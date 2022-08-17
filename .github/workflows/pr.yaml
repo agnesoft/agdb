@@ -3,6 +3,10 @@ name: pr
 on:
   pull_request:
     branches: ["main"]
+    paths:
+      - "**.rs"
+      - "Cargo.tml"
+      - ".github/workflows/pr.yaml"
 
 env:
   CARGO_TERM_COLOR: always

@@ -4,6 +4,9 @@ on:
   push:
     branches: ["main"]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   codecov:
     runs-on: ubuntu-latest

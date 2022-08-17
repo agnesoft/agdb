@@ -9,9 +9,6 @@ on:
       - reopened
       - synchronize
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   title_check:
     runs-on: ubuntu-latest

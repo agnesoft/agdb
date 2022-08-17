@@ -4,9 +4,10 @@ on:
   pull_request:
     branches: ["main"]
     types:
-      - "opened"
-      - "edited"
-      - "reopened"
+      - edited
+      - opened
+      - reopened
+      - synchronize
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,7 +20,8 @@ jobs:
         with:
           script: |
             const regex = RegExp("^\[(ci|commands|docs|graph|query|storage|tests)\] .+ #[\d]+$")
+            const title = github.context.payload.pull_request.title
 
-            if (!regex.test(github.event.pull_request.title)) {
-                core.setFailed(`PR title "${github.event.pull_request.title}" failed to pass regex - ${regex}.\nCorrect example: [ci] fix something #1`);
+            if (!regex.test(title)) {
+                core.setFailed(`PR title "${title}" failed to pass regex - ${regex}.\nCorrect example: [ci] description #1`);
             }

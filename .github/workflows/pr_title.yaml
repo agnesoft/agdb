@@ -1,0 +1,25 @@
+name: pr_title
+
+on:
+  pull_request:
+    branches: ["main"]
+    types:
+      - "opened"
+      - "edited"
+      - "reopened"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  title_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            const regex = RegExp("^\[(ci|commands|docs|graph|query|storage|tests)\] .+ #[\d]+$")
+
+            if (!regex.test(github.event.pull_request.title)) {
+                core.setFailed(`PR title "${github.event.pull_request.title}" failed to pass regex - ${regex}.\nCorrect example: [ci] fix something #1`);
+            }

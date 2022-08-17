@@ -1,0 +1,17 @@
+name: coverage
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  codecov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - run: rustup component add llvm-tools-preview
+      - run: cargo llvm-cov --lcov --output-path lcov.info
+      - uses: codecov/codecov-action@v2
+        with:
+          files: lcov.info

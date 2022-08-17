@@ -2,7 +2,7 @@ name: coverage
 
 on:
   push:
-    branches: ["*"]
+    branches: ["main"]
 
 jobs:
   codecov:

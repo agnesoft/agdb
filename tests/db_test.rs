@@ -1,5 +1,3 @@
-use agdb::Query;
-
 extern crate agdb;
 
 #[test]

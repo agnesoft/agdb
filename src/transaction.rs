@@ -12,6 +12,10 @@ impl Transaction {
         Ok(QueryResult::default())
     }
 
+    pub fn rollback(self) -> Result<QueryResult, QueryError> {
+        Ok(QueryResult::default())
+    }
+
     pub fn transaction(&self) -> Transaction {
         Transaction::default()
     }

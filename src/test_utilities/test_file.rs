@@ -10,6 +10,13 @@ fn remove_file_if_exists(filename: &String) {
     }
 }
 
+impl TestFile {
+    #[allow(dead_code)]
+    pub(crate) fn file_name(&self) -> &String {
+        &self.filename
+    }
+}
+
 impl From<&str> for TestFile {
     fn from(filename: &str) -> Self {
         TestFile::from(filename.to_string())

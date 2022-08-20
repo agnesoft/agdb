@@ -3,6 +3,7 @@ mod query;
 mod query_error;
 mod query_result;
 mod storage;
+mod test_utilities;
 mod transaction;
 
 pub use db::Db;

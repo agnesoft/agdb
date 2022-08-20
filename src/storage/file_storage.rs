@@ -29,6 +29,6 @@ mod tests {
     #[test]
     fn create_new_file() {
         let test_file = TestFile::from("./file_storage_test.agdb");
-        let _storage = FileStorage::from(test_file.filename);
+        let _storage = FileStorage::from(test_file.file_name().clone());
     }
 }

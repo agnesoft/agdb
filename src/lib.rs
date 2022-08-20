@@ -2,6 +2,7 @@ mod db;
 mod query;
 mod query_error;
 mod query_result;
+mod storage;
 mod transaction;
 
 pub use db::Db;

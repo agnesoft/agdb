@@ -72,4 +72,12 @@ mod tests {
 
         assert!(!file_path.exists());
     }
+
+    #[test]
+    fn get_file_name() {
+        let filename = "./test_file_test_file";
+        let test_file = TestFile::from(filename);
+
+        assert_eq!(test_file.file_name(), filename);
+    }
 }

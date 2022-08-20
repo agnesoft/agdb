@@ -25,3 +25,10 @@ fn create_transaction_from_transaction() {
     let transaction = db.transaction();
     let _nested_transaction: agdb::Transaction = transaction.transaction();
 }
+
+#[test]
+fn transaction_commit() {
+    let db = agdb::Db::default();
+    let transaction = db.transaction();
+    let _result: Result<agdb::QueryResult, agdb::QueryError> = transaction.commit();
+}

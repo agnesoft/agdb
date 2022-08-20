@@ -1,7 +1,9 @@
+use std::fs::{File, OpenOptions};
+
 #[allow(dead_code)]
-#[derive(Default)]
 pub(crate) struct FileStorage {
     filename: String,
+    file: File,
 }
 
 impl From<&str> for FileStorage {
@@ -12,7 +14,15 @@ impl From<&str> for FileStorage {
 
 impl From<String> for FileStorage {
     fn from(filename: String) -> Self {
-        FileStorage { filename }
+        FileStorage {
+            file: OpenOptions::new()
+                .write(true)
+                .create(true)
+                .read(true)
+                .open(&filename)
+                .unwrap(),
+            filename,
+        }
     }
 }
 
@@ -20,15 +30,20 @@ impl From<String> for FileStorage {
 mod tests {
     use super::*;
     use crate::test_utilities::test_file::TestFile;
-
-    #[test]
-    fn file_storage() {
-        let _storage = FileStorage::default();
-    }
+    use std::path::Path;
 
     #[test]
     fn create_new_file() {
-        let test_file = TestFile::from("./file_storage_test.agdb");
+        let test_file = TestFile::from("./file_storage_test01.agdb");
+        let _storage = FileStorage::from(test_file.file_name().as_str());
+
+        assert!(Path::new(test_file.file_name()).exists());
+    }
+
+    #[test]
+    fn open_existing_file() {
+        let test_file = TestFile::from("./file_storage_test02.agdb");
+        File::create(test_file.file_name()).unwrap();
         let _storage = FileStorage::from(test_file.file_name().clone());
     }
 }

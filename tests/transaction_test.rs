@@ -30,5 +30,5 @@ fn create_transaction_from_transaction() {
 fn transaction_commit() {
     let db = agdb::Db::default();
     let transaction = db.transaction();
-    transaction.commit();
+    let _result: Result<agdb::QueryResult, agdb::QueryError> = transaction.commit();
 }

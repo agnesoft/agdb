@@ -16,7 +16,7 @@ fn exec_takes_query_returns_query_result() {
     let db = agdb::Db::default();
     let query = agdb::Query::default();
     let transaction = db.transaction();
-    let _result: agdb::QueryResult = transaction.exec(query);
+    let _result: Result<agdb::QueryResult, agdb::QueryError> = transaction.exec(query);
 }
 
 #[test]

@@ -18,3 +18,10 @@ fn exec_takes_query_returns_query_result() {
     let transaction = db.transaction();
     let _result: agdb::QueryResult = transaction.exec(query);
 }
+
+#[test]
+fn create_transaction_from_transaction() {
+    let db = agdb::Db::default();
+    let transaction = db.transaction();
+    let _nested_transaction: agdb::Transaction = transaction.transaction();
+}

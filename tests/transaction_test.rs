@@ -32,3 +32,10 @@ fn transaction_commit() {
     let transaction = db.transaction();
     let _result: Result<agdb::QueryResult, agdb::QueryError> = transaction.commit();
 }
+
+#[test]
+fn transaction_rollback() {
+    let db = agdb::Db::default();
+    let transaction = db.transaction();
+    let _result: Result<agdb::QueryResult, agdb::QueryError> = transaction.rollback();
+}

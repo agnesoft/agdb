@@ -15,6 +15,10 @@ impl FileIndex {
     pub(crate) fn insert(&mut self, index: i64, position: u64) {
         self.positions.insert(index, position);
     }
+
+    pub(crate) fn remove(&mut self, index: i64) {
+        self.positions.remove(&index);
+    }
 }
 
 #[cfg(test)]

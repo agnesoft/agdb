@@ -1,5 +1,19 @@
+use std::collections::HashMap;
+
 #[derive(Default)]
-pub(crate) struct FileIndex {}
+pub(crate) struct FileIndex {
+    positions: HashMap<i64, u64>,
+}
+
+impl FileIndex {
+    pub(crate) fn get(&self, index: i64) -> Option<&u64> {
+        self.positions.get(&index)
+    }
+
+    pub(crate) fn insert(&mut self, index: i64, position: u64) {
+        self.positions.insert(index, position);
+    }
+}
 
 #[cfg(test)]
 mod tests {

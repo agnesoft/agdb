@@ -15,6 +15,10 @@ impl FileIndex {
     pub(crate) fn insert(&mut self, index: i64, position: u64) {
         self.positions.insert(index, position);
     }
+
+    pub(crate) fn remove(&mut self, index: i64) {
+        self.positions.remove(&index);
+    }
 }
 
 #[cfg(test)]
@@ -27,7 +31,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_indexes_and_positions() {
+    fn insert_indexes() {
         let mut file_index = FileIndex::default();
         let index1 = 1_i64;
         let index2 = 2_i64;
@@ -38,6 +42,22 @@ mod tests {
         file_index.insert(index2, pos2);
 
         assert_eq!(file_index.get(index1), Some(&pos1));
+        assert_eq!(file_index.get(index2), Some(&pos2));
+    }
+
+    #[test]
+    fn remove_index() {
+        let mut file_index = FileIndex::default();
+        let index1 = 1_i64;
+        let index2 = 2_i64;
+        let pos1 = 32u64;
+        let pos2 = 64u64;
+
+        file_index.insert(index1, pos1);
+        file_index.insert(index2, pos2);
+        file_index.remove(index1);
+
+        assert_eq!(file_index.get(index1), None);
         assert_eq!(file_index.get(index2), Some(&pos2));
     }
 }

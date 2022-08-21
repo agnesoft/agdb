@@ -1,9 +1,11 @@
+use super::file_index::FileIndex;
 use std::fs::{File, OpenOptions};
 
 #[allow(dead_code)]
 pub(crate) struct FileStorage {
     filename: String,
     file: File,
+    index: FileIndex,
 }
 
 impl From<&str> for FileStorage {
@@ -14,14 +16,17 @@ impl From<&str> for FileStorage {
 
 impl From<String> for FileStorage {
     fn from(filename: String) -> Self {
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .read(true)
+            .open(&filename)
+            .unwrap();
+
         FileStorage {
-            file: OpenOptions::new()
-                .write(true)
-                .create(true)
-                .read(true)
-                .open(&filename)
-                .unwrap(),
             filename,
+            file,
+            index: FileIndex::default(),
         }
     }
 }

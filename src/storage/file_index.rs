@@ -4,6 +4,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub(crate) struct FileIndex {
     positions: HashMap<i64, u64>,
+    free_list: Vec<i64>,
 }
 
 #[allow(dead_code)]
@@ -12,12 +13,20 @@ impl FileIndex {
         self.positions.get(&index)
     }
 
-    pub(crate) fn insert(&mut self, index: i64, position: u64) {
+    pub(crate) fn insert(&mut self, position: u64) -> i64 {
+        let mut index = self.positions.len() as i64;
+
+        if let Some(free_index) = self.free_list.pop() {
+            index = free_index;
+        }
+
         self.positions.insert(index, position);
+        index
     }
 
     pub(crate) fn remove(&mut self, index: i64) {
         self.positions.remove(&index);
+        self.free_list.push(index);
     }
 }
 

@@ -53,6 +53,17 @@ mod tests {
     }
 
     #[test]
+    fn insert_index() {
+        let mut file_index = FileIndex::default();
+        let pos = 8u64;
+        let index = 4i64;
+
+        file_index.insert(index, pos);
+
+        assert_eq!(file_index.get(index), Some(&pos));
+    }
+
+    #[test]
     fn remove_index() {
         let mut file_index = FileIndex::default();
         let pos1 = 32u64;

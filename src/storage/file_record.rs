@@ -10,6 +10,13 @@ pub(crate) struct FileRecord {
     pub(crate) size: u64,
 }
 
+#[allow(dead_code)]
+impl FileRecord {
+    pub(crate) const fn size() -> usize {
+        size_of::<i64>() + size_of::<u64>()
+    }
+}
+
 impl Serialize for FileRecord {
     fn deserialize(bytes: &[u8]) -> Self {
         const SIZE_OFFSET: usize = size_of::<i64>();
@@ -64,5 +71,10 @@ mod tests {
         let actual_record = FileRecord::deserialize(&bytes);
 
         assert_eq!(record, actual_record);
+    }
+
+    #[test]
+    fn size() {
+        assert_eq!(FileRecord::size(), size_of::<i64>() + size_of::<u64>());
     }
 }

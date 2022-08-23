@@ -1,8 +1,8 @@
 #[allow(dead_code)]
-#[derive(Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct FileRecord {
-    pos: u64,
-    size: u64,
+    pub(crate) pos: u64,
+    pub(crate) size: u64,
 }
 
 #[cfg(test)]

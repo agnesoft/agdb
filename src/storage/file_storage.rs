@@ -1,11 +1,11 @@
-use super::file_index::FileIndex;
+use super::file_records::FileRecords;
 use std::fs::{File, OpenOptions};
 
 #[allow(dead_code)]
 pub(crate) struct FileStorage {
     filename: String,
     file: File,
-    index: FileIndex,
+    records: FileRecords,
 }
 
 impl From<&str> for FileStorage {
@@ -26,7 +26,7 @@ impl From<String> for FileStorage {
         FileStorage {
             filename,
             file,
-            index: FileIndex::default(),
+            records: FileRecords::default(),
         }
     }
 }

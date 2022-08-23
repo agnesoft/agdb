@@ -11,10 +11,6 @@ pub(crate) struct FileRecords {
 
 #[allow(dead_code)]
 impl FileRecords {
-    pub(crate) fn get(&self, index: i64) -> Option<&FileRecord> {
-        self.records.get(&index)
-    }
-
     pub(crate) fn create(&mut self, position: u64, size: u64) -> FileRecord {
         let mut index = self.records.len() as i64;
 
@@ -30,6 +26,10 @@ impl FileRecords {
 
         self.records.insert(index, record.clone());
         record
+    }
+
+    pub(crate) fn get(&self, index: i64) -> Option<&FileRecord> {
+        self.records.get(&index)
     }
 
     pub(crate) fn remove(&mut self, index: i64) {

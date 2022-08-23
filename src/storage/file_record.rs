@@ -10,7 +10,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn file_record_can_be_default_constructed() {
+    fn default_constructed() {
         let _record = FileRecord::default();
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        let record = FileRecord::default();
+        format!("{:?}", record);
     }
 }

@@ -102,4 +102,11 @@ mod tests {
 
         assert_eq!(storage.value::<i64>(index), Some(10_i64));
     }
+
+    #[test]
+    fn value_of_missing_index() {
+        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let mut storage = FileStorage::from(test_file.file_name().clone());
+        assert_eq!(storage.value::<i64>(0), None);
+    }
 }

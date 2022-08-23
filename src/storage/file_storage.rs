@@ -51,4 +51,14 @@ mod tests {
         File::create(test_file.file_name()).unwrap();
         let _storage = FileStorage::from(test_file.file_name().clone());
     }
+
+    #[test]
+    fn insert() {
+        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let storage = FileStorage::from(test_file.file_name().clone());
+
+        let index = storage.insert("Hello, World!");
+
+        assert_eq!(index, 0);
+    }
 }

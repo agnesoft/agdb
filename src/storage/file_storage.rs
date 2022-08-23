@@ -1,11 +1,19 @@
 use super::file_records::FileRecords;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::{Seek, SeekFrom};
 
 #[allow(dead_code)]
 pub(crate) struct FileStorage {
     filename: String,
     file: File,
     records: FileRecords,
+}
+
+impl FileStorage {
+    pub(crate) fn insert<T>(&mut self, value: &T) -> i64 {
+        let position = self.file.seek(SeekFrom::End(0)).unwrap();
+    }
 }
 
 impl From<&str> for FileStorage {

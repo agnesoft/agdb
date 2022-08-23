@@ -1,6 +1,8 @@
 use super::file_records::FileRecords;
+use super::serialize::Serialize;
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::Write;
 use std::io::{Seek, SeekFrom};
 
 #[allow(dead_code)]
@@ -10,9 +12,15 @@ pub(crate) struct FileStorage {
     records: FileRecords,
 }
 
+#[allow(dead_code)]
 impl FileStorage {
-    pub(crate) fn insert<T>(&mut self, value: &T) -> i64 {
+    pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> i64 {
         let position = self.file.seek(SeekFrom::End(0)).unwrap();
+        let bytes = value.serialize();
+        let record = self.records.create(position, bytes.len() as u64);
+        self.file.write_all(&record.serialize()).unwrap();
+        self.file.write_all(&bytes).unwrap();
+        record.index
     }
 }
 
@@ -63,9 +71,9 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::from("./file_storage_test03.agdb");
-        let storage = FileStorage::from(test_file.file_name().clone());
+        let mut storage = FileStorage::from(test_file.file_name().clone());
 
-        let index = storage.insert("Hello, World!");
+        let index = storage.insert(&10_i64);
 
         assert_eq!(index, 0);
     }

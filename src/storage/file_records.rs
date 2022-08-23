@@ -147,8 +147,7 @@ mod tests {
             size: 16,
         };
 
-        let mut file_records =
-            FileRecords::from(vec![record1.clone(), record2.clone(), record3.clone()]);
+        let mut file_records = FileRecords::from(vec![record1, record2, record3]);
 
         let new_record1 = file_records.create(1, 2);
         let new_record2 = file_records.create(3, 4);

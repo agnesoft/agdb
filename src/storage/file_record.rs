@@ -1,12 +1,15 @@
 #[allow(dead_code)]
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Ord, PartialOrd, PartialEq)]
 pub(crate) struct FileRecord {
-    pub(crate) pos: u64,
+    pub(crate) index: i64,
+    pub(crate) position: u64,
     pub(crate) size: u64,
 }
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::Ordering;
+
     use super::*;
 
     #[test]
@@ -18,5 +21,11 @@ mod tests {
     fn derived_from_debug() {
         let record = FileRecord::default();
         format!("{:?}", record);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        let record = FileRecord::default();
+        assert_eq!(record.cmp(&record), Ordering::Equal);
     }
 }

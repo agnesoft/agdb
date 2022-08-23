@@ -6,6 +6,7 @@ use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Write;
 use std::io::{Seek, SeekFrom};
+use std::mem::size_of;
 
 #[allow(dead_code)]
 pub(crate) struct FileStorage {
@@ -31,6 +32,21 @@ impl FileStorage {
                 .seek(SeekFrom::Start(record.position + FileRecord::size() as u64))
                 .unwrap();
             let mut bytes: Vec<u8> = vec![0; record.size as usize];
+            self.file.read_exact(&mut bytes).unwrap();
+            return Some(T::deserialize(&bytes));
+        }
+
+        None
+    }
+
+    pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Option<T> {
+        if let Some(record) = self.records.get(index) {
+            self.file
+                .seek(SeekFrom::Start(
+                    record.position + FileRecord::size() as u64 + offset,
+                ))
+                .unwrap();
+            let mut bytes: Vec<u8> = vec![0; size_of::<T>()];
             self.file.read_exact(&mut bytes).unwrap();
             return Some(T::deserialize(&bytes));
         }
@@ -77,15 +93,8 @@ mod tests {
     }
 
     #[test]
-    fn open_existing_file() {
-        let test_file = TestFile::from("./file_storage_test02.agdb");
-        File::create(test_file.file_name()).unwrap();
-        let _storage = FileStorage::from(test_file.file_name().clone());
-    }
-
-    #[test]
     fn insert() {
-        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let test_file = TestFile::from("./file_storage_test02.agdb");
         let mut storage = FileStorage::from(test_file.file_name().clone());
 
         let index = storage.insert(&10_i64);
@@ -94,8 +103,15 @@ mod tests {
     }
 
     #[test]
-    fn value() {
+    fn open_existing_file() {
         let test_file = TestFile::from("./file_storage_test03.agdb");
+        File::create(test_file.file_name()).unwrap();
+        let _storage = FileStorage::from(test_file.file_name().clone());
+    }
+
+    #[test]
+    fn value() {
+        let test_file = TestFile::from("./file_storage_test04.agdb");
         let mut storage = FileStorage::from(test_file.file_name().clone());
 
         let index = storage.insert(&10_i64);
@@ -104,8 +120,27 @@ mod tests {
     }
 
     #[test]
+    fn value_at() {
+        let test_file = TestFile::from("./file_storage_test05.agdb");
+        let mut storage = FileStorage::from(test_file.file_name().clone());
+        let data = vec![1_i64, 2_i64, 3_i64];
+
+        let index = storage.insert(&data);
+        let offset = (size_of::<u64>() + size_of::<i64>()) as u64;
+
+        assert_eq!(storage.value_at::<i64>(index, offset), Some(2_i64));
+    }
+
+    #[test]
+    fn value_at_of_missing_index() {
+        let test_file = TestFile::from("./file_storage_test06.agdb");
+        let mut storage = FileStorage::from(test_file.file_name().clone());
+        assert_eq!(storage.value_at::<i64>(0, 8), None);
+    }
+
+    #[test]
     fn value_of_missing_index() {
-        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let test_file = TestFile::from("./file_storage_test07.agdb");
         let mut storage = FileStorage::from(test_file.file_name().clone());
         assert_eq!(storage.value::<i64>(0), None);
     }

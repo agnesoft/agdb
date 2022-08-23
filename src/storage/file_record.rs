@@ -1,3 +1,10 @@
+#[allow(dead_code)]
+#[derive(Default)]
+pub(crate) struct FileRecord {
+    pos: u64,
+    size: u64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

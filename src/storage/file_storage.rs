@@ -1,7 +1,9 @@
+use super::file_record::FileRecord;
 use super::file_records::FileRecords;
 use super::serialize::Serialize;
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::Read;
 use std::io::Write;
 use std::io::{Seek, SeekFrom};
 
@@ -21,6 +23,19 @@ impl FileStorage {
         self.file.write_all(&record.serialize()).unwrap();
         self.file.write_all(&bytes).unwrap();
         record.index
+    }
+
+    pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Option<T> {
+        if let Some(record) = self.records.get(index) {
+            self.file
+                .seek(SeekFrom::Start(record.position + FileRecord::size() as u64))
+                .unwrap();
+            let mut bytes: Vec<u8> = vec![0; record.size as usize];
+            self.file.read_exact(&mut bytes).unwrap();
+            return Some(T::deserialize(&bytes));
+        }
+
+        None
     }
 }
 
@@ -76,5 +91,15 @@ mod tests {
         let index = storage.insert(&10_i64);
 
         assert_eq!(index, 0);
+    }
+
+    #[test]
+    fn value() {
+        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let mut storage = FileStorage::from(test_file.file_name().clone());
+
+        let index = storage.insert(&10_i64);
+
+        assert_eq!(storage.value::<i64>(index), Some(10_i64));
     }
 }

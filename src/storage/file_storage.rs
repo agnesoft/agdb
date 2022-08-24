@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn insert() {
-        let test_file = TestFile::from("./file_storage_test02.agdb");
+        let test_file = TestFile::from("./file_storage_test01.agdb");
         let mut storage = FileStorage::from(test_file.file_name().as_str());
 
         let index = storage.insert(&10_i64);
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn value() {
-        let test_file = TestFile::from("./file_storage_test04.agdb");
+        let test_file = TestFile::from("./file_storage_test02.agdb");
         let mut storage = FileStorage::from(test_file.file_name().clone());
 
         let index = storage.insert(&10_i64);
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn value_at() {
-        let test_file = TestFile::from("./file_storage_test05.agdb");
+        let test_file = TestFile::from("./file_storage_test03.agdb");
         let mut storage = FileStorage::from(test_file.file_name().clone());
         let data = vec![1_i64, 2_i64, 3_i64];
 
@@ -109,14 +109,14 @@ mod tests {
 
     #[test]
     fn value_at_of_missing_index() {
-        let test_file = TestFile::from("./file_storage_test06.agdb");
+        let test_file = TestFile::from("./file_storage_test04.agdb");
         let mut storage = FileStorage::from(test_file.file_name().clone());
         assert_eq!(storage.value_at::<i64>(0, 8), None);
     }
 
     #[test]
     fn value_of_missing_index() {
-        let test_file = TestFile::from("./file_storage_test07.agdb");
+        let test_file = TestFile::from("./file_storage_test05.agdb");
         let mut storage = FileStorage::from(test_file.file_name().clone());
         assert_eq!(storage.value::<i64>(0), None);
     }

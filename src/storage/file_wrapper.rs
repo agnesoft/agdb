@@ -22,7 +22,7 @@ impl FileWrapper {
         self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
     }
 
-    pub(crate) fn write(&mut self, data: &Vec<u8>) {
+    pub(crate) fn write(&mut self, data: &[u8]) {
         self.file.write_all(data).expect(ERROR_MESSAGE);
     }
 }

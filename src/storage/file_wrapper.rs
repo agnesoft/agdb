@@ -12,14 +12,24 @@ pub(crate) struct FileWrapper {
 
 #[allow(dead_code)]
 impl FileWrapper {
+    pub(crate) fn current_pos(&mut self) -> u64 {
+        self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
+    }
+
     pub(crate) fn read(&mut self, size: u64) -> Vec<u8> {
         let mut buffer = vec![0_u8; size as usize];
         self.file.read_exact(&mut buffer).expect(ERROR_MESSAGE);
         buffer
     }
 
-    pub(crate) fn current_pos(&mut self) -> u64 {
-        self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
+    pub(crate) fn seek(&mut self, position: u64) {
+        self.file
+            .seek(SeekFrom::Start(position))
+            .expect(ERROR_MESSAGE);
+    }
+
+    pub(crate) fn seek_end(&mut self) {
+        self.file.seek(SeekFrom::End(0)).expect(ERROR_MESSAGE);
     }
 
     pub(crate) fn write(&mut self, data: &[u8]) {

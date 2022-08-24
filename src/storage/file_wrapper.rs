@@ -110,7 +110,12 @@ mod tests {
         let mut file = FileWrapper::from(test_file.file_name().clone());
         let data = 10_i64.serialize();
 
+        assert_eq!(file.size, 0);
+
         file.write(&data);
+
+        assert_eq!(file.size, size_of::<i64>() as u64);
+
         file.seek(0);
 
         let actual_data = file.read(size_of::<i64>() as u64);

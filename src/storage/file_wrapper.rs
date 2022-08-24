@@ -1,5 +1,6 @@
+use super::serialize::Serialize;
 use std::fs::{File, OpenOptions};
-use std::io::{Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 
 const ERROR_MESSAGE: &str = "Could not access file";
 
@@ -8,6 +9,15 @@ pub(crate) struct FileWrapper {
     pub(crate) file: File,
     pub(crate) filename: String,
     pub(crate) size: u64,
+}
+
+#[allow(dead_code)]
+impl FileWrapper {
+    pub(crate) fn read(&mut self, size: u64) -> Vec<u8> {
+        let mut buffer = vec![0_u8; size as usize];
+        self.file.read_exact(&mut buffer).expect(ERROR_MESSAGE);
+        buffer
+    }
 }
 
 impl From<String> for FileWrapper {

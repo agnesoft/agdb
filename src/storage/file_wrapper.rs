@@ -1,4 +1,3 @@
-use super::serialize::Serialize;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom};
 
@@ -42,6 +41,7 @@ impl From<String> for FileWrapper {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::serialize::Serialize;
     use crate::test_utilities::test_file::TestFile;
     use std::{io::Write, mem::size_of, path::Path};
 

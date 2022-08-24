@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 const ERROR_MESSAGE: &str = "Could not access file";
 
@@ -20,6 +20,10 @@ impl FileWrapper {
 
     pub(crate) fn current_pos(&mut self) -> u64 {
         self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
+    }
+
+    pub(crate) fn write(&mut self, data: &Vec<u8>) {
+        self.file.write_all(data).expect(ERROR_MESSAGE);
     }
 }
 

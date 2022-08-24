@@ -2,9 +2,6 @@ use super::file_record::FileRecord;
 use super::file_records::FileRecords;
 use super::file_wrapper::FileWrapper;
 use super::serialize::Serialize;
-use std::io::Read;
-use std::io::Write;
-use std::io::{Seek, SeekFrom};
 use std::mem::size_of;
 
 #[allow(dead_code)]
@@ -16,23 +13,18 @@ pub(crate) struct FileStorage {
 #[allow(dead_code)]
 impl FileStorage {
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> i64 {
-        let position = self.file.file.seek(SeekFrom::End(0)).unwrap();
+        self.file.seek_end();
         let bytes = value.serialize();
-        let record = self.records.create(position, bytes.len() as u64);
-        self.file.file.write_all(&record.serialize()).unwrap();
-        self.file.file.write_all(&bytes).unwrap();
+        let record = self.records.create(self.file.size, bytes.len() as u64);
+        self.file.write(&record.serialize());
+        self.file.write(&bytes);
         record.index
     }
 
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Option<T> {
         if let Some(record) = self.records.get(index) {
-            self.file
-                .file
-                .seek(SeekFrom::Start(record.position + FileRecord::size() as u64))
-                .unwrap();
-            let mut bytes: Vec<u8> = vec![0; record.size as usize];
-            self.file.file.read_exact(&mut bytes).unwrap();
-            return Some(T::deserialize(&bytes));
+            self.file.seek(record.position + FileRecord::size() as u64);
+            return Some(T::deserialize(&self.file.read(record.size)));
         }
 
         None
@@ -40,15 +32,9 @@ impl FileStorage {
 
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Option<T> {
         if let Some(record) = self.records.get(index) {
-            self.file
-                .file
-                .seek(SeekFrom::Start(
-                    record.position + FileRecord::size() as u64 + offset,
-                ))
-                .unwrap();
-            let mut bytes: Vec<u8> = vec![0; size_of::<T>()];
-            self.file.file.read_exact(&mut bytes).unwrap();
-            return Some(T::deserialize(&bytes));
+            let read_start = record.position + FileRecord::size() as u64 + offset;
+            self.file.seek(read_start);
+            return Some(T::deserialize(&self.file.read(size_of::<T>() as u64)));
         }
 
         None

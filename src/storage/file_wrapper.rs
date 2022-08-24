@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 const ERROR_MESSAGE: &str = "Could not access file";
 
@@ -20,6 +20,10 @@ impl FileWrapper {
 
     pub(crate) fn current_pos(&mut self) -> u64 {
         self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
+    }
+
+    pub(crate) fn write(&mut self, data: &[u8]) {
+        self.file.write_all(data).expect(ERROR_MESSAGE);
     }
 }
 
@@ -60,27 +64,6 @@ mod tests {
     }
 
     #[test]
-    fn open_existing_file() {
-        let test_file = TestFile::from("./file_storage_test02.agdb");
-        File::create(test_file.file_name()).unwrap();
-        let _file = FileWrapper::from(test_file.file_name().clone());
-    }
-
-    #[test]
-    fn read_bytes() {
-        let test_file = TestFile::from("./file_storage_test03.agdb");
-        let mut file = FileWrapper::from(test_file.file_name().clone());
-        let data = 10_i64.serialize();
-
-        file.file.write_all(&data).unwrap();
-        file.file.seek(SeekFrom::Start(0)).unwrap();
-
-        let actual_data = file.read(size_of::<i64>() as u64);
-
-        assert_eq!(data, actual_data);
-    }
-
-    #[test]
     fn current_pos() {
         let test_file = TestFile::from("./file_storage_test03.agdb");
         let mut file = FileWrapper::from(test_file.file_name().clone());
@@ -91,5 +74,26 @@ mod tests {
         file.file.write_all(&data).unwrap();
 
         assert_eq!(file.current_pos(), size_of::<i64>() as u64);
+    }
+
+    #[test]
+    fn open_existing_file() {
+        let test_file = TestFile::from("./file_storage_test02.agdb");
+        File::create(test_file.file_name()).unwrap();
+        let _file = FileWrapper::from(test_file.file_name().clone());
+    }
+
+    #[test]
+    fn write_read_bytes() {
+        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let data = 10_i64.serialize();
+
+        file.write(&data);
+        file.file.seek(SeekFrom::Start(0)).unwrap();
+
+        let actual_data = file.read(size_of::<i64>() as u64);
+
+        assert_eq!(data, actual_data);
     }
 }

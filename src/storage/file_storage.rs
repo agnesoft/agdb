@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::from("./file_storage_test02.agdb");
-        let mut storage = FileStorage::from(test_file.file_name().clone());
+        let mut storage = FileStorage::from(test_file.file_name().as_str());
 
         let index = storage.insert(&10_i64);
 

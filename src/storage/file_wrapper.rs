@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn open_existing_file() {
-        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let test_file = TestFile::from("./file_storage_test02.agdb");
         File::create(test_file.file_name()).unwrap();
         let _storage = FileWrapper::from(test_file.file_name().clone());
     }

@@ -1,3 +1,34 @@
+use std::fs::{File, OpenOptions};
+use std::io::{Seek, SeekFrom};
+
+const ERROR_MESSAGE: &str = "Could not access file";
+
+#[allow(dead_code)]
+pub(crate) struct FileWrapper {
+    pub(crate) file: File,
+    pub(crate) filename: String,
+    pub(crate) size: u64,
+}
+
+impl From<String> for FileWrapper {
+    fn from(filename: String) -> Self {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .read(true)
+            .open(&filename)
+            .expect(ERROR_MESSAGE);
+
+        let size = file.seek(SeekFrom::End(0)).expect(ERROR_MESSAGE);
+
+        FileWrapper {
+            file,
+            filename,
+            size,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

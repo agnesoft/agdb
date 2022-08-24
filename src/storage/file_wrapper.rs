@@ -33,7 +33,12 @@ impl FileWrapper {
     }
 
     pub(crate) fn write(&mut self, data: &[u8]) {
-        self.size = self.size + data.len() as u64;
+        let end_position = self.current_pos() + data.len() as u64;
+
+        if end_position > self.size {
+            self.size = end_position;
+        }
+
         self.file.write_all(data).expect(ERROR_MESSAGE);
     }
 }
@@ -94,7 +99,7 @@ mod tests {
 
     #[test]
     fn seek_end() {
-        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let test_file = TestFile::from("./file_storage_test04.agdb");
         let mut file = FileWrapper::from(test_file.file_name().clone());
         let data = 10_i64.serialize();
         file.write(&data);
@@ -106,17 +111,54 @@ mod tests {
     }
 
     #[test]
-    fn write_read_bytes() {
-        let test_file = TestFile::from("./file_storage_test04.agdb");
+    fn size_writing_at_end() {
+        let test_file = TestFile::from("./file_storage_test05.agdb");
+        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let data = 10_i64.serialize();
+
+        assert_eq!(file.size, 0);
+        file.write(&data);
+        assert_eq!(file.size, size_of::<i64>() as u64);
+    }
+
+    #[test]
+    fn size_write_within_current_size() {
+        let test_file = TestFile::from("./file_storage_test06.agdb");
+        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let data = 10_i64.serialize();
+
+        assert_eq!(file.size, 0);
+        file.write(&data);
+        file.seek(0);
+        file.write(&data);
+        assert_eq!(file.size, size_of::<i64>() as u64);
+    }
+
+    #[test]
+    fn size_writing_over_end() {
+        let test_file = TestFile::from("./file_storage_test07.agdb");
         let mut file = FileWrapper::from(test_file.file_name().clone());
         let data = 10_i64.serialize();
 
         assert_eq!(file.size, 0);
 
         file.write(&data);
+        file.seek((size_of::<i64>() as u64) / 2);
+        file.write(&data);
 
-        assert_eq!(file.size, size_of::<i64>() as u64);
+        assert_eq!(
+            file.size,
+            size_of::<i64>() as u64 + (size_of::<i64>() as u64 / 2)
+        );
+    }
 
+    #[test]
+    fn write_read_bytes() {
+        let test_file = TestFile::from("./file_storage_test08.agdb");
+        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let data = 10_i64.serialize();
+
+        file.write(&data);
         file.seek(0);
 
         let actual_data = file.read(size_of::<i64>() as u64);

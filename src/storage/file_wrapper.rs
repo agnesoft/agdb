@@ -17,6 +17,10 @@ impl FileWrapper {
         self.file.read_exact(&mut buffer).expect(ERROR_MESSAGE);
         buffer
     }
+
+    pub(crate) fn current_pos(&mut self) -> u64 {
+        self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
+    }
 }
 
 impl From<String> for FileWrapper {
@@ -74,5 +78,18 @@ mod tests {
         let actual_data = file.read(size_of::<i64>() as u64);
 
         assert_eq!(data, actual_data);
+    }
+
+    #[test]
+    fn current_pos() {
+        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let mut file = FileWrapper::from(test_file.file_name().clone());
+
+        assert_eq!(file.current_pos(), 0);
+
+        let data = 10_i64.serialize();
+        file.file.write_all(&data).unwrap();
+
+        assert_eq!(file.current_pos(), size_of::<i64>() as u64);
     }
 }

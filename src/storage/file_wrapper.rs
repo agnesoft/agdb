@@ -33,6 +33,7 @@ impl FileWrapper {
     }
 
     pub(crate) fn write(&mut self, data: &[u8]) {
+        self.size = self.size + data.len() as u64;
         self.file.write_all(data).expect(ERROR_MESSAGE);
     }
 }

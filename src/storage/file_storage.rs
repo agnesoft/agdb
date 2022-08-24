@@ -53,6 +53,33 @@ impl FileStorage {
 
         None
     }
+
+    fn read_record(file: &mut File) -> FileRecord {
+        let pos = file.seek(SeekFrom::Current(0)).unwrap();
+        let mut data = [0; FileRecord::size()];
+        file.read_exact(&mut data).unwrap();
+        let mut record = FileRecord::deserialize(&data);
+        record.position = pos;
+        file.seek(SeekFrom::Current(record.size as i64)).unwrap();
+
+        record
+    }
+
+    fn read_records(file: &mut File) -> Vec<FileRecord> {
+        let mut records: Vec<FileRecord> = vec![];
+        let end = file.seek(SeekFrom::End(0)).unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+
+        while file.seek(SeekFrom::Current(0)).unwrap() != end {
+            records.push(Self::read_record(file));
+        }
+
+        records
+    }
+
+    fn seek(file: &mut File, position: SeekFrom) {
+        file.seek(position).expect("");
+    }
 }
 
 impl From<&str> for FileStorage {
@@ -70,19 +97,7 @@ impl From<String> for FileStorage {
             .open(&filename)
             .unwrap();
 
-        let mut records: Vec<FileRecord> = vec![];
-        let end = file.seek(SeekFrom::End(0)).unwrap();
-        file.seek(SeekFrom::Start(0)).unwrap();
-
-        while file.seek(SeekFrom::Current(0)).unwrap() != end {
-            let pos = file.seek(SeekFrom::Current(0)).unwrap();
-            let mut data = [0; FileRecord::size()];
-            file.read_exact(&mut data).unwrap();
-            let mut record = FileRecord::deserialize(&data);
-            record.position = pos;
-            file.seek(SeekFrom::Current(record.size as i64)).unwrap();
-            records.push(record);
-        }
+        let records = Self::read_records(&mut file);
 
         FileStorage {
             filename,

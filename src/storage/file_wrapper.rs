@@ -17,6 +17,10 @@ impl FileWrapper {
         self.file.read_exact(&mut buffer).expect(ERROR_MESSAGE);
         buffer
     }
+
+    pub(crate) fn current_pos(&mut self) -> u64 {
+        self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
+    }
 }
 
 impl From<String> for FileWrapper {

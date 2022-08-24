@@ -63,17 +63,31 @@ impl From<&str> for FileStorage {
 
 impl From<String> for FileStorage {
     fn from(filename: String) -> Self {
-        let file = OpenOptions::new()
+        let mut file = OpenOptions::new()
             .write(true)
             .create(true)
             .read(true)
             .open(&filename)
             .unwrap();
 
+        let mut records: Vec<FileRecord> = vec![];
+        let end = file.seek(SeekFrom::End(0)).unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+
+        while file.seek(SeekFrom::Current(0)).unwrap() != end {
+            let pos = file.seek(SeekFrom::Current(0)).unwrap();
+            let mut data = [0; FileRecord::size()];
+            file.read_exact(&mut data).unwrap();
+            let mut record = FileRecord::deserialize(&data);
+            record.position = pos;
+            file.seek(SeekFrom::Current(record.size as i64)).unwrap();
+            records.push(record);
+        }
+
         FileStorage {
             filename,
             file,
-            records: FileRecords::default(),
+            records: FileRecords::from(records),
         }
     }
 }

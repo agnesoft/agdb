@@ -1,7 +1,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-const ERROR_MESSAGE: &str = "Could not access file";
+use crate::db_error::DbError;
 
 #[allow(dead_code)]
 pub(crate) struct FileWrapper {
@@ -12,53 +12,67 @@ pub(crate) struct FileWrapper {
 
 #[allow(dead_code)]
 impl FileWrapper {
-    pub(crate) fn current_pos(&mut self) -> u64 {
-        self.file.seek(SeekFrom::Current(0)).expect(ERROR_MESSAGE)
+    pub(crate) fn current_pos(&mut self) -> Result<u64, DbError> {
+        self.file
+            .seek(SeekFrom::Current(0))
+            .map_err(|error| DbError::Storage(error.to_string()))
     }
 
-    pub(crate) fn read(&mut self, size: u64) -> Vec<u8> {
+    pub(crate) fn read(&mut self, size: u64) -> Result<Vec<u8>, DbError> {
         let mut buffer = vec![0_u8; size as usize];
-        self.file.read_exact(&mut buffer).expect(ERROR_MESSAGE);
-        buffer
+        self.file
+            .read_exact(&mut buffer)
+            .map_err(|error| DbError::Storage(error.to_string()))?;
+        Ok(buffer)
     }
 
-    pub(crate) fn seek(&mut self, position: u64) {
+    pub(crate) fn seek(&mut self, position: u64) -> Result<(), DbError> {
         self.file
             .seek(SeekFrom::Start(position))
-            .expect(ERROR_MESSAGE);
+            .map_err(|error| DbError::Storage(error.to_string()))?;
+        Ok(())
     }
 
-    pub(crate) fn seek_end(&mut self) {
-        self.file.seek(SeekFrom::End(0)).expect(ERROR_MESSAGE);
+    pub(crate) fn seek_end(&mut self) -> Result<(), DbError> {
+        self.file
+            .seek(SeekFrom::End(0))
+            .map_err(|error| DbError::Storage(error.to_string()))?;
+        Ok(())
     }
 
-    pub(crate) fn write(&mut self, data: &[u8]) {
-        let end_position = self.current_pos() + data.len() as u64;
+    pub(crate) fn write(&mut self, data: &[u8]) -> Result<(), DbError> {
+        let end_position = self.current_pos()? + data.len() as u64;
 
         if end_position > self.size {
             self.size = end_position;
         }
 
-        self.file.write_all(data).expect(ERROR_MESSAGE);
+        self.file
+            .write_all(data)
+            .map_err(|error| DbError::Storage(error.to_string()))
     }
 }
 
-impl From<String> for FileWrapper {
-    fn from(filename: String) -> Self {
+impl TryFrom<String> for FileWrapper {
+    type Error = DbError;
+
+    fn try_from(filename: String) -> Result<Self, Self::Error> {
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
             .read(true)
             .open(&filename)
-            .expect(ERROR_MESSAGE);
+            .map_err(|error| DbError::Storage(error.to_string()))?;
 
-        let size = file.seek(SeekFrom::End(0)).expect(ERROR_MESSAGE);
+        let size = file
+            .seek(SeekFrom::End(0))
+            .map_err(|error| DbError::Storage(error.to_string()))?;
 
-        FileWrapper {
+        Ok(FileWrapper {
             file,
             filename,
             size,
-        }
+        })
     }
 }
 
@@ -73,7 +87,7 @@ mod tests {
     #[test]
     fn create_new_file() {
         let test_file = TestFile::from("./file_wrapper_test01.agdb");
-        let file = FileWrapper::from(test_file.file_name().clone());
+        let file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
 
         assert!(Path::new(test_file.file_name()).exists());
         assert_eq!(&file.filename, test_file.file_name());
@@ -84,67 +98,67 @@ mod tests {
     fn open_existing_file() {
         let test_file = TestFile::from("./file_storage_test02.agdb");
         File::create(test_file.file_name()).unwrap();
-        let _file = FileWrapper::from(test_file.file_name().clone());
+        let _file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
     }
 
     #[test]
     fn seek() {
         let test_file = TestFile::from("./file_storage_test03.agdb");
-        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
 
-        assert_eq!(file.current_pos(), 0);
-        file.seek(10);
-        assert_eq!(file.current_pos(), 10);
+        assert_eq!(file.current_pos(), Ok(0));
+        file.seek(10).unwrap();
+        assert_eq!(file.current_pos(), Ok(10));
     }
 
     #[test]
     fn seek_end() {
         let test_file = TestFile::from("./file_storage_test04.agdb");
-        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
-        file.write(&data);
-        file.seek(0);
+        file.write(&data).unwrap();
+        file.seek(0).unwrap();
 
-        assert_eq!(file.current_pos(), 0);
-        file.seek_end();
-        assert_eq!(file.current_pos(), size_of::<i64>() as u64);
+        assert_eq!(file.current_pos(), Ok(0));
+        file.seek_end().unwrap();
+        assert_eq!(file.current_pos(), Ok(size_of::<i64>() as u64));
     }
 
     #[test]
     fn size_writing_at_end() {
         let test_file = TestFile::from("./file_storage_test05.agdb");
-        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
         assert_eq!(file.size, 0);
-        file.write(&data);
+        file.write(&data).unwrap();
         assert_eq!(file.size, size_of::<i64>() as u64);
     }
 
     #[test]
     fn size_write_within_current_size() {
         let test_file = TestFile::from("./file_storage_test06.agdb");
-        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
         assert_eq!(file.size, 0);
-        file.write(&data);
-        file.seek(0);
-        file.write(&data);
+        file.write(&data).unwrap();
+        file.seek(0).unwrap();
+        file.write(&data).unwrap();
         assert_eq!(file.size, size_of::<i64>() as u64);
     }
 
     #[test]
     fn size_writing_over_end() {
         let test_file = TestFile::from("./file_storage_test07.agdb");
-        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
         assert_eq!(file.size, 0);
 
-        file.write(&data);
-        file.seek((size_of::<i64>() as u64) / 2);
-        file.write(&data);
+        file.write(&data).unwrap();
+        file.seek((size_of::<i64>() as u64) / 2).unwrap();
+        file.write(&data).unwrap();
 
         assert_eq!(
             file.size,
@@ -155,14 +169,14 @@ mod tests {
     #[test]
     fn write_read_bytes() {
         let test_file = TestFile::from("./file_storage_test08.agdb");
-        let mut file = FileWrapper::from(test_file.file_name().clone());
+        let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
-        file.write(&data);
-        file.seek(0);
+        file.write(&data).unwrap();
+        file.seek(0).unwrap();
 
         let actual_data = file.read(size_of::<i64>() as u64);
 
-        assert_eq!(data, actual_data);
+        assert_eq!(actual_data, Ok(data));
     }
 }

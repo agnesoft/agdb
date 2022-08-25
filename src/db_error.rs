@@ -1,4 +1,5 @@
 #[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum DbError {
     Storage(String),
 }

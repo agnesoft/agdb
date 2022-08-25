@@ -1,4 +1,5 @@
 mod db;
+mod db_error;
 mod query;
 mod query_error;
 mod query_result;

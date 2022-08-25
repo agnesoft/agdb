@@ -39,6 +39,26 @@ impl FileStorage {
 
         None
     }
+
+    fn read_record(file: &mut FileWrapper) -> FileRecord {
+        let pos = file.current_pos();
+        let mut record = FileRecord::deserialize(&file.read(FileRecord::size() as u64));
+        record.position = pos;
+        file.seek(pos + FileRecord::size() as u64 + record.size);
+
+        record
+    }
+
+    fn read_records(file: &mut FileWrapper) -> Vec<FileRecord> {
+        let mut records: Vec<FileRecord> = vec![];
+        file.seek(0);
+
+        while file.current_pos() != file.size {
+            records.push(Self::read_record(file));
+        }
+
+        records
+    }
 }
 
 impl From<&str> for FileStorage {
@@ -49,10 +69,10 @@ impl From<&str> for FileStorage {
 
 impl From<String> for FileStorage {
     fn from(filename: String) -> Self {
-        FileStorage {
-            file: FileWrapper::from(filename),
-            records: FileRecords::default(),
-        }
+        let mut file = FileWrapper::from(filename);
+        let records = FileRecords::from(Self::read_records(&mut file));
+
+        FileStorage { file, records }
     }
 }
 
@@ -72,8 +92,33 @@ mod tests {
     }
 
     #[test]
-    fn value() {
+    fn restore_from_open_file() {
         let test_file = TestFile::from("./file_storage_test02.agdb");
+        let value1 = vec![1_i64, 2_i64, 3_i64];
+        let value2 = 64_u64;
+        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
+        let index1;
+        let index2;
+        let index3;
+
+        {
+            let mut storage = FileStorage::from(test_file.file_name().clone());
+            index1 = storage.insert(&value1);
+            index2 = storage.insert(&value2);
+            index3 = storage.insert(&value3);
+        }
+
+        let mut storage = FileStorage::from(test_file.file_name().clone());
+
+        assert_eq!(storage.value::<Vec<i64>>(index1), Some(value1));
+        assert_eq!(storage.value::<u64>(index2), Some(value2));
+        assert_eq!(storage.value::<Vec<i64>>(index3), Some(value3));
+    }
+
+    #[test]
+    fn value() {
+        let test_file = TestFile::from("./file_storage_test03.agdb");
+
         let mut storage = FileStorage::from(test_file.file_name().clone());
 
         let index = storage.insert(&10_i64);
@@ -83,7 +128,8 @@ mod tests {
 
     #[test]
     fn value_at() {
-        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let test_file = TestFile::from("./file_storage_test04.agdb");
+
         let mut storage = FileStorage::from(test_file.file_name().clone());
         let data = vec![1_i64, 2_i64, 3_i64];
 
@@ -95,14 +141,16 @@ mod tests {
 
     #[test]
     fn value_at_of_missing_index() {
-        let test_file = TestFile::from("./file_storage_test04.agdb");
+        let test_file = TestFile::from("./file_storage_test05.agdb");
+
         let mut storage = FileStorage::from(test_file.file_name().clone());
         assert_eq!(storage.value_at::<i64>(0, 8), None);
     }
 
     #[test]
     fn value_of_missing_index() {
-        let test_file = TestFile::from("./file_storage_test05.agdb");
+        let test_file = TestFile::from("./file_storage_test06.agdb");
+
         let mut storage = FileStorage::from(test_file.file_name().clone());
         assert_eq!(storage.value::<i64>(0), None);
     }

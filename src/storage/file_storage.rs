@@ -2,6 +2,7 @@ use super::file_record::FileRecord;
 use super::file_records::FileRecords;
 use super::file_wrapper::FileWrapper;
 use super::serialize::Serialize;
+use crate::db_error::DbError;
 use std::mem::size_of;
 
 #[allow(dead_code)]
@@ -12,67 +13,72 @@ pub(crate) struct FileStorage {
 
 #[allow(dead_code)]
 impl FileStorage {
-    pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> i64 {
-        self.file.seek_end();
+    pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
+        self.file.seek_end()?;
         let bytes = value.serialize();
         let record = self.records.create(self.file.size, bytes.len() as u64);
-        self.file.write(&record.serialize());
-        self.file.write(&bytes);
-        record.index
+        self.file.write(&record.serialize())?;
+        self.file.write(&bytes)?;
+        Ok(record.index)
     }
 
-    pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Option<T> {
+    pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
-            self.file.seek(record.position + FileRecord::size() as u64);
-            return Some(T::deserialize(&self.file.read(record.size)));
+            self.file
+                .seek(record.position + FileRecord::size() as u64)?;
+            return Ok(T::deserialize(&self.file.read(record.size)?));
         }
 
-        None
+        Err(DbError::Storage(format!("Index '{}' not found", index)))
     }
 
-    pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Option<T> {
+    pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let read_start = record.position + FileRecord::size() as u64 + offset;
-            self.file.seek(read_start);
-            return Some(T::deserialize(&self.file.read(size_of::<T>() as u64)));
+            self.file.seek(read_start)?;
+            return Ok(T::deserialize(&self.file.read(size_of::<T>() as u64)?));
         }
 
-        None
+        Err(DbError::Storage(format!("Index '{}' not found", index)))
     }
 
-    fn read_record(file: &mut FileWrapper) -> FileRecord {
-        let pos = file.current_pos();
-        let mut record = FileRecord::deserialize(&file.read(FileRecord::size() as u64));
+    fn read_record(file: &mut FileWrapper) -> Result<FileRecord, DbError> {
+        let pos = file.current_pos()?;
+        let mut record = FileRecord::deserialize(&file.read(FileRecord::size() as u64)?);
         record.position = pos;
-        file.seek(pos + FileRecord::size() as u64 + record.size);
+        file.seek(pos + FileRecord::size() as u64 + record.size)?;
 
-        record
+        Ok(record)
     }
 
-    fn read_records(file: &mut FileWrapper) -> Vec<FileRecord> {
+    fn read_records(file: &mut FileWrapper) -> Result<Vec<FileRecord>, DbError> {
         let mut records: Vec<FileRecord> = vec![];
-        file.seek(0);
+        file.seek(0)?;
 
-        while file.current_pos() != file.size {
-            records.push(Self::read_record(file));
+        while file.current_pos()? != file.size {
+            records.push(Self::read_record(file)?);
         }
 
-        records
+        Ok(records)
     }
 }
 
-impl From<&str> for FileStorage {
-    fn from(filename: &str) -> Self {
-        FileStorage::from(filename.to_string())
+impl TryFrom<&str> for FileStorage {
+    type Error = DbError;
+
+    fn try_from(filename: &str) -> Result<Self, Self::Error> {
+        FileStorage::try_from(filename.to_string())
     }
 }
 
-impl From<String> for FileStorage {
-    fn from(filename: String) -> Self {
-        let mut file = FileWrapper::from(filename);
-        let records = FileRecords::from(Self::read_records(&mut file));
+impl TryFrom<String> for FileStorage {
+    type Error = DbError;
 
-        FileStorage { file, records }
+    fn try_from(filename: String) -> Result<Self, Self::Error> {
+        let mut file = FileWrapper::try_from(filename)?;
+        let records = FileRecords::from(Self::read_records(&mut file)?);
+
+        Ok(FileStorage { file, records })
     }
 }
 
@@ -84,11 +90,11 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::from("./file_storage_test01.agdb");
-        let mut storage = FileStorage::from(test_file.file_name().as_str());
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&10_i64);
 
-        assert_eq!(index, 0);
+        assert_eq!(index, Ok(0));
     }
 
     #[test]
@@ -102,61 +108,72 @@ mod tests {
         let index3;
 
         {
-            let mut storage = FileStorage::from(test_file.file_name().clone());
-            index1 = storage.insert(&value1);
-            index2 = storage.insert(&value2);
-            index3 = storage.insert(&value3);
+            let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+            index1 = storage.insert(&value1).unwrap();
+            index2 = storage.insert(&value2).unwrap();
+            index3 = storage.insert(&value3).unwrap();
         }
 
-        let mut storage = FileStorage::from(test_file.file_name().clone());
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
-        assert_eq!(storage.value::<Vec<i64>>(index1), Some(value1));
-        assert_eq!(storage.value::<u64>(index2), Some(value2));
-        assert_eq!(storage.value::<Vec<i64>>(index3), Some(value3));
+        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
+        assert_eq!(storage.value::<u64>(index2), Ok(value2));
+        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
     }
 
     #[test]
     fn value() {
         let test_file = TestFile::from("./file_storage_test03.agdb");
-        let mut storage = FileStorage::from(test_file.file_name().clone());
-        let index = storage.insert(&10_i64);
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let index = storage.insert(&10_i64).unwrap();
 
-        assert_eq!(storage.value::<i64>(index), Some(10_i64));
+        assert_eq!(storage.value::<i64>(index), Ok(10_i64));
     }
 
     #[test]
     fn value_at() {
         let test_file = TestFile::from("./file_storage_test04.agdb");
 
-        let mut storage = FileStorage::from(test_file.file_name().clone());
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         let data = vec![1_i64, 2_i64, 3_i64];
 
-        let index = storage.insert(&data);
+        let index = storage.insert(&data).unwrap();
         let offset = (size_of::<u64>() + size_of::<i64>()) as u64;
 
-        assert_eq!(storage.value_at::<i64>(index, offset), Some(2_i64));
+        assert_eq!(storage.value_at::<i64>(index, offset), Ok(2_i64));
     }
 
     #[test]
     fn value_at_of_missing_index() {
         let test_file = TestFile::from("./file_storage_test05.agdb");
-        let mut storage = FileStorage::from(test_file.file_name().clone());
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
-        assert_eq!(storage.value_at::<i64>(0, 8), None);
+        assert_eq!(
+            storage.value_at::<i64>(0, 8),
+            Err(DbError::Storage("Index '0' not found".to_string()))
+        );
     }
 
     #[test]
     fn value_of_missing_index() {
         let test_file = TestFile::from("./file_storage_test06.agdb");
-        let mut storage = FileStorage::from(test_file.file_name().clone());
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
-        assert_eq!(storage.value::<i64>(0), None);
+        assert_eq!(
+            storage.value::<i64>(0),
+            Err(DbError::Storage("Index '0' not found".to_string()))
+        );
     }
     #[test]
     fn value_out_of_bounds() {
         let test_file = TestFile::from("./file_storage_test07.agdb");
-        let mut storage = FileStorage::from(test_file.file_name().clone());
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
-        let index = storage.insert(&10_i64);
+        let index = storage.insert(&10_i64).unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index),
+            Err(DbError::Storage("Value out of bounds".to_string()))
+        );
     }
 }

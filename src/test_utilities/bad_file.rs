@@ -1,30 +1,149 @@
-use std::io::{Read, Result, Seek, SeekFrom, Write};
-
 struct BadFile {
-    read_result: Result<usize>,
-    seek_result: Result<u64>,
-    write_result: Result<usize>,
-    flush_result: Result<()>,
+    read_result: std::io::Result<usize>,
+    seek_result: std::io::Result<u64>,
+    write_result: std::io::Result<usize>,
+    flush_result: std::io::Result<()>,
 }
 
-impl Read for BadFile {
+impl std::io::Read for BadFile {
     fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
-        self.read_result
+        match &self.read_result {
+            Ok(v) => Ok(v.clone()),
+            Err(e) => Err(std::io::Error::from(e.kind())),
+        }
     }
 }
 
-impl Seek for BadFile {
-    fn seek(&mut self, _pos: SeekFrom) -> std::io::Result<u64> {
-        self.seek_result
+impl std::io::Seek for BadFile {
+    fn seek(&mut self, _pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        match &self.seek_result {
+            Ok(v) => Ok(v.clone()),
+            Err(e) => Err(std::io::Error::from(e.kind())),
+        }
     }
 }
 
-impl Write for BadFile {
+impl std::io::Write for BadFile {
     fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
-        self.write_result
+        match &self.write_result {
+            Ok(v) => Ok(v.clone()),
+            Err(e) => Err(std::io::Error::from(e.kind())),
+        }
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.flush_result
+        match &self.flush_result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(std::io::Error::from(e.kind())),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Read;
+    use std::io::Seek;
+    use std::io::Write;
+
+    use super::*;
+
+    #[test]
+    fn flush_ok() {
+        let mut file = BadFile {
+            read_result: Ok(0),
+            seek_result: Ok(0),
+            write_result: Ok(0),
+            flush_result: Ok(()),
+        };
+
+        assert!(file.flush().is_ok());
+    }
+
+    #[test]
+    fn flush_err() {
+        let mut file = BadFile {
+            read_result: Ok(0),
+            seek_result: Ok(0),
+            write_result: Ok(0),
+            flush_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+        };
+
+        assert!(file.flush().is_err());
+    }
+
+    #[test]
+    fn read_ok() {
+        let mut file = BadFile {
+            read_result: Ok(0),
+            seek_result: Ok(0),
+            write_result: Ok(0),
+            flush_result: Ok(()),
+        };
+
+        let mut buf = vec![0_u8; 0];
+        assert!(file.read(&mut buf).is_ok());
+    }
+
+    #[test]
+    fn read_err() {
+        let mut file = BadFile {
+            read_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            seek_result: Ok(0),
+            write_result: Ok(0),
+            flush_result: Ok(()),
+        };
+
+        let mut buf = vec![0_u8; 0];
+        assert!(file.read(&mut buf).is_err());
+    }
+
+    #[test]
+    fn seek_ok() {
+        let mut file = BadFile {
+            read_result: Ok(0),
+            seek_result: Ok(0),
+            write_result: Ok(0),
+            flush_result: Ok(()),
+        };
+
+        assert!(file.seek(std::io::SeekFrom::Current(0)).is_ok());
+    }
+
+    #[test]
+    fn seek_err() {
+        let mut file = BadFile {
+            read_result: Ok(0),
+            seek_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            write_result: Ok(0),
+            flush_result: Ok(()),
+        };
+
+        assert!(file.seek(std::io::SeekFrom::Current(0)).is_err());
+    }
+
+    #[test]
+    fn write_ok() {
+        let mut file = BadFile {
+            read_result: Ok(0),
+            seek_result: Ok(0),
+            write_result: Ok(0),
+            flush_result: Ok(()),
+        };
+
+        let buf = vec![0_u8; 0];
+        assert!(file.write(&buf).is_ok());
+    }
+
+    #[test]
+    fn write_err() {
+        let mut file = BadFile {
+            read_result: Ok(0),
+            seek_result: Ok(0),
+            write_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            flush_result: Ok(()),
+        };
+
+        let buf = vec![0_u8; 0];
+        assert!(file.write(&buf).is_err());
     }
 }

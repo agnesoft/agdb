@@ -8,7 +8,7 @@ struct BadFile {
 impl std::io::Read for BadFile {
     fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
         match &self.read_result {
-            Ok(v) => Ok(v.clone()),
+            Ok(v) => Ok(*v),
             Err(e) => Err(std::io::Error::from(e.kind())),
         }
     }
@@ -17,7 +17,7 @@ impl std::io::Read for BadFile {
 impl std::io::Seek for BadFile {
     fn seek(&mut self, _pos: std::io::SeekFrom) -> std::io::Result<u64> {
         match &self.seek_result {
-            Ok(v) => Ok(v.clone()),
+            Ok(v) => Ok(*v),
             Err(e) => Err(std::io::Error::from(e.kind())),
         }
     }
@@ -26,7 +26,7 @@ impl std::io::Seek for BadFile {
 impl std::io::Write for BadFile {
     fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
         match &self.write_result {
-            Ok(v) => Ok(v.clone()),
+            Ok(v) => Ok(*v),
             Err(e) => Err(std::io::Error::from(e.kind())),
         }
     }

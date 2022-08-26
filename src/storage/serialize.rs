@@ -9,7 +9,7 @@ pub(crate) trait Serialize: Sized {
 impl Serialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(i64::from_le_bytes(bytes.try_into().map_err(|_| {
-            DbError::Storage(format!("i64 deserialization error: out of bounds"))
+            DbError::Storage("i64 deserialization error: out of bounds".to_string())
         })?))
     }
 
@@ -21,7 +21,7 @@ impl Serialize for i64 {
 impl Serialize for u64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(u64::from_le_bytes(bytes.try_into().map_err(|_| {
-            DbError::Storage(format!("u64 deserialization error: out of bounds"))
+            DbError::Storage("u64 deserialization error: out of bounds".to_string())
         })?))
     }
 
@@ -34,7 +34,7 @@ impl<T: Serialize> Serialize for Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         const SIZE_OFFSET: usize = size_of::<usize>();
         let value_offset = size_of::<T>();
-        let size = u64::deserialize(&bytes)? as usize;
+        let size = u64::deserialize(bytes)? as usize;
         let mut data: Self = vec![];
 
         data.reserve(size);
@@ -42,8 +42,8 @@ impl<T: Serialize> Serialize for Vec<T> {
         for i in 0..size {
             let offset = SIZE_OFFSET + value_offset * i;
             let end = offset + value_offset;
-            data.push(T::deserialize(bytes.get(offset..end).ok_or(
-                DbError::Storage("Vec deserialization error: value out of bounds".to_string()),
+            data.push(T::deserialize(bytes.get(offset..end).ok_or_else(
+                || DbError::Storage("Vec deserialization error: value out of bounds".to_string()),
             )?)?);
         }
 

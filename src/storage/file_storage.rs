@@ -26,7 +26,7 @@ impl FileStorage {
         if let Some(record) = self.records.get(index) {
             self.file
                 .seek(record.position + FileRecord::size() as u64)?;
-            return Ok(T::deserialize(&self.file.read(record.size)?)?);
+            return T::deserialize(&self.file.read(record.size)?);
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
@@ -36,7 +36,7 @@ impl FileStorage {
         if let Some(record) = self.records.get(index) {
             let read_start = record.position + FileRecord::size() as u64 + offset;
             self.file.seek(read_start)?;
-            return Ok(T::deserialize(&self.file.read(size_of::<T>() as u64)?)?);
+            return T::deserialize(&self.file.read(size_of::<T>() as u64)?);
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))

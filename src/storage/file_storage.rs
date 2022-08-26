@@ -174,7 +174,7 @@ mod tests {
         assert_eq!(
             storage.value::<Vec<i64>>(index),
             Err(DbError::Storage(
-                "Vec deserialization error: value out of bounds".to_string()
+                "i64 deserialization error: out of bounds".to_string()
             ))
         );
     }

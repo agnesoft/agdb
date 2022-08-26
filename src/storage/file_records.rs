@@ -46,7 +46,7 @@ impl From<Vec<FileRecord>> for FileRecords {
         records.sort();
 
         for record in records {
-            for index in last_index + 1..record.index {
+            for index in (last_index + 1)..record.index {
                 file_records.free_list.push(index);
             }
 

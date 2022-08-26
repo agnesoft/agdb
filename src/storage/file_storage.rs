@@ -26,25 +26,25 @@ impl FileStorage {
         if let Some(record) = self.records.get(index) {
             self.file
                 .seek(record.position + FileRecord::size() as u64)?;
-            return Ok(T::deserialize(&self.file.read(record.size)?));
+            return Ok(T::deserialize(&self.file.read(record.size)?)?);
         }
 
-        Err(DbError::Storage(format!("Index '{}' not found", index)))
+        Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let read_start = record.position + FileRecord::size() as u64 + offset;
             self.file.seek(read_start)?;
-            return Ok(T::deserialize(&self.file.read(size_of::<T>() as u64)?));
+            return Ok(T::deserialize(&self.file.read(size_of::<T>() as u64)?)?);
         }
 
-        Err(DbError::Storage(format!("Index '{}' not found", index)))
+        Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
     fn read_record(file: &mut FileWrapper) -> Result<FileRecord, DbError> {
         let pos = file.current_pos()?;
-        let mut record = FileRecord::deserialize(&file.read(FileRecord::size() as u64)?);
+        let mut record = FileRecord::deserialize(&file.read(FileRecord::size() as u64)?)?;
         record.position = pos;
         file.seek(pos + FileRecord::size() as u64 + record.size)?;
 
@@ -150,7 +150,7 @@ mod tests {
 
         assert_eq!(
             storage.value_at::<i64>(0, 8),
-            Err(DbError::Storage("Index '0' not found".to_string()))
+            Err(DbError::Storage("index '0' not found".to_string()))
         );
     }
 
@@ -161,7 +161,7 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(0),
-            Err(DbError::Storage("Index '0' not found".to_string()))
+            Err(DbError::Storage("index '0' not found".to_string()))
         );
     }
     #[test]
@@ -173,7 +173,9 @@ mod tests {
 
         assert_eq!(
             storage.value::<Vec<i64>>(index),
-            Err(DbError::Storage("Value out of bounds".to_string()))
+            Err(DbError::Storage(
+                "Vec deserialization error: value out of bounds".to_string()
+            ))
         );
     }
 }

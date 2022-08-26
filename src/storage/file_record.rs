@@ -23,9 +23,17 @@ impl Serialize for FileRecord {
         const END: usize = SIZE_OFFSET + size_of::<u64>();
 
         Ok(FileRecord {
-            index: i64::deserialize(&bytes[0..SIZE_OFFSET])?,
+            index: i64::deserialize(bytes.get(0..SIZE_OFFSET).ok_or_else(|| {
+                DbError::Storage(
+                    "FileRecord deserialization error: index value out of bounds".to_string(),
+                )
+            })?)?,
             position: 0,
-            size: u64::deserialize(&bytes[SIZE_OFFSET..END])?,
+            size: u64::deserialize(bytes.get(SIZE_OFFSET..END).ok_or_else(|| {
+                DbError::Storage(
+                    "FileRecord deserialization error: size value out of bounds".to_string(),
+                )
+            })?)?,
         })
     }
 
@@ -59,11 +67,29 @@ mod tests {
     }
 
     #[test]
-    fn deserialization_out_of_bounds() {
+    fn deserialization_index_out_of_bounds() {
         let bytes = vec![0_u8; 4];
         let actual_record = FileRecord::deserialize(&bytes);
 
-        assert_eq!(actual_record, Err(DbError::Storage("".to_string())));
+        assert_eq!(
+            actual_record,
+            Err(DbError::Storage(
+                "FileRecord deserialization error: index value out of bounds".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn deserialization_size_out_of_bounds() {
+        let bytes = vec![0_u8; 12];
+        let actual_record = FileRecord::deserialize(&bytes);
+
+        assert_eq!(
+            actual_record,
+            Err(DbError::Storage(
+                "FileRecord deserialization error: size value out of bounds".to_string()
+            ))
+        );
     }
 
     #[test]

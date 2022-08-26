@@ -34,7 +34,9 @@ impl<T: Serialize> Serialize for Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         const SIZE_OFFSET: usize = size_of::<usize>();
         let value_offset = size_of::<T>();
-        let size = u64::deserialize(bytes)? as usize;
+        let size = u64::deserialize(bytes.get(0..SIZE_OFFSET).ok_or_else(|| {
+            DbError::Storage("Vec deserialization error: size out of bounds".to_string())
+        })?)? as usize;
         let mut data: Self = vec![];
 
         data.reserve(size);
@@ -128,7 +130,7 @@ mod tests {
         assert_eq!(
             Vec::<i64>::deserialize(&bytes),
             Err(DbError::Storage(
-                "u64 deserialization error: out of bounds".to_string()
+                "Vec deserialization error: size out of bounds".to_string()
             ))
         );
     }

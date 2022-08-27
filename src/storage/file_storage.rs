@@ -15,8 +15,6 @@ pub(crate) struct FileStorage {
 
 #[allow(dead_code)]
 impl FileStorage {
-    //fn move_value(&mut self, )
-
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
         self.file.seek(std::io::SeekFrom::End(0))?;
         let bytes = value.serialize();
@@ -37,17 +35,7 @@ impl FileStorage {
             let bytes = T::serialize(value);
 
             if offset + bytes.len() as u64 > record.size {
-                self.file.seek(std::io::SeekFrom::Start(
-                    record.position + FileRecord::size() as u64,
-                ))?;
-                let orig_read = std::cmp::min(offset, record.size);
-                let orig_value = FileStorage::read_exact(&mut self.file, orig_read)?;
-                self.file.seek(std::io::SeekFrom::End(0))?;
-                record.position = self.file.seek(std::io::SeekFrom::Current(0))?;
-                record.size = offset + bytes.len() as u64;
-                let record_bytes = record.serialize();
-                self.file.write_all(&record_bytes)?;
-                self.file.write_all(&orig_value)?;
+                FileStorage::move_value_to_end(&mut self.file, record, offset, bytes.len() as u64)?;
             }
 
             let write_start = record.position + FileRecord::size() as u64 + offset;
@@ -78,6 +66,25 @@ impl FileStorage {
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
+    }
+
+    fn move_value_to_end(
+        file: &mut std::fs::File,
+        record: &mut FileRecord,
+        offset: u64,
+        new_value_size: u64,
+    ) -> Result<(), DbError> {
+        let value_position = record.position + FileRecord::size() as u64;
+        file.seek(std::io::SeekFrom::Start(value_position))?;
+        let read_size = std::cmp::min(offset, record.size);
+        let orig_value = FileStorage::read_exact(file, read_size)?;
+        file.seek(std::io::SeekFrom::End(0))?;
+        record.position = file.seek(std::io::SeekFrom::Current(0))?;
+        record.size = offset + new_value_size;
+        let record_bytes = record.serialize();
+        file.write_all(&record_bytes)?;
+        file.write_all(&orig_value)?;
+        Ok(())
     }
 
     fn read_exact(file: &mut std::fs::File, size: u64) -> Result<Vec<u8>, DbError> {

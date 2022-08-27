@@ -48,6 +48,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn default_constructed() {
+        let _file = BadFile::default();
+    }
+
+    #[test]
     fn flush_ok() {
         let mut file = BadFile {
             read_result: Ok(0),
@@ -55,6 +60,7 @@ mod tests {
             write_result: Ok(0),
             flush_result: Ok(()),
         };
+        let mut file = BadFile::default();
 
         assert!(file.flush().is_ok());
     }
@@ -66,19 +72,34 @@ mod tests {
             seek_result: Ok(0),
             write_result: Ok(0),
             flush_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            ..Default::default()
         };
 
         assert!(file.flush().is_err());
     }
 
     #[test]
-    fn read_ok() {
+    fn read_exact_ok() {
+        let mut file = BadFile::default();
+
+        let mut buf = vec![0_u8; 0];
+        assert!(file.read_exact(&mut buf).is_ok());
+    }
+
+    #[test]
+    fn read_exact_err() {
         let mut file = BadFile {
-            read_result: Ok(0),
-            seek_result: Ok(0),
-            write_result: Ok(0),
-            flush_result: Ok(()),
+            read_exact_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            ..Default::default()
         };
+
+        let mut buf = vec![0_u8; 0];
+        assert!(file.read_exact(&mut buf).is_err());
+    }
+
+    #[test]
+    fn read_ok() {
+        let mut file = BadFile::default();
 
         let mut buf = vec![0_u8; 0];
         assert!(file.read(&mut buf).is_ok());
@@ -91,6 +112,7 @@ mod tests {
             seek_result: Ok(0),
             write_result: Ok(0),
             flush_result: Ok(()),
+            ..Default::default()
         };
 
         let mut buf = vec![0_u8; 0];
@@ -105,6 +127,7 @@ mod tests {
             write_result: Ok(0),
             flush_result: Ok(()),
         };
+        let mut file = BadFile::default();
 
         assert!(file.seek(std::io::SeekFrom::Current(0)).is_ok());
     }
@@ -116,19 +139,34 @@ mod tests {
             seek_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
             write_result: Ok(0),
             flush_result: Ok(()),
+            ..Default::default()
         };
 
         assert!(file.seek(std::io::SeekFrom::Current(0)).is_err());
     }
 
     #[test]
-    fn write_ok() {
+    fn write_all_ok() {
+        let mut file = BadFile::default();
+
+        let buf = vec![0_u8; 0];
+        assert!(file.write_all(&buf).is_ok());
+    }
+
+    #[test]
+    fn write_all_err() {
         let mut file = BadFile {
-            read_result: Ok(0),
-            seek_result: Ok(0),
-            write_result: Ok(0),
-            flush_result: Ok(()),
+            write_all_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            ..Default::default()
         };
+
+        let buf = vec![0_u8; 0];
+        assert!(file.write_all(&buf).is_err());
+    }
+
+    #[test]
+    fn write_ok() {
+        let mut file = BadFile::default();
 
         let buf = vec![0_u8; 0];
         assert!(file.write(&buf).is_ok());
@@ -140,7 +178,7 @@ mod tests {
             read_result: Ok(0),
             seek_result: Ok(0),
             write_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
-            flush_result: Ok(()),
+            ..Default::default()
         };
 
         let buf = vec![0_u8; 0];

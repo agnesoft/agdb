@@ -32,6 +32,10 @@ impl FileRecords {
         self.records.get(&index)
     }
 
+    pub(crate) fn get_mut(&mut self, index: i64) -> Option<&mut FileRecord> {
+        self.records.get_mut(&index)
+    }
+
     pub(crate) fn remove(&mut self, index: i64) {
         self.records.remove(&index);
         self.free_list.push(index);
@@ -64,30 +68,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_constructed() {
-        let _records = FileRecords::default();
-    }
-
-    #[test]
-    fn get() {
-        let mut file_records = FileRecords::default();
-        let position = 32_u64;
-        let size = 64_u64;
-
-        file_records.create(position, size);
-        let expected_record = FileRecord {
-            index: 0,
-            position,
-            size,
-        };
-
-        assert_eq!(
-            file_records.get(expected_record.index),
-            Some(&expected_record)
-        );
-    }
-
-    #[test]
     fn create() {
         let mut file_records = FileRecords::default();
         let position = 32_u64;
@@ -101,6 +81,11 @@ mod tests {
         };
 
         assert_eq!(actual_record, expected_record);
+    }
+
+    #[test]
+    fn default_constructed() {
+        let _records = FileRecords::default();
     }
 
     #[test]
@@ -156,6 +141,44 @@ mod tests {
         assert_eq!(new_record1.index, 3);
         assert_eq!(new_record2.index, 2);
         assert_eq!(new_record3.index, 5);
+    }
+
+    #[test]
+    fn get() {
+        let mut file_records = FileRecords::default();
+        let position = 32_u64;
+        let size = 64_u64;
+
+        file_records.create(position, size);
+        let expected_record = FileRecord {
+            index: 0,
+            position,
+            size,
+        };
+
+        assert_eq!(
+            file_records.get(expected_record.index),
+            Some(&expected_record)
+        );
+    }
+
+    #[test]
+    fn get_mut() {
+        let mut file_records = FileRecords::default();
+        let position = 32_u64;
+        let size = 64_u64;
+
+        file_records.create(position, size);
+        let mut expected_record = FileRecord {
+            index: 0,
+            position,
+            size,
+        };
+
+        assert_eq!(
+            file_records.get_mut(expected_record.index),
+            Some(&mut expected_record)
+        );
     }
 
     #[test]

@@ -15,6 +15,8 @@ pub(crate) struct FileStorage {
 
 #[allow(dead_code)]
 impl FileStorage {
+    //fn move_value(&mut self, )
+
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
         self.file.seek(std::io::SeekFrom::End(0))?;
         let bytes = value.serialize();
@@ -35,7 +37,17 @@ impl FileStorage {
             let bytes = T::serialize(value);
 
             if offset + bytes.len() as u64 > record.size {
-                todo!()
+                self.file.seek(std::io::SeekFrom::Start(
+                    record.position + FileRecord::size() as u64,
+                ))?;
+                let orig_read = std::cmp::min(offset, record.size);
+                let orig_value = FileStorage::read_exact(&mut self.file, orig_read)?;
+                self.file.seek(std::io::SeekFrom::End(0))?;
+                record.position = self.file.seek(std::io::SeekFrom::Current(0))?;
+                record.size = offset + bytes.len() as u64;
+                let record_bytes = record.serialize();
+                self.file.write_all(&record_bytes)?;
+                self.file.write_all(&orig_value)?;
             }
 
             let write_start = record.position + FileRecord::size() as u64 + offset;
@@ -176,6 +188,38 @@ mod tests {
         assert_eq!(
             storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 10_i64, 3_i64]
+        );
+    }
+
+    #[test]
+    fn insert_at_value_end() {
+        let test_file = TestFile::from("./file_storage-insert_at_value_end.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 3) as u64;
+        storage.insert_at(index, 0, &4_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 2_i64, 3_i64, 10_i64]
+        );
+    }
+
+    #[test]
+    fn insert_at_beyond_end() {
+        let test_file = TestFile::from("./file_storage-insert_at_beyond_end.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 4) as u64;
+        storage.insert_at(index, 0, &5_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
         );
     }
 

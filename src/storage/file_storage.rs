@@ -68,6 +68,14 @@ impl FileStorage {
         Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
+    pub(crate) fn value_size(&self, index: i64) -> Result<u64, DbError> {
+        if let Some(record) = self.records.get(index) {
+            return Ok(record.size);
+        }
+
+        Err(DbError::Storage(format!("index '{}' not found", index)))
+    }
+
     fn move_value_to_end(
         file: &mut std::fs::File,
         record: &mut FileRecord,
@@ -355,6 +363,28 @@ mod tests {
             Err(DbError::Storage(
                 "i64 deserialization error: out of bounds".to_string()
             ))
+        );
+    }
+
+    #[test]
+    fn value_size() {
+        let test_file = TestFile::from("./file_storage-value_size.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let index = storage.insert(&10_i64).unwrap();
+        let expected_size = std::mem::size_of::<i64>() as u64;
+
+        assert_eq!(storage.value_size(index), Ok(expected_size));
+    }
+
+    #[test]
+    fn value_size_of_missing_index() {
+        let test_file = TestFile::from("./file_storage-value_size_of_missing_index.agdb");
+        let storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        assert_eq!(
+            storage.value_size(0),
+            Err(DbError::Storage("index '0' not found".to_string()))
         );
     }
 }

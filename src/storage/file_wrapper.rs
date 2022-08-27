@@ -76,7 +76,7 @@ mod tests {
     fn bad_read() {
         let mut file = FileWrapper {
             file: BadFile {
-                read_exact_result: Err(std::io::ErrorKind::Other.into()),
+                read_exact_results: vec![Err(std::io::ErrorKind::Other.into())],
                 ..Default::default()
             },
             filename: "".to_string(),
@@ -89,7 +89,7 @@ mod tests {
     fn bad_seek() {
         let mut file = FileWrapper {
             file: BadFile {
-                seek_result: Err(std::io::ErrorKind::Other.into()),
+                seek_results: vec![Err(std::io::ErrorKind::Other.into())],
                 ..Default::default()
             },
             filename: "".to_string(),
@@ -105,7 +105,7 @@ mod tests {
     fn bad_write_all() {
         let mut file = FileWrapper {
             file: BadFile {
-                write_all_result: Err(std::io::ErrorKind::Other.into()),
+                write_all_results: vec![Err(std::io::ErrorKind::Other.into())],
                 ..Default::default()
             },
             filename: "".to_string(),
@@ -165,6 +165,58 @@ mod tests {
         assert_eq!(file.current_pos(), Ok(0));
         file.seek_end().unwrap();
         assert_eq!(file.current_pos(), Ok(std::mem::size_of::<i64>() as u64));
+    }
+
+    #[test]
+    fn size_bad_first_seek() {
+        let mut file = FileWrapper {
+            file: BadFile {
+                seek_results: vec![Err(std::io::ErrorKind::Other.into())],
+                ..Default::default()
+            },
+            filename: "".to_string(),
+        };
+
+        assert!(file.size().is_err());
+    }
+
+    #[test]
+    fn size_bad_second_seek() {
+        let mut file = FileWrapper {
+            file: BadFile {
+                seek_results: vec![Ok(0), Err(std::io::ErrorKind::Other.into())],
+                ..Default::default()
+            },
+            filename: "".to_string(),
+        };
+
+        assert!(file.size().is_err());
+    }
+
+    #[test]
+    fn size_bad_third_seek() {
+        let mut file = FileWrapper {
+            file: BadFile {
+                seek_results: vec![Ok(0), Ok(0), Err(std::io::ErrorKind::Other.into())],
+                ..Default::default()
+            },
+            filename: "".to_string(),
+        };
+
+        assert!(file.size().is_err());
+    }
+
+    #[test]
+    fn size_bad_fourth_seek() {
+        let mut file = FileWrapper {
+            file: BadFile {
+                seek_results: vec![Ok(0), Ok(0), Ok(0), Err(std::io::ErrorKind::Other.into())],
+                ..Default::default()
+            },
+            filename: "".to_string(),
+        };
+
+        assert!(file.size().is_err());
     }
 
     #[test]

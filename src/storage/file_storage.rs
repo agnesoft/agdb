@@ -357,4 +357,26 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn value_size() {
+        let test_file = TestFile::from("./file_storage-value_size.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let index = storage.insert(&10_i64).unwrap();
+        let expected_size = std::mem::size_of::<i64>() as u64;
+
+        assert_eq!(storage.value_size(index), Ok(expected_size));
+    }
+
+    #[test]
+    fn value_size_of_missing_index() {
+        let test_file = TestFile::from("./file_storage-value_size_of_missing_index.agdb");
+        let storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        assert_eq!(
+            storage.value_size(0),
+            Err(DbError::Storage("index '0' not found".to_string()))
+        );
+    }
 }

@@ -55,7 +55,7 @@ impl TryFrom<String> for FileWrapper {
     type Error = DbError;
 
     fn try_from(filename: String) -> Result<Self, Self::Error> {
-        let mut file = std::fs::OpenOptions::new()
+        let file = std::fs::OpenOptions::new()
             .write(true)
             .create(true)
             .read(true)
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn create_new_file() {
         let test_file = TestFile::from("./file_wrapper-create_new_file.agdb");
-        let file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
+        let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
 
         assert!(std::path::Path::new(test_file.file_name()).exists());
         assert_eq!(&file.filename, test_file.file_name());

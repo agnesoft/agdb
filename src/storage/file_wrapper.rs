@@ -9,7 +9,6 @@ where
 {
     pub(crate) file: FileT,
     pub(crate) filename: String,
-    pub(crate) size: u64,
 }
 
 #[allow(dead_code)]
@@ -39,13 +38,15 @@ where
         Ok(())
     }
 
+    pub(crate) fn size(&mut self) -> Result<u64, DbError> {
+        let current = self.current_pos()?;
+        self.seek_end()?;
+        let size = self.current_pos()?;
+        self.seek(current)?;
+        Ok(size)
+    }
+
     pub(crate) fn write(&mut self, data: &[u8]) -> Result<(), DbError> {
-        let end_position = self.current_pos()? + data.len() as u64;
-
-        if end_position > self.size {
-            self.size = end_position;
-        }
-
         Ok(self.file.write_all(data)?)
     }
 }
@@ -60,13 +61,7 @@ impl TryFrom<String> for FileWrapper {
             .read(true)
             .open(&filename)?;
 
-        let size = std::io::Seek::seek(&mut file, std::io::SeekFrom::End(0))?;
-
-        Ok(FileWrapper {
-            file,
-            filename,
-            size,
-        })
+        Ok(FileWrapper { file, filename })
     }
 }
 
@@ -85,7 +80,6 @@ mod tests {
                 ..Default::default()
             },
             filename: "".to_string(),
-            size: 0,
         };
 
         assert!(file.read(0).is_err());
@@ -99,14 +93,12 @@ mod tests {
                 ..Default::default()
             },
             filename: "".to_string(),
-            size: 0,
         };
 
         assert!(file.seek(0).is_err());
         assert!(file.current_pos().is_err());
         assert!(file.seek_end().is_err());
-        let bytes = vec![0_u8; 0];
-        assert!(file.write(&bytes).is_err());
+        assert!(file.size().is_err());
     }
 
     #[test]
@@ -117,7 +109,6 @@ mod tests {
                 ..Default::default()
             },
             filename: "".to_string(),
-            size: 0,
         };
 
         let bytes = vec![0_u8; 0];
@@ -131,7 +122,7 @@ mod tests {
 
         assert!(std::path::Path::new(test_file.file_name()).exists());
         assert_eq!(&file.filename, test_file.file_name());
-        assert_eq!(file.size, 0);
+        assert_eq!(file.size(), Ok(0));
     }
 
     #[test]
@@ -182,9 +173,9 @@ mod tests {
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
-        assert_eq!(file.size, 0);
+        assert_eq!(file.size(), Ok(0));
         file.write(&data).unwrap();
-        assert_eq!(file.size, std::mem::size_of::<i64>() as u64);
+        assert_eq!(file.size(), Ok(std::mem::size_of::<i64>() as u64));
     }
 
     #[test]
@@ -193,11 +184,11 @@ mod tests {
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
-        assert_eq!(file.size, 0);
+        assert_eq!(file.size(), Ok(0));
         file.write(&data).unwrap();
         file.seek(0).unwrap();
         file.write(&data).unwrap();
-        assert_eq!(file.size, std::mem::size_of::<i64>() as u64);
+        assert_eq!(file.size(), Ok(std::mem::size_of::<i64>() as u64));
     }
 
     #[test]
@@ -206,15 +197,15 @@ mod tests {
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
-        assert_eq!(file.size, 0);
+        assert_eq!(file.size(), Ok(0));
 
         file.write(&data).unwrap();
         file.seek((std::mem::size_of::<i64>() as u64) / 2).unwrap();
         file.write(&data).unwrap();
 
         assert_eq!(
-            file.size,
-            std::mem::size_of::<i64>() as u64 + (std::mem::size_of::<i64>() as u64 / 2)
+            file.size(),
+            Ok(std::mem::size_of::<i64>() as u64 + (std::mem::size_of::<i64>() as u64 / 2))
         );
     }
 

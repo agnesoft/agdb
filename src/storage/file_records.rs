@@ -32,6 +32,10 @@ impl FileRecords {
         self.records.get(&index)
     }
 
+    pub(crate) fn get_mut(&mut self, index: i64) -> Option<&mut FileRecord> {
+        self.records.get_mut(&index)
+    }
+
     pub(crate) fn remove(&mut self, index: i64) {
         self.records.remove(&index);
         self.free_list.push(index);

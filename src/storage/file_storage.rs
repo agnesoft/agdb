@@ -38,11 +38,9 @@ impl FileStorage {
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let read_start = record.position + FileRecord::size() as u64 + offset;
+            let value_size = FileStorage::value_read_size::<T>(record.size, offset)?;
             self.file.seek(std::io::SeekFrom::Start(read_start))?;
-            return T::deserialize(&FileStorage::read_exact(
-                &mut self.file,
-                std::mem::size_of::<T>() as u64,
-            )?);
+            return T::deserialize(&FileStorage::read_exact(&mut self.file, value_size)?);
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
@@ -83,6 +81,26 @@ impl FileStorage {
         let size = self.file.seek(std::io::SeekFrom::Current(0))?;
         self.file.seek(std::io::SeekFrom::Start(current))?;
         Ok(size)
+    }
+
+    fn value_read_size<T>(size: u64, offset: u64) -> Result<u64, DbError> {
+        let value_size = std::mem::size_of::<T>() as u64;
+
+        if offset > size {
+            return Err(DbError::Storage(format!(
+                "{} deserialization error: offset out of bounds",
+                std::any::type_name::<T>()
+            )));
+        }
+
+        if size - offset < value_size {
+            return Err(DbError::Storage(format!(
+                "{} deserialization error: value out of bounds",
+                std::any::type_name::<T>()
+            )));
+        }
+
+        Ok(std::mem::size_of::<T>() as u64)
     }
 }
 
@@ -182,6 +200,40 @@ mod tests {
     }
 
     #[test]
+    fn value_at_out_of_bounds() {
+        let test_file = TestFile::from("./file_storage-value_at_out_of_bounds.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let data = vec![1_i64, 2_i64];
+        let index = storage.insert(&data).unwrap();
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 2) as u64;
+
+        assert_eq!(
+            storage.value_at::<i64>(index, offset),
+            Err(DbError::Storage(
+                "i64 deserialization error: value out of bounds".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn value_at_offset_overflow() {
+        let test_file = TestFile::from("./file_storage-value_at_offset_overflow.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let data = vec![1_i64, 2_i64];
+        let index = storage.insert(&data).unwrap();
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 3) as u64;
+
+        assert_eq!(
+            storage.value_at::<i64>(index, offset),
+            Err(DbError::Storage(
+                "i64 deserialization error: offset out of bounds".to_string()
+            ))
+        );
+    }
+
+    #[test]
     fn value_of_missing_index() {
         let test_file = TestFile::from("./file_storage-value_of_missing_index.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
@@ -191,6 +243,7 @@ mod tests {
             Err(DbError::Storage("index '0' not found".to_string()))
         );
     }
+
     #[test]
     fn value_out_of_bounds() {
         let test_file = TestFile::from("./file_storage-value_out_of_bounds.agdb");

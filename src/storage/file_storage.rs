@@ -25,7 +25,7 @@ where
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
         self.file.seek_end()?;
         let bytes = value.serialize();
-        let record = self.records.create(self.file.size, bytes.len() as u64);
+        let record = self.records.create(self.file.size()?, bytes.len() as u64);
         self.file.write(&record.serialize())?;
         self.file.write(&bytes)?;
         Ok(record.index)
@@ -64,7 +64,7 @@ where
         let mut records: Vec<FileRecord> = vec![];
         file.seek(0)?;
 
-        while file.current_pos()? != file.size {
+        while file.current_pos()? != file.size()? {
             records.push(Self::read_record(file)?);
         }
 
@@ -104,7 +104,6 @@ mod tests {
             file: FileWrapper {
                 file: bad_file,
                 filename: "".to_string(),
-                size: 0,
             },
             records: FileRecords::default(),
         }

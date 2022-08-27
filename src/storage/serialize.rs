@@ -1,14 +1,21 @@
+use crate::db_error::DbError;
 use std::mem::size_of;
 
-pub(crate) trait Serialize {
-    fn deserialize(bytes: &[u8]) -> Self;
+pub(crate) trait Serialize: Sized {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
     fn serialize(&self) -> Vec<u8>;
 }
 
 impl Serialize for i64 {
-    fn deserialize(bytes: &[u8]) -> Self {
-        const END: usize = size_of::<i64>();
-        i64::from_le_bytes((&bytes[0..END]).try_into().unwrap())
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let buffer: [u8; size_of::<Self>()] = bytes
+            .get(0..size_of::<Self>())
+            .ok_or_else(|| {
+                DbError::Storage("i64 deserialization error: out of bounds".to_string())
+            })?
+            .try_into()
+            .unwrap();
+        Ok(Self::from_le_bytes(buffer))
     }
 
     fn serialize(&self) -> Vec<u8> {
@@ -17,9 +24,15 @@ impl Serialize for i64 {
 }
 
 impl Serialize for u64 {
-    fn deserialize(bytes: &[u8]) -> Self {
-        const END: usize = size_of::<u64>();
-        u64::from_le_bytes((&bytes[0..END]).try_into().unwrap())
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let buffer: [u8; size_of::<Self>()] = bytes
+            .get(0..size_of::<Self>())
+            .ok_or_else(|| {
+                DbError::Storage("u64 deserialization error: out of bounds".to_string())
+            })?
+            .try_into()
+            .unwrap();
+        Ok(Self::from_le_bytes(buffer))
     }
 
     fn serialize(&self) -> Vec<u8> {
@@ -28,21 +41,20 @@ impl Serialize for u64 {
 }
 
 impl<T: Serialize> Serialize for Vec<T> {
-    fn deserialize(bytes: &[u8]) -> Self {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         const SIZE_OFFSET: usize = size_of::<usize>();
         let value_offset = size_of::<T>();
-        let size = u64::deserialize(&bytes[0..SIZE_OFFSET]) as usize;
+        let size = u64::deserialize(bytes)? as usize;
         let mut data: Self = vec![];
 
         data.reserve(size);
 
-        for i in 0..(size) {
+        for i in 0..size {
             let offset = SIZE_OFFSET + value_offset * i;
-            let end = offset + value_offset;
-            data.push(T::deserialize(&bytes[offset..end]));
+            data.push(T::deserialize(&bytes[offset..])?);
         }
 
-        data
+        Ok(data)
     }
 
     fn serialize(&self) -> Vec<u8> {
@@ -71,7 +83,19 @@ mod tests {
         let bytes = number.serialize();
         let actual = i64::deserialize(&bytes);
 
-        assert_eq!(actual, number)
+        assert_eq!(actual, Ok(number))
+    }
+
+    #[test]
+    fn i64_out_of_bounds() {
+        let bytes = vec![0_u8; 4];
+
+        assert_eq!(
+            i64::deserialize(&bytes),
+            Err(DbError::Storage(
+                "i64 deserialization error: out of bounds".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -80,7 +104,19 @@ mod tests {
         let bytes = number.serialize();
         let actual = u64::deserialize(&bytes);
 
-        assert_eq!(actual, number)
+        assert_eq!(actual, Ok(number))
+    }
+
+    #[test]
+    fn u64_out_of_bounds() {
+        let bytes = vec![0_u8; 4];
+
+        assert_eq!(
+            u64::deserialize(&bytes),
+            Err(DbError::Storage(
+                "u64 deserialization error: out of bounds".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -89,6 +125,30 @@ mod tests {
         let bytes = data.serialize();
         let actual = Vec::<i64>::deserialize(&bytes);
 
-        assert_eq!(actual, data);
+        assert_eq!(actual, Ok(data));
+    }
+
+    #[test]
+    fn vec_size_out_of_bounds() {
+        let bytes = vec![0_u8; 4];
+
+        assert_eq!(
+            Vec::<i64>::deserialize(&bytes),
+            Err(DbError::Storage(
+                "u64 deserialization error: out of bounds".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn vec_value_out_of_bounds() {
+        let bytes = 1_u64.serialize();
+
+        assert_eq!(
+            Vec::<i64>::deserialize(&bytes),
+            Err(DbError::Storage(
+                "i64 deserialization error: out of bounds".to_string()
+            ))
+        );
     }
 }

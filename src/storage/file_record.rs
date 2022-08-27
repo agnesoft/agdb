@@ -1,6 +1,6 @@
-use std::mem::size_of;
-
 use super::serialize::Serialize;
+use crate::db_error::DbError;
+use std::mem::size_of;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Eq, Ord, PartialOrd, PartialEq)]
@@ -18,15 +18,14 @@ impl FileRecord {
 }
 
 impl Serialize for FileRecord {
-    fn deserialize(bytes: &[u8]) -> Self {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         const SIZE_OFFSET: usize = size_of::<i64>();
-        const END: usize = SIZE_OFFSET + size_of::<u64>();
 
-        FileRecord {
-            index: i64::deserialize(&bytes[0..SIZE_OFFSET]),
+        Ok(FileRecord {
+            index: i64::deserialize(bytes)?,
             position: 0,
-            size: u64::deserialize(&bytes[SIZE_OFFSET..END]),
-        }
+            size: u64::deserialize(&bytes[SIZE_OFFSET..])?,
+        })
     }
 
     fn serialize(&self) -> Vec<u8> {
@@ -38,9 +37,8 @@ impl Serialize for FileRecord {
 
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
-
     use super::*;
+    use std::cmp::Ordering;
 
     #[test]
     fn default_constructed() {
@@ -60,6 +58,32 @@ mod tests {
     }
 
     #[test]
+    fn deserialization_index_out_of_bounds() {
+        let bytes = vec![0_u8; 4];
+        let actual_record = FileRecord::deserialize(&bytes);
+
+        assert_eq!(
+            actual_record,
+            Err(DbError::Storage(
+                "i64 deserialization error: out of bounds".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn deserialization_size_out_of_bounds() {
+        let bytes = vec![0_u8; 12];
+        let actual_record = FileRecord::deserialize(&bytes);
+
+        assert_eq!(
+            actual_record,
+            Err(DbError::Storage(
+                "u64 deserialization error: out of bounds".to_string()
+            ))
+        );
+    }
+
+    #[test]
     fn serialization() {
         let record = FileRecord {
             index: 1,
@@ -70,7 +94,7 @@ mod tests {
         let bytes = record.serialize();
         let actual_record = FileRecord::deserialize(&bytes);
 
-        assert_eq!(record, actual_record);
+        assert_eq!(actual_record, Ok(record));
     }
 
     #[test]

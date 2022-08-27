@@ -68,6 +68,14 @@ impl FileStorage {
         Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
+    pub(crate) fn value_size(&self, index: i64) -> Result<u64, DbError> {
+        if let Some(record) = self.records.get(index) {
+            return Ok(record.size);
+        }
+
+        Err(DbError::Storage(format!("index '{}' not found", index)))
+    }
+
     fn move_value_to_end(
         file: &mut std::fs::File,
         record: &mut FileRecord,

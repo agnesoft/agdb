@@ -1,41 +1,35 @@
+use std::io::Read;
+use std::io::Seek;
+use std::io::Write;
+
 use super::file_record::FileRecord;
 use super::file_records::FileRecords;
-use super::file_wrapper::FileWrapper;
 use super::serialize::Serialize;
 use crate::db_error::DbError;
 
 #[allow(dead_code)]
-pub(crate) struct FileStorage<FileT = std::fs::File>
-where
-    FileT: std::io::Read,
-    FileT: std::io::Seek,
-    FileT: std::io::Write,
-{
-    file: FileWrapper<FileT>,
+pub(crate) struct FileStorage {
+    file: std::fs::File,
     records: FileRecords,
 }
 
 #[allow(dead_code)]
-impl<FileT> FileStorage<FileT>
-where
-    FileT: std::io::Read,
-    FileT: std::io::Seek,
-    FileT: std::io::Write,
-{
+impl FileStorage {
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
-        self.file.seek_end()?;
+        self.file.seek(std::io::SeekFrom::End(0))?;
         let bytes = value.serialize();
-        let record = self.records.create(self.file.size()?, bytes.len() as u64);
-        self.file.write(&record.serialize())?;
-        self.file.write(&bytes)?;
+        let size = self.size()?;
+        let record = self.records.create(size, bytes.len() as u64);
+        self.file.write_all(&record.serialize())?;
+        self.file.write_all(&bytes)?;
         Ok(record.index)
     }
 
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
-            self.file
-                .seek(record.position + FileRecord::size() as u64)?;
-            return T::deserialize(&self.file.read(record.size)?);
+            let value_pos = record.position + FileRecord::size() as u64;
+            self.file.seek(std::io::SeekFrom::Start(value_pos))?;
+            return T::deserialize(&FileStorage::read_exact(&mut self.file, record.size)?);
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
@@ -44,31 +38,51 @@ where
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let read_start = record.position + FileRecord::size() as u64 + offset;
-            self.file.seek(read_start)?;
-            return T::deserialize(&self.file.read(std::mem::size_of::<T>() as u64)?);
+            self.file.seek(std::io::SeekFrom::Start(read_start))?;
+            return T::deserialize(&FileStorage::read_exact(
+                &mut self.file,
+                std::mem::size_of::<T>() as u64,
+            )?);
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
-    fn read_record(file: &mut FileWrapper) -> Result<FileRecord, DbError> {
-        let pos = file.current_pos()?;
-        let mut record = FileRecord::deserialize(&file.read(FileRecord::size() as u64)?)?;
+    fn read_exact(file: &mut std::fs::File, size: u64) -> Result<Vec<u8>, DbError> {
+        let mut buffer = vec![0_u8; size as usize];
+        file.read_exact(&mut buffer)?;
+        Ok(buffer)
+    }
+
+    fn read_record(file: &mut std::fs::File) -> Result<FileRecord, DbError> {
+        let pos = file.seek(std::io::SeekFrom::Current(0))?;
+        let mut record =
+            FileRecord::deserialize(&FileStorage::read_exact(file, FileRecord::size() as u64)?)?;
         record.position = pos;
-        file.seek(pos + FileRecord::size() as u64 + record.size)?;
+        file.seek(std::io::SeekFrom::Current(record.size as i64))?;
 
         Ok(record)
     }
 
-    fn read_records(file: &mut FileWrapper) -> Result<Vec<FileRecord>, DbError> {
+    fn read_records(file: &mut std::fs::File) -> Result<Vec<FileRecord>, DbError> {
         let mut records: Vec<FileRecord> = vec![];
-        file.seek(0)?;
+        file.seek(std::io::SeekFrom::End(0))?;
+        let size = file.seek(std::io::SeekFrom::Current(0))?;
+        file.seek(std::io::SeekFrom::Start(0))?;
 
-        while file.current_pos()? != file.size()? {
+        while file.seek(std::io::SeekFrom::Current(0))? != size {
             records.push(Self::read_record(file)?);
         }
 
         Ok(records)
+    }
+
+    fn size(&mut self) -> Result<u64, DbError> {
+        let current = self.file.seek(std::io::SeekFrom::Current(0))?;
+        self.file.seek(std::io::SeekFrom::End(0))?;
+        let size = self.file.seek(std::io::SeekFrom::Current(0))?;
+        self.file.seek(std::io::SeekFrom::Start(current))?;
+        Ok(size)
     }
 }
 
@@ -84,7 +98,11 @@ impl TryFrom<String> for FileStorage {
     type Error = DbError;
 
     fn try_from(filename: String) -> Result<Self, Self::Error> {
-        let mut file = FileWrapper::try_from(filename)?;
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .read(true)
+            .open(&filename)?;
         let records = FileRecords::from(Self::read_records(&mut file)?);
 
         Ok(FileStorage { file, records })
@@ -94,102 +112,7 @@ impl TryFrom<String> for FileStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::bad_file::BadFile;
     use crate::test_utilities::test_file::TestFile;
-
-    fn bad_storage(bad_file: BadFile) -> FileStorage<BadFile> {
-        FileStorage {
-            file: FileWrapper {
-                file: bad_file,
-                filename: "".to_string(),
-            },
-            records: FileRecords::default(),
-        }
-    }
-
-    #[test]
-    fn bad_insert_first_write() {
-        let mut storage = bad_storage(BadFile {
-            write_all_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        assert!(storage.insert(&1_i64).is_err());
-    }
-
-    #[test]
-    fn bad_insert_second_write() {
-        let mut storage = bad_storage(BadFile {
-            write_all_results: vec![Ok(()), Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        assert!(storage.insert(&1_i64).is_err());
-    }
-
-    #[test]
-    fn bad_insert_seek() {
-        let mut storage = bad_storage(BadFile {
-            seek_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        assert!(storage.insert(&1_i64).is_err());
-    }
-
-    #[test]
-    fn bad_insert_size() {
-        let mut storage = bad_storage(BadFile {
-            seek_results: vec![Ok(0), Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        assert!(storage.insert(&1_i64).is_err());
-    }
-
-    #[test]
-    fn bad_value_at_seek() {
-        let mut storage = bad_storage(BadFile {
-            seek_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        let record = storage.records.create(0, 0);
-        assert!(storage.value_at::<i64>(record.index, 0).is_err());
-    }
-
-    #[test]
-    fn bad_value_at_read() {
-        let mut storage = bad_storage(BadFile {
-            read_exact_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        let record = storage.records.create(0, 0);
-        assert!(storage.value_at::<i64>(record.index, 0).is_err());
-    }
-
-    #[test]
-    fn bad_value_seek() {
-        let mut storage = bad_storage(BadFile {
-            seek_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        let record = storage.records.create(0, 0);
-        assert!(storage.value::<i64>(record.index).is_err());
-    }
-
-    #[test]
-    fn bad_value_read() {
-        let mut storage = bad_storage(BadFile {
-            read_exact_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
-            ..Default::default()
-        });
-
-        let record = storage.records.create(0, 0);
-        assert!(storage.value::<i64>(record.index).is_err());
-    }
 
     #[test]
     fn insert() {

@@ -79,13 +79,12 @@ mod tests {
 
     #[test]
     fn bad_read() {
-        let test_file = TestFile::from("./file_storage_test01.agdb");
         let mut file = FileWrapper {
             file: BadFile {
                 read_exact_result: Err(std::io::ErrorKind::Other.into()),
                 ..Default::default()
             },
-            filename: test_file.file_name().clone(),
+            filename: "".to_string(),
             size: 0,
         };
 
@@ -94,13 +93,12 @@ mod tests {
 
     #[test]
     fn bad_seek() {
-        let test_file = TestFile::from("./file_storage_test02.agdb");
         let mut file = FileWrapper {
             file: BadFile {
                 seek_result: Err(std::io::ErrorKind::Other.into()),
                 ..Default::default()
             },
-            filename: test_file.file_name().clone(),
+            filename: "".to_string(),
             size: 0,
         };
 
@@ -113,13 +111,12 @@ mod tests {
 
     #[test]
     fn bad_write_all() {
-        let test_file = TestFile::from("./file_storage_test01.agdb");
         let mut file = FileWrapper {
             file: BadFile {
                 write_all_result: Err(std::io::ErrorKind::Other.into()),
                 ..Default::default()
             },
-            filename: test_file.file_name().clone(),
+            filename: "".to_string(),
             size: 0,
         };
 
@@ -129,7 +126,7 @@ mod tests {
 
     #[test]
     fn create_new_file() {
-        let test_file = TestFile::from("./file_wrapper_test01.agdb");
+        let test_file = TestFile::from("./file_wrapper-create_new_file.agdb");
         let file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
 
         assert!(std::path::Path::new(test_file.file_name()).exists());
@@ -139,14 +136,26 @@ mod tests {
 
     #[test]
     fn open_existing_file() {
-        let test_file = TestFile::from("./file_storage_test02.agdb");
+        let test_file = TestFile::from("./file_wrapper-open_existing_file.agdb");
         std::fs::File::create(test_file.file_name()).unwrap();
         let _file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
     }
 
     #[test]
+    fn open_directory() {
+        let dir = std::env::current_dir()
+            .unwrap()
+            .as_os_str()
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        assert!(FileWrapper::try_from(dir).is_err());
+    }
+
+    #[test]
     fn seek() {
-        let test_file = TestFile::from("./file_storage_test03.agdb");
+        let test_file = TestFile::from("./file_wrapper-seek.agdb");
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(file.current_pos(), Ok(0));
@@ -156,7 +165,7 @@ mod tests {
 
     #[test]
     fn seek_end() {
-        let test_file = TestFile::from("./file_storage_test04.agdb");
+        let test_file = TestFile::from("./file_wrapper-seek_end.agdb");
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
         file.write(&data).unwrap();
@@ -169,7 +178,7 @@ mod tests {
 
     #[test]
     fn size_writing_at_end() {
-        let test_file = TestFile::from("./file_storage_test05.agdb");
+        let test_file = TestFile::from("./file_wrapper-size_writing_at_end.agdb");
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
@@ -180,7 +189,7 @@ mod tests {
 
     #[test]
     fn size_write_within_current_size() {
-        let test_file = TestFile::from("./file_storage_test06.agdb");
+        let test_file = TestFile::from("./file_wrapper-size_write_within_current_size.agdb");
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
@@ -193,7 +202,7 @@ mod tests {
 
     #[test]
     fn size_writing_over_end() {
-        let test_file = TestFile::from("./file_storage_test07.agdb");
+        let test_file = TestFile::from("./file_wrapper-size_writing_over_end.agdb");
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 
@@ -211,7 +220,7 @@ mod tests {
 
     #[test]
     fn write_read_bytes() {
-        let test_file = TestFile::from("./file_storage_test08.agdb");
+        let test_file = TestFile::from("./file_wrapper-write_read_bytes.agdb");
         let mut file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
         let data = 10_i64.serialize();
 

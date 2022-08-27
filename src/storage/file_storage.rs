@@ -25,6 +25,28 @@ impl FileStorage {
         Ok(record.index)
     }
 
+    pub(crate) fn insert_at<T: Serialize>(
+        &mut self,
+        index: i64,
+        offset: u64,
+        value: &T,
+    ) -> Result<(), DbError> {
+        if let Some(record) = self.records.get_mut(index) {
+            let bytes = T::serialize(value);
+
+            if offset + bytes.len() as u64 > record.size {
+                FileStorage::move_value_to_end(&mut self.file, record, offset, bytes.len() as u64)?;
+            }
+
+            let write_start = record.position + FileRecord::size() as u64 + offset;
+            self.file.seek(std::io::SeekFrom::Start(write_start))?;
+            self.file.write_all(&bytes)?;
+            return Ok(());
+        }
+
+        Err(DbError::Storage(format!("index '{}' not found", index)))
+    }
+
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let value_pos = record.position + FileRecord::size() as u64;
@@ -44,6 +66,25 @@ impl FileStorage {
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
+    }
+
+    fn move_value_to_end(
+        file: &mut std::fs::File,
+        record: &mut FileRecord,
+        offset: u64,
+        new_value_size: u64,
+    ) -> Result<(), DbError> {
+        let value_position = record.position + FileRecord::size() as u64;
+        file.seek(std::io::SeekFrom::Start(value_position))?;
+        let read_size = std::cmp::min(offset, record.size);
+        let orig_value = FileStorage::read_exact(file, read_size)?;
+        file.seek(std::io::SeekFrom::End(0))?;
+        record.position = file.seek(std::io::SeekFrom::Current(0))?;
+        record.size = offset + new_value_size;
+        let record_bytes = record.serialize();
+        file.write_all(&record_bytes)?;
+        file.write_all(&orig_value)?;
+        Ok(())
     }
 
     fn read_exact(file: &mut std::fs::File, size: u64) -> Result<Vec<u8>, DbError> {
@@ -140,6 +181,64 @@ mod tests {
         let index = storage.insert(&10_i64);
 
         assert_eq!(index, Ok(0));
+    }
+
+    #[test]
+    fn insert_at() {
+        let test_file = TestFile::from("./file_storage-insert.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>()) as u64;
+        storage.insert_at(index, offset, &10_i64).unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 10_i64, 3_i64]
+        );
+    }
+
+    #[test]
+    fn insert_at_missing_index() {
+        let test_file = TestFile::from("./file_storage-insert_at_missing_index.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        assert_eq!(
+            storage.insert_at(0, 8, &1_i64),
+            Err(DbError::Storage("index '0' not found".to_string()))
+        );
+    }
+
+    #[test]
+    fn insert_at_value_end() {
+        let test_file = TestFile::from("./file_storage-insert_at_value_end.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 3) as u64;
+        storage.insert_at(index, 0, &4_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 2_i64, 3_i64, 10_i64]
+        );
+    }
+
+    #[test]
+    fn insert_at_beyond_end() {
+        let test_file = TestFile::from("./file_storage-insert_at_beyond_end.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 4) as u64;
+        storage.insert_at(index, 0, &5_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
+        );
     }
 
     #[test]

@@ -78,6 +78,56 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    fn bad_read() {
+        let test_file = TestFile::from("./file_storage_test01.agdb");
+        let mut file = FileWrapper {
+            file: BadFile {
+                read_exact_result: Err(std::io::ErrorKind::Other.into()),
+                ..Default::default()
+            },
+            filename: test_file.file_name().clone(),
+            size: 0,
+        };
+
+        assert!(file.read(0).is_err());
+    }
+
+    #[test]
+    fn bad_seek() {
+        let test_file = TestFile::from("./file_storage_test02.agdb");
+        let mut file = FileWrapper {
+            file: BadFile {
+                seek_result: Err(std::io::ErrorKind::Other.into()),
+                ..Default::default()
+            },
+            filename: test_file.file_name().clone(),
+            size: 0,
+        };
+
+        assert!(file.seek(0).is_err());
+        assert!(file.current_pos().is_err());
+        assert!(file.seek_end().is_err());
+        let bytes = vec![0_u8; 0];
+        assert!(file.write(&bytes).is_err());
+    }
+
+    #[test]
+    fn bad_write_all() {
+        let test_file = TestFile::from("./file_storage_test01.agdb");
+        let mut file = FileWrapper {
+            file: BadFile {
+                write_all_result: Err(std::io::ErrorKind::Other.into()),
+                ..Default::default()
+            },
+            filename: test_file.file_name().clone(),
+            size: 0,
+        };
+
+        let bytes = vec![0_u8; 0];
+        assert!(file.write(&bytes).is_err());
+    }
+
+    #[test]
     fn create_new_file() {
         let test_file = TestFile::from("./file_wrapper_test01.agdb");
         let file = FileWrapper::try_from(test_file.file_name().clone()).unwrap();
@@ -171,22 +221,5 @@ mod tests {
         let actual_data = file.read(std::mem::size_of::<i64>() as u64);
 
         assert_eq!(actual_data, Ok(data));
-    }
-
-    #[test]
-    fn bad_read() {
-        let test_file = TestFile::from("./file_storage_test09.agdb");
-        let mut file = FileWrapper {
-            file: BadFile {
-                read_result: Err(std::io::ErrorKind::Other.into()),
-                seek_result: Ok(0),
-                write_result: Ok(0),
-                flush_result: Ok(()),
-            },
-            filename: test_file.file_name().clone(),
-            size: 0,
-        };
-
-        assert!(file.read(0).is_err());
     }
 }

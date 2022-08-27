@@ -25,6 +25,28 @@ impl FileStorage {
         Ok(record.index)
     }
 
+    pub(crate) fn insert_at<T: Serialize>(
+        &mut self,
+        index: i64,
+        offset: u64,
+        value: &T,
+    ) -> Result<(), DbError> {
+        if let Some(record) = self.records.get_mut(index) {
+            let bytes = T::serialize(value);
+
+            if offset + bytes.len() as u64 > record.size {
+                todo!()
+            }
+
+            let write_start = record.position + FileRecord::size() as u64 + offset;
+            self.file.seek(std::io::SeekFrom::Start(write_start))?;
+            self.file.write_all(&bytes)?;
+            return Ok(());
+        }
+
+        Err(DbError::Storage(format!("index '{}' not found", index)))
+    }
+
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let value_pos = record.position + FileRecord::size() as u64;
@@ -143,13 +165,13 @@ mod tests {
     }
 
     #[test]
-    fn insert_offset() {
+    fn insert_at() {
         let test_file = TestFile::from("./file_storage-insert.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>()) as u64;
-        storage.insert_at(index, offset, 10_i64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
 
         assert_eq!(
             storage.value::<Vec<i64>>(index).unwrap(),

@@ -12,8 +12,6 @@ impl From<std::io::Error> for DbError {
 
 #[cfg(test)]
 mod tests {
-    use std::io::ErrorKind;
-
     use super::*;
 
     #[test]
@@ -23,7 +21,15 @@ mod tests {
     }
 
     #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound)),
+            DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound))
+        );
+    }
+
+    #[test]
     fn from_io_error() {
-        let _error = DbError::from(std::io::Error::from(ErrorKind::NotFound));
+        let _error = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
     }
 }

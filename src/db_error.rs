@@ -21,6 +21,14 @@ mod tests {
     }
 
     #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound)),
+            DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound))
+        );
+    }
+
+    #[test]
     fn from_io_error() {
         let _error = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
     }

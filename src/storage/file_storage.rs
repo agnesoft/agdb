@@ -93,8 +93,6 @@ impl TryFrom<String> for FileStorage {
 
 #[cfg(test)]
 mod tests {
-    use std::io::ErrorKind;
-
     use super::*;
     use crate::test_utilities::bad_file::BadFile;
     use crate::test_utilities::test_file::TestFile;
@@ -110,9 +108,9 @@ mod tests {
     }
 
     #[test]
-    fn bad_seek() {
+    fn bad_insert_first_write() {
         let mut storage = bad_storage(BadFile {
-            seek_result: Err(std::io::Error::from(ErrorKind::Other)),
+            write_all_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
             ..Default::default()
         });
 
@@ -120,13 +118,77 @@ mod tests {
     }
 
     #[test]
-    fn bad_write() {
+    fn bad_insert_second_write() {
         let mut storage = bad_storage(BadFile {
-            write_all_result: Err(std::io::Error::from(ErrorKind::Other)),
+            write_all_results: vec![Ok(()), Err(std::io::Error::from(std::io::ErrorKind::Other))],
             ..Default::default()
         });
 
         assert!(storage.insert(&1_i64).is_err());
+    }
+
+    #[test]
+    fn bad_insert_seek() {
+        let mut storage = bad_storage(BadFile {
+            seek_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
+            ..Default::default()
+        });
+
+        assert!(storage.insert(&1_i64).is_err());
+    }
+
+    #[test]
+    fn bad_insert_size() {
+        let mut storage = bad_storage(BadFile {
+            seek_results: vec![Ok(0), Err(std::io::Error::from(std::io::ErrorKind::Other))],
+            ..Default::default()
+        });
+
+        assert!(storage.insert(&1_i64).is_err());
+    }
+
+    #[test]
+    fn bad_value_at_seek() {
+        let mut storage = bad_storage(BadFile {
+            seek_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
+            ..Default::default()
+        });
+
+        let record = storage.records.create(0, 0);
+        assert!(storage.value_at::<i64>(record.index, 0).is_err());
+    }
+
+    #[test]
+    fn bad_value_at_read() {
+        let mut storage = bad_storage(BadFile {
+            read_exact_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
+            ..Default::default()
+        });
+
+        let record = storage.records.create(0, 0);
+        assert!(storage.value_at::<i64>(record.index, 0).is_err());
+    }
+
+    #[test]
+    fn bad_value_seek() {
+        let mut storage = bad_storage(BadFile {
+            seek_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
+            ..Default::default()
+        });
+
+        let record = storage.records.create(0, 0);
+        assert!(storage.value::<i64>(record.index).is_err());
+    }
+
+    #[test]
+    fn bad_value_read() {
+        let mut storage = bad_storage(BadFile {
+            read_exact_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
+            ..Default::default()
+        });
+
+        let record = storage.records.create(0, 0);
+        assert!(storage.value::<i64>(record.index).is_err());
     }
 
     #[test]

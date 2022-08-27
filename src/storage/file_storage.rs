@@ -199,6 +199,17 @@ mod tests {
     }
 
     #[test]
+    fn insert_at_missing_index() {
+        let test_file = TestFile::from("./file_storage-insert_at_missing_index.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        assert_eq!(
+            storage.insert_at(0, 8, &1_i64),
+            Err(DbError::Storage("index '0' not found".to_string()))
+        );
+    }
+
+    #[test]
     fn insert_at_value_end() {
         let test_file = TestFile::from("./file_storage-insert_at_value_end.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();

@@ -82,6 +82,33 @@ mod tests {
     }
 
     #[test]
+    fn flush_err() {
+        let mut file = BadFile {
+            flush_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
+            ..Default::default()
+        };
+
+        assert!(file.flush().is_err());
+    }
+
+    #[test]
+    fn flush_list() {
+        let mut file = BadFile {
+            flush_results: vec![
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Ok(()),
+            ],
+            ..Default::default()
+        };
+
+        assert!(file.flush().is_err());
+        assert!(file.flush().is_err());
+        assert!(file.flush().is_ok());
+        assert!(file.flush().is_ok());
+    }
+
+    #[test]
     fn flush_ok() {
         let mut file = BadFile::default();
 
@@ -89,13 +116,32 @@ mod tests {
     }
 
     #[test]
-    fn flush_err() {
+    fn read_exact_err() {
         let mut file = BadFile {
-            flush_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            read_exact_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
             ..Default::default()
         };
 
-        assert!(file.flush().is_err());
+        let mut buf = vec![0_u8; 0];
+        assert!(file.read_exact(&mut buf).is_err());
+    }
+
+    #[test]
+    fn read_exact_list() {
+        let mut file = BadFile {
+            read_exact_results: vec![
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Ok(()),
+            ],
+            ..Default::default()
+        };
+
+        let mut buf = vec![0_u8; 0];
+        assert!(file.read_exact(&mut buf).is_err());
+        assert!(file.read_exact(&mut buf).is_err());
+        assert!(file.read_exact(&mut buf).is_ok());
+        assert!(file.read_exact(&mut buf).is_ok());
     }
 
     #[test]
@@ -107,14 +153,32 @@ mod tests {
     }
 
     #[test]
-    fn read_exact_err() {
+    fn read_err() {
         let mut file = BadFile {
-            read_exact_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            read_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
             ..Default::default()
         };
 
         let mut buf = vec![0_u8; 0];
-        assert!(file.read_exact(&mut buf).is_err());
+        assert!(file.read(&mut buf).is_err());
+    }
+
+    #[test]
+    fn read_list() {
+        let mut file = BadFile {
+            read_results: vec![
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Ok(0),
+            ],
+            ..Default::default()
+        };
+
+        let mut buf = vec![0_u8; 0];
+        assert!(file.read(&mut buf).is_err());
+        assert!(file.read(&mut buf).is_err());
+        assert!(file.read(&mut buf).is_ok());
+        assert!(file.read(&mut buf).is_ok());
     }
 
     #[test]
@@ -126,14 +190,30 @@ mod tests {
     }
 
     #[test]
-    fn read_err() {
+    fn seek_err() {
         let mut file = BadFile {
-            read_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            seek_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
             ..Default::default()
         };
 
-        let mut buf = vec![0_u8; 0];
-        assert!(file.read(&mut buf).is_err());
+        assert!(file.seek(std::io::SeekFrom::Current(0)).is_err());
+    }
+
+    #[test]
+    fn seek_list() {
+        let mut file = BadFile {
+            seek_results: vec![
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Ok(0),
+            ],
+            ..Default::default()
+        };
+
+        assert!(file.seek(std::io::SeekFrom::Current(0)).is_err());
+        assert!(file.seek(std::io::SeekFrom::Current(0)).is_err());
+        assert!(file.seek(std::io::SeekFrom::Current(0)).is_ok());
+        assert!(file.seek(std::io::SeekFrom::Current(0)).is_ok());
     }
 
     #[test]
@@ -144,13 +224,32 @@ mod tests {
     }
 
     #[test]
-    fn seek_err() {
+    fn write_all_err() {
         let mut file = BadFile {
-            seek_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            write_all_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
             ..Default::default()
         };
 
-        assert!(file.seek(std::io::SeekFrom::Current(0)).is_err());
+        let buf = vec![0_u8; 0];
+        assert!(file.write_all(&buf).is_err());
+    }
+
+    #[test]
+    fn write_all_list() {
+        let mut file = BadFile {
+            write_all_results: vec![
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Ok(()),
+            ],
+            ..Default::default()
+        };
+
+        let buf = vec![0_u8; 0];
+        assert!(file.write_all(&buf).is_err());
+        assert!(file.write_all(&buf).is_err());
+        assert!(file.write_all(&buf).is_ok());
+        assert!(file.write_all(&buf).is_ok());
     }
 
     #[test]
@@ -162,14 +261,32 @@ mod tests {
     }
 
     #[test]
-    fn write_all_err() {
+    fn write_err() {
         let mut file = BadFile {
-            write_all_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
+            write_results: vec![Err(std::io::Error::from(std::io::ErrorKind::Other))],
             ..Default::default()
         };
 
         let buf = vec![0_u8; 0];
-        assert!(file.write_all(&buf).is_err());
+        assert!(file.write(&buf).is_err());
+    }
+
+    #[test]
+    fn write_list() {
+        let mut file = BadFile {
+            write_results: vec![
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Err(std::io::Error::from(std::io::ErrorKind::Other)),
+                Ok(0),
+            ],
+            ..Default::default()
+        };
+
+        let buf = vec![0_u8; 0];
+        assert!(file.write(&buf).is_err());
+        assert!(file.write(&buf).is_err());
+        assert!(file.write(&buf).is_ok());
+        assert!(file.write(&buf).is_ok());
     }
 
     #[test]
@@ -178,16 +295,5 @@ mod tests {
 
         let buf = vec![0_u8; 0];
         assert!(file.write(&buf).is_ok());
-    }
-
-    #[test]
-    fn write_err() {
-        let mut file = BadFile {
-            write_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
-            ..Default::default()
-        };
-
-        let buf = vec![0_u8; 0];
-        assert!(file.write(&buf).is_err());
     }
 }

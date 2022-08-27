@@ -1,6 +1,13 @@
 #[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum DbError {
     Storage(String),
+}
+
+impl From<std::io::Error> for DbError {
+    fn from(error: std::io::Error) -> Self {
+        DbError::Storage(error.to_string())
+    }
 }
 
 #[cfg(test)]

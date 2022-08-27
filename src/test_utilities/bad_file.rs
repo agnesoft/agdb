@@ -1,14 +1,23 @@
-struct BadFile {
-    read_result: std::io::Result<usize>,
-    seek_result: std::io::Result<u64>,
-    write_result: std::io::Result<usize>,
-    flush_result: std::io::Result<()>,
+pub(crate) struct BadFile {
+    pub(crate) read_result: std::io::Result<usize>,
+    pub(crate) read_exact_result: std::io::Result<()>,
+    pub(crate) seek_result: std::io::Result<u64>,
+    pub(crate) write_result: std::io::Result<usize>,
+    pub(crate) write_all_result: std::io::Result<()>,
+    pub(crate) flush_result: std::io::Result<()>,
 }
 
 impl std::io::Read for BadFile {
     fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
         match &self.read_result {
             Ok(v) => Ok(*v),
+            Err(e) => Err(std::io::Error::from(e.kind())),
+        }
+    }
+
+    fn read_exact(&mut self, _buf: &mut [u8]) -> std::io::Result<()> {
+        match &self.read_exact_result {
+            Ok(_) => Ok(()),
             Err(e) => Err(std::io::Error::from(e.kind())),
         }
     }
@@ -31,10 +40,30 @@ impl std::io::Write for BadFile {
         }
     }
 
+    fn write_all(&mut self, mut _buf: &[u8]) -> std::io::Result<()> {
+        match &self.write_all_result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(std::io::Error::from(e.kind())),
+        }
+    }
+
     fn flush(&mut self) -> std::io::Result<()> {
         match &self.flush_result {
             Ok(_) => Ok(()),
             Err(e) => Err(std::io::Error::from(e.kind())),
+        }
+    }
+}
+
+impl Default for BadFile {
+    fn default() -> Self {
+        Self {
+            read_result: Ok(0),
+            read_exact_result: Ok(()),
+            seek_result: Ok(0),
+            write_result: Ok(0),
+            write_all_result: Ok(()),
+            flush_result: Ok(()),
         }
     }
 }
@@ -54,12 +83,6 @@ mod tests {
 
     #[test]
     fn flush_ok() {
-        let mut file = BadFile {
-            read_result: Ok(0),
-            seek_result: Ok(0),
-            write_result: Ok(0),
-            flush_result: Ok(()),
-        };
         let mut file = BadFile::default();
 
         assert!(file.flush().is_ok());
@@ -68,9 +91,6 @@ mod tests {
     #[test]
     fn flush_err() {
         let mut file = BadFile {
-            read_result: Ok(0),
-            seek_result: Ok(0),
-            write_result: Ok(0),
             flush_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
             ..Default::default()
         };
@@ -109,9 +129,6 @@ mod tests {
     fn read_err() {
         let mut file = BadFile {
             read_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
-            seek_result: Ok(0),
-            write_result: Ok(0),
-            flush_result: Ok(()),
             ..Default::default()
         };
 
@@ -121,12 +138,6 @@ mod tests {
 
     #[test]
     fn seek_ok() {
-        let mut file = BadFile {
-            read_result: Ok(0),
-            seek_result: Ok(0),
-            write_result: Ok(0),
-            flush_result: Ok(()),
-        };
         let mut file = BadFile::default();
 
         assert!(file.seek(std::io::SeekFrom::Current(0)).is_ok());
@@ -135,10 +146,7 @@ mod tests {
     #[test]
     fn seek_err() {
         let mut file = BadFile {
-            read_result: Ok(0),
             seek_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
-            write_result: Ok(0),
-            flush_result: Ok(()),
             ..Default::default()
         };
 
@@ -175,8 +183,6 @@ mod tests {
     #[test]
     fn write_err() {
         let mut file = BadFile {
-            read_result: Ok(0),
-            seek_result: Ok(0),
             write_result: Err(std::io::Error::from(std::io::ErrorKind::Other)),
             ..Default::default()
         };

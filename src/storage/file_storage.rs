@@ -188,12 +188,12 @@ mod tests {
 
         let index = storage.insert(&10_i64);
 
-        assert_eq!(index, Ok(0));
+        assert_eq!(index, Ok(1));
     }
 
     #[test]
     fn insert_at() {
-        let test_file = TestFile::from("./file_storage-insert.agdb");
+        let test_file = TestFile::from("./file_storage-insert_at.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -212,8 +212,8 @@ mod tests {
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         assert_eq!(
-            storage.insert_at(0, 8, &1_i64),
-            Err(DbError::Storage("index '0' not found".to_string()))
+            storage.insert_at(1, 8, &1_i64),
+            Err(DbError::Storage("index '1' not found".to_string()))
         );
     }
 
@@ -301,8 +301,8 @@ mod tests {
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(
-            storage.value_at::<i64>(0, 8),
-            Err(DbError::Storage("index '0' not found".to_string()))
+            storage.value_at::<i64>(1, 8),
+            Err(DbError::Storage("index '1' not found".to_string()))
         );
     }
 
@@ -346,8 +346,8 @@ mod tests {
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(
-            storage.value::<i64>(0),
-            Err(DbError::Storage("index '0' not found".to_string()))
+            storage.value::<i64>(1),
+            Err(DbError::Storage("index '1' not found".to_string()))
         );
     }
 
@@ -383,8 +383,8 @@ mod tests {
         let storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(
-            storage.value_size(0),
-            Err(DbError::Storage("index '0' not found".to_string()))
+            storage.value_size(1),
+            Err(DbError::Storage("index '1' not found".to_string()))
         );
     }
 }

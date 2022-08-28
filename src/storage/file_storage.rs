@@ -58,6 +58,8 @@ impl FileStorage {
         Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
+    pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {}
+
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let value_pos = record.position + FileRecord::size() as u64;
@@ -339,6 +341,23 @@ mod tests {
             Err(DbError::Storage(format!("index '{}' not found", index2)))
         );
         assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
+    }
+
+    #[test]
+    fn shrink_to_fit() {
+        let test_file = TestFile::from("./file_storage-shrink_to_fit.agdb");
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        storage.insert(&1_i64).unwrap();
+        let index = storage.insert(&2_i64).unwrap();
+        storage.insert(&3_i64).unwrap();
+        storage.remove(index).unwrap();
+        storage.shrink_to_fit().unwrap();
+
+        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+        let expected_size = FileRecord::size() * 2 + std::mem::size_of::<i64>() * 2;
+
+        assert_eq!(actual_size, expected_size as u64);
     }
 
     #[test]

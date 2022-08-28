@@ -52,12 +52,15 @@ impl From<Vec<FileRecord>> for FileRecords {
         records.sort();
 
         for record in records {
+            if record.index == 0 {
+                continue;
+            }
+
             for index in (last_index + 1)..record.index {
                 file_records.free_list.push(index);
             }
 
             last_index = record.index;
-
             file_records.records.insert(record.index, record);
         }
 
@@ -143,6 +146,29 @@ mod tests {
         assert_eq!(new_record1.index, 4);
         assert_eq!(new_record2.index, 3);
         assert_eq!(new_record3.index, 6);
+    }
+
+    #[test]
+    fn from_records_with_removed_index() {
+        let record1 = FileRecord {
+            index: 1,
+            position: 24,
+            size: 16,
+        };
+        let record2 = FileRecord {
+            index: 0,
+            position: 40,
+            size: 16,
+        };
+        let record3 = FileRecord {
+            index: 3,
+            position: 40,
+            size: 16,
+        };
+
+        let file_records = FileRecords::from(vec![record1, record2, record3]);
+
+        assert_eq!(file_records.get(0), None);
     }
 
     #[test]

@@ -331,6 +331,10 @@ mod tests {
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(
+            storage.value::<u64>(0),
+            Err(DbError::Storage(format!("index '{}' not found", 0)))
+        );
+        assert_eq!(
             storage.value::<u64>(index2),
             Err(DbError::Storage(format!("index '{}' not found", index2)))
         );

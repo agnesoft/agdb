@@ -12,10 +12,12 @@ pub(crate) struct FileRecords {
 #[allow(dead_code)]
 impl FileRecords {
     pub(crate) fn create(&mut self, position: u64, size: u64) -> FileRecord {
-        let mut index = self.records.len() as i64;
+        let index;
 
         if let Some(free_index) = self.free_list.pop() {
             index = free_index;
+        } else {
+            index = self.records.len() as i64 + 1;
         }
 
         let record = FileRecord {
@@ -75,7 +77,7 @@ mod tests {
 
         let actual_record = file_records.create(position, size);
         let expected_record = FileRecord {
-            index: 0_i64,
+            index: 1_i64,
             position,
             size,
         };
@@ -91,13 +93,39 @@ mod tests {
     #[test]
     fn from_records() {
         let record1 = FileRecord {
-            index: 1,
+            index: 2,
             position: 8,
             size: 16,
         };
         let record2 = FileRecord {
-            index: 0,
+            index: 1,
             position: 24,
+            size: 16,
+        };
+        let record3 = FileRecord {
+            index: 3,
+            position: 40,
+            size: 16,
+        };
+
+        let file_records =
+            FileRecords::from(vec![record1.clone(), record2.clone(), record3.clone()]);
+
+        assert_eq!(file_records.get(2), Some(&record1));
+        assert_eq!(file_records.get(1), Some(&record2));
+        assert_eq!(file_records.get(3), Some(&record3));
+    }
+
+    #[test]
+    fn from_records_with_index_gaps() {
+        let record1 = FileRecord {
+            index: 5,
+            position: 24,
+            size: 16,
+        };
+        let record2 = FileRecord {
+            index: 1,
+            position: 40,
             size: 16,
         };
         let record3 = FileRecord {
@@ -106,41 +134,15 @@ mod tests {
             size: 16,
         };
 
-        let file_records =
-            FileRecords::from(vec![record1.clone(), record2.clone(), record3.clone()]);
-
-        assert_eq!(file_records.get(1), Some(&record1));
-        assert_eq!(file_records.get(0), Some(&record2));
-        assert_eq!(file_records.get(2), Some(&record3));
-    }
-
-    #[test]
-    fn from_records_with_index_gaps() {
-        let record1 = FileRecord {
-            index: 4,
-            position: 24,
-            size: 16,
-        };
-        let record2 = FileRecord {
-            index: 0,
-            position: 40,
-            size: 16,
-        };
-        let record3 = FileRecord {
-            index: 1,
-            position: 40,
-            size: 16,
-        };
-
         let mut file_records = FileRecords::from(vec![record1, record2, record3]);
 
-        let new_record1 = file_records.create(1, 2);
-        let new_record2 = file_records.create(3, 4);
-        let new_record3 = file_records.create(5, 6);
+        let new_record1 = file_records.create(2, 2);
+        let new_record2 = file_records.create(4, 4);
+        let new_record3 = file_records.create(6, 6);
 
-        assert_eq!(new_record1.index, 3);
-        assert_eq!(new_record2.index, 2);
-        assert_eq!(new_record3.index, 5);
+        assert_eq!(new_record1.index, 4);
+        assert_eq!(new_record2.index, 3);
+        assert_eq!(new_record3.index, 6);
     }
 
     #[test]
@@ -151,7 +153,7 @@ mod tests {
 
         file_records.create(position, size);
         let expected_record = FileRecord {
-            index: 0,
+            index: 1,
             position,
             size,
         };
@@ -170,7 +172,7 @@ mod tests {
 
         file_records.create(position, size);
         let mut expected_record = FileRecord {
-            index: 0,
+            index: 1,
             position,
             size,
         };

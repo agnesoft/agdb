@@ -47,6 +47,17 @@ impl FileStorage {
         Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
+    pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
+        if let Some(record) = self.records.get_mut(index) {
+            self.file.seek(std::io::SeekFrom::Start(record.position))?;
+            self.file.write_all(&0_i64.serialize())?;
+            self.records.remove(index);
+            return Ok(());
+        }
+
+        Err(DbError::Storage(format!("index '{}' not found", index)))
+    }
+
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let value_pos = record.position + FileRecord::size() as u64;
@@ -250,6 +261,31 @@ mod tests {
     }
 
     #[test]
+    fn remove() {
+        let test_file = TestFile::from("./file_storage-remove.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&1_i64).unwrap();
+        storage.remove(index).unwrap();
+
+        assert_eq!(
+            storage.value::<i64>(index),
+            Err(DbError::Storage("index '1' not found".to_string()))
+        );
+    }
+
+    #[test]
+    fn remove_missing_index() {
+        let test_file = TestFile::from("./file_storage-remove.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        assert_eq!(
+            storage.remove(1_i64),
+            Err(DbError::Storage("index '1' not found".to_string()))
+        );
+    }
+
+    #[test]
     fn restore_from_open_file() {
         let test_file = TestFile::from("./file_storage-restore_from_open_file.agdb");
         let value1 = vec![1_i64, 2_i64, 3_i64];
@@ -270,6 +306,38 @@ mod tests {
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(storage.value::<u64>(index2), Ok(value2));
+        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
+    }
+
+    #[test]
+    fn restore_from_open_file_with_removed_index() {
+        let test_file = TestFile::from("./file_storage-restore_from_open_file.agdb");
+        let value1 = vec![1_i64, 2_i64, 3_i64];
+        let value2 = 64_u64;
+        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
+        let index1;
+        let index2;
+        let index3;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+            index1 = storage.insert(&value1).unwrap();
+            index2 = storage.insert(&value2).unwrap();
+            index3 = storage.insert(&value3).unwrap();
+            storage.remove(index2).unwrap();
+        }
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
+        assert_eq!(
+            storage.value::<u64>(0),
+            Err(DbError::Storage(format!("index '{}' not found", 0)))
+        );
+        assert_eq!(
+            storage.value::<u64>(index2),
+            Err(DbError::Storage(format!("index '{}' not found", index2)))
+        );
         assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
     }
 

@@ -273,6 +273,23 @@ mod tests {
     }
 
     #[test]
+    fn iterable() {
+        let mut file_records = FileRecords::default();
+        let mut record1 = file_records.create(0, 0);
+        let record2 = file_records.create(0, 0);
+        let mut record3 = file_records.create(0, 0);
+        file_records.remove(record2.index);
+
+        let mut records = Vec::<&mut FileRecord>::new();
+
+        for record in file_records.iter_mut() {
+            records.push(record);
+        }
+
+        assert_eq!(records, vec![&mut record1, &mut record3]);
+    }
+
+    #[test]
     fn remove() {
         let mut file_records = FileRecords::default();
         let record = file_records.create(8u64, 16u64);

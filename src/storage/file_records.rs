@@ -52,7 +52,7 @@ impl From<Vec<FileRecord>> for FileRecords {
         records.sort();
 
         for record in records {
-            if record.index == 0 {
+            if record.index < 0 {
                 continue;
             }
 
@@ -156,7 +156,7 @@ mod tests {
             size: 16,
         };
         let record2 = FileRecord {
-            index: 0,
+            index: -2,
             position: 40,
             size: 16,
         };

@@ -8,17 +8,6 @@ pub(crate) struct FileRecords {
 
 #[allow(dead_code)]
 impl FileRecords {
-    pub(crate) fn apply<F>(&mut self, op: &mut F)
-    where
-        F: FnMut(i64, &mut FileRecord),
-    {
-        for record in self.records.iter_mut().enumerate() {
-            if record.1.size != 0 {
-                op(record.0 as i64, record.1);
-            }
-        }
-    }
-
     pub(crate) fn create(&mut self, position: u64, size: u64) -> i64 {
         let index;
 
@@ -51,6 +40,24 @@ impl FileRecords {
         }
 
         None
+    }
+
+    pub(crate) fn indexes_by_position(&self) -> Vec<i64> {
+        let mut indexes = Vec::<i64>::new();
+
+        for index in 1..self.records.len() {
+            if self.records[index].size != 0 {
+                indexes.push(index as i64);
+            }
+        }
+
+        indexes.sort_by(|left, right| {
+            self.records[*left as usize]
+                .position
+                .cmp(&self.records[*right as usize].position)
+        });
+
+        indexes
     }
 
     pub(crate) fn remove(&mut self, index: i64) {
@@ -277,20 +284,14 @@ mod tests {
     }
 
     #[test]
-    fn iterable() {
+    fn indexes_by_position() {
         let mut file_records = FileRecords::default();
-        let index1 = file_records.create(10, 8);
+        let index1 = file_records.create(30, 8);
         let index2 = file_records.create(20, 8);
-        let index3 = file_records.create(30, 8);
+        let index3 = file_records.create(10, 8);
         file_records.remove(index2);
 
-        let mut records = Vec::<i64>::new();
-
-        file_records.apply(&mut |index: i64, _record: &mut FileRecord| {
-            records.push(index);
-        });
-
-        assert_eq!(records, vec![index1, index3]);
+        assert_eq!(file_records.indexes_by_position(), vec![index3, index1]);
     }
 
     #[test]

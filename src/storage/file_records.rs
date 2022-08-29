@@ -3,7 +3,6 @@ use super::file_record::FileRecord;
 #[allow(dead_code)]
 pub(crate) struct FileRecords {
     records: Vec<FileRecord>,
-    free_list: Vec<i64>,
 }
 
 #[allow(dead_code)]
@@ -11,7 +10,7 @@ impl FileRecords {
     pub(crate) fn create(&mut self, position: u64, size: u64) -> FileRecord {
         let record;
 
-        if let Some(free_index) = self.free_list.pop() {
+        if let Some(free_index) = self.free_index() {
             let value = &mut self.records[free_index as usize];
             value.index = free_index;
             value.position = position;
@@ -52,10 +51,26 @@ impl FileRecords {
     }
 
     pub(crate) fn remove(&mut self, index: i64) {
-        if let Some(record) = self.get_mut(index) {
-            record.index *= -1;
-            self.free_list.push(index);
+        if let Some(_record) = self.get_mut(index) {
+            self.add_free_index(index);
         }
+    }
+
+    fn add_free_index(&mut self, index: i64) {
+        self.records[index as usize].index = self.records[0].index;
+        self.records[0].index = -index;
+    }
+
+    fn free_index(&mut self) -> Option<i64> {
+        let free = self.records[0].index;
+
+        if free < 0 {
+            let index = -free;
+            self.records[0].index = self.records[index as usize].index;
+            return Some(index);
+        }
+
+        None
     }
 }
 
@@ -68,7 +83,6 @@ impl From<Vec<FileRecord>> for FileRecords {
         if let Some(last) = records.last() {
             file_records = FileRecords {
                 records: vec![FileRecord::default(); last.index as usize + 1],
-                ..Default::default()
             };
         } else {
             file_records = FileRecords::default();
@@ -99,7 +113,6 @@ impl Default for FileRecords {
     fn default() -> Self {
         Self {
             records: vec![FileRecord::default()],
-            free_list: Default::default(),
         }
     }
 }

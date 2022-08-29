@@ -1,9 +1,6 @@
-use std::collections::HashMap;
-
 use super::file_record::FileRecord;
 
 #[allow(dead_code)]
-#[derive(Default)]
 pub(crate) struct FileRecords {
     records: Vec<FileRecord>,
     free_list: Vec<i64>,
@@ -12,59 +9,98 @@ pub(crate) struct FileRecords {
 #[allow(dead_code)]
 impl FileRecords {
     pub(crate) fn create(&mut self, position: u64, size: u64) -> FileRecord {
-        let index;
+        let record;
 
         if let Some(free_index) = self.free_list.pop() {
-            index = free_index;
+            let value = &mut self.records[free_index as usize];
+            value.index = free_index;
+            value.position = position;
+            value.size = size;
+
+            record = value.clone();
         } else {
-            index = self.records.len() as i64 + 1;
+            record = FileRecord {
+                index: self.records.len() as i64,
+                position,
+                size,
+            };
+
+            self.records.push(record.clone());
         }
 
-        let record = FileRecord {
-            index,
-            position,
-            size,
-        };
-
-        self.records[index as usize] = record.clone();
         record
     }
 
     pub(crate) fn get(&self, index: i64) -> Option<&FileRecord> {
-        self.records.get(index as usize)
+        if let Some(record) = self.records.get(index as usize) {
+            if 0 < record.index {
+                return Some(record);
+            }
+        }
+
+        None
     }
 
     pub(crate) fn get_mut(&mut self, index: i64) -> Option<&mut FileRecord> {
-        self.records.get_mut(index as usize)
+        if let Some(record) = self.records.get_mut(index as usize) {
+            if 0 < record.index {
+                return Some(record);
+            }
+        }
+
+        None
     }
 
     pub(crate) fn remove(&mut self, index: i64) {
-        self.records.remove(&index);
-        self.free_list.push(index);
+        if let Some(record) = self.get_mut(index) {
+            record.index *= -1;
+            self.free_list.push(index);
+        }
     }
 }
 
 impl From<Vec<FileRecord>> for FileRecords {
     fn from(mut records: Vec<FileRecord>) -> Self {
-        let mut last_index = 0;
-        let mut file_records = FileRecords::default();
-
         records.sort();
 
+        let mut file_records;
+
+        if let Some(last) = records.last() {
+            file_records = FileRecords {
+                records: vec![FileRecord::default(); last.index as usize + 1],
+                ..Default::default()
+            };
+        } else {
+            file_records = FileRecords::default();
+        }
+
+        let mut last_index = 0;
+
         for record in records {
-            if record.index < 0 {
+            if record.index <= 0 {
                 continue;
             }
 
-            for index in (last_index + 1)..record.index {
+            let index = record.index;
+
+            for index in last_index + 1..record.index {
                 file_records.free_list.push(index);
             }
 
-            last_index = record.index;
-            file_records.records.insert(record.index, record);
+            file_records.records[index as usize] = record;
+            last_index = index;
         }
 
         file_records
+    }
+}
+
+impl Default for FileRecords {
+    fn default() -> Self {
+        Self {
+            records: vec![FileRecord::default()],
+            free_list: Default::default(),
+        }
     }
 }
 
@@ -114,9 +150,9 @@ mod tests {
         let file_records =
             FileRecords::from(vec![record1.clone(), record2.clone(), record3.clone()]);
 
-        assert_eq!(file_records.get(2), Some(&record1));
-        assert_eq!(file_records.get(1), Some(&record2));
-        assert_eq!(file_records.get(3), Some(&record3));
+        assert_eq!(file_records.get(record1.index), Some(&record1));
+        assert_eq!(file_records.get(record2.index), Some(&record2));
+        assert_eq!(file_records.get(record3.index), Some(&record3));
     }
 
     #[test]

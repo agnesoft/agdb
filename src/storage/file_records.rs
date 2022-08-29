@@ -5,7 +5,7 @@ use super::file_record::FileRecord;
 #[allow(dead_code)]
 #[derive(Default)]
 pub(crate) struct FileRecords {
-    records: HashMap<i64, FileRecord>,
+    records: Vec<FileRecord>,
     free_list: Vec<i64>,
 }
 
@@ -26,16 +26,16 @@ impl FileRecords {
             size,
         };
 
-        self.records.insert(index, record.clone());
+        self.records[index as usize] = record.clone();
         record
     }
 
     pub(crate) fn get(&self, index: i64) -> Option<&FileRecord> {
-        self.records.get(&index)
+        self.records.get(index as usize)
     }
 
     pub(crate) fn get_mut(&mut self, index: i64) -> Option<&mut FileRecord> {
-        self.records.get_mut(&index)
+        self.records.get_mut(index as usize)
     }
 
     pub(crate) fn remove(&mut self, index: i64) {

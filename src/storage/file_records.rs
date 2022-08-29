@@ -13,9 +13,6 @@ impl FileRecords {
 
         if let Some(free_index) = self.free_index() {
             index = free_index;
-            let value = &mut self.records[free_index as usize];
-            value.position = position;
-            value.size = size;
         } else {
             index = self.records.len() as i64;
             self.records.push(FileRecord { position, size });
@@ -270,16 +267,16 @@ mod tests {
     #[test]
     fn iterable() {
         let mut file_records = FileRecords::default();
-        let mut index1 = file_records.create(0, 0);
-        let index2 = file_records.create(0, 0);
-        let mut index3 = file_records.create(0, 0);
+        let index1 = file_records.create(10, 8);
+        let index2 = file_records.create(20, 8);
+        let index3 = file_records.create(30, 8);
         file_records.remove(index2);
 
         let mut records = Vec::<i64>::new();
 
-        for record in file_records.iter_mut() {
-            records.push(record);
-        }
+        file_records.apply(&mut |index: i64, _record: &mut FileRecord| {
+            records.push(index);
+        });
 
         assert_eq!(records, vec![index1, index3]);
     }

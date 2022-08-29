@@ -3,6 +3,7 @@ use std::io::Seek;
 use std::io::Write;
 
 use super::file_record::FileRecord;
+use super::file_record_full::FileRecordFull;
 use super::file_records::FileRecords;
 use super::serialize::Serialize;
 use crate::db_error::DbError;
@@ -18,11 +19,12 @@ impl FileStorage {
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
         self.file.seek(std::io::SeekFrom::End(0))?;
         let bytes = value.serialize();
-        let size = self.size()?;
-        let record = self.records.create(size, bytes.len() as u64);
-        self.file.write_all(&record.serialize())?;
+        let position = self.size()?;
+        let index = self.records.create(position, bytes.len() as u64);
+        self.file.write_all(&index.serialize())?;
+        self.file.write_all(&(bytes.len() as u64).serialize())?;
         self.file.write_all(&bytes)?;
-        Ok(record.index)
+        Ok(index)
     }
 
     pub(crate) fn insert_at<T: Serialize>(
@@ -35,10 +37,16 @@ impl FileStorage {
             let bytes = T::serialize(value);
 
             if offset + bytes.len() as u64 > record.size {
-                FileStorage::move_value_to_end(&mut self.file, record, offset, bytes.len() as u64)?;
+                FileStorage::move_value_to_end(
+                    &mut self.file,
+                    index,
+                    record,
+                    offset,
+                    bytes.len() as u64,
+                )?;
             }
 
-            let write_start = record.position + FileRecord::size() as u64 + offset;
+            let write_start = record.position + std::mem::size_of::<FileRecord>() as u64 + offset;
             self.file.seek(std::io::SeekFrom::Start(write_start))?;
             self.file.write_all(&bytes)?;
             return Ok(());
@@ -50,7 +58,7 @@ impl FileStorage {
     pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
         if let Some(record) = self.records.get_mut(index) {
             self.file.seek(std::io::SeekFrom::Start(record.position))?;
-            self.file.write_all(&0_i64.serialize())?;
+            self.file.write_all(&(-index).serialize())?;
             self.records.remove(index);
             return Ok(());
         }
@@ -62,7 +70,7 @@ impl FileStorage {
 
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
-            let value_pos = record.position + FileRecord::size() as u64;
+            let value_pos = record.position + std::mem::size_of::<FileRecord>() as u64;
             self.file.seek(std::io::SeekFrom::Start(value_pos))?;
             return T::deserialize(&FileStorage::read_exact(&mut self.file, record.size)?);
         }
@@ -72,7 +80,7 @@ impl FileStorage {
 
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
-            let read_start = record.position + FileRecord::size() as u64 + offset;
+            let read_start = record.position + std::mem::size_of::<FileRecord>() as u64 + offset;
             let value_size = FileStorage::value_read_size::<T>(record.size, offset)?;
             self.file.seek(std::io::SeekFrom::Start(read_start))?;
             return T::deserialize(&FileStorage::read_exact(&mut self.file, value_size)?);
@@ -91,19 +99,20 @@ impl FileStorage {
 
     fn move_value_to_end(
         file: &mut std::fs::File,
+        index: i64,
         record: &mut FileRecord,
         offset: u64,
         new_value_size: u64,
     ) -> Result<(), DbError> {
-        let value_position = record.position + FileRecord::size() as u64;
+        let value_position = record.position + std::mem::size_of::<FileRecord>() as u64;
         file.seek(std::io::SeekFrom::Start(value_position))?;
         let read_size = std::cmp::min(offset, record.size);
         let orig_value = FileStorage::read_exact(file, read_size)?;
         file.seek(std::io::SeekFrom::End(0))?;
         record.position = file.seek(std::io::SeekFrom::Current(0))?;
         record.size = offset + new_value_size;
-        let record_bytes = record.serialize();
-        file.write_all(&record_bytes)?;
+        file.write_all(&index.serialize())?;
+        file.write_all(&record.size.serialize())?;
         file.write_all(&orig_value)?;
         Ok(())
     }
@@ -114,23 +123,33 @@ impl FileStorage {
         Ok(buffer)
     }
 
-    fn read_record(file: &mut std::fs::File) -> Result<FileRecord, DbError> {
-        let pos = file.seek(std::io::SeekFrom::Current(0))?;
-        let mut record =
-            FileRecord::deserialize(&FileStorage::read_exact(file, FileRecord::size() as u64)?)?;
-        record.position = pos;
-        file.seek(std::io::SeekFrom::Current(record.size as i64))?;
+    fn read_record(file: &mut std::fs::File) -> Result<FileRecordFull, DbError> {
+        let position = file.seek(std::io::SeekFrom::Current(0))?;
+        let index = i64::deserialize(&FileStorage::read_exact(
+            file,
+            std::mem::size_of::<i64>() as u64,
+        )?)?;
+        let size = u64::deserialize(&FileStorage::read_exact(
+            file,
+            std::mem::size_of::<u64>() as u64,
+        )?)?;
 
-        Ok(record)
+        file.seek(std::io::SeekFrom::Current(size as i64))?;
+
+        Ok(FileRecordFull {
+            index,
+            position,
+            size,
+        })
     }
 
-    fn read_records(file: &mut std::fs::File) -> Result<Vec<FileRecord>, DbError> {
-        let mut records: Vec<FileRecord> = vec![];
+    fn read_records(file: &mut std::fs::File) -> Result<Vec<FileRecordFull>, DbError> {
+        let mut records: Vec<FileRecordFull> = vec![];
         file.seek(std::io::SeekFrom::End(0))?;
         let size = file.seek(std::io::SeekFrom::Current(0))?;
         file.seek(std::io::SeekFrom::Start(0))?;
 
-        while file.seek(std::io::SeekFrom::Current(0))? != size {
+        while file.seek(std::io::SeekFrom::Current(0))? < size {
             records.push(Self::read_record(file)?);
         }
 
@@ -278,7 +297,7 @@ mod tests {
 
     #[test]
     fn remove_missing_index() {
-        let test_file = TestFile::from("./file_storage-remove.agdb");
+        let test_file = TestFile::from("./file_storage-remove_missing_index.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         assert_eq!(
@@ -313,7 +332,8 @@ mod tests {
 
     #[test]
     fn restore_from_open_file_with_removed_index() {
-        let test_file = TestFile::from("./file_storage-restore_from_open_file.agdb");
+        let test_file =
+            TestFile::from("./file_storage-restore_from_open_file_with_removed_index.agdb");
         let value1 = vec![1_i64, 2_i64, 3_i64];
         let value2 = 64_u64;
         let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];

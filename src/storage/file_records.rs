@@ -98,7 +98,7 @@ impl From<Vec<FileRecord>> for FileRecords {
             let index = record.index;
 
             for index in last_index + 1..record.index {
-                file_records.free_list.push(index);
+                file_records.add_free_index(index);
             }
 
             file_records.records[index as usize] = record;

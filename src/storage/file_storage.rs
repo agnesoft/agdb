@@ -375,7 +375,7 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        let expected_size = FileRecord::size() * 2 + std::mem::size_of::<i64>() * 2;
+        let expected_size = std::mem::size_of::<FileRecord>() * 2 + std::mem::size_of::<i64>() * 2;
 
         assert_eq!(actual_size, expected_size as u64);
     }

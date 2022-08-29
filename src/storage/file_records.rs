@@ -246,6 +246,20 @@ mod tests {
     }
 
     #[test]
+    fn get_mut_zero_index() {
+        let mut file_records = FileRecords::default();
+
+        assert_eq!(file_records.get_mut(0), None);
+    }
+
+    #[test]
+    fn get_zero_index() {
+        let file_records = FileRecords::default();
+
+        assert_eq!(file_records.get(0), None);
+    }
+
+    #[test]
     fn remove() {
         let mut file_records = FileRecords::default();
         let record = file_records.create(8u64, 16u64);

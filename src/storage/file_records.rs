@@ -8,11 +8,23 @@ pub(crate) struct FileRecords {
 
 #[allow(dead_code)]
 impl FileRecords {
+    pub(crate) fn apply<F>(&mut self, op: &mut F)
+    where
+        F: FnMut(i64, &mut FileRecord),
+    {
+        for record in self.records.iter_mut().enumerate() {
+            if record.1.size != 0 {
+                op(record.0 as i64, record.1);
+            }
+        }
+    }
+
     pub(crate) fn create(&mut self, position: u64, size: u64) -> i64 {
         let index;
 
         if let Some(free_index) = self.free_index() {
             index = free_index;
+            self.records[free_index as usize] = FileRecord { position, size };
         } else {
             index = self.records.len() as i64;
             self.records.push(FileRecord { position, size });

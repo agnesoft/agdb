@@ -50,7 +50,7 @@ impl FileStorage {
     pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
         if let Some(record) = self.records.get_mut(index) {
             self.file.seek(std::io::SeekFrom::Start(record.position))?;
-            self.file.write_all(&0_i64.serialize())?;
+            self.file.write_all(&(-index).serialize())?;
             self.records.remove(index);
             return Ok(());
         }
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn remove_missing_index() {
-        let test_file = TestFile::from("./file_storage-remove.agdb");
+        let test_file = TestFile::from("./file_storage-remove_missing_index.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         assert_eq!(
@@ -311,7 +311,8 @@ mod tests {
 
     #[test]
     fn restore_from_open_file_with_removed_index() {
-        let test_file = TestFile::from("./file_storage-restore_from_open_file.agdb");
+        let test_file =
+            TestFile::from("./file_storage-restore_from_open_file_with_removed_index.agdb");
         let value1 = vec![1_i64, 2_i64, 3_i64];
         let value2 = 64_u64;
         let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];

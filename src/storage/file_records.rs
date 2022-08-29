@@ -270,18 +270,18 @@ mod tests {
     #[test]
     fn iterable() {
         let mut file_records = FileRecords::default();
-        let mut record1 = file_records.create(0, 0);
-        let record2 = file_records.create(0, 0);
-        let mut record3 = file_records.create(0, 0);
-        file_records.remove(record2.index);
+        let mut index1 = file_records.create(0, 0);
+        let index2 = file_records.create(0, 0);
+        let mut index3 = file_records.create(0, 0);
+        file_records.remove(index2);
 
-        let mut records = Vec::<&mut FileRecord>::new();
+        let mut records = Vec::<i64>::new();
 
         for record in file_records.iter_mut() {
             records.push(record);
         }
 
-        assert_eq!(records, vec![&mut record1, &mut record3]);
+        assert_eq!(records, vec![index1, index3]);
     }
 
     #[test]

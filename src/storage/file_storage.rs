@@ -66,7 +66,34 @@ impl FileStorage {
         Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
-    pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {}
+    pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
+        let indexes = self.records.indexes_by_position();
+        let mut current_pos = self.file.seek(std::io::SeekFrom::Start(0))?;
+
+        for index in indexes {
+            if let Some(record) = self.records.get_mut(index) {
+                if record.position != current_pos {
+                    self.file.seek(std::io::SeekFrom::Start(record.position))?;
+                    let bytes = FileStorage::read_exact(
+                        &mut self.file,
+                        std::mem::size_of::<FileRecord>() as u64 + record.size,
+                    )?;
+                    self.file.seek(std::io::SeekFrom::Start(current_pos))?;
+                    self.file.write_all(&bytes)?;
+                } else {
+                    self.file.seek(std::io::SeekFrom::Current(
+                        std::mem::size_of::<FileRecord>() as i64 + record.size as i64,
+                    ))?;
+                }
+            }
+
+            current_pos = self.file.seek(std::io::SeekFrom::Current(0))?;
+        }
+
+        self.file.set_len(current_pos)?;
+
+        Ok(())
+    }
 
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {

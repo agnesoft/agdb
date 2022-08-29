@@ -13,9 +13,7 @@ impl FileRecords {
 
         if let Some(free_index) = self.free_index() {
             index = free_index;
-            let value = &mut self.records[free_index as usize];
-            value.position = position;
-            value.size = size;
+            self.records[free_index as usize] = FileRecord { position, size };
         } else {
             index = self.records.len() as i64;
             self.records.push(FileRecord { position, size });
@@ -42,6 +40,24 @@ impl FileRecords {
         }
 
         None
+    }
+
+    pub(crate) fn indexes_by_position(&self) -> Vec<i64> {
+        let mut indexes = Vec::<i64>::new();
+
+        for index in 1..self.records.len() {
+            if self.records[index].size != 0 {
+                indexes.push(index as i64);
+            }
+        }
+
+        indexes.sort_by(|left, right| {
+            self.records[*left as usize]
+                .position
+                .cmp(&self.records[*right as usize].position)
+        });
+
+        indexes
     }
 
     pub(crate) fn remove(&mut self, index: i64) {
@@ -265,6 +281,17 @@ mod tests {
         let file_records = FileRecords::default();
 
         assert_eq!(file_records.get(0), None);
+    }
+
+    #[test]
+    fn indexes_by_position() {
+        let mut file_records = FileRecords::default();
+        let index1 = file_records.create(30, 8);
+        let index2 = file_records.create(20, 8);
+        let index3 = file_records.create(10, 8);
+        file_records.remove(index2);
+
+        assert_eq!(file_records.indexes_by_position(), vec![index3, index1]);
     }
 
     #[test]

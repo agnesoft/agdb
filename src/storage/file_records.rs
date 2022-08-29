@@ -1,4 +1,5 @@
 use super::file_record::FileRecord;
+use super::file_record_full::FileRecordFull;
 
 #[allow(dead_code)]
 pub(crate) struct FileRecords {
@@ -7,32 +8,25 @@ pub(crate) struct FileRecords {
 
 #[allow(dead_code)]
 impl FileRecords {
-    pub(crate) fn create(&mut self, position: u64, size: u64) -> FileRecord {
-        let record;
+    pub(crate) fn create(&mut self, position: u64, size: u64) -> i64 {
+        let index;
 
         if let Some(free_index) = self.free_index() {
+            index = free_index;
             let value = &mut self.records[free_index as usize];
-            value.index = free_index;
             value.position = position;
             value.size = size;
-
-            record = value.clone();
         } else {
-            record = FileRecord {
-                index: self.records.len() as i64,
-                position,
-                size,
-            };
-
-            self.records.push(record.clone());
+            index = self.records.len() as i64;
+            self.records.push(FileRecord { position, size });
         }
 
-        record
+        index
     }
 
     pub(crate) fn get(&self, index: i64) -> Option<&FileRecord> {
         if let Some(record) = self.records.get(index as usize) {
-            if 0 < record.index {
+            if record.size != 0 {
                 return Some(record);
             }
         }
@@ -42,7 +36,7 @@ impl FileRecords {
 
     pub(crate) fn get_mut(&mut self, index: i64) -> Option<&mut FileRecord> {
         if let Some(record) = self.records.get_mut(index as usize) {
-            if 0 < record.index {
+            if record.size != 0 {
                 return Some(record);
             }
         }
@@ -57,25 +51,25 @@ impl FileRecords {
     }
 
     fn add_free_index(&mut self, index: i64) {
-        self.records[index as usize].index = self.records[0].index;
-        self.records[0].index = -index;
+        self.records[index as usize].position = self.records[0].position;
+        self.records[index as usize].size = 0;
+        self.records[0].position = index as u64;
     }
 
     fn free_index(&mut self) -> Option<i64> {
-        let free = self.records[0].index;
+        let free = self.records[0].position;
 
-        if free < 0 {
-            let index = -free;
-            self.records[0].index = self.records[index as usize].index;
-            return Some(index);
+        if free != 0 {
+            self.records[0].position = self.records[free as usize].position;
+            return Some(free as i64);
         }
 
         None
     }
 }
 
-impl From<Vec<FileRecord>> for FileRecords {
-    fn from(mut records: Vec<FileRecord>) -> Self {
+impl From<Vec<FileRecordFull>> for FileRecords {
+    fn from(mut records: Vec<FileRecordFull>) -> Self {
         records.sort();
 
         let mut file_records;
@@ -101,7 +95,8 @@ impl From<Vec<FileRecord>> for FileRecords {
                 file_records.add_free_index(index);
             }
 
-            file_records.records[index as usize] = record;
+            file_records.records[index as usize].position = record.position;
+            file_records.records[index as usize].size = record.size;
             last_index = index;
         }
 
@@ -124,17 +119,10 @@ mod tests {
     #[test]
     fn create() {
         let mut file_records = FileRecords::default();
-        let position = 32_u64;
-        let size = 64_u64;
 
-        let actual_record = file_records.create(position, size);
-        let expected_record = FileRecord {
-            index: 1_i64,
-            position,
-            size,
-        };
+        let index = file_records.create(0, 0);
 
-        assert_eq!(actual_record, expected_record);
+        assert_eq!(index, 1_i64);
     }
 
     #[test]
@@ -144,43 +132,64 @@ mod tests {
 
     #[test]
     fn from_records() {
-        let record1 = FileRecord {
-            index: 2,
-            position: 8,
-            size: 16,
-        };
-        let record2 = FileRecord {
-            index: 1,
-            position: 24,
-            size: 16,
-        };
-        let record3 = FileRecord {
-            index: 3,
-            position: 40,
-            size: 16,
-        };
+        let index1 = 2;
+        let index2 = 1;
+        let index3 = 3;
 
-        let file_records =
-            FileRecords::from(vec![record1.clone(), record2.clone(), record3.clone()]);
+        let file_records = FileRecords::from(vec![
+            FileRecordFull {
+                index: index1,
+                position: 8,
+                size: 16,
+            },
+            FileRecordFull {
+                index: index2,
+                position: 24,
+                size: 16,
+            },
+            FileRecordFull {
+                index: index3,
+                position: 40,
+                size: 16,
+            },
+        ]);
 
-        assert_eq!(file_records.get(record1.index), Some(&record1));
-        assert_eq!(file_records.get(record2.index), Some(&record2));
-        assert_eq!(file_records.get(record3.index), Some(&record3));
+        assert_eq!(
+            file_records.get(index1),
+            Some(&FileRecord {
+                position: 8,
+                size: 16
+            })
+        );
+        assert_eq!(
+            file_records.get(index2),
+            Some(&FileRecord {
+                position: 24,
+                size: 16
+            })
+        );
+        assert_eq!(
+            file_records.get(index3),
+            Some(&FileRecord {
+                position: 40,
+                size: 16
+            })
+        );
     }
 
     #[test]
     fn from_records_with_index_gaps() {
-        let record1 = FileRecord {
+        let record1 = FileRecordFull {
             index: 5,
             position: 24,
             size: 16,
         };
-        let record2 = FileRecord {
+        let record2 = FileRecordFull {
             index: 1,
             position: 40,
             size: 16,
         };
-        let record3 = FileRecord {
+        let record3 = FileRecordFull {
             index: 2,
             position: 40,
             size: 16,
@@ -188,28 +197,28 @@ mod tests {
 
         let mut file_records = FileRecords::from(vec![record1, record2, record3]);
 
-        let new_record1 = file_records.create(2, 2);
-        let new_record2 = file_records.create(4, 4);
-        let new_record3 = file_records.create(6, 6);
+        let index1 = file_records.create(2, 2);
+        let index2 = file_records.create(4, 4);
+        let index3 = file_records.create(6, 6);
 
-        assert_eq!(new_record1.index, 4);
-        assert_eq!(new_record2.index, 3);
-        assert_eq!(new_record3.index, 6);
+        assert_eq!(index1, 4);
+        assert_eq!(index2, 3);
+        assert_eq!(index3, 6);
     }
 
     #[test]
     fn from_records_with_removed_index() {
-        let record1 = FileRecord {
+        let record1 = FileRecordFull {
             index: 1,
             position: 24,
             size: 16,
         };
-        let record2 = FileRecord {
+        let record2 = FileRecordFull {
             index: -2,
             position: 40,
             size: 16,
         };
-        let record3 = FileRecord {
+        let record3 = FileRecordFull {
             index: 3,
             position: 40,
             size: 16,
@@ -226,17 +235,10 @@ mod tests {
         let position = 32_u64;
         let size = 64_u64;
 
-        file_records.create(position, size);
-        let expected_record = FileRecord {
-            index: 1,
-            position,
-            size,
-        };
+        let index = file_records.create(position, size);
+        let expected_record = FileRecord { position, size };
 
-        assert_eq!(
-            file_records.get(expected_record.index),
-            Some(&expected_record)
-        );
+        assert_eq!(file_records.get(index), Some(&expected_record));
     }
 
     #[test]
@@ -245,17 +247,10 @@ mod tests {
         let position = 32_u64;
         let size = 64_u64;
 
-        file_records.create(position, size);
-        let mut expected_record = FileRecord {
-            index: 1,
-            position,
-            size,
-        };
+        let index = file_records.create(position, size);
+        let mut expected_record = FileRecord { position, size };
 
-        assert_eq!(
-            file_records.get_mut(expected_record.index),
-            Some(&mut expected_record)
-        );
+        assert_eq!(file_records.get_mut(index), Some(&mut expected_record));
     }
 
     #[test]
@@ -275,20 +270,20 @@ mod tests {
     #[test]
     fn remove() {
         let mut file_records = FileRecords::default();
-        let record = file_records.create(8u64, 16u64);
+        let index = file_records.create(8u64, 16u64);
 
-        file_records.remove(record.index);
+        file_records.remove(index);
 
-        assert_eq!(file_records.get(record.index), None);
+        assert_eq!(file_records.get(index), None);
     }
 
     #[test]
     fn reuse_indexes() {
         let mut file_records = FileRecords::default();
-        let record = file_records.create(8u64, 16u64);
-        file_records.remove(record.index);
-        let record2 = file_records.create(16u64, 32u64);
+        let index = file_records.create(8u64, 16u64);
+        file_records.remove(index);
+        let index2 = file_records.create(16u64, 32u64);
 
-        assert_eq!(record.index, record2.index);
+        assert_eq!(index, index2);
     }
 }

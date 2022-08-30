@@ -79,6 +79,7 @@ impl FileStorage {
                         std::mem::size_of::<FileRecord>() as u64 + record.size,
                     )?;
                     self.file.seek(std::io::SeekFrom::Start(current_pos))?;
+                    record.position = current_pos;
                     self.file.write_all(&bytes)?;
                 } else {
                     self.file.seek(std::io::SeekFrom::Current(
@@ -395,16 +396,39 @@ mod tests {
         let test_file = TestFile::from("./file_storage-shrink_to_fit.agdb");
 
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
-        storage.insert(&1_i64).unwrap();
-        let index = storage.insert(&2_i64).unwrap();
-        storage.insert(&3_i64).unwrap();
-        storage.remove(index).unwrap();
+        let index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+        storage.remove(index2).unwrap();
         storage.shrink_to_fit().unwrap();
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
         let expected_size = std::mem::size_of::<FileRecord>() * 2 + std::mem::size_of::<i64>() * 2;
 
         assert_eq!(actual_size, expected_size as u64);
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
+    }
+
+    #[test]
+    fn shrink_to_fit_no_change() {
+        let test_file = TestFile::from("./file_storage-shrink_to_fit_no_change.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+
+        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+
+        storage.shrink_to_fit().unwrap();
+
+        assert_eq!(
+            actual_size,
+            std::fs::metadata(test_file.file_name()).unwrap().len()
+        );
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(storage.value(index2), Ok(2_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
     }
 
     #[test]

@@ -66,6 +66,36 @@ impl FileStorage {
         Err(DbError::Storage(format!("index '{}' not found", index)))
     }
 
+    pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
+        let indexes = self.records.indexes_by_position();
+        let mut current_pos = self.file.seek(std::io::SeekFrom::Start(0))?;
+
+        for index in indexes {
+            if let Some(record) = self.records.get_mut(index) {
+                if record.position != current_pos {
+                    self.file.seek(std::io::SeekFrom::Start(record.position))?;
+                    let bytes = FileStorage::read_exact(
+                        &mut self.file,
+                        std::mem::size_of::<FileRecord>() as u64 + record.size,
+                    )?;
+                    self.file.seek(std::io::SeekFrom::Start(current_pos))?;
+                    record.position = current_pos;
+                    self.file.write_all(&bytes)?;
+                } else {
+                    self.file.seek(std::io::SeekFrom::Current(
+                        std::mem::size_of::<FileRecord>() as i64 + record.size as i64,
+                    ))?;
+                }
+            }
+
+            current_pos = self.file.seek(std::io::SeekFrom::Current(0))?;
+        }
+
+        self.file.set_len(current_pos)?;
+
+        Ok(())
+    }
+
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let value_pos = record.position + std::mem::size_of::<FileRecord>() as u64;
@@ -359,6 +389,46 @@ mod tests {
             Err(DbError::Storage(format!("index '{}' not found", index2)))
         );
         assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
+    }
+
+    #[test]
+    fn shrink_to_fit() {
+        let test_file = TestFile::from("./file_storage-shrink_to_fit.agdb");
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+        storage.remove(index2).unwrap();
+        storage.shrink_to_fit().unwrap();
+
+        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+        let expected_size = std::mem::size_of::<FileRecord>() * 2 + std::mem::size_of::<i64>() * 2;
+
+        assert_eq!(actual_size, expected_size as u64);
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
+    }
+
+    #[test]
+    fn shrink_to_fit_no_change() {
+        let test_file = TestFile::from("./file_storage-shrink_to_fit_no_change.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let index1 = storage.insert(&1_i64).unwrap();
+        let index2 = storage.insert(&2_i64).unwrap();
+        let index3 = storage.insert(&3_i64).unwrap();
+
+        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+
+        storage.shrink_to_fit().unwrap();
+
+        assert_eq!(
+            actual_size,
+            std::fs::metadata(test_file.file_name()).unwrap().len()
+        );
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(storage.value(index2), Ok(2_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
     }
 
     #[test]

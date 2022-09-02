@@ -56,7 +56,7 @@ mod tests {
         }
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        let expected_size = (std::mem::size_of::<u64>() + 5) as u64;
+        let expected_size = (std::mem::size_of::<u64>() * 2 + 5) as u64;
 
         assert_eq!(actual_size, expected_size);
     }

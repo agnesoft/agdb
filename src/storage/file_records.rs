@@ -270,6 +270,13 @@ mod tests {
     }
 
     #[test]
+    fn get_mut_invalid_index() {
+        let mut file_records = FileRecords::default();
+
+        assert_eq!(file_records.get_mut(-1), None);
+    }
+
+    #[test]
     fn get_mut_zero_index() {
         let mut file_records = FileRecords::default();
 
@@ -302,6 +309,20 @@ mod tests {
         file_records.remove(index);
 
         assert_eq!(file_records.get(index), None);
+    }
+
+    #[test]
+    fn remove_invalid_index() {
+        let mut file_records = FileRecords::default();
+        let record = FileRecord {
+            position: 8u64,
+            size: 16u64,
+        };
+        let index = file_records.create(record.position, record.size);
+
+        file_records.remove(-1);
+
+        assert_eq!(file_records.get(index), Some(&record));
     }
 
     #[test]

@@ -17,13 +17,14 @@ pub(crate) struct FileStorage {
 #[allow(dead_code)]
 impl FileStorage {
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
-        self.file.seek(std::io::SeekFrom::End(0))?;
-        let bytes = value.serialize();
         let position = self.size()?;
+        let bytes = value.serialize();
         let index = self.records.create(position, bytes.len() as u64);
-        self.file.write_all(&index.serialize())?;
-        self.file.write_all(&(bytes.len() as u64).serialize())?;
-        self.file.write_all(&bytes)?;
+
+        self.append(index.serialize())?;
+        self.append((bytes.len() as u64).serialize())?;
+        self.append(bytes)?;
+
         Ok(index)
     }
 
@@ -33,134 +34,158 @@ impl FileStorage {
         offset: u64,
         value: &T,
     ) -> Result<(), DbError> {
-        if let Some(record) = self.records.get_mut(index) {
-            let bytes = T::serialize(value);
+        let mut record = self.record(index)?;
+        let bytes = T::serialize(value);
+        self.ensure_record_size(&mut record, index, offset, bytes.len())?;
+        self.write(Self::value_position(record.position, offset), bytes)?;
 
-            if offset + bytes.len() as u64 > record.size {
-                FileStorage::move_value_to_end(
-                    &mut self.file,
-                    index,
-                    record,
-                    offset,
-                    bytes.len() as u64,
-                )?;
-            }
-
-            let write_start = record.position + std::mem::size_of::<FileRecord>() as u64 + offset;
-            self.file.seek(std::io::SeekFrom::Start(write_start))?;
-            self.file.write_all(&bytes)?;
-            return Ok(());
-        }
-
-        Err(DbError::Storage(format!("index '{}' not found", index)))
+        Ok(())
     }
 
     pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
-        if let Some(record) = self.records.get_mut(index) {
-            self.file.seek(std::io::SeekFrom::Start(record.position))?;
-            self.file.write_all(&(-index).serialize())?;
-            self.records.remove(index);
-            return Ok(());
-        }
+        let position = self.record(index)?.position;
+        self.write(std::io::SeekFrom::Start(position), (-index).serialize())?;
+        self.records.remove(index);
 
-        Err(DbError::Storage(format!("index '{}' not found", index)))
+        Ok(())
     }
 
     pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
         let indexes = self.records.indexes_by_position();
-        let mut current_pos = self.file.seek(std::io::SeekFrom::Start(0))?;
-
-        for index in indexes {
-            if let Some(record) = self.records.get_mut(index) {
-                if record.position != current_pos {
-                    self.file.seek(std::io::SeekFrom::Start(record.position))?;
-                    let bytes = FileStorage::read_exact(
-                        &mut self.file,
-                        std::mem::size_of::<FileRecord>() as u64 + record.size,
-                    )?;
-                    self.file.seek(std::io::SeekFrom::Start(current_pos))?;
-                    record.position = current_pos;
-                    self.file.write_all(&bytes)?;
-                } else {
-                    self.file.seek(std::io::SeekFrom::Current(
-                        std::mem::size_of::<FileRecord>() as i64 + record.size as i64,
-                    ))?;
-                }
-            }
-
-            current_pos = self.file.seek(std::io::SeekFrom::Current(0))?;
-        }
-
-        self.file.set_len(current_pos)?;
+        let size = self.shrink_indexes(indexes)?;
+        self.file.set_len(size)?;
 
         Ok(())
     }
 
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
-        if let Some(record) = self.records.get(index) {
-            let value_pos = record.position + std::mem::size_of::<FileRecord>() as u64;
-            self.file.seek(std::io::SeekFrom::Start(value_pos))?;
-            return T::deserialize(&FileStorage::read_exact(&mut self.file, record.size)?);
-        }
-
-        Err(DbError::Storage(format!("index '{}' not found", index)))
+        let record = self.record(index)?;
+        T::deserialize(&self.read(Self::value_position(record.position, 0), record.size)?)
     }
 
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
-        if let Some(record) = self.records.get(index) {
-            let read_start = record.position + std::mem::size_of::<FileRecord>() as u64 + offset;
-            let value_size = FileStorage::value_read_size::<T>(record.size, offset)?;
-            self.file.seek(std::io::SeekFrom::Start(read_start))?;
-            return T::deserialize(&FileStorage::read_exact(&mut self.file, value_size)?);
-        }
+        let record = self.record(index)?;
+        let bytes = Self::read_exact(
+            &mut self.file,
+            Self::value_position(record.position, offset),
+            Self::value_read_size::<T>(record.size, offset)?,
+        );
 
-        Err(DbError::Storage(format!("index '{}' not found", index)))
+        T::deserialize(&bytes?)
     }
 
     pub(crate) fn value_size(&self, index: i64) -> Result<u64, DbError> {
-        if let Some(record) = self.records.get(index) {
-            return Ok(record.size);
-        }
-
-        Err(DbError::Storage(format!("index '{}' not found", index)))
+        Ok(self.record(index)?.size)
     }
 
-    fn move_value_to_end(
-        file: &mut std::fs::File,
+    fn append(&mut self, bytes: Vec<u8>) -> Result<(), DbError> {
+        self.write(std::io::SeekFrom::End(0), bytes)
+    }
+
+    fn copy_record(
+        &mut self,
         index: i64,
-        record: &mut FileRecord,
-        offset: u64,
-        new_value_size: u64,
+        old_position: u64,
+        size: u64,
+        new_position: u64,
     ) -> Result<(), DbError> {
-        let value_position = record.position + std::mem::size_of::<FileRecord>() as u64;
-        file.seek(std::io::SeekFrom::Start(value_position))?;
-        let read_size = std::cmp::min(offset, record.size);
-        let orig_value = FileStorage::read_exact(file, read_size)?;
-        file.seek(std::io::SeekFrom::End(0))?;
-        record.position = file.seek(std::io::SeekFrom::Current(0))?;
-        record.size = offset + new_value_size;
-        file.write_all(&index.serialize())?;
-        file.write_all(&record.size.serialize())?;
-        file.write_all(&orig_value)?;
+        let bytes = self.read(std::io::SeekFrom::Start(old_position), size)?;
+        self.write(std::io::SeekFrom::Start(new_position), bytes)?;
+        self.record_mut(index).position = new_position;
+
         Ok(())
     }
 
-    fn read_exact(file: &mut std::fs::File, size: u64) -> Result<Vec<u8>, DbError> {
+    fn copy_record_to_end(
+        &mut self,
+        from: u64,
+        size: u64,
+        record_index: i64,
+        record_size: u64,
+    ) -> Result<FileRecord, DbError> {
+        let new_position = self.size()?;
+        let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
+        self.append(record_index.serialize())?;
+        self.append(record_size.serialize())?;
+        self.append(bytes)?;
+
+        Ok(FileRecord {
+            position: new_position,
+            size: record_size,
+        })
+    }
+
+    fn ensure_record_size(
+        &mut self,
+        record: &mut FileRecord,
+        index: i64,
+        offset: u64,
+        value_size: usize,
+    ) -> Result<(), DbError> {
+        let new_size = offset + value_size as u64;
+
+        if new_size > record.size {
+            self.move_record_to_end(index, new_size, offset, record)?;
+        }
+
+        Ok(())
+    }
+
+    fn move_record_to_end(
+        &mut self,
+        index: i64,
+        new_size: u64,
+        offset: u64,
+        record: &mut FileRecord,
+    ) -> Result<(), DbError> {
+        *record = self.copy_record_to_end(
+            record.position + std::mem::size_of::<FileRecord>() as u64,
+            core::cmp::min(record.size, offset),
+            index,
+            new_size,
+        )?;
+        *self.record_mut(index) = record.clone();
+
+        Ok(())
+    }
+
+    fn read(&mut self, position: std::io::SeekFrom, size: u64) -> Result<Vec<u8>, DbError> {
+        Self::read_exact(&mut self.file, position, size)
+    }
+
+    fn read_exact(
+        file: &mut std::fs::File,
+        position: std::io::SeekFrom,
+        size: u64,
+    ) -> Result<Vec<u8>, DbError> {
+        file.seek(position)?;
         let mut buffer = vec![0_u8; size as usize];
         file.read_exact(&mut buffer)?;
+
         Ok(buffer)
     }
 
+    fn record(&self, index: i64) -> Result<FileRecord, DbError> {
+        Ok(self
+            .records
+            .get(index)
+            .ok_or_else(|| DbError::Storage(format!("index '{}' not found", index)))?
+            .clone())
+    }
+
+    fn record_mut(&mut self, index: i64) -> &mut FileRecord {
+        self.records
+            .get_mut(index)
+            .expect("validated by previous call to FileStorage::record()")
+    }
+
     fn read_record(file: &mut std::fs::File) -> Result<FileRecordFull, DbError> {
-        let position = file.seek(std::io::SeekFrom::Current(0))?;
-        let index = i64::deserialize(&FileStorage::read_exact(
-            file,
-            std::mem::size_of::<i64>() as u64,
-        )?)?;
-        let size = u64::deserialize(&FileStorage::read_exact(
-            file,
-            std::mem::size_of::<u64>() as u64,
-        )?)?;
+        const SIZE: u64 = std::mem::size_of::<i64>() as u64;
+        const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
+
+        let position = file.seek(CURRENT)?;
+        let index = i64::deserialize(&Self::read_exact(file, CURRENT, SIZE)?)?;
+        let size = u64::deserialize(&Self::read_exact(file, CURRENT, SIZE)?)?;
 
         file.seek(std::io::SeekFrom::Current(size as i64))?;
 
@@ -184,31 +209,71 @@ impl FileStorage {
         Ok(records)
     }
 
-    fn size(&mut self) -> Result<u64, DbError> {
-        let current = self.file.seek(std::io::SeekFrom::Current(0))?;
-        let size = self.file.seek(std::io::SeekFrom::End(0))?;
-        self.file.seek(std::io::SeekFrom::Start(current))?;
-        Ok(size)
+    fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
+        let record = self.record(index)?;
+        let record_size = std::mem::size_of::<FileRecord>() as u64 + record.size;
+
+        if record.position != current_pos {
+            self.copy_record(index, record.position, record_size, current_pos)?;
+        } else {
+            self.file
+                .seek(std::io::SeekFrom::Current(record_size as i64))?;
+        }
+
+        Ok(self.file.seek(std::io::SeekFrom::Current(0))?)
     }
 
-    fn value_read_size<T>(size: u64, offset: u64) -> Result<u64, DbError> {
-        let value_size = std::mem::size_of::<T>() as u64;
+    fn shrink_indexes(&mut self, indexes: Vec<i64>) -> Result<u64, DbError> {
+        let mut current_pos = self.file.seek(std::io::SeekFrom::Start(0))?;
 
-        if offset > size {
+        for index in indexes {
+            current_pos = self.shrink_index(index, current_pos)?;
+        }
+
+        Ok(current_pos)
+    }
+
+    fn size(&mut self) -> Result<u64, DbError> {
+        Ok(self.file.seek(std::io::SeekFrom::End(0))?)
+    }
+
+    fn validate_offset<T>(size: u64, offset: u64) -> Result<(), DbError> {
+        if size < offset {
             return Err(DbError::Storage(format!(
                 "{} deserialization error: offset out of bounds",
                 std::any::type_name::<T>()
             )));
         }
 
-        if size - offset < value_size {
+        Ok(())
+    }
+
+    fn validate_value_size<T>(size: u64, offset: u64) -> Result<(), DbError> {
+        if size - offset < std::mem::size_of::<T>() as u64 {
             return Err(DbError::Storage(format!(
                 "{} deserialization error: value out of bounds",
                 std::any::type_name::<T>()
             )));
         }
 
+        Ok(())
+    }
+
+    fn value_position(position: u64, offset: u64) -> std::io::SeekFrom {
+        std::io::SeekFrom::Start(position + std::mem::size_of::<FileRecord>() as u64 + offset)
+    }
+
+    fn value_read_size<T>(size: u64, offset: u64) -> Result<u64, DbError> {
+        Self::validate_offset::<T>(size, offset)?;
+        Self::validate_value_size::<T>(size, offset)?;
+
         Ok(std::mem::size_of::<T>() as u64)
+    }
+
+    fn write(&mut self, position: std::io::SeekFrom, bytes: Vec<u8>) -> Result<(), DbError> {
+        self.file.seek(position)?;
+
+        Ok(self.file.write_all(&bytes)?)
     }
 }
 
@@ -216,7 +281,7 @@ impl TryFrom<&str> for FileStorage {
     type Error = DbError;
 
     fn try_from(filename: &str) -> Result<Self, Self::Error> {
-        FileStorage::try_from(filename.to_string())
+        Self::try_from(filename.to_string())
     }
 }
 

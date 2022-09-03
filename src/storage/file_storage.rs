@@ -180,17 +180,12 @@ impl FileStorage {
     }
 
     fn read_record(file: &mut std::fs::File) -> Result<FileRecordFull, DbError> {
-        let position = file.seek(std::io::SeekFrom::Current(0))?;
-        let index = i64::deserialize(&Self::read_exact(
-            file,
-            std::io::SeekFrom::Current(0),
-            std::mem::size_of::<i64>() as u64,
-        )?)?;
-        let size = u64::deserialize(&Self::read_exact(
-            file,
-            std::io::SeekFrom::Current(0),
-            std::mem::size_of::<u64>() as u64,
-        )?)?;
+        const SIZE: u64 = std::mem::size_of::<i64>() as u64;
+        const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
+
+        let position = file.seek(CURRENT)?;
+        let index = i64::deserialize(&Self::read_exact(file, CURRENT, SIZE)?)?;
+        let size = u64::deserialize(&Self::read_exact(file, CURRENT, SIZE)?)?;
 
         file.seek(std::io::SeekFrom::Current(size as i64))?;
 

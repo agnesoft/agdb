@@ -10,6 +10,18 @@ fn remove_file_if_exists(filename: &String) {
     }
 }
 
+fn hidden_filename(filename: &String) -> String {
+    let path = Path::new(filename);
+    let name: String = path.file_name().unwrap().to_str().unwrap().to_string();
+    let parent = path.parent().unwrap();
+
+    parent
+        .join(&Path::new(&(".".to_string() + &name)))
+        .to_str()
+        .unwrap()
+        .to_string()
+}
+
 impl TestFile {
     #[allow(dead_code)]
     pub(crate) fn file_name(&self) -> &String {
@@ -26,6 +38,7 @@ impl From<&str> for TestFile {
 impl From<String> for TestFile {
     fn from(filename: String) -> Self {
         remove_file_if_exists(&filename);
+        remove_file_if_exists(&hidden_filename(&filename));
 
         TestFile { filename }
     }
@@ -34,6 +47,7 @@ impl From<String> for TestFile {
 impl Drop for TestFile {
     fn drop(&mut self) {
         remove_file_if_exists(&self.filename);
+        remove_file_if_exists(&hidden_filename(&self.filename));
     }
 }
 

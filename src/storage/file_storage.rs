@@ -6,12 +6,14 @@ use super::file_record::FileRecord;
 use super::file_record_full::FileRecordFull;
 use super::file_records::FileRecords;
 use super::serialize::Serialize;
+use super::write_ahead_log::WriteAheadLog;
 use crate::db_error::DbError;
 
 #[allow(dead_code)]
 pub(crate) struct FileStorage {
     file: std::fs::File,
     records: FileRecords,
+    wal: WriteAheadLog,
 }
 
 #[allow(dead_code)]
@@ -296,7 +298,11 @@ impl TryFrom<String> for FileStorage {
             .open(&filename)?;
         let records = FileRecords::from(Self::read_records(&mut file)?);
 
-        Ok(FileStorage { file, records })
+        Ok(FileStorage {
+            file,
+            records,
+            wal: WriteAheadLog::try_from(".".to_string() + &filename)?,
+        })
     }
 }
 

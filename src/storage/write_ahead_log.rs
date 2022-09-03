@@ -89,7 +89,7 @@ mod tests {
             bytes: vec![1_u8; 5],
         };
 
-        wal.insert(record.clone()).unwrap();
+        wal.insert(record).unwrap();
         wal.clear().unwrap();
 
         assert_eq!(wal.records(), Ok(vec![]));

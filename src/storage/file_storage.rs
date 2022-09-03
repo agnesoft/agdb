@@ -34,15 +34,10 @@ impl FileStorage {
     ) -> Result<(), DbError> {
         let mut record = self.record(index)?;
         let bytes = T::serialize(value);
+        let new_size = offset + bytes.len() as u64;
 
-        if offset + bytes.len() as u64 > record.size {
-            record = self.move_record_to_end(
-                record.position + std::mem::size_of::<FileRecord>() as u64,
-                core::cmp::min(record.size, offset),
-                index,
-                offset + bytes.len() as u64,
-            )?;
-            *self.record_mut(index)? = record.clone();
+        if new_size > record.size {
+            self.move_record_to_end(index, new_size, offset, &mut record)?;
         }
 
         let write_start = record.position + std::mem::size_of::<FileRecord>() as u64 + offset;
@@ -119,7 +114,7 @@ impl FileStorage {
         self.write(std::io::SeekFrom::End(0), bytes)
     }
 
-    fn move_record_to_end(
+    fn copy_record_to_end(
         &mut self,
         from: u64,
         size: u64,
@@ -136,6 +131,23 @@ impl FileStorage {
             position: new_position,
             size: record_size,
         })
+    }
+
+    fn move_record_to_end(
+        &mut self,
+        index: i64,
+        new_size: u64,
+        offset: u64,
+        record: &mut FileRecord,
+    ) -> Result<(), DbError> {
+        *record = self.copy_record_to_end(
+            record.position + std::mem::size_of::<FileRecord>() as u64,
+            core::cmp::min(record.size, offset),
+            index,
+            new_size,
+        )?;
+        *self.record_mut(index)? = record.clone();
+        Ok(())
     }
 
     fn read_exact(file: &mut std::fs::File, size: u64) -> Result<Vec<u8>, DbError> {

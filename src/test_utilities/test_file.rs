@@ -52,19 +52,19 @@ mod tests {
 
     #[test]
     fn created_from_str_ref() {
-        let filename = "./test_file_test_file01";
+        let filename = "./test_file-created_from_str_ref";
         let _test_file = TestFile::from(filename);
     }
 
     #[test]
     fn created_from_string() {
-        let filename = "./test_file_test_file02".to_string();
+        let filename = "./test_file-created_from_string".to_string();
         let _test_file = TestFile::from(filename);
     }
 
     #[test]
     fn get_file_name() {
-        let filename = "./test_file_test_file03";
+        let filename = "./test_file-get_file_name";
         let test_file = TestFile::from(filename);
 
         assert_eq!(test_file.file_name(), filename);
@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn existing_file_is_deleted_on_construction() {
-        let filename = "./test_file_test_file04";
+        let filename = "./test_file-existing_file_is_deleted_on_construction";
         ensure_file(filename);
         let _test_file = TestFile::from(filename);
         assert!(!Path::new(filename).exists());
@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn file_is_deleted_on_destruction() {
-        let filename = "./test_file_test_file05";
+        let filename = "./test_file-file_is_deleted_on_destruction";
 
         {
             let _test_file = TestFile::from(filename);
@@ -88,5 +88,31 @@ mod tests {
         }
 
         assert!(!Path::new(filename).exists());
+    }
+
+    #[test]
+    fn hidden_file_is_deleted_on_construction() {
+        let filename = "./test_file-hidden_file_is_deleted_on_construction";
+        let hidden_filename = "./.test_file-hidden_file_is_deleted_on_construction";
+        ensure_file(filename);
+        ensure_file(hidden_filename);
+        let _test_file = TestFile::from(filename);
+        assert!(!Path::new(filename).exists());
+        assert!(!Path::new(hidden_filename).exists());
+    }
+
+    #[test]
+    fn hidden_file_is_deleted_on_destruction() {
+        let filename = "test_file-hidden_file_is_deleted_on_destruction";
+        let hidden_filename = ".test_file-hidden_file_is_deleted_on_destruction";
+
+        {
+            let _test_file = TestFile::from(filename);
+            ensure_file(filename);
+            ensure_file(hidden_filename);
+        }
+
+        assert!(!Path::new(filename).exists());
+        assert!(!Path::new(hidden_filename).exists());
     }
 }

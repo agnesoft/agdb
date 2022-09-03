@@ -65,12 +65,13 @@ impl FileStorage {
 
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
         let record = self.record(index)?;
-
-        T::deserialize(&Self::read_exact(
+        let bytes = Self::read_exact(
             &mut self.file,
             Self::value_position(record.position, offset),
             Self::value_read_size::<T>(record.size, offset)?,
-        )?)
+        );
+
+        T::deserialize(&bytes?)
     }
 
     pub(crate) fn value_size(&self, index: i64) -> Result<u64, DbError> {

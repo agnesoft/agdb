@@ -90,7 +90,7 @@ impl FileStorage {
     ) -> Result<(), DbError> {
         let bytes = self.read(std::io::SeekFrom::Start(old_position), size)?;
         self.write(std::io::SeekFrom::Start(new_position), bytes)?;
-        self.record_mut(index)?.position = new_position;
+        self.record_mut(index).position = new_position;
 
         Ok(())
     }
@@ -143,7 +143,7 @@ impl FileStorage {
             index,
             new_size,
         )?;
-        *self.record_mut(index)? = record.clone();
+        *self.record_mut(index) = record.clone();
 
         Ok(())
     }
@@ -172,10 +172,10 @@ impl FileStorage {
             .clone())
     }
 
-    fn record_mut(&mut self, index: i64) -> Result<&mut FileRecord, DbError> {
+    fn record_mut(&mut self, index: i64) -> &mut FileRecord {
         self.records
             .get_mut(index)
-            .ok_or_else(|| DbError::Storage(format!("index '{}' not found", index)))
+            .expect("validated by previous call to FileStorage::record()")
     }
 
     fn read_record(file: &mut std::fs::File) -> Result<FileRecordFull, DbError> {

@@ -12,6 +12,10 @@ pub(crate) struct WriteAheadLog {
 
 #[allow(dead_code)]
 impl WriteAheadLog {
+    pub(crate) fn clear(&mut self) -> Result<(), DbError> {
+        Ok(self.file.set_len(0)?)
+    }
+
     pub(crate) fn insert(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
         self.file.write_all(&record.position.serialize())?;
         self.file
@@ -73,6 +77,22 @@ mod tests {
     fn filename_constructed() {
         let test_file = TestFile::from("./write_ahead_log-filename_constructed.agdb");
         WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+    }
+
+    #[test]
+    fn clear() {
+        let test_file = TestFile::from("./write_ahead_log-clear.agdb");
+
+        let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        let record = WriteAheadLogRecord {
+            position: 1,
+            bytes: vec![1_u8; 5],
+        };
+
+        wal.insert(record).unwrap();
+        wal.clear().unwrap();
+
+        assert_eq!(wal.records(), Ok(vec![]));
     }
 
     #[test]

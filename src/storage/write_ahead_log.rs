@@ -76,6 +76,22 @@ mod tests {
     }
 
     #[test]
+    fn clear() {
+        let test_file = TestFile::from("./write_ahead_log-clear.agdb");
+
+        let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        let record = WriteAheadLogRecord {
+            position: 1,
+            bytes: vec![1_u8; 5],
+        };
+
+        wal.insert(record.clone()).unwrap();
+        wal.clear().unwrap();
+
+        assert_eq!(wal.records(), Ok(vec![]));
+    }
+
+    #[test]
     fn insert() {
         let test_file = TestFile::from("./write_ahead_log-insert.agdb");
 

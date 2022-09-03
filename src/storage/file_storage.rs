@@ -59,9 +59,9 @@ impl FileStorage {
         for index in indexes {
             if let Some(record) = self.records.get_mut(index) {
                 if record.position != current_pos {
-                    self.file.seek(std::io::SeekFrom::Start(record.position))?;
                     let bytes = FileStorage::read_exact(
                         &mut self.file,
+                        std::io::SeekFrom::Start(record.position),
                         std::mem::size_of::<FileRecord>() as u64 + record.size,
                     )?;
                     record.position = current_pos;
@@ -84,8 +84,11 @@ impl FileStorage {
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
         if let Some(record) = self.records.get(index) {
             let value_pos = record.position + std::mem::size_of::<FileRecord>() as u64;
-            self.file.seek(std::io::SeekFrom::Start(value_pos))?;
-            return T::deserialize(&FileStorage::read_exact(&mut self.file, record.size)?);
+            return T::deserialize(&FileStorage::read_exact(
+                &mut self.file,
+                std::io::SeekFrom::Start(value_pos),
+                record.size,
+            )?);
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
@@ -95,8 +98,11 @@ impl FileStorage {
         if let Some(record) = self.records.get(index) {
             let read_start = record.position + std::mem::size_of::<FileRecord>() as u64 + offset;
             let value_size = FileStorage::value_read_size::<T>(record.size, offset)?;
-            self.file.seek(std::io::SeekFrom::Start(read_start))?;
-            return T::deserialize(&FileStorage::read_exact(&mut self.file, value_size)?);
+            return T::deserialize(&FileStorage::read_exact(
+                &mut self.file,
+                std::io::SeekFrom::Start(read_start),
+                value_size,
+            )?);
         }
 
         Err(DbError::Storage(format!("index '{}' not found", index)))
@@ -122,8 +128,8 @@ impl FileStorage {
         record_size: u64,
     ) -> Result<FileRecord, DbError> {
         let new_position = self.size()?;
-        self.file.seek(std::io::SeekFrom::Start(from))?;
-        let orig_value = FileStorage::read_exact(&mut self.file, size)?;
+        let orig_value =
+            FileStorage::read_exact(&mut self.file, std::io::SeekFrom::Start(from), size)?;
         self.append(record_index.serialize())?;
         self.append(record_size.serialize())?;
         self.append(orig_value)?;
@@ -150,7 +156,12 @@ impl FileStorage {
         Ok(())
     }
 
-    fn read_exact(file: &mut std::fs::File, size: u64) -> Result<Vec<u8>, DbError> {
+    fn read_exact(
+        file: &mut std::fs::File,
+        position: std::io::SeekFrom,
+        size: u64,
+    ) -> Result<Vec<u8>, DbError> {
+        file.seek(position)?;
         let mut buffer = vec![0_u8; size as usize];
         file.read_exact(&mut buffer)?;
         Ok(buffer)
@@ -179,10 +190,12 @@ impl FileStorage {
         let position = file.seek(std::io::SeekFrom::Current(0))?;
         let index = i64::deserialize(&FileStorage::read_exact(
             file,
+            std::io::SeekFrom::Current(0),
             std::mem::size_of::<i64>() as u64,
         )?)?;
         let size = u64::deserialize(&FileStorage::read_exact(
             file,
+            std::io::SeekFrom::Current(0),
             std::mem::size_of::<u64>() as u64,
         )?)?;
 

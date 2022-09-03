@@ -12,6 +12,10 @@ pub(crate) struct WriteAheadLog {
 
 #[allow(dead_code)]
 impl WriteAheadLog {
+    pub(crate) fn clear(&mut self) -> Result<(), DbError> {
+        Ok(self.file.set_len(0)?)
+    }
+
     pub(crate) fn insert(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
         self.file.write_all(&record.position.serialize())?;
         self.file

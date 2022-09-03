@@ -1,6 +1,8 @@
 use super::serialize::Serialize;
 use super::write_ahead_log_record::WriteAheadLogRecord;
 use crate::db_error::DbError;
+use std::io::Read;
+use std::io::Seek;
 use std::io::Write;
 
 #[allow(dead_code)]
@@ -17,6 +19,35 @@ impl WriteAheadLog {
         self.file.write_all(&record.bytes)?;
         Ok(())
     }
+
+    pub(crate) fn records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
+        let mut records = Vec::<WriteAheadLogRecord>::new();
+        let size = self.file.seek(std::io::SeekFrom::End(0))?;
+        self.file.seek(std::io::SeekFrom::Start(0))?;
+
+        while self.file.seek(std::io::SeekFrom::Current(0))? < size {
+            records.push(Self::read_record(&mut self.file)?);
+        }
+
+        Ok(records)
+    }
+
+    fn read_exact(file: &mut std::fs::File, size: u64) -> Result<Vec<u8>, DbError> {
+        let mut buffer = vec![0_u8; size as usize];
+        file.read_exact(&mut buffer)?;
+        Ok(buffer)
+    }
+
+    fn read_record(file: &mut std::fs::File) -> Result<WriteAheadLogRecord, DbError> {
+        let position =
+            u64::deserialize(&Self::read_exact(file, std::mem::size_of::<u64>() as u64)?)?;
+        let size = u64::deserialize(&Self::read_exact(file, std::mem::size_of::<u64>() as u64)?)?;
+
+        Ok(WriteAheadLogRecord {
+            position,
+            bytes: Self::read_exact(file, size)?,
+        })
+    }
 }
 
 impl TryFrom<String> for WriteAheadLog {
@@ -24,6 +55,7 @@ impl TryFrom<String> for WriteAheadLog {
 
     fn try_from(filename: String) -> Result<Self, Self::Error> {
         let file = std::fs::OpenOptions::new()
+            .read(true)
             .write(true)
             .create(true)
             .open(&filename)?;
@@ -46,18 +78,35 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::from("./write_ahead_log-insert.agdb");
-        {
-            let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
-            wal.insert(WriteAheadLogRecord {
-                position: 1,
-                bytes: vec![1_u8; 5],
-            })
-            .unwrap();
-        }
 
-        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        let expected_size = (std::mem::size_of::<u64>() * 2 + 5) as u64;
+        let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        let record = WriteAheadLogRecord {
+            position: 1,
+            bytes: vec![1_u8; 5],
+        };
 
-        assert_eq!(actual_size, expected_size);
+        wal.insert(record.clone()).unwrap();
+
+        assert_eq!(wal.records(), Ok(vec![record]));
+    }
+
+    #[test]
+    fn records() {
+        let test_file = TestFile::from("./write_ahead_log-records.agdb");
+
+        let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        let record1 = WriteAheadLogRecord {
+            position: 1,
+            bytes: vec![1_u8; 5],
+        };
+        let record2 = WriteAheadLogRecord {
+            position: 15,
+            bytes: vec![2_u8; 3],
+        };
+
+        wal.insert(record1.clone()).unwrap();
+        wal.insert(record2.clone()).unwrap();
+
+        assert_eq!(wal.records(), Ok(vec![record1, record2]));
     }
 }

@@ -186,8 +186,7 @@ impl FileStorage {
 
     fn size(&mut self) -> Result<u64, DbError> {
         let current = self.file.seek(std::io::SeekFrom::Current(0))?;
-        self.file.seek(std::io::SeekFrom::End(0))?;
-        let size = self.file.seek(std::io::SeekFrom::Current(0))?;
+        let size = self.file.seek(std::io::SeekFrom::End(0))?;
         self.file.seek(std::io::SeekFrom::Start(current))?;
         Ok(size)
     }

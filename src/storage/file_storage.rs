@@ -168,15 +168,14 @@ impl FileStorage {
         Ok(self
             .records
             .get(index)
-            .ok_or(DbError::Storage(format!("index '{}' not found", index)))?
+            .ok_or_else(|| DbError::Storage(format!("index '{}' not found", index)))?
             .clone())
     }
 
     fn record_mut(&mut self, index: i64) -> Result<&mut FileRecord, DbError> {
-        Ok(self
-            .records
+        self.records
             .get_mut(index)
-            .ok_or(DbError::Storage(format!("index '{}' not found", index)))?)
+            .ok_or_else(|| DbError::Storage(format!("index '{}' not found", index)))
     }
 
     fn read_record(file: &mut std::fs::File) -> Result<FileRecordFull, DbError> {

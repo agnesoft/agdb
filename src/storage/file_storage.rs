@@ -2,10 +2,10 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::Write;
 
-use super::file_record::FileRecord;
-use super::file_record_full::FileRecordFull;
-use super::file_records::FileRecords;
 use super::storage_impl::StorageImpl;
+use super::storage_record::StorageRecord;
+use super::storage_record_with_index::StorageRecordWithIndex;
+use super::storage_records::StorageRecords;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log_record::WriteAheadLogRecord;
 use super::Storage;
@@ -15,7 +15,7 @@ use crate::db_error::DbError;
 pub(crate) struct FileStorage {
     file: std::fs::File,
     filename: String,
-    records: FileRecords,
+    records: StorageRecords,
     wal: WriteAheadLog,
     wal_filename: String,
     transactions: u64,
@@ -54,7 +54,7 @@ impl StorageImpl for FileStorage {
         Ok(self.file.read_exact(buffer)?)
     }
 
-    fn record(&self, index: i64) -> Result<FileRecord, DbError> {
+    fn record(&self, index: i64) -> Result<StorageRecord, DbError> {
         Ok(self
             .records
             .get(index)
@@ -62,7 +62,7 @@ impl StorageImpl for FileStorage {
             .clone())
     }
 
-    fn record_mut(&mut self, index: i64) -> &mut FileRecord {
+    fn record_mut(&mut self, index: i64) -> &mut StorageRecord {
         self.records
             .get_mut(index)
             .expect("validated by previous call to FileStorage::record()")
@@ -80,8 +80,8 @@ impl StorageImpl for FileStorage {
         Ok(self.file.set_len(len)?)
     }
 
-    fn set_records(&mut self, records: Vec<FileRecordFull>) {
-        self.records = FileRecords::from(records);
+    fn set_records(&mut self, records: Vec<StorageRecordWithIndex>) {
+        self.records = StorageRecords::from(records);
     }
 
     fn wal_records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
@@ -141,7 +141,7 @@ impl TryFrom<String> for FileStorage {
                 .read(true)
                 .open(&filename)?,
             filename,
-            records: FileRecords::default(),
+            records: StorageRecords::default(),
             wal: WriteAheadLog::try_from(&wal_filename)?,
             wal_filename,
             transactions: 0,
@@ -321,7 +321,8 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-        let expected_size = std::mem::size_of::<FileRecord>() * 2 + std::mem::size_of::<i64>() * 2;
+        let expected_size =
+            std::mem::size_of::<StorageRecord>() * 2 + std::mem::size_of::<i64>() * 2;
 
         assert_eq!(actual_size, expected_size as u64);
         assert_eq!(storage.value(index1), Ok(1_i64));

@@ -1,9 +1,9 @@
-mod file_record;
-mod file_record_full;
-mod file_records;
 mod file_storage;
 mod serialize;
 mod storage_impl;
+mod storage_record;
+mod storage_record_with_index;
+mod storage_records;
 mod write_ahead_log;
 mod write_ahead_log_record;
 

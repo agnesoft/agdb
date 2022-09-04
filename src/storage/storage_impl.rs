@@ -1,6 +1,6 @@
-use super::file_record::FileRecord;
-use super::file_record_full::FileRecordFull;
 use super::serialize::Serialize;
+use super::storage_record::StorageRecord;
+use super::storage_record_with_index::StorageRecordWithIndex;
 use super::write_ahead_log_record::WriteAheadLogRecord;
 use crate::db_error::DbError;
 
@@ -57,14 +57,14 @@ pub(crate) trait StorageImpl<T = Self> {
         size: u64,
         record_index: i64,
         record_size: u64,
-    ) -> Result<FileRecord, DbError> {
+    ) -> Result<StorageRecord, DbError> {
         let new_position = self.seek(std::io::SeekFrom::End(0))?;
         let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
         self.append(record_index.serialize())?;
         self.append(record_size.serialize())?;
         self.append(bytes)?;
 
-        Ok(FileRecord {
+        Ok(StorageRecord {
             position: new_position,
             size: record_size,
         })
@@ -76,7 +76,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn ensure_record_size(
         &mut self,
-        record: &mut FileRecord,
+        record: &mut StorageRecord,
         index: i64,
         offset: u64,
         value_size: usize,
@@ -98,10 +98,10 @@ pub(crate) trait StorageImpl<T = Self> {
         index: i64,
         new_size: u64,
         offset: u64,
-        record: &mut FileRecord,
+        record: &mut StorageRecord,
     ) -> Result<(), DbError> {
         *record = self.copy_record_to_end(
-            record.position + std::mem::size_of::<FileRecord>() as u64,
+            record.position + std::mem::size_of::<StorageRecord>() as u64,
             core::cmp::min(record.size, offset),
             index,
             new_size,
@@ -121,7 +121,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn read_exact(&mut self, buffer: &mut Vec<u8>) -> Result<(), DbError>;
 
-    fn read_record(&mut self) -> Result<FileRecordFull, DbError> {
+    fn read_record(&mut self) -> Result<StorageRecordWithIndex, DbError> {
         const SIZE: u64 = std::mem::size_of::<i64>() as u64;
         const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
@@ -131,7 +131,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
         self.seek(std::io::SeekFrom::Current(size as i64))?;
 
-        Ok(FileRecordFull {
+        Ok(StorageRecordWithIndex {
             index,
             position,
             size,
@@ -139,7 +139,7 @@ pub(crate) trait StorageImpl<T = Self> {
     }
 
     fn read_records(&mut self) -> Result<(), DbError> {
-        let mut records: Vec<FileRecordFull> = vec![];
+        let mut records: Vec<StorageRecordWithIndex> = vec![];
         self.seek(std::io::SeekFrom::End(0))?;
         let size = self.seek(std::io::SeekFrom::Current(0))?;
         self.seek(std::io::SeekFrom::Start(0))?;
@@ -153,16 +153,16 @@ pub(crate) trait StorageImpl<T = Self> {
         Ok(())
     }
 
-    fn record(&self, index: i64) -> Result<FileRecord, DbError>;
-    fn record_mut(&mut self, index: i64) -> &mut FileRecord;
+    fn record(&self, index: i64) -> Result<StorageRecord, DbError>;
+    fn record_mut(&mut self, index: i64) -> &mut StorageRecord;
     fn remove_index(&mut self, index: i64);
     fn seek(&mut self, position: std::io::SeekFrom) -> Result<u64, DbError>;
     fn set_len(&mut self, len: u64) -> Result<(), DbError>;
-    fn set_records(&mut self, records: Vec<FileRecordFull>);
+    fn set_records(&mut self, records: Vec<StorageRecordWithIndex>);
 
     fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
         let record = self.record(index)?;
-        let record_size = std::mem::size_of::<FileRecord>() as u64 + record.size;
+        let record_size = std::mem::size_of::<StorageRecord>() as u64 + record.size;
 
         if record.position != current_pos {
             self.copy_record(index, record.position, record_size, current_pos)?;
@@ -219,7 +219,7 @@ pub(crate) trait StorageImpl<T = Self> {
     }
 
     fn value_position(position: u64, offset: u64) -> std::io::SeekFrom {
-        std::io::SeekFrom::Start(position + std::mem::size_of::<FileRecord>() as u64 + offset)
+        std::io::SeekFrom::Start(position + std::mem::size_of::<StorageRecord>() as u64 + offset)
     }
 
     fn value_read_size<V>(size: u64, offset: u64) -> Result<u64, DbError> {

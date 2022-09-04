@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct FileRecord {
+pub(crate) struct StorageRecord {
     pub(crate) position: u64,
     pub(crate) size: u64,
 }
@@ -11,7 +11,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        let record = FileRecord::default();
+        let record = StorageRecord::default();
         format!("{:?}", record);
     }
 }

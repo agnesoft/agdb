@@ -17,10 +17,12 @@ impl WriteAheadLog {
     }
 
     pub(crate) fn insert(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
+        self.file.seek(std::io::SeekFrom::End(0))?;
         self.file.write_all(&record.position.serialize())?;
         self.file
             .write_all(&(record.bytes.len() as u64).serialize())?;
         self.file.write_all(&record.bytes)?;
+
         Ok(())
     }
 
@@ -54,15 +56,15 @@ impl WriteAheadLog {
     }
 }
 
-impl TryFrom<String> for WriteAheadLog {
+impl TryFrom<&String> for WriteAheadLog {
     type Error = DbError;
 
-    fn try_from(filename: String) -> Result<Self, Self::Error> {
+    fn try_from(filename: &String) -> Result<Self, Self::Error> {
         let file = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .open(&filename)?;
+            .open(filename)?;
 
         Ok(WriteAheadLog { file })
     }
@@ -76,14 +78,14 @@ mod tests {
     #[test]
     fn filename_constructed() {
         let test_file = TestFile::from("./write_ahead_log-filename_constructed.agdb");
-        WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        WriteAheadLog::try_from(test_file.file_name()).unwrap();
     }
 
     #[test]
     fn clear() {
         let test_file = TestFile::from("./write_ahead_log-clear.agdb");
 
-        let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
         let record = WriteAheadLogRecord {
             position: 1,
             bytes: vec![1_u8; 5],
@@ -99,7 +101,7 @@ mod tests {
     fn insert() {
         let test_file = TestFile::from("./write_ahead_log-insert.agdb");
 
-        let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
         let record = WriteAheadLogRecord {
             position: 1,
             bytes: vec![1_u8; 5],
@@ -111,10 +113,25 @@ mod tests {
     }
 
     #[test]
+    fn insert_empty() {
+        let test_file = TestFile::from("./write_ahead_log-insert_empty.agdb");
+
+        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
+        let record = WriteAheadLogRecord {
+            position: 16,
+            bytes: vec![],
+        };
+
+        wal.insert(record.clone()).unwrap();
+
+        assert_eq!(wal.records(), Ok(vec![record]));
+    }
+
+    #[test]
     fn records() {
         let test_file = TestFile::from("./write_ahead_log-records.agdb");
 
-        let mut wal = WriteAheadLog::try_from(test_file.file_name().clone()).unwrap();
+        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
         let record1 = WriteAheadLogRecord {
             position: 1,
             bytes: vec![1_u8; 5],

@@ -13,8 +13,10 @@ use crate::db_error::DbError;
 #[allow(dead_code)]
 pub(crate) struct FileStorage {
     file: std::fs::File,
+    filename: String,
     records: FileRecords,
     wal: WriteAheadLog,
+    wal_filename: String,
     transactions: u64,
 }
 
@@ -102,16 +104,20 @@ impl FileStorage {
     }
 
     fn apply_wal(&mut self) -> Result<(), DbError> {
-        for record in self.wal.records()? {
-            self.apply_wal_record(record)?;
-        }
+        let records = self.wal.records()?;
 
-        self.wal.clear()?;
+        if !records.is_empty() {
+            for record in records.iter().rev() {
+                self.apply_wal_record(record)?;
+            }
+
+            self.wal.clear()?;
+        }
 
         Ok(())
     }
 
-    fn apply_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
+    fn apply_wal_record(&mut self, record: &WriteAheadLogRecord) -> Result<(), DbError> {
         if record.bytes.is_empty() {
             self.file.set_len(record.position)?;
         } else {
@@ -232,7 +238,7 @@ impl FileStorage {
         })
     }
 
-    fn read_records(&mut self) -> Result<Vec<FileRecordFull>, DbError> {
+    fn read_records(&mut self) -> Result<(), DbError> {
         let mut records: Vec<FileRecordFull> = vec![];
         self.file.seek(std::io::SeekFrom::End(0))?;
         let size = self.file.seek(std::io::SeekFrom::Current(0))?;
@@ -242,7 +248,9 @@ impl FileStorage {
             records.push(self.read_record()?);
         }
 
-        Ok(records)
+        self.records = FileRecords::from(records);
+
+        Ok(())
     }
 
     fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
@@ -326,13 +334,13 @@ impl FileStorage {
         let write_pos = self.file.seek(position)?;
 
         if write_pos < current_end {
-            let bytes = self.read(
+            let orig_bytes = self.read(
                 std::io::SeekFrom::Start(write_pos),
                 std::cmp::min(bytes.len() as u64, current_end - write_pos),
             )?;
             self.wal.insert(WriteAheadLogRecord {
                 position: write_pos,
-                bytes,
+                bytes: orig_bytes,
             })?;
         } else {
             self.wal.insert(WriteAheadLogRecord {
@@ -348,8 +356,9 @@ impl FileStorage {
 
 impl Drop for FileStorage {
     fn drop(&mut self) {
-        if let Ok(_) = self.apply_wal() {
-            let _ = self.wal.clear();
+        if self.apply_wal().is_ok() {
+            let _ignore1 = self.wal.clear();
+            let _ignore2 = std::fs::remove_file(&self.wal_filename);
         }
     }
 }
@@ -362,18 +371,38 @@ impl TryFrom<&str> for FileStorage {
     }
 }
 
+fn wal_filename(filename: &str) -> String {
+    let pos;
+
+    if let Some(slash) = filename.rfind('/') {
+        pos = slash + 1;
+    } else if let Some(backslash) = filename.rfind('\\') {
+        pos = backslash + 1
+    } else {
+        pos = 1;
+    }
+
+    let mut copy = filename.to_owned();
+    copy.insert(pos, '.');
+    copy
+}
+
 impl TryFrom<String> for FileStorage {
     type Error = DbError;
 
     fn try_from(filename: String) -> Result<Self, Self::Error> {
+        let wal_filename = wal_filename(&filename);
+
         let mut storage = FileStorage {
             file: std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .read(true)
                 .open(&filename)?,
+            filename,
             records: FileRecords::default(),
-            wal: WriteAheadLog::try_from(filename + ".wal")?,
+            wal: WriteAheadLog::try_from(&wal_filename)?,
+            wal_filename,
             transactions: 0,
         };
 
@@ -576,6 +605,40 @@ mod tests {
         );
         assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(storage.value(index2), Ok(2_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
+    }
+
+    #[test]
+    fn shrink_to_fit_uncommitted() {
+        let test_file = TestFile::from("./file_storage-shrink_to_fit.agdb");
+
+        let expected_size;
+        let index1;
+        let index2;
+        let index3;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+            index1 = storage.insert(&1_i64).unwrap();
+            index2 = storage.insert(&2_i64).unwrap();
+            index3 = storage.insert(&3_i64).unwrap();
+            storage.remove(index2).unwrap();
+
+            expected_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+
+            storage.transaction();
+            storage.shrink_to_fit().unwrap();
+        }
+
+        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+        assert_eq!(actual_size, expected_size);
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(
+            storage.value::<i64>(index2),
+            Err(DbError::Storage(format!("index '{}' not found", index2)))
+        );
         assert_eq!(storage.value(index3), Ok(3_i64));
     }
 

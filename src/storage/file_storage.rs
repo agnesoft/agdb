@@ -6,17 +6,38 @@ use super::file_record::FileRecord;
 use super::file_record_full::FileRecordFull;
 use super::file_records::FileRecords;
 use super::serialize::Serialize;
+use super::write_ahead_log::WriteAheadLog;
+use super::write_ahead_log_record::WriteAheadLogRecord;
 use crate::db_error::DbError;
 
 #[allow(dead_code)]
 pub(crate) struct FileStorage {
     file: std::fs::File,
+    filename: String,
     records: FileRecords,
+    wal: WriteAheadLog,
+    wal_filename: String,
+    transactions: u64,
 }
 
 #[allow(dead_code)]
 impl FileStorage {
+    pub(crate) fn commit(&mut self) -> Result<(), DbError> {
+        if self.transactions == 0 {
+            return Err(DbError::Storage("no transaction in progress".to_string()));
+        }
+
+        self.transactions -= 1;
+
+        if self.transactions == 0 {
+            self.wal.clear()?;
+        }
+
+        Ok(())
+    }
+
     pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
+        self.transaction();
         let position = self.size()?;
         let bytes = value.serialize();
         let index = self.records.create(position, bytes.len() as u64);
@@ -24,6 +45,7 @@ impl FileStorage {
         self.append(index.serialize())?;
         self.append((bytes.len() as u64).serialize())?;
         self.append(bytes)?;
+        self.commit()?;
 
         Ok(index)
     }
@@ -34,28 +56,32 @@ impl FileStorage {
         offset: u64,
         value: &T,
     ) -> Result<(), DbError> {
+        self.transaction();
         let mut record = self.record(index)?;
         let bytes = T::serialize(value);
         self.ensure_record_size(&mut record, index, offset, bytes.len())?;
         self.write(Self::value_position(record.position, offset), bytes)?;
-
-        Ok(())
+        self.commit()
     }
 
     pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
+        self.transaction();
         let position = self.record(index)?.position;
         self.write(std::io::SeekFrom::Start(position), (-index).serialize())?;
         self.records.remove(index);
-
-        Ok(())
+        self.commit()
     }
 
     pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
+        self.transaction();
         let indexes = self.records.indexes_by_position();
         let size = self.shrink_indexes(indexes)?;
-        self.file.set_len(size)?;
+        self.truncate(size)?;
+        self.commit()
+    }
 
-        Ok(())
+    pub(crate) fn transaction(&mut self) {
+        self.transactions += 1;
     }
 
     pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
@@ -65,8 +91,7 @@ impl FileStorage {
 
     pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
         let record = self.record(index)?;
-        let bytes = Self::read_exact(
-            &mut self.file,
+        let bytes = self.read(
             Self::value_position(record.position, offset),
             Self::value_read_size::<T>(record.size, offset)?,
         );
@@ -76,6 +101,31 @@ impl FileStorage {
 
     pub(crate) fn value_size(&self, index: i64) -> Result<u64, DbError> {
         Ok(self.record(index)?.size)
+    }
+
+    fn apply_wal(&mut self) -> Result<(), DbError> {
+        let records = self.wal.records()?;
+
+        if !records.is_empty() {
+            for record in records.iter().rev() {
+                self.apply_wal_record(record)?;
+            }
+
+            self.wal.clear()?;
+        }
+
+        Ok(())
+    }
+
+    fn apply_wal_record(&mut self, record: &WriteAheadLogRecord) -> Result<(), DbError> {
+        if record.bytes.is_empty() {
+            self.file.set_len(record.position)?;
+        } else {
+            self.file.seek(std::io::SeekFrom::Start(record.position))?;
+            self.file.write_all(&record.bytes)?;
+        }
+
+        Ok(())
     }
 
     fn append(&mut self, bytes: Vec<u8>) -> Result<(), DbError> {
@@ -150,17 +200,9 @@ impl FileStorage {
     }
 
     fn read(&mut self, position: std::io::SeekFrom, size: u64) -> Result<Vec<u8>, DbError> {
-        Self::read_exact(&mut self.file, position, size)
-    }
-
-    fn read_exact(
-        file: &mut std::fs::File,
-        position: std::io::SeekFrom,
-        size: u64,
-    ) -> Result<Vec<u8>, DbError> {
-        file.seek(position)?;
+        self.file.seek(position)?;
         let mut buffer = vec![0_u8; size as usize];
-        file.read_exact(&mut buffer)?;
+        self.file.read_exact(&mut buffer)?;
 
         Ok(buffer)
     }
@@ -179,15 +221,15 @@ impl FileStorage {
             .expect("validated by previous call to FileStorage::record()")
     }
 
-    fn read_record(file: &mut std::fs::File) -> Result<FileRecordFull, DbError> {
+    fn read_record(&mut self) -> Result<FileRecordFull, DbError> {
         const SIZE: u64 = std::mem::size_of::<i64>() as u64;
         const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
-        let position = file.seek(CURRENT)?;
-        let index = i64::deserialize(&Self::read_exact(file, CURRENT, SIZE)?)?;
-        let size = u64::deserialize(&Self::read_exact(file, CURRENT, SIZE)?)?;
+        let position = self.file.seek(CURRENT)?;
+        let index = i64::deserialize(&self.read(CURRENT, SIZE)?)?;
+        let size = u64::deserialize(&self.read(CURRENT, SIZE)?)?;
 
-        file.seek(std::io::SeekFrom::Current(size as i64))?;
+        self.file.seek(std::io::SeekFrom::Current(size as i64))?;
 
         Ok(FileRecordFull {
             index,
@@ -196,17 +238,19 @@ impl FileStorage {
         })
     }
 
-    fn read_records(file: &mut std::fs::File) -> Result<Vec<FileRecordFull>, DbError> {
+    fn read_records(&mut self) -> Result<(), DbError> {
         let mut records: Vec<FileRecordFull> = vec![];
-        file.seek(std::io::SeekFrom::End(0))?;
-        let size = file.seek(std::io::SeekFrom::Current(0))?;
-        file.seek(std::io::SeekFrom::Start(0))?;
+        self.file.seek(std::io::SeekFrom::End(0))?;
+        let size = self.file.seek(std::io::SeekFrom::Current(0))?;
+        self.file.seek(std::io::SeekFrom::Start(0))?;
 
-        while file.seek(std::io::SeekFrom::Current(0))? < size {
-            records.push(Self::read_record(file)?);
+        while self.file.seek(std::io::SeekFrom::Current(0))? < size {
+            records.push(self.read_record()?);
         }
 
-        Ok(records)
+        self.records = FileRecords::from(records);
+
+        Ok(())
     }
 
     fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
@@ -235,6 +279,21 @@ impl FileStorage {
 
     fn size(&mut self) -> Result<u64, DbError> {
         Ok(self.file.seek(std::io::SeekFrom::End(0))?)
+    }
+
+    fn truncate(&mut self, size: u64) -> Result<(), DbError> {
+        let current_size = self.size()?;
+
+        if size < current_size {
+            let bytes = self.read(std::io::SeekFrom::Start(size), current_size - size)?;
+            self.wal.insert(WriteAheadLogRecord {
+                position: size,
+                bytes,
+            })?;
+            self.file.set_len(size)?;
+        }
+
+        Ok(())
     }
 
     fn validate_offset<T>(size: u64, offset: u64) -> Result<(), DbError> {
@@ -271,9 +330,36 @@ impl FileStorage {
     }
 
     fn write(&mut self, position: std::io::SeekFrom, bytes: Vec<u8>) -> Result<(), DbError> {
-        self.file.seek(position)?;
+        let current_end = self.size()?;
+        let write_pos = self.file.seek(position)?;
 
+        if write_pos < current_end {
+            let orig_bytes = self.read(
+                std::io::SeekFrom::Start(write_pos),
+                std::cmp::min(bytes.len() as u64, current_end - write_pos),
+            )?;
+            self.wal.insert(WriteAheadLogRecord {
+                position: write_pos,
+                bytes: orig_bytes,
+            })?;
+        } else {
+            self.wal.insert(WriteAheadLogRecord {
+                position: current_end,
+                bytes: vec![],
+            })?;
+        }
+
+        self.file.seek(position)?;
         Ok(self.file.write_all(&bytes)?)
+    }
+}
+
+impl Drop for FileStorage {
+    fn drop(&mut self) {
+        if self.apply_wal().is_ok() {
+            let _ignore1 = self.wal.clear();
+            let _ignore2 = std::fs::remove_file(&self.wal_filename);
+        }
     }
 }
 
@@ -285,18 +371,45 @@ impl TryFrom<&str> for FileStorage {
     }
 }
 
+fn wal_filename(filename: &str) -> String {
+    let pos;
+
+    if let Some(slash) = filename.rfind('/') {
+        pos = slash + 1;
+    } else if let Some(backslash) = filename.rfind('\\') {
+        pos = backslash + 1
+    } else {
+        pos = 1;
+    }
+
+    let mut copy = filename.to_owned();
+    copy.insert(pos, '.');
+    copy
+}
+
 impl TryFrom<String> for FileStorage {
     type Error = DbError;
 
     fn try_from(filename: String) -> Result<Self, Self::Error> {
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .read(true)
-            .open(&filename)?;
-        let records = FileRecords::from(Self::read_records(&mut file)?);
+        let wal_filename = wal_filename(&filename);
 
-        Ok(FileStorage { file, records })
+        let mut storage = FileStorage {
+            file: std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .read(true)
+                .open(&filename)?,
+            filename,
+            records: FileRecords::default(),
+            wal: WriteAheadLog::try_from(&wal_filename)?,
+            wal_filename,
+            transactions: 0,
+        };
+
+        storage.apply_wal()?;
+        storage.read_records()?;
+
+        Ok(storage)
     }
 }
 
@@ -493,6 +606,108 @@ mod tests {
         assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(storage.value(index2), Ok(2_i64));
         assert_eq!(storage.value(index3), Ok(3_i64));
+    }
+
+    #[test]
+    fn shrink_to_fit_uncommitted() {
+        let test_file = TestFile::from("./file_storage-shrink_to_fit.agdb");
+
+        let expected_size;
+        let index1;
+        let index2;
+        let index3;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+            index1 = storage.insert(&1_i64).unwrap();
+            index2 = storage.insert(&2_i64).unwrap();
+            index3 = storage.insert(&3_i64).unwrap();
+            storage.remove(index2).unwrap();
+
+            expected_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+
+            storage.transaction();
+            storage.shrink_to_fit().unwrap();
+        }
+
+        let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
+        assert_eq!(actual_size, expected_size);
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(
+            storage.value::<i64>(index2),
+            Err(DbError::Storage(format!("index '{}' not found", index2)))
+        );
+        assert_eq!(storage.value(index3), Ok(3_i64));
+    }
+
+    #[test]
+    fn transaction_commit() {
+        let test_file = TestFile::from(".\\\\file_storage-transaction_commit.agdb");
+        let index;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+            storage.transaction();
+            index = storage.insert(&1_i64).unwrap();
+            storage.commit().unwrap();
+            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+        }
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+    }
+
+    #[test]
+    fn transaction_commit_no_transaction() {
+        let test_file = TestFile::from("file_storage-transaction_commit.agdb");
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        assert_eq!(
+            storage.commit(),
+            Err(DbError::Storage("no transaction in progress".to_string()))
+        );
+    }
+
+    #[test]
+    fn transaction_unfinished() {
+        let test_file = TestFile::from("./file_storage-transaction_unfinished.agdb");
+        let index;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+            storage.transaction();
+            index = storage.insert(&1_i64).unwrap();
+            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+        }
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        assert_eq!(
+            storage.value::<i64>(index),
+            Err(DbError::Storage(format!("index '{}' not found", index)))
+        );
+    }
+
+    #[test]
+    fn transaction_nested_unfinished() {
+        let test_file = TestFile::from("./file_storage-transaction_unfinished.agdb");
+        let index;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+            storage.transaction();
+            storage.transaction();
+            index = storage.insert(&1_i64).unwrap();
+            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+            storage.commit().unwrap();
+        }
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        assert_eq!(
+            storage.value::<i64>(index),
+            Err(DbError::Storage(format!("index '{}' not found", index)))
+        );
     }
 
     #[test]

@@ -644,7 +644,7 @@ mod tests {
 
     #[test]
     fn transaction_commit() {
-        let test_file = TestFile::from("./file_storage-transaction_commit.agdb");
+        let test_file = TestFile::from(".\\\\file_storage-transaction_commit.agdb");
         let index;
 
         {
@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn transaction_commit_no_transaction() {
-        let test_file = TestFile::from("./file_storage-transaction_commit.agdb");
+        let test_file = TestFile::from("file_storage-transaction_commit.agdb");
 
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         assert_eq!(

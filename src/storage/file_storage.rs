@@ -5,9 +5,10 @@ use std::io::Write;
 use super::file_record::FileRecord;
 use super::file_record_full::FileRecordFull;
 use super::file_records::FileRecords;
-use super::serialize::Serialize;
+use super::storage_impl::StorageImpl;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log_record::WriteAheadLogRecord;
+use super::Storage;
 use crate::db_error::DbError;
 
 #[allow(dead_code)]
@@ -20,191 +21,37 @@ pub(crate) struct FileStorage {
     transactions: u64,
 }
 
-#[allow(dead_code)]
-impl FileStorage {
-    pub(crate) fn commit(&mut self) -> Result<(), DbError> {
-        if self.transactions == 0 {
-            return Err(DbError::Storage("no transaction in progress".to_string()));
-        }
-
-        self.transactions -= 1;
-
-        if self.transactions == 0 {
-            self.wal.clear()?;
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn insert<T: Serialize>(&mut self, value: &T) -> Result<i64, DbError> {
-        self.transaction();
-        let position = self.size()?;
-        let bytes = value.serialize();
-        let index = self.records.create(position, bytes.len() as u64);
-
-        self.append(index.serialize())?;
-        self.append((bytes.len() as u64).serialize())?;
-        self.append(bytes)?;
-        self.commit()?;
-
-        Ok(index)
-    }
-
-    pub(crate) fn insert_at<T: Serialize>(
-        &mut self,
-        index: i64,
-        offset: u64,
-        value: &T,
-    ) -> Result<(), DbError> {
-        self.transaction();
-        let mut record = self.record(index)?;
-        let bytes = T::serialize(value);
-        self.ensure_record_size(&mut record, index, offset, bytes.len())?;
-        self.write(Self::value_position(record.position, offset), bytes)?;
-        self.commit()
-    }
-
-    pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
-        self.transaction();
-        let position = self.record(index)?.position;
-        self.write(std::io::SeekFrom::Start(position), (-index).serialize())?;
-        self.records.remove(index);
-        self.commit()
-    }
-
-    pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        self.transaction();
-        let indexes = self.records.indexes_by_position();
-        let size = self.shrink_indexes(indexes)?;
-        self.truncate(size)?;
-        self.commit()
-    }
-
-    pub(crate) fn transaction(&mut self) {
+impl StorageImpl for FileStorage {
+    fn begin_transaction(&mut self) {
         self.transactions += 1;
     }
 
-    pub(crate) fn value<T: Serialize>(&mut self, index: i64) -> Result<T, DbError> {
-        let record = self.record(index)?;
-        T::deserialize(&self.read(Self::value_position(record.position, 0), record.size)?)
+    fn clear_wal(&mut self) -> Result<(), DbError> {
+        self.wal.clear()
     }
 
-    pub(crate) fn value_at<T: Serialize>(&mut self, index: i64, offset: u64) -> Result<T, DbError> {
-        let record = self.record(index)?;
-        let bytes = self.read(
-            Self::value_position(record.position, offset),
-            Self::value_read_size::<T>(record.size, offset)?,
-        );
-
-        T::deserialize(&bytes?)
+    fn create_index(&mut self, position: u64, size: u64) -> i64 {
+        self.records.create(position, size)
     }
 
-    pub(crate) fn value_size(&self, index: i64) -> Result<u64, DbError> {
-        Ok(self.record(index)?.size)
-    }
-
-    fn apply_wal(&mut self) -> Result<(), DbError> {
-        let records = self.wal.records()?;
-
-        if !records.is_empty() {
-            for record in records.iter().rev() {
-                self.apply_wal_record(record)?;
-            }
-
-            self.wal.clear()?;
+    fn end_transaction(&mut self) -> bool {
+        if self.transactions != 0 {
+            self.transactions -= 1;
         }
 
-        Ok(())
+        self.transactions == 0
     }
 
-    fn apply_wal_record(&mut self, record: &WriteAheadLogRecord) -> Result<(), DbError> {
-        if record.bytes.is_empty() {
-            self.file.set_len(record.position)?;
-        } else {
-            self.file.seek(std::io::SeekFrom::Start(record.position))?;
-            self.file.write_all(&record.bytes)?;
-        }
-
-        Ok(())
+    fn indexes_by_position(&self) -> Vec<i64> {
+        self.records.indexes_by_position()
     }
 
-    fn append(&mut self, bytes: Vec<u8>) -> Result<(), DbError> {
-        self.write(std::io::SeekFrom::End(0), bytes)
+    fn insert_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
+        self.wal.insert(record)
     }
 
-    fn copy_record(
-        &mut self,
-        index: i64,
-        old_position: u64,
-        size: u64,
-        new_position: u64,
-    ) -> Result<(), DbError> {
-        let bytes = self.read(std::io::SeekFrom::Start(old_position), size)?;
-        self.write(std::io::SeekFrom::Start(new_position), bytes)?;
-        self.record_mut(index).position = new_position;
-
-        Ok(())
-    }
-
-    fn copy_record_to_end(
-        &mut self,
-        from: u64,
-        size: u64,
-        record_index: i64,
-        record_size: u64,
-    ) -> Result<FileRecord, DbError> {
-        let new_position = self.size()?;
-        let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
-        self.append(record_index.serialize())?;
-        self.append(record_size.serialize())?;
-        self.append(bytes)?;
-
-        Ok(FileRecord {
-            position: new_position,
-            size: record_size,
-        })
-    }
-
-    fn ensure_record_size(
-        &mut self,
-        record: &mut FileRecord,
-        index: i64,
-        offset: u64,
-        value_size: usize,
-    ) -> Result<(), DbError> {
-        let new_size = offset + value_size as u64;
-
-        if new_size > record.size {
-            self.move_record_to_end(index, new_size, offset, record)?;
-        }
-
-        Ok(())
-    }
-
-    fn move_record_to_end(
-        &mut self,
-        index: i64,
-        new_size: u64,
-        offset: u64,
-        record: &mut FileRecord,
-    ) -> Result<(), DbError> {
-        *record = self.copy_record_to_end(
-            record.position + std::mem::size_of::<FileRecord>() as u64,
-            core::cmp::min(record.size, offset),
-            index,
-            new_size,
-        )?;
-        *self.record_mut(index) = record.clone();
-
-        Ok(())
-    }
-
-    fn read(&mut self, position: std::io::SeekFrom, size: u64) -> Result<Vec<u8>, DbError> {
-        self.file.seek(position)?;
-        let mut buffer = vec![0_u8; size as usize];
-        self.file.read_exact(&mut buffer)?;
-
-        Ok(buffer)
+    fn read_exact(&mut self, buffer: &mut Vec<u8>) -> Result<(), DbError> {
+        Ok(self.file.read_exact(buffer)?)
     }
 
     fn record(&self, index: i64) -> Result<FileRecord, DbError> {
@@ -221,138 +68,32 @@ impl FileStorage {
             .expect("validated by previous call to FileStorage::record()")
     }
 
-    fn read_record(&mut self) -> Result<FileRecordFull, DbError> {
-        const SIZE: u64 = std::mem::size_of::<i64>() as u64;
-        const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
-
-        let position = self.file.seek(CURRENT)?;
-        let index = i64::deserialize(&self.read(CURRENT, SIZE)?)?;
-        let size = u64::deserialize(&self.read(CURRENT, SIZE)?)?;
-
-        self.file.seek(std::io::SeekFrom::Current(size as i64))?;
-
-        Ok(FileRecordFull {
-            index,
-            position,
-            size,
-        })
+    fn remove_index(&mut self, index: i64) {
+        self.records.remove(index);
     }
 
-    fn read_records(&mut self) -> Result<(), DbError> {
-        let mut records: Vec<FileRecordFull> = vec![];
-        self.file.seek(std::io::SeekFrom::End(0))?;
-        let size = self.file.seek(std::io::SeekFrom::Current(0))?;
-        self.file.seek(std::io::SeekFrom::Start(0))?;
+    fn seek(&mut self, position: std::io::SeekFrom) -> Result<u64, DbError> {
+        Ok(self.file.seek(position)?)
+    }
 
-        while self.file.seek(std::io::SeekFrom::Current(0))? < size {
-            records.push(self.read_record()?);
-        }
+    fn set_len(&mut self, len: u64) -> Result<(), DbError> {
+        Ok(self.file.set_len(len)?)
+    }
 
+    fn set_records(&mut self, records: Vec<FileRecordFull>) {
         self.records = FileRecords::from(records);
-
-        Ok(())
     }
 
-    fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
-        let record = self.record(index)?;
-        let record_size = std::mem::size_of::<FileRecord>() as u64 + record.size;
-
-        if record.position != current_pos {
-            self.copy_record(index, record.position, record_size, current_pos)?;
-        } else {
-            self.file
-                .seek(std::io::SeekFrom::Current(record_size as i64))?;
-        }
-
-        Ok(self.file.seek(std::io::SeekFrom::Current(0))?)
+    fn wal_records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
+        self.wal.records()
     }
 
-    fn shrink_indexes(&mut self, indexes: Vec<i64>) -> Result<u64, DbError> {
-        let mut current_pos = self.file.seek(std::io::SeekFrom::Start(0))?;
-
-        for index in indexes {
-            current_pos = self.shrink_index(index, current_pos)?;
-        }
-
-        Ok(current_pos)
-    }
-
-    fn size(&mut self) -> Result<u64, DbError> {
-        Ok(self.file.seek(std::io::SeekFrom::End(0))?)
-    }
-
-    fn truncate(&mut self, size: u64) -> Result<(), DbError> {
-        let current_size = self.size()?;
-
-        if size < current_size {
-            let bytes = self.read(std::io::SeekFrom::Start(size), current_size - size)?;
-            self.wal.insert(WriteAheadLogRecord {
-                position: size,
-                bytes,
-            })?;
-            self.file.set_len(size)?;
-        }
-
-        Ok(())
-    }
-
-    fn validate_offset<T>(size: u64, offset: u64) -> Result<(), DbError> {
-        if size < offset {
-            return Err(DbError::Storage(format!(
-                "{} deserialization error: offset out of bounds",
-                std::any::type_name::<T>()
-            )));
-        }
-
-        Ok(())
-    }
-
-    fn validate_value_size<T>(size: u64, offset: u64) -> Result<(), DbError> {
-        if size - offset < std::mem::size_of::<T>() as u64 {
-            return Err(DbError::Storage(format!(
-                "{} deserialization error: value out of bounds",
-                std::any::type_name::<T>()
-            )));
-        }
-
-        Ok(())
-    }
-
-    fn value_position(position: u64, offset: u64) -> std::io::SeekFrom {
-        std::io::SeekFrom::Start(position + std::mem::size_of::<FileRecord>() as u64 + offset)
-    }
-
-    fn value_read_size<T>(size: u64, offset: u64) -> Result<u64, DbError> {
-        Self::validate_offset::<T>(size, offset)?;
-        Self::validate_value_size::<T>(size, offset)?;
-
-        Ok(std::mem::size_of::<T>() as u64)
-    }
-
-    fn write(&mut self, position: std::io::SeekFrom, bytes: Vec<u8>) -> Result<(), DbError> {
-        let current_end = self.size()?;
-        let write_pos = self.file.seek(position)?;
-
-        if write_pos < current_end {
-            let orig_bytes = self.read(
-                std::io::SeekFrom::Start(write_pos),
-                std::cmp::min(bytes.len() as u64, current_end - write_pos),
-            )?;
-            self.wal.insert(WriteAheadLogRecord {
-                position: write_pos,
-                bytes: orig_bytes,
-            })?;
-        } else {
-            self.wal.insert(WriteAheadLogRecord {
-                position: current_end,
-                bytes: vec![],
-            })?;
-        }
-
-        self.file.seek(position)?;
-        Ok(self.file.write_all(&bytes)?)
+    fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError> {
+        Ok(self.file.write_all(bytes)?)
     }
 }
+
+impl Storage for FileStorage {}
 
 impl Drop for FileStorage {
     fn drop(&mut self) {
@@ -610,7 +351,7 @@ mod tests {
 
     #[test]
     fn shrink_to_fit_uncommitted() {
-        let test_file = TestFile::from("./file_storage-shrink_to_fit.agdb");
+        let test_file = TestFile::from("./file_storage-shrink_to_fit_uncommitted.agdb");
 
         let expected_size;
         let index1;
@@ -661,13 +402,10 @@ mod tests {
 
     #[test]
     fn transaction_commit_no_transaction() {
-        let test_file = TestFile::from("file_storage-transaction_commit.agdb");
+        let test_file = TestFile::from("file_storage-transaction_commit_no_transaction.agdb");
 
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
-        assert_eq!(
-            storage.commit(),
-            Err(DbError::Storage("no transaction in progress".to_string()))
-        );
+        assert_eq!(storage.commit(), Ok(()));
     }
 
     #[test]
@@ -691,7 +429,7 @@ mod tests {
 
     #[test]
     fn transaction_nested_unfinished() {
-        let test_file = TestFile::from("./file_storage-transaction_unfinished.agdb");
+        let test_file = TestFile::from("./file_storage-transaction_nested_unfinished.agdb");
         let index;
 
         {
@@ -755,7 +493,7 @@ mod tests {
         assert_eq!(
             storage.value_at::<i64>(index, offset),
             Err(DbError::Storage(
-                "i64 deserialization error: value out of bounds".to_string()
+                "deserialization error: value out of bounds".to_string()
             ))
         );
     }
@@ -772,7 +510,7 @@ mod tests {
         assert_eq!(
             storage.value_at::<i64>(index, offset),
             Err(DbError::Storage(
-                "i64 deserialization error: offset out of bounds".to_string()
+                "deserialization error: offset out of bounds".to_string()
             ))
         );
     }

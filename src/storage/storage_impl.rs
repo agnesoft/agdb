@@ -93,6 +93,10 @@ pub(crate) trait StorageImpl<T = Self> {
     fn indexes_by_position(&self) -> Vec<i64>;
     fn insert_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError>;
 
+    fn invalidate_record(&mut self, index: i64, position: u64) -> Result<(), DbError> {
+        self.write(std::io::SeekFrom::Start(position), (-index).serialize())
+    }
+
     fn move_record_to_end(
         &mut self,
         index: i64,
@@ -100,12 +104,14 @@ pub(crate) trait StorageImpl<T = Self> {
         offset: u64,
         record: &mut StorageRecord,
     ) -> Result<(), DbError> {
+        let old_position = record.position;
         *record = self.copy_record_to_end(
             record.position + std::mem::size_of::<StorageRecord>() as u64,
             core::cmp::min(record.size, offset),
             index,
             new_size,
         )?;
+        self.invalidate_record(index, old_position)?;
         *self.record_mut(index) = record.clone();
 
         Ok(())

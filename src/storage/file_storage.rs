@@ -253,6 +253,78 @@ mod tests {
     }
 
     #[test]
+    fn resize_value_greater() {
+        let test_file = TestFile::from("./file_storage-resize_value_greater.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let index = storage.insert(&10_i64).unwrap();
+        let expected_size = std::mem::size_of::<i64>() as u64;
+
+        assert_eq!(storage.value_size(index), Ok(expected_size));
+
+        storage.resize_value(index, expected_size * 2).unwrap();
+
+        assert_eq!(storage.value_size(index), Ok(expected_size * 2));
+    }
+
+    #[test]
+    fn resize_value_missing_index() {
+        let test_file = TestFile::from("./file_storage-resize_value_missing_index.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        assert_eq!(
+            storage.resize_value(1, 1),
+            Err(DbError::Storage("index '1' not found".to_string()))
+        );
+    }
+
+    #[test]
+    fn resize_value_same() {
+        let test_file = TestFile::from("./file_storage-resize_value_same.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let index = storage.insert(&10_i64).unwrap();
+        let expected_size = std::mem::size_of::<i64>() as u64;
+
+        assert_eq!(storage.value_size(index), Ok(expected_size));
+
+        storage.resize_value(index, expected_size).unwrap();
+
+        assert_eq!(storage.value_size(index), Ok(expected_size));
+    }
+
+    #[test]
+    fn resize_value_smaller() {
+        let test_file = TestFile::from("./file_storage-resize_value_smaller.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let index = storage.insert(&10_i64).unwrap();
+        let expected_size = std::mem::size_of::<i64>() as u64;
+
+        assert_eq!(storage.value_size(index), Ok(expected_size));
+
+        storage.resize_value(index, expected_size / 2).unwrap();
+
+        assert_eq!(storage.value_size(index), Ok(expected_size / 2));
+    }
+
+    #[test]
+    fn resize_value_zero() {
+        let test_file = TestFile::from("./file_storage-resize_value_zero.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let index = storage.insert(&10_i64).unwrap();
+        let expected_size = std::mem::size_of::<i64>() as u64;
+
+        assert_eq!(storage.value_size(index), Ok(expected_size));
+
+        assert_eq!(
+            storage.resize_value(index, 0),
+            Err(DbError::Storage("value size cannot be 0".to_string()))
+        );
+    }
+
+    #[test]
     fn restore_from_open_file() {
         let test_file = TestFile::from("./file_storage-restore_from_open_file.agdb");
         let value1 = vec![1_i64, 2_i64, 3_i64];
@@ -539,6 +611,29 @@ mod tests {
             Err(DbError::Storage(
                 "i64 deserialization error: out of bounds".to_string()
             ))
+        );
+    }
+
+    #[test]
+    fn value_move_invalidates_original_position() {
+        let test_file =
+            TestFile::from("./file_storage-value_move_invalidates_original_position.agdb");
+
+        let index;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+            index = storage.insert(&10_i64).unwrap();
+            storage.insert(&5_i64).unwrap();
+            storage.resize_value(index, 1).unwrap();
+            storage.remove(index).unwrap();
+        }
+
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        assert_eq!(
+            storage.value::<i64>(index),
+            Err(DbError::Storage("index '1' not found".to_string()))
         );
     }
 

@@ -100,12 +100,14 @@ pub(crate) trait StorageImpl<T = Self> {
         offset: u64,
         record: &mut StorageRecord,
     ) -> Result<(), DbError> {
+        let old_position = record.position;
         *record = self.copy_record_to_end(
             record.position + std::mem::size_of::<StorageRecord>() as u64,
             core::cmp::min(record.size, offset),
             index,
             new_size,
         )?;
+        self.write(std::io::SeekFrom::Start(old_position), (-index).serialize())?;
         *self.record_mut(index) = record.clone();
 
         Ok(())

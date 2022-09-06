@@ -18,20 +18,24 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         self.index
     }
 
-    pub(crate) fn push(&mut self, value: T) -> Result<(), DbError> {
+    pub(crate) fn push(&mut self, value: &T) -> Result<(), DbError> {
         if self.size == self.capacity {
-            self.reallocate(self.capacity * 2)
+            self.reallocate(std::cmp::max(self.capacity * 2, 64))?;
         }
 
+        let mut ref_storage = self.storage.borrow_mut();
+        ref_storage.insert_at(self.index, Self::value_offset(self.size), value)?;
         self.size += 1;
+        ref_storage.insert_at(self.index, 0, &self.size)?;
 
         Ok(())
     }
 
-    fn reallocate(&mut self, mut new_capacity: u64) {
-        if new_capacity < 64 {
-            new_capacity = 64;
-        }
+    fn reallocate(&mut self, new_capacity: u64) -> Result<(), DbError> {
+        self.capacity = new_capacity;
+        self.storage
+            .borrow_mut()
+            .resize_value(self.index, Self::value_offset(new_capacity))
     }
 
     fn value_offset(index: u64) -> u64 {
@@ -62,19 +66,19 @@ mod tests {
 
     #[test]
     fn push() {
-        let test_file = TestFile::from("./storage_vec-from_file_storage.agdb");
+        let test_file = TestFile::from("./storage_vec-push.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
-        vec.push(1).unwrap();
-        vec.push(3).unwrap();
-        vec.push(5).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
 
         assert_eq!(
             storage.borrow_mut().value::<Vec::<i64>>(vec.index()),
-            Ok(vec![1, 3, 5])
+            Ok(vec![1_i64, 3_i64, 5_i64])
         );
     }
 }

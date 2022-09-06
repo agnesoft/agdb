@@ -52,7 +52,7 @@ pub(crate) trait Storage<T: StorageImpl = Self>: StorageImpl<T> {
     fn remove(&mut self, index: i64) -> Result<(), DbError> {
         self.transaction();
         let position = self.record(index)?.position;
-        self.write(std::io::SeekFrom::Start(position), (-index).serialize())?;
+        self.invalidate_record(index, position)?;
         self.remove_index(index);
         self.commit()
     }

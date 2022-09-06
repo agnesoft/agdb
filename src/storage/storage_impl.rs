@@ -112,6 +112,7 @@ pub(crate) trait StorageImpl<T = Self> {
             new_size,
         )?;
         self.invalidate_record(index, old_position)?;
+        self.set_len(record.position + std::mem::size_of::<StorageRecord>() as u64 + new_size)?;
         *self.record_mut(index) = record.clone();
 
         Ok(())

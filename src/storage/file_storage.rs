@@ -638,6 +638,18 @@ mod tests {
     }
 
     #[test]
+    fn value_move_resizes_file() {
+        let test_file = TestFile::from("./file_storage-value_move_resizes_file.agdb");
+
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+        let index = storage.insert(&3_i64).unwrap();
+        let size = std::mem::size_of::<u64>() as u64 + std::mem::size_of::<i64>() as u64 * 3;
+        storage.resize_value(index, size).unwrap();
+
+        assert_eq!(storage.value::<Vec<i64>>(index), Ok(vec![0_i64; 3]));
+    }
+
+    #[test]
     fn value_size() {
         let test_file = TestFile::from("./file_storage-value_size.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();

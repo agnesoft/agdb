@@ -633,9 +633,7 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::Storage(
-                "i64 deserialization error: out of bounds".to_string()
-            ))
+            Err(DbError::Storage("index '1' not found".to_string()))
         );
     }
 

@@ -57,6 +57,22 @@ pub(crate) trait Storage<T: StorageImpl = Self>: StorageImpl<T> {
         self.commit()
     }
 
+    fn resize_value(&mut self, index: i64, new_size: u64) -> Result<(), DbError> {
+        if new_size == 0 {
+            return Err(DbError::Storage("value size cannot be 0".to_string()));
+        }
+
+        let mut record = self.record(index)?;
+
+        if record.size != new_size {
+            self.transaction();
+            self.move_record_to_end(index, new_size, new_size, &mut record)?;
+            self.commit()?;
+        }
+
+        Ok(())
+    }
+
     fn shrink_to_fit(&mut self) -> Result<(), DbError> {
         self.transaction();
         let indexes = self.indexes_by_position();

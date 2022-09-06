@@ -615,6 +615,31 @@ mod tests {
     }
 
     #[test]
+    fn value_move_invalidates_original_position() {
+        let test_file =
+            TestFile::from("./file_storage-value_move_invalidates_original_position.agdb");
+
+        let index;
+
+        {
+            let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+            index = storage.insert(&10_i64).unwrap();
+            storage.insert(&5_i64).unwrap();
+            storage.resize_value(index, 1).unwrap();
+            storage.remove(index).unwrap();
+        }
+
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        assert_eq!(
+            storage.value::<i64>(index),
+            Err(DbError::Storage(
+                "i64 deserialization error: out of bounds".to_string()
+            ))
+        );
+    }
+
+    #[test]
     fn value_size() {
         let test_file = TestFile::from("./file_storage-value_size.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();

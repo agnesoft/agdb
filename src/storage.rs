@@ -66,7 +66,7 @@ pub(crate) trait Storage<T: StorageImpl = Self>: StorageImpl<T> {
 
         if record.size != new_size {
             self.transaction();
-            self.move_record_to_end(index, new_size, new_size, &mut record)?;
+            self.resize_record(index, new_size, new_size, &mut record)?;
             self.commit()?;
         }
 

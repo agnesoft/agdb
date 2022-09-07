@@ -253,6 +253,20 @@ mod tests {
     }
 
     #[test]
+    fn resize_at_end_does_not_move() {
+        let test_file = TestFile::from("./file_storage-resize_at_end_does_not_move.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+
+        let index = storage.insert(&1_i64).unwrap();
+        let size = storage.size().unwrap();
+        let value_size = storage.value_size(index).unwrap();
+
+        storage.resize_value(index, value_size + 8).unwrap();
+
+        assert_eq!(storage.size(), Ok(size + 8));
+    }
+
+    #[test]
     fn resize_value_greater() {
         let test_file = TestFile::from("./file_storage-resize_value_greater.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();

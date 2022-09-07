@@ -84,7 +84,7 @@ pub(crate) trait StorageImpl<T = Self> {
         let new_size = offset + value_size as u64;
 
         if new_size > record.size {
-            self.move_record_to_end(index, new_size, offset, record)?;
+            self.resize_record(index, new_size, offset, record)?;
         }
 
         Ok(())
@@ -95,6 +95,14 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn invalidate_record(&mut self, index: i64, position: u64) -> Result<(), DbError> {
         self.write(std::io::SeekFrom::Start(position), (-index).serialize())
+    }
+
+    fn is_at_end(&mut self, record: &StorageRecord) -> Result<bool, DbError> {
+        let file_size = self.seek(std::io::SeekFrom::End(0))?;
+        Ok(
+            (record.position + std::mem::size_of::<StorageRecord>() as u64 + record.size)
+                == file_size,
+        )
     }
 
     fn move_record_to_end(
@@ -112,9 +120,6 @@ pub(crate) trait StorageImpl<T = Self> {
             new_size,
         )?;
         self.invalidate_record(index, old_position)?;
-        self.set_len(record.position + std::mem::size_of::<StorageRecord>() as u64 + new_size)?;
-        *self.record_mut(index) = record.clone();
-
         Ok(())
     }
 
@@ -163,6 +168,26 @@ pub(crate) trait StorageImpl<T = Self> {
     fn record(&self, index: i64) -> Result<StorageRecord, DbError>;
     fn record_mut(&mut self, index: i64) -> &mut StorageRecord;
     fn remove_index(&mut self, index: i64);
+
+    fn resize_record(
+        &mut self,
+        index: i64,
+        new_size: u64,
+        offset: u64,
+        record: &mut StorageRecord,
+    ) -> Result<(), DbError> {
+        if self.is_at_end(record)? {
+            record.size = new_size;
+        } else {
+            self.move_record_to_end(index, new_size, offset, record)?;
+        }
+
+        self.set_len(record.position + std::mem::size_of::<StorageRecord>() as u64 + new_size)?;
+        *self.record_mut(index) = record.clone();
+
+        Ok(())
+    }
+
     fn seek(&mut self, position: std::io::SeekFrom) -> Result<u64, DbError>;
     fn set_len(&mut self, len: u64) -> Result<(), DbError>;
     fn set_records(&mut self, records: Vec<StorageRecordWithIndex>);

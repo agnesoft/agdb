@@ -31,6 +31,16 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         Ok(())
     }
 
+    pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
+        if index < self.size {
+            self.storage
+                .borrow_mut()
+                .value_at::<T>(self.index, Self::value_offset(index))
+        } else {
+            return Err(DbError::Storage("index out of bounds".to_string()));
+        }
+    }
+
     fn reallocate(&mut self, new_capacity: u64) -> Result<(), DbError> {
         self.capacity = new_capacity;
         self.storage

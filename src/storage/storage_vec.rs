@@ -31,6 +31,16 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         Ok(())
     }
 
+    pub(crate) fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
+        if self.size <= index {
+            return Err(DbError::Storage("index out of bounds".to_string()));
+        }
+
+        self.storage
+            .borrow_mut()
+            .insert_at(self.index, Self::value_offset(index), value)
+    }
+
     pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
         if self.size <= index {
             return Err(DbError::Storage("index out of bounds".to_string()));
@@ -89,6 +99,40 @@ mod tests {
         assert_eq!(
             storage.borrow_mut().value::<Vec::<i64>>(vec.index()),
             Ok(vec![1_i64, 3_i64, 5_i64])
+        );
+    }
+
+    #[test]
+    fn set_value() {
+        let test_file = TestFile::from("./storage_vec-set_value.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.set_value(1, &10).unwrap();
+
+        assert_eq!(vec.value(0), Ok(1));
+        assert_eq!(vec.value(1), Ok(10));
+        assert_eq!(vec.value(2), Ok(5));
+    }
+
+    #[test]
+    fn set_value_out_of_bounds() {
+        let test_file = TestFile::from("./storage_vec-set_value_out_of_bounds.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(
+            vec.set_value(0, &10),
+            Err(DbError::Storage("index out of bounds".to_string()))
         );
     }
 

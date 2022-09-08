@@ -18,6 +18,10 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         self.index
     }
 
+    pub(crate) fn len(&self) -> u64 {
+        self.size
+    }
+
     pub(crate) fn push(&mut self, value: &T) -> Result<(), DbError> {
         if self.size == self.capacity {
             self.reallocate(std::cmp::max(self.capacity * 2, 64))?;
@@ -76,6 +80,37 @@ impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for S
             capacity: 0,
             phantom_data: std::marker::PhantomData::<T>,
         })
+    }
+}
+
+pub(crate) struct StorageVecIterator<'a, T: Serialize, S: Storage> {
+    index: u64,
+    vec: &'a mut StorageVec<T, S>,
+}
+
+impl<'a, T: Serialize, S: Storage> Iterator for StorageVecIterator<'a, T, S> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.vec.len() <= self.index {
+            return None;
+        }
+        let current = self.index;
+        self.index += 1;
+        self.vec.value(current).ok()
+    }
+}
+
+impl<'a, T: Serialize, S: Storage> IntoIterator for &'a mut StorageVec<T, S> {
+    type Item = T;
+
+    type IntoIter = StorageVecIterator<'a, T, S>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        StorageVecIterator::<T, S> {
+            index: 0,
+            vec: self,
+        }
     }
 }
 

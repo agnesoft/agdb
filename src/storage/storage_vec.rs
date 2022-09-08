@@ -85,6 +85,27 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    fn iteration() {
+        let test_file = TestFile::from("./storage_vec-iteration.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        let mut values: Vec<i64> = vec![];
+
+        for value in &mut vec {
+            values.push(value);
+        }
+
+        assert_eq!(values, vec![1, 3, 5]);
+    }
+
+    #[test]
     fn push() {
         let test_file = TestFile::from("./storage_vec-push.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(

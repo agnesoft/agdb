@@ -32,13 +32,13 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
     }
 
     pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
-        if index < self.size {
-            self.storage
-                .borrow_mut()
-                .value_at::<T>(self.index, Self::value_offset(index))
-        } else {
+        if self.size <= index {
             return Err(DbError::Storage("index out of bounds".to_string()));
         }
+
+        self.storage
+            .borrow_mut()
+            .value_at::<T>(self.index, Self::value_offset(index))
     }
 
     fn reallocate(&mut self, new_capacity: u64) -> Result<(), DbError> {
@@ -99,7 +99,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -111,12 +111,12 @@ mod tests {
 
     #[test]
     fn value_out_of_bounds() {
-        let test_file = TestFile::from("./storage_vec-value.agdb");
+        let test_file = TestFile::from("./storage_vec-value_out_of_bounds.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(
             vec.value(0),

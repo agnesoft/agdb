@@ -83,34 +83,16 @@ impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for S
     }
 }
 
-pub(crate) struct StorageVecIterator<'a, T: Serialize, S: Storage> {
-    index: u64,
-    vec: &'a mut StorageVec<T, S>,
-}
-
-impl<'a, T: Serialize, S: Storage> Iterator for StorageVecIterator<'a, T, S> {
+impl<T: Serialize, S: Storage> IntoIterator for &mut StorageVec<T, S> {
     type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.vec.len() <= self.index {
-            return None;
-        }
-        let current = self.index;
-        self.index += 1;
-        self.vec.value(current).ok()
-    }
-}
-
-impl<'a, T: Serialize, S: Storage> IntoIterator for &'a mut StorageVec<T, S> {
-    type Item = T;
-
-    type IntoIter = StorageVecIterator<'a, T, S>;
+    type IntoIter = std::vec::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        StorageVecIterator::<T, S> {
-            index: 0,
-            vec: self,
-        }
+        self.storage
+            .borrow_mut()
+            .value::<Vec<T>>(self.index)
+            .unwrap_or_default()
+            .into_iter()
     }
 }
 
@@ -138,6 +120,21 @@ mod tests {
         }
 
         assert_eq!(values, vec![1, 3, 5]);
+    }
+
+    #[test]
+    fn len() {
+        let test_file = TestFile::from("./storage_vec-len.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        assert_eq!(vec.len(), 3);
     }
 
     #[test]

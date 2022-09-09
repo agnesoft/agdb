@@ -79,15 +79,22 @@ pub(crate) trait StorageImpl<T = Self> {
         record: &mut StorageRecord,
         index: i64,
         offset: u64,
-        value_size: usize,
+        value_size: u64,
     ) -> Result<(), DbError> {
-        let new_size = offset + value_size as u64;
+        let new_size = offset + value_size;
 
         if new_size > record.size {
             self.resize_record(index, new_size, offset, record)?;
         }
 
         Ok(())
+    }
+
+    fn erase_bytes(&mut self, position: u64, size: u64) -> Result<(), DbError> {
+        self.write(
+            std::io::SeekFrom::Start(position),
+            vec![0_u8; size as usize],
+        )
     }
 
     fn indexes_by_position(&self) -> Vec<i64>;
@@ -99,6 +106,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn is_at_end(&mut self, record: &StorageRecord) -> Result<bool, DbError> {
         let file_size = self.seek(std::io::SeekFrom::End(0))?;
+
         Ok(
             (record.position + std::mem::size_of::<StorageRecord>() as u64 + record.size)
                 == file_size,
@@ -120,6 +128,21 @@ pub(crate) trait StorageImpl<T = Self> {
             new_size,
         )?;
         self.invalidate_record(index, old_position)?;
+
+        Ok(())
+    }
+
+    fn move_bytes(&mut self, from: u64, to: u64, size: u64) -> Result<(), DbError> {
+        let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
+        self.write(std::io::SeekFrom::Start(to), bytes)?;
+
+        if from < to {
+            self.erase_bytes(from, std::cmp::min(size, to - from))?;
+        } else {
+            let position = std::cmp::max(to + size, from);
+            self.erase_bytes(position, from + size - position)?;
+        }
+
         Ok(())
     }
 
@@ -230,6 +253,14 @@ pub(crate) trait StorageImpl<T = Self> {
         Ok(())
     }
 
+    fn validate_move_size(offset: u64, size: u64, record_size: u64) -> Result<(), DbError> {
+        if record_size < (offset + size) {
+            return Err(DbError::Storage("move size out of bounds".to_string()));
+        }
+
+        Ok(())
+    }
+
     fn validate_offset<V>(size: u64, offset: u64) -> Result<(), DbError> {
         if size < offset {
             return Err(DbError::Storage(
@@ -251,7 +282,11 @@ pub(crate) trait StorageImpl<T = Self> {
     }
 
     fn value_position(position: u64, offset: u64) -> std::io::SeekFrom {
-        std::io::SeekFrom::Start(position + std::mem::size_of::<StorageRecord>() as u64 + offset)
+        std::io::SeekFrom::Start(Self::value_position_u64(position, offset))
+    }
+
+    fn value_position_u64(position: u64, offset: u64) -> u64 {
+        position + std::mem::size_of::<StorageRecord>() as u64 + offset
     }
 
     fn value_read_size<V>(size: u64, offset: u64) -> Result<u64, DbError> {

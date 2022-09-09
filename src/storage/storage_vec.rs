@@ -6,7 +6,7 @@ use crate::db_error::DbError;
 #[allow(dead_code)]
 pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
     storage: std::rc::Rc<std::cell::RefCell<S>>,
-    index: i64,
+    file_index: i64,
     size: u64,
     capacity: u64,
     phantom_data: std::marker::PhantomData<T>,
@@ -14,8 +14,8 @@ pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
 
 #[allow(dead_code)]
 impl<T: Serialize, S: Storage> StorageVec<T, S> {
-    pub(crate) fn index(&self) -> i64 {
-        self.index
+    pub(crate) fn file_index(&self) -> i64 {
+        self.file_index
     }
 
     pub(crate) fn len(&self) -> u64 {
@@ -28,9 +28,9 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         }
 
         let mut ref_storage = self.storage.borrow_mut();
-        ref_storage.insert_at(self.index, Self::value_offset(self.size), value)?;
+        ref_storage.insert_at(self.file_index, Self::value_offset(self.size), value)?;
         self.size += 1;
-        ref_storage.insert_at(self.index, 0, &self.size)?;
+        ref_storage.insert_at(self.file_index, 0, &self.size)?;
 
         Ok(())
     }
@@ -42,7 +42,7 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
 
         self.storage
             .borrow_mut()
-            .insert_at(self.index, Self::value_offset(index), value)
+            .insert_at(self.file_index, Self::value_offset(index), value)
     }
 
     pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
@@ -52,14 +52,14 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
 
         self.storage
             .borrow_mut()
-            .value_at::<T>(self.index, Self::value_offset(index))
+            .value_at::<T>(self.file_index, Self::value_offset(index))
     }
 
     fn reallocate(&mut self, new_capacity: u64) -> Result<(), DbError> {
         self.capacity = new_capacity;
         self.storage
             .borrow_mut()
-            .resize_value(self.index, Self::value_offset(new_capacity))
+            .resize_value(self.file_index, Self::value_offset(new_capacity))
     }
 
     fn value_offset(index: u64) -> u64 {
@@ -75,7 +75,7 @@ impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for S
 
         Ok(Self {
             storage,
-            index,
+            file_index: index,
             size: 0,
             capacity: 0,
             phantom_data: std::marker::PhantomData::<T>,
@@ -90,7 +90,7 @@ impl<T: Serialize, S: Storage> IntoIterator for &mut StorageVec<T, S> {
     fn into_iter(self) -> Self::IntoIter {
         self.storage
             .borrow_mut()
-            .value::<Vec<T>>(self.index)
+            .value::<Vec<T>>(self.file_index)
             .unwrap_or_default()
             .into_iter()
     }
@@ -150,7 +150,7 @@ mod tests {
         vec.push(&5).unwrap();
 
         assert_eq!(
-            storage.borrow_mut().value::<Vec::<i64>>(vec.index()),
+            storage.borrow_mut().value::<Vec::<i64>>(vec.file_index()),
             Ok(vec![1_i64, 3_i64, 5_i64])
         );
     }

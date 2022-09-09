@@ -228,6 +228,103 @@ mod tests {
     }
 
     #[test]
+    fn move_at() {
+        let test_file = TestFile::from("./file_storage-move_at.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset_from = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 2) as u64;
+        let offset_to = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>()) as u64;
+        let size = std::mem::size_of::<u64>() as u64;
+
+        storage
+            .move_at(index, offset_from, offset_to, size)
+            .unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 3_i64, 0_i64]
+        )
+    }
+
+    #[test]
+    fn move_at_beyond_end() {
+        let test_file = TestFile::from("./file_storage-move_at_beyond_end.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset_from = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>()) as u64;
+        let offset_to = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 4) as u64;
+        let size = std::mem::size_of::<u64>() as u64;
+
+        storage
+            .move_at(index, offset_from, offset_to, size)
+            .unwrap();
+
+        storage.insert_at(index, 0, &5_u64).unwrap();
+
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 0_i64, 3_i64, 0_i64, 2_i64]
+        )
+    }
+
+    #[test]
+    fn move_at_missing_index() {
+        let test_file = TestFile::from("./file_storage-move_at_missing_index.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        assert_eq!(
+            storage.move_at(1, 0, 1, 10),
+            Err(DbError::Storage("index '1' not found".to_string()))
+        );
+    }
+
+    #[test]
+    fn move_at_same_offset() {
+        let test_file = TestFile::from("./file_storage-move_at_same_offset.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+
+        assert_eq!(storage.move_at(index, 0, 0, 10), Ok(()));
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 2_i64, 3_i64]
+        );
+    }
+
+    #[test]
+    fn move_at_size_out_of_bounds() {
+        let test_file = TestFile::from("./file_storage-move_at_size_out_of_bounds.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+        let offset_from = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 3) as u64;
+        let offset_to = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 2) as u64;
+        let size = (std::mem::size_of::<u64>() * 10) as u64;
+
+        assert_eq!(
+            storage.move_at(index, offset_from, offset_to, size),
+            Err(DbError::Storage("move size out of bounds".to_string()))
+        );
+    }
+
+    #[test]
+    fn move_at_zero_size() {
+        let test_file = TestFile::from("./file_storage-move_at_zero_size.agdb");
+        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+
+        let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
+
+        assert_eq!(storage.move_at(index, 0, 1, 0), Ok(()));
+        assert_eq!(
+            storage.value::<Vec<i64>>(index).unwrap(),
+            vec![1_i64, 2_i64, 3_i64]
+        );
+    }
+
+    #[test]
     fn remove() {
         let test_file = TestFile::from("./file_storage-remove.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();

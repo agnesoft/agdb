@@ -102,6 +102,21 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    fn into_vec() {
+        let test_file = TestFile::from("./storage_vec-into_vec.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        assert_eq!(vec.as_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
+    }
+
+    #[test]
     fn iteration() {
         let test_file = TestFile::from("./storage_vec-iteration.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
@@ -115,7 +130,7 @@ mod tests {
 
         let mut values: Vec<i64> = vec![];
 
-        for value in &mut vec {
+        for value in vec.as_vec().unwrap() {
             values.push(value);
         }
 

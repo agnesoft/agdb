@@ -18,6 +18,10 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         self.index
     }
 
+    pub(crate) fn len(&self) -> u64 {
+        self.size
+    }
+
     pub(crate) fn push(&mut self, value: &T) -> Result<(), DbError> {
         if self.size == self.capacity {
             self.reallocate(std::cmp::max(self.capacity * 2, 64))?;
@@ -79,10 +83,59 @@ impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for S
     }
 }
 
+impl<T: Serialize, S: Storage> IntoIterator for &mut StorageVec<T, S> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.storage
+            .borrow_mut()
+            .value::<Vec<T>>(self.index)
+            .unwrap_or_default()
+            .into_iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_utilities::test_file::TestFile;
+
+    #[test]
+    fn iteration() {
+        let test_file = TestFile::from("./storage_vec-iteration.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        let mut values: Vec<i64> = vec![];
+
+        for value in &mut vec {
+            values.push(value);
+        }
+
+        assert_eq!(values, vec![1, 3, 5]);
+    }
+
+    #[test]
+    fn len() {
+        let test_file = TestFile::from("./storage_vec-len.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        assert_eq!(vec.len(), 3);
+    }
 
     #[test]
     fn push() {

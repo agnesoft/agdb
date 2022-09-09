@@ -44,9 +44,34 @@ pub(crate) trait Storage<T: StorageImpl = Self>: StorageImpl<T> {
         self.transaction();
         let mut record = self.record(index)?;
         let bytes = V::serialize(value);
-        self.ensure_record_size(&mut record, index, offset, bytes.len())?;
+        self.ensure_record_size(&mut record, index, offset, bytes.len() as u64)?;
         self.write(Self::value_position(record.position, offset), bytes)?;
         self.commit()
+    }
+
+    fn move_at(
+        &mut self,
+        index: i64,
+        offset_from: u64,
+        offset_to: u64,
+        size: u64,
+    ) -> Result<(), DbError> {
+        if offset_from == offset_to || size == 0 {
+            return Ok(());
+        }
+
+        let mut record = self.record(index)?;
+        Self::validate_move_size(offset_from, size, record.size)?;
+        self.transaction();
+        self.ensure_record_size(&mut record, index, offset_to, size)?;
+        self.move_bytes(
+            Self::value_position_u64(record.position, offset_from),
+            Self::value_position_u64(record.position, offset_to),
+            size,
+        )?;
+        self.commit()?;
+
+        Ok(())
     }
 
     fn remove(&mut self, index: i64) -> Result<(), DbError> {

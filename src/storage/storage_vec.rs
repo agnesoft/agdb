@@ -14,8 +14,8 @@ pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
 
 #[allow(dead_code)]
 impl<T: Serialize, S: Storage> StorageVec<T, S> {
-    pub(crate) fn storage_index(&self) -> i64 {
-        self.storage_index
+    fn as_vec(&mut self) -> Result<Vec<T>, DbError> {
+        self.storage.borrow_mut().value(self.storage_index)
     }
 
     pub(crate) fn len(&self) -> u64 {
@@ -43,6 +43,10 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         self.storage
             .borrow_mut()
             .insert_at(self.storage_index, Self::value_offset(index), value)
+    }
+
+    pub(crate) fn storage_index(&self) -> i64 {
+        self.storage_index
     }
 
     pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
@@ -80,19 +84,6 @@ impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for S
             capacity: 0,
             phantom_data: std::marker::PhantomData::<T>,
         })
-    }
-}
-
-impl<T: Serialize, S: Storage> IntoIterator for &mut StorageVec<T, S> {
-    type Item = T;
-    type IntoIter = std::vec::IntoIter<T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.storage
-            .borrow_mut()
-            .value::<Vec<T>>(self.storage_index)
-            .unwrap_or_default()
-            .into_iter()
     }
 }
 

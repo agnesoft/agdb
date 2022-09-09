@@ -150,7 +150,9 @@ mod tests {
         vec.push(&5).unwrap();
 
         assert_eq!(
-            storage.borrow_mut().value::<Vec::<i64>>(vec.file_index()),
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
             Ok(vec![1_i64, 3_i64, 5_i64])
         );
     }

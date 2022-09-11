@@ -187,7 +187,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -204,7 +204,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -221,7 +221,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(vec.remove(0), Err(DbError::from("index out of bounds")));
     }

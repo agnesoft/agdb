@@ -249,6 +249,72 @@ mod tests {
     }
 
     #[test]
+    fn resize_larger() {
+        let test_file = TestFile::from("./storage_vec-resize_larger.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.resize(6).unwrap();
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(vec![1_i64, 3_i64, 5_i64, 0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn resize_same() {
+        let test_file = TestFile::from("./storage_vec-resize_same.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.resize(3).unwrap();
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(vec![1_i64, 3_i64, 5_i64])
+        );
+    }
+
+    #[test]
+    fn resize_smaller() {
+        let test_file = TestFile::from("./storage_vec-resize_smaller.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.resize(1).unwrap();
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(vec![1_i64])
+        );
+    }
+
+    #[test]
     fn set_value() {
         let test_file = TestFile::from("./storage_vec-set_value.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(

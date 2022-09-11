@@ -37,7 +37,7 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
 
     pub(crate) fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
         if self.size <= index {
-            return Err(DbError::Storage("index out of bounds".to_string()));
+            return Err(DbError::from("index out of bounds"));
         }
 
         self.storage
@@ -51,7 +51,7 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
 
     pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
         if self.size <= index {
-            return Err(DbError::Storage("index out of bounds".to_string()));
+            return Err(DbError::from("index out of bounds"));
         }
 
         self.storage
@@ -193,7 +193,7 @@ mod tests {
 
         assert_eq!(
             vec.set_value(0, &10),
-            Err(DbError::Storage("index out of bounds".to_string()))
+            Err(DbError::from("index out of bounds"))
         );
     }
 
@@ -223,9 +223,6 @@ mod tests {
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
 
-        assert_eq!(
-            vec.value(0),
-            Err(DbError::Storage("index out of bounds".to_string()))
-        );
+        assert_eq!(vec.value(0), Err(DbError::from("index out of bounds")));
     }
 }

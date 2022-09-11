@@ -35,6 +35,23 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         Ok(())
     }
 
+    pub(crate) fn remove(&mut self, index: u64) -> Result<(), DbError> {
+        if self.size <= index {
+            return Err(DbError::from("index out of bounds"));
+        }
+
+        let offset_from = Self::value_offset(index + 1);
+        let offset_to = Self::value_offset(index);
+        let size = Self::value_offset(self.size) - offset_from;
+        self.storage
+            .borrow_mut()
+            .move_at(self.storage_index, offset_from, offset_to, size)?;
+        self.size -= 1;
+        self.storage
+            .borrow_mut()
+            .insert_at(self.storage_index, 0, &self.size)
+    }
+
     pub(crate) fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
         if self.size <= index {
             return Err(DbError::from("index out of bounds"));
@@ -93,7 +110,7 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn into_vec() {
+    fn as_vec() {
         let test_file = TestFile::from("./storage_vec-into_vec.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
@@ -160,6 +177,74 @@ mod tests {
                 .borrow_mut()
                 .value::<Vec::<i64>>(vec.storage_index()),
             Ok(vec![1_i64, 3_i64, 5_i64])
+        );
+    }
+
+    #[test]
+    fn remove() {
+        let test_file = TestFile::from("./storage_vec-remove.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.remove(1).unwrap();
+
+        assert_eq!(vec.as_vec(), Ok(vec![1, 5]));
+    }
+
+    #[test]
+    fn remove_at_end() {
+        let test_file = TestFile::from("./storage_vec-remove_at_end.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.remove(2).unwrap();
+
+        assert_eq!(vec.as_vec(), Ok(vec![1, 3]));
+    }
+
+    #[test]
+    fn remove_index_out_of_bounds() {
+        let test_file = TestFile::from("./storage_vec-remove_index_out_of_bounds.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(vec.remove(0), Err(DbError::from("index out of bounds")));
+    }
+
+    #[test]
+    fn remove_size_updated() {
+        let test_file = TestFile::from("./storage_vec-remove_size_updated.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.remove(1).unwrap();
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(vec![1_i64, 5_i64])
         );
     }
 

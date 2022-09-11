@@ -152,6 +152,24 @@ mod tests {
     }
 
     #[test]
+    fn capacity() {
+        let test_file = TestFile::from("./storage_vec-len.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(vec.capacity(), 0);
+
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        assert_eq!(vec.capacity(), 64);
+    }
+
+    #[test]
     fn iteration() {
         let test_file = TestFile::from("./storage_vec-iteration.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
@@ -180,6 +198,9 @@ mod tests {
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(vec.len(), 0);
+
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();

@@ -52,6 +52,30 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
             .insert_at(self.storage_index, 0, &self.size)
     }
 
+    pub(crate) fn resize(&mut self, size: u64) -> Result<(), DbError> {
+        if self.size == size {
+            return Ok(());
+        }
+
+        if size < self.size {
+            let offset = Self::value_offset(size);
+            let byte_size = Self::value_offset(self.size) - offset;
+            let bytes = [0_u8; byte_size];
+            self.storage
+                .borrow_mut()
+                .insert_at(self.storage_index, offset, &[0_u8; byte_size])?;
+        } else {
+            if size < self.capacity {
+                self.size = size;
+            }
+        }
+
+        self.size = size;
+        self.storage
+            .borrow_mut()
+            .insert_at(self.storage_index, 0, &self.size)
+    }
+
     pub(crate) fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
         if self.size <= index {
             return Err(DbError::from("index out of bounds"));

@@ -84,7 +84,7 @@ pub(crate) trait Storage<T: StorageImpl = Self>: StorageImpl<T> {
 
     fn resize_value(&mut self, index: i64, new_size: u64) -> Result<(), DbError> {
         if new_size == 0 {
-            return Err(DbError::Storage("value size cannot be 0".to_string()));
+            return Err(DbError::from("value size cannot be 0"));
         }
 
         let mut record = self.record(index)?;

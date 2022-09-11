@@ -27,9 +27,9 @@ pub(crate) trait Storage<T: StorageImpl = Self>: StorageImpl<T> {
         let bytes = value.serialize();
         let index = self.create_index(position, bytes.len() as u64);
 
-        self.append(index.serialize())?;
-        self.append((bytes.len() as u64).serialize())?;
-        self.append(bytes)?;
+        self.append(&index.serialize())?;
+        self.append(&(bytes.len() as u64).serialize())?;
+        self.append(&bytes)?;
         self.commit()?;
 
         Ok(index)
@@ -45,7 +45,7 @@ pub(crate) trait Storage<T: StorageImpl = Self>: StorageImpl<T> {
         let mut record = self.record(index)?;
         let bytes = V::serialize(value);
         self.ensure_record_size(&mut record, index, offset, bytes.len() as u64)?;
-        self.write(Self::value_position(record.position, offset), bytes)?;
+        self.write(Self::value_position(record.position, offset), &bytes)?;
         self.commit()
     }
 

@@ -58,7 +58,7 @@ impl StorageImpl for FileStorage {
         Ok(self
             .records
             .get(index)
-            .ok_or_else(|| DbError::Storage(format!("index '{}' not found", index)))?
+            .ok_or_else(|| DbError::from(format!("index '{}' not found", index)))?
             .clone())
     }
 
@@ -160,6 +160,11 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    fn bad_file() {
+        assert!(FileStorage::try_from("/a/").is_err());
+    }
+
+    #[test]
     fn insert() {
         let test_file = TestFile::from("./file_storage-insert.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
@@ -191,7 +196,7 @@ mod tests {
 
         assert_eq!(
             storage.insert_at(1, 8, &1_i64),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -276,7 +281,7 @@ mod tests {
 
         assert_eq!(
             storage.move_at(1, 0, 1, 10),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -306,7 +311,7 @@ mod tests {
 
         assert_eq!(
             storage.move_at(index, offset_from, offset_to, size),
-            Err(DbError::Storage("move size out of bounds".to_string()))
+            Err(DbError::from("move size out of bounds"))
         );
     }
 
@@ -334,7 +339,7 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -345,7 +350,7 @@ mod tests {
 
         assert_eq!(
             storage.remove(1_i64),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -385,7 +390,7 @@ mod tests {
 
         assert_eq!(
             storage.resize_value(1, 1),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -431,7 +436,7 @@ mod tests {
 
         assert_eq!(
             storage.resize_value(index, 0),
-            Err(DbError::Storage("value size cannot be 0".to_string()))
+            Err(DbError::from("value size cannot be 0"))
         );
     }
 
@@ -483,11 +488,11 @@ mod tests {
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(
             storage.value::<u64>(0),
-            Err(DbError::Storage(format!("index '{}' not found", 0)))
+            Err(DbError::from(format!("index '{}' not found", 0)))
         );
         assert_eq!(
             storage.value::<u64>(index2),
-            Err(DbError::Storage(format!("index '{}' not found", index2)))
+            Err(DbError::from(format!("index '{}' not found", index2)))
         );
         assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
     }
@@ -562,7 +567,7 @@ mod tests {
         assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(
             storage.value::<i64>(index2),
-            Err(DbError::Storage(format!("index '{}' not found", index2)))
+            Err(DbError::from(format!("index '{}' not found", index2)))
         );
         assert_eq!(storage.value(index3), Ok(3_i64));
     }
@@ -607,7 +612,7 @@ mod tests {
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::Storage(format!("index '{}' not found", index)))
+            Err(DbError::from(format!("index '{}' not found", index)))
         );
     }
 
@@ -628,7 +633,7 @@ mod tests {
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::Storage(format!("index '{}' not found", index)))
+            Err(DbError::from(format!("index '{}' not found", index)))
         );
     }
 
@@ -661,7 +666,7 @@ mod tests {
 
         assert_eq!(
             storage.value_at::<i64>(1, 8),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -676,9 +681,7 @@ mod tests {
 
         assert_eq!(
             storage.value_at::<i64>(index, offset),
-            Err(DbError::Storage(
-                "deserialization error: value out of bounds".to_string()
-            ))
+            Err(DbError::from("deserialization error: value out of bounds"))
         );
     }
 
@@ -693,9 +696,7 @@ mod tests {
 
         assert_eq!(
             storage.value_at::<i64>(index, offset),
-            Err(DbError::Storage(
-                "deserialization error: offset out of bounds".to_string()
-            ))
+            Err(DbError::from("deserialization error: offset out of bounds"))
         );
     }
 
@@ -706,7 +707,7 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(1),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -719,9 +720,7 @@ mod tests {
 
         assert_eq!(
             storage.value::<Vec<i64>>(index),
-            Err(DbError::Storage(
-                "i64 deserialization error: out of bounds".to_string()
-            ))
+            Err(DbError::from("i64 deserialization error: out of bounds"))
         );
     }
 
@@ -744,7 +743,7 @@ mod tests {
 
         assert_eq!(
             storage.value::<i64>(index),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 
@@ -778,7 +777,7 @@ mod tests {
 
         assert_eq!(
             storage.value_size(1),
-            Err(DbError::Storage("index '1' not found".to_string()))
+            Err(DbError::from("index '1' not found"))
         );
     }
 }

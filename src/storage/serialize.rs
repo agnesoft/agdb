@@ -1,5 +1,4 @@
 use crate::db_error::DbError;
-use std::mem::size_of;
 
 pub(crate) trait Serialize: Sized {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
@@ -8,11 +7,9 @@ pub(crate) trait Serialize: Sized {
 
 impl Serialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        let buffer: [u8; size_of::<Self>()] = bytes
-            .get(0..size_of::<Self>())
-            .ok_or_else(|| {
-                DbError::Storage("i64 deserialization error: out of bounds".to_string())
-            })?
+        let buffer: [u8; std::mem::size_of::<Self>()] = bytes
+            .get(0..std::mem::size_of::<Self>())
+            .ok_or_else(|| DbError::from("i64 deserialization error: out of bounds"))?
             .try_into()
             .unwrap();
         Ok(Self::from_le_bytes(buffer))
@@ -25,11 +22,9 @@ impl Serialize for i64 {
 
 impl Serialize for u64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        let buffer: [u8; size_of::<Self>()] = bytes
-            .get(0..size_of::<Self>())
-            .ok_or_else(|| {
-                DbError::Storage("u64 deserialization error: out of bounds".to_string())
-            })?
+        let buffer: [u8; std::mem::size_of::<Self>()] = bytes
+            .get(0..std::mem::size_of::<Self>())
+            .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
             .try_into()
             .unwrap();
         Ok(Self::from_le_bytes(buffer))
@@ -42,8 +37,8 @@ impl Serialize for u64 {
 
 impl<T: Serialize> Serialize for Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        const SIZE_OFFSET: usize = size_of::<usize>();
-        let value_offset = size_of::<T>();
+        const SIZE_OFFSET: usize = std::mem::size_of::<usize>();
+        let value_offset = std::mem::size_of::<T>();
         let size = u64::deserialize(bytes)? as usize;
         let mut data: Self = vec![];
 
@@ -58,8 +53,8 @@ impl<T: Serialize> Serialize for Vec<T> {
     }
 
     fn serialize(&self) -> Vec<u8> {
-        const SIZE_OFFSET: usize = size_of::<usize>();
-        let value_offset: usize = size_of::<T>();
+        const SIZE_OFFSET: usize = std::mem::size_of::<usize>();
+        let value_offset: usize = std::mem::size_of::<T>();
         let mut bytes: Vec<u8> = vec![];
 
         bytes.reserve(SIZE_OFFSET + value_offset * self.len());
@@ -92,9 +87,7 @@ mod tests {
 
         assert_eq!(
             i64::deserialize(&bytes),
-            Err(DbError::Storage(
-                "i64 deserialization error: out of bounds".to_string()
-            ))
+            Err(DbError::from("i64 deserialization error: out of bounds"))
         );
     }
 
@@ -113,9 +106,7 @@ mod tests {
 
         assert_eq!(
             u64::deserialize(&bytes),
-            Err(DbError::Storage(
-                "u64 deserialization error: out of bounds".to_string()
-            ))
+            Err(DbError::from("u64 deserialization error: out of bounds"))
         );
     }
 
@@ -134,9 +125,7 @@ mod tests {
 
         assert_eq!(
             Vec::<i64>::deserialize(&bytes),
-            Err(DbError::Storage(
-                "u64 deserialization error: out of bounds".to_string()
-            ))
+            Err(DbError::from("u64 deserialization error: out of bounds"))
         );
     }
 
@@ -146,9 +135,7 @@ mod tests {
 
         assert_eq!(
             Vec::<i64>::deserialize(&bytes),
-            Err(DbError::Storage(
-                "i64 deserialization error: out of bounds".to_string()
-            ))
+            Err(DbError::from("i64 deserialization error: out of bounds"))
         );
     }
 }

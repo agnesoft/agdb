@@ -16,7 +16,7 @@ impl Serialize for i64 {
     }
 
     fn serialize(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
+        self.to_le_bytes().into()
     }
 }
 
@@ -31,7 +31,7 @@ impl Serialize for u64 {
     }
 
     fn serialize(&self) -> Vec<u8> {
-        self.to_le_bytes().to_vec()
+        self.to_le_bytes().into()
     }
 }
 
@@ -65,6 +65,16 @@ impl<T: Serialize> Serialize for Vec<T> {
         }
 
         bytes
+    }
+}
+
+impl Serialize for Vec<u8> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(bytes.to_vec())
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        self.to_vec()
     }
 }
 
@@ -127,6 +137,15 @@ mod tests {
             Vec::<i64>::deserialize(&bytes),
             Err(DbError::from("u64 deserialization error: out of bounds"))
         );
+    }
+
+    #[test]
+    fn vec_u8() {
+        let data = vec![1_u8, 2_u8, 3_u8];
+        let bytes = data.serialize();
+        let actual = Vec::<u8>::deserialize(&bytes);
+
+        assert_eq!(actual, Ok(data));
     }
 
     #[test]

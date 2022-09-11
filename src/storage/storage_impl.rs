@@ -5,7 +5,7 @@ use super::write_ahead_log_record::WriteAheadLogRecord;
 use crate::db_error::DbError;
 
 pub(crate) trait StorageImpl<T = Self> {
-    fn append(&mut self, bytes: Vec<u8>) -> Result<(), DbError> {
+    fn append(&mut self, bytes: &[u8]) -> Result<(), DbError> {
         self.write(std::io::SeekFrom::End(0), bytes)
     }
 
@@ -46,7 +46,7 @@ pub(crate) trait StorageImpl<T = Self> {
         new_position: u64,
     ) -> Result<(), DbError> {
         let bytes = self.read(std::io::SeekFrom::Start(old_position), size)?;
-        self.write(std::io::SeekFrom::Start(new_position), bytes)?;
+        self.write(std::io::SeekFrom::Start(new_position), &bytes)?;
         self.record_mut(index).position = new_position;
 
         Ok(())
@@ -60,9 +60,9 @@ pub(crate) trait StorageImpl<T = Self> {
     ) -> Result<StorageRecord, DbError> {
         let new_position = self.seek(std::io::SeekFrom::End(0))?;
         let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
-        self.append(record_index.serialize())?;
-        self.append(record_size.serialize())?;
-        self.append(bytes)?;
+        self.append(&record_index.serialize())?;
+        self.append(&record_size.serialize())?;
+        self.append(&bytes)?;
 
         Ok(StorageRecord {
             position: new_position,
@@ -93,7 +93,7 @@ pub(crate) trait StorageImpl<T = Self> {
     fn erase_bytes(&mut self, position: u64, size: u64) -> Result<(), DbError> {
         self.write(
             std::io::SeekFrom::Start(position),
-            vec![0_u8; size as usize],
+            &vec![0_u8; size as usize],
         )
     }
 
@@ -101,7 +101,7 @@ pub(crate) trait StorageImpl<T = Self> {
     fn insert_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError>;
 
     fn invalidate_record(&mut self, index: i64, position: u64) -> Result<(), DbError> {
-        self.write(std::io::SeekFrom::Start(position), (-index).serialize())
+        self.write(std::io::SeekFrom::Start(position), &(-index).serialize())
     }
 
     fn is_at_end(&mut self, record: &StorageRecord) -> Result<bool, DbError> {
@@ -134,7 +134,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn move_bytes(&mut self, from: u64, to: u64, size: u64) -> Result<(), DbError> {
         let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
-        self.write(std::io::SeekFrom::Start(to), bytes)?;
+        self.write(std::io::SeekFrom::Start(to), &bytes)?;
 
         if from < to {
             self.erase_bytes(from, std::cmp::min(size, to - from))?;
@@ -294,7 +294,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn wal_records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError>;
 
-    fn write(&mut self, position: std::io::SeekFrom, bytes: Vec<u8>) -> Result<(), DbError> {
+    fn write(&mut self, position: std::io::SeekFrom, bytes: &[u8]) -> Result<(), DbError> {
         let current_end = self.seek(std::io::SeekFrom::End(0))?;
         let write_pos = self.seek(position)?;
 
@@ -315,7 +315,7 @@ pub(crate) trait StorageImpl<T = Self> {
         }
 
         self.seek(position)?;
-        self.write_all(&bytes)
+        self.write_all(bytes)
     }
 
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError>;

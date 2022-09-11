@@ -255,7 +255,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn validate_move_size(offset: u64, size: u64, record_size: u64) -> Result<(), DbError> {
         if record_size < (offset + size) {
-            return Err(DbError::Storage("move size out of bounds".to_string()));
+            return Err(DbError::from("move size out of bounds"));
         }
 
         Ok(())
@@ -263,9 +263,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn validate_offset<V>(size: u64, offset: u64) -> Result<(), DbError> {
         if size < offset {
-            return Err(DbError::Storage(
-                "deserialization error: offset out of bounds".to_string(),
-            ));
+            return Err(DbError::from("deserialization error: offset out of bounds"));
         }
 
         Ok(())
@@ -273,9 +271,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn validate_value_size<V>(size: u64, offset: u64) -> Result<(), DbError> {
         if size - offset < std::mem::size_of::<V>() as u64 {
-            return Err(DbError::Storage(
-                "deserialization error: value out of bounds".to_string(),
-            ));
+            return Err(DbError::from("deserialization error: value out of bounds"));
         }
 
         Ok(())

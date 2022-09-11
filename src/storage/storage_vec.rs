@@ -14,8 +14,12 @@ pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
 
 #[allow(dead_code)]
 impl<T: Serialize, S: Storage> StorageVec<T, S> {
-    fn as_vec(&mut self) -> Result<Vec<T>, DbError> {
+    pub(crate) fn as_vec(&mut self) -> Result<Vec<T>, DbError> {
         self.storage.borrow_mut().value(self.storage_index)
+    }
+
+    pub(crate) fn capacity(&self) -> u64 {
+        self.capacity
     }
 
     pub(crate) fn len(&self) -> u64 {
@@ -47,6 +51,29 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
             .borrow_mut()
             .move_at(self.storage_index, offset_from, offset_to, size)?;
         self.size -= 1;
+        self.storage
+            .borrow_mut()
+            .insert_at(self.storage_index, 0, &self.size)
+    }
+
+    pub(crate) fn resize(&mut self, size: u64) -> Result<(), DbError> {
+        if self.size == size {
+            return Ok(());
+        }
+
+        if size < self.size {
+            let offset = Self::value_offset(size);
+            let byte_size = Self::value_offset(self.size) - offset;
+            self.storage.borrow_mut().insert_at(
+                self.storage_index,
+                offset,
+                &vec![0_u8; byte_size as usize],
+            )?;
+        } else if self.capacity < size {
+            self.reallocate(size)?;
+        }
+
+        self.size = size;
         self.storage
             .borrow_mut()
             .insert_at(self.storage_index, 0, &self.size)
@@ -125,6 +152,24 @@ mod tests {
     }
 
     #[test]
+    fn capacity() {
+        let test_file = TestFile::from("./storage_vec-len.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(vec.capacity(), 0);
+
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        assert_eq!(vec.capacity(), 64);
+    }
+
+    #[test]
     fn iteration() {
         let test_file = TestFile::from("./storage_vec-iteration.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
@@ -153,6 +198,9 @@ mod tests {
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(vec.len(), 0);
+
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -245,6 +293,102 @@ mod tests {
                 .borrow_mut()
                 .value::<Vec::<i64>>(vec.storage_index()),
             Ok(vec![1_i64, 5_i64])
+        );
+    }
+
+    #[test]
+    fn resize_larger() {
+        let test_file = TestFile::from("./storage_vec-resize_larger.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.resize(6).unwrap();
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(vec![1_i64, 3_i64, 5_i64, 0, 0, 0])
+        );
+    }
+
+    #[test]
+    fn resize_over_capacity() {
+        let test_file = TestFile::from("./storage_vec-resize_over_capacity.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.resize(100).unwrap();
+
+        let mut expected = vec![0_i64; 100];
+        expected[0] = 1;
+        expected[1] = 3;
+        expected[2] = 5;
+
+        assert_eq!(vec.len(), 100);
+        assert_eq!(vec.capacity(), 100);
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(expected)
+        );
+    }
+
+    #[test]
+    fn resize_same() {
+        let test_file = TestFile::from("./storage_vec-resize_same.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.resize(3).unwrap();
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(vec![1_i64, 3_i64, 5_i64])
+        );
+    }
+
+    #[test]
+    fn resize_smaller() {
+        let test_file = TestFile::from("./storage_vec-resize_smaller.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        vec.resize(1).unwrap();
+
+        assert_eq!(
+            storage
+                .borrow_mut()
+                .value::<Vec::<i64>>(vec.storage_index()),
+            Ok(vec![1_i64])
         );
     }
 

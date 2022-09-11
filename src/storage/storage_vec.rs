@@ -93,7 +93,7 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn into_vec() {
+    fn as_vec() {
         let test_file = TestFile::from("./storage_vec-into_vec.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),

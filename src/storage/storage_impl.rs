@@ -315,7 +315,7 @@ pub(crate) trait StorageImpl<T = Self> {
         }
 
         self.seek(position)?;
-        self.write_all(&bytes)
+        self.write_all(bytes)
     }
 
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError>;

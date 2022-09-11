@@ -238,7 +238,7 @@ mod tests {
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>() * 1) as u64;
+        let offset = (std::mem::size_of::<u64>() + std::mem::size_of::<i64>()) as u64;
         let size = std::mem::size_of::<i64>() * 2;
 
         storage.insert_at(index, offset, &vec![0_u8; size]).unwrap();

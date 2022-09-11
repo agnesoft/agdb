@@ -17,7 +17,7 @@ impl DbError {
 
 impl std::fmt::Display for DbError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let location = self.source_location.to_string().replace("\\", "/");
+        let location = self.source_location.to_string().replace('\\', "/");
         write!(f, "{} (at {})", self.description, location)
     }
 }
@@ -50,7 +50,7 @@ impl From<String> for DbError {
 impl std::error::Error for DbError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         if let Some(cause) = &self.cause {
-            return Some(&*cause);
+            return Some(cause);
         }
 
         None
@@ -65,6 +65,8 @@ impl PartialEq for DbError {
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
+
     use super::*;
 
     #[test]
@@ -85,7 +87,7 @@ mod tests {
             error.to_string(),
             format!(
                 "file not found (at {}:{}:{})",
-                file.replace("\\", "/"),
+                file.replace('\\', "/"),
                 line + 1,
                 col__
             )
@@ -114,5 +116,31 @@ mod tests {
     #[test]
     fn from_io_error() {
         let _error = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
+    }
+
+    #[test]
+    fn source() {
+        let file = file!();
+        let col__ = column!();
+        let line = line!();
+        let error = DbError::from("file not found");
+        let new_error = DbError::from("open error").caused_by(error);
+
+        assert_eq!(
+            new_error.source().unwrap().to_string(),
+            format!(
+                "file not found (at {}:{}:{})",
+                file.replace('\\', "/"),
+                line + 1,
+                col__
+            )
+        );
+    }
+
+    #[test]
+    fn source_none() {
+        let error = DbError::from("file not found");
+
+        assert!(error.source().is_none());
     }
 }

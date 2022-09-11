@@ -14,8 +14,12 @@ pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
 
 #[allow(dead_code)]
 impl<T: Serialize, S: Storage> StorageVec<T, S> {
-    fn as_vec(&mut self) -> Result<Vec<T>, DbError> {
+    pub(crate) fn as_vec(&mut self) -> Result<Vec<T>, DbError> {
         self.storage.borrow_mut().value(self.storage_index)
+    }
+
+    pub(crate) fn capacity(&self) -> u64 {
+        self.capacity
     }
 
     pub(crate) fn len(&self) -> u64 {
@@ -57,23 +61,16 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
             return Ok(());
         }
 
-        let offset = Self::value_offset(size);
-
         if size < self.size {
+            let offset = Self::value_offset(size);
             let byte_size = Self::value_offset(self.size) - offset;
             self.storage.borrow_mut().insert_at(
                 self.storage_index,
                 offset,
                 &vec![0_u8; byte_size as usize],
             )?;
-        } else {
-            if size < self.capacity {
-                self.size = size;
-            } else {
-                self.storage
-                    .borrow_mut()
-                    .resize_value(self.storage_index, offset)?;
-            }
+        } else if self.capacity < size {
+            self.reallocate(size)?;
         }
 
         self.size = size;
@@ -320,6 +317,7 @@ mod tests {
         expected[2] = 5;
 
         assert_eq!(vec.len(), 100);
+        assert_eq!(vec.capacity(), 100);
 
         assert_eq!(
             storage

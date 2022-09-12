@@ -97,6 +97,10 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
             .insert_at(self.storage_index, Self::value_offset(index), value)
     }
 
+    pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
+        self.reallocate(self.size)
+    }
+
     pub(crate) fn storage_index(&self) -> i64 {
         self.storage_index
     }
@@ -461,6 +465,45 @@ mod tests {
             vec.set_value(0, &10),
             Err(DbError::from("index out of bounds"))
         );
+    }
+
+    #[test]
+    fn shrink_to_fit() {
+        let test_file = TestFile::from("./storage_vec-shrink_to_fit.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        assert_eq!(vec.capacity(), 64);
+
+        vec.shrink_to_fit().unwrap();
+
+        assert_eq!(vec.capacity(), 3);
+
+        vec.shrink_to_fit().unwrap();
+
+        assert_eq!(vec.capacity(), 3);
+    }
+
+    #[test]
+    fn shrink_to_fit_empty() {
+        let test_file = TestFile::from("./storage_vec-shrink_to_fit_empty.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(vec.capacity(), 0);
+
+        vec.shrink_to_fit().unwrap();
+
+        assert_eq!(vec.capacity(), 0);
     }
 
     #[test]

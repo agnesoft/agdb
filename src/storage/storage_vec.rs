@@ -97,6 +97,10 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
             .insert_at(self.storage_index, Self::value_offset(index), value)
     }
 
+    pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
+        self.reallocate(self.size)
+    }
+
     pub(crate) fn storage_index(&self) -> i64 {
         self.storage_index
     }

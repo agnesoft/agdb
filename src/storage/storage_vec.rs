@@ -297,6 +297,35 @@ mod tests {
     }
 
     #[test]
+    fn reserve_larger() {
+        let test_file = TestFile::from("./storage_vec-reserve_larger.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        assert_eq!(vec.capacity(), 0);
+
+        vec.reserve(20).unwrap();
+
+        assert_eq!(vec.capacity(), 20);
+    }
+
+    #[test]
+    fn reserve_smaller() {
+        let test_file = TestFile::from("./storage_vec-reserve_smaller.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        vec.reserve(20).unwrap();
+        vec.reserve(10).unwrap();
+
+        assert_eq!(vec.capacity(), 20);
+    }
+
+    #[test]
     fn resize_larger() {
         let test_file = TestFile::from("./storage_vec-resize_larger.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(

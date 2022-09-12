@@ -56,6 +56,14 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
             .insert_at(self.storage_index, 0, &self.size)
     }
 
+    pub(crate) fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
+        if capacity <= self.capacity {
+            return Ok(());
+        }
+
+        self.reallocate(capacity)
+    }
+
     pub(crate) fn resize(&mut self, size: u64) -> Result<(), DbError> {
         if self.size == size {
             return Ok(());

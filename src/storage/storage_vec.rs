@@ -311,7 +311,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
         assert_eq!(vec.capacity(), 0);
 
         vec.reserve(20).unwrap();
@@ -326,7 +326,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
         vec.reserve(20).unwrap();
         vec.reserve(10).unwrap();
 

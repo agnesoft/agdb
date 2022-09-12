@@ -56,6 +56,14 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
             .insert_at(self.storage_index, 0, &self.size)
     }
 
+    pub(crate) fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
+        if capacity <= self.capacity {
+            return Ok(());
+        }
+
+        self.reallocate(capacity)
+    }
+
     pub(crate) fn resize(&mut self, size: u64) -> Result<(), DbError> {
         if self.size == size {
             return Ok(());
@@ -294,6 +302,35 @@ mod tests {
                 .value::<Vec::<i64>>(vec.storage_index()),
             Ok(vec![1_i64, 5_i64])
         );
+    }
+
+    #[test]
+    fn reserve_larger() {
+        let test_file = TestFile::from("./storage_vec-reserve_larger.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        assert_eq!(vec.capacity(), 0);
+
+        vec.reserve(20).unwrap();
+
+        assert_eq!(vec.capacity(), 20);
+    }
+
+    #[test]
+    fn reserve_smaller() {
+        let test_file = TestFile::from("./storage_vec-reserve_smaller.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.reserve(20).unwrap();
+        vec.reserve(10).unwrap();
+
+        assert_eq!(vec.capacity(), 20);
     }
 
     #[test]

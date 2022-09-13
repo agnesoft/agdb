@@ -1,5 +1,6 @@
 mod file_storage;
 mod serialize;
+mod storage_hash_map;
 mod storage_impl;
 mod storage_record;
 mod storage_record_with_index;

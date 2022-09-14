@@ -14,10 +14,6 @@ pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
 
 #[allow(dead_code)]
 impl<T: Serialize, S: Storage> StorageVec<T, S> {
-    pub(crate) fn as_vec(&mut self) -> Result<Vec<T>, DbError> {
-        self.storage.borrow_mut().value(self.storage_index)
-    }
-
     pub(crate) fn capacity(&self) -> u64 {
         self.capacity
     }
@@ -105,6 +101,11 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
         self.storage_index
     }
 
+    #[allow(clippy::wrong_self_convention)]
+    pub(crate) fn to_vec(&mut self) -> Result<Vec<T>, DbError> {
+        self.storage.borrow_mut().value(self.storage_index)
+    }
+
     pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
         if self.size <= index {
             return Err(DbError::from("index out of bounds"));
@@ -125,6 +126,10 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
     fn value_offset(index: u64) -> u64 {
         std::mem::size_of::<u64>() as u64 + index * std::mem::size_of::<T>() as u64
     }
+
+    fn capacity_from_bytes(len: u64) -> u64 {
+        (len - std::mem::size_of::<u64>() as u64) / std::mem::size_of::<T>() as u64
+    }
 }
 
 impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for StorageVec<T, S> {
@@ -143,13 +148,40 @@ impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for S
     }
 }
 
+impl<T: Serialize, S: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<S>>, i64)>
+    for StorageVec<T, S>
+{
+    type Error = DbError;
+
+    fn try_from(
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<S>>, i64),
+    ) -> Result<Self, Self::Error> {
+        let byte_size = storage_with_index
+            .0
+            .borrow_mut()
+            .value_size(storage_with_index.1)?;
+        let size = storage_with_index
+            .0
+            .borrow_mut()
+            .value_at::<u64>(storage_with_index.1, 0)?;
+
+        Ok(Self {
+            storage: storage_with_index.0,
+            storage_index: storage_with_index.1,
+            size,
+            capacity: Self::capacity_from_bytes(byte_size),
+            phantom_data: std::marker::PhantomData::<T>,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn as_vec() {
+    fn to_vec() {
         let test_file = TestFile::from("./storage_vec-into_vec.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
@@ -160,7 +192,7 @@ mod tests {
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
 
-        assert_eq!(vec.as_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
+        assert_eq!(vec.to_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
     }
 
     #[test]
@@ -195,7 +227,7 @@ mod tests {
 
         let mut values: Vec<i64> = vec![];
 
-        for value in vec.as_vec().unwrap() {
+        for value in vec.to_vec().unwrap() {
             values.push(value);
         }
 
@@ -254,7 +286,7 @@ mod tests {
 
         vec.remove(1).unwrap();
 
-        assert_eq!(vec.as_vec(), Ok(vec![1, 5]));
+        assert_eq!(vec.to_vec(), Ok(vec![1, 5]));
     }
 
     #[test]
@@ -271,7 +303,7 @@ mod tests {
 
         vec.remove(2).unwrap();
 
-        assert_eq!(vec.as_vec(), Ok(vec![1, 3]));
+        assert_eq!(vec.to_vec(), Ok(vec![1, 3]));
     }
 
     #[test]
@@ -504,6 +536,40 @@ mod tests {
         vec.shrink_to_fit().unwrap();
 
         assert_eq!(vec.capacity(), 0);
+    }
+
+    #[test]
+    fn try_from_storage_index() {
+        let test_file = TestFile::from("./storage_vec-try_from_stroage_index.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let index;
+        {
+            let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+            vec.push(&1).unwrap();
+            vec.push(&3).unwrap();
+            vec.push(&5).unwrap();
+            index = vec.storage_index();
+        }
+
+        let mut vec = StorageVec::<i64>::try_from((storage, index)).unwrap();
+
+        assert_eq!(vec.to_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
+    }
+
+    #[test]
+    fn try_from_storage_missing_index() {
+        let test_file = TestFile::from("./storage_vec-try_from_stroage_index.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        assert_eq!(
+            StorageVec::<i64>::try_from((storage, 1)).err().unwrap(),
+            DbError::from("index '1' not found")
+        );
     }
 
     #[test]

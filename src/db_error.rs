@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct DbError {
     pub description: String,
@@ -116,6 +115,11 @@ mod tests {
     #[test]
     fn from_io_error() {
         let _error = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
+    }
+
+    #[test]
+    fn from_utf8_error() {
+        let _error = DbError::from(String::from_utf8(vec![0xdf, 0xff]).unwrap_err());
     }
 
     #[test]

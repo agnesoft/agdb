@@ -168,13 +168,16 @@ where
     type Error = DbError;
 
     fn try_from(storage: std::rc::Rc<std::cell::RefCell<S>>) -> Result<Self, Self::Error> {
-        let index = storage.borrow_mut().insert(&0_u64)?;
+        let index = storage.borrow_mut().insert(&StorageHashMapData::<K, T> {
+            data: vec![StorageHashMapKeyValue::<K, T>::default()],
+            size: 0,
+        })?;
 
         Ok(Self {
             storage,
             storage_index: index,
             size: 0,
-            capacity: 0,
+            capacity: 1,
             phantom_data: std::marker::PhantomData::<(K, T)>,
         })
     }
@@ -201,5 +204,35 @@ mod tests {
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(Some(15)));
         assert_eq!(map.value(&7), Ok(Some(20)));
+    }
+
+    #[test]
+    fn insert_reallocate() {
+        let test_file = TestFile::from("./storage_hash_map-insert_reallocate.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        for i in 0..100 {
+            map.insert(i, i).unwrap();
+        }
+
+        for i in 0..100 {
+            assert_eq!(map.value(&i), Ok(Some(i)));
+        }
+    }
+
+    #[test]
+    fn value_missing() {
+        let test_file = TestFile::from("./storage_hash_map-value_missing.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        assert_eq!(map.value(&0), Ok(None));
     }
 }

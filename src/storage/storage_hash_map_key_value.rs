@@ -9,6 +9,16 @@ pub(crate) struct StorageHashMapKeyValue<K: Serialize, T: Serialize> {
     meta_value: MetaValue,
 }
 
+impl<K: Serialize, T: Serialize> StorageHashMapKeyValue<K, T> {
+    pub(crate) fn serialized_size() -> u64 {
+        Self::meta_value_offset() + MetaValue::serialized_size()
+    }
+
+    pub(crate) fn meta_value_offset() -> u64 {
+        std::mem::size_of::<K>() as u64 + std::mem::size_of::<T>() as u64
+    }
+}
+
 impl<K: Serialize, T: Serialize> Serialize for StorageHashMapKeyValue<K, T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {

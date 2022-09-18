@@ -90,4 +90,9 @@ mod tests {
             "value out of bounds"
         );
     }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(StorageHashMapKeyValue::<i64, i64>::serialized_size(), 17);
+    }
 }

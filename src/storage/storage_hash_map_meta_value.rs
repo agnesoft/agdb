@@ -11,6 +11,7 @@ pub(crate) enum MetaValue {
     Valid,
 }
 
+#[allow(dead_code)]
 impl MetaValue {
     pub(crate) fn serialized_size() -> u64 {
         std::mem::size_of::<u8>() as u64

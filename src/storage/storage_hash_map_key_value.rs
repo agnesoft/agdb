@@ -1,23 +1,22 @@
+use super::serialize::Serialize;
+use super::storage_hash_map_meta_value::MetaValue;
 use crate::DbError;
 
-use super::serialize::Serialize;
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub(crate) struct StorageHashMapKeyValue<K: Serialize, T: Serialize> {
     key: K,
     value: T,
-    empty: bool,
+    meta_value: MetaValue,
 }
 
 impl<K: Serialize, T: Serialize> Serialize for StorageHashMapKeyValue<K, T> {
-    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             key: K::deserialize(&bytes[0..])?,
             value: T::deserialize(&bytes[std::mem::size_of::<K>()..])?,
-            empty: *bytes
-                .get(std::mem::size_of::<K>() + std::mem::size_of::<T>())
-                .ok_or_else(|| DbError::from("value out of bounds"))?
-                != 0,
+            meta_value: MetaValue::deserialize(
+                &bytes[(std::mem::size_of::<K>() + std::mem::size_of::<T>())..],
+            )?,
         })
     }
 
@@ -26,19 +25,9 @@ impl<K: Serialize, T: Serialize> Serialize for StorageHashMapKeyValue<K, T> {
         data.reserve(std::mem::size_of::<K>() + std::mem::size_of::<T>() + 1);
         data.append(&mut self.key.serialize());
         data.append(&mut self.value.serialize());
-        data.push(self.empty as u8);
+        data.append(&mut self.meta_value.serialize());
 
         data
-    }
-}
-
-impl<K: Serialize + Default, T: Serialize + Default> Default for StorageHashMapKeyValue<K, T> {
-    fn default() -> Self {
-        Self {
-            key: K::default(),
-            value: T::default(),
-            empty: true,
-        }
     }
 }
 
@@ -62,7 +51,7 @@ mod tests {
             StorageHashMapKeyValue::<i64, i64> {
                 key: 0,
                 value: 0,
-                empty: true
+                meta_value: MetaValue::Empty
             }
         )
     }
@@ -72,7 +61,7 @@ mod tests {
         let key_value = StorageHashMapKeyValue {
             key: 1_i64,
             value: 10_i64,
-            empty: false,
+            meta_value: MetaValue::Valid,
         };
         let bytes = key_value.serialize();
         let other = StorageHashMapKeyValue::deserialize(&bytes);

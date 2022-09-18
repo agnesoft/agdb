@@ -167,14 +167,6 @@ where
             .value_at::<StorageHashMapKeyValue<K, T>>(self.storage_index, offset)
     }
 
-    fn record_meta_value(&mut self, pos: u64) -> Result<MetaValue, DbError> {
-        let offset = Self::record_offset(pos) + StorageHashMapKeyValue::<K, T>::meta_value_offset();
-
-        self.storage
-            .borrow_mut()
-            .value_at::<MetaValue>(self.storage_index, offset)
-    }
-
     fn record_offset(pos: u64) -> u64 {
         u64::serialized_size() as u64 + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
     }

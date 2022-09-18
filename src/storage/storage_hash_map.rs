@@ -147,15 +147,16 @@ where
         self.storage
             .borrow_mut()
             .insert_at(self.storage_index, 0, &new_data)?;
-        self.storage
-            .borrow_mut()
-            .resize_value(self.storage_index, new_data.serialized_size())?;
+        self.storage.borrow_mut().resize_value(
+            self.storage_index,
+            StorageHashMapData::<K, T>::serialized_size(),
+        )?;
 
         Ok(())
     }
 
     fn record_offset(pos: u64) -> u64 {
-        std::mem::size_of::<u64>() as u64 + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
+        u64::serialized_size() as u64 + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
     }
 }
 

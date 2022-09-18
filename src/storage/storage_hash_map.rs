@@ -271,6 +271,7 @@ mod tests {
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
 
+        assert_eq!(map.size(), 3);
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(Some(15)));
         assert_eq!(map.value(&7), Ok(Some(20)));
@@ -291,6 +292,7 @@ mod tests {
             map.insert(i, i).unwrap();
         }
 
+        assert_eq!(map.size(), 100);
         assert_eq!(map.capacity(), 128);
 
         for i in 0..100 {
@@ -327,7 +329,9 @@ mod tests {
 
         assert_eq!(map.insert(1, 10), Ok(None));
         assert_eq!(map.insert(5, 15), Ok(None));
+        assert_eq!(map.size(), 2);
         assert_eq!(map.insert(5, 20), Ok(Some(15)));
+        assert_eq!(map.size(), 2);
 
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(Some(20)));
@@ -346,8 +350,10 @@ mod tests {
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
 
+        assert_eq!(map.size(), 3);
         map.remove(&5).unwrap();
 
+        assert_eq!(map.size(), 2);
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(None));
         assert_eq!(map.value(&7), Ok(Some(20)));
@@ -366,11 +372,16 @@ mod tests {
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
 
+        assert_eq!(map.size(), 3);
+
         map.remove(&5).unwrap();
 
+        assert_eq!(map.size(), 2);
         assert_eq!(map.value(&5), Ok(None));
 
         map.remove(&5).unwrap();
+
+        assert_eq!(map.size(), 2);
     }
 
     #[test]
@@ -382,7 +393,9 @@ mod tests {
 
         let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
+        assert_eq!(map.size(), 0);
         assert_eq!(map.remove(&0), Ok(()));
+        assert_eq!(map.size(), 0);
     }
 
     #[test]
@@ -398,12 +411,14 @@ mod tests {
             map.insert(i, i).unwrap();
         }
 
+        assert_eq!(map.size(), 100);
         assert_eq!(map.capacity(), 128);
 
         for i in 1..100 {
             map.remove(&i).unwrap();
         }
 
+        assert_eq!(map.size(), 0);
         assert_eq!(map.capacity(), 64);
     }
 

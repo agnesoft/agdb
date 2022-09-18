@@ -54,4 +54,11 @@ mod tests {
 
         assert_eq!(data, other);
     }
+
+    #[allow(dead_code)]
+    impl MetaValue {
+        pub(crate) fn serialized_size() -> u64 {
+            std::mem::size_of::<u8>() as u64
+        }
+    }
 }

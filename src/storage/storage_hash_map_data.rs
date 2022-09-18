@@ -60,6 +60,10 @@ where
 
         bytes
     }
+
+    fn serialized_size() -> u64 {
+        0
+    }
 }
 
 #[cfg(test)]
@@ -90,5 +94,10 @@ mod tests {
         let other = StorageHashMapData::<i64, i64>::deserialize(&bytes).unwrap();
 
         assert_eq!(data, other);
+    }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(StorageHashMapData::<i64, i64>::serialized_size(), 0);
     }
 }

@@ -10,13 +10,6 @@ pub(crate) enum MetaValue {
     Valid,
 }
 
-#[allow(dead_code)]
-impl MetaValue {
-    pub(crate) fn serialized_size() -> u64 {
-        std::mem::size_of::<u8>() as u64
-    }
-}
-
 impl Serialize for MetaValue {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         match bytes.first() {
@@ -33,6 +26,10 @@ impl Serialize for MetaValue {
             MetaValue::Deleted => vec![2_u8],
             MetaValue::Valid => vec![1_u8],
         }
+    }
+
+    fn serialized_size() -> u64 {
+        std::mem::size_of::<u8>() as u64
     }
 }
 

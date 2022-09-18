@@ -5,6 +5,22 @@ use super::write_ahead_log_record::WriteAheadLogRecord;
 use crate::db_error::DbError;
 
 pub(crate) trait StorageImpl<T = Self> {
+    fn begin_transaction(&mut self);
+    fn clear_wal(&mut self) -> Result<(), DbError>;
+    fn create_index(&mut self, position: u64, size: u64) -> i64;
+    fn end_transaction(&mut self) -> bool;
+    fn indexes_by_position(&self) -> Vec<i64>;
+    fn insert_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError>;
+    fn read_exact(&mut self, buffer: &mut Vec<u8>) -> Result<(), DbError>;
+    fn record(&self, index: i64) -> Result<StorageRecord, DbError>;
+    fn record_mut(&mut self, index: i64) -> &mut StorageRecord;
+    fn remove_index(&mut self, index: i64);
+    fn seek(&mut self, position: std::io::SeekFrom) -> Result<u64, DbError>;
+    fn set_len(&mut self, len: u64) -> Result<(), DbError>;
+    fn set_records(&mut self, records: Vec<StorageRecordWithIndex>);
+    fn wal_records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError>;
+    fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError>;
+
     fn append(&mut self, bytes: &[u8]) -> Result<(), DbError> {
         self.write(std::io::SeekFrom::End(0), bytes)
     }
@@ -33,10 +49,6 @@ pub(crate) trait StorageImpl<T = Self> {
 
         Ok(())
     }
-
-    fn begin_transaction(&mut self);
-
-    fn clear_wal(&mut self) -> Result<(), DbError>;
 
     fn copy_record(
         &mut self,
@@ -70,10 +82,6 @@ pub(crate) trait StorageImpl<T = Self> {
         })
     }
 
-    fn create_index(&mut self, position: u64, size: u64) -> i64;
-
-    fn end_transaction(&mut self) -> bool;
-
     fn ensure_record_size(
         &mut self,
         record: &mut StorageRecord,
@@ -96,9 +104,6 @@ pub(crate) trait StorageImpl<T = Self> {
             &vec![0_u8; size as usize],
         )
     }
-
-    fn indexes_by_position(&self) -> Vec<i64>;
-    fn insert_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError>;
 
     fn invalidate_record(&mut self, index: i64, position: u64) -> Result<(), DbError> {
         self.write(std::io::SeekFrom::Start(position), &(-index).serialize())
@@ -154,8 +159,6 @@ pub(crate) trait StorageImpl<T = Self> {
         Ok(buffer)
     }
 
-    fn read_exact(&mut self, buffer: &mut Vec<u8>) -> Result<(), DbError>;
-
     fn read_record(&mut self) -> Result<StorageRecordWithIndex, DbError> {
         const SIZE: u64 = std::mem::size_of::<i64>() as u64;
         const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
@@ -188,10 +191,6 @@ pub(crate) trait StorageImpl<T = Self> {
         Ok(())
     }
 
-    fn record(&self, index: i64) -> Result<StorageRecord, DbError>;
-    fn record_mut(&mut self, index: i64) -> &mut StorageRecord;
-    fn remove_index(&mut self, index: i64);
-
     fn resize_record(
         &mut self,
         index: i64,
@@ -210,10 +209,6 @@ pub(crate) trait StorageImpl<T = Self> {
 
         Ok(())
     }
-
-    fn seek(&mut self, position: std::io::SeekFrom) -> Result<u64, DbError>;
-    fn set_len(&mut self, len: u64) -> Result<(), DbError>;
-    fn set_records(&mut self, records: Vec<StorageRecordWithIndex>);
 
     fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
         let record = self.record(index)?;
@@ -261,7 +256,7 @@ pub(crate) trait StorageImpl<T = Self> {
         Ok(())
     }
 
-    fn validate_offset<V>(size: u64, offset: u64) -> Result<(), DbError> {
+    fn validate_offset(size: u64, offset: u64) -> Result<(), DbError> {
         if size < offset {
             return Err(DbError::from("deserialization error: offset out of bounds"));
         }
@@ -269,8 +264,8 @@ pub(crate) trait StorageImpl<T = Self> {
         Ok(())
     }
 
-    fn validate_value_size<V>(size: u64, offset: u64) -> Result<(), DbError> {
-        if size - offset < std::mem::size_of::<V>() as u64 {
+    fn validate_value_size(read_size: u64, max_size: u64) -> Result<(), DbError> {
+        if max_size < read_size {
             return Err(DbError::from("deserialization error: value out of bounds"));
         }
 
@@ -285,14 +280,19 @@ pub(crate) trait StorageImpl<T = Self> {
         position + std::mem::size_of::<StorageRecord>() as u64 + offset
     }
 
-    fn value_read_size<V>(size: u64, offset: u64) -> Result<u64, DbError> {
-        Self::validate_offset::<V>(size, offset)?;
-        Self::validate_value_size::<V>(size, offset)?;
+    fn value_read_size<V: Serialize>(size: u64, offset: u64) -> Result<u64, DbError> {
+        Self::validate_offset(size, offset)?;
 
-        Ok(std::mem::size_of::<V>() as u64)
+        let mut read_size = V::serialized_size();
+        let max_size = size - offset;
+
+        if read_size == 0 {
+            read_size = max_size;
+        }
+
+        Self::validate_value_size(read_size, max_size)?;
+        Ok(read_size)
     }
-
-    fn wal_records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError>;
 
     fn write(&mut self, position: std::io::SeekFrom, bytes: &[u8]) -> Result<(), DbError> {
         let current_end = self.seek(std::io::SeekFrom::End(0))?;
@@ -317,6 +317,4 @@ pub(crate) trait StorageImpl<T = Self> {
         self.seek(position)?;
         self.write_all(bytes)
     }
-
-    fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError>;
 }

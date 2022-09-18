@@ -30,7 +30,8 @@ where
 {
     pub(crate) fn insert(&mut self, key: K, value: T) -> Result<(), DbError> {
         self.storage.borrow_mut().transaction();
-        let offset = self.free_offset(key.stable_hash())?;
+        let pos = self.free_offset(key.stable_hash())?;
+        let offset = Self::record_offset(pos);
         self.insert_value(offset, key, value)?;
         self.set_size(self.size + 1)?;
         self.storage.borrow_mut().commit()
@@ -68,19 +69,11 @@ where
 
         let mut pos = hash % self.capacity;
 
-        loop {
-            let record_offset = Self::record_offset(pos);
-            let offset = record_offset + StorageHashMapKeyValue::<K, T>::meta_value_offset();
-            let meta_value = self
-                .storage
-                .borrow_mut()
-                .value_at::<MetaValue>(self.storage_index, offset)?;
-
-            match meta_value {
-                MetaValue::Empty | MetaValue::Deleted => return Ok(record_offset),
-                MetaValue::Valid => pos = self.next_pos(pos),
-            }
+        while self.record_meta_value(pos)? == MetaValue::Valid {
+            pos = self.next_pos(pos);
         }
+
+        Ok(pos)
     }
 
     fn insert_value(&mut self, offset: u64, key: K, value: T) -> Result<(), DbError> {
@@ -132,6 +125,14 @@ where
         self.storage
             .borrow_mut()
             .value_at::<StorageHashMapKeyValue<K, T>>(self.storage_index, offset)
+    }
+
+    fn record_meta_value(&mut self, pos: u64) -> Result<MetaValue, DbError> {
+        let offset = Self::record_offset(pos) + StorageHashMapKeyValue::<K, T>::meta_value_offset();
+
+        self.storage
+            .borrow_mut()
+            .value_at::<MetaValue>(self.storage_index, offset)
     }
 
     fn record_offset(pos: u64) -> u64 {

@@ -19,14 +19,14 @@ where
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         let size = u64::deserialize(bytes)?;
 
-        const SIZE_OFFSET: usize = std::mem::size_of::<usize>();
+        let size_offset = u64::serialized_size() as usize;
         let value_offset = StorageHashMapKeyValue::<K, T>::serialized_size() as usize;
-        let data_size = (bytes.len() - SIZE_OFFSET) / value_offset;
+        let data_size = (bytes.len() - size_offset) / value_offset;
         let mut data = Vec::<StorageHashMapKeyValue<K, T>>::new();
         data.reserve(data_size);
 
         for i in 0..data_size {
-            let offset = SIZE_OFFSET + value_offset * i;
+            let offset = size_offset + value_offset * i;
             data.push(StorageHashMapKeyValue::<K, T>::deserialize(
                 &bytes[offset..],
             )?);

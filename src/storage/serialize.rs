@@ -41,7 +41,7 @@ impl Serialize for u64 {
 
 impl<T: Serialize> Serialize for Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        const SIZE_OFFSET: usize = std::mem::size_of::<usize>();
+        const SIZE_OFFSET: usize = std::mem::size_of::<u64>();
         let value_offset = std::mem::size_of::<T>();
         let size = u64::deserialize(bytes)? as usize;
         let mut data: Self = vec![];
@@ -57,7 +57,7 @@ impl<T: Serialize> Serialize for Vec<T> {
     }
 
     fn serialize(&self) -> Vec<u8> {
-        const SIZE_OFFSET: usize = std::mem::size_of::<usize>();
+        const SIZE_OFFSET: usize = std::mem::size_of::<u64>();
         let value_offset: usize = std::mem::size_of::<T>();
         let mut bytes: Vec<u8> = vec![];
 
@@ -86,6 +86,20 @@ impl Serialize for Vec<u8> {
     }
 }
 
+impl Serialize for String {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(String::from_utf8(bytes.to_vec())?)
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+
+    fn serialized_size() -> u64 {
+        0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,7 +110,7 @@ mod tests {
         let bytes = number.serialize();
         let actual = i64::deserialize(&bytes);
 
-        assert_eq!(actual, Ok(number))
+        assert_eq!(actual, Ok(number));
     }
 
     #[test]
@@ -114,6 +128,23 @@ mod tests {
         assert_eq!(i64::serialized_size(), 8);
         assert_eq!(u64::serialized_size(), 8);
         assert_eq!(Vec::<i64>::serialized_size(), 0);
+        assert_eq!(String::serialized_size(), 0);
+    }
+
+    #[test]
+    fn string() {
+        let value = "Hello, World!".to_string();
+        let bytes = value.serialize();
+        let actual = String::deserialize(&bytes);
+
+        assert_eq!(actual, Ok(value));
+    }
+
+    #[test]
+    fn string_bad_bytes() {
+        let bad_bytes = vec![0xdf, 0xff];
+
+        assert!(String::deserialize(&bad_bytes).is_err());
     }
 
     #[test]
@@ -122,7 +153,7 @@ mod tests {
         let bytes = number.serialize();
         let actual = u64::deserialize(&bytes);
 
-        assert_eq!(actual, Ok(number))
+        assert_eq!(actual, Ok(number));
     }
 
     #[test]

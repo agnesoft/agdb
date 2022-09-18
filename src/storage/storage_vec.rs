@@ -3,7 +3,6 @@ use super::serialize::Serialize;
 use super::Storage;
 use crate::db_error::DbError;
 
-#[allow(dead_code)]
 pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
     storage: std::rc::Rc<std::cell::RefCell<S>>,
     storage_index: i64,

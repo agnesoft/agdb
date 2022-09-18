@@ -112,10 +112,7 @@ pub(crate) trait StorageImpl<T = Self> {
     fn is_at_end(&mut self, record: &StorageRecord) -> Result<bool, DbError> {
         let file_size = self.seek(std::io::SeekFrom::End(0))?;
 
-        Ok(
-            (record.position + std::mem::size_of::<StorageRecord>() as u64 + record.size)
-                == file_size,
-        )
+        Ok((record.position + StorageRecord::serialized_size() + record.size) == file_size)
     }
 
     fn move_record_to_end(
@@ -127,7 +124,7 @@ pub(crate) trait StorageImpl<T = Self> {
     ) -> Result<(), DbError> {
         let old_position = record.position;
         *record = self.copy_record_to_end(
-            record.position + std::mem::size_of::<StorageRecord>() as u64,
+            record.position + StorageRecord::serialized_size(),
             core::cmp::min(record.size, offset),
             index,
             new_size,
@@ -160,7 +157,7 @@ pub(crate) trait StorageImpl<T = Self> {
     }
 
     fn read_record(&mut self) -> Result<StorageRecordWithIndex, DbError> {
-        let index_size: u64 = i64::serialized_size() as u64;
+        let index_size: u64 = i64::serialized_size();
         const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
         let position = self.seek(CURRENT)?;
@@ -204,7 +201,7 @@ pub(crate) trait StorageImpl<T = Self> {
             self.move_record_to_end(index, new_size, offset, record)?;
         }
 
-        self.set_len(record.position + std::mem::size_of::<StorageRecord>() as u64 + new_size)?;
+        self.set_len(record.position + StorageRecord::serialized_size() + new_size)?;
         *self.record_mut(index) = record.clone();
 
         Ok(())
@@ -212,7 +209,7 @@ pub(crate) trait StorageImpl<T = Self> {
 
     fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
         let record = self.record(index)?;
-        let record_size = std::mem::size_of::<StorageRecord>() as u64 + record.size;
+        let record_size = StorageRecord::serialized_size() + record.size;
 
         if record.position != current_pos {
             self.copy_record(index, record.position, record_size, current_pos)?;
@@ -277,7 +274,7 @@ pub(crate) trait StorageImpl<T = Self> {
     }
 
     fn value_position_u64(position: u64, offset: u64) -> u64 {
-        position + std::mem::size_of::<StorageRecord>() as u64 + offset
+        position + StorageRecord::serialized_size() + offset
     }
 
     fn value_read_size<V: Serialize>(size: u64, offset: u64) -> Result<u64, DbError> {

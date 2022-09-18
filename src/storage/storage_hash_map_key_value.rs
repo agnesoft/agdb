@@ -19,7 +19,7 @@ where
     T: Clone + Default + Serialize,
 {
     pub(crate) fn meta_value_offset() -> u64 {
-        std::mem::size_of::<K>() as u64 + std::mem::size_of::<T>() as u64
+        K::serialized_size() + T::serialized_size()
     }
 }
 
@@ -31,10 +31,8 @@ where
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             key: K::deserialize(&bytes[0..])?,
-            value: T::deserialize(&bytes[std::mem::size_of::<K>()..])?,
-            meta_value: MetaValue::deserialize(
-                &bytes[(std::mem::size_of::<K>() + std::mem::size_of::<T>())..],
-            )?,
+            value: T::deserialize(&bytes[(K::serialized_size() as usize)..])?,
+            meta_value: MetaValue::deserialize(&bytes[(Self::meta_value_offset() as usize)..])?,
         })
     }
 

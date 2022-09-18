@@ -206,7 +206,7 @@ where
     }
 
     fn record_offset(pos: u64) -> u64 {
-        u64::serialized_size() as u64 + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
+        u64::serialized_size() + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
     }
 
     fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {

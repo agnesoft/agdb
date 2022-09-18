@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-
 use super::file_storage::FileStorage;
 use super::serialize::Serialize;
 use super::stable_hash::StableHash;
@@ -9,6 +6,8 @@ use super::storage_hash_map_key_value::StorageHashMapKeyValue;
 use super::storage_hash_map_meta_value::MetaValue;
 use super::Storage;
 use crate::DbError;
+use std::collections::HashMap;
+use std::hash::Hash;
 
 #[allow(dead_code)]
 pub(crate) struct StorageHashMap<K, T, S = FileStorage>
@@ -77,6 +76,10 @@ where
         self.size
     }
 
+    pub(crate) fn storage_index(&self) -> i64 {
+        self.storage_index
+    }
+
     pub(crate) fn to_hash_map(&self) -> Result<HashMap<K, T>, DbError> {
         let mut map = HashMap::<K, T>::new();
         map.reserve(self.size as usize);
@@ -105,6 +108,10 @@ where
                 MetaValue::Valid | MetaValue::Deleted => pos = self.next_pos(pos),
             }
         }
+    }
+
+    fn capacity_from_bytes(len: u64) -> u64 {
+        (len - u64::serialized_size()) / T::serialized_size()
     }
 
     fn ensure_capacity(&mut self, new_capacity: u64) -> bool {
@@ -272,10 +279,39 @@ where
     }
 }
 
+impl<K, T, S> TryFrom<(std::rc::Rc<std::cell::RefCell<S>>, i64)> for StorageHashMap<K, T, S>
+where
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Serialize,
+    S: Storage,
+{
+    type Error = DbError;
+
+    fn try_from(
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<S>>, i64),
+    ) -> Result<Self, Self::Error> {
+        let byte_size = storage_with_index
+            .0
+            .borrow_mut()
+            .value_size(storage_with_index.1)?;
+        let size = storage_with_index
+            .0
+            .borrow_mut()
+            .value_at::<u64>(storage_with_index.1, 0)?;
+        let capacity = Self::capacity_from_bytes(byte_size);
+
+        Ok(Self {
+            storage: storage_with_index.0,
+            storage_index: storage_with_index.1,
+            size,
+            capacity,
+            phantom_data: std::marker::PhantomData::<(K, T)>,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
     use crate::test_utilities::test_file::TestFile;
 
@@ -505,20 +541,24 @@ mod tests {
     #[test]
     fn try_from_storage_index() {
         let test_file = TestFile::from("./storage_hash_map-try_from_storage_index.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
 
         let index;
 
         {
             let mut map = StorageHashMap::<i64, i64>::try_from(storage.clone()).unwrap();
-            map.insert(&1, 1).unwrap();
-            map.insert(&3, 2).unwrap();
-            map.insert(&5, 3).unwrap();
+            map.insert(1, 1).unwrap();
+            map.insert(3, 2).unwrap();
+            map.insert(5, 3).unwrap();
+            map.remove(&3).unwrap();
             index = map.storage_index();
         }
 
-        let mut map = StorageHashMap::<i64, i64>::try_from((storage, index)).unwrap();
+        let map = StorageHashMap::<i64, i64>::try_from((storage, index)).unwrap();
 
-        let expected = HashMap::<i64, i64>::new();
+        let mut expected = HashMap::<i64, i64>::new();
         expected.insert(1, 1);
         expected.insert(3, 2);
         expected.insert(5, 3);
@@ -527,15 +567,27 @@ mod tests {
     }
 
     #[test]
-    fn try_from_storage_missing_index() {}
+    fn try_from_storage_missing_index() {
+        let test_file = TestFile::from("./storage_hash_map-try_from_storage_missing_index.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
 
+        assert_eq!(
+            StorageHashMap::<i64, i64>::try_from((storage, 1))
+                .err()
+                .unwrap(),
+            DbError::from("index '1' not found")
+        );
+    }
+
+    #[test]
     fn to_hash_map() {
         let test_file = TestFile::from("./storage_hash_map-to_hash_map.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let test_file = TestFile::from("./storage_hash_map-try_from_storage_missing_index.agdb");
         let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
         map.insert(1, 10).unwrap();
         map.insert(5, 15).unwrap();
@@ -557,12 +609,6 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        assert_eq!(
-            StorageHashMap::<i64, i64>::try_from((storage, 1))
-                .err()
-                .unwrap(),
-            DbError::from("index '1' not found")
-        );
         let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
         let other = map.to_hash_map().unwrap();
 

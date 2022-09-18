@@ -3,6 +3,10 @@ use crate::db_error::DbError;
 pub(crate) trait Serialize: Sized {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
     fn serialize(&self) -> Vec<u8>;
+
+    fn serialized_size() -> u64 {
+        std::mem::size_of::<Self>() as u64
+    }
 }
 
 impl Serialize for i64 {
@@ -66,6 +70,10 @@ impl<T: Serialize> Serialize for Vec<T> {
 
         bytes
     }
+
+    fn serialized_size() -> u64 {
+        0
+    }
 }
 
 impl Serialize for Vec<u8> {
@@ -99,6 +107,13 @@ mod tests {
             i64::deserialize(&bytes),
             Err(DbError::from("i64 deserialization error: out of bounds"))
         );
+    }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(i64::serialized_size(), 8);
+        assert_eq!(u64::serialized_size(), 8);
+        assert_eq!(Vec::<i64>::serialized_size(), 0);
     }
 
     #[test]

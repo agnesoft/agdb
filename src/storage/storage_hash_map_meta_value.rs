@@ -2,13 +2,19 @@ use crate::DbError;
 
 use super::serialize::Serialize;
 
-#[allow(dead_code)]
-#[derive(Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub(crate) enum MetaValue {
     #[default]
     Empty,
     Deleted,
     Valid,
+}
+
+#[allow(dead_code)]
+impl MetaValue {
+    pub(crate) fn serialized_size() -> u64 {
+        std::mem::size_of::<u8>() as u64
+    }
 }
 
 impl Serialize for MetaValue {
@@ -53,5 +59,10 @@ mod tests {
         let other = Vec::<MetaValue>::deserialize(&bytes).unwrap();
 
         assert_eq!(data, other);
+    }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(MetaValue::serialized_size(), 1);
     }
 }

@@ -256,6 +256,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use crate::test_utilities::test_file::TestFile;
 
@@ -480,6 +482,48 @@ mod tests {
 
         assert_eq!(map.capacity(), current_capacity);
         assert_eq!(map.size(), size);
+    }
+
+    #[test]
+    fn try_from_storage_index() {
+        let test_file = TestFile::from("./storage_hash_map-try_from_storage_index.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let index;
+
+        {
+            let mut map = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+            map.inst(&1, 1).unwrap();
+            map.inst(&3, 2).unwrap();
+            map.inst(&5, 3).unwrap();
+            index = map.storage_index();
+        }
+
+        let mut map = StorageHashMap::<i64, i64>::try_from((storage, index)).unwrap();
+
+        let expected = HashMap::<i64, i64>::new();
+        expected.insert(1, 1);
+        expected.insert(3, 2);
+        expected.insert(5, 3);
+
+        assert_eq!(map.to_hash_map(), Ok(expected));
+    }
+
+    #[test]
+    fn try_from_storage_missing_index() {
+        let test_file = TestFile::from("./storage_hash_map-try_from_storage_missing_index.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        assert_eq!(
+            StorageHashMap::<i64, i64>::try_from((storage, 1))
+                .err()
+                .unwrap(),
+            DbError::from("index '1' not found")
+        );
     }
 
     #[test]

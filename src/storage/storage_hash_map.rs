@@ -32,12 +32,18 @@ where
         self.capacity
     }
 
-    pub(crate) fn insert(&mut self, key: K, value: T) -> Result<(), DbError> {
+    pub(crate) fn insert(&mut self, key: K, value: T) -> Result<Option<T>, DbError> {
         self.storage.borrow_mut().transaction();
-        let pos = self.free_offset(key.stable_hash())?;
-        self.insert_value(pos, key, value)?;
+        let free = self.find_or_free(&key)?;
+        self.insert_value(free.0, key, value)?;
         self.set_size(self.size + 1)?;
-        self.storage.borrow_mut().commit()
+        self.storage.borrow_mut().commit()?;
+
+        if free.1.meta_value == MetaValue::Valid {
+            Ok(Some(free.1.value))
+        } else {
+            Ok(None)
+        }
     }
 
     pub(crate) fn remove(&mut self, key: &K) -> Result<(), DbError> {
@@ -82,18 +88,27 @@ where
         old_capacity != self.capacity
     }
 
+<<<<<<< Updated upstream
     fn free_offset(&mut self, hash: u64) -> Result<u64, DbError> {
+=======
+    fn find_or_free(&mut self, key: &K) -> Result<(u64, StorageHashMapKeyValue<K, T>), DbError> {
+>>>>>>> Stashed changes
         if self.max_size() < (self.size + 1) {
             self.rehash(self.capacity * 2)?;
         }
 
+        let hash = key.stable_hash();
         let mut pos = hash % self.capacity;
 
-        while self.record_meta_value(pos)? == MetaValue::Valid {
-            pos = self.next_pos(pos);
-        }
+        loop {
+            let record = self.record(pos)?;
 
-        Ok(pos)
+            match record.meta_value {
+                MetaValue::Empty => return Ok((pos, record)),
+                MetaValue::Valid if record.key == *key => return Ok((pos, record)),
+                MetaValue::Valid | MetaValue::Deleted => pos = self.next_pos(pos),
+            }
+        }
     }
 
     fn insert_meta_value(&mut self, pos: u64, meta_value: MetaValue) -> Result<(), DbError> {

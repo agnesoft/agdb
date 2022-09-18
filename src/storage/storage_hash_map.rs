@@ -88,11 +88,7 @@ where
         old_capacity != self.capacity
     }
 
-<<<<<<< Updated upstream
-    fn free_offset(&mut self, hash: u64) -> Result<u64, DbError> {
-=======
     fn find_or_free(&mut self, key: &K) -> Result<(u64, StorageHashMapKeyValue<K, T>), DbError> {
->>>>>>> Stashed changes
         if self.max_size() < (self.size + 1) {
             self.rehash(self.capacity * 2)?;
         }
@@ -314,6 +310,23 @@ mod tests {
         for i in 0..100 {
             assert_eq!(map.value(&(i * 64)), Ok(Some(i)));
         }
+    }
+
+    #[test]
+    fn insert_same_key() {
+        let test_file = TestFile::from("./storage_hash_map-insert_same_key.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        assert_eq!(map.insert(1, 10), Ok(None));
+        assert_eq!(map.insert(5, 15), Ok(None));
+        assert_eq!(map.insert(5, 20), Ok(Some(15)));
+
+        assert_eq!(map.value(&1), Ok(Some(10)));
+        assert_eq!(map.value(&5), Ok(Some(20)));
     }
 
     #[test]

@@ -1,15 +1,14 @@
-use std::borrow::BorrowMut;
-
 use super::file_storage::FileStorage;
 use super::serialize::Serialize;
 use super::stable_hash::StableHash;
+use super::storage_hash_map_data::StorageHashMapData;
 use super::storage_hash_map_key_value::StorageHashMapKeyValue;
 use super::storage_hash_map_meta_value::MetaValue;
 use super::Storage;
 use crate::DbError;
 
 #[allow(dead_code)]
-pub(crate) struct HashMap<K, T, S = FileStorage>
+pub(crate) struct StorageHashMap<K, T, S = FileStorage>
 where
     K: Clone + Default + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
@@ -23,7 +22,7 @@ where
 }
 
 #[allow(dead_code)]
-impl<K, T, S> HashMap<K, T, S>
+impl<K, T, S> StorageHashMap<K, T, S>
 where
     K: Clone + Default + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
@@ -112,32 +111,45 @@ where
     }
 
     fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        let old_capacity = self.capacity;
-
         if new_capacity < 64 {
             self.capacity = 64;
         } else {
             self.capacity = new_capacity;
         }
 
-        let new_data = vec![StorageHashMapKeyValue::<K, T>::default(); self.capacity as usize];
-        let old_data = self.borrow_mut().value::<Vec<>>(key)
+        let old_data: StorageHashMapData<K, T> =
+            self.storage.borrow_mut().value(self.storage_index)?;
+        let mut new_data = StorageHashMapData::<K, T> {
+            data: vec![StorageHashMapKeyValue::<K, T>::default(); self.capacity as usize],
+            size: old_data.size,
+        };
 
-        let read_offset = Self::record_offset(0);
-        let read_size = Self::record_offset(old_capacity) - read_offset;
-        let bytes = self
-            .storage
-            .borrow_mut()
-            .value_at::(self.storage_index, read_offset)?;
+        for record in old_data.data {
+            if record.meta_value == MetaValue::Valid {
+                let hash = record.key.stable_hash();
+                let mut pos = hash % self.capacity;
 
-        let data = self
-            .storage
-            .borrow_mut()
-            .value::<Vec<StorageHashMapKeyValue<K, T>>>(self.storage_index)?;
+                loop {
+                    if new_data.data[pos as usize].meta_value == MetaValue::Empty {
+                        new_data.data[pos as usize] = record;
+                        break;
+                    }
+
+                    if pos == self.capacity - 1 {
+                        pos = 0;
+                    } else {
+                        pos += 1;
+                    }
+                }
+            }
+        }
 
         self.storage
             .borrow_mut()
-            .resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+            .insert_at(self.storage_index, 0, &new_data)?;
+        self.storage
+            .borrow_mut()
+            .resize_value(self.storage_index, new_data.serialized_size())?;
 
         Ok(())
     }
@@ -147,7 +159,7 @@ where
     }
 }
 
-impl<K, T, S> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for HashMap<K, T, S>
+impl<K, T, S> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for StorageHashMap<K, T, S>
 where
     K: Clone + Default + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
@@ -180,10 +192,14 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut map = HashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
         map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(7, 20).unwrap();
 
         assert_eq!(map.value(&1), Ok(Some(10)));
+        assert_eq!(map.value(&5), Ok(Some(15)));
+        assert_eq!(map.value(&7), Ok(Some(20)));
     }
 }

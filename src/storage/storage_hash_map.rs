@@ -61,6 +61,18 @@ where
         }
     }
 
+    pub(crate) fn reserve(&mut self, new_capacity: u64) -> Result<(), DbError> {
+        if self.capacity < new_capacity {
+            return self.rehash(new_capacity);
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn size(&self) -> u64 {
+        self.size
+    }
+
     pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity;

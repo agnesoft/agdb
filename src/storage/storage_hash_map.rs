@@ -4,7 +4,7 @@ use super::Storage;
 use crate::DbError;
 
 #[allow(dead_code)]
-pub(crate) struct HashMap<K: Serialize, T: Serialize, S: Storage = FileStorage> {
+pub(crate) struct HashMap<K: Serialize + StableHash, T: Serialize, S: Storage = FileStorage> {
     storage: std::rc::Rc<std::cell::RefCell<S>>,
     storage_index: i64,
     size: u64,
@@ -12,7 +12,23 @@ pub(crate) struct HashMap<K: Serialize, T: Serialize, S: Storage = FileStorage> 
     phantom_data: std::marker::PhantomData<(K, T)>,
 }
 
-impl<K: Serialize, T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>>
+impl<K: Serialize + Into<u64>, T: Serialize, S: Storage> HashMap<K, T, S> {
+    pub(crate) fn insert(&mut self, key: &K, value: &T) -> Result<(), DbError> {
+        let hashed = Self::hash(key);
+
+        Ok(())
+    }
+
+    pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
+        todo!()
+    }
+
+    fn hash(value: &K) -> u64 {
+        0
+    }
+}
+
+impl<K: Serialize + Into<u64>, T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>>
     for HashMap<K, T, S>
 {
     type Error = DbError;
@@ -36,12 +52,16 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn try_from() {
-        let test_file = TestFile::from("./storage_hash_map-try_from.agdb");
+    fn insert() {
+        let test_file = TestFile::from("./storage_hash_map-insert.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut _map = HashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = HashMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.insert(&1, &10).unwrap();
+
+        assert_eq!(map.value(&1), Ok(Some(10)));
     }
 }

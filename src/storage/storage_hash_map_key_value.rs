@@ -9,6 +9,7 @@ pub(crate) struct StorageHashMapKeyValue<K: Serialize, T: Serialize> {
     meta_value: MetaValue,
 }
 
+#[allow(dead_code)]
 impl<K: Serialize, T: Serialize> StorageHashMapKeyValue<K, T> {
     pub(crate) fn serialized_size() -> u64 {
         Self::meta_value_offset() + MetaValue::serialized_size()

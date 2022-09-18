@@ -76,4 +76,9 @@ mod tests {
 
         assert_eq!(data, other);
     }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(StorageHashMapData::<i64, i64>::serialized_size(), 0);
+    }
 }

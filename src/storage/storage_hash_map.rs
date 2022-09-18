@@ -70,14 +70,16 @@ where
         }
     }
 
-    fn ensure_capacity(&mut self, new_capacity: u64) -> Result<(), DbError> {
+    fn ensure_capacity(&mut self, new_capacity: u64) -> bool {
+        let old_capacity = self.capacity;
+
         if new_capacity < 64 {
             self.capacity = 64;
         } else {
             self.capacity = new_capacity;
         }
 
-        Ok(())
+        old_capacity != self.capacity
     }
 
     fn free_offset(&mut self, hash: u64) -> Result<u64, DbError> {
@@ -167,11 +169,12 @@ where
     }
 
     fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        self.ensure_capacity(new_capacity)?;
-        let mut store = self.storage.borrow_mut();
-        let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
-        store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
-        store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+        if self.ensure_capacity(new_capacity) {
+            let mut store = self.storage.borrow_mut();
+            let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
+            store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
+            store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+        }
 
         Ok(())
     }

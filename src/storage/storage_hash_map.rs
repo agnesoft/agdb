@@ -1,6 +1,7 @@
 use super::file_storage::FileStorage;
 use super::serialize::Serialize;
 use super::stable_hash::StableHash;
+use super::storage_hash_map_key_value::StorageHashMapKeyValue;
 use super::Storage;
 use crate::DbError;
 
@@ -13,15 +14,20 @@ pub(crate) struct HashMap<K: Serialize + StableHash, T: Serialize, S: Storage = 
     phantom_data: std::marker::PhantomData<(K, T)>,
 }
 
+#[allow(dead_code)]
 impl<K: Serialize + StableHash, T: Serialize, S: Storage> HashMap<K, T, S> {
-    pub(crate) fn insert(&mut self, key: &K, value: &T) -> Result<(), DbError> {
+    pub(crate) fn insert(&mut self, key: K, value: T) -> Result<(), DbError> {
         let hash = key.stable_hash();
         let pos = hash % self.capacity;
-        let offset = self.free_offset(pos);
+
         self.storage.borrow_mut().transaction();
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, offset, value)?;
+
+        let offset = self.free_offset(pos)?;
+        self.storage.borrow_mut().insert_at(
+            self.storage_index,
+            offset,
+            &StorageHashMapKeyValue { key, value },
+        )?;
 
         self.storage.borrow_mut().commit()?;
 
@@ -29,11 +35,23 @@ impl<K: Serialize + StableHash, T: Serialize, S: Storage> HashMap<K, T, S> {
     }
 
     pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
-        todo!()
+        if let Some(offset) = self.find_value_offset(key)? {
+            return Ok(Some(
+                self.storage
+                    .borrow_mut()
+                    .value_at::<T>(self.storage_index, offset)?,
+            ));
+        }
+
+        Ok(None)
     }
 
-    fn free_offset(&mut self, pos: u64) -> u64 {
-        0
+    fn find_value_offset(&mut self, key: &K) -> Result<Option<u64>, DbError> {
+        Ok(None)
+    }
+
+    fn free_offset(&mut self, pos: u64) -> Result<u64, DbError> {
+        Ok(0)
     }
 }
 
@@ -69,7 +87,7 @@ mod tests {
 
         let mut map = HashMap::<i64, i64>::try_from(storage).unwrap();
 
-        map.insert(&1, &10).unwrap();
+        map.insert(1, 10).unwrap();
 
         assert_eq!(map.value(&1), Ok(Some(10)));
     }

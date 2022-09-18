@@ -4,13 +4,13 @@ pub(crate) trait StableHash {
 
 impl StableHash for i64 {
     fn stable_hash(&self) -> u64 {
-        self.clone() as u64
+        *self as u64
     }
 }
 
 impl StableHash for u64 {
     fn stable_hash(&self) -> u64 {
-        self.clone()
+        *self
     }
 }
 

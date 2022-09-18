@@ -124,11 +124,11 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
     }
 
     fn value_offset(index: u64) -> u64 {
-        std::mem::size_of::<u64>() as u64 + index * std::mem::size_of::<T>() as u64
+        u64::serialized_size() as u64 + index * std::mem::size_of::<T>() as u64
     }
 
     fn capacity_from_bytes(len: u64) -> u64 {
-        (len - std::mem::size_of::<u64>() as u64) / std::mem::size_of::<T>() as u64
+        (len - u64::serialized_size() as u64) / std::mem::size_of::<T>() as u64
     }
 }
 

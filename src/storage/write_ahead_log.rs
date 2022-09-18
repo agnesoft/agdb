@@ -45,9 +45,8 @@ impl WriteAheadLog {
     }
 
     fn read_record(file: &mut std::fs::File) -> Result<WriteAheadLogRecord, DbError> {
-        let position =
-            u64::deserialize(&Self::read_exact(file, std::mem::size_of::<u64>() as u64)?)?;
-        let size = u64::deserialize(&Self::read_exact(file, std::mem::size_of::<u64>() as u64)?)?;
+        let position = u64::deserialize(&Self::read_exact(file, u64::serialized_size() as u64)?)?;
+        let size = u64::deserialize(&Self::read_exact(file, u64::serialized_size() as u64)?)?;
 
         Ok(WriteAheadLogRecord {
             position,

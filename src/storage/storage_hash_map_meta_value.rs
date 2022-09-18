@@ -2,8 +2,7 @@ use crate::DbError;
 
 use super::serialize::Serialize;
 
-#[allow(dead_code)]
-#[derive(Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub(crate) enum MetaValue {
     #[default]
     Empty,

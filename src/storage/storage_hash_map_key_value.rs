@@ -2,21 +2,32 @@ use super::serialize::Serialize;
 use super::storage_hash_map_meta_value::MetaValue;
 use crate::DbError;
 
-#[derive(Debug, Default, PartialEq)]
-pub(crate) struct StorageHashMapKeyValue<K: Serialize, T: Serialize> {
-    key: K,
-    value: T,
-    meta_value: MetaValue,
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct StorageHashMapKeyValue<K, T>
+where
+    K: Clone + Default + Serialize,
+    T: Clone + Default + Serialize,
+{
+    pub(crate) key: K,
+    pub(crate) value: T,
+    pub(crate) meta_value: MetaValue,
 }
 
-#[allow(dead_code)]
-impl<K: Serialize, T: Serialize> StorageHashMapKeyValue<K, T> {
+impl<K, T> StorageHashMapKeyValue<K, T>
+where
+    K: Clone + Default + Serialize,
+    T: Clone + Default + Serialize,
+{
     pub(crate) fn meta_value_offset() -> u64 {
         std::mem::size_of::<K>() as u64 + std::mem::size_of::<T>() as u64
     }
 }
 
-impl<K: Serialize, T: Serialize> Serialize for StorageHashMapKeyValue<K, T> {
+impl<K, T> Serialize for StorageHashMapKeyValue<K, T>
+where
+    K: Clone + Default + Serialize,
+    T: Clone + Default + Serialize,
+{
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             key: K::deserialize(&bytes[0..])?,
@@ -29,7 +40,7 @@ impl<K: Serialize, T: Serialize> Serialize for StorageHashMapKeyValue<K, T> {
 
     fn serialize(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
-        data.reserve(std::mem::size_of::<K>() + std::mem::size_of::<T>() + 1);
+        data.reserve(Self::serialized_size() as usize);
         data.extend(self.key.serialize());
         data.extend(self.value.serialize());
         data.extend(self.meta_value.serialize());

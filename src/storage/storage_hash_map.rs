@@ -68,6 +68,16 @@ where
         }
     }
 
+    fn ensure_capacity(&mut self, new_capacity: u64) -> Result<(), DbError> {
+        if new_capacity < 64 {
+            self.capacity = 64;
+        } else {
+            self.capacity = new_capacity;
+        }
+
+        Ok(())
+    }
+
     fn free_offset(&mut self, hash: u64) -> Result<u64, DbError> {
         if (self.size + 1) > self.max_size() {
             self.rehash(self.capacity * 2)?;
@@ -99,41 +109,11 @@ where
     // }
 
     fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        if new_capacity < 64 {
-            self.capacity = 64;
-        } else {
-            self.capacity = new_capacity;
-        }
-
-        let old_data: StorageHashMapData<K, T> =
-            self.storage.borrow_mut().value(self.storage_index)?;
-        let mut new_data = StorageHashMapData::<K, T> {
-            data: vec![StorageHashMapKeyValue::<K, T>::default(); self.capacity as usize],
-            size: old_data.size,
-        };
-
-        for record in old_data.data {
-            if record.meta_value == MetaValue::Valid {
-                let hash = record.key.stable_hash();
-                let mut pos = hash % self.capacity;
-
-                loop {
-                    if new_data.data[pos as usize].meta_value == MetaValue::Empty {
-                        new_data.data[pos as usize] = record;
-                        break;
-                    }
-
-                    pos = self.next_pos(pos);
-                }
-            }
-        }
-
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, 0, &new_data)?;
-        self.storage
-            .borrow_mut()
-            .resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+        self.ensure_capacity(new_capacity)?;
+        let mut store = self.storage.borrow_mut();
+        let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
+        store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
+        store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
 
         Ok(())
     }
@@ -146,8 +126,38 @@ where
         }
     }
 
+    fn place_new_record(
+        &self,
+        new_data: &mut StorageHashMapData<K, T>,
+        record: StorageHashMapKeyValue<K, T>,
+    ) {
+        let hash = record.key.stable_hash();
+        let mut pos = hash % self.capacity;
+
+        while new_data.data[pos as usize].meta_value != MetaValue::Empty {
+            pos = self.next_pos(pos);
+        }
+
+        new_data.data[pos as usize] = record;
+    }
+
     fn record_offset(pos: u64) -> u64 {
         u64::serialized_size() as u64 + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
+    }
+
+    fn rehash_old_data(&self, old_data: StorageHashMapData<K, T>) -> StorageHashMapData<K, T> {
+        let mut new_data = StorageHashMapData::<K, T> {
+            data: vec![StorageHashMapKeyValue::<K, T>::default(); self.capacity as usize],
+            size: old_data.size,
+        };
+
+        for record in old_data.data {
+            if record.meta_value == MetaValue::Valid {
+                self.place_new_record(&mut new_data, record);
+            }
+        }
+
+        new_data
     }
 }
 
@@ -218,7 +228,7 @@ mod tests {
 
     #[test]
     fn insert_reallocate_with_collisions() {
-        let test_file = TestFile::from("./storage_hash_map-insert_reallocate.agdb");
+        let test_file = TestFile::from("./storage_hash_map-insert_reallocate_with_collisions.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));

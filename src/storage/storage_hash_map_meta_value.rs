@@ -11,6 +11,13 @@ pub(crate) enum MetaValue {
     Valid,
 }
 
+#[allow(dead_code)]
+impl MetaValue {
+    pub(crate) fn serialized_size() -> u64 {
+        std::mem::size_of::<u8>() as u64
+    }
+}
+
 impl Serialize for MetaValue {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         match bytes.first() {
@@ -53,5 +60,10 @@ mod tests {
         let other = Vec::<MetaValue>::deserialize(&bytes).unwrap();
 
         assert_eq!(data, other);
+    }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(MetaValue::serialized_size(), 1);
     }
 }

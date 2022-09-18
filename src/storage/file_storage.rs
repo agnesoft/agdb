@@ -677,6 +677,22 @@ mod tests {
     }
 
     #[test]
+    fn value_at_dynamic_size() {
+        let test_file = TestFile::from("./file_storage-value_at_dynamic_size.agdb");
+
+        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let data = vec![2_i64, 1_i64, 2_i64];
+
+        let index = storage.insert(&data).unwrap();
+        let offset = std::mem::size_of::<u64>() as u64;
+
+        assert_eq!(
+            storage.value_at::<Vec<i64>>(index, offset),
+            Ok(vec![1_i64, 2_i64])
+        );
+    }
+
+    #[test]
     fn value_at_of_missing_index() {
         let test_file = TestFile::from("./file_storage-value_at_of_missing_index.agdb");
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();

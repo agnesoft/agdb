@@ -396,6 +396,65 @@ mod tests {
     }
 
     #[test]
+    fn reserve_larger() {
+        let test_file = TestFile::from("./storage_hash_map-reserve_larger.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        map.insert(1, 1).unwrap();
+
+        let capacity = map.capacity() + 10;
+        let size = map.size();
+
+        map.reserve(capacity).unwrap();
+
+        assert_eq!(map.capacity(), capacity);
+        assert_eq!(map.size(), size);
+        assert_eq!(map.value(&1), Ok(Some(1)));
+    }
+
+    #[test]
+    fn reserve_same() {
+        let test_file = TestFile::from("./storage_hash_map-reserve_same.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        map.insert(1, 1).unwrap();
+
+        let capacity = map.capacity();
+        let size = map.size();
+
+        map.reserve(capacity).unwrap();
+
+        assert_eq!(map.capacity(), capacity);
+        assert_eq!(map.size(), size);
+    }
+
+    #[test]
+    fn reserve_smaller() {
+        let test_file = TestFile::from("./storage_hash_map-reserve_smaller.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        map.insert(1, 1).unwrap();
+
+        let current_capacity = map.capacity();
+        let capacity = current_capacity - 10;
+        let size = map.size();
+
+        map.reserve(capacity).unwrap();
+
+        assert_eq!(map.capacity(), current_capacity);
+        assert_eq!(map.size(), size);
+    }
+
+    #[test]
     fn value_missing() {
         let test_file = TestFile::from("./storage_hash_map-value_missing.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(

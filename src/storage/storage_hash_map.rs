@@ -1,5 +1,6 @@
 use super::file_storage::FileStorage;
 use super::serialize::Serialize;
+use super::stable_hash::StableHash;
 use super::Storage;
 use crate::DbError;
 
@@ -12,9 +13,17 @@ pub(crate) struct HashMap<K: Serialize + StableHash, T: Serialize, S: Storage = 
     phantom_data: std::marker::PhantomData<(K, T)>,
 }
 
-impl<K: Serialize + Into<u64>, T: Serialize, S: Storage> HashMap<K, T, S> {
+impl<K: Serialize + StableHash, T: Serialize, S: Storage> HashMap<K, T, S> {
     pub(crate) fn insert(&mut self, key: &K, value: &T) -> Result<(), DbError> {
-        let hashed = Self::hash(key);
+        let hash = key.stable_hash();
+        let pos = hash % self.capacity;
+        let offset = self.free_offset(pos);
+        self.storage.borrow_mut().transaction();
+        self.storage
+            .borrow_mut()
+            .insert_at(self.storage_index, offset, value)?;
+
+        self.storage.borrow_mut().commit()?;
 
         Ok(())
     }
@@ -23,13 +32,13 @@ impl<K: Serialize + Into<u64>, T: Serialize, S: Storage> HashMap<K, T, S> {
         todo!()
     }
 
-    fn hash(value: &K) -> u64 {
+    fn free_offset(&mut self, pos: u64) -> u64 {
         0
     }
 }
 
-impl<K: Serialize + Into<u64>, T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>>
-    for HashMap<K, T, S>
+impl<K: Serialize + StableHash, T: Serialize, S: Storage>
+    TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for HashMap<K, T, S>
 {
     type Error = DbError;
 

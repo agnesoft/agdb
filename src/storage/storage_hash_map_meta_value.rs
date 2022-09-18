@@ -17,7 +17,7 @@ impl Serialize for MetaValue {
             Some(0) => Ok(MetaValue::Empty),
             Some(1) => Ok(MetaValue::Valid),
             Some(2) => Ok(MetaValue::Deleted),
-            _ => return Err(DbError::from("value out of bounds")),
+            _ => Err(DbError::from("value out of bounds")),
         }
     }
 

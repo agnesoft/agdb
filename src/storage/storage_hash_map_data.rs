@@ -41,6 +41,10 @@ impl<K: Serialize, T: Serialize> Serialize for StorageHashMapData<K, T> {
 
         bytes
     }
+
+    fn serialized_size() -> u64 {
+        0
+    }
 }
 
 #[cfg(test)]

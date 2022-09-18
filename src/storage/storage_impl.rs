@@ -269,8 +269,10 @@ pub(crate) trait StorageImpl<T = Self> {
         Ok(())
     }
 
-    fn validate_value_size<V>(size: u64, offset: u64) -> Result<(), DbError> {
-        if size - offset < std::mem::size_of::<V>() as u64 {
+    fn validate_value_size<V: Serialize>(size: u64, offset: u64) -> Result<(), DbError> {
+        let serialized_size = V::serialized_size();
+
+        if serialized_size != 0 && size - offset < serialized_size {
             return Err(DbError::from("deserialization error: value out of bounds"));
         }
 
@@ -285,11 +287,15 @@ pub(crate) trait StorageImpl<T = Self> {
         position + std::mem::size_of::<StorageRecord>() as u64 + offset
     }
 
-    fn value_read_size<V>(size: u64, offset: u64) -> Result<u64, DbError> {
+    fn value_read_size<V: Serialize>(size: u64, offset: u64) -> Result<u64, DbError> {
         Self::validate_offset::<V>(size, offset)?;
         Self::validate_value_size::<V>(size, offset)?;
 
-        Ok(std::mem::size_of::<V>() as u64)
+        if V::serialized_size() == 0 {
+            Ok(size - offset)
+        } else {
+            Ok(std::mem::size_of::<V>() as u64)
+        }
     }
 
     fn wal_records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError>;

@@ -124,11 +124,11 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
     }
 
     fn value_offset(index: u64) -> u64 {
-        u64::serialized_size() as u64 + index * std::mem::size_of::<T>() as u64
+        u64::serialized_size() + index * T::serialized_size()
     }
 
     fn capacity_from_bytes(len: u64) -> u64 {
-        (len - u64::serialized_size() as u64) / std::mem::size_of::<T>() as u64
+        (len - u64::serialized_size()) / T::serialized_size()
     }
 }
 
@@ -546,6 +546,7 @@ mod tests {
         ));
 
         let index;
+
         {
             let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
             vec.push(&1).unwrap();
@@ -561,7 +562,7 @@ mod tests {
 
     #[test]
     fn try_from_storage_missing_index() {
-        let test_file = TestFile::from("./storage_vec-try_from_storage_index.agdb");
+        let test_file = TestFile::from("./storage_vec-try_from_storage_missing_index.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));

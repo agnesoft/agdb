@@ -2,8 +2,8 @@ use super::serialize::Serialize;
 
 #[derive(Debug, Default, PartialEq)]
 pub(crate) struct StorageHashMapKeyValue<K: Serialize, T: Serialize> {
-    key: K,
-    value: T,
+    pub(crate) key: K,
+    pub(crate) value: T,
 }
 
 impl<K: Serialize, T: Serialize> Serialize for StorageHashMapKeyValue<K, T> {

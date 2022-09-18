@@ -44,7 +44,7 @@ where
 
     fn serialize(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
-        data.reserve(Self::serialized_size());
+        data.reserve(Self::serialized_size() as usize);
         data.extend(self.key.serialize());
         data.extend(self.value.serialize());
         data.extend(self.meta_value.serialize());

@@ -29,6 +29,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn derived_from_debug() {
+        let key_value = StorageHashMapKeyValue::<i64, i64>::default();
+
+        format!("{:?}", key_value);
+    }
+
+    #[test]
+    fn derived_from_default() {
+        let key_value = StorageHashMapKeyValue::<i64, i64>::default();
+
+        assert_eq!(key_value.key, 0);
+        assert_eq!(key_value.value, 0);
+    }
+
+    #[test]
     fn i64_i64() {
         let key_value = StorageHashMapKeyValue {
             key: 1_i64,

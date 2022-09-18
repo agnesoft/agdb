@@ -2,12 +2,31 @@ use super::serialize::Serialize;
 use super::storage_hash_map_key_value::StorageHashMapKeyValue;
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct StorageHashMapData<K: Serialize, T: Serialize> {
+pub(crate) struct StorageHashMapData<K, T>
+where
+    K: Clone + Default + Serialize,
+    T: Clone + Default + Serialize,
+{
     pub(crate) data: Vec<StorageHashMapKeyValue<K, T>>,
     pub(crate) size: u64,
 }
 
-impl<K: Serialize, T: Serialize> Serialize for StorageHashMapData<K, T> {
+impl<K, T> StorageHashMapData<K, T>
+where
+    K: Clone + Default + Serialize,
+    T: Clone + Default + Serialize,
+{
+    pub(crate) fn serialized_size(&self) -> u64 {
+        std::mem::size_of::<u64>() as u64
+            + self.data.len() as u64 * StorageHashMapKeyValue::<K, T>::serialized_size()
+    }
+}
+
+impl<K, T> Serialize for StorageHashMapData<K, T>
+where
+    K: Clone + Default + Serialize,
+    T: Clone + Default + Serialize,
+{
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         let size = u64::deserialize(bytes)?;
 

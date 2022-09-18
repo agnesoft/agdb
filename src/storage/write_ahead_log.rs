@@ -5,12 +5,10 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::Write;
 
-#[allow(dead_code)]
 pub(crate) struct WriteAheadLog {
     file: std::fs::File,
 }
 
-#[allow(dead_code)]
 impl WriteAheadLog {
     pub(crate) fn clear(&mut self) -> Result<(), DbError> {
         Ok(self.file.set_len(0)?)

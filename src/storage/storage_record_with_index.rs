@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 #[derive(Debug, Default, Eq, Ord, PartialOrd, PartialEq)]
 pub(crate) struct StorageRecordWithIndex {
     pub(crate) index: i64,

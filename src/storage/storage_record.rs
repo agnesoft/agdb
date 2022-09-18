@@ -4,7 +4,6 @@ pub(crate) struct StorageRecord {
     pub(crate) size: u64,
 }
 
-#[allow(dead_code)]
 impl StorageRecord {
     pub(crate) fn serialized_size() -> u64 {
         (std::mem::size_of::<u64>() + std::mem::size_of::<u64>()) as u64

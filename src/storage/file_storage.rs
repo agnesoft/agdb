@@ -13,9 +13,9 @@ use super::write_ahead_log_record::WriteAheadLogRecord;
 use super::Storage;
 use crate::db_error::DbError;
 
-#[allow(dead_code)]
 pub(crate) struct FileStorage {
     file: std::fs::File,
+    #[allow(dead_code)]
     filename: String,
     records: StorageRecords,
     wal: WriteAheadLog,

@@ -1,12 +1,10 @@
 use super::storage_record::StorageRecord;
 use super::storage_record_with_index::StorageRecordWithIndex;
 
-#[allow(dead_code)]
 pub(crate) struct StorageRecords {
     records: Vec<StorageRecord>,
 }
 
-#[allow(dead_code)]
 impl StorageRecords {
     pub(crate) fn create(&mut self, position: u64, size: u64) -> i64 {
         let index;

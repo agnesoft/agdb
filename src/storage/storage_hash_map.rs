@@ -63,13 +63,7 @@ where
             match record.meta_value {
                 MetaValue::Empty => return Ok(None),
                 MetaValue::Valid if record.key == *key => return Ok(Some(record.value)),
-                MetaValue::Valid | MetaValue::Deleted => {
-                    if pos == self.capacity - 1 {
-                        pos = 0;
-                    } else {
-                        pos += 1;
-                    }
-                }
+                MetaValue::Valid | MetaValue::Deleted => pos = self.next_pos(pos),
             }
         }
     }
@@ -91,13 +85,7 @@ where
 
             match meta_value {
                 MetaValue::Empty | MetaValue::Deleted => return Ok(record_offset),
-                MetaValue::Valid => {
-                    if pos == self.capacity - 1 {
-                        pos = 0;
-                    } else {
-                        pos += 1;
-                    }
-                }
+                MetaValue::Valid => pos = self.next_pos(pos),
             }
         }
     }
@@ -106,9 +94,9 @@ where
         self.capacity * 15 / 16
     }
 
-    fn min_size(&self) -> u64 {
-        self.capacity * 7 / 16
-    }
+    // fn min_size(&self) -> u64 {
+    //     self.capacity * 7 / 16
+    // }
 
     fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
         if new_capacity < 64 {
@@ -135,11 +123,7 @@ where
                         break;
                     }
 
-                    if pos == self.capacity - 1 {
-                        pos = 0;
-                    } else {
-                        pos += 1;
-                    }
+                    pos = self.next_pos(pos);
                 }
             }
         }
@@ -147,12 +131,19 @@ where
         self.storage
             .borrow_mut()
             .insert_at(self.storage_index, 0, &new_data)?;
-        self.storage.borrow_mut().resize_value(
-            self.storage_index,
-            StorageHashMapData::<K, T>::serialized_size(),
-        )?;
+        self.storage
+            .borrow_mut()
+            .resize_value(self.storage_index, Self::record_offset(self.capacity))?;
 
         Ok(())
+    }
+
+    fn next_pos(&self, pos: u64) -> u64 {
+        if pos == self.capacity - 1 {
+            0
+        } else {
+            pos + 1
+        }
     }
 
     fn record_offset(pos: u64) -> u64 {
@@ -226,6 +217,24 @@ mod tests {
     }
 
     #[test]
+    fn insert_reallocate_with_collisions() {
+        let test_file = TestFile::from("./storage_hash_map-insert_reallocate.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        for i in 0..100 {
+            map.insert(i * 64, i).unwrap();
+        }
+
+        for i in 0..100 {
+            assert_eq!(map.value(&(i * 64)), Ok(Some(i)));
+        }
+    }
+
+    #[test]
     fn value_missing() {
         let test_file = TestFile::from("./storage_hash_map-value_missing.agdb");
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
@@ -235,5 +244,23 @@ mod tests {
         let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
         assert_eq!(map.value(&0), Ok(None));
+    }
+
+    #[test]
+    fn values_at_end() {
+        let test_file = TestFile::from("./storage_hash_map-values_at_end.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.insert(127, 10).unwrap();
+        map.insert(255, 11).unwrap();
+        map.insert(191, 12).unwrap();
+
+        assert_eq!(map.value(&127), Ok(Some(10)));
+        assert_eq!(map.value(&255), Ok(Some(11)));
+        assert_eq!(map.value(&191), Ok(Some(12)));
     }
 }

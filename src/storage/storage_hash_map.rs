@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::hash::Hash;
+
 use super::file_storage::FileStorage;
 use super::serialize::Serialize;
 use super::stable_hash::StableHash;
@@ -10,7 +13,7 @@ use crate::DbError;
 #[allow(dead_code)]
 pub(crate) struct StorageHashMap<K, T, S = FileStorage>
 where
-    K: Clone + Default + PartialEq + StableHash + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
     S: Storage,
 {
@@ -24,7 +27,7 @@ where
 #[allow(dead_code)]
 impl<K, T, S> StorageHashMap<K, T, S>
 where
-    K: Clone + Default + PartialEq + StableHash + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
     S: Storage,
 {
@@ -72,6 +75,21 @@ where
 
     pub(crate) fn size(&self) -> u64 {
         self.size
+    }
+
+    pub(crate) fn to_hash_map(&self) -> Result<HashMap<K, T>, DbError> {
+        let mut map = HashMap::<K, T>::new();
+        map.reserve(self.size as usize);
+
+        let data: StorageHashMapData<K, T> = self.storage.borrow_mut().value(self.storage_index)?;
+
+        for record in data.data {
+            if record.meta_value == MetaValue::Valid {
+                map.insert(record.key, record.value);
+            }
+        }
+
+        Ok(map)
     }
 
     pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
@@ -232,7 +250,7 @@ where
 
 impl<K, T, S> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for StorageHashMap<K, T, S>
 where
-    K: Clone + Default + PartialEq + StableHash + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
     S: Storage,
 {
@@ -480,6 +498,40 @@ mod tests {
 
         assert_eq!(map.capacity(), current_capacity);
         assert_eq!(map.size(), size);
+    }
+
+    #[test]
+    fn to_hash_map() {
+        let test_file = TestFile::from("./storage_hash_map-to_hash_map.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(7, 20).unwrap();
+        map.remove(&5).unwrap();
+
+        let other = map.to_hash_map().unwrap();
+
+        assert_eq!(other.len(), 2);
+        assert_eq!(other.get(&1), Some(&10));
+        assert_eq!(other.get(&5), None);
+        assert_eq!(other.get(&7), Some(&20));
+    }
+
+    #[test]
+    fn to_hash_map_empty() {
+        let test_file = TestFile::from("./storage_hash_map-to_hash_map_empty.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let other = map.to_hash_map().unwrap();
+
+        assert_eq!(other.len(), 0);
     }
 
     #[test]

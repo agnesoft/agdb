@@ -3,6 +3,7 @@ mod serialize;
 mod stable_hash;
 mod storage_hash_map;
 mod storage_hash_map_key_value;
+mod storage_hash_map_meta_value;
 mod storage_impl;
 mod storage_record;
 mod storage_record_with_index;

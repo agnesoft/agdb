@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct DbError {
     pub description: String,
@@ -25,6 +24,13 @@ impl std::fmt::Display for DbError {
 impl From<std::io::Error> for DbError {
     #[track_caller]
     fn from(error: std::io::Error) -> Self {
+        DbError::from(error.to_string())
+    }
+}
+
+impl From<std::string::FromUtf8Error> for DbError {
+    #[track_caller]
+    fn from(error: std::string::FromUtf8Error) -> Self {
         DbError::from(error.to_string())
     }
 }
@@ -116,6 +122,11 @@ mod tests {
     #[test]
     fn from_io_error() {
         let _error = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
+    }
+
+    #[test]
+    fn from_utf8_error() {
+        let _error = DbError::from(String::from_utf8(vec![0xdf, 0xff]).unwrap_err());
     }
 
     #[test]

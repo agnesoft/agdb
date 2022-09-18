@@ -36,12 +36,13 @@ where
         self.storage.borrow_mut().transaction();
         let free = self.find_or_free(&key)?;
         self.insert_value(free.0, key, value)?;
-        self.set_size(self.size + 1)?;
-        self.storage.borrow_mut().commit()?;
 
         if free.1.meta_value == MetaValue::Valid {
+            self.storage.borrow_mut().commit()?;
             Ok(Some(free.1.value))
         } else {
+            self.set_size(self.size + 1)?;
+            self.storage.borrow_mut().commit()?;
             Ok(None)
         }
     }
@@ -407,14 +408,14 @@ mod tests {
 
         let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
-        for i in 1..100 {
+        for i in 0..100 {
             map.insert(i, i).unwrap();
         }
 
         assert_eq!(map.size(), 100);
         assert_eq!(map.capacity(), 128);
 
-        for i in 1..100 {
+        for i in 0..100 {
             map.remove(&i).unwrap();
         }
 

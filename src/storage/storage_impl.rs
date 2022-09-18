@@ -160,12 +160,12 @@ pub(crate) trait StorageImpl<T = Self> {
     }
 
     fn read_record(&mut self) -> Result<StorageRecordWithIndex, DbError> {
-        const SIZE: u64 = std::mem::size_of::<i64>() as u64;
+        let index_size: u64 = i64::serialized_size() as u64;
         const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
         let position = self.seek(CURRENT)?;
-        let index = i64::deserialize(&self.read(CURRENT, SIZE)?)?;
-        let size = u64::deserialize(&self.read(CURRENT, SIZE)?)?;
+        let index = i64::deserialize(&self.read(CURRENT, index_size)?)?;
+        let size = u64::deserialize(&self.read(CURRENT, index_size)?)?;
 
         self.seek(std::io::SeekFrom::Current(size as i64))?;
 

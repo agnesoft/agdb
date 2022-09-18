@@ -11,17 +11,6 @@ where
     pub(crate) size: u64,
 }
 
-impl<K, T> StorageHashMapData<K, T>
-where
-    K: Clone + Default + Serialize,
-    T: Clone + Default + Serialize,
-{
-    pub(crate) fn serialized_size(&self) -> u64 {
-        std::mem::size_of::<u64>() as u64
-            + self.data.len() as u64 * StorageHashMapKeyValue::<K, T>::serialized_size()
-    }
-}
-
 impl<K, T> Serialize for StorageHashMapData<K, T>
 where
     K: Clone + Default + Serialize,
@@ -48,7 +37,7 @@ where
 
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        let byte_size = std::mem::size_of::<u64>()
+        let byte_size = u64::serialized_size() as usize
             + self.data.len() * StorageHashMapKeyValue::<K, T>::serialized_size() as usize;
 
         bytes.reserve(byte_size);

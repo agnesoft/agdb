@@ -560,7 +560,6 @@ mod tests {
 
         let mut expected = HashMap::<i64, i64>::new();
         expected.insert(1, 1);
-        expected.insert(3, 2);
         expected.insert(5, 3);
 
         assert_eq!(map.to_hash_map(), Ok(expected));

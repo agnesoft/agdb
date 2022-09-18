@@ -31,22 +31,9 @@ where
     pub(crate) fn insert(&mut self, key: K, value: T) -> Result<(), DbError> {
         self.storage.borrow_mut().transaction();
         let offset = self.free_offset(key.stable_hash())?;
-        self.storage.borrow_mut().insert_at(
-            self.storage_index,
-            offset,
-            &StorageHashMapKeyValue {
-                key,
-                value,
-                meta_value: MetaValue::Valid,
-            },
-        )?;
-        self.size += 1;
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, 0, &self.size)?;
-        self.storage.borrow_mut().commit()?;
-
-        Ok(())
+        self.insert_value(offset, key, value)?;
+        self.set_size(self.size + 1)?;
+        self.storage.borrow_mut().commit()
     }
 
     pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
@@ -54,11 +41,7 @@ where
         let mut pos = hash % self.capacity;
 
         loop {
-            let offset = Self::record_offset(pos);
-            let record = self
-                .storage
-                .borrow_mut()
-                .value_at::<StorageHashMapKeyValue<K, T>>(self.storage_index, offset)?;
+            let record = self.record(pos)?;
 
             match record.meta_value {
                 MetaValue::Empty => return Ok(None),
@@ -79,7 +62,7 @@ where
     }
 
     fn free_offset(&mut self, hash: u64) -> Result<u64, DbError> {
-        if (self.size + 1) > self.max_size() {
+        if self.max_size() < (self.size + 1) {
             self.rehash(self.capacity * 2)?;
         }
 
@@ -100,6 +83,18 @@ where
         }
     }
 
+    fn insert_value(&mut self, offset: u64, key: K, value: T) -> Result<(), DbError> {
+        let record = StorageHashMapKeyValue {
+            key,
+            value,
+            meta_value: MetaValue::Valid,
+        };
+
+        self.storage
+            .borrow_mut()
+            .insert_at(self.storage_index, offset, &record)
+    }
+
     fn max_size(&self) -> u64 {
         self.capacity * 15 / 16
     }
@@ -107,16 +102,6 @@ where
     // fn min_size(&self) -> u64 {
     //     self.capacity * 7 / 16
     // }
-
-    fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        self.ensure_capacity(new_capacity)?;
-        let mut store = self.storage.borrow_mut();
-        let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
-        store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
-        store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
-
-        Ok(())
-    }
 
     fn next_pos(&self, pos: u64) -> u64 {
         if pos == self.capacity - 1 {
@@ -141,8 +126,26 @@ where
         new_data.data[pos as usize] = record;
     }
 
+    fn record(&mut self, pos: u64) -> Result<StorageHashMapKeyValue<K, T>, DbError> {
+        let offset = Self::record_offset(pos);
+
+        self.storage
+            .borrow_mut()
+            .value_at::<StorageHashMapKeyValue<K, T>>(self.storage_index, offset)
+    }
+
     fn record_offset(pos: u64) -> u64 {
         u64::serialized_size() as u64 + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
+    }
+
+    fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
+        self.ensure_capacity(new_capacity)?;
+        let mut store = self.storage.borrow_mut();
+        let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
+        store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
+        store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+
+        Ok(())
     }
 
     fn rehash_old_data(&self, old_data: StorageHashMapData<K, T>) -> StorageHashMapData<K, T> {
@@ -158,6 +161,13 @@ where
         }
 
         new_data
+    }
+
+    fn set_size(&mut self, new_size: u64) -> Result<(), DbError> {
+        self.size = new_size;
+        self.storage
+            .borrow_mut()
+            .insert_at(self.storage_index, 0, &self.size)
     }
 }
 

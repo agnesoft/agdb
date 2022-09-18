@@ -88,7 +88,7 @@ impl Serialize for Vec<u8> {
 
 impl Serialize for String {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        String::from_utf8(bytes.to_vec())
+        Ok(String::from_utf8(bytes.to_vec())?)
     }
 
     fn serialize(&self) -> Vec<u8> {
@@ -141,14 +141,10 @@ mod tests {
     }
 
     #[test]
-    fn string_out_of_bounds() {
-        let value = "Hello, World!".to_string();
-        let bytes = vec![20_u8; 10];
+    fn string_bad_bytes() {
+        let bad_bytes = vec![0xdf, 0xff];
 
-        assert_eq!(
-            String::deserialize(&bytes),
-            Err(DbError::from("String deserialization error: out of bounds"))
-        );
+        assert!(String::deserialize(&bad_bytes).is_err());
     }
 
     #[test]

@@ -28,13 +28,31 @@ where
     T: Clone + Default + Serialize,
     S: Storage,
 {
+    pub(crate) fn capacity(&self) -> u64 {
+        self.capacity
+    }
+
     pub(crate) fn insert(&mut self, key: K, value: T) -> Result<(), DbError> {
         self.storage.borrow_mut().transaction();
         let pos = self.free_offset(key.stable_hash())?;
-        let offset = Self::record_offset(pos);
-        self.insert_value(offset, key, value)?;
+        self.insert_value(pos, key, value)?;
         self.set_size(self.size + 1)?;
         self.storage.borrow_mut().commit()
+    }
+
+    pub(crate) fn remove(&mut self, key: &K) -> Result<(), DbError> {
+        let hash = key.stable_hash();
+        let mut pos = hash % self.capacity;
+
+        loop {
+            let record = self.record(pos)?;
+
+            match record.meta_value {
+                MetaValue::Empty => return Ok(()),
+                MetaValue::Valid if record.key == *key => return self.remove_record(pos),
+                MetaValue::Valid | MetaValue::Deleted => pos = self.next_pos(pos),
+            }
+        }
     }
 
     pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
@@ -52,14 +70,16 @@ where
         }
     }
 
-    fn ensure_capacity(&mut self, new_capacity: u64) -> Result<(), DbError> {
+    fn ensure_capacity(&mut self, new_capacity: u64) -> bool {
+        let old_capacity = self.capacity;
+
         if new_capacity < 64 {
             self.capacity = 64;
         } else {
             self.capacity = new_capacity;
         }
 
-        Ok(())
+        old_capacity != self.capacity
     }
 
     fn free_offset(&mut self, hash: u64) -> Result<u64, DbError> {
@@ -76,12 +96,21 @@ where
         Ok(pos)
     }
 
-    fn insert_value(&mut self, offset: u64, key: K, value: T) -> Result<(), DbError> {
+    fn insert_meta_value(&mut self, pos: u64, meta_value: MetaValue) -> Result<(), DbError> {
+        let offset = Self::record_offset(pos) + StorageHashMapKeyValue::<K, T>::meta_value_offset();
+
+        self.storage
+            .borrow_mut()
+            .insert_at(self.storage_index, offset, &meta_value)
+    }
+
+    fn insert_value(&mut self, pos: u64, key: K, value: T) -> Result<(), DbError> {
         let record = StorageHashMapKeyValue {
             key,
             value,
             meta_value: MetaValue::Valid,
         };
+        let offset = Self::record_offset(pos);
 
         self.storage
             .borrow_mut()
@@ -92,9 +121,9 @@ where
         self.capacity * 15 / 16
     }
 
-    // fn min_size(&self) -> u64 {
-    //     self.capacity * 7 / 16
-    // }
+    fn min_size(&self) -> u64 {
+        self.capacity * 7 / 16
+    }
 
     fn next_pos(&self, pos: u64) -> u64 {
         if pos == self.capacity - 1 {
@@ -140,11 +169,12 @@ where
     }
 
     fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        self.ensure_capacity(new_capacity)?;
-        let mut store = self.storage.borrow_mut();
-        let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
-        store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
-        store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+        if self.ensure_capacity(new_capacity) {
+            let mut store = self.storage.borrow_mut();
+            let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
+            store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
+            store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+        }
 
         Ok(())
     }
@@ -162,6 +192,18 @@ where
         }
 
         new_data
+    }
+
+    fn remove_record(&mut self, pos: u64) -> Result<(), DbError> {
+        self.storage.borrow_mut().transaction();
+        self.insert_meta_value(pos, MetaValue::Deleted)?;
+        self.set_size(self.size - 1)?;
+
+        if 0 != self.size && (self.size - 1) < self.min_size() {
+            self.rehash(self.capacity / 2)?;
+        }
+
+        self.storage.borrow_mut().commit()
     }
 
     fn set_size(&mut self, new_size: u64) -> Result<(), DbError> {
@@ -228,9 +270,13 @@ mod tests {
 
         let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
+        assert_eq!(map.capacity(), 1);
+
         for i in 0..100 {
             map.insert(i, i).unwrap();
         }
+
+        assert_eq!(map.capacity(), 128);
 
         for i in 0..100 {
             assert_eq!(map.value(&i), Ok(Some(i)));
@@ -253,6 +299,80 @@ mod tests {
         for i in 0..100 {
             assert_eq!(map.value(&(i * 64)), Ok(Some(i)));
         }
+    }
+
+    #[test]
+    fn remove() {
+        let test_file = TestFile::from("./storage_hash_map-remove.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(7, 20).unwrap();
+
+        map.remove(&5).unwrap();
+
+        assert_eq!(map.value(&1), Ok(Some(10)));
+        assert_eq!(map.value(&5), Ok(None));
+        assert_eq!(map.value(&7), Ok(Some(20)));
+    }
+
+    #[test]
+    fn remove_deleted() {
+        let test_file = TestFile::from("./storage_hash_map-remove_deleted.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(7, 20).unwrap();
+
+        map.remove(&5).unwrap();
+
+        assert_eq!(map.value(&5), Ok(None));
+
+        map.remove(&5).unwrap();
+    }
+
+    #[test]
+    fn remove_missing() {
+        let test_file = TestFile::from("./storage_hash_map-remove_missing.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        assert_eq!(map.remove(&0), Ok(()));
+    }
+
+    #[test]
+    fn remove_shrinks_capacity() {
+        let test_file = TestFile::from("./storage_hash_map-remove_shrinks_capacity.agdb");
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        for i in 1..100 {
+            map.insert(i, i).unwrap();
+        }
+
+        assert_eq!(map.capacity(), 128);
+
+        for i in 1..100 {
+            map.remove(&i).unwrap();
+        }
+
+        assert_eq!(map.capacity(), 64);
     }
 
     #[test]

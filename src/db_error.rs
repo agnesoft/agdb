@@ -28,6 +28,13 @@ impl From<std::io::Error> for DbError {
     }
 }
 
+impl From<std::string::FromUtf8Error> for DbError {
+    #[track_caller]
+    fn from(error: std::string::FromUtf8Error) -> Self {
+        DbError::from(error.to_string())
+    }
+}
+
 impl From<&str> for DbError {
     #[track_caller]
     fn from(description: &str) -> Self {

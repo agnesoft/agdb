@@ -85,8 +85,9 @@ mod tests {
     }
 
     #[test]
-    fn wip() {
-        TestFile::new();
+    fn new() {
+        let test_file = TestFile::new();
+        assert!(!test_file.file_name().is_empty());
     }
 
     #[test]

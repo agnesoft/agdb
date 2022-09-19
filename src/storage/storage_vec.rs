@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn to_vec() {
-        let test_file = TestFile::from("./storage_vec-into_vec.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn capacity() {
-        let test_file = TestFile::from("./storage_vec-len.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn iteration() {
-        let test_file = TestFile::from("./storage_vec-iteration.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn len() {
-        let test_file = TestFile::from("./storage_vec-len.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn push() {
-        let test_file = TestFile::from("./storage_vec-push.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn remove() {
-        let test_file = TestFile::from("./storage_vec-remove.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn remove_at_end() {
-        let test_file = TestFile::from("./storage_vec-remove_at_end.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn remove_index_out_of_bounds() {
-        let test_file = TestFile::from("./storage_vec-remove_index_out_of_bounds.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn remove_size_updated() {
-        let test_file = TestFile::from("./storage_vec-remove_size_updated.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -341,7 +341,7 @@ mod tests {
 
     #[test]
     fn reserve_larger() {
-        let test_file = TestFile::from("./storage_vec-reserve_larger.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn reserve_smaller() {
-        let test_file = TestFile::from("./storage_vec-reserve_smaller.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn resize_larger() {
-        let test_file = TestFile::from("./storage_vec-resize_larger.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn resize_over_capacity() {
-        let test_file = TestFile::from("./storage_vec-resize_over_capacity.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -422,7 +422,7 @@ mod tests {
 
     #[test]
     fn resize_same() {
-        let test_file = TestFile::from("./storage_vec-resize_same.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -444,7 +444,7 @@ mod tests {
 
     #[test]
     fn resize_smaller() {
-        let test_file = TestFile::from("./storage_vec-resize_smaller.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn set_value() {
-        let test_file = TestFile::from("./storage_vec-set_value.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -485,7 +485,7 @@ mod tests {
 
     #[test]
     fn set_value_out_of_bounds() {
-        let test_file = TestFile::from("./storage_vec-set_value_out_of_bounds.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn shrink_to_fit() {
-        let test_file = TestFile::from("./storage_vec-shrink_to_fit.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn shrink_to_fit_empty() {
-        let test_file = TestFile::from("./storage_vec-shrink_to_fit_empty.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn try_from_storage_index() {
-        let test_file = TestFile::from("./storage_vec-try_from_storage_index.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -561,7 +561,7 @@ mod tests {
 
     #[test]
     fn try_from_storage_missing_index() {
-        let test_file = TestFile::from("./storage_vec-try_from_storage_missing_index.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -574,7 +574,7 @@ mod tests {
 
     #[test]
     fn value() {
-        let test_file = TestFile::from("./storage_vec-value.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -591,7 +591,7 @@ mod tests {
 
     #[test]
     fn value_out_of_bounds() {
-        let test_file = TestFile::from("./storage_vec-value_out_of_bounds.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));

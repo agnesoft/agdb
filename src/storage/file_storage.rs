@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn insert() {
-        let test_file = TestFile::from("./file_storage-insert.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&10_i64);
@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn insert_at() {
-        let test_file = TestFile::from("./file_storage-insert_at.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn insert_at_missing_index() {
-        let test_file = TestFile::from("./file_storage-insert_at_missing_index.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         assert_eq!(
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn insert_at_value_end() {
-        let test_file = TestFile::from("./file_storage-insert_at_value_end.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn insert_at_beyond_end() {
-        let test_file = TestFile::from("./file_storage-insert_at_beyond_end.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn insert_at_bytes() {
-        let test_file = TestFile::from("./file_storage-insert_at_bytes.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -255,7 +255,7 @@ mod tests {
 
     #[test]
     fn move_at() {
-        let test_file = TestFile::from("./file_storage-move_at.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn move_at_beyond_end() {
-        let test_file = TestFile::from("./file_storage-move_at_beyond_end.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn move_at_missing_index() {
-        let test_file = TestFile::from("./file_storage-move_at_missing_index.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         assert_eq!(
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn move_at_same_offset() {
-        let test_file = TestFile::from("./file_storage-move_at_same_offset.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn move_at_size_out_of_bounds() {
-        let test_file = TestFile::from("./file_storage-move_at_size_out_of_bounds.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn move_at_zero_size() {
-        let test_file = TestFile::from("./file_storage-move_at_zero_size.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
@@ -352,7 +352,7 @@ mod tests {
 
     #[test]
     fn remove() {
-        let test_file = TestFile::from("./file_storage-remove.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&1_i64).unwrap();
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn remove_missing_index() {
-        let test_file = TestFile::from("./file_storage-remove_missing_index.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
 
         assert_eq!(
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn resize_at_end_does_not_move() {
-        let test_file = TestFile::from("./file_storage-resize_at_end_does_not_move.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&1_i64).unwrap();
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn resize_value_greater() {
-        let test_file = TestFile::from("./file_storage-resize_value_greater.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn resize_value_missing_index() {
-        let test_file = TestFile::from("./file_storage-resize_value_missing_index.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(
@@ -417,7 +417,7 @@ mod tests {
 
     #[test]
     fn resize_value_same() {
-        let test_file = TestFile::from("./file_storage-resize_value_same.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn resize_value_smaller() {
-        let test_file = TestFile::from("./file_storage-resize_value_smaller.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn resize_value_zero() {
-        let test_file = TestFile::from("./file_storage-resize_value_zero.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn restore_from_open_file() {
-        let test_file = TestFile::from("./file_storage-restore_from_open_file.agdb");
+        let test_file = TestFile::new();
         let value1 = vec![1_i64, 2_i64, 3_i64];
         let value2 = 64_u64;
         let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
@@ -487,8 +487,7 @@ mod tests {
 
     #[test]
     fn restore_from_open_file_with_removed_index() {
-        let test_file =
-            TestFile::from("./file_storage-restore_from_open_file_with_removed_index.agdb");
+        let test_file = TestFile::new();
         let value1 = vec![1_i64, 2_i64, 3_i64];
         let value2 = 64_u64;
         let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
@@ -520,7 +519,7 @@ mod tests {
 
     #[test]
     fn shrink_to_fit() {
-        let test_file = TestFile::from("./file_storage-shrink_to_fit.agdb");
+        let test_file = TestFile::new();
 
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         let index1 = storage.insert(&1_i64).unwrap();
@@ -539,7 +538,7 @@ mod tests {
 
     #[test]
     fn shrink_to_fit_no_change() {
-        let test_file = TestFile::from("./file_storage-shrink_to_fit_no_change.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         let index1 = storage.insert(&1_i64).unwrap();
         let index2 = storage.insert(&2_i64).unwrap();
@@ -560,7 +559,7 @@ mod tests {
 
     #[test]
     fn shrink_to_fit_uncommitted() {
-        let test_file = TestFile::from("./file_storage-shrink_to_fit_uncommitted.agdb");
+        let test_file = TestFile::new();
 
         let expected_size;
         let index1;
@@ -612,14 +611,13 @@ mod tests {
     #[test]
     fn transaction_commit_no_transaction() {
         let test_file = TestFile::from("file_storage-transaction_commit_no_transaction.agdb");
-
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         assert_eq!(storage.commit(), Ok(()));
     }
 
     #[test]
     fn transaction_unfinished() {
-        let test_file = TestFile::from("./file_storage-transaction_unfinished.agdb");
+        let test_file = TestFile::new();
         let index;
 
         {
@@ -638,7 +636,7 @@ mod tests {
 
     #[test]
     fn transaction_nested_unfinished() {
-        let test_file = TestFile::from("./file_storage-transaction_nested_unfinished.agdb");
+        let test_file = TestFile::new();
         let index;
 
         {
@@ -659,7 +657,7 @@ mod tests {
 
     #[test]
     fn value() {
-        let test_file = TestFile::from("./file_storage-value.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         let index = storage.insert(&10_i64).unwrap();
 
@@ -668,7 +666,7 @@ mod tests {
 
     #[test]
     fn value_at() {
-        let test_file = TestFile::from("./file_storage-value_at.agdb");
+        let test_file = TestFile::new();
 
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         let data = vec![1_i64, 2_i64, 3_i64];
@@ -681,7 +679,7 @@ mod tests {
 
     #[test]
     fn value_at_dynamic_size() {
-        let test_file = TestFile::from("./file_storage-value_at_dynamic_size.agdb");
+        let test_file = TestFile::new();
 
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
         let data = vec![2_i64, 1_i64, 2_i64];
@@ -697,7 +695,7 @@ mod tests {
 
     #[test]
     fn value_at_of_missing_index() {
-        let test_file = TestFile::from("./file_storage-value_at_of_missing_index.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(
@@ -708,7 +706,7 @@ mod tests {
 
     #[test]
     fn value_at_out_of_bounds() {
-        let test_file = TestFile::from("./file_storage-value_at_out_of_bounds.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let data = vec![1_i64, 2_i64];
@@ -723,7 +721,7 @@ mod tests {
 
     #[test]
     fn value_at_offset_overflow() {
-        let test_file = TestFile::from("./file_storage-value_at_offset_overflow.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let data = vec![1_i64, 2_i64];
@@ -738,7 +736,7 @@ mod tests {
 
     #[test]
     fn value_of_missing_index() {
-        let test_file = TestFile::from("./file_storage-value_of_missing_index.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(
@@ -749,7 +747,7 @@ mod tests {
 
     #[test]
     fn value_out_of_bounds() {
-        let test_file = TestFile::from("./file_storage-value_out_of_bounds.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
@@ -762,8 +760,7 @@ mod tests {
 
     #[test]
     fn value_move_invalidates_original_position() {
-        let test_file =
-            TestFile::from("./file_storage-value_move_invalidates_original_position.agdb");
+        let test_file = TestFile::new();
 
         let index;
 
@@ -785,7 +782,7 @@ mod tests {
 
     #[test]
     fn value_move_resizes_file() {
-        let test_file = TestFile::from("./file_storage-value_move_resizes_file.agdb");
+        let test_file = TestFile::new();
 
         let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
         let index = storage.insert(&3_i64).unwrap();
@@ -797,7 +794,7 @@ mod tests {
 
     #[test]
     fn value_size() {
-        let test_file = TestFile::from("./file_storage-value_size.agdb");
+        let test_file = TestFile::new();
         let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
@@ -808,7 +805,7 @@ mod tests {
 
     #[test]
     fn value_size_of_missing_index() {
-        let test_file = TestFile::from("./file_storage-value_size_of_missing_index.agdb");
+        let test_file = TestFile::new();
         let storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
 
         assert_eq!(

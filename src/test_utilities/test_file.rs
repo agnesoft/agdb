@@ -4,6 +4,26 @@ pub(crate) struct TestFile {
     filename: String,
 }
 
+#[allow(dead_code)]
+impl TestFile {
+    #[track_caller]
+    pub(crate) fn new() -> TestFile {
+        let caller = std::panic::Location::caller();
+        let file = format!(
+            "./{}.{}.{}.testfile",
+            Path::new(caller.file())
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            caller.line(),
+            caller.column()
+        );
+
+        TestFile::from(file)
+    }
+}
+
 fn remove_file_if_exists(filename: &String) {
     if Path::new(filename).exists() {
         std::fs::remove_file(filename).unwrap();
@@ -62,6 +82,12 @@ mod tests {
             .create_new(true)
             .open(filename)
             .unwrap();
+    }
+
+    #[test]
+    fn new() {
+        let test_file = TestFile::new();
+        assert!(!test_file.file_name().is_empty());
     }
 
     #[test]

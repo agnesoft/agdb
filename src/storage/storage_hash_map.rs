@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn insert() {
-        let test_file = TestFile::from("./storage_hash_map-insert.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn insert_reallocate() {
-        let test_file = TestFile::from("./storage_hash_map-insert_reallocate.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn insert_reallocate_with_collisions() {
-        let test_file = TestFile::from("./storage_hash_map-insert_reallocate_with_collisions.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn insert_same_key() {
-        let test_file = TestFile::from("./storage_hash_map-insert_same_key.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn remove() {
-        let test_file = TestFile::from("./storage_hash_map-remove.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -418,7 +418,7 @@ mod tests {
 
     #[test]
     fn remove_deleted() {
-        let test_file = TestFile::from("./storage_hash_map-remove_deleted.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -443,7 +443,7 @@ mod tests {
 
     #[test]
     fn remove_missing() {
-        let test_file = TestFile::from("./storage_hash_map-remove_missing.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -457,7 +457,7 @@ mod tests {
 
     #[test]
     fn remove_shrinks_capacity() {
-        let test_file = TestFile::from("./storage_hash_map-remove_shrinks_capacity.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn reserve_larger() {
-        let test_file = TestFile::from("./storage_hash_map-reserve_larger.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -501,7 +501,7 @@ mod tests {
 
     #[test]
     fn reserve_same() {
-        let test_file = TestFile::from("./storage_hash_map-reserve_same.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn reserve_smaller() {
-        let test_file = TestFile::from("./storage_hash_map-reserve_smaller.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -540,7 +540,7 @@ mod tests {
 
     #[test]
     fn try_from_storage_index() {
-        let test_file = TestFile::from("./storage_hash_map-try_from_storage_index.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -567,7 +567,7 @@ mod tests {
 
     #[test]
     fn try_from_storage_missing_index() {
-        let test_file = TestFile::from("./storage_hash_map-try_from_storage_missing_index.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -582,7 +582,7 @@ mod tests {
 
     #[test]
     fn to_hash_map() {
-        let test_file = TestFile::from("./storage_hash_map-to_hash_map.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -603,7 +603,7 @@ mod tests {
 
     #[test]
     fn to_hash_map_empty() {
-        let test_file = TestFile::from("./storage_hash_map-to_hash_map_empty.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -616,7 +616,7 @@ mod tests {
 
     #[test]
     fn value_missing() {
-        let test_file = TestFile::from("./storage_hash_map-value_missing.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
@@ -628,7 +628,7 @@ mod tests {
 
     #[test]
     fn values_at_end() {
-        let test_file = TestFile::from("./storage_hash_map-values_at_end.agdb");
+        let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));

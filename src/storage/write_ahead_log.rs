@@ -74,13 +74,13 @@ mod tests {
 
     #[test]
     fn filename_constructed() {
-        let test_file = TestFile::from("./write_ahead_log-filename_constructed.agdb");
+        let test_file = TestFile::new();
         WriteAheadLog::try_from(test_file.file_name()).unwrap();
     }
 
     #[test]
     fn clear() {
-        let test_file = TestFile::from("./write_ahead_log-clear.agdb");
+        let test_file = TestFile::new();
 
         let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
         let record = WriteAheadLogRecord {
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn insert() {
-        let test_file = TestFile::from("./write_ahead_log-insert.agdb");
+        let test_file = TestFile::new();
 
         let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
         let record = WriteAheadLogRecord {
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn insert_empty() {
-        let test_file = TestFile::from("./write_ahead_log-insert_empty.agdb");
+        let test_file = TestFile::new();
 
         let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
         let record = WriteAheadLogRecord {
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn records() {
-        let test_file = TestFile::from("./write_ahead_log-records.agdb");
+        let test_file = TestFile::new();
 
         let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
         let record1 = WriteAheadLogRecord {

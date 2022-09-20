@@ -1,8 +1,5 @@
-mod graph_element;
-mod graph_node;
-
 #[allow(dead_code)]
-pub(crate) struct Graph {}
+pub(crate) struct GraphNode {}
 
 #[cfg(test)]
 mod tests {
@@ -10,6 +7,6 @@ mod tests {
 
     #[test]
     fn new() {
-        let _graph = Graph {};
+        let _node = GraphNode {};
     }
 }

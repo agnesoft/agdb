@@ -1,3 +1,4 @@
+mod graph_edge;
 mod graph_element;
 mod graph_node;
 

@@ -1,3 +1,5 @@
+mod graph_element;
+
 #[allow(dead_code)]
 pub(crate) struct Graph {}
 

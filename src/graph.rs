@@ -1,9 +1,9 @@
+use self::graph_edge::GraphEdge;
 use self::graph_node::GraphNode;
 use self::graph_node_iterator::GraphNodeIterator;
 use crate::DbError;
 
 mod graph_edge;
-mod graph_element;
 mod graph_node;
 mod graph_node_iterator;
 
@@ -25,6 +25,17 @@ impl Graph {
             to_meta: vec![0],
             node_count: 0,
         }
+    }
+
+    pub(crate) fn edge(&self, index: i64) -> Option<GraphEdge> {
+        if self.validate_edge(index).is_err() {
+            return None;
+        }
+
+        Some(GraphEdge {
+            graph: self,
+            index: index,
+        })
     }
 
     pub(crate) fn insert_edge(&mut self, from: i64, to: i64) -> Result<i64, DbError> {
@@ -80,6 +91,16 @@ impl Graph {
         None
     }
 
+    fn validate_edge(&self, index: i64) -> Result<(), DbError> {
+        if let Some(meta) = self.from_meta.get((-index) as usize) {
+            if 0 <= *meta {
+                return Ok(());
+            }
+        }
+
+        Err(DbError::from(format!("'{}' is not a valid edge", index)))
+    }
+
     fn validate_node(&self, index: i64) -> Result<(), DbError> {
         if let Some(meta) = self.from_meta.get(index as usize) {
             if 0 <= *meta {
@@ -94,6 +115,23 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn edge_from_index() {
+        let mut graph = Graph::new();
+        let from = graph.insert_node();
+        let to = graph.insert_node();
+        let index = graph.insert_edge(from, to).unwrap();
+
+        assert_eq!(graph.edge(index).unwrap().index(), index);
+    }
+
+    #[test]
+    fn edge_from_index_missing() {
+        let graph = Graph::new();
+
+        assert!(graph.edge(-3).is_none());
+    }
 
     #[test]
     fn insert_edge() {

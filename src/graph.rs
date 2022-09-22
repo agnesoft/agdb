@@ -1,8 +1,10 @@
+use self::graph_node_iterator::GraphNodeIterator;
 use crate::DbError;
 
 mod graph_edge;
 mod graph_element;
 mod graph_node;
+mod graph_node_iterator;
 
 pub(crate) struct Graph {
     from: Vec<i64>,
@@ -50,6 +52,23 @@ impl Graph {
         self.to_meta.push(0);
         self.node_count += 1;
         self.node_count as i64
+    }
+
+    pub(crate) fn node_iter(&self) -> GraphNodeIterator {
+        GraphNodeIterator {
+            graph: self,
+            index: 0,
+        }
+    }
+
+    fn next_node(&self, index: i64) -> Option<i64> {
+        for i in (index as usize + 1)..self.from_meta.len() {
+            if 0 <= self.from_meta[i] {
+                return Some(i as i64);
+            }
+        }
+
+        None
     }
 
     fn validate_node(&self, index: i64) -> Result<(), DbError> {
@@ -116,5 +135,22 @@ mod tests {
         let id = graph.insert_node();
 
         assert_eq!(id, 1);
+    }
+
+    #[test]
+    fn node_iteration() {
+        let mut graph = Graph::new();
+        let expected = vec![
+            graph.insert_node(),
+            graph.insert_node(),
+            graph.insert_node(),
+        ];
+        let mut nodes = Vec::<i64>::new();
+
+        for node in graph.node_iter() {
+            nodes.push(node.index());
+        }
+
+        assert_eq!(nodes, expected);
     }
 }

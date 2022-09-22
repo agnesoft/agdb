@@ -32,10 +32,7 @@ impl Graph {
             return None;
         }
 
-        Some(GraphEdge {
-            graph: self,
-            index: index,
-        })
+        Some(GraphEdge { graph: self, index })
     }
 
     pub(crate) fn insert_edge(&mut self, from: i64, to: i64) -> Result<i64, DbError> {

@@ -10,7 +10,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new() {
-        let _graph = Graph {};
+    fn insert_node() {
+        let mut graph = Graph::new();
+        let id = graph.insert_node();
+
+        assert_eq!(id, 1);
     }
 }

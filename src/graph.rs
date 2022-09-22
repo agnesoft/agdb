@@ -1,3 +1,4 @@
+use self::graph_node::GraphNode;
 use self::graph_node_iterator::GraphNodeIterator;
 use crate::DbError;
 
@@ -52,6 +53,14 @@ impl Graph {
         self.to_meta.push(0);
         self.node_count += 1;
         self.node_count as i64
+    }
+
+    pub(crate) fn node(&self, index: i64) -> Option<GraphNode> {
+        if self.validate_node(index).is_err() {
+            return None;
+        }
+
+        Some(GraphNode { graph: self, index })
     }
 
     pub(crate) fn node_iter(&self) -> GraphNodeIterator {

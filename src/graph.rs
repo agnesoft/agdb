@@ -138,6 +138,25 @@ mod tests {
     }
 
     #[test]
+    fn node_from_index() {
+        let mut graph = Graph::new();
+        let index = graph.insert_node();
+
+        let node = graph.node(index);
+
+        assert_eq!(node.unwrap().index(), index);
+    }
+
+    #[test]
+    fn node_from_index_missing() {
+        let graph = Graph::new();
+
+        let node = graph.node(1);
+
+        assert!(node.is_none());
+    }
+
+    #[test]
     fn node_iteration() {
         let mut graph = Graph::new();
         let expected = vec![

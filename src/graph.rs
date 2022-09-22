@@ -4,6 +4,7 @@ use self::graph_node_iterator::GraphNodeIterator;
 use crate::DbError;
 
 mod graph_edge;
+mod graph_edge_iterator;
 mod graph_node;
 mod graph_node_iterator;
 
@@ -78,6 +79,14 @@ impl Graph {
         }
     }
 
+    fn first_edge_from(&self, index: i64) -> i64 {
+        self.from[index as usize]
+    }
+
+    fn next_edge_from(&self, index: i64) -> i64 {
+        self.from_meta[index as usize]
+    }
+
     fn next_node(&self, index: i64) -> Option<i64> {
         for i in (index as usize + 1)..self.from_meta.len() {
             if 0 <= self.from_meta[i] {
@@ -119,11 +128,21 @@ mod tests {
         let node1 = graph.insert_node();
         let node2 = graph.insert_node();
 
-        let expected = vec![
+        let mut expected = vec![
             graph.insert_edge(node1, node2).unwrap(),
             graph.insert_edge(node1, node2).unwrap(),
             graph.insert_edge(node1, node2).unwrap(),
         ];
+        expected.reverse();
+
+        let node = graph.node(node1).unwrap();
+        let mut actual = Vec::<i64>::new();
+
+        for edge in node.edge_from_iter() {
+            actual.push(edge.index());
+        }
+
+        assert_eq!(actual, expected);
     }
 
     #[test]

@@ -87,6 +87,19 @@ mod tests {
     use super::*;
 
     #[test]
+    fn edge_iteration() {
+        let mut graph = Graph::new();
+        let node1 = graph.insert_node();
+        let node2 = graph.insert_node();
+
+        let expected = vec![
+            graph.insert_edge(node1, node2).unwrap(),
+            graph.insert_edge(node1, node2).unwrap(),
+            graph.insert_edge(node1, node2).unwrap(),
+        ];
+    }
+
+    #[test]
     fn insert_edge() {
         let mut graph = Graph::new();
         let from = graph.insert_node();

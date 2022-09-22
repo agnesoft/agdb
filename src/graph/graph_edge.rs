@@ -1,12 +1,14 @@
+use super::Graph;
+
 #[allow(dead_code)]
-pub(crate) struct GraphEdge {}
+pub(crate) struct GraphEdge<'a> {
+    pub(crate) graph: &'a Graph,
+    pub(crate) index: i64,
+}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn new() {
-        let _edge = GraphEdge {};
+#[allow(dead_code)]
+impl<'a> GraphEdge<'a> {
+    pub(crate) fn index(&self) -> i64 {
+        self.index
     }
 }

@@ -1,9 +1,9 @@
 use super::graph_node::GraphNode;
-use super::Graph;
+use super::GraphImpl;
 
 pub(crate) struct GraphNodeIterator<'a> {
-    pub(crate) graph: &'a Graph,
-    pub(crate) index: i64,
+    pub(super) graph: &'a GraphImpl,
+    pub(super) index: i64,
 }
 
 impl<'a> Iterator for GraphNodeIterator<'a> {

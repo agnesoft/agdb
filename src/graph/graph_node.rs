@@ -20,18 +20,3 @@ impl<'a> GraphNode<'a> {
         }
     }
 }
-
-impl<'a> PartialEq for GraphNode<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        self.graph as *const _ == other.graph as *const _ && self.index == other.index
-    }
-}
-
-impl<'a> std::fmt::Debug for GraphNode<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GraphNode")
-            .field("graph", &(self.graph as *const _))
-            .field("index", &self.index)
-            .finish()
-    }
-}

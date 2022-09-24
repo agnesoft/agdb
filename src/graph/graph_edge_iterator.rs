@@ -1,9 +1,9 @@
 use super::graph_edge::GraphEdge;
-use super::Graph;
+use super::GraphImpl;
 
 pub(crate) struct GraphEdgeIterator<'a> {
-    pub(crate) graph: &'a Graph,
-    pub(crate) index: i64,
+    pub(super) graph: &'a GraphImpl,
+    pub(super) index: i64,
 }
 
 impl<'a> Iterator for GraphEdgeIterator<'a> {
@@ -14,7 +14,7 @@ impl<'a> Iterator for GraphEdgeIterator<'a> {
             return None;
         }
 
-        let index = -self.index;
+        let index = self.index;
         self.index = self.graph.next_edge_from(self.index);
 
         Some(GraphEdge {

@@ -1,10 +1,10 @@
 use super::graph_edge_iterator::GraphEdgeIterator;
-use super::Graph;
+use super::GraphImpl;
 
 #[allow(dead_code)]
 pub(crate) struct GraphNode<'a> {
-    pub(crate) graph: &'a Graph,
-    pub(crate) index: i64,
+    pub(super) graph: &'a GraphImpl,
+    pub(super) index: i64,
 }
 
 #[allow(dead_code)]

@@ -1,8 +1,8 @@
-use super::GraphImpl;
+use super::Graph;
 
 #[allow(dead_code)]
 pub(crate) struct GraphEdge<'a> {
-    pub(super) graph: &'a GraphImpl,
+    pub(super) graph: &'a Graph,
     pub(super) index: i64,
 }
 

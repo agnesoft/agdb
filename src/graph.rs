@@ -1,27 +1,27 @@
+use self::graph_data::GraphData;
 use self::graph_edge::GraphEdge;
-use self::graph_impl::GraphImpl;
 use self::graph_node::GraphNode;
 use self::graph_node_iterator::GraphNodeIterator;
 use crate::DbError;
 
+mod graph_data;
 mod graph_edge;
 mod graph_edge_iterator;
-mod graph_impl;
 mod graph_node;
 mod graph_node_iterator;
 
 pub(crate) struct Graph {
-    data: GraphImpl,
+    data: GraphData,
 }
 
 #[allow(dead_code)]
 impl Graph {
     pub(crate) fn new() -> Graph {
         Graph {
-            data: GraphImpl {
+            data: GraphData {
                 from: vec![0],
                 to: vec![0],
-                from_meta: vec![i64::MAX],
+                from_meta: vec![i64::MIN],
                 to_meta: vec![0],
                 node_count: 0,
             },
@@ -33,60 +33,23 @@ impl Graph {
             return None;
         }
 
-        Some(GraphEdge {
-            graph: &self.data,
-            index,
-        })
+        Some(GraphEdge { graph: self, index })
     }
 
     pub(crate) fn insert_edge(&mut self, from: i64, to: i64) -> Result<i64, DbError> {
         self.validate_node(from)?;
         self.validate_node(to)?;
 
-        let index;
-        let first_from = self.data.from[from as usize];
-        let first_to = self.data.to[to as usize];
-
-        if let Some(free_index) = self.free_index() {
-            index = free_index;
-            self.data.from[index as usize] = from;
-            self.data.to[index as usize] = to;
-            self.data.from_meta[index as usize] = first_from;
-            self.data.to_meta[index as usize] = first_to;
-        } else {
-            index = self.data.from.len() as i64;
-            self.data.from.push(from);
-            self.data.to.push(to);
-            self.data.from_meta.push(first_from);
-            self.data.to_meta.push(first_to)
-        }
-
-        self.data.from[from as usize] = -index;
-        self.data.from_meta[from as usize] -= 1;
-        self.data.to[to as usize] = -index;
-        self.data.to_meta[to as usize] -= 1;
+        let index = self.get_free_index();
+        self.set_edge(index, from, to);
 
         Ok(-index)
     }
 
     pub(crate) fn insert_node(&mut self) -> i64 {
-        let index;
-
-        if let Some(free_index) = self.free_index() {
-            index = free_index;
-            self.data.from[index as usize] = 0;
-            self.data.to[index as usize] = 0;
-            self.data.from_meta[index as usize] = 0;
-            self.data.to_meta[index as usize] = 0;
-        } else {
-            index = self.data.from.len() as i64;
-            self.data.from.push(0);
-            self.data.to.push(0);
-            self.data.from_meta.push(0);
-            self.data.to_meta.push(0);
-        }
-
-        self.data.node_count += 1;
+        let index = self.get_free_index();
+        let count = self.data.node_count();
+        self.data.set_node_count(count + 1);
 
         index
     }
@@ -96,15 +59,12 @@ impl Graph {
             return None;
         }
 
-        Some(GraphNode {
-            graph: &self.data,
-            index,
-        })
+        Some(GraphNode { graph: self, index })
     }
 
     pub(crate) fn node_iter(&self) -> GraphNodeIterator {
         GraphNodeIterator {
-            graph: &self.data,
+            graph: self,
             index: 0,
         }
     }
@@ -114,45 +74,9 @@ impl Graph {
             return;
         }
 
-        {
-            let from = self.data.from[(-index) as usize];
-            let mut previous = self.data.from[from as usize];
-            let next = self.data.from_meta[(-index) as usize];
-
-            if previous == index {
-                self.data.from[from as usize] = next;
-            } else {
-                while self.data.from_meta[(-previous) as usize] != index {
-                    previous = self.data.from_meta[(-previous) as usize];
-                }
-
-                self.data.from_meta[(-previous) as usize] = next;
-            }
-
-            self.data.from_meta[from as usize] += 1;
-
-            self.data.from_meta[(-index) as usize] = self.data.from_meta[0];
-            self.data.from_meta[0] = (-index) as i64;
-        }
-
-        {
-            let to = self.data.to[(-index) as usize];
-            let mut previous = self.data.to[to as usize];
-            let next = self.data.to_meta[(-index) as usize];
-
-            if previous == index {
-                self.data.to[to as usize] = next;
-            } else {
-                while self.data.to_meta[(-previous) as usize] != index {
-                    previous = self.data.to_meta[(-previous) as usize];
-                }
-
-                self.data.to_meta[(-previous) as usize] = next;
-            }
-
-            self.data.to_meta[to as usize] += 1;
-            self.data.to_meta[(-index) as usize] = 0;
-        }
+        self.remove_from_edge(-index);
+        self.remove_to_edge(-index);
+        self.free_index(-index);
     }
 
     pub(crate) fn remove_node(&mut self, index: i64) {
@@ -160,112 +84,169 @@ impl Graph {
             return;
         }
 
-        let first_from_edge = self.data.from[index as usize];
+        self.remove_from_edges(index);
+        self.remove_to_edges(index);
+        self.free_index(index);
 
-        {
-            let mut edge = first_from_edge;
-
-            while edge != 0 {
-                let next_from = self.data.from_meta[(-edge) as usize];
-                let next_to = self.data.to_meta[(-edge) as usize];
-                let to = self.data.to[(-edge) as usize];
-
-                self.data.from[(-edge) as usize] = 0;
-                self.data.from_meta[(-edge) as usize] = -next_from;
-
-                if to != index {
-                    self.data.to[(-edge) as usize] = 0;
-                    self.data.to_meta[(-edge) as usize] = 0;
-
-                    if self.data.to[to as usize] == edge {
-                        self.data.to[to as usize] = next_to;
-                    } else {
-                        let mut previous = self.data.to[to as usize];
-
-                        while self.data.to_meta[(-previous) as usize] != edge {
-                            previous = self.data.to_meta[(-previous) as usize];
-                        }
-
-                        self.data.to_meta[(-previous) as usize] = next_to;
-                    }
-
-                    self.data.to_meta[to as usize] += 1;
-                }
-
-                edge = next_from;
-            }
-        }
-
-        let firt_to_edge = self.data.to[index as usize];
-
-        {
-            let mut edge = firt_to_edge;
-
-            while edge != 0 {
-                let next_from = self.data.from_meta[(-edge) as usize];
-                let next_to = self.data.to_meta[(-edge) as usize];
-                let from = self.data.from[(-edge) as usize];
-
-                self.data.to[(-edge) as usize] = 0;
-                self.data.to_meta[(-edge) as usize] = 0;
-
-                if from != index {
-                    self.data.from[(-edge) as usize] = 0;
-                    self.data.from_meta[(-edge) as usize] = -next_from;
-
-                    if self.data.from[from as usize] == edge {
-                        self.data.from[from as usize] = next_to;
-                    } else {
-                        let mut previous = self.data.from[from as usize];
-
-                        while self.data.to_meta[(-previous) as usize] != edge {
-                            previous = self.data.to_meta[(-previous) as usize];
-                        }
-
-                        self.data.to_meta[(-previous) as usize] = next_to;
-                    }
-                }
-            }
-        }
-
-        self.data.from[index as usize] = 0;
-        self.data.to[index as usize] = 0;
-        self.data.from_meta[index as usize] = self.data.from_meta[0];
-        self.data.from_meta[0] = index as i64;
-        self.data.to_meta[index as usize] = 0;
-        self.data.node_count -= 1;
+        let count = self.data.node_count();
+        self.data.set_node_count(count - 1);
     }
 
-    fn free_index(&mut self) -> Option<i64> {
-        let index = self.data.from_meta[0];
+    fn first_edge_from(&self, index: i64) -> i64 {
+        -self.data.from(index)
+    }
 
-        if index != i64::MAX {
-            let next = self.data.from_meta[index as usize];
-            self.data.from_meta[0] = next;
-            return Some(index);
+    fn free_index(&mut self, index: i64) {
+        let next_free = self.data.from_meta(0);
+        self.data.set_from_meta(index, next_free);
+        self.data.set_from_meta(0, -index);
+    }
+
+    fn get_free_index(&mut self) -> i64 {
+        let mut index = self.data.free_index();
+
+        if index == i64::MIN {
+            index = self.data.capacity() as i64;
+            self.data.resize((index + 1) as u64);
+            return index;
+        } else {
+            self.data.set_from_meta(0, self.data.from_meta(-index));
+            return -index;
+        }
+    }
+
+    fn invalid_index(index: i64) -> DbError {
+        DbError::from(format!("'{}' is invalid index", index))
+    }
+
+    fn is_valid_edge(&self, index: i64) -> bool {
+        self.data.from(index) < 0
+    }
+
+    fn is_valid_index(&self, index: i64) -> bool {
+        0 < index && (index as u64) < self.data.capacity() && 0 <= self.data.from_meta(index)
+    }
+
+    fn is_valid_node(&self, index: i64) -> bool {
+        0 <= self.data.from(index)
+    }
+
+    fn next_edge_from(&self, index: i64) -> i64 {
+        -self.data.from_meta(-index)
+    }
+
+    fn next_node(&self, index: i64) -> Option<i64> {
+        for index in (index + 1)..(self.data.capacity() as i64) {
+            if self.is_valid_node(index) {
+                return Some(index);
+            }
         }
 
         None
     }
 
-    fn validate_edge(&self, index: i64) -> Result<(), DbError> {
-        if let Some(meta) = self.data.from_meta.get((-index) as usize) {
-            if *meta <= 0 {
-                return Ok(());
+    fn remove_from_edge(&mut self, index: i64) {
+        let node = -self.data.from(index);
+        let first = self.data.from(node);
+        let next = self.data.from_meta(index);
+
+        if first == index {
+            self.data.set_from(node, next);
+        } else {
+            let mut previous = first;
+
+            while self.data.from_meta(previous) != index {
+                previous = self.data.from_meta(previous);
             }
+
+            self.data.set_from_meta(previous, next);
         }
 
-        Err(DbError::from(format!("'{}' is not a valid edge", index)))
+        let count = self.data.from_meta(node);
+        self.data.set_from_meta(node, count - 1);
+    }
+
+    fn remove_from_edges(&mut self, index: i64) {
+        let mut edge = self.data.from(index);
+
+        while edge != 0 {
+            self.remove_to_edge(edge);
+            let current = edge;
+            edge = self.data.from_meta(edge);
+            self.free_index(current);
+        }
+    }
+
+    fn remove_to_edge(&mut self, index: i64) {
+        let node = -self.data.to(index);
+        let first = self.data.to(node);
+        let next = self.data.to_meta(index);
+
+        if first == index {
+            self.data.set_to(node, next);
+        } else {
+            let mut previous = first;
+
+            while self.data.to_meta(previous) != index {
+                previous = self.data.to_meta(previous);
+            }
+
+            self.data.set_to_meta(previous, next);
+        }
+
+        let count = self.data.to_meta(node);
+        self.data.set_to_meta(node, count - 1);
+    }
+
+    fn remove_to_edges(&mut self, index: i64) {
+        let mut edge = self.data.to(index);
+
+        while edge != 0 {
+            self.remove_from_edge(edge);
+            self.free_index(index);
+            edge = self.data.to_meta(edge);
+        }
+    }
+
+    fn set_edge(&mut self, index: i64, from: i64, to: i64) {
+        self.data.set_from(index, -from);
+        self.data.set_to(index, -to);
+        self.update_from_edge(from, index);
+        self.update_to_edge(to, index);
+    }
+
+    fn update_from_edge(&mut self, node: i64, edge: i64) {
+        let next = self.data.from(node);
+        self.data.set_from_meta(edge, next);
+        self.data.set_from(node, edge);
+
+        let count = self.data.from_meta(node);
+        self.data.set_from_meta(node, count + 1);
+    }
+
+    fn update_to_edge(&mut self, node: i64, edge: i64) {
+        let next = self.data.to(node);
+        self.data.set_to_meta(edge, next);
+        self.data.set_to(node, edge);
+
+        let count = self.data.to_meta(node);
+        self.data.set_to_meta(node, count + 1);
+    }
+
+    fn validate_edge(&self, index: i64) -> Result<(), DbError> {
+        if !self.is_valid_index(-index) || !self.is_valid_edge(-index) {
+            return Err(Self::invalid_index(index));
+        }
+
+        Ok(())
     }
 
     fn validate_node(&self, index: i64) -> Result<(), DbError> {
-        if let Some(meta) = self.data.from_meta.get(index as usize) {
-            if *meta <= 0 {
-                return Ok(());
-            }
+        if !self.is_valid_index(index) || !self.is_valid_node(index) {
+            return Err(Self::invalid_index(index));
         }
 
-        Err(DbError::from(format!("'{}' is not a valid node", index)))
+        Ok(())
     }
 }
 
@@ -351,7 +332,7 @@ mod tests {
 
         assert_eq!(
             graph.insert_edge(1, 2),
-            Err(DbError::from("'1' is not a valid node"))
+            Err(DbError::from("'1' is invalid index"))
         );
     }
 
@@ -362,7 +343,7 @@ mod tests {
 
         assert_eq!(
             graph.insert_edge(from, 2),
-            Err(DbError::from("'2' is not a valid node"))
+            Err(DbError::from("'2' is invalid index"))
         );
     }
 
@@ -376,14 +357,13 @@ mod tests {
     #[test]
     fn insert_node_after_removal() {
         let mut graph = Graph::new();
-        let from = graph.insert_node();
-        let to = graph.insert_node();
-        let index = graph.insert_edge(from, to).unwrap();
-        graph.insert_edge(from, to).unwrap();
+        graph.insert_node();
+        let index = graph.insert_node();
+        graph.insert_node();
 
-        graph.remove_edge(index);
+        graph.remove_node(index);
 
-        assert_eq!(graph.insert_node(), (-index));
+        assert_eq!(graph.insert_node(), index);
     }
 
     #[test]

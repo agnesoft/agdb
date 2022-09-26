@@ -1,8 +1,8 @@
 use super::graph_edge::GraphEdge;
-use super::GraphImpl;
+use super::Graph;
 
 pub(crate) struct GraphEdgeIterator<'a> {
-    pub(super) graph: &'a GraphImpl,
+    pub(super) graph: &'a Graph,
     pub(super) index: i64,
 }
 

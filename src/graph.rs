@@ -109,20 +109,20 @@ impl Graph {
         }
     }
 
-    pub(crate) fn remove_edge(&mut self, edge: i64) {
-        if self.validate_edge(edge).is_err() {
+    pub(crate) fn remove_edge(&mut self, index: i64) {
+        if self.validate_edge(index).is_err() {
             return;
         }
 
         {
-            let from = self.data.from[(-edge) as usize];
+            let from = self.data.from[(-index) as usize];
             let mut previous = self.data.from[from as usize];
-            let next = self.data.from_meta[(-edge) as usize];
+            let next = self.data.from_meta[(-index) as usize];
 
-            if previous == edge {
+            if previous == index {
                 self.data.from[from as usize] = next;
             } else {
-                while self.data.from_meta[(-previous) as usize] != edge {
+                while self.data.from_meta[(-previous) as usize] != index {
                     previous = self.data.from_meta[(-previous) as usize];
                 }
 
@@ -131,19 +131,19 @@ impl Graph {
 
             self.data.from_meta[from as usize] += 1;
 
-            self.data.from_meta[(-edge) as usize] = self.data.from_meta[0];
-            self.data.from_meta[0] = (-edge) as usize as i64;
+            self.data.from_meta[(-index) as usize] = self.data.from_meta[0];
+            self.data.from_meta[0] = (-index) as i64;
         }
 
         {
-            let to = self.data.to[(-edge) as usize];
+            let to = self.data.to[(-index) as usize];
             let mut previous = self.data.to[to as usize];
-            let next = self.data.to_meta[(-edge) as usize];
+            let next = self.data.to_meta[(-index) as usize];
 
-            if previous == edge {
+            if previous == index {
                 self.data.to[to as usize] = next;
             } else {
-                while self.data.to_meta[(-previous) as usize] != edge {
+                while self.data.to_meta[(-previous) as usize] != index {
                     previous = self.data.to_meta[(-previous) as usize];
                 }
 
@@ -151,8 +151,89 @@ impl Graph {
             }
 
             self.data.to_meta[to as usize] += 1;
-            self.data.to_meta[(-edge) as usize] = 0;
+            self.data.to_meta[(-index) as usize] = 0;
         }
+    }
+
+    pub(crate) fn remove_node(&mut self, index: i64) {
+        if self.validate_node(index).is_err() {
+            return;
+        }
+
+        let first_from_edge = self.data.from[index as usize];
+
+        {
+            let mut edge = first_from_edge;
+
+            while edge != 0 {
+                let next_from = self.data.from_meta[(-edge) as usize];
+                let next_to = self.data.to_meta[(-edge) as usize];
+                let to = self.data.to[(-edge) as usize];
+
+                self.data.from[(-edge) as usize] = 0;
+                self.data.from_meta[(-edge) as usize] = -next_from;
+
+                if to != index {
+                    self.data.to[(-edge) as usize] = 0;
+                    self.data.to_meta[(-edge) as usize] = 0;
+
+                    if self.data.to[to as usize] == edge {
+                        self.data.to[to as usize] = next_to;
+                    } else {
+                        let mut previous = self.data.to[to as usize];
+
+                        while self.data.to_meta[(-previous) as usize] != edge {
+                            previous = self.data.to_meta[(-previous) as usize];
+                        }
+
+                        self.data.to_meta[(-previous) as usize] = next_to;
+                    }
+
+                    self.data.to_meta[to as usize] += 1;
+                }
+
+                edge = next_from;
+            }
+        }
+
+        let firt_to_edge = self.data.to[index as usize];
+
+        {
+            let mut edge = firt_to_edge;
+
+            while edge != 0 {
+                let next_from = self.data.from_meta[(-edge) as usize];
+                let next_to = self.data.to_meta[(-edge) as usize];
+                let from = self.data.from[(-edge) as usize];
+
+                self.data.to[(-edge) as usize] = 0;
+                self.data.to_meta[(-edge) as usize] = 0;
+
+                if from != index {
+                    self.data.from[(-edge) as usize] = 0;
+                    self.data.from_meta[(-edge) as usize] = -next_from;
+
+                    if self.data.from[from as usize] == edge {
+                        self.data.from[from as usize] = next_to;
+                    } else {
+                        let mut previous = self.data.from[from as usize];
+
+                        while self.data.to_meta[(-previous) as usize] != edge {
+                            previous = self.data.to_meta[(-previous) as usize];
+                        }
+
+                        self.data.to_meta[(-previous) as usize] = next_to;
+                    }
+                }
+            }
+        }
+
+        self.data.from[index as usize] = 0;
+        self.data.to[index as usize] = 0;
+        self.data.from_meta[index as usize] = self.data.from_meta[0];
+        self.data.from_meta[0] = index as i64;
+        self.data.to_meta[index as usize] = 0;
+        self.data.node_count -= 1;
     }
 
     fn free_index(&mut self) -> Option<i64> {
@@ -413,5 +494,27 @@ mod tests {
         graph.remove_edge(index);
 
         assert!(graph.edge(index).is_none());
+    }
+
+    #[test]
+    fn remove_only_node() {
+        let mut graph = Graph::new();
+        let index = graph.insert_node();
+
+        graph.remove_node(index);
+
+        assert!(graph.node(index).is_none());
+    }
+
+    #[test]
+    fn remove_node_with_self_edge() {
+        let mut graph = Graph::new();
+        let index = graph.insert_node();
+        let edge = graph.insert_edge(index, index).unwrap();
+
+        graph.remove_node(index);
+
+        assert!(graph.node(index).is_none());
+        assert!(graph.edge(edge).is_none());
     }
 }

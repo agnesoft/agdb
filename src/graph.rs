@@ -142,13 +142,8 @@ impl Graph {
     }
 
     fn next_node(&self, index: i64) -> Option<i64> {
-        for index in (index + 1)..(self.data.capacity() as i64) {
-            if self.is_valid_node(index) && !self.is_removed_index(index) {
-                return Some(index);
-            }
-        }
-
-        None
+        ((index + 1)..(self.data.capacity() as i64))
+            .find(|&index| self.is_valid_node(index) && !self.is_removed_index(index))
     }
 
     fn remove_from_edge(&mut self, index: i64) {

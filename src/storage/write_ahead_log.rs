@@ -5,16 +5,16 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::Write;
 
-pub(crate) struct WriteAheadLog {
+pub(super) struct WriteAheadLog {
     file: std::fs::File,
 }
 
 impl WriteAheadLog {
-    pub(crate) fn clear(&mut self) -> Result<(), DbError> {
+    pub(super) fn clear(&mut self) -> Result<(), DbError> {
         Ok(self.file.set_len(0)?)
     }
 
-    pub(crate) fn insert(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
+    pub(super) fn insert(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
         self.file.seek(std::io::SeekFrom::End(0))?;
         self.file.write_all(&record.position.serialize())?;
         self.file
@@ -24,7 +24,7 @@ impl WriteAheadLog {
         Ok(())
     }
 
-    pub(crate) fn records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
+    pub(super) fn records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
         let mut records = Vec::<WriteAheadLogRecord>::new();
         let size = self.file.seek(std::io::SeekFrom::End(0))?;
         self.file.seek(std::io::SeekFrom::Start(0))?;

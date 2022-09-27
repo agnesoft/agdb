@@ -1,8 +1,8 @@
 #[derive(Debug, Default, Eq, Ord, PartialOrd, PartialEq)]
 pub(crate) struct StorageRecordWithIndex {
-    pub(crate) index: i64,
-    pub(crate) position: u64,
-    pub(crate) size: u64,
+    pub(super) index: i64,
+    pub(super) position: u64,
+    pub(super) size: u64,
 }
 
 #[cfg(test)]

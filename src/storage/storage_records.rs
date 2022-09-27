@@ -1,12 +1,12 @@
 use super::storage_record::StorageRecord;
 use super::storage_record_with_index::StorageRecordWithIndex;
 
-pub(crate) struct StorageRecords {
+pub(super) struct StorageRecords {
     records: Vec<StorageRecord>,
 }
 
 impl StorageRecords {
-    pub(crate) fn create(&mut self, position: u64, size: u64) -> i64 {
+    pub(super) fn create(&mut self, position: u64, size: u64) -> i64 {
         let index;
 
         if let Some(free_index) = self.free_index() {
@@ -20,7 +20,7 @@ impl StorageRecords {
         index
     }
 
-    pub(crate) fn get(&self, index: i64) -> Option<&StorageRecord> {
+    pub(super) fn get(&self, index: i64) -> Option<&StorageRecord> {
         if let Some(record) = self.records.get(index as usize) {
             if record.size != 0 {
                 return Some(record);
@@ -30,7 +30,7 @@ impl StorageRecords {
         None
     }
 
-    pub(crate) fn get_mut(&mut self, index: i64) -> Option<&mut StorageRecord> {
+    pub(super) fn get_mut(&mut self, index: i64) -> Option<&mut StorageRecord> {
         if let Some(record) = self.records.get_mut(index as usize) {
             if record.size != 0 {
                 return Some(record);
@@ -40,7 +40,7 @@ impl StorageRecords {
         None
     }
 
-    pub(crate) fn indexes_by_position(&self) -> Vec<i64> {
+    pub(super) fn indexes_by_position(&self) -> Vec<i64> {
         let mut indexes = Vec::<i64>::new();
 
         for index in 1..self.records.len() {
@@ -58,7 +58,7 @@ impl StorageRecords {
         indexes
     }
 
-    pub(crate) fn remove(&mut self, index: i64) {
+    pub(super) fn remove(&mut self, index: i64) {
         if let Some(_record) = self.get_mut(index) {
             self.add_free_index(index);
         }

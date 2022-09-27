@@ -1,26 +1,8 @@
 use super::file_storage_data::FileStorageData;
-use super::storage_records::StorageRecords;
-use super::write_ahead_log::WriteAheadLog;
 use super::Storage;
 use crate::db_error::DbError;
 
 pub(crate) type FileStorage = Storage<FileStorageData>;
-
-fn wal_filename(filename: &str) -> String {
-    let pos;
-
-    if let Some(slash) = filename.rfind('/') {
-        pos = slash + 1;
-    } else if let Some(backslash) = filename.rfind('\\') {
-        pos = backslash + 1
-    } else {
-        pos = 1;
-    }
-
-    let mut copy = filename.to_owned();
-    copy.insert(pos, '.');
-    copy
-}
 
 impl TryFrom<String> for FileStorage {
     type Error = DbError;
@@ -29,18 +11,7 @@ impl TryFrom<String> for FileStorage {
         let wal_filename = wal_filename(&filename);
 
         let mut storage = FileStorage {
-            data: FileStorageData {
-                file: std::fs::OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .read(true)
-                    .open(&filename)?,
-                filename,
-                records: StorageRecords::default(),
-                wal: WriteAheadLog::try_from(&wal_filename)?,
-                wal_filename,
-                transactions: 0,
-            },
+            data: FileStorageData::try_from((filename, wal_filename))?,
         };
 
         storage.apply_wal()?;
@@ -56,6 +27,22 @@ impl TryFrom<&str> for FileStorage {
     fn try_from(filename: &str) -> Result<Self, Self::Error> {
         Self::try_from(filename.to_string())
     }
+}
+
+fn wal_filename(filename: &str) -> String {
+    let pos;
+
+    if let Some(slash) = filename.rfind('/') {
+        pos = slash + 1;
+    } else if let Some(backslash) = filename.rfind('\\') {
+        pos = backslash + 1
+    } else {
+        pos = 1;
+    }
+
+    let mut copy = filename.to_owned();
+    copy.insert(pos, '.');
+    copy
 }
 
 #[cfg(test)]

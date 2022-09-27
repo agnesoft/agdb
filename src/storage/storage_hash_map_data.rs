@@ -2,13 +2,13 @@ use super::serialize::Serialize;
 use super::storage_hash_map_key_value::StorageHashMapKeyValue;
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct StorageHashMapData<K, T>
+pub(super) struct StorageHashMapData<K, T>
 where
     K: Clone + Default + Serialize,
     T: Clone + Default + Serialize,
 {
-    pub(crate) data: Vec<StorageHashMapKeyValue<K, T>>,
-    pub(crate) size: u64,
+    pub(super) data: Vec<StorageHashMapKeyValue<K, T>>,
+    pub(super) size: u64,
 }
 
 impl<K, T> Serialize for StorageHashMapData<K, T>

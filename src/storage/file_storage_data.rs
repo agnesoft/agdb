@@ -8,12 +8,12 @@ use crate::DbError;
 
 #[allow(dead_code)]
 pub(crate) struct FileStorageData {
-    pub(super) file: std::fs::File,
-    pub(super) filename: String,
-    pub(super) records: StorageRecords,
-    pub(super) wal: WriteAheadLog,
-    pub(super) wal_filename: String,
-    pub(super) transactions: u64,
+    file: std::fs::File,
+    filename: String,
+    records: StorageRecords,
+    wal: WriteAheadLog,
+    wal_filename: String,
+    transactions: u64,
 }
 
 impl StorageData for FileStorageData {
@@ -85,5 +85,24 @@ impl StorageData for FileStorageData {
 
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError> {
         Ok(std::io::Write::write_all(&mut self.file, bytes)?)
+    }
+}
+
+impl TryFrom<(String, String)> for FileStorageData {
+    type Error = DbError;
+
+    fn try_from(filenames: (String, String)) -> Result<Self, Self::Error> {
+        Ok(FileStorageData {
+            file: std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .read(true)
+                .open(&filenames.0)?,
+            filename: filenames.0,
+            records: StorageRecords::default(),
+            wal: WriteAheadLog::try_from(&filenames.1)?,
+            wal_filename: filenames.1,
+            transactions: 0,
+        })
     }
 }

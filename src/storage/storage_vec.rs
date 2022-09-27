@@ -17,7 +17,11 @@ where
 }
 
 #[allow(dead_code)]
-impl<T: Serialize, Data: StorageData> StorageVec<T, Data> {
+impl<T, Data> StorageVec<T, Data>
+where
+    T: Serialize,
+    Data: StorageData,
+{
     pub(crate) fn capacity(&self) -> u64 {
         self.capacity
     }
@@ -136,8 +140,10 @@ impl<T: Serialize, Data: StorageData> StorageVec<T, Data> {
     }
 }
 
-impl<T: Serialize, Data: StorageData> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
-    for StorageVec<T, Data>
+impl<T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>> for StorageVec<T, Data>
+where
+    T: Serialize,
+    Data: StorageData,
 {
     type Error = DbError;
 

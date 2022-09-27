@@ -3,14 +3,14 @@ use super::storage_hash_map_meta_value::MetaValue;
 use crate::DbError;
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StorageHashMapKeyValue<K, T>
+pub(super) struct StorageHashMapKeyValue<K, T>
 where
     K: Clone + Default + Serialize,
     T: Clone + Default + Serialize,
 {
-    pub(crate) key: K,
-    pub(crate) value: T,
-    pub(crate) meta_value: MetaValue,
+    pub(super) key: K,
+    pub(super) value: T,
+    pub(super) meta_value: MetaValue,
 }
 
 impl<K, T> StorageHashMapKeyValue<K, T>

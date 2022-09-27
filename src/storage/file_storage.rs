@@ -37,7 +37,7 @@ fn wal_filename(filename: &str) -> String {
     } else if let Some(backslash) = filename.rfind('\\') {
         pos = backslash + 1
     } else {
-        pos = 1;
+        pos = 0;
     }
 
     let mut copy = filename.to_owned();
@@ -484,7 +484,7 @@ mod tests {
 
     #[test]
     fn transaction_commit() {
-        let test_file = TestFile::from(".\\\\file_storage-transaction_commit.agdb");
+        let test_file = TestFile::from("file_storage-transaction_commit.agdb");
         let index;
 
         {
@@ -703,5 +703,12 @@ mod tests {
             storage.value_size(1),
             Err(DbError::from("index '1' not found"))
         );
+    }
+
+    #[test]
+    fn wal_filenames() {
+        assert_eq!(wal_filename("some_name.agdb"), ".some_name.agdb");
+        assert_eq!(wal_filename("./some_name.agdb"), "./.some_name.agdb");
+        assert_eq!(wal_filename("\\some_name.agdb"), "\\.some_name.agdb");
     }
 }

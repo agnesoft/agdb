@@ -14,12 +14,21 @@ mod storage_vec;
 mod write_ahead_log;
 mod write_ahead_log_record;
 
-use self::serialize::Serialize;
-use self::storage_data::StorageData;
-use self::storage_record::StorageRecord;
-use self::storage_record_with_index::StorageRecordWithIndex;
-use self::write_ahead_log_record::WriteAheadLogRecord;
 use crate::db_error::DbError;
+use storage_data::StorageData;
+use storage_record::StorageRecord;
+use storage_record_with_index::StorageRecordWithIndex;
+use write_ahead_log_record::WriteAheadLogRecord;
+
+#[allow(unused_imports)]
+pub(crate) use file_storage::FileStorage;
+pub(crate) use serialize::Serialize;
+#[allow(unused_imports)]
+pub(crate) use stable_hash::StableHash;
+#[allow(unused_imports)]
+pub(crate) use storage_hash_map::StorageHashMap;
+#[allow(unused_imports)]
+pub(crate) use storage_vec::StorageVec;
 
 pub(crate) struct Storage<T: StorageData> {
     data: T,

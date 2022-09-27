@@ -108,10 +108,12 @@ impl Graph {
         if index == i64::MIN {
             index = self.data.capacity() as i64;
             self.data.resize((index + 1) as u64);
-            return index;
+
+            index
         } else {
             self.data.set_from_meta(0, self.data.from_meta(-index));
-            return -index;
+
+            -index
         }
     }
 
@@ -119,12 +121,16 @@ impl Graph {
         DbError::from(format!("'{}' is invalid index", index))
     }
 
+    fn is_removed_index(&self, index: i64) -> bool {
+        self.data.from_meta(index) < 0
+    }
+
     fn is_valid_edge(&self, index: i64) -> bool {
         self.data.from(index) < 0
     }
 
     fn is_valid_index(&self, index: i64) -> bool {
-        0 < index && (index as u64) < self.data.capacity() && 0 <= self.data.from_meta(index)
+        0 < index && (index as u64) < self.data.capacity() && !self.is_removed_index(index)
     }
 
     fn is_valid_node(&self, index: i64) -> bool {
@@ -137,7 +143,7 @@ impl Graph {
 
     fn next_node(&self, index: i64) -> Option<i64> {
         for index in (index + 1)..(self.data.capacity() as i64) {
-            if self.is_valid_node(index) {
+            if self.is_valid_node(index) && !self.is_removed_index(index) {
                 return Some(index);
             }
         }
@@ -203,8 +209,9 @@ impl Graph {
 
         while edge != 0 {
             self.remove_from_edge(edge);
-            self.free_index(index);
+            let current = edge;
             edge = self.data.to_meta(edge);
+            self.free_index(current);
         }
     }
 
@@ -255,6 +262,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn edge_from_index() {
+        let mut graph = Graph::new();
+        let from = graph.insert_node();
+        let to = graph.insert_node();
+        let index = graph.insert_edge(from, to).unwrap();
+
+        assert_eq!(graph.edge(index).unwrap().index(), index);
+    }
+
+    #[test]
+    fn edge_from_index_missing() {
+        let graph = Graph::new();
+
+        assert!(graph.edge(-3).is_none());
+    }
+
+    #[test]
     fn edge_iteration() {
         let mut graph = Graph::new();
         let node1 = graph.insert_node();
@@ -271,23 +295,6 @@ mod tests {
         }
 
         assert_eq!(actual, vec![edge3, edge2, edge1]);
-    }
-
-    #[test]
-    fn edge_from_index() {
-        let mut graph = Graph::new();
-        let from = graph.insert_node();
-        let to = graph.insert_node();
-        let index = graph.insert_edge(from, to).unwrap();
-
-        assert_eq!(graph.edge(index).unwrap().index(), index);
-    }
-
-    #[test]
-    fn edge_from_index_missing() {
-        let graph = Graph::new();
-
-        assert!(graph.edge(-3).is_none());
     }
 
     #[test]
@@ -401,11 +408,32 @@ mod tests {
     }
 
     #[test]
-    fn remove_only_edge() {
+    fn node_iteration_with_removed_nodes() {
         let mut graph = Graph::new();
-        let from = graph.insert_node();
-        let to = graph.insert_node();
-        let index = graph.insert_edge(from, to).unwrap();
+        let node1 = graph.insert_node();
+        let node2 = graph.insert_node();
+        let node3 = graph.insert_node();
+        let node4 = graph.insert_node();
+        let node5 = graph.insert_node();
+
+        graph.remove_node(node2);
+        graph.remove_node(node5);
+
+        let expected = vec![node1, node3, node4];
+        let mut nodes = Vec::<i64>::new();
+
+        for node in graph.node_iter() {
+            nodes.push(node.index());
+        }
+
+        assert_eq!(nodes, expected);
+    }
+
+    #[test]
+    fn remove_edge_circular() {
+        let mut graph = Graph::new();
+        let node = graph.insert_node();
+        let index = graph.insert_edge(node, node).unwrap();
 
         graph.remove_edge(index);
 
@@ -413,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn remove_first_edge() {
+    fn remove_edge_first() {
         let mut graph = Graph::new();
         let from = graph.insert_node();
         let to = graph.insert_node();
@@ -429,7 +457,7 @@ mod tests {
     }
 
     #[test]
-    fn remove_last_edge() {
+    fn remove_edge_last() {
         let mut graph = Graph::new();
         let from = graph.insert_node();
         let to = graph.insert_node();
@@ -445,7 +473,7 @@ mod tests {
     }
 
     #[test]
-    fn remove_middle_edge() {
+    fn remove_edge_middle() {
         let mut graph = Graph::new();
         let from = graph.insert_node();
         let to = graph.insert_node();
@@ -459,17 +487,19 @@ mod tests {
         assert!(graph.edge(index2).is_none());
         assert!(graph.edge(index3).is_some());
     }
+
     #[test]
-    fn remove_missing_edge() {
+    fn remove_edge_missing() {
         let mut graph = Graph::new();
         graph.remove_edge(-3);
     }
 
     #[test]
-    fn remove_self_edge() {
+    fn remove_edge_only() {
         let mut graph = Graph::new();
-        let node = graph.insert_node();
-        let index = graph.insert_edge(node, node).unwrap();
+        let from = graph.insert_node();
+        let to = graph.insert_node();
+        let index = graph.insert_edge(from, to).unwrap();
 
         graph.remove_edge(index);
 
@@ -477,17 +507,7 @@ mod tests {
     }
 
     #[test]
-    fn remove_only_node() {
-        let mut graph = Graph::new();
-        let index = graph.insert_node();
-
-        graph.remove_node(index);
-
-        assert!(graph.node(index).is_none());
-    }
-
-    #[test]
-    fn remove_node_with_self_edge() {
+    fn remove_node_circular_edge() {
         let mut graph = Graph::new();
         let index = graph.insert_node();
         let edge = graph.insert_edge(index, index).unwrap();
@@ -496,5 +516,53 @@ mod tests {
 
         assert!(graph.node(index).is_none());
         assert!(graph.edge(edge).is_none());
+    }
+
+    #[test]
+    fn remove_node_only() {
+        let mut graph = Graph::new();
+        let index = graph.insert_node();
+
+        graph.remove_node(index);
+
+        assert!(graph.node(index).is_none());
+    }
+
+    #[test]
+    fn remove_node_missing() {
+        let mut graph = Graph::new();
+        graph.remove_node(1);
+    }
+
+    #[test]
+    fn remove_nodes_with_edges() {
+        let mut graph = Graph::new();
+
+        let node1 = graph.insert_node();
+        let node2 = graph.insert_node();
+        let node3 = graph.insert_node();
+
+        let edge1 = graph.insert_edge(node1, node2).unwrap();
+        let edge2 = graph.insert_edge(node1, node1).unwrap();
+        let edge3 = graph.insert_edge(node1, node3).unwrap();
+        let edge4 = graph.insert_edge(node2, node1).unwrap();
+        let edge5 = graph.insert_edge(node3, node1).unwrap();
+
+        let edge6 = graph.insert_edge(node3, node2).unwrap();
+        let edge7 = graph.insert_edge(node2, node3).unwrap();
+
+        graph.remove_node(node1);
+
+        assert!(graph.node(node1).is_none());
+        assert!(graph.edge(edge1).is_none());
+        assert!(graph.edge(edge2).is_none());
+        assert!(graph.edge(edge3).is_none());
+        assert!(graph.edge(edge4).is_none());
+        assert!(graph.edge(edge5).is_none());
+
+        assert!(graph.node(node2).is_some());
+        assert!(graph.node(node3).is_some());
+        assert!(graph.edge(edge6).is_some());
+        assert!(graph.edge(edge7).is_some());
     }
 }

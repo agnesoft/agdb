@@ -1,10 +1,15 @@
-use super::file_storage::FileStorage;
+use super::file_storage_data::FileStorageData;
 use super::serialize::Serialize;
+use super::storage_data::StorageData;
 use super::Storage;
 use crate::db_error::DbError;
 
-pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
-    storage: std::rc::Rc<std::cell::RefCell<S>>,
+pub(crate) struct StorageVec<T, Data = FileStorageData>
+where
+    T: Serialize,
+    Data: StorageData,
+{
+    storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
     storage_index: i64,
     size: u64,
     capacity: u64,
@@ -12,7 +17,7 @@ pub(crate) struct StorageVec<T: Serialize, S: Storage = FileStorage> {
 }
 
 #[allow(dead_code)]
-impl<T: Serialize, S: Storage> StorageVec<T, S> {
+impl<T: Serialize, Data: StorageData> StorageVec<T, Data> {
     pub(crate) fn capacity(&self) -> u64 {
         self.capacity
     }
@@ -131,10 +136,14 @@ impl<T: Serialize, S: Storage> StorageVec<T, S> {
     }
 }
 
-impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for StorageVec<T, S> {
+impl<T: Serialize, Data: StorageData> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
+    for StorageVec<T, Data>
+{
     type Error = DbError;
 
-    fn try_from(storage: std::rc::Rc<std::cell::RefCell<S>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
+    ) -> Result<Self, Self::Error> {
         let index = storage.borrow_mut().insert(&0_u64)?;
 
         Ok(Self {
@@ -147,13 +156,13 @@ impl<T: Serialize, S: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for S
     }
 }
 
-impl<T: Serialize, S: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<S>>, i64)>
-    for StorageVec<T, S>
+impl<T: Serialize, Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
+    for StorageVec<T, Data>
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<S>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
     ) -> Result<Self, Self::Error> {
         let byte_size = storage_with_index
             .0
@@ -177,6 +186,7 @@ impl<T: Serialize, S: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<S>>, i64)
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
 
     #[test]

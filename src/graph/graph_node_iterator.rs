@@ -1,13 +1,14 @@
+use super::graph_data::GraphData;
+use super::graph_impl::GraphImpl;
 use super::graph_node::GraphNode;
-use super::Graph;
 
-pub(crate) struct GraphNodeIterator<'a> {
-    pub(super) graph: &'a Graph,
+pub(crate) struct GraphNodeIterator<'a, Data: GraphData> {
+    pub(super) graph: &'a GraphImpl<Data>,
     pub(super) index: i64,
 }
 
-impl<'a> Iterator for GraphNodeIterator<'a> {
-    type Item = GraphNode<'a>;
+impl<'a, Data: GraphData> Iterator for GraphNodeIterator<'a, Data> {
+    type Item = GraphNode<'a, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(next) = self.graph.next_node(self.index) {

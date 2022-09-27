@@ -1,6 +1,7 @@
-use super::file_storage::FileStorage;
+use super::file_storage_data::FileStorageData;
 use super::serialize::Serialize;
 use super::stable_hash::StableHash;
+use super::storage_data::StorageData;
 use super::storage_hash_map_data::StorageHashMapData;
 use super::storage_hash_map_key_value::StorageHashMapKeyValue;
 use super::storage_hash_map_meta_value::MetaValue;
@@ -10,13 +11,13 @@ use std::collections::HashMap;
 use std::hash::Hash;
 
 #[allow(dead_code)]
-pub(crate) struct StorageHashMap<K, T, S = FileStorage>
+pub(crate) struct StorageHashMap<K, T, Data = FileStorageData>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    S: Storage,
+    Data: StorageData,
 {
-    storage: std::rc::Rc<std::cell::RefCell<S>>,
+    storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
     storage_index: i64,
     size: u64,
     capacity: u64,
@@ -24,11 +25,11 @@ where
 }
 
 #[allow(dead_code)]
-impl<K, T, S> StorageHashMap<K, T, S>
+impl<K, T, Data> StorageHashMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    S: Storage,
+    Data: StorageData,
 {
     pub(crate) fn capacity(&self) -> u64 {
         self.capacity
@@ -255,15 +256,18 @@ where
     }
 }
 
-impl<K, T, S> TryFrom<std::rc::Rc<std::cell::RefCell<S>>> for StorageHashMap<K, T, S>
+impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
+    for StorageHashMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    S: Storage,
+    Data: StorageData,
 {
     type Error = DbError;
 
-    fn try_from(storage: std::rc::Rc<std::cell::RefCell<S>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
+    ) -> Result<Self, Self::Error> {
         let index = storage.borrow_mut().insert(&StorageHashMapData::<K, T> {
             data: vec![StorageHashMapKeyValue::<K, T>::default()],
             size: 0,
@@ -279,16 +283,17 @@ where
     }
 }
 
-impl<K, T, S> TryFrom<(std::rc::Rc<std::cell::RefCell<S>>, i64)> for StorageHashMap<K, T, S>
+impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
+    for StorageHashMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    S: Storage,
+    Data: StorageData,
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<S>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
     ) -> Result<Self, Self::Error> {
         let byte_size = storage_with_index
             .0
@@ -313,6 +318,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
 
     #[test]

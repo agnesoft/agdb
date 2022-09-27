@@ -19,6 +19,7 @@ impl GraphData {
         self.from[index as usize]
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub(super) fn from_meta(&self, index: i64) -> i64 {
         self.from_meta[index as usize]
     }

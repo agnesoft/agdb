@@ -9,6 +9,7 @@ mod graph_edge_iterator;
 mod graph_impl;
 mod graph_node;
 mod graph_node_iterator;
+mod storage_graph;
 
 #[allow(dead_code)]
 pub(crate) type Graph = GraphImpl<GraphDataMemory>;

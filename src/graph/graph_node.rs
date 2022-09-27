@@ -17,7 +17,7 @@ impl<'a, Data: GraphData> GraphNode<'a, Data> {
     pub(crate) fn edge_from_iter(&self) -> GraphEdgeIterator<Data> {
         GraphEdgeIterator {
             graph: self.graph,
-            index: self.graph.first_edge_from(self.index),
+            index: self.graph.first_edge_from(self.index).unwrap_or(0),
         }
     }
 }

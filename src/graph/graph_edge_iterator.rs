@@ -16,7 +16,7 @@ impl<'a, Data: GraphData> Iterator for GraphEdgeIterator<'a, Data> {
         }
 
         let index = self.index;
-        self.index = self.graph.next_edge_from(self.index);
+        self.index = self.graph.next_edge_from(self.index).unwrap_or(0);
 
         Some(GraphEdge {
             graph: self.graph,

@@ -11,7 +11,7 @@ impl<'a, Data: GraphData> Iterator for GraphNodeIterator<'a, Data> {
     type Item = GraphNode<'a, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.graph.next_node(self.index) {
+        if let Some(next) = self.graph.next_node(self.index).unwrap_or(None) {
             self.index = next;
             return Some(GraphNode {
                 graph: self.graph,

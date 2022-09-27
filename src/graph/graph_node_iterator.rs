@@ -1,8 +1,8 @@
 use super::graph_node::GraphNode;
-use super::GraphImpl;
+use super::Graph;
 
 pub(crate) struct GraphNodeIterator<'a> {
-    pub(super) graph: &'a GraphImpl,
+    pub(super) graph: &'a Graph,
     pub(super) index: i64,
 }
 

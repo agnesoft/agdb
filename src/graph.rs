@@ -36,6 +36,10 @@ impl Graph {
         Some(GraphEdge { graph: self, index })
     }
 
+    pub(crate) fn node_count(&self) -> u64 {
+        self.data.node_count()
+    }
+
     pub(crate) fn insert_edge(&mut self, from: i64, to: i64) -> Result<i64, DbError> {
         self.validate_node(from)?;
         self.validate_node(to)?;
@@ -366,6 +370,23 @@ mod tests {
         graph.remove_node(index);
 
         assert_eq!(graph.insert_node(), index);
+    }
+
+    #[test]
+    fn node_count() {
+        let mut graph = Graph::new();
+
+        assert_eq!(graph.node_count(), 0);
+
+        graph.insert_node();
+        let index = graph.insert_node();
+        graph.insert_node();
+
+        assert_eq!(graph.node_count(), 3);
+
+        graph.remove_node(index);
+
+        assert_eq!(graph.node_count(), 2);
     }
 
     #[test]

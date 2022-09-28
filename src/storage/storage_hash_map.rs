@@ -212,10 +212,12 @@ where
 
     fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
         if self.ensure_capacity(new_capacity) {
-            let mut store = self.storage.borrow_mut();
-            let old_data: StorageHashMapData<K, T> = store.value(self.storage_index)?;
-            store.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
-            store.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+            let mut ref_storage = self.storage.borrow_mut();
+            let old_data: StorageHashMapData<K, T> = ref_storage.value(self.storage_index)?;
+            ref_storage.transaction();
+            ref_storage.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
+            ref_storage.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
+            ref_storage.commit()?;
         }
 
         Ok(())

@@ -9,6 +9,7 @@ where
     Data: StorageData,
 {
     pub(super) index: i64,
+    #[allow(dead_code)]
     pub(super) indexes: GraphDataStorageIndexes,
     pub(super) from: StorageVec<i64, Data>,
     pub(super) to: StorageVec<i64, Data>,

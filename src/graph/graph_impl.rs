@@ -26,16 +26,20 @@ impl<Data: GraphData> GraphImpl<Data> {
         self.validate_node(from)?;
         self.validate_node(to)?;
 
+        self.data.transaction();
         let index = self.get_free_index()?;
         self.set_edge(index, from, to)?;
+        self.data.commit()?;
 
         Ok(-index)
     }
 
     pub(crate) fn insert_node(&mut self) -> Result<i64, DbError> {
+        self.data.transaction();
         let index = self.get_free_index()?;
         let count = self.data.node_count()?;
         self.data.set_node_count(count + 1)?;
+        self.data.commit()?;
 
         Ok(index)
     }
@@ -60,11 +64,12 @@ impl<Data: GraphData> GraphImpl<Data> {
             return Ok(());
         }
 
+        self.data.transaction();
         self.remove_from_edge(-index)?;
         self.remove_to_edge(-index)?;
         self.free_index(-index)?;
 
-        Ok(())
+        self.data.commit()
     }
 
     pub(crate) fn remove_node(&mut self, index: i64) -> Result<(), DbError> {
@@ -72,6 +77,7 @@ impl<Data: GraphData> GraphImpl<Data> {
             return Ok(());
         }
 
+        self.data.transaction();
         self.remove_from_edges(index)?;
         self.remove_to_edges(index)?;
         self.free_index(index)?;
@@ -79,7 +85,7 @@ impl<Data: GraphData> GraphImpl<Data> {
         let count = self.data.node_count()?;
         self.data.set_node_count(count - 1)?;
 
-        Ok(())
+        self.data.commit()
     }
 
     pub(super) fn first_edge_from(&self, index: i64) -> Result<i64, DbError> {

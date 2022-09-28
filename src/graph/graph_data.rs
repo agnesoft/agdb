@@ -4,6 +4,7 @@ pub(crate) trait GraphData {
     fn capacity(&self) -> Result<u64, DbError>;
     fn free_index(&self) -> Result<i64, DbError>;
     fn from(&self, index: i64) -> Result<i64, DbError>;
+    #[allow(clippy::wrong_self_convention)]
     fn from_meta(&self, index: i64) -> Result<i64, DbError>;
     fn node_count(&self) -> Result<u64, DbError>;
     fn resize(&mut self, capacity: u64) -> Result<(), DbError>;

@@ -96,7 +96,7 @@ where
         Ok(map)
     }
 
-    pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
+    pub(crate) fn value(&self, key: &K) -> Result<Option<T>, DbError> {
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity;
 
@@ -198,7 +198,7 @@ where
         new_data.data[pos as usize] = record;
     }
 
-    fn record(&mut self, pos: u64) -> Result<StorageHashMapKeyValue<K, T>, DbError> {
+    fn record(&self, pos: u64) -> Result<StorageHashMapKeyValue<K, T>, DbError> {
         let offset = Self::record_offset(pos);
 
         self.storage
@@ -627,7 +627,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
         assert_eq!(map.value(&0), Ok(None));
     }

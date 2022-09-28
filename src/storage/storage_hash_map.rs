@@ -627,7 +627,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
         assert_eq!(map.value(&0), Ok(None));
     }

@@ -31,16 +31,23 @@ where
     }
 
     pub(crate) fn push(&mut self, value: &T) -> Result<(), DbError> {
+        let mut ref_storage = self.storage.borrow_mut();
+        ref_storage.transaction();
+
         if self.size == self.capacity {
-            self.reallocate(std::cmp::max(self.capacity * 2, 64))?;
+            let current_capacity = self.capacity;
+            Self::reallocate(
+                &mut self.capacity,
+                std::cmp::max(current_capacity * 2, 64),
+                &mut ref_storage,
+                self.storage_index,
+            )?;
         }
 
-        let mut ref_storage = self.storage.borrow_mut();
         ref_storage.insert_at(self.storage_index, Self::value_offset(self.size), value)?;
         self.size += 1;
         ref_storage.insert_at(self.storage_index, 0, &self.size)?;
-
-        Ok(())
+        ref_storage.commit()
     }
 
     pub(crate) fn remove(&mut self, index: u64) -> Result<(), DbError> {
@@ -51,13 +58,13 @@ where
         let offset_from = Self::value_offset(index + 1);
         let offset_to = Self::value_offset(index);
         let size = Self::value_offset(self.size) - offset_from;
-        self.storage
-            .borrow_mut()
-            .move_at(self.storage_index, offset_from, offset_to, size)?;
+
+        let mut ref_storage = self.storage.borrow_mut();
+        ref_storage.transaction();
+        ref_storage.move_at(self.storage_index, offset_from, offset_to, size)?;
         self.size -= 1;
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, 0, &self.size)
+        ref_storage.insert_at(self.storage_index, 0, &self.size)?;
+        ref_storage.commit()
     }
 
     pub(crate) fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
@@ -65,7 +72,13 @@ where
             return Ok(());
         }
 
-        self.reallocate(capacity)
+        let mut ref_storage = self.storage.borrow_mut();
+        Self::reallocate(
+            &mut self.capacity,
+            capacity,
+            &mut ref_storage,
+            self.storage_index,
+        )
     }
 
     pub(crate) fn resize(&mut self, size: u64) -> Result<(), DbError> {
@@ -73,22 +86,25 @@ where
             return Ok(());
         }
 
+        let mut ref_storage = self.storage.borrow_mut();
+        ref_storage.transaction();
+
         if size < self.size {
             let offset = Self::value_offset(size);
             let byte_size = Self::value_offset(self.size) - offset;
-            self.storage.borrow_mut().insert_at(
-                self.storage_index,
-                offset,
-                &vec![0_u8; byte_size as usize],
-            )?;
+            ref_storage.insert_at(self.storage_index, offset, &vec![0_u8; byte_size as usize])?;
         } else if self.capacity < size {
-            self.reallocate(size)?;
+            Self::reallocate(
+                &mut self.capacity,
+                size,
+                &mut ref_storage,
+                self.storage_index,
+            )?;
         }
 
         self.size = size;
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, 0, &self.size)
+        ref_storage.insert_at(self.storage_index, 0, &self.size)?;
+        ref_storage.commit()
     }
 
     pub(crate) fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
@@ -102,7 +118,13 @@ where
     }
 
     pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        self.reallocate(self.size)
+        let mut ref_storage = self.storage.borrow_mut();
+        Self::reallocate(
+            &mut self.capacity,
+            self.size,
+            &mut ref_storage,
+            self.storage_index,
+        )
     }
 
     pub(crate) fn storage_index(&self) -> i64 {
@@ -124,11 +146,14 @@ where
             .value_at::<T>(self.storage_index, Self::value_offset(index))
     }
 
-    fn reallocate(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        self.capacity = new_capacity;
-        self.storage
-            .borrow_mut()
-            .resize_value(self.storage_index, Self::value_offset(new_capacity))
+    fn reallocate(
+        capacity: &mut u64,
+        new_capacity: u64,
+        storage: &mut std::cell::RefMut<Storage<Data>>,
+        index: i64,
+    ) -> Result<(), DbError> {
+        *capacity = new_capacity;
+        storage.resize_value(index, Self::value_offset(new_capacity))
     }
 
     fn value_offset(index: u64) -> u64 {

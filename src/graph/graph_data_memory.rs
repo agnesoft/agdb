@@ -6,7 +6,6 @@ pub(crate) struct GraphDataMemory {
     pub(super) to: Vec<i64>,
     pub(super) from_meta: Vec<i64>,
     pub(super) to_meta: Vec<i64>,
-    pub(super) node_count: u64,
 }
 
 impl GraphData for GraphDataMemory {
@@ -27,7 +26,7 @@ impl GraphData for GraphDataMemory {
     }
 
     fn node_count(&self) -> Result<u64, DbError> {
-        Ok(self.node_count)
+        Ok(self.to_meta[0] as u64)
     }
 
     fn resize(&mut self, capacity: u64) -> Result<(), DbError> {
@@ -52,7 +51,7 @@ impl GraphData for GraphDataMemory {
     }
 
     fn set_node_count(&mut self, count: u64) -> Result<(), DbError> {
-        self.node_count = count;
+        self.to_meta[0] = count as i64;
 
         Ok(())
     }

@@ -4,6 +4,7 @@ use self::graph_impl::GraphImpl;
 mod graph_data;
 mod graph_data_memory;
 mod graph_data_storage;
+mod graph_data_storage_indexes;
 mod graph_edge;
 mod graph_edge_iterator;
 mod graph_impl;
@@ -23,7 +24,6 @@ impl Graph {
                 to: vec![0],
                 from_meta: vec![i64::MIN],
                 to_meta: vec![0],
-                node_count: 0,
             },
         }
     }

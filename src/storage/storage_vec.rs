@@ -110,11 +110,11 @@ where
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub(crate) fn to_vec(&mut self) -> Result<Vec<T>, DbError> {
+    pub(crate) fn to_vec(&self) -> Result<Vec<T>, DbError> {
         self.storage.borrow_mut().value(self.storage_index)
     }
 
-    pub(crate) fn value(&mut self, index: u64) -> Result<T, DbError> {
+    pub(crate) fn value(&self, index: u64) -> Result<T, DbError> {
         if self.size <= index {
             return Err(DbError::from("index out of bounds"));
         }
@@ -570,7 +570,7 @@ mod tests {
             index = vec.storage_index();
         }
 
-        let mut vec = StorageVec::<i64>::try_from((storage, index)).unwrap();
+        let vec = StorageVec::<i64>::try_from((storage, index)).unwrap();
 
         assert_eq!(vec.to_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
     }
@@ -612,7 +612,7 @@ mod tests {
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let vec = StorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(vec.value(0), Err(DbError::from("index out of bounds")));
     }

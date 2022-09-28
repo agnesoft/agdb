@@ -96,7 +96,7 @@ where
         Ok(map)
     }
 
-    pub(crate) fn value(&mut self, key: &K) -> Result<Option<T>, DbError> {
+    pub(crate) fn value(&self, key: &K) -> Result<Option<T>, DbError> {
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity;
 
@@ -198,7 +198,7 @@ where
         new_data.data[pos as usize] = record;
     }
 
-    fn record(&mut self, pos: u64) -> Result<StorageHashMapKeyValue<K, T>, DbError> {
+    fn record(&self, pos: u64) -> Result<StorageHashMapKeyValue<K, T>, DbError> {
         let offset = Self::record_offset(pos);
 
         self.storage

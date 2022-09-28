@@ -13,6 +13,10 @@ impl GraphData for GraphDataMemory {
         Ok(self.from.len() as u64)
     }
 
+    fn commit(&mut self) -> Result<(), DbError> {
+        Ok(())
+    }
+
     fn free_index(&self) -> Result<i64, DbError> {
         Ok(self.from_meta[0])
     }
@@ -75,4 +79,6 @@ impl GraphData for GraphDataMemory {
     fn to_meta(&self, index: i64) -> Result<i64, DbError> {
         Ok(self.to_meta[index as usize])
     }
+
+    fn transaction(&mut self) {}
 }

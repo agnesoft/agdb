@@ -44,6 +44,7 @@ impl<Data: StorageData> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
 
         Ok(StorageGraph {
             data: GraphDataStorage::<Data> {
+                storage,
                 index,
                 indexes,
                 from,
@@ -77,6 +78,7 @@ impl<Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
 
         Ok(StorageGraph {
             data: GraphDataStorage::<Data> {
+                storage: storage_with_index.0,
                 index: storage_with_index.1,
                 indexes,
                 from,

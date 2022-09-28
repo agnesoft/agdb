@@ -10,7 +10,7 @@ pub(super) struct GraphDataStorageIndexes {
 impl Serialize for GraphDataStorageIndexes {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(GraphDataStorageIndexes {
-            from: i64::deserialize(&bytes)?,
+            from: i64::deserialize(bytes)?,
             to: i64::deserialize(&bytes[std::mem::size_of::<i64>()..])?,
             from_meta: i64::deserialize(&bytes[(std::mem::size_of::<i64>() * 2)..])?,
             to_meta: i64::deserialize(&bytes[(std::mem::size_of::<i64>() * 3)..])?,

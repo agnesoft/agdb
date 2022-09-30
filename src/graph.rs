@@ -1,6 +1,10 @@
 use self::graph_data_memory::GraphDataMemory;
 use self::graph_impl::GraphImpl;
 
+mod dictionary;
+mod dictionary_data;
+mod dictionary_data_memory;
+mod dictionary_impl;
 mod graph_data;
 mod graph_data_memory;
 mod graph_data_storage;

@@ -8,19 +8,9 @@ where
     K: Clone + Default + Serialize,
     T: Clone + Default + Serialize,
 {
+    pub(super) meta_value: HashMapMetaValue,
     pub(super) key: K,
     pub(super) value: T,
-    pub(super) meta_value: HashMapMetaValue,
-}
-
-impl<K, T> HashMapKeyValue<K, T>
-where
-    K: Clone + Default + Serialize,
-    T: Clone + Default + Serialize,
-{
-    pub(crate) fn meta_value_offset() -> u64 {
-        K::serialized_size() + T::serialized_size()
-    }
 }
 
 impl<K, T> Serialize for HashMapKeyValue<K, T>
@@ -30,10 +20,10 @@ where
 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
-            key: K::deserialize(&bytes[0..])?,
-            value: T::deserialize(&bytes[(K::serialized_size() as usize)..])?,
-            meta_value: HashMapMetaValue::deserialize(
-                &bytes[(Self::meta_value_offset() as usize)..],
+            meta_value: HashMapMetaValue::deserialize(bytes)?,
+            key: K::deserialize(&bytes[(HashMapMetaValue::serialized_size() as usize)..])?,
+            value: T::deserialize(
+                &bytes[((HashMapMetaValue::serialized_size() + K::serialized_size()) as usize)..],
             )?,
         })
     }
@@ -41,15 +31,15 @@ where
     fn serialize(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
         data.reserve(Self::serialized_size() as usize);
+        data.extend(self.meta_value.serialize());
         data.extend(self.key.serialize());
         data.extend(self.value.serialize());
-        data.extend(self.meta_value.serialize());
 
         data
     }
 
     fn serialized_size() -> u64 {
-        Self::meta_value_offset() + HashMapMetaValue::serialized_size()
+        HashMapMetaValue::serialized_size() + K::serialized_size() + T::serialized_size()
     }
 }
 
@@ -71,9 +61,9 @@ mod tests {
         assert_eq!(
             key_value,
             HashMapKeyValue::<i64, i64> {
+                meta_value: HashMapMetaValue::Empty,
                 key: 0,
                 value: 0,
-                meta_value: HashMapMetaValue::Empty
             }
         )
     }
@@ -81,9 +71,9 @@ mod tests {
     #[test]
     fn i64_i64() {
         let key_value = HashMapKeyValue {
+            meta_value: HashMapMetaValue::Valid,
             key: 1_i64,
             value: 10_i64,
-            meta_value: HashMapMetaValue::Valid,
         };
         let bytes = key_value.serialize();
         let other = HashMapKeyValue::deserialize(&bytes);

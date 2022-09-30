@@ -138,9 +138,9 @@ where
         self.data.set_value(
             pos,
             HashMapKeyValue {
+                meta_value: HashMapMetaValue::Valid,
                 key,
                 value,
-                meta_value: HashMapMetaValue::Valid,
             },
         )
     }

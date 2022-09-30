@@ -1,19 +1,19 @@
+use super::hash_map_meta_value::HashMapMetaValue;
 use super::serialize::Serialize;
-use super::storage_hash_map_meta_value::MetaValue;
 use crate::DbError;
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(super) struct StorageHashMapKeyValue<K, T>
+pub(crate) struct HashMapKeyValue<K, T>
 where
     K: Clone + Default + Serialize,
     T: Clone + Default + Serialize,
 {
     pub(super) key: K,
     pub(super) value: T,
-    pub(super) meta_value: MetaValue,
+    pub(super) meta_value: HashMapMetaValue,
 }
 
-impl<K, T> StorageHashMapKeyValue<K, T>
+impl<K, T> HashMapKeyValue<K, T>
 where
     K: Clone + Default + Serialize,
     T: Clone + Default + Serialize,
@@ -23,7 +23,7 @@ where
     }
 }
 
-impl<K, T> Serialize for StorageHashMapKeyValue<K, T>
+impl<K, T> Serialize for HashMapKeyValue<K, T>
 where
     K: Clone + Default + Serialize,
     T: Clone + Default + Serialize,
@@ -32,7 +32,9 @@ where
         Ok(Self {
             key: K::deserialize(&bytes[0..])?,
             value: T::deserialize(&bytes[(K::serialized_size() as usize)..])?,
-            meta_value: MetaValue::deserialize(&bytes[(Self::meta_value_offset() as usize)..])?,
+            meta_value: HashMapMetaValue::deserialize(
+                &bytes[(Self::meta_value_offset() as usize)..],
+            )?,
         })
     }
 
@@ -47,7 +49,7 @@ where
     }
 
     fn serialized_size() -> u64 {
-        Self::meta_value_offset() + MetaValue::serialized_size()
+        Self::meta_value_offset() + HashMapMetaValue::serialized_size()
     }
 }
 
@@ -57,34 +59,34 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        let key_value = StorageHashMapKeyValue::<i64, i64>::default();
+        let key_value = HashMapKeyValue::<i64, i64>::default();
 
         format!("{:?}", key_value);
     }
 
     #[test]
     fn derived_from_default() {
-        let key_value = StorageHashMapKeyValue::<i64, i64>::default();
+        let key_value = HashMapKeyValue::<i64, i64>::default();
 
         assert_eq!(
             key_value,
-            StorageHashMapKeyValue::<i64, i64> {
+            HashMapKeyValue::<i64, i64> {
                 key: 0,
                 value: 0,
-                meta_value: MetaValue::Empty
+                meta_value: HashMapMetaValue::Empty
             }
         )
     }
 
     #[test]
     fn i64_i64() {
-        let key_value = StorageHashMapKeyValue {
+        let key_value = HashMapKeyValue {
             key: 1_i64,
             value: 10_i64,
-            meta_value: MetaValue::Valid,
+            meta_value: HashMapMetaValue::Valid,
         };
         let bytes = key_value.serialize();
-        let other = StorageHashMapKeyValue::deserialize(&bytes);
+        let other = HashMapKeyValue::deserialize(&bytes);
 
         assert_eq!(other, Ok(key_value));
     }
@@ -94,7 +96,7 @@ mod tests {
         let bytes = vec![0_u8; 16];
 
         assert_eq!(
-            StorageHashMapKeyValue::<i64, i64>::deserialize(&bytes)
+            HashMapKeyValue::<i64, i64>::deserialize(&bytes)
                 .unwrap_err()
                 .description,
             "value out of bounds"
@@ -103,6 +105,6 @@ mod tests {
 
     #[test]
     fn serialized_size() {
-        assert_eq!(StorageHashMapKeyValue::<i64, i64>::serialized_size(), 17);
+        assert_eq!(HashMapKeyValue::<i64, i64>::serialized_size(), 17);
     }
 }

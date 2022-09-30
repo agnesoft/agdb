@@ -3,28 +3,28 @@ use crate::DbError;
 use super::serialize::Serialize;
 
 #[derive(Clone, Default, Debug, PartialEq)]
-pub(super) enum MetaValue {
+pub(crate) enum HashMapMetaValue {
     #[default]
     Empty,
     Deleted,
     Valid,
 }
 
-impl Serialize for MetaValue {
+impl Serialize for HashMapMetaValue {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         match bytes.first() {
-            Some(0) => Ok(MetaValue::Empty),
-            Some(1) => Ok(MetaValue::Valid),
-            Some(2) => Ok(MetaValue::Deleted),
+            Some(0) => Ok(HashMapMetaValue::Empty),
+            Some(1) => Ok(HashMapMetaValue::Valid),
+            Some(2) => Ok(HashMapMetaValue::Deleted),
             _ => Err(DbError::from("value out of bounds")),
         }
     }
 
     fn serialize(&self) -> Vec<u8> {
         match self {
-            MetaValue::Empty => vec![0_u8],
-            MetaValue::Deleted => vec![2_u8],
-            MetaValue::Valid => vec![1_u8],
+            HashMapMetaValue::Empty => vec![0_u8],
+            HashMapMetaValue::Deleted => vec![2_u8],
+            HashMapMetaValue::Valid => vec![1_u8],
         }
     }
 
@@ -39,27 +39,31 @@ mod tests {
 
     #[test]
     fn derived_from_default() {
-        assert_eq!(MetaValue::default(), MetaValue::Empty);
+        assert_eq!(HashMapMetaValue::default(), HashMapMetaValue::Empty);
     }
 
     #[test]
     fn derived_from_debug() {
-        let value = MetaValue::Deleted;
+        let value = HashMapMetaValue::Deleted;
 
         format!("{:?}", value);
     }
 
     #[test]
     fn serialize() {
-        let data = vec![MetaValue::Valid, MetaValue::Empty, MetaValue::Deleted];
+        let data = vec![
+            HashMapMetaValue::Valid,
+            HashMapMetaValue::Empty,
+            HashMapMetaValue::Deleted,
+        ];
         let bytes = data.serialize();
-        let other = Vec::<MetaValue>::deserialize(&bytes).unwrap();
+        let other = Vec::<HashMapMetaValue>::deserialize(&bytes).unwrap();
 
         assert_eq!(data, other);
     }
 
     #[test]
     fn serialized_size() {
-        assert_eq!(MetaValue::serialized_size(), 1);
+        assert_eq!(HashMapMetaValue::serialized_size(), 1);
     }
 }

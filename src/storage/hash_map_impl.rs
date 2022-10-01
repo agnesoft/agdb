@@ -52,7 +52,7 @@ where
 
     pub(crate) fn remove(&mut self, key: &K) -> Result<(), DbError> {
         let hash = key.stable_hash();
-        let mut pos = hash % self.data.capacity();
+        let mut pos = hash % self.capacity();
 
         self.data.transaction();
 
@@ -65,7 +65,7 @@ where
                     self.remove_record(pos)?;
                 }
                 HashMapMetaValue::Valid | HashMapMetaValue::Deleted => {
-                    pos = self.next_pos(pos);
+                    pos = Self::next_pos(pos, self.capacity());
                 }
             }
         }
@@ -74,7 +74,7 @@ where
     }
 
     pub(crate) fn reserve(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        if self.data.capacity() < new_capacity {
+        if self.capacity() < new_capacity {
             return self.rehash(new_capacity);
         }
 
@@ -98,7 +98,7 @@ where
 
     pub(crate) fn value(&self, key: &K) -> Result<Option<T>, DbError> {
         let hash = key.stable_hash();
-        let mut pos = hash % self.data.capacity();
+        let mut pos = hash % self.capacity();
 
         loop {
             let record = self.data.record(pos)?;
@@ -108,18 +108,20 @@ where
                 HashMapMetaValue::Valid if record.key == *key => {
                     return Ok(Some(record.value.clone()))
                 }
-                HashMapMetaValue::Valid | HashMapMetaValue::Deleted => pos = self.next_pos(pos),
+                HashMapMetaValue::Valid | HashMapMetaValue::Deleted => {
+                    pos = Self::next_pos(pos, self.capacity())
+                }
             }
         }
     }
 
     fn find_or_free(&mut self, key: &K) -> Result<(u64, Option<T>), DbError> {
         if self.max_size() < (self.data.count() + 1) {
-            self.rehash(self.data.capacity() * 2)?;
+            self.rehash(self.capacity() * 2)?;
         }
 
         let hash = key.stable_hash();
-        let mut pos = hash % self.data.capacity();
+        let mut pos = hash % self.capacity();
 
         loop {
             let record = self.data.record(pos)?;
@@ -129,7 +131,7 @@ where
                 HashMapMetaValue::Valid if record.key == *key => {
                     return Ok((pos, Some(record.value.clone())))
                 }
-                HashMapMetaValue::Valid => pos = self.next_pos(pos),
+                HashMapMetaValue::Valid => pos = Self::next_pos(pos, self.capacity()),
             }
         }
     }
@@ -146,15 +148,15 @@ where
     }
 
     pub(super) fn max_size(&self) -> u64 {
-        self.data.capacity() * 15 / 16
+        self.capacity() * 15 / 16
     }
 
     pub(super) fn min_size(&self) -> u64 {
-        self.data.capacity() * 7 / 16
+        self.capacity() * 7 / 16
     }
 
-    pub(super) fn next_pos(&self, pos: u64) -> u64 {
-        if pos == self.data.capacity() - 1 {
+    pub(super) fn next_pos(pos: u64, capacity: u64) -> u64 {
+        if pos == capacity - 1 {
             0
         } else {
             pos + 1
@@ -170,7 +172,7 @@ where
         let mut pos = hash % new_data.len() as u64;
 
         while new_data[pos as usize].meta_value != HashMapMetaValue::Empty {
-            pos = self.next_pos(pos);
+            pos = Self::next_pos(pos, new_data.len() as u64);
         }
 
         new_data[pos as usize] = record;
@@ -179,7 +181,7 @@ where
     pub(super) fn rehash(&mut self, mut new_capacity: u64) -> Result<(), DbError> {
         new_capacity = std::cmp::max(new_capacity, 64);
 
-        if new_capacity != self.data.capacity() {
+        if new_capacity != self.capacity() {
             let old_data = self.data.values()?;
             self.data.transaction();
             self.data
@@ -212,7 +214,7 @@ where
         self.data.set_count(self.data.count() - 1)?;
 
         if 0 != self.data.count() && (self.data.count() - 1) < self.min_size() {
-            self.rehash(self.data.capacity() / 2)?;
+            self.rehash(self.capacity() / 2)?;
         }
 
         Ok(())

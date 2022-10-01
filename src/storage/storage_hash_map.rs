@@ -1,28 +1,16 @@
 use super::file_storage_data::FileStorageData;
+use super::hash_map_data_storage::HashMapDataStorage;
+use super::hash_map_impl::HashMapImpl;
+use super::hash_map_key_value::HashMapKeyValue;
 use super::serialize::Serialize;
 use super::stable_hash::StableHash;
 use super::storage_data::StorageData;
-use super::storage_hash_map_data::StorageHashMapData;
-use super::storage_hash_map_key_value::StorageHashMapKeyValue;
-use super::storage_hash_map_meta_value::MetaValue;
 use super::Storage;
 use crate::DbError;
-use std::collections::HashMap;
 use std::hash::Hash;
 
-#[allow(dead_code)]
-pub(crate) struct StorageHashMap<K, T, Data = FileStorageData>
-where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
-    Data: StorageData,
-{
-    storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
-    storage_index: i64,
-    size: u64,
-    capacity: u64,
-    phantom_data: std::marker::PhantomData<(K, T)>,
-}
+pub(crate) type StorageHashMap<K, T, Data = FileStorageData> =
+    HashMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
 impl<K, T, Data> StorageHashMap<K, T, Data>
@@ -31,230 +19,8 @@ where
     T: Clone + Default + Serialize,
     Data: StorageData,
 {
-    pub(crate) fn capacity(&self) -> u64 {
-        self.capacity
-    }
-
-    pub(crate) fn insert(&mut self, key: K, value: T) -> Result<Option<T>, DbError> {
-        self.storage.borrow_mut().transaction();
-        let free = self.find_or_free(&key)?;
-        self.insert_value(free.0, key, value)?;
-
-        if free.1.meta_value == MetaValue::Valid {
-            self.storage.borrow_mut().commit()?;
-            Ok(Some(free.1.value))
-        } else {
-            self.set_size(self.size + 1)?;
-            self.storage.borrow_mut().commit()?;
-            Ok(None)
-        }
-    }
-
-    pub(crate) fn remove(&mut self, key: &K) -> Result<(), DbError> {
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity;
-
-        loop {
-            let record = self.record(pos)?;
-
-            match record.meta_value {
-                MetaValue::Empty => return Ok(()),
-                MetaValue::Valid if record.key == *key => return self.remove_record(pos),
-                MetaValue::Valid | MetaValue::Deleted => pos = self.next_pos(pos),
-            }
-        }
-    }
-
-    pub(crate) fn reserve(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        if self.capacity < new_capacity {
-            return self.rehash(new_capacity);
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn size(&self) -> u64 {
-        self.size
-    }
-
     pub(crate) fn storage_index(&self) -> i64 {
-        self.storage_index
-    }
-
-    pub(crate) fn to_hash_map(&self) -> Result<HashMap<K, T>, DbError> {
-        let mut map = HashMap::<K, T>::new();
-        map.reserve(self.size as usize);
-
-        let data: StorageHashMapData<K, T> = self.storage.borrow_mut().value(self.storage_index)?;
-
-        for record in data.data {
-            if record.meta_value == MetaValue::Valid {
-                map.insert(record.key, record.value);
-            }
-        }
-
-        Ok(map)
-    }
-
-    pub(crate) fn value(&self, key: &K) -> Result<Option<T>, DbError> {
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity;
-
-        loop {
-            let record = self.record(pos)?;
-
-            match record.meta_value {
-                MetaValue::Empty => return Ok(None),
-                MetaValue::Valid if record.key == *key => return Ok(Some(record.value)),
-                MetaValue::Valid | MetaValue::Deleted => pos = self.next_pos(pos),
-            }
-        }
-    }
-
-    fn capacity_from_bytes(len: u64) -> u64 {
-        (len - u64::serialized_size()) / T::serialized_size()
-    }
-
-    fn ensure_capacity(&mut self, new_capacity: u64) -> bool {
-        let old_capacity = self.capacity;
-
-        if new_capacity < 64 {
-            self.capacity = 64;
-        } else {
-            self.capacity = new_capacity;
-        }
-
-        old_capacity != self.capacity
-    }
-
-    fn find_or_free(&mut self, key: &K) -> Result<(u64, StorageHashMapKeyValue<K, T>), DbError> {
-        if self.max_size() < (self.size + 1) {
-            self.rehash(self.capacity * 2)?;
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity;
-
-        loop {
-            let record = self.record(pos)?;
-
-            match record.meta_value {
-                MetaValue::Empty => return Ok((pos, record)),
-                MetaValue::Valid if record.key == *key => return Ok((pos, record)),
-                MetaValue::Valid | MetaValue::Deleted => pos = self.next_pos(pos),
-            }
-        }
-    }
-
-    fn insert_meta_value(&mut self, pos: u64, meta_value: MetaValue) -> Result<(), DbError> {
-        let offset = Self::record_offset(pos) + StorageHashMapKeyValue::<K, T>::meta_value_offset();
-
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, offset, &meta_value)
-    }
-
-    fn insert_value(&mut self, pos: u64, key: K, value: T) -> Result<(), DbError> {
-        let record = StorageHashMapKeyValue {
-            key,
-            value,
-            meta_value: MetaValue::Valid,
-        };
-        let offset = Self::record_offset(pos);
-
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, offset, &record)
-    }
-
-    fn max_size(&self) -> u64 {
-        self.capacity * 15 / 16
-    }
-
-    fn min_size(&self) -> u64 {
-        self.capacity * 7 / 16
-    }
-
-    fn next_pos(&self, pos: u64) -> u64 {
-        if pos == self.capacity - 1 {
-            0
-        } else {
-            pos + 1
-        }
-    }
-
-    fn place_new_record(
-        &self,
-        new_data: &mut StorageHashMapData<K, T>,
-        record: StorageHashMapKeyValue<K, T>,
-    ) {
-        let hash = record.key.stable_hash();
-        let mut pos = hash % self.capacity;
-
-        while new_data.data[pos as usize].meta_value != MetaValue::Empty {
-            pos = self.next_pos(pos);
-        }
-
-        new_data.data[pos as usize] = record;
-    }
-
-    fn record(&self, pos: u64) -> Result<StorageHashMapKeyValue<K, T>, DbError> {
-        let offset = Self::record_offset(pos);
-
-        self.storage
-            .borrow_mut()
-            .value_at::<StorageHashMapKeyValue<K, T>>(self.storage_index, offset)
-    }
-
-    fn record_offset(pos: u64) -> u64 {
-        u64::serialized_size() + StorageHashMapKeyValue::<K, T>::serialized_size() * pos
-    }
-
-    fn rehash(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        if self.ensure_capacity(new_capacity) {
-            let mut ref_storage = self.storage.borrow_mut();
-            let old_data: StorageHashMapData<K, T> = ref_storage.value(self.storage_index)?;
-            ref_storage.transaction();
-            ref_storage.insert_at(self.storage_index, 0, &self.rehash_old_data(old_data))?;
-            ref_storage.resize_value(self.storage_index, Self::record_offset(self.capacity))?;
-            ref_storage.commit()?;
-        }
-
-        Ok(())
-    }
-
-    fn rehash_old_data(&self, old_data: StorageHashMapData<K, T>) -> StorageHashMapData<K, T> {
-        let mut new_data = StorageHashMapData::<K, T> {
-            data: vec![StorageHashMapKeyValue::<K, T>::default(); self.capacity as usize],
-            size: old_data.size,
-        };
-
-        for record in old_data.data {
-            if record.meta_value == MetaValue::Valid {
-                self.place_new_record(&mut new_data, record);
-            }
-        }
-
-        new_data
-    }
-
-    fn remove_record(&mut self, pos: u64) -> Result<(), DbError> {
-        self.storage.borrow_mut().transaction();
-        self.insert_meta_value(pos, MetaValue::Deleted)?;
-        self.set_size(self.size - 1)?;
-
-        if 0 != self.size && (self.size - 1) < self.min_size() {
-            self.rehash(self.capacity / 2)?;
-        }
-
-        self.storage.borrow_mut().commit()
-    }
-
-    fn set_size(&mut self, new_size: u64) -> Result<(), DbError> {
-        self.size = new_size;
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, 0, &self.size)
+        self.data.storage_index
     }
 }
 
@@ -270,17 +36,22 @@ where
     fn try_from(
         storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
     ) -> Result<Self, Self::Error> {
-        let index = storage.borrow_mut().insert(&StorageHashMapData::<K, T> {
-            data: vec![StorageHashMapKeyValue::<K, T>::default()],
-            size: 0,
-        })?;
+        let storage_index = storage.borrow_mut().insert(&0_u64)?;
+        storage.borrow_mut().insert_at(
+            storage_index,
+            std::mem::size_of::<u64>() as u64,
+            &vec![HashMapKeyValue::<K, T>::default()],
+        )?;
 
         Ok(Self {
-            storage,
-            storage_index: index,
-            size: 0,
-            capacity: 1,
-            phantom_data: std::marker::PhantomData::<(K, T)>,
+            data: HashMapDataStorage::<K, T, Data> {
+                storage,
+                storage_index,
+                count: 0,
+                capacity: 1,
+                phantom_data: std::marker::PhantomData,
+            },
+            phantom_data: std::marker::PhantomData,
         })
     }
 }
@@ -297,22 +68,24 @@ where
     fn try_from(
         storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
     ) -> Result<Self, Self::Error> {
-        let byte_size = storage_with_index
-            .0
-            .borrow_mut()
-            .value_size(storage_with_index.1)?;
-        let size = storage_with_index
+        let count = storage_with_index
             .0
             .borrow_mut()
             .value_at::<u64>(storage_with_index.1, 0)?;
-        let capacity = Self::capacity_from_bytes(byte_size);
+        let capacity = storage_with_index
+            .0
+            .borrow_mut()
+            .value_at::<u64>(storage_with_index.1, std::mem::size_of::<u64>() as u64)?;
 
         Ok(Self {
-            storage: storage_with_index.0,
-            storage_index: storage_with_index.1,
-            size,
-            capacity,
-            phantom_data: std::marker::PhantomData::<(K, T)>,
+            data: HashMapDataStorage::<K, T, Data> {
+                storage: storage_with_index.0,
+                storage_index: storage_with_index.1,
+                count,
+                capacity,
+                phantom_data: std::marker::PhantomData,
+            },
+            phantom_data: std::marker::PhantomData,
         })
     }
 }
@@ -336,7 +109,7 @@ mod tests {
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
 
-        assert_eq!(map.size(), 3);
+        assert_eq!(map.count(), 3);
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(Some(15)));
         assert_eq!(map.value(&7), Ok(Some(20)));
@@ -357,7 +130,7 @@ mod tests {
             map.insert(i, i).unwrap();
         }
 
-        assert_eq!(map.size(), 100);
+        assert_eq!(map.count(), 100);
         assert_eq!(map.capacity(), 128);
 
         for i in 0..100 {
@@ -394,12 +167,35 @@ mod tests {
 
         assert_eq!(map.insert(1, 10), Ok(None));
         assert_eq!(map.insert(5, 15), Ok(None));
-        assert_eq!(map.size(), 2);
+        assert_eq!(map.count(), 2);
         assert_eq!(map.insert(5, 20), Ok(Some(15)));
-        assert_eq!(map.size(), 2);
+        assert_eq!(map.count(), 2);
 
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(Some(20)));
+    }
+
+    #[test]
+    fn iter() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(7, 20).unwrap();
+        map.insert(2, 30).unwrap();
+        map.insert(4, 13).unwrap();
+        map.remove(&7).unwrap();
+
+        let mut actual = map.iter().collect::<Vec<(i64, i64)>>();
+        actual.sort();
+        let expected: Vec<(i64, i64)> = vec![(1, 10), (2, 30), (4, 13), (5, 15)];
+
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -415,10 +211,10 @@ mod tests {
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
 
-        assert_eq!(map.size(), 3);
+        assert_eq!(map.count(), 3);
         map.remove(&5).unwrap();
 
-        assert_eq!(map.size(), 2);
+        assert_eq!(map.count(), 2);
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(None));
         assert_eq!(map.value(&7), Ok(Some(20)));
@@ -437,16 +233,16 @@ mod tests {
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
 
-        assert_eq!(map.size(), 3);
+        assert_eq!(map.count(), 3);
 
         map.remove(&5).unwrap();
 
-        assert_eq!(map.size(), 2);
+        assert_eq!(map.count(), 2);
         assert_eq!(map.value(&5), Ok(None));
 
         map.remove(&5).unwrap();
 
-        assert_eq!(map.size(), 2);
+        assert_eq!(map.count(), 2);
     }
 
     #[test]
@@ -458,9 +254,9 @@ mod tests {
 
         let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
 
-        assert_eq!(map.size(), 0);
+        assert_eq!(map.count(), 0);
         assert_eq!(map.remove(&0), Ok(()));
-        assert_eq!(map.size(), 0);
+        assert_eq!(map.count(), 0);
     }
 
     #[test]
@@ -476,14 +272,14 @@ mod tests {
             map.insert(i, i).unwrap();
         }
 
-        assert_eq!(map.size(), 100);
+        assert_eq!(map.count(), 100);
         assert_eq!(map.capacity(), 128);
 
         for i in 0..100 {
             map.remove(&i).unwrap();
         }
 
-        assert_eq!(map.size(), 0);
+        assert_eq!(map.count(), 0);
         assert_eq!(map.capacity(), 64);
     }
 
@@ -498,12 +294,12 @@ mod tests {
         map.insert(1, 1).unwrap();
 
         let capacity = map.capacity() + 10;
-        let size = map.size();
+        let size = map.count();
 
         map.reserve(capacity).unwrap();
 
         assert_eq!(map.capacity(), capacity);
-        assert_eq!(map.size(), size);
+        assert_eq!(map.count(), size);
         assert_eq!(map.value(&1), Ok(Some(1)));
     }
 
@@ -518,12 +314,12 @@ mod tests {
         map.insert(1, 1).unwrap();
 
         let capacity = map.capacity();
-        let size = map.size();
+        let size = map.count();
 
         map.reserve(capacity).unwrap();
 
         assert_eq!(map.capacity(), capacity);
-        assert_eq!(map.size(), size);
+        assert_eq!(map.count(), size);
     }
 
     #[test]
@@ -538,12 +334,12 @@ mod tests {
 
         let current_capacity = map.capacity();
         let capacity = current_capacity - 10;
-        let size = map.size();
+        let size = map.count();
 
         map.reserve(capacity).unwrap();
 
         assert_eq!(map.capacity(), current_capacity);
-        assert_eq!(map.size(), size);
+        assert_eq!(map.count(), size);
     }
 
     #[test]
@@ -566,7 +362,7 @@ mod tests {
 
         let map = StorageHashMap::<i64, i64>::try_from((storage, index)).unwrap();
 
-        let mut expected = HashMap::<i64, i64>::new();
+        let mut expected = std::collections::HashMap::<i64, i64>::new();
         expected.insert(1, 1);
         expected.insert(5, 3);
 

@@ -182,7 +182,7 @@ where
             storage_index: index,
             size: 0,
             capacity: 0,
-            phantom_data: std::marker::PhantomData::<T>,
+            phantom_data: std::marker::PhantomData,
         })
     }
 }
@@ -209,7 +209,7 @@ impl<T: Serialize, Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<St
             storage_index: storage_with_index.1,
             size,
             capacity: Self::capacity_from_bytes(byte_size),
-            phantom_data: std::marker::PhantomData::<T>,
+            phantom_data: std::marker::PhantomData,
         })
     }
 }

@@ -167,7 +167,7 @@ where
         record: HashMapKeyValue<K, T>,
     ) {
         let hash = record.key.stable_hash();
-        let mut pos = hash % self.data.capacity();
+        let mut pos = hash % new_data.len() as u64;
 
         while new_data[pos as usize].meta_value != HashMapMetaValue::Empty {
             pos = self.next_pos(pos);

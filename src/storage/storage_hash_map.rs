@@ -22,10 +22,6 @@ where
     pub(crate) fn storage_index(&self) -> i64 {
         self.data.storage_index
     }
-
-    fn capacity_from_bytes(len: u64) -> u64 {
-        (len - u64::serialized_size()) / T::serialized_size()
-    }
 }
 
 impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
@@ -44,7 +40,7 @@ where
         storage.borrow_mut().insert_at(
             storage_index,
             std::mem::size_of::<u64>() as u64,
-            &HashMapKeyValue::<K, T>::default(),
+            &vec![HashMapKeyValue::<K, T>::default()],
         )?;
 
         Ok(Self {
@@ -72,15 +68,14 @@ where
     fn try_from(
         storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
     ) -> Result<Self, Self::Error> {
-        let byte_size = storage_with_index
-            .0
-            .borrow_mut()
-            .value_size(storage_with_index.1)?;
         let count = storage_with_index
             .0
             .borrow_mut()
             .value_at::<u64>(storage_with_index.1, 0)?;
-        let capacity = Self::capacity_from_bytes(byte_size);
+        let capacity = storage_with_index
+            .0
+            .borrow_mut()
+            .value_at::<u64>(storage_with_index.1, std::mem::size_of::<u64>() as u64)?;
 
         Ok(Self {
             data: HashMapDataStorage::<K, T, Data> {

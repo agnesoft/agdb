@@ -26,7 +26,7 @@ where
     Data: StorageData,
 {
     fn record_offset(pos: u64) -> u64 {
-        u64::serialized_size() + HashMapKeyValue::<K, T>::serialized_size() * pos
+        u64::serialized_size() * 2 + HashMapKeyValue::<K, T>::serialized_size() * pos
     }
 }
 

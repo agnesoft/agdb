@@ -42,14 +42,14 @@ impl Serialize for u64 {
 impl<T: Serialize> Serialize for Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         const SIZE_OFFSET: usize = std::mem::size_of::<u64>();
-        let value_offset = std::mem::size_of::<T>();
+        let value_offset = T::serialized_size();
         let size = u64::deserialize(bytes)? as usize;
         let mut data: Self = vec![];
 
         data.reserve(size);
 
         for i in 0..size {
-            let offset = SIZE_OFFSET + value_offset * i;
+            let offset = SIZE_OFFSET + value_offset as usize * i;
             data.push(T::deserialize(&bytes[offset..])?);
         }
 

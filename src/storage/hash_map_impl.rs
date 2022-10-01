@@ -105,9 +105,7 @@ where
 
             match record.meta_value {
                 HashMapMetaValue::Empty => return Ok(None),
-                HashMapMetaValue::Valid if record.key == *key => {
-                    return Ok(Some(record.value.clone()))
-                }
+                HashMapMetaValue::Valid if record.key == *key => return Ok(Some(record.value)),
                 HashMapMetaValue::Valid | HashMapMetaValue::Deleted => {
                     pos = Self::next_pos(pos, self.capacity())
                 }
@@ -129,7 +127,7 @@ where
             match record.meta_value {
                 HashMapMetaValue::Empty | HashMapMetaValue::Deleted => return Ok((pos, None)),
                 HashMapMetaValue::Valid if record.key == *key => {
-                    return Ok((pos, Some(record.value.clone())))
+                    return Ok((pos, Some(record.value)))
                 }
                 HashMapMetaValue::Valid => pos = Self::next_pos(pos, self.capacity()),
             }

@@ -70,6 +70,6 @@ where
     fn transaction(&mut self) {}
 
     fn values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, crate::DbError> {
-        Ok(std::mem::replace(&mut self.data, vec![]))
+        Ok(std::mem::take(&mut self.data))
     }
 }

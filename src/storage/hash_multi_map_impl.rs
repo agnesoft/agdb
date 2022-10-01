@@ -39,8 +39,8 @@ where
         self.map.data.commit()
     }
 
-    pub(crate) fn iter(&self) -> HashMapIterator {
-        todo!()
+    pub(crate) fn iter(&self) -> HashMapIterator<K, T, Data> {
+        self.map.iter()
     }
 
     pub(crate) fn remove_key(&mut self, key: &K) -> Result<(), DbError> {

@@ -89,7 +89,7 @@ mod tests {
             HashMapKeyValue::<i64, i64>::deserialize(&bytes)
                 .unwrap_err()
                 .description,
-            "value out of bounds"
+            "i64 deserialization error: out of bounds"
         );
     }
 

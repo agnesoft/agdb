@@ -38,6 +38,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn bad_deserialization() {
+        assert_eq!(
+            HashMapMetaValue::deserialize(&vec![10_u8]),
+            Err(DbError::from("value out of bounds"))
+        );
+    }
+
+    #[test]
     fn derived_from_default() {
         assert_eq!(HashMapMetaValue::default(), HashMapMetaValue::Empty);
     }

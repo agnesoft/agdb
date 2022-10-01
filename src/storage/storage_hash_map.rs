@@ -49,9 +49,9 @@ where
                 storage_index,
                 count: 0,
                 capacity: 1,
-                phantom_data: std::marker::PhantomData::<(K, T)>,
+                phantom_data: std::marker::PhantomData,
             },
-            phantom_data: std::marker::PhantomData::<(K, T)>,
+            phantom_data: std::marker::PhantomData,
         })
     }
 }
@@ -83,9 +83,9 @@ where
                 storage_index: storage_with_index.1,
                 count,
                 capacity,
-                phantom_data: std::marker::PhantomData::<(K, T)>,
+                phantom_data: std::marker::PhantomData,
             },
-            phantom_data: std::marker::PhantomData::<(K, T)>,
+            phantom_data: std::marker::PhantomData,
         })
     }
 }
@@ -173,6 +173,29 @@ mod tests {
 
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(Some(20)));
+    }
+
+    #[test]
+    fn iter() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(7, 20).unwrap();
+        map.insert(2, 30).unwrap();
+        map.insert(4, 13).unwrap();
+        map.remove(&7).unwrap();
+
+        let mut actual = map.iter().collect::<Vec<(i64, i64)>>();
+        actual.sort();
+        let expected: Vec<(i64, i64)> = vec![(1, 10), (2, 30), (4, 13), (5, 15)];
+
+        assert_eq!(actual, expected);
     }
 
     #[test]

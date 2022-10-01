@@ -46,8 +46,12 @@ where
         Ok(free.1)
     }
 
-    pub(crate) fn iter(&self) -> HashMapIterator {
-        todo!()
+    pub(crate) fn iter(&self) -> HashMapIterator<K, T, Data> {
+        HashMapIterator::<K, T, Data> {
+            pos: 0,
+            data: &self.data,
+            phantom_data: std::marker::PhantomData,
+        }
     }
 
     pub(crate) fn remove(&mut self, key: &K) -> Result<(), DbError> {

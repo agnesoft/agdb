@@ -1,4 +1,5 @@
 use super::hash_map_data::HashMapData;
+use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_map_meta_value::HashMapMetaValue;
 use super::Serialize;
 use super::StableHash;
@@ -33,14 +34,15 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         while self.pos < self.data.capacity() {
-            if let Ok(value) = self.data.record(self.pos) {
-                self.pos += 1;
+            let value = self
+                .data
+                .record(self.pos)
+                .unwrap_or(HashMapKeyValue::<K, T>::default());
 
-                if value.meta_value == HashMapMetaValue::Valid {
-                    return Some((value.key, value.value));
-                }
-            } else {
-                return None;
+            self.pos += 1;
+
+            if value.meta_value == HashMapMetaValue::Valid {
+                return Some((value.key, value.value));
             }
         }
 

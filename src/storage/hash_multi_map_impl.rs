@@ -13,7 +13,7 @@ where
     T: Clone + Default + Eq + PartialEq + Serialize,
     Data: HashMapData<K, T>,
 {
-    multi_map: HashMapImpl<K, T, Data>,
+    pub(super) map: HashMapImpl<K, T, Data>,
 }
 
 #[allow(dead_code)]
@@ -24,19 +24,19 @@ where
     Data: HashMapData<K, T>,
 {
     pub(crate) fn capacity(&self) -> u64 {
-        self.multi_map.capacity()
+        self.map.capacity()
     }
 
     pub(crate) fn count(&self) -> u64 {
-        self.multi_map.count()
+        self.map.count()
     }
 
     pub(crate) fn insert(&mut self, key: K, value: T) -> Result<(), DbError> {
-        self.multi_map.data.transaction();
+        self.map.data.transaction();
         let free = self.find_free(&key)?;
-        self.multi_map.insert_value(free, key, value)?;
-        self.multi_map.data.set_count(self.count() + 1)?;
-        self.multi_map.data.commit()
+        self.map.insert_value(free, key, value)?;
+        self.map.data.set_count(self.count() + 1)?;
+        self.map.data.commit()
     }
 
     pub(crate) fn iter(&self) -> HashMapIterator {
@@ -45,25 +45,27 @@ where
 
     pub(crate) fn remove_key(&mut self, key: &K) -> Result<(), DbError> {
         let hash = key.stable_hash();
-        let mut pos = hash % self.multi_map.data.capacity();
+        let mut pos = hash % self.map.data.capacity();
 
-        self.multi_map.data.transaction();
+        self.map.data.transaction();
 
         loop {
-            let record = self.multi_map.data.record(pos)?;
+            let record = self.map.data.record(pos)?;
 
             match record.meta_value {
                 HashMapMetaValue::Empty => break,
                 HashMapMetaValue::Valid if record.key == *key => {
-                    self.multi_map.remove_record(pos)?;
+                    self.map.remove_record(pos)?;
                 }
                 HashMapMetaValue::Valid | HashMapMetaValue::Deleted => {
-                    pos = self.multi_map.next_pos(pos);
+                    pos = HashMapImpl::<K, T, Data>::next_pos(pos, self.capacity());
                 }
             }
+
+            pos = HashMapImpl::<K, T, Data>::next_pos(pos, self.capacity());
         }
 
-        self.multi_map.data.commit()
+        self.map.data.commit()
     }
 
     pub(crate) fn remove_value(&mut self, key: &K, value: &T) -> Result<(), DbError> {
@@ -71,17 +73,18 @@ where
         let mut pos = hash % self.capacity();
 
         loop {
-            let record = self.multi_map.data.record(pos)?;
+            let record = self.map.data.record(pos)?;
 
             match record.meta_value {
                 HashMapMetaValue::Empty => break,
                 HashMapMetaValue::Valid if record.key == *key && record.value == *value => {
-                    self.multi_map.data.transaction();
-                    self.multi_map.remove_record(pos)?;
-                    self.multi_map.data.commit()?;
+                    self.map.data.transaction();
+                    self.map.remove_record(pos)?;
+                    self.map.data.commit()?;
+                    break;
                 }
                 HashMapMetaValue::Valid | HashMapMetaValue::Deleted => {
-                    pos = self.multi_map.next_pos(pos);
+                    pos = HashMapImpl::<K, T, Data>::next_pos(pos, self.capacity());
                 }
             }
         }
@@ -90,47 +93,49 @@ where
     }
 
     pub(crate) fn reserve(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        self.multi_map.reserve(new_capacity)
+        self.map.reserve(new_capacity)
     }
 
     pub(crate) fn value(&self, key: &K) -> Result<Option<T>, DbError> {
-        self.multi_map.value(key)
+        self.map.value(key)
     }
 
-    pub(crate) fn values(&self, key: &K) -> Result<Option<Vec<T>>, DbError> {
+    pub(crate) fn values(&self, key: &K) -> Result<Vec<T>, DbError> {
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
         let mut values: Vec<T> = vec![];
 
         loop {
-            let record = self.multi_map.data.record(pos)?;
+            let record = self.map.data.record(pos)?;
 
             match record.meta_value {
                 HashMapMetaValue::Empty => break,
                 HashMapMetaValue::Valid if record.key == *key => values.push(record.value.clone()),
-                HashMapMetaValue::Valid | HashMapMetaValue::Deleted => {
-                    pos = self.multi_map.next_pos(pos)
-                }
+                HashMapMetaValue::Valid | HashMapMetaValue::Deleted => {}
             }
+
+            pos = HashMapImpl::<K, T, Data>::next_pos(pos, self.capacity());
         }
 
-        Ok(Some(values))
+        Ok(values)
     }
 
     fn find_free(&mut self, key: &K) -> Result<u64, DbError> {
-        if self.multi_map.max_size() < (self.count() + 1) {
-            self.multi_map.rehash(self.capacity() * 2)?;
+        if self.map.max_size() < (self.count() + 1) {
+            self.map.rehash(self.capacity() * 2)?;
         }
 
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
 
         loop {
-            let meta_value = self.multi_map.data.meta_value(pos)?;
+            let meta_value = self.map.data.meta_value(pos)?;
 
             match meta_value {
                 HashMapMetaValue::Empty | HashMapMetaValue::Deleted => return Ok(pos),
-                HashMapMetaValue::Valid => pos = self.multi_map.next_pos(pos),
+                HashMapMetaValue::Valid => {
+                    pos = HashMapImpl::<K, T, Data>::next_pos(pos, self.capacity());
+                }
             }
         }
     }

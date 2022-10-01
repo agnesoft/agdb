@@ -149,6 +149,15 @@ mod tests {
     }
 
     #[test]
+    fn remove_missing_key() {
+        let mut map = HashMultiMap::<i64, i64>::new();
+
+        map.remove_key(&5).unwrap();
+
+        assert_eq!(map.count(), 0);
+    }
+
+    #[test]
     fn remove_value() {
         let mut map = HashMultiMap::<i64, i64>::new();
 
@@ -163,6 +172,15 @@ mod tests {
         assert_eq!(map.count(), 3);
         assert_eq!(map.value(&1), Ok(Some(7)));
         assert_eq!(map.values(&5), Ok(vec![10_i64, 20_i64]));
+    }
+
+    #[test]
+    fn remove_missing_value() {
+        let mut map = HashMultiMap::<i64, i64>::new();
+
+        map.remove_value(&5, &10).unwrap();
+
+        assert_eq!(map.count(), 0);
     }
 
     #[test]

@@ -10,8 +10,8 @@ where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Eq + PartialEq + Serialize,
 {
-    data: Vec<HashMapKeyValue<K, T>>,
-    count: u64,
+    pub(super) data: Vec<HashMapKeyValue<K, T>>,
+    pub(super) count: u64,
 }
 
 impl<K, T> HashMapData<K, T> for HashMapDataMemory<K, T>

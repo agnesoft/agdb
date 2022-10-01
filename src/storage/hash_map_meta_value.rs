@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn bad_deserialization() {
         assert_eq!(
-            HashMapMetaValue::deserialize(&vec![10_u8]),
+            HashMapMetaValue::deserialize(&[10_u8]),
             Err(DbError::from("value out of bounds"))
         );
     }

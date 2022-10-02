@@ -3,6 +3,7 @@ use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_map_meta_value::HashMapMetaValue;
 use super::Serialize;
 use super::StableHash;
+use crate::DbError;
 use std::hash::Hash;
 
 pub(crate) struct HashMapDataMemory<K, T>
@@ -23,7 +24,7 @@ where
         self.data.len() as u64
     }
 
-    fn commit(&mut self) -> Result<(), crate::DbError> {
+    fn commit(&mut self) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -31,15 +32,15 @@ where
         self.count
     }
 
-    fn meta_value(&self, pos: u64) -> Result<HashMapMetaValue, crate::DbError> {
+    fn meta_value(&self, pos: u64) -> Result<HashMapMetaValue, DbError> {
         Ok(self.data[pos as usize].meta_value.clone())
     }
 
-    fn record(&self, pos: u64) -> Result<HashMapKeyValue<K, T>, crate::DbError> {
+    fn record(&self, pos: u64) -> Result<HashMapKeyValue<K, T>, DbError> {
         Ok(self.data[pos as usize].clone())
     }
 
-    fn set_count(&mut self, new_count: u64) -> Result<(), crate::DbError> {
+    fn set_count(&mut self, new_count: u64) -> Result<(), DbError> {
         self.count = new_count;
 
         Ok(())
@@ -55,21 +56,21 @@ where
         Ok(())
     }
 
-    fn set_value(&mut self, pos: u64, value: HashMapKeyValue<K, T>) -> Result<(), crate::DbError> {
+    fn set_value(&mut self, pos: u64, value: HashMapKeyValue<K, T>) -> Result<(), DbError> {
         self.data[pos as usize] = value;
 
         Ok(())
     }
 
-    fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), crate::DbError> {
+    fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), DbError> {
         self.data = values;
 
         Ok(())
     }
 
-    fn transaction(&mut self) {}
-
-    fn values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, crate::DbError> {
+    fn take_values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {
         Ok(std::mem::take(&mut self.data))
     }
+
+    fn transaction(&mut self) {}
 }

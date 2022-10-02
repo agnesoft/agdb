@@ -184,7 +184,7 @@ where
         new_capacity = std::cmp::max(new_capacity, 64);
 
         if new_capacity != self.capacity() {
-            let old_data = self.data.values()?;
+            let old_data = self.data.take_values()?;
             self.data.transaction();
             self.data
                 .set_values(self.rehash_old_data(old_data, new_capacity))?;

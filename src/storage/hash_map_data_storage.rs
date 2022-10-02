@@ -5,6 +5,7 @@ use super::Serialize;
 use super::StableHash;
 use super::Storage;
 use super::StorageData;
+use crate::DbError;
 use std::hash::Hash;
 
 pub(crate) struct HashMapDataStorage<K, T, Data: StorageData>
@@ -28,6 +29,15 @@ where
     fn record_offset(pos: u64) -> u64 {
         u64::serialized_size() * 2 + HashMapKeyValue::<K, T>::serialized_size() * pos
     }
+
+    pub(super) fn values(&self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {
+        self.storage
+            .borrow_mut()
+            .value_at::<Vec<HashMapKeyValue<K, T>>>(
+                self.storage_index,
+                std::mem::size_of::<u64>() as u64,
+            )
+    }
 }
 
 impl<K, T, Data> HashMapData<K, T> for HashMapDataStorage<K, T, Data>
@@ -40,7 +50,7 @@ where
         self.capacity
     }
 
-    fn commit(&mut self) -> Result<(), crate::DbError> {
+    fn commit(&mut self) -> Result<(), DbError> {
         self.storage.borrow_mut().commit()
     }
 
@@ -48,19 +58,19 @@ where
         self.count
     }
 
-    fn meta_value(&self, pos: u64) -> Result<HashMapMetaValue, crate::DbError> {
+    fn meta_value(&self, pos: u64) -> Result<HashMapMetaValue, DbError> {
         self.storage
             .borrow_mut()
             .value_at::<HashMapMetaValue>(self.storage_index, Self::record_offset(pos))
     }
 
-    fn record(&self, pos: u64) -> Result<HashMapKeyValue<K, T>, crate::DbError> {
+    fn record(&self, pos: u64) -> Result<HashMapKeyValue<K, T>, DbError> {
         self.storage
             .borrow_mut()
             .value_at::<HashMapKeyValue<K, T>>(self.storage_index, Self::record_offset(pos))
     }
 
-    fn set_count(&mut self, new_count: u64) -> Result<(), crate::DbError> {
+    fn set_count(&mut self, new_count: u64) -> Result<(), DbError> {
         self.count = new_count;
         self.storage
             .borrow_mut()
@@ -79,13 +89,13 @@ where
         )
     }
 
-    fn set_value(&mut self, pos: u64, value: HashMapKeyValue<K, T>) -> Result<(), crate::DbError> {
+    fn set_value(&mut self, pos: u64, value: HashMapKeyValue<K, T>) -> Result<(), DbError> {
         self.storage
             .borrow_mut()
             .insert_at(self.storage_index, Self::record_offset(pos), &value)
     }
 
-    fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), crate::DbError> {
+    fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), DbError> {
         self.capacity = values.len() as u64;
         self.storage.borrow_mut().insert_at(
             self.storage_index,
@@ -94,16 +104,11 @@ where
         )
     }
 
-    fn transaction(&mut self) {
-        self.storage.borrow_mut().transaction()
+    fn take_values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {
+        self.values()
     }
 
-    fn values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, crate::DbError> {
-        self.storage
-            .borrow_mut()
-            .value_at::<Vec<HashMapKeyValue<K, T>>>(
-                self.storage_index,
-                std::mem::size_of::<u64>() as u64,
-            )
+    fn transaction(&mut self) {
+        self.storage.borrow_mut().transaction()
     }
 }

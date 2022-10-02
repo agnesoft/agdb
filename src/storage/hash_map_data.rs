@@ -20,6 +20,6 @@ where
     fn set_meta_value(&mut self, pos: u64, meta_value: HashMapMetaValue) -> Result<(), DbError>;
     fn set_value(&mut self, pos: u64, value: HashMapKeyValue<K, T>) -> Result<(), DbError>;
     fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), DbError>;
+    fn take_values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError>;
     fn transaction(&mut self);
-    fn values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError>;
 }

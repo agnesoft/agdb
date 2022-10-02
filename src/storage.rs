@@ -13,6 +13,7 @@ mod serialize;
 mod stable_hash;
 mod storage_data;
 mod storage_hash_map;
+mod storage_hash_multi_map;
 mod storage_record;
 mod storage_record_with_index;
 mod storage_records;

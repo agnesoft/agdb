@@ -343,6 +343,40 @@ mod tests {
     }
 
     #[test]
+    fn to_hash_map() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(7, 20).unwrap();
+        map.remove(&5).unwrap();
+
+        let other = map.to_hash_map().unwrap();
+
+        assert_eq!(other.len(), 2);
+        assert_eq!(other.get(&1), Some(&10));
+        assert_eq!(other.get(&5), None);
+        assert_eq!(other.get(&7), Some(&20));
+    }
+
+    #[test]
+    fn to_hash_map_empty() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let other = map.to_hash_map().unwrap();
+
+        assert_eq!(other.len(), 0);
+    }
+
+    #[test]
     fn try_from_storage_index() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
@@ -382,40 +416,6 @@ mod tests {
                 .unwrap(),
             DbError::from("index '1' not found")
         );
-    }
-
-    #[test]
-    fn to_hash_map() {
-        let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
-        ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
-        map.insert(1, 10).unwrap();
-        map.insert(5, 15).unwrap();
-        map.insert(7, 20).unwrap();
-        map.remove(&5).unwrap();
-
-        let other = map.to_hash_map().unwrap();
-
-        assert_eq!(other.len(), 2);
-        assert_eq!(other.get(&1), Some(&10));
-        assert_eq!(other.get(&5), None);
-        assert_eq!(other.get(&7), Some(&20));
-    }
-
-    #[test]
-    fn to_hash_map_empty() {
-        let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
-        ));
-
-        let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
-        let other = map.to_hash_map().unwrap();
-
-        assert_eq!(other.len(), 0);
     }
 
     #[test]

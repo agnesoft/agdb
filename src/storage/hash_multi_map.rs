@@ -6,7 +6,7 @@ use super::Serialize;
 use super::StableHash;
 use std::hash::Hash;
 
-type HashMultiMap<K, T> = HashMultiMapImpl<K, T, HashMapDataMemory<K, T>>;
+pub(crate) type HashMultiMap<K, T> = HashMultiMapImpl<K, T, HashMapDataMemory<K, T>>;
 
 #[allow(dead_code)]
 impl<K, T> HashMultiMap<K, T>

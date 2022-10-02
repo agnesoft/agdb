@@ -1,6 +1,7 @@
 use super::file_storage_data::FileStorageData;
 use super::serialize::Serialize;
 use super::storage_data::StorageData;
+use super::vec_iterator::VecIterator;
 use super::Storage;
 use crate::db_error::DbError;
 
@@ -28,6 +29,14 @@ where
 
     pub(crate) fn len(&self) -> u64 {
         self.size
+    }
+
+    pub(crate) fn iter(&self) -> VecIterator<T, Data> {
+        VecIterator::<T, Data> {
+            index: 0,
+            vec: self,
+            phantom_data: std::marker::PhantomData,
+        }
     }
 
     pub(crate) fn push(&mut self, value: &T) -> Result<(), DbError> {
@@ -254,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn iteration() {
+    fn iter() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
@@ -265,13 +274,7 @@ mod tests {
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
 
-        let mut values: Vec<i64> = vec![];
-
-        for value in vec.to_vec().unwrap() {
-            values.push(value);
-        }
-
-        assert_eq!(values, vec![1, 3, 5]);
+        assert_eq!(vec.iter().collect::<Vec<i64>>(), vec![1_i64, 3_i64, 5_i64]);
     }
 
     #[test]

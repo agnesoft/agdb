@@ -1,34 +1,49 @@
 use super::file_storage_data::FileStorageData;
+use super::hash_map_data_memory::HashMapDataMemory;
 use super::hash_map_data_storage::HashMapDataStorage;
 use super::hash_map_impl::HashMapImpl;
-use super::hash_map_key_value::HashMapKeyValue;
+use super::hash_multi_map::HashMultiMap;
+use super::hash_multi_map_impl::HashMultiMapImpl;
 use super::serialize::Serialize;
 use super::stable_hash::StableHash;
 use super::storage_data::StorageData;
 use super::Storage;
+use super::StorageHashMap;
 use crate::DbError;
 use std::hash::Hash;
 
-pub(crate) type StorageHashMap<K, T, Data = FileStorageData> =
-    HashMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
+pub(crate) type StorageHashMultiMap<K, T, Data = FileStorageData> =
+    HashMultiMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
-impl<K, T, Data> StorageHashMap<K, T, Data>
+impl<K, T, Data> StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    T: Clone + Default + Eq + PartialEq + Serialize,
     Data: StorageData,
 {
     pub(crate) fn storage_index(&self) -> i64 {
-        self.data.storage_index
+        self.map.data.storage_index
+    }
+
+    pub(crate) fn to_hash_multi_map(&self) -> Result<HashMultiMap<K, T>, DbError> {
+        Ok(HashMultiMap::<K, T> {
+            map: HashMapImpl::<K, T, HashMapDataMemory<K, T>> {
+                data: HashMapDataMemory::<K, T> {
+                    data: self.map.data.values()?,
+                    count: self.map.data.count,
+                },
+                phantom_data: std::marker::PhantomData,
+            },
+        })
     }
 }
 
 impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
-    for StorageHashMap<K, T, Data>
+    for StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    T: Clone + Default + Eq + PartialEq + Serialize,
     Data: StorageData,
 {
     type Error = DbError;
@@ -36,31 +51,17 @@ where
     fn try_from(
         storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
     ) -> Result<Self, Self::Error> {
-        let storage_index = storage.borrow_mut().insert(&0_u64)?;
-        storage.borrow_mut().insert_at(
-            storage_index,
-            std::mem::size_of::<u64>() as u64,
-            &vec![HashMapKeyValue::<K, T>::default()],
-        )?;
-
         Ok(Self {
-            data: HashMapDataStorage::<K, T, Data> {
-                storage,
-                storage_index,
-                count: 0,
-                capacity: 1,
-                phantom_data: std::marker::PhantomData,
-            },
-            phantom_data: std::marker::PhantomData,
+            map: StorageHashMap::<K, T, Data>::try_from(storage)?,
         })
     }
 }
 
 impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
-    for StorageHashMap<K, T, Data>
+    for StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    T: Clone + Default + Eq + PartialEq + Serialize,
     Data: StorageData,
 {
     type Error = DbError;
@@ -68,24 +69,8 @@ where
     fn try_from(
         storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
     ) -> Result<Self, Self::Error> {
-        let count = storage_with_index
-            .0
-            .borrow_mut()
-            .value_at::<u64>(storage_with_index.1, 0)?;
-        let capacity = storage_with_index
-            .0
-            .borrow_mut()
-            .value_at::<u64>(storage_with_index.1, std::mem::size_of::<u64>() as u64)?;
-
         Ok(Self {
-            data: HashMapDataStorage::<K, T, Data> {
-                storage: storage_with_index.0,
-                storage_index: storage_with_index.1,
-                count,
-                capacity,
-                phantom_data: std::marker::PhantomData,
-            },
-            phantom_data: std::marker::PhantomData,
+            map: StorageHashMap::<K, T, Data>::try_from(storage_with_index)?,
         })
     }
 }
@@ -102,8 +87,7 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         map.insert(1, 10).unwrap();
         map.insert(5, 15).unwrap();
@@ -121,8 +105,7 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         assert_eq!(map.capacity(), 1);
 
@@ -144,14 +127,14 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
-
-        for i in 0..100 {
+        for i in 0..50 {
             map.insert(i * 64, i).unwrap();
+            map.insert(i * 64, i + 1).unwrap();
         }
 
-        for i in 0..100 {
+        for i in 0..50 {
             assert_eq!(map.value(&(i * 64)), Ok(Some(i)));
         }
     }
@@ -162,17 +145,16 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
-
-        assert_eq!(map.insert(1, 10), Ok(None));
-        assert_eq!(map.insert(5, 15), Ok(None));
+        map.insert(1, 10).unwrap();
+        map.insert(5, 15).unwrap();
         assert_eq!(map.count(), 2);
-        assert_eq!(map.insert(5, 20), Ok(Some(15)));
-        assert_eq!(map.count(), 2);
+        map.insert(5, 20).unwrap();
+        assert_eq!(map.count(), 3);
 
         assert_eq!(map.value(&1), Ok(Some(10)));
-        assert_eq!(map.value(&5), Ok(Some(20)));
+        assert_eq!(map.value(&5), Ok(Some(15)));
     }
 
     #[test]
@@ -181,68 +163,114 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         map.insert(1, 10).unwrap();
         map.insert(5, 15).unwrap();
+        map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
         map.insert(2, 30).unwrap();
+        map.insert(2, 50).unwrap();
         map.insert(4, 13).unwrap();
-        map.remove(&7).unwrap();
+        map.remove_key(&7).unwrap();
 
         let mut actual = map.iter().collect::<Vec<(i64, i64)>>();
         actual.sort();
-        let expected: Vec<(i64, i64)> = vec![(1, 10), (2, 30), (4, 13), (5, 15)];
+        let expected: Vec<(i64, i64)> = vec![(1, 10), (2, 30), (2, 50), (4, 13), (5, 15), (5, 15)];
 
         assert_eq!(actual, expected);
     }
 
     #[test]
-    fn remove() {
+    fn remove_deleted_key() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         map.insert(1, 10).unwrap();
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
 
         assert_eq!(map.count(), 3);
-        map.remove(&5).unwrap();
+
+        map.remove_key(&5).unwrap();
 
         assert_eq!(map.count(), 2);
-        assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(None));
-        assert_eq!(map.value(&7), Ok(Some(20)));
+
+        map.remove_key(&5).unwrap();
+
+        assert_eq!(map.count(), 2);
     }
 
     #[test]
-    fn remove_deleted() {
+    fn remove_key() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
-
-        map.insert(1, 10).unwrap();
+        map.insert(1, 7).unwrap();
+        map.insert(5, 10).unwrap();
         map.insert(5, 15).unwrap();
-        map.insert(7, 20).unwrap();
+        map.insert(5, 20).unwrap();
+
+        assert_eq!(map.count(), 4);
+        map.remove_key(&5).unwrap();
+
+        assert_eq!(map.count(), 1);
+        assert_eq!(map.value(&1), Ok(Some(7)));
+        assert_eq!(map.values(&5), Ok(Vec::<i64>::new()));
+    }
+
+    #[test]
+    fn remove_missing_key() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.remove_key(&5).unwrap();
+
+        assert_eq!(map.count(), 0);
+    }
+
+    #[test]
+    fn remove_value() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
+
+        map.insert(1, 7).unwrap();
+        map.insert(5, 10).unwrap();
+        map.insert(5, 15).unwrap();
+        map.insert(5, 20).unwrap();
+
+        assert_eq!(map.count(), 4);
+        map.remove_value(&5, &15).unwrap();
 
         assert_eq!(map.count(), 3);
+        assert_eq!(map.value(&1), Ok(Some(7)));
+        assert_eq!(map.values(&5), Ok(vec![10_i64, 20_i64]));
+    }
 
-        map.remove(&5).unwrap();
+    #[test]
+    fn remove_missing_value() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        assert_eq!(map.count(), 2);
-        assert_eq!(map.value(&5), Ok(None));
+        map.remove_value(&5, &10).unwrap();
 
-        map.remove(&5).unwrap();
-
-        assert_eq!(map.count(), 2);
+        assert_eq!(map.count(), 0);
     }
 
     #[test]
@@ -251,11 +279,10 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         assert_eq!(map.count(), 0);
-        assert_eq!(map.remove(&0), Ok(()));
+        assert_eq!(map.remove_key(&0), Ok(()));
         assert_eq!(map.count(), 0);
     }
 
@@ -265,8 +292,7 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         for i in 0..100 {
             map.insert(i, i).unwrap();
@@ -276,7 +302,7 @@ mod tests {
         assert_eq!(map.capacity(), 128);
 
         for i in 0..100 {
-            map.remove(&i).unwrap();
+            map.remove_key(&i).unwrap();
         }
 
         assert_eq!(map.count(), 0);
@@ -289,8 +315,8 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
         map.insert(1, 1).unwrap();
 
         let capacity = map.capacity() + 10;
@@ -309,8 +335,8 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
         map.insert(1, 1).unwrap();
 
         let capacity = map.capacity();
@@ -328,8 +354,8 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
         map.insert(1, 1).unwrap();
 
         let current_capacity = map.capacity();
@@ -343,37 +369,37 @@ mod tests {
     }
 
     #[test]
-    fn to_hash_map() {
+    fn to_hash_multi_map() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
         map.insert(1, 10).unwrap();
         map.insert(5, 15).unwrap();
         map.insert(7, 20).unwrap();
-        map.remove(&5).unwrap();
+        map.remove_key(&5).unwrap();
 
-        let other = map.to_hash_map().unwrap();
+        let other = map.to_hash_multi_map().unwrap();
 
-        assert_eq!(other.len(), 2);
-        assert_eq!(other.get(&1), Some(&10));
-        assert_eq!(other.get(&5), None);
-        assert_eq!(other.get(&7), Some(&20));
+        assert_eq!(other.count(), 2);
+        assert_eq!(other.value(&1).unwrap(), Some(10));
+        assert_eq!(other.value(&5).unwrap(), None);
+        assert_eq!(other.value(&7).unwrap(), Some(20));
     }
 
     #[test]
-    fn to_hash_map_empty() {
+    fn to_hash_multi_map_empty() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
-        let other = map.to_hash_map().unwrap();
+        let map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
+        let other = map.to_hash_multi_map().unwrap();
 
-        assert_eq!(other.len(), 0);
+        assert_eq!(other.count(), 0);
     }
 
     #[test]
@@ -386,21 +412,21 @@ mod tests {
         let index;
 
         {
-            let mut map = StorageHashMap::<i64, i64>::try_from(storage.clone()).unwrap();
+            let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage.clone()).unwrap();
             map.insert(1, 1).unwrap();
             map.insert(3, 2).unwrap();
+            map.insert(3, 3).unwrap();
             map.insert(5, 3).unwrap();
-            map.remove(&3).unwrap();
+            map.remove_key(&1).unwrap();
             index = map.storage_index();
         }
 
-        let map = StorageHashMap::<i64, i64>::try_from((storage, index)).unwrap();
+        let map = StorageHashMultiMap::<i64, i64>::try_from((storage, index)).unwrap();
 
-        let mut expected = std::collections::HashMap::<i64, i64>::new();
-        expected.insert(1, 1);
-        expected.insert(5, 3);
-
-        assert_eq!(map.to_hash_map(), Ok(expected));
+        assert_eq!(
+            map.iter().collect::<Vec<(i64, i64)>>(),
+            vec![(3_i64, 2_i64), (3_i64, 3_i64), (5_i64, 3_i64)]
+        );
     }
 
     #[test]
@@ -411,7 +437,7 @@ mod tests {
         ));
 
         assert_eq!(
-            StorageHashMap::<i64, i64>::try_from((storage, 1))
+            StorageHashMultiMap::<i64, i64>::try_from((storage, 1))
                 .err()
                 .unwrap(),
             DbError::from("index '1' not found")
@@ -424,8 +450,7 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         assert_eq!(map.value(&0), Ok(None));
     }
@@ -436,8 +461,7 @@ mod tests {
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
             FileStorage::try_from(test_file.file_name().clone()).unwrap(),
         ));
-
-        let mut map = StorageHashMap::<i64, i64>::try_from(storage).unwrap();
+        let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
         map.insert(127, 10).unwrap();
         map.insert(255, 11).unwrap();

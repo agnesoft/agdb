@@ -18,6 +18,7 @@ mod storage_record;
 mod storage_record_with_index;
 mod storage_records;
 mod storage_vec;
+mod vec_iterator;
 mod write_ahead_log;
 mod write_ahead_log_record;
 

@@ -230,21 +230,6 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn to_vec() {
-        let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
-        ));
-
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
-        vec.push(&1).unwrap();
-        vec.push(&3).unwrap();
-        vec.push(&5).unwrap();
-
-        assert_eq!(vec.to_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
-    }
-
-    #[test]
     fn capacity() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
@@ -579,6 +564,21 @@ mod tests {
         vec.shrink_to_fit().unwrap();
 
         assert_eq!(vec.capacity(), 0);
+    }
+
+    #[test]
+    fn to_vec() {
+        let test_file = TestFile::new();
+        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        vec.push(&1).unwrap();
+        vec.push(&3).unwrap();
+        vec.push(&5).unwrap();
+
+        assert_eq!(vec.to_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
     }
 
     #[test]

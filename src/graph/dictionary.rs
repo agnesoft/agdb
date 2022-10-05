@@ -60,7 +60,7 @@ mod tests {
         let bytes = value.serialize();
         let other = CollidedValue::deserialize(&bytes).unwrap();
 
-        assert_eq!((value == other), true);
+        assert!(value == other);
     }
 
     #[test]

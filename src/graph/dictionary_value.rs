@@ -34,3 +34,17 @@ where
         bytes
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialize() {
+        let value = DictionaryValue::<i64>::default();
+        let bytes = value.serialize();
+        let other = DictionaryValue::<i64>::deserialize(&bytes).unwrap();
+
+        assert_eq!((other == value), true);
+    }
+}

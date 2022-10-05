@@ -70,9 +70,9 @@ where
             self.data.transaction();
 
             if value == 1 {
-                self.remove_value(index)?;
-            } else if 1 < value {
-                self.data.set_meta(index, value - 1)?;
+                self.remove_value(index)?
+            } else {
+                self.data.set_meta(index, value - 1)?
             }
 
             self.data.commit()?;

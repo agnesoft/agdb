@@ -30,12 +30,15 @@ use write_ahead_log_record::WriteAheadLogRecord;
 #[allow(unused_imports)]
 pub(crate) use file_storage::FileStorage;
 pub(crate) use file_storage_data::FileStorageData;
+#[allow(unused_imports)]
+pub(crate) use hash_multi_map::HashMultiMap;
 pub(crate) use serialize::Serialize;
 #[allow(unused_imports)]
 pub(crate) use stable_hash::StableHash;
 pub(crate) use storage_data::StorageData;
-#[allow(unused_imports)]
 pub(crate) use storage_hash_map::StorageHashMap;
+#[allow(unused_imports)]
+pub(crate) use storage_hash_multi_map::StorageHashMultiMap;
 #[allow(unused_imports)]
 pub(crate) use storage_vec::StorageVec;
 

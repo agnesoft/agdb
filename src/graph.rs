@@ -5,6 +5,7 @@ mod dictionary;
 mod dictionary_data;
 mod dictionary_data_memory;
 mod dictionary_impl;
+mod dictionary_value;
 mod graph_data;
 mod graph_data_memory;
 mod graph_data_storage;

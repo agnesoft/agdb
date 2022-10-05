@@ -45,6 +45,6 @@ mod tests {
         let bytes = value.serialize();
         let other = DictionaryValue::<i64>::deserialize(&bytes).unwrap();
 
-        assert_eq!((other == value), true);
+        assert!(other == value);
     }
 }

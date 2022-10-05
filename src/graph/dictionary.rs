@@ -7,6 +7,7 @@ use crate::storage::StableHash;
 
 pub(crate) type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 
+#[allow(dead_code)]
 impl<T> Dictionary<T>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,

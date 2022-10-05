@@ -13,13 +13,14 @@ where
     pub(super) phantom_data: std::marker::PhantomData<T>,
 }
 
+#[allow(dead_code)]
 impl<T, Data> DictionaryImpl<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: DictionaryData<T>,
 {
     pub(crate) fn count(&self, index: i64) -> Result<Option<u64>, DbError> {
-        if 0 < index && index < self.data.capacity() as i64 {
+        if self.is_valid_index(index) {
             let value = self.data.meta(index)?;
 
             if 0 < value {
@@ -37,12 +38,8 @@ where
     pub(crate) fn index(&self, value: &T) -> Result<Option<i64>, DbError> {
         let hash = value.stable_hash();
 
-        for index in self.data.indexes(hash)? {
-            let dictionary_value = self.data.value(index)?;
-
-            if dictionary_value.value == *value {
-                return Ok(Some(index));
-            }
+        if let Some(value) = self.find_value(hash, value)? {
+            return Ok(Some(value.0));
         }
 
         Ok(None)
@@ -50,57 +47,30 @@ where
 
     pub(crate) fn insert(&mut self, value: &T) -> Result<i64, DbError> {
         let hash = value.stable_hash();
-
-        for index in self.data.indexes(hash)? {
-            let dictionary_value = self.data.value(index)?;
-
-            if dictionary_value.value == *value {
-                self.data.set_meta(index, dictionary_value.meta + 1)?;
-                return Ok(index);
-            }
-        }
-
-        let mut free_index = -self.data.meta(0)?;
+        let index;
 
         self.data.transaction();
 
-        if free_index == 0 {
-            free_index = self.data.capacity() as i64;
+        if let Some(value) = self.find_value(hash, value)? {
+            index = value.0;
+            self.data.set_meta(index, value.1 + 1)?;
         } else {
-            let next_free_index = self.data.meta(free_index)?;
-            self.data.set_meta(0, next_free_index)?;
+            index = self.insert_new(hash, value)?;
         }
 
-        self.data.set_value(
-            free_index,
-            DictionaryValue::<T> {
-                meta: 1,
-                hash,
-                value: value.clone(),
-            },
-        )?;
-        self.data.insert(hash, free_index)?;
-        let len = self.len()?;
-        self.data.set_hash(0, len + 1)?;
         self.data.commit()?;
 
-        Ok(free_index)
+        Ok(index)
     }
 
     pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
-        if 0 < index && index < self.data.capacity() as i64 {
+        if self.is_valid_index(index) {
             let value = self.data.meta(index)?;
 
             self.data.transaction();
 
             if value == 1 {
-                let len = self.len()?;
-                let hash = self.data.hash(index)?;
-                self.data.remove(hash, index)?;
-                let next_free_index = self.data.meta(0)?;
-                self.data.set_meta(index, next_free_index)?;
-                self.data.set_meta(0, -index)?;
-                self.data.set_hash(0, len - 1)?;
+                self.remove_value(index)?;
             } else if 1 < value {
                 self.data.set_meta(index, value - 1)?;
             }
@@ -112,7 +82,7 @@ where
     }
 
     pub(crate) fn value(&mut self, index: i64) -> Result<Option<T>, DbError> {
-        if 0 < index && index < self.data.capacity() as i64 {
+        if self.is_valid_index(index) {
             let value = self.data.value(index)?;
 
             if 0 < value.meta {
@@ -121,5 +91,71 @@ where
         }
 
         Ok(None)
+    }
+
+    fn find_value(&self, hash: u64, value: &T) -> Result<Option<(i64, i64)>, DbError> {
+        for index in self.data.indexes(hash)? {
+            let dictionary_value = self.data.value(index)?;
+
+            if dictionary_value.value == *value {
+                return Ok(Some((index, dictionary_value.meta)));
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn free_index(&mut self, index: i64) -> Result<(), DbError> {
+        let next_free_index = self.data.meta(0)?;
+        self.data.set_meta(index, next_free_index)?;
+        self.data.set_meta(0, -index)
+    }
+
+    fn get_free_index(&mut self) -> Result<i64, DbError> {
+        let mut free_index = -self.data.meta(0)?;
+
+        if free_index == 0 {
+            free_index = self.data.capacity() as i64;
+        } else {
+            let next_free_index = self.data.meta(free_index)?;
+            self.data.set_meta(0, next_free_index)?;
+        }
+
+        Ok(free_index)
+    }
+
+    fn insert_new(&mut self, hash: u64, value: &T) -> Result<i64, DbError> {
+        let index = self.get_free_index()?;
+
+        self.data.insert(hash, index)?;
+        self.data.set_value(
+            index,
+            DictionaryValue::<T> {
+                meta: 1,
+                hash,
+                value: value.clone(),
+            },
+        )?;
+
+        let len = self.len()?;
+        self.data.set_hash(0, len + 1)?;
+
+        Ok(index)
+    }
+
+    fn is_valid_index(&self, index: i64) -> bool {
+        0 < index && index < self.data.capacity() as i64
+    }
+
+    fn remove_value(&mut self, index: i64) -> Result<(), DbError> {
+        let hash = self.data.hash(index)?;
+        self.data.remove(hash, index)?;
+
+        self.free_index(index)?;
+
+        let len = self.len()?;
+        self.data.set_hash(0, len - 1)?;
+
+        Ok(())
     }
 }

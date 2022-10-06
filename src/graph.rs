@@ -4,6 +4,8 @@ use self::graph_impl::GraphImpl;
 mod dictionary;
 mod dictionary_data;
 mod dictionary_data_memory;
+mod dictionary_data_storage;
+mod dictionary_data_storage_indexes;
 mod dictionary_impl;
 mod dictionary_value;
 mod graph_data;
@@ -15,6 +17,7 @@ mod graph_edge_iterator;
 mod graph_impl;
 mod graph_node;
 mod graph_node_iterator;
+mod storage_dictionary;
 mod storage_graph;
 
 #[allow(dead_code)]

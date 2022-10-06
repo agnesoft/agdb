@@ -81,7 +81,7 @@ where
         Ok(())
     }
 
-    pub(crate) fn value(&mut self, index: i64) -> Result<Option<T>, DbError> {
+    pub(crate) fn value(&self, index: i64) -> Result<Option<T>, DbError> {
         if self.is_valid_index(index) {
             let value = self.data.value(index)?;
 

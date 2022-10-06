@@ -44,15 +44,15 @@ where
         self.from_meta.value(index as u64)
     }
 
-    fn node_count(&self) -> Result<u64, crate::DbError> {
-        Ok(self.to_meta.value(0)? as u64)
+    fn grow(&mut self) -> Result<(), crate::DbError> {
+        self.from.push(&0)?;
+        self.to.push(&0)?;
+        self.from_meta.push(&0)?;
+        self.to_meta.push(&0)
     }
 
-    fn resize(&mut self, capacity: u64) -> Result<(), crate::DbError> {
-        self.from.resize(capacity)?;
-        self.to.resize(capacity)?;
-        self.from_meta.resize(capacity)?;
-        self.to_meta.resize(capacity)
+    fn node_count(&self) -> Result<u64, crate::DbError> {
+        Ok(self.to_meta.value(0)? as u64)
     }
 
     fn set_from(&mut self, index: i64, value: i64) -> Result<(), crate::DbError> {

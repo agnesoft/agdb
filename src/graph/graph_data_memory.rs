@@ -29,17 +29,17 @@ impl GraphData for GraphDataMemory {
         Ok(self.from_meta[index as usize])
     }
 
-    fn node_count(&self) -> Result<u64, DbError> {
-        Ok(self.to_meta[0] as u64)
-    }
-
-    fn resize(&mut self, capacity: u64) -> Result<(), DbError> {
-        self.from.resize(capacity as usize, 0);
-        self.to.resize(capacity as usize, 0);
-        self.from_meta.resize(capacity as usize, 0);
-        self.to_meta.resize(capacity as usize, 0);
+    fn grow(&mut self) -> Result<(), DbError> {
+        self.from.push(0);
+        self.to.push(0);
+        self.from_meta.push(0);
+        self.to_meta.push(0);
 
         Ok(())
+    }
+
+    fn node_count(&self) -> Result<u64, DbError> {
+        Ok(self.to_meta[0] as u64)
     }
 
     fn set_from(&mut self, index: i64, value: i64) -> Result<(), DbError> {

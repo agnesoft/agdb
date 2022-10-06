@@ -103,7 +103,7 @@ impl<Data: GraphData> GraphImpl<Data> {
 
         if index == i64::MIN {
             index = self.data.capacity()? as i64;
-            self.data.resize((index + 1) as u64)?;
+            self.data.grow()?;
 
             Ok(index)
         } else {

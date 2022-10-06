@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn value_missing_index() {
-        let mut dictionary = Dictionary::<i64>::new();
+        let dictionary = Dictionary::<i64>::new();
 
         assert_eq!(dictionary.value(1), Ok(None));
     }

@@ -155,6 +155,10 @@ where
             .value_at::<T>(self.storage_index, Self::value_offset(index))
     }
 
+    pub(crate) fn value_offset(index: u64) -> u64 {
+        u64::serialized_size() + index * T::serialized_size()
+    }
+
     fn reallocate(
         capacity: &mut u64,
         new_capacity: u64,
@@ -163,10 +167,6 @@ where
     ) -> Result<(), DbError> {
         *capacity = new_capacity;
         storage.resize_value(index, Self::value_offset(new_capacity))
-    }
-
-    fn value_offset(index: u64) -> u64 {
-        u64::serialized_size() + index * T::serialized_size()
     }
 
     fn capacity_from_bytes(len: u64) -> u64 {

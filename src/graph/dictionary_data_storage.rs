@@ -16,8 +16,8 @@ where
 {
     pub(super) storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
     pub(super) storage_index: i64,
-    pub(super) index: StorageHashMultiMap<u64, i64>,
-    pub(super) values: StorageVec<DictionaryValue<T>>,
+    pub(super) index: StorageHashMultiMap<u64, i64, Data>,
+    pub(super) values: StorageVec<DictionaryValue<T>, Data>,
 }
 
 impl<T, Data> DictionaryData<T> for DictionaryDataStorage<T, Data>
@@ -42,11 +42,19 @@ where
     }
 
     fn hash(&self, index: i64) -> Result<u64, DbError> {
-        Ok(self.values[index as usize].hash)
+        let values_index = self.values.storage_index();
+        self.storage.borrow_mut().value_at::<u64>(
+            values_index,
+            StorageVec::<DictionaryValue<T>>::value_offset(index as u64) + i64::serialized_size(),
+        )
     }
 
     fn meta(&self, index: i64) -> Result<i64, DbError> {
-        Ok(self.values[index as usize].meta)
+        let values_index = self.values.storage_index();
+        self.storage.borrow_mut().value_at::<i64>(
+            values_index,
+            StorageVec::<DictionaryValue<T>>::value_offset(index as u64),
+        )
     }
 
     fn remove(&mut self, hash: u64, index: i64) -> Result<(), DbError> {
@@ -54,15 +62,21 @@ where
     }
 
     fn set_hash(&mut self, index: i64, hash: u64) -> Result<(), DbError> {
-        self.values[index as usize].hash = hash;
-
-        Ok(())
+        let values_index = self.values.storage_index();
+        self.storage.borrow_mut().insert_at(
+            values_index,
+            StorageVec::<DictionaryValue<T>>::value_offset(index as u64) + u64::serialized_size(),
+            &hash,
+        )
     }
 
     fn set_meta(&mut self, index: i64, meta: i64) -> Result<(), DbError> {
-        self.values[index as usize].meta = meta;
-
-        Ok(())
+        let values_index = self.values.storage_index();
+        self.storage.borrow_mut().insert_at(
+            values_index,
+            StorageVec::<DictionaryValue<T>>::value_offset(index as u64),
+            &meta,
+        )
     }
 
     fn set_value(&mut self, index: i64, value: DictionaryValue<T>) -> Result<(), DbError> {

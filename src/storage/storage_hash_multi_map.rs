@@ -1,16 +1,16 @@
-use super::file_storage_data::FileStorageData;
 use super::hash_map_data_memory::HashMapDataMemory;
 use super::hash_map_data_storage::HashMapDataStorage;
 use super::hash_map_impl::HashMapImpl;
 use super::hash_multi_map::HashMultiMap;
 use super::hash_multi_map_impl::HashMultiMapImpl;
 use super::stable_hash::StableHash;
-use super::storage_data::StorageData;
-use super::Storage;
 use super::StorageHashMap;
 use crate::DbError;
 use serialize::Serialize;
 use std::hash::Hash;
+use storage::FileStorageData;
+use storage::Storage;
+use storage::StorageData;
 
 pub(crate) type StorageHashMultiMap<K, T, Data = FileStorageData> =
     HashMultiMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
@@ -78,7 +78,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::file_storage::FileStorage;
+    use storage::FileStorage;
     use test_file::TestFile;
 
     #[test]

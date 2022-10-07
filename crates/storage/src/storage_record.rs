@@ -1,11 +1,11 @@
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct StorageRecord {
-    pub(super) position: u64,
-    pub(super) size: u64,
+pub struct StorageRecord {
+    pub position: u64,
+    pub size: u64,
 }
 
 impl StorageRecord {
-    pub(super) fn serialized_size() -> u64 {
+    pub fn serialized_size() -> u64 {
         (std::mem::size_of::<u64>() + std::mem::size_of::<u64>()) as u64
     }
 }

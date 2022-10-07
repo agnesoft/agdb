@@ -1,10 +1,10 @@
 use super::graph_data::GraphData;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
-use crate::storage::FileStorageData;
-use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageVec;
 use crate::DbError;
+use storage::FileStorageData;
+use storage::Storage;
+use storage::StorageData;
 
 pub(crate) struct GraphDataStorage<Data = FileStorageData>
 where

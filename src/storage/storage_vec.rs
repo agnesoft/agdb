@@ -1,9 +1,9 @@
-use super::file_storage_data::FileStorageData;
-use super::storage_data::StorageData;
 use super::vec_iterator::VecIterator;
-use super::Storage;
 use crate::DbError;
 use serialize::Serialize;
+use storage::FileStorageData;
+use storage::Storage;
+use storage::StorageData;
 
 pub(crate) struct StorageVec<T, Data = FileStorageData>
 where
@@ -226,7 +226,7 @@ impl<T: Serialize, Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::file_storage::FileStorage;
+    use storage::FileStorage;
     use test_file::TestFile;
 
     #[test]

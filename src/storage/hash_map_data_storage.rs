@@ -2,11 +2,11 @@ use super::hash_map_data::HashMapData;
 use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_map_meta_value::HashMapMetaValue;
 use super::StableHash;
-use super::Storage;
-use super::StorageData;
 use crate::DbError;
 use serialize::Serialize;
 use std::hash::Hash;
+use storage::Storage;
+use storage::StorageData;
 
 pub(crate) struct HashMapDataStorage<K, T, Data: StorageData>
 where

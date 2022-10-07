@@ -1,9 +1,9 @@
-use super::storage_record::StorageRecord;
-use super::storage_record_with_index::StorageRecordWithIndex;
-use super::write_ahead_log_record::WriteAheadLogRecord;
-use crate::DbError;
+use crate::storage_record::StorageRecord;
+use crate::storage_record_with_index::StorageRecordWithIndex;
+use crate::write_ahead_log_record::WriteAheadLogRecord;
+use db_error::DbError;
 
-pub(crate) trait StorageData<T = Self> {
+pub trait StorageData<T = Self> {
     fn begin_transaction(&mut self);
     fn clear_wal(&mut self) -> Result<(), DbError>;
     fn create_index(&mut self, position: u64, size: u64) -> i64;

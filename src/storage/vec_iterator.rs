@@ -1,6 +1,6 @@
-use super::StorageData;
 use super::StorageVec;
 use serialize::Serialize;
+use storage::StorageData;
 
 pub(crate) struct VecIterator<'a, T, Data>
 where

@@ -1,8 +1,8 @@
 #[derive(Clone, Debug, Default, PartialEq)]
 #[allow(dead_code)]
-pub(crate) struct WriteAheadLogRecord {
-    pub(super) position: u64,
-    pub(super) bytes: Vec<u8>,
+pub struct WriteAheadLogRecord {
+    pub position: u64,
+    pub bytes: Vec<u8>,
 }
 
 #[cfg(test)]

@@ -1,8 +1,8 @@
-use super::file_storage_data::FileStorageData;
-use super::Storage;
-use crate::DbError;
+use crate::file_storage_data::FileStorageData;
+use crate::Storage;
+use db_error::DbError;
 
-pub(crate) type FileStorage = Storage<FileStorageData>;
+pub type FileStorage = Storage<FileStorageData>;
 
 impl TryFrom<String> for FileStorage {
     type Error = DbError;
@@ -47,8 +47,9 @@ fn wal_filename(filename: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::storage_record::StorageRecord;
+
     use super::*;
-    use crate::storage::storage_record::StorageRecord;
     use serialize::Serialize;
     use test_file::TestFile;
 

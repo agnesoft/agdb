@@ -1,11 +1,11 @@
 use super::graph_data_storage::GraphDataStorage;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_impl::GraphImpl;
-use crate::storage::FileStorageData;
-use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageVec;
 use crate::DbError;
+use storage::FileStorageData;
+use storage::Storage;
+use storage::StorageData;
 
 pub(crate) type StorageGraph<Data = FileStorageData> = GraphImpl<GraphDataStorage<Data>>;
 
@@ -93,7 +93,7 @@ impl<Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::FileStorage;
+    use storage::FileStorage;
     use test_file::TestFile;
 
     #[test]

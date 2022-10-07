@@ -1,13 +1,13 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_value::DictionaryValue;
-use crate::storage::FileStorageData;
 use crate::storage::StableHash;
-use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageHashMultiMap;
 use crate::storage::StorageVec;
 use crate::DbError;
 use serialize::Serialize;
+use storage::FileStorageData;
+use storage::Storage;
+use storage::StorageData;
 
 pub(crate) struct DictionaryDataStorage<T, Data = FileStorageData>
 where

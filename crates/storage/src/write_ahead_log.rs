@@ -1,5 +1,5 @@
-use super::write_ahead_log_record::WriteAheadLogRecord;
-use crate::DbError;
+use crate::write_ahead_log_record::WriteAheadLogRecord;
+use db_error::DbError;
 use serialize::Serialize;
 use std::io::Read;
 use std::io::Seek;

@@ -1,13 +1,13 @@
-use super::storage_data::StorageData;
-use super::storage_record::StorageRecord;
-use super::storage_record_with_index::StorageRecordWithIndex;
-use super::storage_records::StorageRecords;
-use super::write_ahead_log::WriteAheadLog;
-use super::write_ahead_log_record::WriteAheadLogRecord;
-use crate::DbError;
+use crate::storage_data::StorageData;
+use crate::storage_record::StorageRecord;
+use crate::storage_record_with_index::StorageRecordWithIndex;
+use crate::storage_records::StorageRecords;
+use crate::write_ahead_log::WriteAheadLog;
+use crate::write_ahead_log_record::WriteAheadLogRecord;
+use db_error::DbError;
 
 #[allow(dead_code)]
-pub(crate) struct FileStorageData {
+pub struct FileStorageData {
     file: std::fs::File,
     filename: String,
     records: StorageRecords,

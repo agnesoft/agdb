@@ -1,7 +1,7 @@
 use super::dictionary_value::DictionaryValue;
-use crate::storage::Serialize;
 use crate::storage::StableHash;
 use crate::DbError;
+use serialize::Serialize;
 
 pub(crate) trait DictionaryData<T>
 where

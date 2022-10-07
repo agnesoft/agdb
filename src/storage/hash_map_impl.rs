@@ -2,9 +2,9 @@ use super::hash_map_data::HashMapData;
 use super::hash_map_iterator::HashMapIterator;
 use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_map_meta_value::HashMapMetaValue;
-use super::Serialize;
 use super::StableHash;
 use crate::DbError;
+use serialize::Serialize;
 use std::hash::Hash;
 
 pub(crate) struct HashMapImpl<K, T, Data>

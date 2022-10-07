@@ -49,7 +49,7 @@ fn wal_filename(filename: &str) -> String {
 mod tests {
     use super::*;
     use crate::storage::storage_record::StorageRecord;
-    use crate::storage::Serialize;
+    use serialize::Serialize;
     use test_file::TestFile;
 
     #[test]

@@ -1,6 +1,6 @@
-use crate::storage::Serialize;
 use crate::storage::StableHash;
 use crate::DbError;
+use serialize::Serialize;
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub(crate) struct DictionaryValue<T>

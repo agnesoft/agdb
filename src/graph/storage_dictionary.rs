@@ -3,13 +3,13 @@ use super::dictionary_data_storage_indexes::DictionaryDataStorageIndexes;
 use super::dictionary_impl::DictionaryImpl;
 use super::dictionary_value::DictionaryValue;
 use crate::storage::FileStorageData;
-use crate::storage::Serialize;
 use crate::storage::StableHash;
 use crate::storage::Storage;
 use crate::storage::StorageData;
 use crate::storage::StorageHashMultiMap;
 use crate::storage::StorageVec;
 use crate::DbError;
+use serialize::Serialize;
 
 pub(crate) type StorageDictionary<T, Data = FileStorageData> =
     DictionaryImpl<T, DictionaryDataStorage<T, Data>>;

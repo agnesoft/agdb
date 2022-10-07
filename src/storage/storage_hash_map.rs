@@ -2,11 +2,11 @@ use super::file_storage_data::FileStorageData;
 use super::hash_map_data_storage::HashMapDataStorage;
 use super::hash_map_impl::HashMapImpl;
 use super::hash_map_key_value::HashMapKeyValue;
-use super::serialize::Serialize;
 use super::stable_hash::StableHash;
 use super::storage_data::StorageData;
 use super::Storage;
 use crate::DbError;
+use serialize::Serialize;
 use std::hash::Hash;
 
 pub(crate) type StorageHashMap<K, T, Data = FileStorageData> =

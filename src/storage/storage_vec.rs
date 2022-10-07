@@ -1,9 +1,9 @@
 use super::file_storage_data::FileStorageData;
-use super::serialize::Serialize;
 use super::storage_data::StorageData;
 use super::vec_iterator::VecIterator;
 use super::Storage;
 use crate::DbError;
+use serialize::Serialize;
 
 pub(crate) struct StorageVec<T, Data = FileStorageData>
 where

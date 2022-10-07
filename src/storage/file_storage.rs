@@ -1,6 +1,6 @@
 use super::file_storage_data::FileStorageData;
 use super::Storage;
-use crate::db_error::DbError;
+use crate::DbError;
 
 pub(crate) type FileStorage = Storage<FileStorageData>;
 
@@ -50,7 +50,7 @@ mod tests {
     use super::*;
     use crate::storage::storage_record::StorageRecord;
     use crate::storage::Serialize;
-    use crate::test_utilities::test_file::TestFile;
+    use test_file::TestFile;
 
     #[test]
     fn bad_file() {

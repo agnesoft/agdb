@@ -1,4 +1,4 @@
-use crate::db_error::DbError;
+use crate::DbError;
 
 pub(crate) trait Serialize: Sized {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;

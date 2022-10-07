@@ -1,5 +1,3 @@
-extern crate db_error;
-
 use db_error::DbError;
 use std::error::Error;
 

@@ -1,4 +1,4 @@
-use crate::storage::Serialize;
+use serialize::Serialize;
 
 pub(super) struct GraphDataStorageIndexes {
     pub(super) from: i64,

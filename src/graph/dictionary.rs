@@ -2,8 +2,8 @@ use super::dictionary_data_memory::DictionaryDataMemory;
 use super::dictionary_impl::DictionaryImpl;
 use super::dictionary_value::DictionaryValue;
 use crate::storage::HashMultiMap;
-use crate::storage::Serialize;
 use crate::storage::StableHash;
+use serialize::Serialize;
 
 pub(crate) type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 

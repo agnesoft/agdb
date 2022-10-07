@@ -1,8 +1,8 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_value::DictionaryValue;
-use crate::storage::Serialize;
 use crate::storage::StableHash;
 use crate::DbError;
+use serialize::Serialize;
 
 pub(crate) struct DictionaryImpl<T, Data>
 where

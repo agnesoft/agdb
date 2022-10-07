@@ -1,6 +1,6 @@
 use super::hash_map_meta_value::HashMapMetaValue;
-use super::serialize::Serialize;
 use crate::DbError;
+use serialize::Serialize;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct HashMapKeyValue<K, T>

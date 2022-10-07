@@ -9,7 +9,6 @@ mod hash_map_key_value;
 mod hash_map_meta_value;
 mod hash_multi_map;
 mod hash_multi_map_impl;
-mod serialize;
 mod stable_hash;
 mod storage_data;
 mod storage_hash_map;
@@ -23,6 +22,7 @@ mod write_ahead_log;
 mod write_ahead_log_record;
 
 use crate::DbError;
+use serialize::Serialize;
 use storage_record::StorageRecord;
 use storage_record_with_index::StorageRecordWithIndex;
 use write_ahead_log_record::WriteAheadLogRecord;
@@ -32,7 +32,6 @@ pub(crate) use file_storage::FileStorage;
 pub(crate) use file_storage_data::FileStorageData;
 #[allow(unused_imports)]
 pub(crate) use hash_multi_map::HashMultiMap;
-pub(crate) use serialize::Serialize;
 #[allow(unused_imports)]
 pub(crate) use stable_hash::StableHash;
 pub(crate) use storage_data::StorageData;

@@ -1,7 +1,7 @@
 use super::hash_map_data::HashMapData;
 use super::hash_map_meta_value::HashMapMetaValue;
-use super::Serialize;
 use super::StableHash;
+use serialize::Serialize;
 use std::hash::Hash;
 
 pub(crate) struct HashMapIterator<'a, K, T, Data>

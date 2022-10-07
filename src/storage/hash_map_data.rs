@@ -2,8 +2,8 @@ use crate::DbError;
 
 use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_map_meta_value::HashMapMetaValue;
-use super::Serialize;
 use super::StableHash;
+use serialize::Serialize;
 use std::hash::Hash;
 
 pub(crate) trait HashMapData<K, T>

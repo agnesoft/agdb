@@ -1,6 +1,6 @@
 use crate::DbError;
 
-use super::serialize::Serialize;
+use serialize::Serialize;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub(crate) enum HashMapMetaValue {

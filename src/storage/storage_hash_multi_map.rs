@@ -79,7 +79,7 @@ where
 mod tests {
     use super::*;
     use crate::storage::file_storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
+    use test_file::TestFile;
 
     #[test]
     fn insert() {

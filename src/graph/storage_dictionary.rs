@@ -96,7 +96,7 @@ where
 mod tests {
     use super::*;
     use crate::storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
+    use test_file::TestFile;
 
     #[derive(Clone, Default, Eq, PartialEq)]
     struct CollidedValue {

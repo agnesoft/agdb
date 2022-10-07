@@ -94,7 +94,7 @@ impl<Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
 mod tests {
     use super::*;
     use crate::storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
+    use test_file::TestFile;
 
     #[test]
     fn edge_from_index() {

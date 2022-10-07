@@ -1,6 +1,6 @@
 use super::serialize::Serialize;
 use super::write_ahead_log_record::WriteAheadLogRecord;
-use crate::db_error::DbError;
+use crate::DbError;
 use std::io::Read;
 use std::io::Seek;
 use std::io::Write;
@@ -70,7 +70,7 @@ impl TryFrom<&String> for WriteAheadLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::test_file::TestFile;
+    use test_file::TestFile;
 
     #[test]
     fn filename_constructed() {

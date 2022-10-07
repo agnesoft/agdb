@@ -3,7 +3,7 @@ use super::serialize::Serialize;
 use super::storage_data::StorageData;
 use super::vec_iterator::VecIterator;
 use super::Storage;
-use crate::db_error::DbError;
+use crate::DbError;
 
 pub(crate) struct StorageVec<T, Data = FileStorageData>
 where
@@ -227,7 +227,7 @@ impl<T: Serialize, Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<St
 mod tests {
     use super::*;
     use crate::storage::file_storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
+    use test_file::TestFile;
 
     #[test]
     fn capacity() {

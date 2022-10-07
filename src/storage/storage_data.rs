@@ -1,7 +1,7 @@
 use super::storage_record::StorageRecord;
 use super::storage_record_with_index::StorageRecordWithIndex;
 use super::write_ahead_log_record::WriteAheadLogRecord;
-use crate::db_error::DbError;
+use crate::DbError;
 
 pub(crate) trait StorageData<T = Self> {
     fn begin_transaction(&mut self);

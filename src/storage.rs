@@ -22,7 +22,7 @@ mod vec_iterator;
 mod write_ahead_log;
 mod write_ahead_log_record;
 
-use crate::db_error::DbError;
+use crate::DbError;
 use storage_record::StorageRecord;
 use storage_record_with_index::StorageRecordWithIndex;
 use write_ahead_log_record::WriteAheadLogRecord;

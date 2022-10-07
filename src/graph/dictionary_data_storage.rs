@@ -5,16 +5,15 @@ use crate::storage::StorageHashMultiMap;
 use crate::storage::StorageVec;
 use crate::DbError;
 use serialize::Serialize;
-use storage::FileStorageData;
+use storage::FileStorage;
 use storage::Storage;
-use storage::StorageData;
 
-pub(crate) struct DictionaryDataStorage<T, Data = FileStorageData>
+pub(crate) struct DictionaryDataStorage<T, Data = FileStorage>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
-    pub(super) storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
+    pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
     pub(super) storage_index: i64,
     pub(super) index: StorageHashMultiMap<u64, i64, Data>,
     pub(super) values: StorageVec<DictionaryValue<T>, Data>,
@@ -23,7 +22,7 @@ where
 impl<T, Data> DictionaryData<T> for DictionaryDataStorage<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     fn capacity(&self) -> u64 {
         self.values.len() as u64

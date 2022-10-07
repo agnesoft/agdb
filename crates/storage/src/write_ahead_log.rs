@@ -53,6 +53,22 @@ impl WriteAheadLog {
     }
 }
 
+pub(crate) fn wal_filename(filename: &str) -> String {
+    let pos;
+
+    if let Some(slash) = filename.rfind('/') {
+        pos = slash + 1;
+    } else if let Some(backslash) = filename.rfind('\\') {
+        pos = backslash + 1
+    } else {
+        pos = 0;
+    }
+
+    let mut copy = filename.to_owned();
+    copy.insert(pos, '.');
+    copy
+}
+
 impl TryFrom<&String> for WriteAheadLog {
     type Error = DbError;
 
@@ -142,5 +158,12 @@ mod tests {
         wal.insert(record2.clone()).unwrap();
 
         assert_eq!(wal.records(), Ok(vec![record1, record2]));
+    }
+
+    #[test]
+    fn wal_filenames() {
+        assert_eq!(wal_filename("some_name.agdb"), ".some_name.agdb");
+        assert_eq!(wal_filename("./some_name.agdb"), "./.some_name.agdb");
+        assert_eq!(wal_filename("\\some_name.agdb"), "\\.some_name.agdb");
     }
 }

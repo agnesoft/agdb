@@ -1,11 +1,11 @@
 use super::StorageVec;
 use serialize::Serialize;
-use storage::StorageData;
+use storage::Storage;
 
 pub(crate) struct VecIterator<'a, T, Data>
 where
     T: Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     pub(super) index: u64,
     pub(super) vec: &'a StorageVec<T, Data>,
@@ -15,7 +15,7 @@ where
 impl<'a, T, Data> Iterator for VecIterator<'a, T, Data>
 where
     T: Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Item = T;
 

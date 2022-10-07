@@ -8,11 +8,10 @@ use super::StorageHashMap;
 use crate::DbError;
 use serialize::Serialize;
 use std::hash::Hash;
-use storage::FileStorageData;
+use storage::FileStorage;
 use storage::Storage;
-use storage::StorageData;
 
-pub(crate) type StorageHashMultiMap<K, T, Data = FileStorageData> =
+pub(crate) type StorageHashMultiMap<K, T, Data = FileStorage> =
     HashMultiMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
@@ -20,7 +19,7 @@ impl<K, T, Data> StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Eq + PartialEq + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     pub(crate) fn storage_index(&self) -> i64 {
         self.map.data.storage_index
@@ -39,35 +38,32 @@ where
     }
 }
 
-impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
-    for StorageHashMultiMap<K, T, Data>
+impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Eq + PartialEq + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
-    fn try_from(
-        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
         Ok(Self {
             map: StorageHashMap::<K, T, Data>::try_from(storage)?,
         })
     }
 }
 
-impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
+impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)>
     for StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Eq + PartialEq + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             map: StorageHashMap::<K, T, Data>::try_from(storage_with_index)?,

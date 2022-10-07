@@ -5,11 +5,10 @@ use super::stable_hash::StableHash;
 use crate::DbError;
 use serialize::Serialize;
 use std::hash::Hash;
-use storage::FileStorageData;
+use storage::FileStorage;
 use storage::Storage;
-use storage::StorageData;
 
-pub(crate) type StorageHashMap<K, T, Data = FileStorageData> =
+pub(crate) type StorageHashMap<K, T, Data = FileStorage> =
     HashMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
@@ -17,25 +16,22 @@ impl<K, T, Data> StorageHashMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     pub(crate) fn storage_index(&self) -> i64 {
         self.data.storage_index
     }
 }
 
-impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
-    for StorageHashMap<K, T, Data>
+impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageHashMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
-    fn try_from(
-        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
         let storage_index = storage.borrow_mut().insert(&0_u64)?;
         storage.borrow_mut().insert_at(
             storage_index,
@@ -56,17 +52,17 @@ where
     }
 }
 
-impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
+impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)>
     for StorageHashMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
     ) -> Result<Self, Self::Error> {
         let count = storage_with_index
             .0

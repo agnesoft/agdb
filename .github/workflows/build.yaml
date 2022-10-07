@@ -12,4 +12,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cargo publish --dry-run
+      - run: cargo install cargo-release
+      - run: cargo release --no-push

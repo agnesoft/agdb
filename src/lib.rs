@@ -1,5 +1,6 @@
+extern crate db_error;
+
 mod db;
-mod db_error;
 mod graph;
 mod query;
 mod query_error;

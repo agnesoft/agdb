@@ -1,3 +1,4 @@
+use agdb_serialize::Serialize;
 use agdb_storage_index::StorageIndex;
 
 #[test]
@@ -29,4 +30,13 @@ fn ordering() {
             StorageIndex::from(100_i64),
         ]
     )
+}
+
+#[test]
+fn serialize() {
+    let index = StorageIndex::from(1_i64);
+    let bytes = index.serialize();
+    let other = StorageIndex::deserialize(&bytes).unwrap();
+
+    assert_eq!(index, other);
 }

@@ -2,39 +2,36 @@ use super::dictionary_data_storage::DictionaryDataStorage;
 use super::dictionary_data_storage_indexes::DictionaryDataStorageIndexes;
 use super::dictionary_impl::DictionaryImpl;
 use super::dictionary_value::DictionaryValue;
-use crate::storage::FileStorageData;
 use crate::storage::StableHash;
-use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageHashMultiMap;
 use crate::storage::StorageVec;
-use crate::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 
-pub(crate) type StorageDictionary<T, Data = FileStorageData> =
+pub(crate) type StorageDictionary<T, Data = FileStorage> =
     DictionaryImpl<T, DictionaryDataStorage<T, Data>>;
 
 #[allow(dead_code)]
 impl<T, Data> StorageDictionary<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     pub(crate) fn storage_index(&self) -> i64 {
         self.data.storage_index
     }
 }
 
-impl<T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>> for StorageDictionary<T, Data>
+impl<T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageDictionary<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
-    fn try_from(
-        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
         let index = StorageHashMultiMap::<u64, i64, Data>::try_from(storage.clone())?;
         let mut values = StorageVec::<DictionaryValue<T>, Data>::try_from(storage.clone())?;
         values.push(&DictionaryValue::default())?;
@@ -56,16 +53,15 @@ where
     }
 }
 
-impl<T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
-    for StorageDictionary<T, Data>
+impl<T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)> for StorageDictionary<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
     ) -> Result<Self, Self::Error> {
         let indexes = storage_with_index
             .0
@@ -95,8 +91,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::FileStorage;
-    use test_file::TestFile;
+    use agdb_test_file::TestFile;
 
     #[derive(Clone, Default, Eq, PartialEq)]
     struct CollidedValue {

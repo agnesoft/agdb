@@ -1,29 +1,24 @@
 use super::graph_data_storage::GraphDataStorage;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_impl::GraphImpl;
-use crate::storage::FileStorageData;
-use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageVec;
-use crate::DbError;
+use agdb_db_error::DbError;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 
-pub(crate) type StorageGraph<Data = FileStorageData> = GraphImpl<GraphDataStorage<Data>>;
+pub(crate) type StorageGraph<Data = FileStorage> = GraphImpl<GraphDataStorage<Data>>;
 
 #[allow(dead_code)]
-impl<Data: StorageData> StorageGraph<Data> {
+impl<Data: Storage> StorageGraph<Data> {
     pub(crate) fn storage_index(&self) -> i64 {
         self.data.index
     }
 }
 
-impl<Data: StorageData> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
-    for StorageGraph<Data>
-{
+impl<Data: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageGraph<Data> {
     type Error = DbError;
 
-    fn try_from(
-        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
         let mut from = StorageVec::<i64, Data>::try_from(storage.clone())?;
         from.push(&0)?;
         let mut to = StorageVec::<i64, Data>::try_from(storage.clone())?;
@@ -56,13 +51,11 @@ impl<Data: StorageData> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
     }
 }
 
-impl<Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
-    for StorageGraph<Data>
-{
+impl<Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)> for StorageGraph<Data> {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
     ) -> Result<Self, Self::Error> {
         let indexes = storage_with_index
             .0
@@ -93,8 +86,7 @@ impl<Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::FileStorage;
-    use test_file::TestFile;
+    use agdb_test_file::TestFile;
 
     #[test]
     fn edge_from_index() {

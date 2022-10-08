@@ -6,8 +6,8 @@ mod query_result;
 mod storage;
 mod transaction;
 
+pub use agdb_db_error::DbError;
 pub use db::Db;
-pub use db_error::DbError;
 pub use query::Query;
 pub use query_error::QueryError;
 pub use query_result::QueryResult;

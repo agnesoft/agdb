@@ -1,5 +1,5 @@
 [package]
-name = "db_error"
+name = "agdb_db_error"
 version = "0.1.0"
 edition = "2021"
 

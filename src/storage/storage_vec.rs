@@ -1,16 +1,15 @@
-use super::file_storage_data::FileStorageData;
-use super::storage_data::StorageData;
 use super::vec_iterator::VecIterator;
-use super::Storage;
-use crate::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 
-pub(crate) struct StorageVec<T, Data = FileStorageData>
+pub(crate) struct StorageVec<T, Data = FileStorage>
 where
     T: Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
-    storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
+    storage: std::rc::Rc<std::cell::RefCell<Data>>,
     storage_index: i64,
     size: u64,
     capacity: u64,
@@ -21,7 +20,7 @@ where
 impl<T, Data> StorageVec<T, Data>
 where
     T: Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     pub(crate) fn capacity(&self) -> u64 {
         self.capacity
@@ -162,7 +161,7 @@ where
     fn reallocate(
         capacity: &mut u64,
         new_capacity: u64,
-        storage: &mut std::cell::RefMut<Storage<Data>>,
+        storage: &mut std::cell::RefMut<Data>,
         index: i64,
     ) -> Result<(), DbError> {
         *capacity = new_capacity;
@@ -174,16 +173,14 @@ where
     }
 }
 
-impl<T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>> for StorageVec<T, Data>
+impl<T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageVec<T, Data>
 where
     T: Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
-    fn try_from(
-        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
         let index = storage.borrow_mut().insert(&0_u64)?;
 
         Ok(Self {
@@ -196,13 +193,13 @@ where
     }
 }
 
-impl<T: Serialize, Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
+impl<T: Serialize, Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)>
     for StorageVec<T, Data>
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
     ) -> Result<Self, Self::Error> {
         let byte_size = storage_with_index
             .0
@@ -226,8 +223,7 @@ impl<T: Serialize, Data: StorageData> TryFrom<(std::rc::Rc<std::cell::RefCell<St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::file_storage::FileStorage;
-    use test_file::TestFile;
+    use agdb_test_file::TestFile;
 
     #[test]
     fn capacity() {

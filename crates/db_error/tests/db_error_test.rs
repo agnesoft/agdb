@@ -1,4 +1,4 @@
-use db_error::DbError;
+use agdb_db_error::DbError;
 use std::error::Error;
 
 #[test]

@@ -1,5 +1,5 @@
 use crate::Serialize;
-use db_error::DbError;
+use agdb_db_error::DbError;
 
 impl Serialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {

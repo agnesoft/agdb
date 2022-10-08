@@ -1,6 +1,6 @@
 use super::hash_map_meta_value::HashMapMetaValue;
-use crate::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct HashMapKeyValue<K, T>

@@ -2,18 +2,17 @@ use super::hash_map_data::HashMapData;
 use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_map_meta_value::HashMapMetaValue;
 use super::StableHash;
-use super::Storage;
-use super::StorageData;
-use crate::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::Storage;
 use std::hash::Hash;
 
-pub(crate) struct HashMapDataStorage<K, T, Data: StorageData>
+pub(crate) struct HashMapDataStorage<K, T, Data: Storage>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
 {
-    pub(super) storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
+    pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
     pub(super) storage_index: i64,
     pub(super) count: u64,
     pub(super) capacity: u64,
@@ -24,7 +23,7 @@ impl<K, T, Data> HashMapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     fn record_offset(pos: u64) -> u64 {
         u64::serialized_size() * 2 + HashMapKeyValue::<K, T>::serialized_size() * pos
@@ -44,7 +43,7 @@ impl<K, T, Data> HashMapData<K, T> for HashMapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     fn capacity(&self) -> u64 {
         self.capacity

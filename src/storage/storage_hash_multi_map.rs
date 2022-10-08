@@ -1,18 +1,17 @@
-use super::file_storage_data::FileStorageData;
 use super::hash_map_data_memory::HashMapDataMemory;
 use super::hash_map_data_storage::HashMapDataStorage;
 use super::hash_map_impl::HashMapImpl;
 use super::hash_multi_map::HashMultiMap;
 use super::hash_multi_map_impl::HashMultiMapImpl;
 use super::stable_hash::StableHash;
-use super::storage_data::StorageData;
-use super::Storage;
 use super::StorageHashMap;
-use crate::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 use std::hash::Hash;
 
-pub(crate) type StorageHashMultiMap<K, T, Data = FileStorageData> =
+pub(crate) type StorageHashMultiMap<K, T, Data = FileStorage> =
     HashMultiMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
@@ -20,7 +19,7 @@ impl<K, T, Data> StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Eq + PartialEq + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     pub(crate) fn storage_index(&self) -> i64 {
         self.map.data.storage_index
@@ -39,35 +38,32 @@ where
     }
 }
 
-impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Storage<Data>>>>
-    for StorageHashMultiMap<K, T, Data>
+impl<K, T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Eq + PartialEq + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
-    fn try_from(
-        storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
         Ok(Self {
             map: StorageHashMap::<K, T, Data>::try_from(storage)?,
         })
     }
 }
 
-impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64)>
+impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)>
     for StorageHashMultiMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Eq + PartialEq + Serialize,
-    Data: StorageData,
+    Data: Storage,
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Storage<Data>>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             map: StorageHashMap::<K, T, Data>::try_from(storage_with_index)?,
@@ -78,8 +74,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::file_storage::FileStorage;
-    use test_file::TestFile;
+    use agdb_test_file::TestFile;
 
     #[test]
     fn insert() {

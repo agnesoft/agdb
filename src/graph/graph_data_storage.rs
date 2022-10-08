@@ -1,16 +1,15 @@
 use super::graph_data::GraphData;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
-use crate::storage::FileStorageData;
-use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageVec;
-use crate::DbError;
+use agdb_db_error::DbError;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 
-pub(crate) struct GraphDataStorage<Data = FileStorageData>
+pub(crate) struct GraphDataStorage<Data = FileStorage>
 where
-    Data: StorageData,
+    Data: Storage,
 {
-    pub(super) storage: std::rc::Rc<std::cell::RefCell<Storage<Data>>>,
+    pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
     pub(super) index: i64,
     #[allow(dead_code)]
     pub(super) indexes: GraphDataStorageIndexes,
@@ -22,7 +21,7 @@ where
 
 impl<Data> GraphData for GraphDataStorage<Data>
 where
-    Data: StorageData,
+    Data: Storage,
 {
     fn capacity(&self) -> Result<u64, crate::DbError> {
         Ok(self.from.len())

@@ -1,9 +1,8 @@
-use super::storage_record::StorageRecord;
-use super::storage_record_with_index::StorageRecordWithIndex;
-use super::write_ahead_log_record::WriteAheadLogRecord;
-use crate::DbError;
+use agdb_db_error::DbError;
+use agdb_storage_index::StorageRecord;
+use agdb_write_ahead_log::WriteAheadLogRecord;
 
-pub(crate) trait StorageData<T = Self> {
+pub trait StorageData<T = Self> {
     fn begin_transaction(&mut self);
     fn clear_wal(&mut self) -> Result<(), DbError>;
     fn create_index(&mut self, position: u64, size: u64) -> i64;
@@ -16,7 +15,7 @@ pub(crate) trait StorageData<T = Self> {
     fn remove_index(&mut self, index: i64);
     fn seek(&mut self, position: std::io::SeekFrom) -> Result<u64, DbError>;
     fn set_len(&mut self, len: u64) -> Result<(), DbError>;
-    fn set_records(&mut self, records: Vec<StorageRecordWithIndex>);
+    fn set_records(&mut self, records: Vec<StorageRecord>);
     fn wal_records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError>;
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError>;
 }

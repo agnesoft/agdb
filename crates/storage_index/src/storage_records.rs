@@ -6,26 +6,26 @@ pub struct StorageRecords {
 }
 
 impl StorageRecords {
-    pub fn create(&mut self, position: u64, size: u64) -> StorageIndex {
+    pub fn create(&mut self, position: u64, size: u64) -> StorageRecord {
         let index;
 
         if let Some(free_index) = self.free_index() {
-            index = free_index;
-            self.records[index.as_usize()] = StorageRecord {
-                index: StorageIndex::default(),
+            index = free_index.as_usize();
+            self.records[index] = StorageRecord {
+                index: free_index,
                 position,
                 size,
             };
         } else {
-            index = StorageIndex::from(self.records.len());
+            index = self.records.len();
             self.records.push(StorageRecord {
-                index: StorageIndex::default(),
+                index: StorageIndex::from(index),
                 position,
                 size,
             });
         }
 
-        index
+        self.records[index].clone()
     }
 
     pub fn get(&self, index: &StorageIndex) -> Option<&StorageRecord> {

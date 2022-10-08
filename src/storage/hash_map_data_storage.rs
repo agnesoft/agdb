@@ -7,6 +7,7 @@ use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageIndex;
 use std::hash::Hash;
+use std::mem::size_of;
 
 pub(crate) struct HashMapDataStorage<K, T, Data: Storage>
 where
@@ -33,10 +34,7 @@ where
     pub(super) fn values(&self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {
         self.storage
             .borrow_mut()
-            .value_at::<Vec<HashMapKeyValue<K, T>>>(
-                &self.storage_index,
-                std::mem::size_of::<u64>() as u64,
-            )
+            .value_at::<Vec<HashMapKeyValue<K, T>>>(&self.storage_index, size_of::<u64>() as u64)
     }
 }
 
@@ -97,11 +95,9 @@ where
 
     fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), DbError> {
         self.capacity = values.len() as u64;
-        self.storage.borrow_mut().insert_at(
-            &self.storage_index,
-            std::mem::size_of::<u64>() as u64,
-            &values,
-        )
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, size_of::<u64>() as u64, &values)
     }
 
     fn take_values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {

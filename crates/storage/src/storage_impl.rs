@@ -60,15 +60,17 @@ impl<Data: StorageData> StorageImpl<Data> {
     ) -> Result<StorageRecord, DbError> {
         let new_position = self.data.seek(std::io::SeekFrom::End(0))?;
         let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
-        self.append(&record_index.serialize())?;
-        self.append(&record_size.serialize())?;
-        self.append(&bytes)?;
 
-        Ok(StorageRecord {
+        let record = StorageRecord {
             index: record_index.clone(),
             position: new_position,
             size: record_size,
-        })
+        };
+
+        self.append(&record.serialize())?;
+        self.append(&bytes)?;
+
+        Ok(record)
     }
 
     pub(crate) fn ensure_record_size(
@@ -153,20 +155,17 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     fn read_record(&mut self) -> Result<StorageRecord, DbError> {
-        let index_size: u64 = StorageIndex::serialized_size();
-        const START: std::io::SeekFrom = std::io::SeekFrom::Current(0);
+        const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
-        let position = self.data.seek(START)?;
-        let index = StorageIndex::deserialize(&self.read(START, index_size)?)?;
-        let size = u64::deserialize(&self.read(START, index_size)?)?;
+        let position = self.data.seek(CURRENT)?;
+        let mut record =
+            StorageRecord::deserialize(&self.read(CURRENT, StorageRecord::serialized_size())?)?;
+        record.position = position;
 
-        self.data.seek(std::io::SeekFrom::Current(size as i64))?;
+        self.data
+            .seek(std::io::SeekFrom::Current(record.size as i64))?;
 
-        Ok(StorageRecord {
-            index,
-            position,
-            size,
-        })
+        Ok(record)
     }
 
     pub(crate) fn read_records(&mut self) -> Result<(), DbError> {

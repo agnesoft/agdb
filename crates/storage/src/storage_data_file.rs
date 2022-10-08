@@ -25,7 +25,7 @@ impl StorageData for StorageDataFile {
         self.wal.clear()
     }
 
-    fn create_index(&mut self, position: u64, size: u64) -> StorageIndex {
+    fn create_record(&mut self, position: u64, size: u64) -> StorageRecord {
         self.records.create(position, size)
     }
 

@@ -18,14 +18,13 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         self.transaction();
         let position = self.size()?;
         let bytes = value.serialize();
-        let index = self.data.create_index(position, bytes.len() as u64);
+        let record = self.data.create_record(position, bytes.len() as u64);
 
-        self.append(&index.serialize())?;
-        self.append(&(bytes.len() as u64).serialize())?;
+        self.append(&record.serialize())?;
         self.append(&bytes)?;
         self.commit()?;
 
-        Ok(index)
+        Ok(record.index)
     }
 
     fn insert_at<V: Serialize>(

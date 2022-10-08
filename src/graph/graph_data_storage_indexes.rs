@@ -1,5 +1,6 @@
 use agdb_serialize::Serialize;
 use agdb_storage::StorageIndex;
+use std::mem::size_of;
 
 pub(super) struct GraphDataStorageIndexes {
     pub(super) from: StorageIndex,
@@ -24,7 +25,7 @@ impl Serialize for GraphDataStorageIndexes {
 
     fn serialize(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![];
-        bytes.reserve(4 * std::mem::size_of::<i64>());
+        bytes.reserve(4 * size_of::<i64>());
 
         bytes.extend(self.from.serialize());
         bytes.extend(self.to.serialize());

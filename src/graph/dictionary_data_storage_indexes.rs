@@ -1,5 +1,6 @@
 use agdb_serialize::Serialize;
 use agdb_storage::StorageIndex;
+use std::mem::size_of;
 
 pub(super) struct DictionaryDataStorageIndexes {
     pub(super) index: StorageIndex,
@@ -18,7 +19,7 @@ impl Serialize for DictionaryDataStorageIndexes {
 
     fn serialize(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![];
-        bytes.reserve(4 * std::mem::size_of::<i64>());
+        bytes.reserve(4 * size_of::<i64>());
 
         bytes.extend(self.index.serialize());
         bytes.extend(self.values.serialize());

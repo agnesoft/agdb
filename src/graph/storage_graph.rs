@@ -5,13 +5,14 @@ use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
+use agdb_storage::StorageIndex;
 
 pub(crate) type StorageGraph<Data = StorageFile> = GraphImpl<GraphDataStorage<Data>>;
 
 #[allow(dead_code)]
 impl<Data: Storage> StorageGraph<Data> {
-    pub(crate) fn storage_index(&self) -> i64 {
-        self.data.index
+    pub(crate) fn storage_index(&self) -> StorageIndex {
+        self.data.storage_index.clone()
     }
 }
 
@@ -40,7 +41,7 @@ impl<Data: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageGr
         Ok(StorageGraph {
             data: GraphDataStorage::<Data> {
                 storage,
-                index,
+                storage_index: index,
                 indexes,
                 from,
                 to,
@@ -51,28 +52,38 @@ impl<Data: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageGr
     }
 }
 
-impl<Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)> for StorageGraph<Data> {
+impl<Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex)>
+    for StorageGraph<Data>
+{
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex),
     ) -> Result<Self, Self::Error> {
         let indexes = storage_with_index
             .0
             .borrow_mut()
-            .value::<GraphDataStorageIndexes>(storage_with_index.1)?;
+            .value::<GraphDataStorageIndexes>(&storage_with_index.1)?;
 
-        let from = StorageVec::<i64, Data>::try_from((storage_with_index.0.clone(), indexes.from))?;
-        let to = StorageVec::<i64, Data>::try_from((storage_with_index.0.clone(), indexes.to))?;
-        let from_meta =
-            StorageVec::<i64, Data>::try_from((storage_with_index.0.clone(), indexes.from_meta))?;
-        let to_meta =
-            StorageVec::<i64, Data>::try_from((storage_with_index.0.clone(), indexes.to_meta))?;
+        let from = StorageVec::<i64, Data>::try_from((
+            storage_with_index.0.clone(),
+            indexes.from.clone(),
+        ))?;
+        let to =
+            StorageVec::<i64, Data>::try_from((storage_with_index.0.clone(), indexes.to.clone()))?;
+        let from_meta = StorageVec::<i64, Data>::try_from((
+            storage_with_index.0.clone(),
+            indexes.from_meta.clone(),
+        ))?;
+        let to_meta = StorageVec::<i64, Data>::try_from((
+            storage_with_index.0.clone(),
+            indexes.to_meta.clone(),
+        ))?;
 
         Ok(StorageGraph {
             data: GraphDataStorage::<Data> {
                 storage: storage_with_index.0,
-                index: storage_with_index.1,
+                storage_index: storage_with_index.1,
                 indexes,
                 from,
                 to,

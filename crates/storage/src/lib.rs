@@ -7,5 +7,6 @@ mod storage_impl;
 mod storage_impl_drop;
 mod storage_impl_storage;
 
+pub use agdb_storage_index::StorageIndex;
 pub use storage::Storage;
 pub use storage_file::StorageFile;

@@ -6,6 +6,7 @@ use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
+use agdb_storage::StorageIndex;
 use std::hash::Hash;
 
 pub(crate) type StorageHashMap<K, T, Data = StorageFile> =
@@ -18,8 +19,8 @@ where
     T: Clone + Default + Serialize,
     Data: Storage,
 {
-    pub(crate) fn storage_index(&self) -> i64 {
-        self.data.storage_index
+    pub(crate) fn storage_index(&self) -> StorageIndex {
+        self.data.storage_index.clone()
     }
 }
 
@@ -34,7 +35,7 @@ where
     fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
         let storage_index = storage.borrow_mut().insert(&0_u64)?;
         storage.borrow_mut().insert_at(
-            storage_index,
+            &storage_index,
             std::mem::size_of::<u64>() as u64,
             &vec![HashMapKeyValue::<K, T>::default()],
         )?;
@@ -52,7 +53,7 @@ where
     }
 }
 
-impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)>
+impl<K, T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex)>
     for StorageHashMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
@@ -62,16 +63,16 @@ where
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex),
     ) -> Result<Self, Self::Error> {
         let count = storage_with_index
             .0
             .borrow_mut()
-            .value_at::<u64>(storage_with_index.1, 0)?;
+            .value_at::<u64>(&storage_with_index.1, 0)?;
         let capacity = storage_with_index
             .0
             .borrow_mut()
-            .value_at::<u64>(storage_with_index.1, std::mem::size_of::<u64>() as u64)?;
+            .value_at::<u64>(&storage_with_index.1, std::mem::size_of::<u64>() as u64)?;
 
         Ok(Self {
             data: HashMapDataStorage::<K, T, Data> {
@@ -406,7 +407,7 @@ mod tests {
         ));
 
         assert_eq!(
-            StorageHashMap::<i64, i64>::try_from((storage, 1))
+            StorageHashMap::<i64, i64>::try_from((storage, StorageIndex::from(1_i64)))
                 .err()
                 .unwrap(),
             DbError::from("index '1' not found")

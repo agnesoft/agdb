@@ -3,6 +3,7 @@ use crate::storage_data::StorageData;
 use crate::storage_impl::StorageImpl;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
+use agdb_storage_index::StorageIndex;
 
 impl<Data: StorageData> Storage for StorageImpl<Data> {
     fn commit(&mut self) -> Result<(), DbError> {
@@ -13,13 +14,13 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         Ok(())
     }
 
-    fn insert<V: Serialize>(&mut self, value: &V) -> Result<i64, DbError> {
+    fn insert<V: Serialize>(&mut self, value: &V) -> Result<StorageIndex, DbError> {
         self.transaction();
         let position = self.size()?;
         let bytes = value.serialize();
         let index = self.data.create_index(position, bytes.len() as u64);
 
-        self.append(&index.serialize())?;
+        self.append(&index.value().serialize())?;
         self.append(&(bytes.len() as u64).serialize())?;
         self.append(&bytes)?;
         self.commit()?;
@@ -29,7 +30,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
 
     fn insert_at<V: Serialize>(
         &mut self,
-        index: i64,
+        index: &StorageIndex,
         offset: u64,
         value: &V,
     ) -> Result<(), DbError> {
@@ -43,7 +44,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
 
     fn move_at(
         &mut self,
-        index: i64,
+        index: &StorageIndex,
         offset_from: u64,
         offset_to: u64,
         size: u64,
@@ -66,7 +67,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         Ok(())
     }
 
-    fn remove(&mut self, index: i64) -> Result<(), DbError> {
+    fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError> {
         self.transaction();
         let position = self.data.record(index)?.position;
         self.invalidate_record(index, position)?;
@@ -74,7 +75,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         self.commit()
     }
 
-    fn resize_value(&mut self, index: i64, new_size: u64) -> Result<(), DbError> {
+    fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<(), DbError> {
         if new_size == 0 {
             return Err(DbError::from("value size cannot be 0"));
         }
@@ -106,12 +107,12 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         self.data.begin_transaction();
     }
 
-    fn value<V: Serialize>(&mut self, index: i64) -> Result<V, DbError> {
+    fn value<V: Serialize>(&mut self, index: &StorageIndex) -> Result<V, DbError> {
         let record = self.data.record(index)?;
         V::deserialize(&self.read(Self::value_position(record.position, 0), record.size)?)
     }
 
-    fn value_at<V: Serialize>(&mut self, index: i64, offset: u64) -> Result<V, DbError> {
+    fn value_at<V: Serialize>(&mut self, index: &StorageIndex, offset: u64) -> Result<V, DbError> {
         let record = self.data.record(index)?;
         let bytes = self.read(
             Self::value_position(record.position, offset),
@@ -121,7 +122,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         V::deserialize(&bytes?)
     }
 
-    fn value_size(&self, index: i64) -> Result<u64, DbError> {
+    fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError> {
         Ok(self.data.record(index)?.size)
     }
 }

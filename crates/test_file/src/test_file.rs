@@ -1,3 +1,4 @@
+use std::fs::remove_file;
 use std::path::Path;
 
 pub struct TestFile {
@@ -40,7 +41,7 @@ impl TestFile {
 
     pub(crate) fn remove_file_if_exists(filename: &String) {
         if Path::new(filename).exists() {
-            std::fs::remove_file(filename).unwrap();
+            remove_file(filename).unwrap();
         }
     }
 }

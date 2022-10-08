@@ -9,6 +9,7 @@ use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
+use agdb_storage::StorageIndex;
 
 pub(crate) type StorageDictionary<T, Data = StorageFile> =
     DictionaryImpl<T, DictionaryDataStorage<T, Data>>;
@@ -19,8 +20,8 @@ where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: Storage,
 {
-    pub(crate) fn storage_index(&self) -> i64 {
-        self.data.storage_index
+    pub(crate) fn storage_index(&self) -> StorageIndex {
+        self.data.storage_index.clone()
     }
 }
 
@@ -53,7 +54,8 @@ where
     }
 }
 
-impl<T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)> for StorageDictionary<T, Data>
+impl<T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex)>
+    for StorageDictionary<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: Storage,
@@ -61,12 +63,12 @@ where
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex),
     ) -> Result<Self, Self::Error> {
         let indexes = storage_with_index
             .0
             .borrow_mut()
-            .value::<DictionaryDataStorageIndexes>(storage_with_index.1)?;
+            .value::<DictionaryDataStorageIndexes>(&storage_with_index.1)?;
         let index = StorageHashMultiMap::<u64, i64, Data>::try_from((
             storage_with_index.0.clone(),
             indexes.index,

@@ -1,7 +1,7 @@
 use crate::storage_data::StorageData;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage_index::StorageRecord;
+use agdb_storage_index::{StorageIndex, StorageRecord};
 use agdb_write_ahead_log::WriteAheadLogRecord;
 
 pub struct StorageImpl<Data: StorageData> {
@@ -40,7 +40,7 @@ impl<Data: StorageData> StorageImpl<Data> {
 
     fn copy_record(
         &mut self,
-        index: i64,
+        index: &StorageIndex,
         old_position: u64,
         size: u64,
         new_position: u64,
@@ -55,17 +55,17 @@ impl<Data: StorageData> StorageImpl<Data> {
         &mut self,
         from: u64,
         size: u64,
-        record_index: i64,
+        record_index: &StorageIndex,
         record_size: u64,
     ) -> Result<StorageRecord, DbError> {
         let new_position = self.data.seek(std::io::SeekFrom::End(0))?;
         let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
-        self.append(&record_index.serialize())?;
+        self.append(&record_index.value().serialize())?;
         self.append(&record_size.serialize())?;
         self.append(&bytes)?;
 
         Ok(StorageRecord {
-            index: record_index,
+            index: record_index.clone(),
             position: new_position,
             size: record_size,
         })
@@ -74,7 +74,7 @@ impl<Data: StorageData> StorageImpl<Data> {
     pub(crate) fn ensure_record_size(
         &mut self,
         record: &mut StorageRecord,
-        index: i64,
+        index: &StorageIndex,
         offset: u64,
         value_size: u64,
     ) -> Result<(), DbError> {
@@ -94,8 +94,15 @@ impl<Data: StorageData> StorageImpl<Data> {
         )
     }
 
-    pub(crate) fn invalidate_record(&mut self, index: i64, position: u64) -> Result<(), DbError> {
-        self.write(std::io::SeekFrom::Start(position), &(-index).serialize())
+    pub(crate) fn invalidate_record(
+        &mut self,
+        index: &StorageIndex,
+        position: u64,
+    ) -> Result<(), DbError> {
+        self.write(
+            std::io::SeekFrom::Start(position),
+            &(-index.value()).serialize(),
+        )
     }
 
     fn is_at_end(&mut self, record: &StorageRecord) -> Result<bool, DbError> {
@@ -106,7 +113,7 @@ impl<Data: StorageData> StorageImpl<Data> {
 
     fn move_record_to_end(
         &mut self,
-        index: i64,
+        index: &StorageIndex,
         new_size: u64,
         offset: u64,
         record: &mut StorageRecord,
@@ -150,12 +157,12 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     fn read_record(&mut self) -> Result<StorageRecord, DbError> {
-        let index_size: u64 = i64::serialized_size();
-        const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
+        let index_size: u64 = StorageIndex::serialized_size();
+        const START: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
-        let position = self.data.seek(CURRENT)?;
-        let index = i64::deserialize(&self.read(CURRENT, index_size)?)?;
-        let size = u64::deserialize(&self.read(CURRENT, index_size)?)?;
+        let position = self.data.seek(START)?;
+        let index = StorageIndex::from(i64::deserialize(&self.read(START, index_size)?)?);
+        let size = u64::deserialize(&self.read(START, index_size)?)?;
 
         self.data.seek(std::io::SeekFrom::Current(size as i64))?;
 
@@ -183,7 +190,7 @@ impl<Data: StorageData> StorageImpl<Data> {
 
     pub(crate) fn resize_record(
         &mut self,
-        index: i64,
+        index: &StorageIndex,
         new_size: u64,
         offset: u64,
         record: &mut StorageRecord,
@@ -201,7 +208,7 @@ impl<Data: StorageData> StorageImpl<Data> {
         Ok(())
     }
 
-    fn shrink_index(&mut self, index: i64, current_pos: u64) -> Result<u64, DbError> {
+    fn shrink_index(&mut self, index: &StorageIndex, current_pos: u64) -> Result<u64, DbError> {
         let record = self.data.record(index)?;
         let record_size = StorageRecord::serialized_size() + record.size;
 
@@ -215,11 +222,11 @@ impl<Data: StorageData> StorageImpl<Data> {
         self.data.seek(std::io::SeekFrom::Current(0))
     }
 
-    pub(crate) fn shrink_indexes(&mut self, indexes: Vec<i64>) -> Result<u64, DbError> {
+    pub(crate) fn shrink_indexes(&mut self, indexes: Vec<StorageIndex>) -> Result<u64, DbError> {
         let mut current_pos = self.data.seek(std::io::SeekFrom::Start(0))?;
 
         for index in indexes {
-            current_pos = self.shrink_index(index, current_pos)?;
+            current_pos = self.shrink_index(&index, current_pos)?;
         }
 
         Ok(current_pos)

@@ -1,13 +1,13 @@
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 use agdb_test_file::TestFile;
 
 #[test]
 fn resize_at_end_does_not_move() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let index = storage.insert(&1_i64).unwrap();
     let size = storage.size().unwrap();
@@ -21,7 +21,7 @@ fn resize_at_end_does_not_move() {
 #[test]
 fn resize_value_greater() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
@@ -36,7 +36,7 @@ fn resize_value_greater() {
 #[test]
 fn resize_value_missing_index() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     assert_eq!(
         storage.resize_value(1, 1),
@@ -47,7 +47,7 @@ fn resize_value_missing_index() {
 #[test]
 fn resize_value_same() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
@@ -62,7 +62,7 @@ fn resize_value_same() {
 #[test]
 fn resize_value_smaller() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
@@ -77,7 +77,7 @@ fn resize_value_smaller() {
 #[test]
 fn resize_value_zero() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
@@ -94,7 +94,7 @@ fn resize_value_zero() {
 fn resize_value_resizes_file() {
     let test_file = TestFile::new();
 
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
     let index = storage.insert(&3_i64).unwrap();
     let size = u64::serialized_size() + i64::serialized_size() * 3;
     storage.resize_value(index, size).unwrap();
@@ -109,14 +109,14 @@ fn resize_value_invalidates_original_position() {
     let index;
 
     {
-        let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+        let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
         index = storage.insert(&10_i64).unwrap();
         storage.insert(&5_i64).unwrap();
         storage.resize_value(index, 1).unwrap();
         storage.remove(index).unwrap();
     }
 
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     assert_eq!(
         storage.value::<i64>(index),

@@ -7,11 +7,11 @@ use super::stable_hash::StableHash;
 use super::StorageHashMap;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 use std::hash::Hash;
 
-pub(crate) type StorageHashMultiMap<K, T, Data = FileStorage> =
+pub(crate) type StorageHashMultiMap<K, T, Data = StorageFile> =
     HashMultiMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
@@ -80,7 +80,7 @@ mod tests {
     fn insert() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -98,7 +98,7 @@ mod tests {
     fn insert_reallocate() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -120,7 +120,7 @@ mod tests {
     fn insert_reallocate_with_collisions() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -138,7 +138,7 @@ mod tests {
     fn insert_same_key() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -156,7 +156,7 @@ mod tests {
     fn iter() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -180,7 +180,7 @@ mod tests {
     fn remove_deleted_key() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -204,7 +204,7 @@ mod tests {
     fn remove_key() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -225,7 +225,7 @@ mod tests {
     fn remove_missing_key() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -238,7 +238,7 @@ mod tests {
     fn remove_value() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -259,7 +259,7 @@ mod tests {
     fn remove_missing_value() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -272,7 +272,7 @@ mod tests {
     fn remove_missing() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -285,7 +285,7 @@ mod tests {
     fn remove_shrinks_capacity() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -308,7 +308,7 @@ mod tests {
     fn reserve_larger() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -328,7 +328,7 @@ mod tests {
     fn reserve_same() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -347,7 +347,7 @@ mod tests {
     fn reserve_smaller() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -367,7 +367,7 @@ mod tests {
     fn to_hash_multi_map() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -388,7 +388,7 @@ mod tests {
     fn to_hash_multi_map_empty() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
@@ -401,7 +401,7 @@ mod tests {
     fn try_from_storage_index() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let index;
@@ -428,7 +428,7 @@ mod tests {
     fn try_from_storage_missing_index() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         assert_eq!(
@@ -443,7 +443,7 @@ mod tests {
     fn value_missing() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 
@@ -454,7 +454,7 @@ mod tests {
     fn values_at_end() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut map = StorageHashMultiMap::<i64, i64>::try_from(storage).unwrap();
 

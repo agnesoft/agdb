@@ -6,7 +6,7 @@ use agdb_write_ahead_log::WriteAheadLog;
 use agdb_write_ahead_log::WriteAheadLogRecord;
 
 #[allow(dead_code)]
-pub struct FileStorageData {
+pub struct StorageDataFile {
     file: std::fs::File,
     filename: String,
     records: StorageRecords,
@@ -15,7 +15,7 @@ pub struct FileStorageData {
     transactions: u64,
 }
 
-impl StorageData for FileStorageData {
+impl StorageData for StorageDataFile {
     fn begin_transaction(&mut self) {
         self.transactions += 1;
     }
@@ -87,11 +87,11 @@ impl StorageData for FileStorageData {
     }
 }
 
-impl TryFrom<String> for FileStorageData {
+impl TryFrom<String> for StorageDataFile {
     type Error = DbError;
 
     fn try_from(filename: String) -> Result<Self, Self::Error> {
-        Ok(FileStorageData {
+        Ok(StorageDataFile {
             file: std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)

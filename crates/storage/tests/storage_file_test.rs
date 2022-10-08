@@ -1,11 +1,11 @@
 use agdb_db_error::DbError;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 use agdb_test_file::TestFile;
 
 #[test]
 fn bad_file() {
-    assert!(FileStorage::try_from("/a/").is_err());
+    assert!(StorageFile::try_from("/a/").is_err());
 }
 
 #[test]
@@ -19,13 +19,13 @@ fn restore_from_open_file() {
     let index3;
 
     {
-        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
         index1 = storage.insert(&value1).unwrap();
         index2 = storage.insert(&value2).unwrap();
         index3 = storage.insert(&value3).unwrap();
     }
 
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
     assert_eq!(storage.value::<u64>(index2), Ok(value2));
@@ -43,14 +43,14 @@ fn restore_from_open_file_with_removed_index() {
     let index3;
 
     {
-        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
         index1 = storage.insert(&value1).unwrap();
         index2 = storage.insert(&value2).unwrap();
         index3 = storage.insert(&value3).unwrap();
         storage.remove(index2).unwrap();
     }
 
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
     assert_eq!(

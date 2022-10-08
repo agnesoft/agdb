@@ -1,10 +1,10 @@
 use super::vec_iterator::VecIterator;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 
-pub(crate) struct StorageVec<T, Data = FileStorage>
+pub(crate) struct StorageVec<T, Data = StorageFile>
 where
     T: Serialize,
     Data: Storage,
@@ -229,7 +229,7 @@ mod tests {
     fn capacity() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -247,7 +247,7 @@ mod tests {
     fn iter() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -262,7 +262,7 @@ mod tests {
     fn len() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -280,7 +280,7 @@ mod tests {
     fn push() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
@@ -300,7 +300,7 @@ mod tests {
     fn remove() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -317,7 +317,7 @@ mod tests {
     fn remove_at_end() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -334,7 +334,7 @@ mod tests {
     fn remove_index_out_of_bounds() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -346,7 +346,7 @@ mod tests {
     fn remove_size_updated() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
@@ -368,7 +368,7 @@ mod tests {
     fn reserve_larger() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -383,7 +383,7 @@ mod tests {
     fn reserve_smaller() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -397,7 +397,7 @@ mod tests {
     fn resize_larger() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
@@ -419,7 +419,7 @@ mod tests {
     fn resize_over_capacity() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
@@ -449,7 +449,7 @@ mod tests {
     fn resize_same() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
@@ -471,7 +471,7 @@ mod tests {
     fn resize_smaller() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
@@ -493,7 +493,7 @@ mod tests {
     fn set_value() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -512,7 +512,7 @@ mod tests {
     fn set_value_out_of_bounds() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -527,7 +527,7 @@ mod tests {
     fn shrink_to_fit() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -550,7 +550,7 @@ mod tests {
     fn shrink_to_fit_empty() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -566,7 +566,7 @@ mod tests {
     fn to_vec() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -581,7 +581,7 @@ mod tests {
     fn try_from_storage_index() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let index;
@@ -603,7 +603,7 @@ mod tests {
     fn try_from_storage_missing_index() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         assert_eq!(
@@ -616,7 +616,7 @@ mod tests {
     fn value() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
@@ -633,7 +633,7 @@ mod tests {
     fn value_out_of_bounds() {
         let test_file = TestFile::new();
         let storage = std::rc::Rc::new(std::cell::RefCell::new(
-            FileStorage::try_from(test_file.file_name().clone()).unwrap(),
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
         let vec = StorageVec::<i64>::try_from(storage).unwrap();

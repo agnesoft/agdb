@@ -1,13 +1,13 @@
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 use agdb_test_file::TestFile;
 
 #[test]
 fn insert() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&10_i64);
 
@@ -17,7 +17,7 @@ fn insert() {
 #[test]
 fn insert_at() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
     let offset = (u64::serialized_size() + i64::serialized_size()) as u64;
@@ -32,7 +32,7 @@ fn insert_at() {
 #[test]
 fn insert_at_missing_index() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     assert_eq!(
         storage.insert_at(1, 8, &1_i64),
@@ -43,7 +43,7 @@ fn insert_at_missing_index() {
 #[test]
 fn insert_at_value_end() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
     let offset = (u64::serialized_size() + i64::serialized_size() * 3) as u64;
@@ -59,7 +59,7 @@ fn insert_at_value_end() {
 #[test]
 fn insert_at_beyond_end() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
     let offset = (u64::serialized_size() + i64::serialized_size() * 4) as u64;
@@ -75,7 +75,7 @@ fn insert_at_beyond_end() {
 #[test]
 fn insert_at_bytes() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
     let offset = (u64::serialized_size() + i64::serialized_size()) as u64;

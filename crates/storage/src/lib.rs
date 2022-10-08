@@ -8,4 +8,4 @@ mod storage_impl_drop;
 mod storage_impl_storage;
 
 pub use storage::Storage;
-pub use storage_file::FileStorage;
+pub use storage_file::StorageFile;

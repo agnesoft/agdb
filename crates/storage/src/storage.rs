@@ -1,5 +1,5 @@
-use db_error::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
 
 pub trait Storage {
     fn commit(&mut self) -> Result<(), DbError>;

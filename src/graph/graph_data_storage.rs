@@ -1,9 +1,9 @@
 use super::graph_data::GraphData;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use crate::storage::StorageVec;
-use crate::DbError;
-use storage::FileStorage;
-use storage::Storage;
+use agdb_db_error::DbError;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 
 pub(crate) struct GraphDataStorage<Data = FileStorage>
 where

@@ -2,7 +2,7 @@ use super::graph_data::GraphData;
 use super::graph_edge::GraphEdge;
 use super::graph_node::GraphNode;
 use super::graph_node_iterator::GraphNodeIterator;
-use crate::DbError;
+use agdb_db_error::DbError;
 
 pub(crate) struct GraphImpl<Data: GraphData> {
     pub(super) data: Data,

@@ -1,4 +1,4 @@
-use crate::DbError;
+use agdb_db_error::DbError;
 
 pub(crate) trait GraphData {
     fn capacity(&self) -> Result<u64, DbError>;

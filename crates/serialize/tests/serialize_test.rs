@@ -1,5 +1,5 @@
-use db_error::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
 
 #[test]
 fn i64() {

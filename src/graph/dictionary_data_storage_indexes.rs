@@ -1,4 +1,4 @@
-use serialize::Serialize;
+use agdb_serialize::Serialize;
 
 pub(super) struct DictionaryDataStorageIndexes {
     pub(super) index: i64,

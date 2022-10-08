@@ -2,9 +2,9 @@ use super::graph_data_storage::GraphDataStorage;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_impl::GraphImpl;
 use crate::storage::StorageVec;
-use crate::DbError;
-use storage::FileStorage;
-use storage::Storage;
+use agdb_db_error::DbError;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 
 pub(crate) type StorageGraph<Data = FileStorage> = GraphImpl<GraphDataStorage<Data>>;
 
@@ -86,8 +86,7 @@ impl<Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)> for St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use storage::FileStorage;
-    use test_file::TestFile;
+    use agdb_test_file::TestFile;
 
     #[test]
     fn edge_from_index() {

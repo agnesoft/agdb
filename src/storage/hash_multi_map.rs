@@ -3,7 +3,7 @@ use super::hash_map_impl::HashMapImpl;
 use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_multi_map_impl::HashMultiMapImpl;
 use super::StableHash;
-use serialize::Serialize;
+use agdb_serialize::Serialize;
 use std::hash::Hash;
 
 pub(crate) type HashMultiMap<K, T> = HashMultiMapImpl<K, T, HashMapDataMemory<K, T>>;

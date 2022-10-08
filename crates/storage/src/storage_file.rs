@@ -1,7 +1,6 @@
 use crate::storage_data_file::FileStorageData;
 use crate::storage_impl::StorageImpl;
-use crate::write_ahead_log::wal_filename;
-use db_error::DbError;
+use agdb_db_error::DbError;
 
 pub type FileStorage = StorageImpl<FileStorageData>;
 
@@ -9,10 +8,8 @@ impl TryFrom<String> for FileStorage {
     type Error = DbError;
 
     fn try_from(filename: String) -> Result<Self, Self::Error> {
-        let wal_filename = wal_filename(&filename);
-
         let mut storage = FileStorage {
-            data: FileStorageData::try_from((filename, wal_filename))?,
+            data: FileStorageData::try_from(filename)?,
         };
 
         storage.apply_wal()?;

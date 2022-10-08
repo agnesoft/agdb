@@ -1,6 +1,6 @@
 use super::StorageVec;
-use serialize::Serialize;
-use storage::Storage;
+use agdb_serialize::Serialize;
+use agdb_storage::Storage;
 
 pub(crate) struct VecIterator<'a, T, Data>
 where

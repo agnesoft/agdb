@@ -3,7 +3,7 @@ use super::dictionary_impl::DictionaryImpl;
 use super::dictionary_value::DictionaryValue;
 use crate::storage::HashMultiMap;
 use crate::storage::StableHash;
-use serialize::Serialize;
+use agdb_serialize::Serialize;
 
 pub(crate) type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 

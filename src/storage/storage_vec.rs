@@ -1,8 +1,8 @@
 use super::vec_iterator::VecIterator;
-use crate::DbError;
-use serialize::Serialize;
-use storage::FileStorage;
-use storage::Storage;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 
 pub(crate) struct StorageVec<T, Data = FileStorage>
 where
@@ -223,8 +223,7 @@ impl<T: Serialize, Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use storage::FileStorage;
-    use test_file::TestFile;
+    use agdb_test_file::TestFile;
 
     #[test]
     fn capacity() {

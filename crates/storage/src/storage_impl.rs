@@ -1,9 +1,8 @@
 use crate::storage_data::StorageData;
-use crate::storage_record::StorageRecord;
-use crate::storage_record_with_index::StorageRecordWithIndex;
-use crate::write_ahead_log_record::WriteAheadLogRecord;
-use db_error::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage_index::StorageRecord;
+use agdb_write_ahead_log::WriteAheadLogRecord;
 
 pub struct StorageImpl<Data: StorageData> {
     pub(crate) data: Data,
@@ -66,6 +65,7 @@ impl<Data: StorageData> StorageImpl<Data> {
         self.append(&bytes)?;
 
         Ok(StorageRecord {
+            index: record_index,
             position: new_position,
             size: record_size,
         })
@@ -149,7 +149,7 @@ impl<Data: StorageData> StorageImpl<Data> {
         Ok(buffer)
     }
 
-    fn read_record(&mut self) -> Result<StorageRecordWithIndex, DbError> {
+    fn read_record(&mut self) -> Result<StorageRecord, DbError> {
         let index_size: u64 = i64::serialized_size();
         const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
@@ -159,7 +159,7 @@ impl<Data: StorageData> StorageImpl<Data> {
 
         self.data.seek(std::io::SeekFrom::Current(size as i64))?;
 
-        Ok(StorageRecordWithIndex {
+        Ok(StorageRecord {
             index,
             position,
             size,
@@ -167,7 +167,7 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     pub(crate) fn read_records(&mut self) -> Result<(), DbError> {
-        let mut records: Vec<StorageRecordWithIndex> = vec![];
+        let mut records: Vec<StorageRecord> = vec![];
         self.data.seek(std::io::SeekFrom::End(0))?;
         let size = self.data.seek(std::io::SeekFrom::Current(0))?;
         self.data.seek(std::io::SeekFrom::Start(0))?;

@@ -5,11 +5,11 @@ use super::hash_multi_map::HashMultiMap;
 use super::hash_multi_map_impl::HashMultiMapImpl;
 use super::stable_hash::StableHash;
 use super::StorageHashMap;
-use crate::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
 use std::hash::Hash;
-use storage::FileStorage;
-use storage::Storage;
 
 pub(crate) type StorageHashMultiMap<K, T, Data = FileStorage> =
     HashMultiMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
@@ -74,8 +74,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use storage::FileStorage;
-    use test_file::TestFile;
+    use agdb_test_file::TestFile;
 
     #[test]
     fn insert() {

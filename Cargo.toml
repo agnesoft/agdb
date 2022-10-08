@@ -12,9 +12,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-db_error = { path = "crates/db_error", version = "<=0.1.0" }
-serialize = { path = "crates/serialize", version = "<=0.1.0" }
-storage = { path = "crates/storage", version = "<=0.1.0" }
+agdb_db_error = { path = "crates/db_error", version = "<=0.1.0" }
+agdb_serialize = { path = "crates/serialize", version = "<=0.1.0" }
+agdb_storage = { path = "crates/storage", version = "<=0.1.0" }
 
 [dev-dependencies]
-test_file = { path = "crates/test_file", version = "<=0.1.0" }
+agdb_test_file = { path = "crates/test_file", version = "<=0.1.0" }

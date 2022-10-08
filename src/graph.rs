@@ -40,7 +40,7 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DbError;
+    use agdb_db_error::DbError;
 
     #[test]
     fn edge_from_index() {

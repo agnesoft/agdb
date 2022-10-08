@@ -1,6 +1,6 @@
+use agdb_test_file::TestFile;
 use std::fs::OpenOptions;
 use std::path::Path;
-use test_file::TestFile;
 
 fn ensure_file(filename: &str) {
     OpenOptions::new()

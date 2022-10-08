@@ -1,8 +1,8 @@
-use db_error::DbError;
-use serialize::Serialize;
-use storage::FileStorage;
-use storage::Storage;
-use test_file::TestFile;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::FileStorage;
+use agdb_storage::Storage;
+use agdb_test_file::TestFile;
 
 #[test]
 fn bad_file() {
@@ -372,7 +372,7 @@ fn shrink_to_fit() {
     storage.shrink_to_fit().unwrap();
 
     let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
-    let expected_size = u64::serialized_size() * 2 + i64::serialized_size() * 2;
+    let expected_size = (u64::serialized_size() * 2) * 2 + i64::serialized_size() * 2;
 
     assert_eq!(actual_size, expected_size);
     assert_eq!(storage.value(index1), Ok(1_i64));

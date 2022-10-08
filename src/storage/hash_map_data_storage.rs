@@ -2,10 +2,10 @@ use super::hash_map_data::HashMapData;
 use super::hash_map_key_value::HashMapKeyValue;
 use super::hash_map_meta_value::HashMapMetaValue;
 use super::StableHash;
-use crate::DbError;
-use serialize::Serialize;
+use agdb_db_error::DbError;
+use agdb_serialize::Serialize;
+use agdb_storage::Storage;
 use std::hash::Hash;
-use storage::Storage;
 
 pub(crate) struct HashMapDataStorage<K, T, Data: Storage>
 where

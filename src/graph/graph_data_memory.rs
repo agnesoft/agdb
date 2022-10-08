@@ -1,5 +1,5 @@
 use super::graph_data::GraphData;
-use crate::DbError;
+use agdb_db_error::DbError;
 
 pub(crate) struct GraphDataMemory {
     pub(super) from: Vec<i64>,

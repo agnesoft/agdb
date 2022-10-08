@@ -1,10 +1,9 @@
 use crate::storage_data::StorageData;
-use crate::storage_record::StorageRecord;
-use crate::storage_record_with_index::StorageRecordWithIndex;
-use crate::storage_records::StorageRecords;
-use crate::write_ahead_log::WriteAheadLog;
-use crate::write_ahead_log_record::WriteAheadLogRecord;
-use db_error::DbError;
+use agdb_db_error::DbError;
+use agdb_storage_index::StorageRecord;
+use agdb_storage_index::StorageRecords;
+use agdb_write_ahead_log::WriteAheadLog;
+use agdb_write_ahead_log::WriteAheadLogRecord;
 
 #[allow(dead_code)]
 pub struct FileStorageData {
@@ -75,7 +74,7 @@ impl StorageData for FileStorageData {
         Ok(self.file.set_len(len)?)
     }
 
-    fn set_records(&mut self, records: Vec<StorageRecordWithIndex>) {
+    fn set_records(&mut self, records: Vec<StorageRecord>) {
         self.records = StorageRecords::from(records);
     }
 
@@ -88,20 +87,20 @@ impl StorageData for FileStorageData {
     }
 }
 
-impl TryFrom<(String, String)> for FileStorageData {
+impl TryFrom<String> for FileStorageData {
     type Error = DbError;
 
-    fn try_from(filenames: (String, String)) -> Result<Self, Self::Error> {
+    fn try_from(filename: String) -> Result<Self, Self::Error> {
         Ok(FileStorageData {
             file: std::fs::OpenOptions::new()
                 .write(true)
                 .create(true)
                 .read(true)
-                .open(&filenames.0)?,
-            filename: filenames.0,
+                .open(&filename)?,
+            filename: filename.clone(),
             records: StorageRecords::default(),
-            wal: WriteAheadLog::try_from(&filenames.1)?,
-            wal_filename: filenames.1,
+            wal: WriteAheadLog::try_from(&filename)?,
+            wal_filename: filename,
             transactions: 0,
         })
     }

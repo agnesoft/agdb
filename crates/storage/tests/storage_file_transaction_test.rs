@@ -13,11 +13,11 @@ fn transaction_commit() {
         storage.transaction();
         index = storage.insert(&1_i64).unwrap();
         storage.commit().unwrap();
-        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+        assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
     }
 
     let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
-    assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+    assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
 }
 
 #[test]
@@ -36,13 +36,16 @@ fn transaction_unfinished() {
         let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
         storage.transaction();
         index = storage.insert(&1_i64).unwrap();
-        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+        assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
     }
 
     let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     assert_eq!(
-        storage.value::<i64>(index),
-        Err(DbError::from(format!("index '{}' not found", index)))
+        storage.value::<i64>(&index),
+        Err(DbError::from(format!(
+            "index '{}' not found",
+            index.value()
+        )))
     );
 }
 
@@ -56,13 +59,16 @@ fn transaction_nested_unfinished() {
         storage.transaction();
         storage.transaction();
         index = storage.insert(&1_i64).unwrap();
-        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
+        assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
         storage.commit().unwrap();
     }
 
     let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     assert_eq!(
-        storage.value::<i64>(index),
-        Err(DbError::from(format!("index '{}' not found", index)))
+        storage.value::<i64>(&index),
+        Err(DbError::from(format!(
+            "index '{}' not found",
+            index.value()
+        )))
     );
 }

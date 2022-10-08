@@ -1,5 +1,6 @@
 use crate::storage_data::StorageData;
 use agdb_db_error::DbError;
+use agdb_storage_index::StorageIndex;
 use agdb_storage_index::StorageRecord;
 use agdb_storage_index::StorageRecords;
 use agdb_write_ahead_log::WriteAheadLog;
@@ -24,7 +25,7 @@ impl StorageData for StorageDataFile {
         self.wal.clear()
     }
 
-    fn create_index(&mut self, position: u64, size: u64) -> i64 {
+    fn create_index(&mut self, position: u64, size: u64) -> StorageIndex {
         self.records.create(position, size)
     }
 
@@ -36,7 +37,7 @@ impl StorageData for StorageDataFile {
         self.transactions == 0
     }
 
-    fn indexes_by_position(&self) -> Vec<i64> {
+    fn indexes_by_position(&self) -> Vec<StorageIndex> {
         self.records.indexes_by_position()
     }
 
@@ -48,21 +49,21 @@ impl StorageData for StorageDataFile {
         Ok(std::io::Read::read_exact(&mut self.file, buffer)?)
     }
 
-    fn record(&self, index: i64) -> Result<StorageRecord, DbError> {
+    fn record(&self, index: &StorageIndex) -> Result<StorageRecord, DbError> {
         Ok(self
             .records
             .get(index)
-            .ok_or_else(|| DbError::from(format!("index '{}' not found", index)))?
+            .ok_or_else(|| DbError::from(format!("index '{}' not found", index.value())))?
             .clone())
     }
 
-    fn record_mut(&mut self, index: i64) -> &mut StorageRecord {
+    fn record_mut(&mut self, index: &StorageIndex) -> &mut StorageRecord {
         self.records
             .get_mut(index)
             .expect("validated by previous call to FileStorage::record()")
     }
 
-    fn remove_index(&mut self, index: i64) {
+    fn remove_index(&mut self, index: &StorageIndex) {
         self.records.remove(index);
     }
 

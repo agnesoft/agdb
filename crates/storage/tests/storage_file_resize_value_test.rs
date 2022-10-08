@@ -2,6 +2,7 @@ use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
+use agdb_storage_index::StorageIndex;
 use agdb_test_file::TestFile;
 
 #[test]
@@ -11,9 +12,9 @@ fn resize_at_end_does_not_move() {
 
     let index = storage.insert(&1_i64).unwrap();
     let size = storage.size().unwrap();
-    let value_size = storage.value_size(index).unwrap();
+    let value_size = storage.value_size(&index).unwrap();
 
-    storage.resize_value(index, value_size + 8).unwrap();
+    storage.resize_value(&index, value_size + 8).unwrap();
 
     assert_eq!(storage.size(), Ok(size + 8));
 }
@@ -26,11 +27,11 @@ fn resize_value_greater() {
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
 
-    assert_eq!(storage.value_size(index), Ok(expected_size));
+    assert_eq!(storage.value_size(&index), Ok(expected_size));
 
-    storage.resize_value(index, expected_size * 2).unwrap();
+    storage.resize_value(&index, expected_size * 2).unwrap();
 
-    assert_eq!(storage.value_size(index), Ok(expected_size * 2));
+    assert_eq!(storage.value_size(&index), Ok(expected_size * 2));
 }
 
 #[test]
@@ -39,7 +40,7 @@ fn resize_value_missing_index() {
     let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     assert_eq!(
-        storage.resize_value(1, 1),
+        storage.resize_value(&StorageIndex::from(1_i64), 1),
         Err(DbError::from("index '1' not found"))
     );
 }
@@ -52,11 +53,11 @@ fn resize_value_same() {
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
 
-    assert_eq!(storage.value_size(index), Ok(expected_size));
+    assert_eq!(storage.value_size(&index), Ok(expected_size));
 
-    storage.resize_value(index, expected_size).unwrap();
+    storage.resize_value(&index, expected_size).unwrap();
 
-    assert_eq!(storage.value_size(index), Ok(expected_size));
+    assert_eq!(storage.value_size(&index), Ok(expected_size));
 }
 
 #[test]
@@ -67,11 +68,11 @@ fn resize_value_smaller() {
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
 
-    assert_eq!(storage.value_size(index), Ok(expected_size));
+    assert_eq!(storage.value_size(&index), Ok(expected_size));
 
-    storage.resize_value(index, expected_size / 2).unwrap();
+    storage.resize_value(&index, expected_size / 2).unwrap();
 
-    assert_eq!(storage.value_size(index), Ok(expected_size / 2));
+    assert_eq!(storage.value_size(&index), Ok(expected_size / 2));
 }
 
 #[test]
@@ -82,10 +83,10 @@ fn resize_value_zero() {
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
 
-    assert_eq!(storage.value_size(index), Ok(expected_size));
+    assert_eq!(storage.value_size(&index), Ok(expected_size));
 
     assert_eq!(
-        storage.resize_value(index, 0),
+        storage.resize_value(&index, 0),
         Err(DbError::from("value size cannot be 0"))
     );
 }
@@ -97,9 +98,9 @@ fn resize_value_resizes_file() {
     let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
     let index = storage.insert(&3_i64).unwrap();
     let size = u64::serialized_size() + i64::serialized_size() * 3;
-    storage.resize_value(index, size).unwrap();
+    storage.resize_value(&index, size).unwrap();
 
-    assert_eq!(storage.value::<Vec<i64>>(index), Ok(vec![0_i64; 3]));
+    assert_eq!(storage.value::<Vec<i64>>(&index), Ok(vec![0_i64; 3]));
 }
 
 #[test]
@@ -112,14 +113,14 @@ fn resize_value_invalidates_original_position() {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
         index = storage.insert(&10_i64).unwrap();
         storage.insert(&5_i64).unwrap();
-        storage.resize_value(index, 1).unwrap();
-        storage.remove(index).unwrap();
+        storage.resize_value(&index, 1).unwrap();
+        storage.remove(&index).unwrap();
     }
 
     let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     assert_eq!(
-        storage.value::<i64>(index),
+        storage.value::<i64>(&index),
         Err(DbError::from("index '1' not found"))
     );
 }

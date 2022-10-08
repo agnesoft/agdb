@@ -13,3 +13,11 @@ impl From<u64> for StorageIndex {
         }
     }
 }
+
+impl From<usize> for StorageIndex {
+    fn from(index: usize) -> Self {
+        StorageIndex {
+            index: index as i64,
+        }
+    }
+}

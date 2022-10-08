@@ -7,6 +7,7 @@ use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
+use agdb_storage::StorageIndex;
 
 pub(crate) struct DictionaryDataStorage<T, Data = StorageFile>
 where
@@ -14,7 +15,7 @@ where
     Data: Storage,
 {
     pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
-    pub(super) storage_index: i64,
+    pub(super) storage_index: StorageIndex,
     pub(super) index: StorageHashMultiMap<u64, i64, Data>,
     pub(super) values: StorageVec<DictionaryValue<T>, Data>,
 }
@@ -43,7 +44,7 @@ where
     fn hash(&self, index: i64) -> Result<u64, DbError> {
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().value_at::<u64>(
-            values_index,
+            &values_index,
             StorageVec::<DictionaryValue<T>>::value_offset(index as u64) + i64::serialized_size(),
         )
     }
@@ -51,7 +52,7 @@ where
     fn meta(&self, index: i64) -> Result<i64, DbError> {
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().value_at::<i64>(
-            values_index,
+            &values_index,
             StorageVec::<DictionaryValue<T>>::value_offset(index as u64),
         )
     }
@@ -63,7 +64,7 @@ where
     fn set_hash(&mut self, index: i64, hash: u64) -> Result<(), DbError> {
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().insert_at(
-            values_index,
+            &values_index,
             StorageVec::<DictionaryValue<T>>::value_offset(index as u64) + u64::serialized_size(),
             &hash,
         )
@@ -72,7 +73,7 @@ where
     fn set_meta(&mut self, index: i64, meta: i64) -> Result<(), DbError> {
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().insert_at(
-            values_index,
+            &values_index,
             StorageVec::<DictionaryValue<T>>::value_offset(index as u64),
             &meta,
         )

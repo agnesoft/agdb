@@ -5,6 +5,7 @@ use super::StableHash;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
+use agdb_storage::StorageIndex;
 use std::hash::Hash;
 
 pub(crate) struct HashMapDataStorage<K, T, Data: Storage>
@@ -13,7 +14,7 @@ where
     T: Clone + Default + Serialize,
 {
     pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
-    pub(super) storage_index: i64,
+    pub(super) storage_index: StorageIndex,
     pub(super) count: u64,
     pub(super) capacity: u64,
     pub(super) phantom_data: std::marker::PhantomData<(K, T)>,
@@ -33,7 +34,7 @@ where
         self.storage
             .borrow_mut()
             .value_at::<Vec<HashMapKeyValue<K, T>>>(
-                self.storage_index,
+                &self.storage_index,
                 std::mem::size_of::<u64>() as u64,
             )
     }
@@ -60,20 +61,20 @@ where
     fn meta_value(&self, pos: u64) -> Result<HashMapMetaValue, DbError> {
         self.storage
             .borrow_mut()
-            .value_at::<HashMapMetaValue>(self.storage_index, Self::record_offset(pos))
+            .value_at::<HashMapMetaValue>(&self.storage_index, Self::record_offset(pos))
     }
 
     fn record(&self, pos: u64) -> Result<HashMapKeyValue<K, T>, DbError> {
         self.storage
             .borrow_mut()
-            .value_at::<HashMapKeyValue<K, T>>(self.storage_index, Self::record_offset(pos))
+            .value_at::<HashMapKeyValue<K, T>>(&self.storage_index, Self::record_offset(pos))
     }
 
     fn set_count(&mut self, new_count: u64) -> Result<(), DbError> {
         self.count = new_count;
         self.storage
             .borrow_mut()
-            .insert_at(self.storage_index, 0, &self.count)
+            .insert_at(&self.storage_index, 0, &self.count)
     }
 
     fn set_meta_value(
@@ -82,7 +83,7 @@ where
         meta_value: HashMapMetaValue,
     ) -> Result<(), crate::DbError> {
         self.storage.borrow_mut().insert_at(
-            self.storage_index,
+            &self.storage_index,
             Self::record_offset(pos),
             &meta_value,
         )
@@ -91,13 +92,13 @@ where
     fn set_value(&mut self, pos: u64, value: HashMapKeyValue<K, T>) -> Result<(), DbError> {
         self.storage
             .borrow_mut()
-            .insert_at(self.storage_index, Self::record_offset(pos), &value)
+            .insert_at(&self.storage_index, Self::record_offset(pos), &value)
     }
 
     fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), DbError> {
         self.capacity = values.len() as u64;
         self.storage.borrow_mut().insert_at(
-            self.storage_index,
+            &self.storage_index,
             std::mem::size_of::<u64>() as u64,
             &values,
         )

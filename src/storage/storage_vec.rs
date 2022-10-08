@@ -3,6 +3,7 @@ use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
+use agdb_storage::StorageIndex;
 
 pub(crate) struct StorageVec<T, Data = StorageFile>
 where
@@ -10,7 +11,7 @@ where
     Data: Storage,
 {
     storage: std::rc::Rc<std::cell::RefCell<Data>>,
-    storage_index: i64,
+    storage_index: StorageIndex,
     size: u64,
     capacity: u64,
     phantom_data: std::marker::PhantomData<T>,
@@ -48,13 +49,13 @@ where
                 &mut self.capacity,
                 std::cmp::max(current_capacity * 2, 64),
                 &mut ref_storage,
-                self.storage_index,
+                &self.storage_index,
             )?;
         }
 
-        ref_storage.insert_at(self.storage_index, Self::value_offset(self.size), value)?;
+        ref_storage.insert_at(&self.storage_index, Self::value_offset(self.size), value)?;
         self.size += 1;
-        ref_storage.insert_at(self.storage_index, 0, &self.size)?;
+        ref_storage.insert_at(&self.storage_index, 0, &self.size)?;
         ref_storage.commit()
     }
 
@@ -69,9 +70,9 @@ where
 
         let mut ref_storage = self.storage.borrow_mut();
         ref_storage.transaction();
-        ref_storage.move_at(self.storage_index, offset_from, offset_to, size)?;
+        ref_storage.move_at(&self.storage_index, offset_from, offset_to, size)?;
         self.size -= 1;
-        ref_storage.insert_at(self.storage_index, 0, &self.size)?;
+        ref_storage.insert_at(&self.storage_index, 0, &self.size)?;
         ref_storage.commit()
     }
 
@@ -85,7 +86,7 @@ where
             &mut self.capacity,
             capacity,
             &mut ref_storage,
-            self.storage_index,
+            &self.storage_index,
         )
     }
 
@@ -100,18 +101,18 @@ where
         if size < self.size {
             let offset = Self::value_offset(size);
             let byte_size = Self::value_offset(self.size) - offset;
-            ref_storage.insert_at(self.storage_index, offset, &vec![0_u8; byte_size as usize])?;
+            ref_storage.insert_at(&self.storage_index, offset, &vec![0_u8; byte_size as usize])?;
         } else if self.capacity < size {
             Self::reallocate(
                 &mut self.capacity,
                 size,
                 &mut ref_storage,
-                self.storage_index,
+                &self.storage_index,
             )?;
         }
 
         self.size = size;
-        ref_storage.insert_at(self.storage_index, 0, &self.size)?;
+        ref_storage.insert_at(&self.storage_index, 0, &self.size)?;
         ref_storage.commit()
     }
 
@@ -122,7 +123,7 @@ where
 
         self.storage
             .borrow_mut()
-            .insert_at(self.storage_index, Self::value_offset(index), value)
+            .insert_at(&self.storage_index, Self::value_offset(index), value)
     }
 
     pub(crate) fn shrink_to_fit(&mut self) -> Result<(), DbError> {
@@ -131,17 +132,17 @@ where
             &mut self.capacity,
             self.size,
             &mut ref_storage,
-            self.storage_index,
+            &self.storage_index,
         )
     }
 
-    pub(crate) fn storage_index(&self) -> i64 {
-        self.storage_index
+    pub(crate) fn storage_index(&self) -> StorageIndex {
+        self.storage_index.clone()
     }
 
     #[allow(clippy::wrong_self_convention)]
     pub(crate) fn to_vec(&self) -> Result<Vec<T>, DbError> {
-        self.storage.borrow_mut().value(self.storage_index)
+        self.storage.borrow_mut().value(&self.storage_index)
     }
 
     pub(crate) fn value(&self, index: u64) -> Result<T, DbError> {
@@ -151,7 +152,7 @@ where
 
         self.storage
             .borrow_mut()
-            .value_at::<T>(self.storage_index, Self::value_offset(index))
+            .value_at::<T>(&self.storage_index, Self::value_offset(index))
     }
 
     pub(crate) fn value_offset(index: u64) -> u64 {
@@ -162,7 +163,7 @@ where
         capacity: &mut u64,
         new_capacity: u64,
         storage: &mut std::cell::RefMut<Data>,
-        index: i64,
+        index: &StorageIndex,
     ) -> Result<(), DbError> {
         *capacity = new_capacity;
         storage.resize_value(index, Self::value_offset(new_capacity))
@@ -193,22 +194,22 @@ where
     }
 }
 
-impl<T: Serialize, Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, i64)>
+impl<T: Serialize, Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex)>
     for StorageVec<T, Data>
 {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, i64),
+        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex),
     ) -> Result<Self, Self::Error> {
         let byte_size = storage_with_index
             .0
             .borrow_mut()
-            .value_size(storage_with_index.1)?;
+            .value_size(&storage_with_index.1)?;
         let size = storage_with_index
             .0
             .borrow_mut()
-            .value_at::<u64>(storage_with_index.1, 0)?;
+            .value_at::<u64>(&storage_with_index.1, 0)?;
 
         Ok(Self {
             storage: storage_with_index.0,
@@ -291,7 +292,7 @@ mod tests {
         assert_eq!(
             storage
                 .borrow_mut()
-                .value::<Vec::<i64>>(vec.storage_index()),
+                .value::<Vec::<i64>>(&vec.storage_index()),
             Ok(vec![1_i64, 3_i64, 5_i64])
         );
     }
@@ -359,7 +360,7 @@ mod tests {
         assert_eq!(
             storage
                 .borrow_mut()
-                .value::<Vec::<i64>>(vec.storage_index()),
+                .value::<Vec::<i64>>(&vec.storage_index()),
             Ok(vec![1_i64, 5_i64])
         );
     }
@@ -410,7 +411,7 @@ mod tests {
         assert_eq!(
             storage
                 .borrow_mut()
-                .value::<Vec::<i64>>(vec.storage_index()),
+                .value::<Vec::<i64>>(&vec.storage_index()),
             Ok(vec![1_i64, 3_i64, 5_i64, 0, 0, 0])
         );
     }
@@ -440,7 +441,7 @@ mod tests {
         assert_eq!(
             storage
                 .borrow_mut()
-                .value::<Vec::<i64>>(vec.storage_index()),
+                .value::<Vec::<i64>>(&vec.storage_index()),
             Ok(expected)
         );
     }
@@ -462,7 +463,7 @@ mod tests {
         assert_eq!(
             storage
                 .borrow_mut()
-                .value::<Vec::<i64>>(vec.storage_index()),
+                .value::<Vec::<i64>>(&vec.storage_index()),
             Ok(vec![1_i64, 3_i64, 5_i64])
         );
     }
@@ -484,7 +485,7 @@ mod tests {
         assert_eq!(
             storage
                 .borrow_mut()
-                .value::<Vec::<i64>>(vec.storage_index()),
+                .value::<Vec::<i64>>(&vec.storage_index()),
             Ok(vec![1_i64])
         );
     }
@@ -607,7 +608,9 @@ mod tests {
         ));
 
         assert_eq!(
-            StorageVec::<i64>::try_from((storage, 1)).err().unwrap(),
+            StorageVec::<i64>::try_from((storage, StorageIndex::from(1_i64)))
+                .err()
+                .unwrap(),
             DbError::from("index '1' not found")
         );
     }

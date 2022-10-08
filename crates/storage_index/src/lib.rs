@@ -1,5 +1,6 @@
 mod storage_index;
 mod storage_index_from;
+mod storage_index_serialize;
 mod storage_record;
 mod storage_records;
 mod storage_records_default;

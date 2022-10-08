@@ -20,7 +20,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         let bytes = value.serialize();
         let index = self.data.create_index(position, bytes.len() as u64);
 
-        self.append(&index.value().serialize())?;
+        self.append(&index.serialize())?;
         self.append(&(bytes.len() as u64).serialize())?;
         self.append(&bytes)?;
         self.commit()?;
@@ -70,7 +70,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
     fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError> {
         self.transaction();
         let position = self.data.record(index)?.position;
-        self.invalidate_record(index, position)?;
+        self.invalidate_record(position)?;
         self.data.remove_index(index);
         self.commit()
     }

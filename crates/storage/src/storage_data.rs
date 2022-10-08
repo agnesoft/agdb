@@ -6,7 +6,7 @@ use agdb_write_ahead_log::WriteAheadLogRecord;
 pub trait StorageData<T = Self> {
     fn begin_transaction(&mut self);
     fn clear_wal(&mut self) -> Result<(), DbError>;
-    fn create_index(&mut self, position: u64, size: u64) -> StorageIndex;
+    fn create_record(&mut self, position: u64, size: u64) -> StorageRecord;
     fn end_transaction(&mut self) -> bool;
     fn indexes_by_position(&self) -> Vec<StorageIndex>;
     fn insert_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError>;

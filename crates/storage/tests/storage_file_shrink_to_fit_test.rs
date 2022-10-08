@@ -1,14 +1,14 @@
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 use agdb_test_file::TestFile;
 
 #[test]
 fn shrink_to_fit() {
     let test_file = TestFile::new();
 
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     let index1 = storage.insert(&1_i64).unwrap();
     let index2 = storage.insert(&2_i64).unwrap();
     let index3 = storage.insert(&3_i64).unwrap();
@@ -26,7 +26,7 @@ fn shrink_to_fit() {
 #[test]
 fn shrink_to_fit_no_change() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     let index1 = storage.insert(&1_i64).unwrap();
     let index2 = storage.insert(&2_i64).unwrap();
     let index3 = storage.insert(&3_i64).unwrap();
@@ -54,7 +54,7 @@ fn shrink_to_fit_uncommitted() {
     let index3;
 
     {
-        let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+        let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
         index1 = storage.insert(&1_i64).unwrap();
         index2 = storage.insert(&2_i64).unwrap();
         index3 = storage.insert(&3_i64).unwrap();
@@ -69,7 +69,7 @@ fn shrink_to_fit_uncommitted() {
     let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
     assert_eq!(actual_size, expected_size);
 
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     assert_eq!(storage.value(index1), Ok(1_i64));
     assert_eq!(
         storage.value::<i64>(index2),

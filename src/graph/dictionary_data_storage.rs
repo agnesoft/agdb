@@ -5,10 +5,10 @@ use crate::storage::StorageHashMultiMap;
 use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 
-pub(crate) struct DictionaryDataStorage<T, Data = FileStorage>
+pub(crate) struct DictionaryDataStorage<T, Data = StorageFile>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: Storage,

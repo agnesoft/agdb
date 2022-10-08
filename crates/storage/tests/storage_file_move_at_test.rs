@@ -1,13 +1,13 @@
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 use agdb_test_file::TestFile;
 
 #[test]
 fn move_at() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
     let offset_from = (u64::serialized_size() + i64::serialized_size() * 2) as u64;
@@ -27,7 +27,7 @@ fn move_at() {
 #[test]
 fn move_at_beyond_end() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
     let offset_from = (u64::serialized_size() + i64::serialized_size()) as u64;
@@ -49,7 +49,7 @@ fn move_at_beyond_end() {
 #[test]
 fn move_at_missing_index() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     assert_eq!(
         storage.move_at(1, 0, 1, 10),
@@ -60,7 +60,7 @@ fn move_at_missing_index() {
 #[test]
 fn move_at_same_offset() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
 
@@ -74,7 +74,7 @@ fn move_at_same_offset() {
 #[test]
 fn move_at_size_out_of_bounds() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
     let offset_from = (u64::serialized_size() + i64::serialized_size() * 3) as u64;
@@ -90,7 +90,7 @@ fn move_at_size_out_of_bounds() {
 #[test]
 fn move_at_zero_size() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().as_str()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
     let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
 

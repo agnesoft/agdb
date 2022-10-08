@@ -1,13 +1,13 @@
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage::FileStorage;
 use agdb_storage::Storage;
+use agdb_storage::StorageFile;
 use agdb_test_file::TestFile;
 
 #[test]
 fn value() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     let index = storage.insert(&10_i64).unwrap();
 
     assert_eq!(storage.value::<i64>(index), Ok(10_i64));
@@ -17,7 +17,7 @@ fn value() {
 fn value_at() {
     let test_file = TestFile::new();
 
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     let data = vec![1_i64, 2_i64, 3_i64];
 
     let index = storage.insert(&data).unwrap();
@@ -30,7 +30,7 @@ fn value_at() {
 fn value_at_dynamic_size() {
     let test_file = TestFile::new();
 
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
     let data = vec![2_i64, 1_i64, 2_i64];
 
     let index = storage.insert(&data).unwrap();
@@ -45,7 +45,7 @@ fn value_at_dynamic_size() {
 #[test]
 fn value_at_of_missing_index() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     assert_eq!(
         storage.value_at::<i64>(1, 8),
@@ -56,7 +56,7 @@ fn value_at_of_missing_index() {
 #[test]
 fn value_at_out_of_bounds() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let data = vec![1_i64, 2_i64];
     let index = storage.insert(&data).unwrap();
@@ -71,7 +71,7 @@ fn value_at_out_of_bounds() {
 #[test]
 fn value_at_offset_overflow() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let data = vec![1_i64, 2_i64];
     let index = storage.insert(&data).unwrap();
@@ -86,7 +86,7 @@ fn value_at_offset_overflow() {
 #[test]
 fn value_of_missing_index() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     assert_eq!(
         storage.value::<i64>(1),
@@ -97,7 +97,7 @@ fn value_of_missing_index() {
 #[test]
 fn value_out_of_bounds() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let index = storage.insert(&10_i64).unwrap();
 
@@ -110,7 +110,7 @@ fn value_out_of_bounds() {
 #[test]
 fn value_size() {
     let test_file = TestFile::new();
-    let mut storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     let index = storage.insert(&10_i64).unwrap();
     let expected_size = i64::serialized_size();
@@ -121,7 +121,7 @@ fn value_size() {
 #[test]
 fn value_size_of_missing_index() {
     let test_file = TestFile::new();
-    let storage = FileStorage::try_from(test_file.file_name().clone()).unwrap();
+    let storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
     assert_eq!(
         storage.value_size(1),

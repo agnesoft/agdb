@@ -8,6 +8,7 @@ use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
 use std::hash::Hash;
+use std::mem::size_of;
 
 pub(crate) type StorageHashMap<K, T, Data = StorageFile> =
     HashMapImpl<K, T, HashMapDataStorage<K, T, Data>>;
@@ -36,7 +37,7 @@ where
         let storage_index = storage.borrow_mut().insert(&0_u64)?;
         storage.borrow_mut().insert_at(
             &storage_index,
-            std::mem::size_of::<u64>() as u64,
+            size_of::<u64>() as u64,
             &vec![HashMapKeyValue::<K, T>::default()],
         )?;
 
@@ -72,7 +73,7 @@ where
         let capacity = storage_with_index
             .0
             .borrow_mut()
-            .value_at::<u64>(&storage_with_index.1, std::mem::size_of::<u64>() as u64)?;
+            .value_at::<u64>(&storage_with_index.1, size_of::<u64>() as u64)?;
 
         Ok(Self {
             data: HashMapDataStorage::<K, T, Data> {

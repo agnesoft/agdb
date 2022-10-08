@@ -155,11 +155,11 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     fn read_record(&mut self) -> Result<StorageRecord, DbError> {
-        let index_size: u64 = StorageIndex::serialized_size();
-        const START: std::io::SeekFrom = std::io::SeekFrom::Current(0);
+        const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
-        let position = self.data.seek(START)?;
-        let mut record = StorageRecord::deserialize(&self.read(START, index_size)?)?;
+        let position = self.data.seek(CURRENT)?;
+        let mut record =
+            StorageRecord::deserialize(&self.read(CURRENT, StorageRecord::serialized_size())?)?;
         record.position = position;
 
         self.data

@@ -154,7 +154,7 @@ fn get() {
 
     let record = file_records.create(position, size);
     let expected_record = StorageRecord {
-        index: StorageIndex::default(),
+        index: StorageIndex::from(1_i64),
         position,
         size,
     };
@@ -170,7 +170,7 @@ fn get_mut() {
 
     let record = file_records.create(position, size);
     let mut expected_record = StorageRecord {
-        index: StorageIndex::default(),
+        index: StorageIndex::from(1_i64),
         position,
         size,
     };

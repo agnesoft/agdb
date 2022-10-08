@@ -1,5 +1,6 @@
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
+use std::mem::size_of;
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub(crate) enum HashMapMetaValue {
@@ -28,7 +29,7 @@ impl Serialize for HashMapMetaValue {
     }
 
     fn serialized_size() -> u64 {
-        std::mem::size_of::<u8>() as u64
+        size_of::<u8>() as u64
     }
 }
 

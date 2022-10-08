@@ -7,7 +7,7 @@ use std::mem::size_of;
 impl Serialize for StorageRecord {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(StorageRecord {
-            index: StorageIndex::deserialize(&bytes)?,
+            index: StorageIndex::deserialize(bytes)?,
             position: 0,
             size: u64::deserialize(&bytes[(StorageIndex::serialized_size() as usize)..])?,
         })
@@ -21,6 +21,6 @@ impl Serialize for StorageRecord {
     }
 
     fn serialized_size() -> u64 {
-        StorageIndex::serialized_size() + size_of::<Self>() as u64
+        StorageIndex::serialized_size() + size_of::<u64>() as u64
     }
 }

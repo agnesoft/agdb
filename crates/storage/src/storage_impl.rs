@@ -60,7 +60,7 @@ impl<Data: StorageData> StorageImpl<Data> {
     ) -> Result<StorageRecord, DbError> {
         let new_position = self.data.seek(std::io::SeekFrom::End(0))?;
         let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
-        self.append(&record_index.value().serialize())?;
+        self.append(&record_index.serialize())?;
         self.append(&record_size.serialize())?;
         self.append(&bytes)?;
 
@@ -94,14 +94,10 @@ impl<Data: StorageData> StorageImpl<Data> {
         )
     }
 
-    pub(crate) fn invalidate_record(
-        &mut self,
-        index: &StorageIndex,
-        position: u64,
-    ) -> Result<(), DbError> {
+    pub(crate) fn invalidate_record(&mut self, position: u64) -> Result<(), DbError> {
         self.write(
             std::io::SeekFrom::Start(position),
-            &(-index.value()).serialize(),
+            &StorageIndex::from(-1_i64).serialize(),
         )
     }
 
@@ -125,7 +121,7 @@ impl<Data: StorageData> StorageImpl<Data> {
             index,
             new_size,
         )?;
-        self.invalidate_record(index, old_position)?;
+        self.invalidate_record(old_position)?;
 
         Ok(())
     }
@@ -161,7 +157,7 @@ impl<Data: StorageData> StorageImpl<Data> {
         const START: std::io::SeekFrom = std::io::SeekFrom::Current(0);
 
         let position = self.data.seek(START)?;
-        let index = StorageIndex::from(i64::deserialize(&self.read(START, index_size)?)?);
+        let index = StorageIndex::deserialize(&self.read(START, index_size)?)?;
         let size = u64::deserialize(&self.read(START, index_size)?)?;
 
         self.data.seek(std::io::SeekFrom::Current(size as i64))?;

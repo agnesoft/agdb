@@ -11,14 +11,14 @@ pub(super) struct GraphDataStorageIndexes {
 impl Serialize for GraphDataStorageIndexes {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(GraphDataStorageIndexes {
-            from: StorageIndex::from(i64::deserialize(bytes)?),
-            to: StorageIndex::from(i64::deserialize(&bytes[std::mem::size_of::<i64>()..])?),
-            from_meta: StorageIndex::from(i64::deserialize(
-                &bytes[(std::mem::size_of::<i64>() * 2)..],
-            )?),
-            to_meta: StorageIndex::from(i64::deserialize(
-                &bytes[(std::mem::size_of::<i64>() * 3)..],
-            )?),
+            from: StorageIndex::deserialize(bytes)?,
+            to: StorageIndex::deserialize(&bytes[(StorageIndex::serialized_size() as usize)..])?,
+            from_meta: StorageIndex::deserialize(
+                &bytes[(StorageIndex::serialized_size() as usize * 2)..],
+            )?,
+            to_meta: StorageIndex::deserialize(
+                &bytes[(StorageIndex::serialized_size() as usize * 3)..],
+            )?,
         })
     }
 
@@ -26,10 +26,10 @@ impl Serialize for GraphDataStorageIndexes {
         let mut bytes: Vec<u8> = vec![];
         bytes.reserve(4 * std::mem::size_of::<i64>());
 
-        bytes.extend(self.from.value().serialize());
-        bytes.extend(self.to.value().serialize());
-        bytes.extend(self.from_meta.value().serialize());
-        bytes.extend(self.to_meta.value().serialize());
+        bytes.extend(self.from.serialize());
+        bytes.extend(self.to.serialize());
+        bytes.extend(self.from_meta.serialize());
+        bytes.extend(self.to_meta.serialize());
 
         bytes
     }

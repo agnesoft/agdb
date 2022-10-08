@@ -9,8 +9,10 @@ pub(super) struct DictionaryDataStorageIndexes {
 impl Serialize for DictionaryDataStorageIndexes {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(DictionaryDataStorageIndexes {
-            index: StorageIndex::from(i64::deserialize(bytes)?),
-            values: StorageIndex::from(i64::deserialize(&bytes[std::mem::size_of::<i64>()..])?),
+            index: StorageIndex::deserialize(bytes)?,
+            values: StorageIndex::deserialize(
+                &bytes[(StorageIndex::serialized_size() as usize)..],
+            )?,
         })
     }
 
@@ -18,8 +20,8 @@ impl Serialize for DictionaryDataStorageIndexes {
         let mut bytes: Vec<u8> = vec![];
         bytes.reserve(4 * std::mem::size_of::<i64>());
 
-        bytes.extend(self.index.value().serialize());
-        bytes.extend(self.values.value().serialize());
+        bytes.extend(self.index.serialize());
+        bytes.extend(self.values.serialize());
 
         bytes
     }

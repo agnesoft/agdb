@@ -5,6 +5,7 @@ use agdb_map_common::MapIterator;
 use agdb_map_common::MapValueState;
 use agdb_serialize::Serialize;
 use agdb_utilities::StableHash;
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -79,8 +80,8 @@ where
         self.map_common.reserve(new_capacity)
     }
 
-    pub fn to_hash_map(&self) -> Result<std::collections::HashMap<K, T>, DbError> {
-        let mut map = std::collections::HashMap::<K, T>::new();
+    pub fn to_hash_map(&self) -> Result<HashMap<K, T>, DbError> {
+        let mut map = HashMap::<K, T>::new();
         map.reserve(self.count() as usize);
 
         for i in 0..self.capacity() {

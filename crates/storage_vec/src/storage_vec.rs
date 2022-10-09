@@ -46,8 +46,8 @@ where
         let mut ref_storage = self.storage.borrow_mut();
         ref_storage.transaction();
 
-        if self.len() == self.capacity {
-            let current_capacity = self.capacity;
+        if self.len() == self.capacity() {
+            let current_capacity = self.capacity();
             Self::reallocate(
                 &mut self.capacity,
                 std::cmp::max(current_capacity * 2, 64),
@@ -105,7 +105,7 @@ where
             let offset = Self::value_offset(size);
             let byte_size = Self::value_offset(self.len()) - offset;
             ref_storage.insert_at(&self.storage_index, offset, &vec![0_u8; byte_size as usize])?;
-        } else if self.capacity < size {
+        } else if self.capacity() < size {
             Self::reallocate(
                 &mut self.capacity,
                 size,
@@ -171,9 +171,9 @@ where
         capacity: &mut u64,
         new_capacity: u64,
         storage: &mut std::cell::RefMut<Data>,
-        index: &StorageIndex,
+        storage_index: &StorageIndex,
     ) -> Result<(), DbError> {
         *capacity = new_capacity;
-        storage.resize_value(index, Self::value_offset(new_capacity))
+        storage.resize_value(storage_index, Self::value_offset(new_capacity))
     }
 }

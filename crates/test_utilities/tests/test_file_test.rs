@@ -1,4 +1,4 @@
-use agdb_test_file::TestFile;
+use agdb_test_utilities::TestFile;
 use std::fs::OpenOptions;
 use std::panic::Location;
 use std::path::Path;

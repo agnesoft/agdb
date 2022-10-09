@@ -11,7 +11,7 @@ use agdb_utilities::StableHash;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub(crate) struct DictionaryDataStorage<T, Data = StorageFile>
+pub struct DictionaryDataStorage<T, Data = StorageFile>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: Storage,
@@ -93,7 +93,7 @@ where
         self.storage.borrow_mut().transaction()
     }
 
-    fn value(&self, index: i64) -> Result<DictionaryValue<T>, crate::DbError> {
+    fn value(&self, index: i64) -> Result<DictionaryValue<T>, DbError> {
         self.values.value(index as u64)
     }
 }

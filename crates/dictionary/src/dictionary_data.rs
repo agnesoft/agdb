@@ -3,7 +3,7 @@ use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_utilities::StableHash;
 
-pub(crate) trait DictionaryData<T>
+pub trait DictionaryData<T>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
 {

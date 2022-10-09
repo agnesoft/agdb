@@ -13,12 +13,12 @@ use std::io::Write;
 
 #[allow(dead_code)]
 pub struct StorageDataFile {
-    file: File,
-    filename: String,
-    records: StorageRecords,
-    wal: WriteAheadLog,
-    wal_filename: String,
-    transactions: u64,
+    pub(crate) file: File,
+    pub(crate) filename: String,
+    pub(crate) records: StorageRecords,
+    pub(crate) wal: WriteAheadLog,
+    pub(crate) wal_filename: String,
+    pub(crate) transactions: u64,
 }
 
 impl StorageData for StorageDataFile {
@@ -90,24 +90,5 @@ impl StorageData for StorageDataFile {
 
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError> {
         Ok(Write::write_all(&mut self.file, bytes)?)
-    }
-}
-
-impl TryFrom<String> for StorageDataFile {
-    type Error = DbError;
-
-    fn try_from(filename: String) -> Result<Self, Self::Error> {
-        Ok(StorageDataFile {
-            file: std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .read(true)
-                .open(&filename)?,
-            filename: filename.clone(),
-            records: StorageRecords::default(),
-            wal: WriteAheadLog::try_from(&filename)?,
-            wal_filename: filename,
-            transactions: 0,
-        })
     }
 }

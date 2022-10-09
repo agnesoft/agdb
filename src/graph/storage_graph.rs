@@ -97,7 +97,7 @@ impl<Data: Storage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for StorageGraph<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agdb_test_file::TestFile;
+    use agdb_test_utilities::TestFile;
 
     #[test]
     fn edge_from_index() {

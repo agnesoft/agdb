@@ -5,13 +5,13 @@ use agdb_serialize::Serialize;
 use agdb_utilities::StableHash;
 use std::marker::PhantomData;
 
-pub(crate) struct DictionaryImpl<T, Data>
+pub struct DictionaryImpl<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: DictionaryData<T>,
 {
-    pub(super) data: Data,
-    pub(super) phantom_data: PhantomData<T>,
+    pub(crate) data: Data,
+    pub(crate) phantom_data: PhantomData<T>,
 }
 
 #[allow(dead_code)]
@@ -20,7 +20,7 @@ where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: DictionaryData<T>,
 {
-    pub(crate) fn count(&self, index: i64) -> Result<Option<u64>, DbError> {
+    pub fn count(&self, index: i64) -> Result<Option<u64>, DbError> {
         if self.is_valid_index(index) {
             let value = self.data.meta(index)?;
 
@@ -32,11 +32,11 @@ where
         Ok(None)
     }
 
-    pub(crate) fn len(&self) -> Result<u64, DbError> {
+    pub fn len(&self) -> Result<u64, DbError> {
         self.data.hash(0)
     }
 
-    pub(crate) fn index(&self, value: &T) -> Result<Option<i64>, DbError> {
+    pub fn index(&self, value: &T) -> Result<Option<i64>, DbError> {
         let hash = value.stable_hash();
 
         if let Some(value) = self.find_value(hash, value)? {
@@ -46,7 +46,7 @@ where
         Ok(None)
     }
 
-    pub(crate) fn insert(&mut self, value: &T) -> Result<i64, DbError> {
+    pub fn insert(&mut self, value: &T) -> Result<i64, DbError> {
         let hash = value.stable_hash();
         let index;
 
@@ -64,7 +64,7 @@ where
         Ok(index)
     }
 
-    pub(crate) fn remove(&mut self, index: i64) -> Result<(), DbError> {
+    pub fn remove(&mut self, index: i64) -> Result<(), DbError> {
         if self.is_valid_index(index) {
             let value = self.data.meta(index)?;
 
@@ -82,7 +82,7 @@ where
         Ok(())
     }
 
-    pub(crate) fn value(&self, index: i64) -> Result<Option<T>, DbError> {
+    pub fn value(&self, index: i64) -> Result<Option<T>, DbError> {
         if self.is_valid_index(index) {
             let value = self.data.value(index)?;
 

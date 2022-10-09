@@ -5,12 +5,12 @@ use agdb_multi_map::MultiMap;
 use agdb_serialize::Serialize;
 use agdb_utilities::StableHash;
 
-pub(crate) struct DictionaryDataMemory<T>
+pub struct DictionaryDataMemory<T>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
 {
-    pub(super) index: MultiMap<u64, i64>,
-    pub(super) values: Vec<DictionaryValue<T>>,
+    pub(crate) index: MultiMap<u64, i64>,
+    pub(crate) values: Vec<DictionaryValue<T>>,
 }
 
 impl<T> DictionaryData<T> for DictionaryDataMemory<T>
@@ -71,7 +71,7 @@ where
 
     fn transaction(&mut self) {}
 
-    fn value(&self, index: i64) -> Result<DictionaryValue<T>, crate::DbError> {
+    fn value(&self, index: i64) -> Result<DictionaryValue<T>, DbError> {
         Ok(self.values[index as usize].clone())
     }
 }

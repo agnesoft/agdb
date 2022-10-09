@@ -1,6 +1,7 @@
 mod storage;
 mod storage_data;
 mod storage_data_file;
+mod storage_data_file_try_from;
 mod storage_file;
 mod storage_file_try_from;
 mod storage_impl;

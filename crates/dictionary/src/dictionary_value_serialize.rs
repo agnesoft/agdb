@@ -1,16 +1,7 @@
+use crate::dictionary_value::DictionaryValue;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_utilities::StableHash;
-
-#[derive(Clone, Default, PartialEq, Eq)]
-pub(crate) struct DictionaryValue<T>
-where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
-{
-    pub(super) meta: i64,
-    pub(super) hash: u64,
-    pub(super) value: T,
-}
 
 impl<T> Serialize for DictionaryValue<T>
 where
@@ -32,19 +23,5 @@ where
         bytes.extend(self.value.serialize());
 
         bytes
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn serialize() {
-        let value = DictionaryValue::<i64>::default();
-        let bytes = value.serialize();
-        let other = DictionaryValue::<i64>::deserialize(&bytes).unwrap();
-
-        assert!(other == value);
     }
 }

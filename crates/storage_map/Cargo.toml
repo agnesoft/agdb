@@ -13,4 +13,4 @@ agdb_storage = { path = "../storage", version = "<=0.1.0" }
 agdb_utilities = { path = "../utilities", version = "<=0.1.0" }
 
 [dev-dependencies]
-agdb_test_file = { path = "../test_file", version = "<=0.1.0" }
+agdb_test_utilities = { path = "../test_utilities", version = "<=0.1.0" }

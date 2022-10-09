@@ -1,3 +1,4 @@
+use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::StorageIndex;
 use std::mem::size_of;
@@ -8,7 +9,7 @@ pub(super) struct DictionaryDataStorageIndexes {
 }
 
 impl Serialize for DictionaryDataStorageIndexes {
-    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(DictionaryDataStorageIndexes {
             index: StorageIndex::deserialize(bytes)?,
             values: StorageIndex::deserialize(
@@ -25,24 +26,5 @@ impl Serialize for DictionaryDataStorageIndexes {
         bytes.extend(self.values.serialize());
 
         bytes
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn serialization() {
-        let element = DictionaryDataStorageIndexes {
-            index: StorageIndex::from(1_i64),
-            values: StorageIndex::from(2_i64),
-        };
-
-        let bytes = element.serialize();
-        let other = DictionaryDataStorageIndexes::deserialize(&bytes).unwrap();
-
-        assert_eq!(element.index, other.index);
-        assert_eq!(element.values, other.values);
     }
 }

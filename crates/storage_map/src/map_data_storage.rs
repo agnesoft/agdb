@@ -1,47 +1,55 @@
-use super::hash_map_data::HashMapData;
-use super::hash_map_key_value::HashMapKeyValue;
-use super::hash_map_meta_value::HashMapMetaValue;
-use super::StableHash;
 use agdb_db_error::DbError;
+use agdb_map_common::MapData;
+use agdb_map_common::MapValue;
+use agdb_map_common::MapValueState;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageIndex;
+use agdb_utilities::StableHash;
 use std::cell::RefCell;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::rc::Rc;
 
-pub(crate) struct HashMapDataStorage<K, T, Data: Storage>
+pub struct MapDataStorage<K, T, Data: Storage>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
 {
-    pub(super) storage: Rc<RefCell<Data>>,
-    pub(super) storage_index: StorageIndex,
-    pub(super) count: u64,
-    pub(super) capacity: u64,
-    pub(super) phantom_data: PhantomData<(K, T)>,
+    pub(crate) storage: Rc<RefCell<Data>>,
+    pub(crate) storage_index: StorageIndex,
+    pub(crate) count: u64,
+    pub(crate) capacity: u64,
+    pub(crate) phantom_data: PhantomData<(K, T)>,
 }
 
-impl<K, T, Data> HashMapDataStorage<K, T, Data>
+impl<K, T, Data> MapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
     Data: Storage,
 {
-    fn record_offset(pos: u64) -> u64 {
-        u64::serialized_size() * 2 + HashMapKeyValue::<K, T>::serialized_size() * pos
+    pub fn count(&self) -> u64 {
+        self.count
     }
 
-    pub(super) fn values(&self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {
+    fn record_offset(pos: u64) -> u64 {
+        u64::serialized_size() * 2 + MapValue::<K, T>::serialized_size() * pos
+    }
+
+    pub fn storage_index(&self) -> StorageIndex {
+        self.storage_index.clone()
+    }
+
+    pub fn values(&self) -> Result<Vec<MapValue<K, T>>, DbError> {
         self.storage
             .borrow_mut()
-            .value_at::<Vec<HashMapKeyValue<K, T>>>(&self.storage_index, size_of::<u64>() as u64)
+            .value_at::<Vec<MapValue<K, T>>>(&self.storage_index, size_of::<u64>() as u64)
     }
 }
 
-impl<K, T, Data> HashMapData<K, T> for HashMapDataStorage<K, T, Data>
+impl<K, T, Data> MapData<K, T> for MapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
@@ -59,16 +67,16 @@ where
         self.count
     }
 
-    fn meta_value(&self, pos: u64) -> Result<HashMapMetaValue, DbError> {
+    fn meta_value(&self, pos: u64) -> Result<MapValueState, DbError> {
         self.storage
             .borrow_mut()
-            .value_at::<HashMapMetaValue>(&self.storage_index, Self::record_offset(pos))
+            .value_at::<MapValueState>(&self.storage_index, Self::record_offset(pos))
     }
 
-    fn record(&self, pos: u64) -> Result<HashMapKeyValue<K, T>, DbError> {
+    fn record(&self, pos: u64) -> Result<MapValue<K, T>, DbError> {
         self.storage
             .borrow_mut()
-            .value_at::<HashMapKeyValue<K, T>>(&self.storage_index, Self::record_offset(pos))
+            .value_at::<MapValue<K, T>>(&self.storage_index, Self::record_offset(pos))
     }
 
     fn set_count(&mut self, new_count: u64) -> Result<(), DbError> {
@@ -78,11 +86,7 @@ where
             .insert_at(&self.storage_index, 0, &self.count)
     }
 
-    fn set_meta_value(
-        &mut self,
-        pos: u64,
-        meta_value: HashMapMetaValue,
-    ) -> Result<(), crate::DbError> {
+    fn set_meta_value(&mut self, pos: u64, meta_value: MapValueState) -> Result<(), DbError> {
         self.storage.borrow_mut().insert_at(
             &self.storage_index,
             Self::record_offset(pos),
@@ -90,20 +94,20 @@ where
         )
     }
 
-    fn set_value(&mut self, pos: u64, value: HashMapKeyValue<K, T>) -> Result<(), DbError> {
+    fn set_value(&mut self, pos: u64, value: MapValue<K, T>) -> Result<(), DbError> {
         self.storage
             .borrow_mut()
             .insert_at(&self.storage_index, Self::record_offset(pos), &value)
     }
 
-    fn set_values(&mut self, values: Vec<HashMapKeyValue<K, T>>) -> Result<(), DbError> {
+    fn set_values(&mut self, values: Vec<MapValue<K, T>>) -> Result<(), DbError> {
         self.capacity = values.len() as u64;
         self.storage
             .borrow_mut()
             .insert_at(&self.storage_index, size_of::<u64>() as u64, &values)
     }
 
-    fn take_values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {
+    fn take_values(&mut self) -> Result<Vec<MapValue<K, T>>, DbError> {
         self.values()
     }
 

@@ -3,7 +3,6 @@ mod graph;
 mod query;
 mod query_error;
 mod query_result;
-mod storage;
 mod transaction;
 
 pub use agdb_db_error::DbError;

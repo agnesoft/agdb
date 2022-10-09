@@ -1,6 +1,6 @@
-use crate::storage::StableHash;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
+use agdb_utilities::StableHash;
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub(crate) struct DictionaryValue<T>

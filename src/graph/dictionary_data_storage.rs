@@ -1,13 +1,13 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_value::DictionaryValue;
-use crate::storage::StableHash;
-use crate::storage::StorageHashMultiMap;
 use agdb_db_error::DbError;
+use agdb_multi_map::StorageMultiMap;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
 use agdb_storage_vec::StorageVec;
+use agdb_utilities::StableHash;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -18,7 +18,7 @@ where
 {
     pub(super) storage: Rc<RefCell<Data>>,
     pub(super) storage_index: StorageIndex,
-    pub(super) index: StorageHashMultiMap<u64, i64, Data>,
+    pub(super) index: StorageMultiMap<u64, i64, Data>,
     pub(super) values: StorageVec<DictionaryValue<T>, Data>,
 }
 

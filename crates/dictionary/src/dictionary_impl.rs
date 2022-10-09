@@ -20,15 +20,17 @@ where
     Data: DictionaryData<T>,
 {
     pub fn count(&self, index: i64) -> Result<Option<u64>, DbError> {
+        let mut c = None;
+
         if self.is_valid_index(index) {
             let value = self.data.meta(index)?;
 
             if 0 < value {
-                return Ok(Some(value as u64));
+                c = Some(value as u64);
             }
         }
 
-        Ok(None)
+        Ok(c)
     }
 
     pub fn len(&self) -> Result<u64, DbError> {
@@ -82,15 +84,17 @@ where
     }
 
     pub fn value(&self, index: i64) -> Result<Option<T>, DbError> {
+        let mut v = None;
+
         if self.is_valid_index(index) {
             let value = self.data.value(index)?;
 
             if 0 < value.meta {
-                return Ok(Some(value.value));
+                v = Some(value.value);
             }
         }
 
-        Ok(None)
+        Ok(v)
     }
 
     fn find_value(&self, hash: u64, value: &T) -> Result<Option<(i64, i64)>, DbError> {

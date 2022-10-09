@@ -64,10 +64,3 @@ fn index_with_collisions() {
     assert_eq!(dictionary.index(&CollidedValue::new(2)), Ok(Some(index2)));
     assert_eq!(dictionary.index(&CollidedValue::new(3)), Ok(Some(index3)));
 }
-
-#[test]
-fn value_missing_index() {
-    let dictionary = Dictionary::<i64>::new();
-
-    assert_eq!(dictionary.value(1), Ok(None));
-}

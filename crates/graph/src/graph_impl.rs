@@ -4,13 +4,18 @@ use super::graph_node::GraphNode;
 use super::graph_node_iterator::GraphNodeIterator;
 use agdb_db_error::DbError;
 
-pub(crate) struct GraphImpl<Data: GraphData> {
-    pub(super) data: Data,
+pub struct GraphImpl<Data>
+where
+    Data: GraphData,
+{
+    pub(crate) data: Data,
 }
 
-#[allow(dead_code)]
-impl<Data: GraphData> GraphImpl<Data> {
-    pub(crate) fn edge(&self, index: i64) -> Option<GraphEdge<Data>> {
+impl<Data> GraphImpl<Data>
+where
+    Data: GraphData,
+{
+    pub fn edge(&self, index: i64) -> Option<GraphEdge<Data>> {
         if self.validate_edge(index).is_err() {
             return None;
         }
@@ -18,11 +23,11 @@ impl<Data: GraphData> GraphImpl<Data> {
         Some(GraphEdge { graph: self, index })
     }
 
-    pub(crate) fn node_count(&self) -> Result<u64, DbError> {
+    pub fn node_count(&self) -> Result<u64, DbError> {
         self.data.node_count()
     }
 
-    pub(crate) fn insert_edge(&mut self, from: i64, to: i64) -> Result<i64, DbError> {
+    pub fn insert_edge(&mut self, from: i64, to: i64) -> Result<i64, DbError> {
         self.validate_node(from)?;
         self.validate_node(to)?;
 
@@ -34,7 +39,7 @@ impl<Data: GraphData> GraphImpl<Data> {
         Ok(-index)
     }
 
-    pub(crate) fn insert_node(&mut self) -> Result<i64, DbError> {
+    pub fn insert_node(&mut self) -> Result<i64, DbError> {
         self.data.transaction();
         let index = self.get_free_index()?;
         let count = self.data.node_count()?;
@@ -44,7 +49,7 @@ impl<Data: GraphData> GraphImpl<Data> {
         Ok(index)
     }
 
-    pub(crate) fn node(&self, index: i64) -> Option<GraphNode<Data>> {
+    pub fn node(&self, index: i64) -> Option<GraphNode<Data>> {
         if self.validate_node(index).is_err() {
             return None;
         }
@@ -52,14 +57,14 @@ impl<Data: GraphData> GraphImpl<Data> {
         Some(GraphNode { graph: self, index })
     }
 
-    pub(crate) fn node_iter(&self) -> GraphNodeIterator<Data> {
+    pub fn node_iter(&self) -> GraphNodeIterator<Data> {
         GraphNodeIterator {
             graph: self,
             index: 0,
         }
     }
 
-    pub(crate) fn remove_edge(&mut self, index: i64) -> Result<(), DbError> {
+    pub fn remove_edge(&mut self, index: i64) -> Result<(), DbError> {
         if self.validate_edge(index).is_err() {
             return Ok(());
         }
@@ -72,7 +77,7 @@ impl<Data: GraphData> GraphImpl<Data> {
         self.data.commit()
     }
 
-    pub(crate) fn remove_node(&mut self, index: i64) -> Result<(), DbError> {
+    pub fn remove_node(&mut self, index: i64) -> Result<(), DbError> {
         if self.validate_node(index).is_err() {
             return Ok(());
         }
@@ -88,7 +93,7 @@ impl<Data: GraphData> GraphImpl<Data> {
         self.data.commit()
     }
 
-    pub(super) fn first_edge_from(&self, index: i64) -> Result<i64, DbError> {
+    pub fn first_edge_from(&self, index: i64) -> Result<i64, DbError> {
         Ok(-self.data.from(index)?)
     }
 
@@ -133,11 +138,11 @@ impl<Data: GraphData> GraphImpl<Data> {
         Ok(0 <= self.data.from(index)?)
     }
 
-    pub(super) fn next_edge_from(&self, index: i64) -> Result<i64, DbError> {
+    pub(crate) fn next_edge_from(&self, index: i64) -> Result<i64, DbError> {
         Ok(-self.data.from_meta(-index)?)
     }
 
-    pub(super) fn next_node(&self, index: i64) -> Result<Option<i64>, DbError> {
+    pub(crate) fn next_node(&self, index: i64) -> Result<Option<i64>, DbError> {
         for i in (index + 1)..(self.data.capacity()? as i64) {
             if self.is_valid_node(i)? && !self.is_removed_index(i)? {
                 return Ok(Some(i));

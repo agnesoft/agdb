@@ -2,12 +2,18 @@ use super::graph_data::GraphData;
 use super::graph_edge::GraphEdge;
 use super::graph_impl::GraphImpl;
 
-pub(crate) struct GraphEdgeIterator<'a, Data: GraphData> {
-    pub(super) graph: &'a GraphImpl<Data>,
-    pub(super) index: i64,
+pub struct GraphEdgeIterator<'a, Data>
+where
+    Data: GraphData,
+{
+    pub(crate) graph: &'a GraphImpl<Data>,
+    pub(crate) index: i64,
 }
 
-impl<'a, Data: GraphData> Iterator for GraphEdgeIterator<'a, Data> {
+impl<'a, Data> Iterator for GraphEdgeIterator<'a, Data>
+where
+    Data: GraphData,
+{
     type Item = GraphEdge<'a, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {

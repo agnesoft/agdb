@@ -61,7 +61,7 @@ where
     }
 
     fn remove(&mut self, hash: u64, index: &DictionaryIndex) -> Result<(), DbError> {
-        self.index.remove_value(&hash, &index)
+        self.index.remove_value(&hash, index)
     }
 
     fn set_hash(&mut self, index: &DictionaryIndex, hash: u64) -> Result<(), DbError> {

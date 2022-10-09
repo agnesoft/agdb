@@ -1,5 +1,4 @@
 mod db;
-mod graph;
 mod query;
 mod query_error;
 mod query_result;

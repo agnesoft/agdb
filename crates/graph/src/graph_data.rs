@@ -1,6 +1,6 @@
 use agdb_db_error::DbError;
 
-pub(crate) trait GraphData {
+pub trait GraphData {
     fn capacity(&self) -> Result<u64, DbError>;
     fn commit(&mut self) -> Result<(), DbError>;
     fn free_index(&self) -> Result<i64, DbError>;

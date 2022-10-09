@@ -26,7 +26,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     steps:
       - uses: actions/checkout@v3
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --workspace --all-targets -- -D warnings
 
   build:
     runs-on: ubuntu-latest

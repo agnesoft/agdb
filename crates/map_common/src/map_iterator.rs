@@ -11,9 +11,9 @@ where
     T: Clone + Default + Serialize,
     Data: MapData<K, T>,
 {
-    pub(super) pos: u64,
-    pub(super) data: &'a Data,
-    pub(super) phantom_data: PhantomData<(K, T)>,
+    pub(crate) pos: u64,
+    pub(crate) data: &'a Data,
+    pub(crate) phantom_data: PhantomData<(K, T)>,
 }
 
 impl<'a, K, T, Data> Iterator for MapIterator<'a, K, T, Data>

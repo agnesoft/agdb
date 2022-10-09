@@ -2,12 +2,18 @@ use super::graph_data::GraphData;
 use super::graph_impl::GraphImpl;
 use super::graph_node::GraphNode;
 
-pub(crate) struct GraphNodeIterator<'a, Data: GraphData> {
-    pub(super) graph: &'a GraphImpl<Data>,
-    pub(super) index: i64,
+pub struct GraphNodeIterator<'a, Data>
+where
+    Data: GraphData,
+{
+    pub(crate) graph: &'a GraphImpl<Data>,
+    pub(crate) index: i64,
 }
 
-impl<'a, Data: GraphData> Iterator for GraphNodeIterator<'a, Data> {
+impl<'a, Data> Iterator for GraphNodeIterator<'a, Data>
+where
+    Data: GraphData,
+{
     type Item = GraphNode<'a, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {

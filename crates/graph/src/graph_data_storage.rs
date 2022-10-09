@@ -8,18 +8,18 @@ use agdb_storage_vec::StorageVec;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub(crate) struct GraphDataStorage<Data = StorageFile>
+pub struct GraphDataStorage<Data = StorageFile>
 where
     Data: Storage,
 {
-    pub(super) storage: Rc<RefCell<Data>>,
-    pub(super) storage_index: StorageIndex,
+    pub(crate) storage: Rc<RefCell<Data>>,
+    pub(crate) storage_index: StorageIndex,
     #[allow(dead_code)]
-    pub(super) indexes: GraphDataStorageIndexes,
-    pub(super) from: StorageVec<i64, Data>,
-    pub(super) to: StorageVec<i64, Data>,
-    pub(super) from_meta: StorageVec<i64, Data>,
-    pub(super) to_meta: StorageVec<i64, Data>,
+    pub(crate) indexes: GraphDataStorageIndexes,
+    pub(crate) from: StorageVec<i64, Data>,
+    pub(crate) to: StorageVec<i64, Data>,
+    pub(crate) from_meta: StorageVec<i64, Data>,
+    pub(crate) to_meta: StorageVec<i64, Data>,
 }
 
 impl<Data> GraphData for GraphDataStorage<Data>

@@ -1,11 +1,11 @@
 use super::graph_data::GraphData;
 use agdb_db_error::DbError;
 
-pub(crate) struct GraphDataMemory {
-    pub(super) from: Vec<i64>,
-    pub(super) to: Vec<i64>,
-    pub(super) from_meta: Vec<i64>,
-    pub(super) to_meta: Vec<i64>,
+pub struct GraphDataMemory {
+    pub(crate) from: Vec<i64>,
+    pub(crate) to: Vec<i64>,
+    pub(crate) from_meta: Vec<i64>,
+    pub(crate) to_meta: Vec<i64>,
 }
 
 impl GraphData for GraphDataMemory {

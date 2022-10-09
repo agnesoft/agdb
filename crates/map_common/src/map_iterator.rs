@@ -1,34 +1,26 @@
-use super::hash_map_data::HashMapData;
-use super::hash_map_meta_value::HashMapMetaValue;
-use super::StableHash;
+use super::map_data::MapData;
+use super::map_value_state::MapValueState;
 use agdb_serialize::Serialize;
+use agdb_utilities::StableHash;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-pub(crate) struct HashMapIterator<'a, K, T, Data>
+pub struct MapIterator<'a, K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    Data: HashMapData<K, T>,
+    Data: MapData<K, T>,
 {
     pub(super) pos: u64,
     pub(super) data: &'a Data,
     pub(super) phantom_data: PhantomData<(K, T)>,
 }
 
-impl<'a, K, T, Data> HashMapIterator<'a, K, T, Data>
+impl<'a, K, T, Data> Iterator for MapIterator<'a, K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
-    Data: HashMapData<K, T>,
-{
-}
-
-impl<'a, K, T, Data> Iterator for HashMapIterator<'a, K, T, Data>
-where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
-    Data: HashMapData<K, T>,
+    Data: MapData<K, T>,
 {
     type Item = (K, T);
 
@@ -38,7 +30,7 @@ where
 
             self.pos += 1;
 
-            if value.meta_value == HashMapMetaValue::Valid {
+            if value.state == MapValueState::Valid {
                 return Some((value.key, value.value));
             }
         }

@@ -1,7 +1,7 @@
 use super::dictionary_value::DictionaryValue;
-use crate::storage::StableHash;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
+use agdb_utilities::StableHash;
 
 pub(crate) trait DictionaryData<T>
 where

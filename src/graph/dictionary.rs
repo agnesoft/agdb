@@ -1,9 +1,9 @@
 use super::dictionary_data_memory::DictionaryDataMemory;
 use super::dictionary_impl::DictionaryImpl;
 use super::dictionary_value::DictionaryValue;
-use crate::storage::HashMultiMap;
-use crate::storage::StableHash;
+use agdb_multi_map::MultiMap;
 use agdb_serialize::Serialize;
+use agdb_utilities::StableHash;
 use std::marker::PhantomData;
 
 pub(crate) type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
@@ -16,7 +16,7 @@ where
     pub(crate) fn new() -> Dictionary<T> {
         Dictionary {
             data: DictionaryDataMemory::<T> {
-                index: HashMultiMap::<u64, i64>::new(),
+                index: MultiMap::<u64, i64>::new(),
                 values: vec![DictionaryValue::<T> {
                     meta: 0,
                     hash: 0,

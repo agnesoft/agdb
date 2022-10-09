@@ -13,9 +13,13 @@ edition = "2021"
 
 [dependencies]
 agdb_db_error = { path = "crates/db_error", version = "<=0.1.0" }
+agdb_map_common = { path = "crates/map_common", version = "<=0.1.0" }
+agdb_multi_map = { path = "crates/multi_map", version = "<=0.1.0" }
 agdb_serialize = { path = "crates/serialize", version = "<=0.1.0" }
 agdb_storage = { path = "crates/storage", version = "<=0.1.0" }
+agdb_storage_map = { path = "crates/storage_map", version = "<=0.1.0" }
 agdb_storage_vec = { path = "crates/storage_vec", version = "<=0.1.0" }
+agdb_utilities = { path = "crates/utilities", version = "<=0.1.0" }
 
 [dev-dependencies]
 agdb_test_file = { path = "crates/test_file", version = "<=0.1.0" }

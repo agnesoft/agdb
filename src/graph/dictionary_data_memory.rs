@@ -1,15 +1,15 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_value::DictionaryValue;
-use crate::storage::HashMultiMap;
-use crate::storage::StableHash;
 use agdb_db_error::DbError;
+use agdb_multi_map::MultiMap;
 use agdb_serialize::Serialize;
+use agdb_utilities::StableHash;
 
 pub(crate) struct DictionaryDataMemory<T>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
 {
-    pub(super) index: HashMultiMap<u64, i64>,
+    pub(super) index: MultiMap<u64, i64>,
     pub(super) values: Vec<DictionaryValue<T>>,
 }
 

@@ -1,5 +1,7 @@
 use agdb_db_error::DbError;
 use std::error::Error;
+use std::io::Error as IOError;
+use std::io::ErrorKind;
 
 #[test]
 fn caused_by() {
@@ -39,8 +41,8 @@ fn derived_from_display() {
 
 #[test]
 fn derived_from_partial_eq() {
-    let left = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
-    let right = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
+    let left = DbError::from(IOError::from(ErrorKind::NotFound));
+    let right = DbError::from(IOError::from(ErrorKind::NotFound));
 
     assert_eq!(left, right);
 }
@@ -66,7 +68,7 @@ fn derived_from_error() {
 
 #[test]
 fn from_io_error() {
-    let _error = DbError::from(std::io::Error::from(std::io::ErrorKind::NotFound));
+    let _error = DbError::from(IOError::from(ErrorKind::NotFound));
 }
 
 #[test]

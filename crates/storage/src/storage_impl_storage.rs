@@ -1,3 +1,5 @@
+use std::io::SeekFrom;
+
 use crate::storage::Storage;
 use crate::storage_data::StorageData;
 use crate::storage_impl::StorageImpl;
@@ -99,7 +101,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
     }
 
     fn size(&mut self) -> Result<u64, DbError> {
-        self.data.seek(std::io::SeekFrom::End(0))
+        self.data.seek(SeekFrom::End(0))
     }
 
     fn transaction(&mut self) {

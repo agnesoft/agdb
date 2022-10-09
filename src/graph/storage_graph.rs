@@ -1,11 +1,13 @@
 use super::graph_data_storage::GraphDataStorage;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_impl::GraphImpl;
-use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use agdb_storage_vec::StorageVec;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub(crate) type StorageGraph<Data = StorageFile> = GraphImpl<GraphDataStorage<Data>>;
 
@@ -16,10 +18,10 @@ impl<Data: Storage> StorageGraph<Data> {
     }
 }
 
-impl<Data: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageGraph<Data> {
+impl<Data: Storage> TryFrom<Rc<RefCell<Data>>> for StorageGraph<Data> {
     type Error = DbError;
 
-    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
+    fn try_from(storage: Rc<RefCell<Data>>) -> Result<Self, Self::Error> {
         let mut from = StorageVec::<i64, Data>::try_from(storage.clone())?;
         from.push(&0)?;
         let mut to = StorageVec::<i64, Data>::try_from(storage.clone())?;
@@ -52,13 +54,11 @@ impl<Data: Storage> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageGr
     }
 }
 
-impl<Data: Storage> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex)>
-    for StorageGraph<Data>
-{
+impl<Data: Storage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for StorageGraph<Data> {
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex),
+        storage_with_index: (Rc<RefCell<Data>>, StorageIndex),
     ) -> Result<Self, Self::Error> {
         let indexes = storage_with_index
             .0
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn edge_from_index() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn edge_from_index_missing() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let graph = StorageGraph::try_from(storage).unwrap();
@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn edge_iteration() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn insert_edge() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn insert_edge_after_removed() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn insert_edge_after_several_removed() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn insert_edge_invalid_from() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn insert_edge_invalid_to() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn insert_node() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn insert_node_after_removal() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn node_count() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn node_from_index() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -288,7 +288,7 @@ mod tests {
     #[test]
     fn node_from_index_missing() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let graph = StorageGraph::try_from(storage).unwrap();
@@ -301,7 +301,7 @@ mod tests {
     #[test]
     fn node_iteration() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn node_iteration_with_removed_nodes() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     fn remove_edge_circular() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -363,7 +363,7 @@ mod tests {
     #[test]
     fn remove_edge_first() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -383,7 +383,7 @@ mod tests {
     #[test]
     fn remove_edge_last() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn remove_edge_middle() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -423,7 +423,7 @@ mod tests {
     #[test]
     fn remove_edge_missing() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -433,7 +433,7 @@ mod tests {
     #[test]
     fn remove_edge_only() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn remove_node_circular_edge() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -465,7 +465,7 @@ mod tests {
     #[test]
     fn remove_node_only() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -479,7 +479,7 @@ mod tests {
     #[test]
     fn remove_node_missing() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn remove_nodes_with_edges() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut graph = StorageGraph::try_from(storage).unwrap();
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn restore_from_file() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 

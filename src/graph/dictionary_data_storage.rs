@@ -2,19 +2,21 @@ use super::dictionary_data::DictionaryData;
 use super::dictionary_value::DictionaryValue;
 use crate::storage::StableHash;
 use crate::storage::StorageHashMultiMap;
-use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use agdb_storage_vec::StorageVec;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub(crate) struct DictionaryDataStorage<T, Data = StorageFile>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: Storage,
 {
-    pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
+    pub(super) storage: Rc<RefCell<Data>>,
     pub(super) storage_index: StorageIndex,
     pub(super) index: StorageHashMultiMap<u64, i64, Data>,
     pub(super) values: StorageVec<DictionaryValue<T>, Data>,

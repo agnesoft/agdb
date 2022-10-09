@@ -4,12 +4,15 @@ use super::dictionary_impl::DictionaryImpl;
 use super::dictionary_value::DictionaryValue;
 use crate::storage::StableHash;
 use crate::storage::StorageHashMultiMap;
-use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use agdb_storage_vec::StorageVec;
+use std::cell::RefCell;
+use std::marker::PhantomData;
+use std::rc::Rc;
 
 pub(crate) type StorageDictionary<T, Data = StorageFile> =
     DictionaryImpl<T, DictionaryDataStorage<T, Data>>;
@@ -25,14 +28,14 @@ where
     }
 }
 
-impl<T, Data> TryFrom<std::rc::Rc<std::cell::RefCell<Data>>> for StorageDictionary<T, Data>
+impl<T, Data> TryFrom<Rc<RefCell<Data>>> for StorageDictionary<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: Storage,
 {
     type Error = DbError;
 
-    fn try_from(storage: std::rc::Rc<std::cell::RefCell<Data>>) -> Result<Self, Self::Error> {
+    fn try_from(storage: Rc<RefCell<Data>>) -> Result<Self, Self::Error> {
         let index = StorageHashMultiMap::<u64, i64, Data>::try_from(storage.clone())?;
         let mut values = StorageVec::<DictionaryValue<T>, Data>::try_from(storage.clone())?;
         values.push(&DictionaryValue::default())?;
@@ -49,13 +52,12 @@ where
                 index,
                 values,
             },
-            phantom_data: std::marker::PhantomData,
+            phantom_data: PhantomData,
         })
     }
 }
 
-impl<T, Data> TryFrom<(std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex)>
-    for StorageDictionary<T, Data>
+impl<T, Data> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for StorageDictionary<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
     Data: Storage,
@@ -63,7 +65,7 @@ where
     type Error = DbError;
 
     fn try_from(
-        storage_with_index: (std::rc::Rc<std::cell::RefCell<Data>>, StorageIndex),
+        storage_with_index: (Rc<RefCell<Data>>, StorageIndex),
     ) -> Result<Self, Self::Error> {
         let indexes = storage_with_index
             .0
@@ -85,7 +87,7 @@ where
                 index,
                 values,
             },
-            phantom_data: std::marker::PhantomData,
+            phantom_data: PhantomData,
         })
     }
 }
@@ -130,7 +132,7 @@ mod tests {
     #[test]
     fn count_invalid_index() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -141,7 +143,7 @@ mod tests {
     #[test]
     fn index() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -154,7 +156,7 @@ mod tests {
     #[test]
     fn index_missing_value() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -165,7 +167,7 @@ mod tests {
     #[test]
     fn index_removed_value() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -179,7 +181,7 @@ mod tests {
     #[test]
     fn index_reuse() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -208,7 +210,7 @@ mod tests {
     #[test]
     fn index_with_collisions() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<CollidedValue>::try_from(storage).unwrap();
@@ -236,7 +238,7 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -251,7 +253,7 @@ mod tests {
     #[test]
     fn insert_multiple() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -275,7 +277,7 @@ mod tests {
     #[test]
     fn insert_same() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -296,7 +298,7 @@ mod tests {
     #[test]
     fn remove() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -311,7 +313,7 @@ mod tests {
     #[test]
     fn remove_duplicated() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -338,7 +340,7 @@ mod tests {
     #[test]
     fn remove_missing() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let mut dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();
@@ -355,7 +357,7 @@ mod tests {
     #[test]
     fn restore_from_file() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
@@ -390,7 +392,7 @@ mod tests {
     #[test]
     fn value_missing_index() {
         let test_file = TestFile::new();
-        let storage = std::rc::Rc::new(std::cell::RefCell::new(
+        let storage = Rc::new(RefCell::new(
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
         let dictionary = StorageDictionary::<i64>::try_from(storage).unwrap();

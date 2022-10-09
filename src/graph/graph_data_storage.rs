@@ -1,16 +1,18 @@
 use super::graph_data::GraphData;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
-use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use agdb_storage_vec::StorageVec;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub(crate) struct GraphDataStorage<Data = StorageFile>
 where
     Data: Storage,
 {
-    pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
+    pub(super) storage: Rc<RefCell<Data>>,
     pub(super) storage_index: StorageIndex,
     #[allow(dead_code)]
     pub(super) indexes: GraphDataStorageIndexes,

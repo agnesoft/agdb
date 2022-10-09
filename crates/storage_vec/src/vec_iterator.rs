@@ -1,15 +1,16 @@
-use super::StorageVec;
+use crate::storage_vec::StorageVec;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
+use std::marker::PhantomData;
 
-pub(crate) struct VecIterator<'a, T, Data>
+pub struct VecIterator<'a, T, Data>
 where
     T: Serialize,
     Data: Storage,
 {
-    pub(super) index: u64,
-    pub(super) vec: &'a StorageVec<T, Data>,
-    pub(super) phantom_data: std::marker::PhantomData<T>,
+    pub(crate) index: u64,
+    pub(crate) vec: &'a StorageVec<T, Data>,
+    pub(crate) phantom_data: PhantomData<T>,
 }
 
 impl<'a, T, Data> Iterator for VecIterator<'a, T, Data>

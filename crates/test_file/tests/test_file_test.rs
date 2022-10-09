@@ -1,5 +1,6 @@
 use agdb_test_file::TestFile;
 use std::fs::OpenOptions;
+use std::panic::Location;
 use std::path::Path;
 
 fn ensure_file(filename: &str) {
@@ -12,7 +13,7 @@ fn ensure_file(filename: &str) {
 
 #[test]
 fn default() {
-    let caller = std::panic::Location::caller();
+    let caller = Location::caller();
     let current_source_file = Path::new(caller.file())
         .file_name()
         .unwrap()
@@ -92,7 +93,7 @@ fn hidden_file_is_deleted_on_destruction() {
 
 #[test]
 fn new() {
-    let caller = std::panic::Location::caller();
+    let caller = Location::caller();
     let current_source_file = Path::new(caller.file())
         .file_name()
         .unwrap()

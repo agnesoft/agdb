@@ -6,19 +6,22 @@ use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageIndex;
+use std::cell::RefCell;
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::mem::size_of;
+use std::rc::Rc;
 
 pub(crate) struct HashMapDataStorage<K, T, Data: Storage>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
     T: Clone + Default + Serialize,
 {
-    pub(super) storage: std::rc::Rc<std::cell::RefCell<Data>>,
+    pub(super) storage: Rc<RefCell<Data>>,
     pub(super) storage_index: StorageIndex,
     pub(super) count: u64,
     pub(super) capacity: u64,
-    pub(super) phantom_data: std::marker::PhantomData<(K, T)>,
+    pub(super) phantom_data: PhantomData<(K, T)>,
 }
 
 impl<K, T, Data> HashMapDataStorage<K, T, Data>

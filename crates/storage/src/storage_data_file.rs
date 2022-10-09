@@ -11,12 +11,13 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 
-#[allow(dead_code)]
 pub struct StorageDataFile {
     pub(crate) file: File,
+    #[allow(dead_code)]
     pub(crate) filename: String,
     pub(crate) records: StorageRecords,
     pub(crate) wal: WriteAheadLog,
+    #[allow(dead_code)]
     pub(crate) wal_filename: String,
     pub(crate) transactions: u64,
 }

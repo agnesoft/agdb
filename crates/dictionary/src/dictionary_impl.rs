@@ -14,7 +14,6 @@ where
     pub(crate) phantom_data: PhantomData<T>,
 }
 
-#[allow(dead_code)]
 impl<T, Data> DictionaryImpl<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,

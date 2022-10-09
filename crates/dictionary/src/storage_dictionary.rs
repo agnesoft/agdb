@@ -9,7 +9,6 @@ use agdb_utilities::StableHash;
 pub type StorageDictionary<T, Data = StorageFile> =
     DictionaryImpl<T, DictionaryDataStorage<T, Data>>;
 
-#[allow(dead_code)]
 impl<T, Data> StorageDictionary<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,

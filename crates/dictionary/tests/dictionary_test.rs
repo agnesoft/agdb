@@ -6,3 +6,8 @@ fn count_invalid_index() {
 
     assert_eq!(dictionary.count(-1), Ok(None));
 }
+
+#[test]
+fn default() {
+    let _dictionary = Dictionary::<i64>::default();
+}

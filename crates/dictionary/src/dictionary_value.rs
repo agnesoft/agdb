@@ -1,7 +1,7 @@
 use agdb_serialize::Serialize;
 use agdb_utilities::StableHash;
 
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default)]
 pub struct DictionaryValue<T>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + Serialize,

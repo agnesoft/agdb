@@ -16,7 +16,6 @@ where
     pub(crate) map_common: MapCommon<K, T, Data>,
 }
 
-#[allow(dead_code)]
 impl<K, T, Data> MultiMapImpl<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,

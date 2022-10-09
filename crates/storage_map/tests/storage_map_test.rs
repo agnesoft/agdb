@@ -4,6 +4,7 @@ use agdb_storage::StorageIndex;
 use agdb_storage_map::StorageMap;
 use agdb_test_file::TestFile;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[test]
@@ -83,7 +84,7 @@ fn try_from_storage_index() {
 
     let map = StorageMap::<i64, i64>::try_from((storage, index)).unwrap();
 
-    let mut expected = std::collections::HashMap::<i64, i64>::new();
+    let mut expected = HashMap::<i64, i64>::new();
     expected.insert(1, 1);
     expected.insert(5, 3);
 

@@ -4,6 +4,7 @@ use super::dictionary_value::DictionaryValue;
 use crate::storage::HashMultiMap;
 use crate::storage::StableHash;
 use agdb_serialize::Serialize;
+use std::marker::PhantomData;
 
 pub(crate) type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 
@@ -22,7 +23,7 @@ where
                     value: T::default(),
                 }],
             },
-            phantom_data: std::marker::PhantomData,
+            phantom_data: PhantomData,
         }
     }
 }

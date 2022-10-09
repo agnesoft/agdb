@@ -1,11 +1,13 @@
 use agdb_storage::StorageFile;
 use agdb_storage_vec::StorageVec;
 use agdb_test_file::TestFile;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[test]
 fn reserve_larger() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -20,7 +22,7 @@ fn reserve_larger() {
 #[test]
 fn reserve_smaller() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 

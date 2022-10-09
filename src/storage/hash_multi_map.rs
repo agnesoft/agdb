@@ -5,6 +5,7 @@ use super::hash_multi_map_impl::HashMultiMapImpl;
 use super::StableHash;
 use agdb_serialize::Serialize;
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 pub(crate) type HashMultiMap<K, T> = HashMultiMapImpl<K, T, HashMapDataMemory<K, T>>;
 
@@ -21,7 +22,7 @@ where
                     data: vec![HashMapKeyValue::<K, T>::default()],
                     count: 0,
                 },
-                phantom_data: std::marker::PhantomData,
+                phantom_data: PhantomData,
             },
         }
     }

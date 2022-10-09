@@ -3,6 +3,7 @@ use super::hash_map_meta_value::HashMapMetaValue;
 use super::StableHash;
 use agdb_serialize::Serialize;
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 pub(crate) struct HashMapIterator<'a, K, T, Data>
 where
@@ -12,7 +13,7 @@ where
 {
     pub(super) pos: u64,
     pub(super) data: &'a Data,
-    pub(super) phantom_data: std::marker::PhantomData<(K, T)>,
+    pub(super) phantom_data: PhantomData<(K, T)>,
 }
 
 impl<'a, K, T, Data> HashMapIterator<'a, K, T, Data>

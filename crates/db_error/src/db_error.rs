@@ -1,8 +1,10 @@
+use std::panic::Location;
+
 #[derive(Debug)]
 pub struct DbError {
     pub description: String,
     pub cause: Option<Box<DbError>>,
-    pub source_location: std::panic::Location<'static>,
+    pub source_location: Location<'static>,
 }
 
 impl DbError {

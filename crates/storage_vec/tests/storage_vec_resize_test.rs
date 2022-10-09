@@ -2,11 +2,13 @@ use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage_vec::StorageVec;
 use agdb_test_file::TestFile;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[test]
 fn resize_larger() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -28,7 +30,7 @@ fn resize_larger() {
 #[test]
 fn resize_over_capacity() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -58,7 +60,7 @@ fn resize_over_capacity() {
 #[test]
 fn resize_same() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -80,7 +82,7 @@ fn resize_same() {
 #[test]
 fn resize_smaller() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 

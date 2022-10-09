@@ -3,11 +3,13 @@ use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage_vec::StorageVec;
 use agdb_test_file::TestFile;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[test]
 fn remove() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -24,7 +26,7 @@ fn remove() {
 #[test]
 fn remove_at_end() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -41,7 +43,7 @@ fn remove_at_end() {
 #[test]
 fn remove_index_out_of_bounds() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -53,7 +55,7 @@ fn remove_index_out_of_bounds() {
 #[test]
 fn remove_size_updated() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 

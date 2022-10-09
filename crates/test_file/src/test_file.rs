@@ -1,4 +1,5 @@
 use std::fs::remove_file;
+use std::panic::Location;
 use std::path::Path;
 
 pub struct TestFile {
@@ -12,7 +13,7 @@ impl TestFile {
 
     #[track_caller]
     pub fn new() -> TestFile {
-        let caller = std::panic::Location::caller();
+        let caller = Location::caller();
         let file = format!(
             "./{}.{}.{}.testfile",
             Path::new(caller.file())

@@ -3,6 +3,7 @@ use super::dictionary_value::DictionaryValue;
 use crate::storage::StableHash;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
+use std::marker::PhantomData;
 
 pub(crate) struct DictionaryImpl<T, Data>
 where
@@ -10,7 +11,7 @@ where
     Data: DictionaryData<T>,
 {
     pub(super) data: Data,
-    pub(super) phantom_data: std::marker::PhantomData<T>,
+    pub(super) phantom_data: PhantomData<T>,
 }
 
 #[allow(dead_code)]

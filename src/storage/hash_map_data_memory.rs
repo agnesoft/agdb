@@ -5,6 +5,7 @@ use super::StableHash;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use std::hash::Hash;
+use std::mem::take;
 
 pub(crate) struct HashMapDataMemory<K, T>
 where
@@ -69,7 +70,7 @@ where
     }
 
     fn take_values(&mut self) -> Result<Vec<HashMapKeyValue<K, T>>, DbError> {
-        Ok(std::mem::take(&mut self.data))
+        Ok(take(&mut self.data))
     }
 
     fn transaction(&mut self) {}

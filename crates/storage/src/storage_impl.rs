@@ -1,8 +1,12 @@
 use crate::storage_data::StorageData;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
-use agdb_storage_index::{StorageIndex, StorageRecord};
+use agdb_storage_index::StorageIndex;
+use agdb_storage_index::StorageRecord;
 use agdb_write_ahead_log::WriteAheadLogRecord;
+use std::cmp::max;
+use std::cmp::min;
+use std::io::SeekFrom;
 
 pub struct StorageImpl<Data: StorageData> {
     pub(crate) data: Data,
@@ -10,7 +14,7 @@ pub struct StorageImpl<Data: StorageData> {
 
 impl<Data: StorageData> StorageImpl<Data> {
     pub(crate) fn append(&mut self, bytes: &[u8]) -> Result<(), DbError> {
-        self.write(std::io::SeekFrom::End(0), bytes)
+        self.write(SeekFrom::End(0), bytes)
     }
 
     pub(crate) fn apply_wal(&mut self) -> Result<(), DbError> {
@@ -31,7 +35,7 @@ impl<Data: StorageData> StorageImpl<Data> {
         if record.bytes.is_empty() {
             self.data.set_len(record.position)?;
         } else {
-            self.data.seek(std::io::SeekFrom::Start(record.position))?;
+            self.data.seek(SeekFrom::Start(record.position))?;
             self.data.write_all(&record.bytes)?;
         }
 
@@ -45,8 +49,8 @@ impl<Data: StorageData> StorageImpl<Data> {
         size: u64,
         new_position: u64,
     ) -> Result<(), DbError> {
-        let bytes = self.read(std::io::SeekFrom::Start(old_position), size)?;
-        self.write(std::io::SeekFrom::Start(new_position), &bytes)?;
+        let bytes = self.read(SeekFrom::Start(old_position), size)?;
+        self.write(SeekFrom::Start(new_position), &bytes)?;
         self.data.record_mut(index).position = new_position;
 
         Ok(())
@@ -58,8 +62,8 @@ impl<Data: StorageData> StorageImpl<Data> {
         record_index: &StorageIndex,
         record_size: u64,
     ) -> Result<StorageRecord, DbError> {
-        let new_position = self.data.seek(std::io::SeekFrom::End(0))?;
-        let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
+        let new_position = self.data.seek(SeekFrom::End(0))?;
+        let bytes = self.read(SeekFrom::Start(from), size)?;
 
         let record = StorageRecord {
             index: record_index.clone(),
@@ -90,21 +94,18 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     fn erase_bytes(&mut self, position: u64, size: u64) -> Result<(), DbError> {
-        self.write(
-            std::io::SeekFrom::Start(position),
-            &vec![0_u8; size as usize],
-        )
+        self.write(SeekFrom::Start(position), &vec![0_u8; size as usize])
     }
 
     pub(crate) fn invalidate_record(&mut self, position: u64) -> Result<(), DbError> {
         self.write(
-            std::io::SeekFrom::Start(position),
+            SeekFrom::Start(position),
             &StorageIndex::from(-1_i64).serialize(),
         )
     }
 
     fn is_at_end(&mut self, record: &StorageRecord) -> Result<bool, DbError> {
-        let file_size = self.data.seek(std::io::SeekFrom::End(0))?;
+        let file_size = self.data.seek(SeekFrom::End(0))?;
 
         Ok((record.position + StorageRecord::serialized_size() + record.size) == file_size)
     }
@@ -129,24 +130,20 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     pub(crate) fn move_bytes(&mut self, from: u64, to: u64, size: u64) -> Result<(), DbError> {
-        let bytes = self.read(std::io::SeekFrom::Start(from), size)?;
-        self.write(std::io::SeekFrom::Start(to), &bytes)?;
+        let bytes = self.read(SeekFrom::Start(from), size)?;
+        self.write(SeekFrom::Start(to), &bytes)?;
 
         if from < to {
-            self.erase_bytes(from, std::cmp::min(size, to - from))?;
+            self.erase_bytes(from, min(size, to - from))?;
         } else {
-            let position = std::cmp::max(to + size, from);
+            let position = max(to + size, from);
             self.erase_bytes(position, from + size - position)?;
         }
 
         Ok(())
     }
 
-    pub(crate) fn read(
-        &mut self,
-        position: std::io::SeekFrom,
-        size: u64,
-    ) -> Result<Vec<u8>, DbError> {
+    pub(crate) fn read(&mut self, position: SeekFrom, size: u64) -> Result<Vec<u8>, DbError> {
         self.data.seek(position)?;
         let mut buffer = vec![0_u8; size as usize];
         self.data.read_exact(&mut buffer)?;
@@ -155,26 +152,25 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     fn read_record(&mut self) -> Result<StorageRecord, DbError> {
-        const CURRENT: std::io::SeekFrom = std::io::SeekFrom::Current(0);
+        const CURRENT: SeekFrom = SeekFrom::Current(0);
 
         let position = self.data.seek(CURRENT)?;
         let mut record =
             StorageRecord::deserialize(&self.read(CURRENT, StorageRecord::serialized_size())?)?;
         record.position = position;
 
-        self.data
-            .seek(std::io::SeekFrom::Current(record.size as i64))?;
+        self.data.seek(SeekFrom::Current(record.size as i64))?;
 
         Ok(record)
     }
 
     pub(crate) fn read_records(&mut self) -> Result<(), DbError> {
         let mut records: Vec<StorageRecord> = vec![];
-        self.data.seek(std::io::SeekFrom::End(0))?;
-        let size = self.data.seek(std::io::SeekFrom::Current(0))?;
-        self.data.seek(std::io::SeekFrom::Start(0))?;
+        self.data.seek(SeekFrom::End(0))?;
+        let size = self.data.seek(SeekFrom::Current(0))?;
+        self.data.seek(SeekFrom::Start(0))?;
 
-        while self.data.seek(std::io::SeekFrom::Current(0))? < size {
+        while self.data.seek(SeekFrom::Current(0))? < size {
             records.push(self.read_record()?);
         }
 
@@ -210,15 +206,14 @@ impl<Data: StorageData> StorageImpl<Data> {
         if record.position != current_pos {
             self.copy_record(index, record.position, record_size, current_pos)?;
         } else {
-            self.data
-                .seek(std::io::SeekFrom::Current(record_size as i64))?;
+            self.data.seek(SeekFrom::Current(record_size as i64))?;
         }
 
-        self.data.seek(std::io::SeekFrom::Current(0))
+        self.data.seek(SeekFrom::Current(0))
     }
 
     pub(crate) fn shrink_indexes(&mut self, indexes: Vec<StorageIndex>) -> Result<u64, DbError> {
-        let mut current_pos = self.data.seek(std::io::SeekFrom::Start(0))?;
+        let mut current_pos = self.data.seek(SeekFrom::Start(0))?;
 
         for index in indexes {
             current_pos = self.shrink_index(&index, current_pos)?;
@@ -228,10 +223,10 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     pub(crate) fn truncate(&mut self, size: u64) -> Result<(), DbError> {
-        let current_size = self.data.seek(std::io::SeekFrom::End(0))?;
+        let current_size = self.data.seek(SeekFrom::End(0))?;
 
         if size < current_size {
-            let bytes = self.read(std::io::SeekFrom::Start(size), current_size - size)?;
+            let bytes = self.read(SeekFrom::Start(size), current_size - size)?;
             self.data.insert_wal_record(WriteAheadLogRecord {
                 position: size,
                 bytes,
@@ -270,8 +265,8 @@ impl<Data: StorageData> StorageImpl<Data> {
         Ok(())
     }
 
-    pub(crate) fn value_position(position: u64, offset: u64) -> std::io::SeekFrom {
-        std::io::SeekFrom::Start(Self::value_position_u64(position, offset))
+    pub(crate) fn value_position(position: u64, offset: u64) -> SeekFrom {
+        SeekFrom::Start(Self::value_position_u64(position, offset))
     }
 
     pub(crate) fn value_position_u64(position: u64, offset: u64) -> u64 {
@@ -292,18 +287,14 @@ impl<Data: StorageData> StorageImpl<Data> {
         Ok(read_size)
     }
 
-    pub(crate) fn write(
-        &mut self,
-        position: std::io::SeekFrom,
-        bytes: &[u8],
-    ) -> Result<(), DbError> {
-        let current_end = self.data.seek(std::io::SeekFrom::End(0))?;
+    pub(crate) fn write(&mut self, position: SeekFrom, bytes: &[u8]) -> Result<(), DbError> {
+        let current_end = self.data.seek(SeekFrom::End(0))?;
         let write_pos = self.data.seek(position)?;
 
         if write_pos < current_end {
             let orig_bytes = self.read(
-                std::io::SeekFrom::Start(write_pos),
-                std::cmp::min(bytes.len() as u64, current_end - write_pos),
+                SeekFrom::Start(write_pos),
+                min(bytes.len() as u64, current_end - write_pos),
             )?;
             self.data.insert_wal_record(WriteAheadLogRecord {
                 position: write_pos,

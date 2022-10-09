@@ -4,17 +4,22 @@ use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use std::cell::RefCell;
+use std::cell::RefMut;
+use std::cmp::max;
+use std::marker::PhantomData;
+use std::rc::Rc;
 
 pub struct StorageVec<T, Data = StorageFile>
 where
     T: Serialize,
     Data: Storage,
 {
-    pub(crate) storage: std::rc::Rc<std::cell::RefCell<Data>>,
+    pub(crate) storage: Rc<RefCell<Data>>,
     pub(crate) storage_index: StorageIndex,
     pub(crate) len: u64,
     pub(crate) capacity: u64,
-    pub(crate) phantom_data: std::marker::PhantomData<T>,
+    pub(crate) phantom_data: PhantomData<T>,
 }
 
 impl<T, Data> StorageVec<T, Data>
@@ -34,7 +39,7 @@ where
         VecIterator::<T, Data> {
             index: 0,
             vec: self,
-            phantom_data: std::marker::PhantomData,
+            phantom_data: PhantomData,
         }
     }
 
@@ -50,7 +55,7 @@ where
             let current_capacity = self.capacity();
             Self::reallocate(
                 &mut self.capacity,
-                std::cmp::max(current_capacity * 2, 64),
+                max(current_capacity * 2, 64),
                 &mut ref_storage,
                 &self.storage_index,
             )?;
@@ -170,7 +175,7 @@ where
     fn reallocate(
         capacity: &mut u64,
         new_capacity: u64,
-        storage: &mut std::cell::RefMut<Data>,
+        storage: &mut RefMut<Data>,
         storage_index: &StorageIndex,
     ) -> Result<(), DbError> {
         *capacity = new_capacity;

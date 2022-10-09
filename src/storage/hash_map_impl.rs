@@ -5,7 +5,9 @@ use super::hash_map_meta_value::HashMapMetaValue;
 use super::StableHash;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
+use std::cmp::max;
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 pub(crate) struct HashMapImpl<K, T, Data>
 where
@@ -14,7 +16,7 @@ where
     Data: HashMapData<K, T>,
 {
     pub(super) data: Data,
-    pub(super) phantom_data: std::marker::PhantomData<(K, T)>,
+    pub(super) phantom_data: PhantomData<(K, T)>,
 }
 
 #[allow(dead_code)]
@@ -50,7 +52,7 @@ where
         HashMapIterator::<K, T, Data> {
             pos: 0,
             data: &self.data,
-            phantom_data: std::marker::PhantomData,
+            phantom_data: PhantomData,
         }
     }
 
@@ -181,7 +183,7 @@ where
     }
 
     pub(super) fn rehash(&mut self, mut new_capacity: u64) -> Result<(), DbError> {
-        new_capacity = std::cmp::max(new_capacity, 64);
+        new_capacity = max(new_capacity, 64);
 
         if new_capacity != self.capacity() {
             let old_data = self.data.take_values()?;

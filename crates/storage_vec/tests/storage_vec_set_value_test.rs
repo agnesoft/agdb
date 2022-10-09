@@ -2,11 +2,13 @@ use agdb_db_error::DbError;
 use agdb_storage::StorageFile;
 use agdb_storage_vec::StorageVec;
 use agdb_test_file::TestFile;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[test]
 fn set_value() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 
@@ -25,7 +27,7 @@ fn set_value() {
 #[test]
 fn set_value_out_of_bounds() {
     let test_file = TestFile::new();
-    let storage = std::rc::Rc::new(std::cell::RefCell::new(
+    let storage = Rc::new(RefCell::new(
         StorageFile::try_from(test_file.file_name().clone()).unwrap(),
     ));
 

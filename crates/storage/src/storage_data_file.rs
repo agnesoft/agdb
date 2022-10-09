@@ -5,10 +5,15 @@ use agdb_storage_index::StorageRecord;
 use agdb_storage_index::StorageRecords;
 use agdb_write_ahead_log::WriteAheadLog;
 use agdb_write_ahead_log::WriteAheadLogRecord;
+use std::fs::File;
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
 
 #[allow(dead_code)]
 pub struct StorageDataFile {
-    file: std::fs::File,
+    file: File,
     filename: String,
     records: StorageRecords,
     wal: WriteAheadLog,
@@ -46,7 +51,7 @@ impl StorageData for StorageDataFile {
     }
 
     fn read_exact(&mut self, buffer: &mut Vec<u8>) -> Result<(), DbError> {
-        Ok(std::io::Read::read_exact(&mut self.file, buffer)?)
+        Ok(Read::read_exact(&mut self.file, buffer)?)
     }
 
     fn record(&self, index: &StorageIndex) -> Result<StorageRecord, DbError> {
@@ -67,8 +72,8 @@ impl StorageData for StorageDataFile {
         self.records.remove(index);
     }
 
-    fn seek(&mut self, position: std::io::SeekFrom) -> Result<u64, DbError> {
-        Ok(std::io::Seek::seek(&mut self.file, position)?)
+    fn seek(&mut self, position: SeekFrom) -> Result<u64, DbError> {
+        Ok(Seek::seek(&mut self.file, position)?)
     }
 
     fn set_len(&mut self, len: u64) -> Result<(), DbError> {
@@ -84,7 +89,7 @@ impl StorageData for StorageDataFile {
     }
 
     fn write_all(&mut self, bytes: &[u8]) -> Result<(), DbError> {
-        Ok(std::io::Write::write_all(&mut self.file, bytes)?)
+        Ok(Write::write_all(&mut self.file, bytes)?)
     }
 }
 

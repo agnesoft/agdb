@@ -1,15 +1,18 @@
 use crate::DbError;
+use std::io::Error;
+use std::panic::Location;
+use std::string::FromUtf8Error;
 
-impl From<std::io::Error> for DbError {
+impl From<Error> for DbError {
     #[track_caller]
-    fn from(error: std::io::Error) -> Self {
+    fn from(error: Error) -> Self {
         DbError::from(error.to_string())
     }
 }
 
-impl From<std::string::FromUtf8Error> for DbError {
+impl From<FromUtf8Error> for DbError {
     #[track_caller]
-    fn from(error: std::string::FromUtf8Error) -> Self {
+    fn from(error: FromUtf8Error) -> Self {
         DbError::from(error.to_string())
     }
 }
@@ -27,7 +30,7 @@ impl From<String> for DbError {
         DbError {
             description,
             cause: None,
-            source_location: *std::panic::Location::caller(),
+            source_location: *Location::caller(),
         }
     }
 }

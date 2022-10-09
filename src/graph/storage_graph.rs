@@ -1,11 +1,11 @@
 use super::graph_data_storage::GraphDataStorage;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_impl::GraphImpl;
-use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use agdb_storage_vec::StorageVec;
 
 pub(crate) type StorageGraph<Data = StorageFile> = GraphImpl<GraphDataStorage<Data>>;
 

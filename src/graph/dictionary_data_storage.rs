@@ -2,12 +2,12 @@ use super::dictionary_data::DictionaryData;
 use super::dictionary_value::DictionaryValue;
 use crate::storage::StableHash;
 use crate::storage::StorageHashMultiMap;
-use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use agdb_storage_vec::StorageVec;
 
 pub(crate) struct DictionaryDataStorage<T, Data = StorageFile>
 where

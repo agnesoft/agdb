@@ -10,8 +10,6 @@ mod hash_multi_map_impl;
 mod stable_hash;
 mod storage_hash_map;
 mod storage_hash_multi_map;
-mod storage_vec;
-mod vec_iterator;
 
 #[allow(unused_imports)]
 pub(crate) use hash_multi_map::HashMultiMap;
@@ -20,5 +18,3 @@ pub(crate) use stable_hash::StableHash;
 pub(crate) use storage_hash_map::StorageHashMap;
 #[allow(unused_imports)]
 pub(crate) use storage_hash_multi_map::StorageHashMultiMap;
-#[allow(unused_imports)]
-pub(crate) use storage_vec::StorageVec;

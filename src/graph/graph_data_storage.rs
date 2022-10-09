@@ -1,10 +1,10 @@
 use super::graph_data::GraphData;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
-use crate::storage::StorageVec;
 use agdb_db_error::DbError;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;
+use agdb_storage_vec::StorageVec;
 
 pub(crate) struct GraphDataStorage<Data = StorageFile>
 where

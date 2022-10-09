@@ -1,6 +1,7 @@
-use super::dictionary_data_storage::DictionaryDataStorage;
-use super::dictionary_data_storage_indexes::DictionaryDataStorageIndexes;
-use super::dictionary_value::DictionaryValue;
+use crate::dictionary_data_storage::DictionaryDataStorage;
+use crate::dictionary_data_storage_indexes::DictionaryDataStorageIndexes;
+use crate::dictionary_index::DictionaryIndex;
+use crate::dictionary_value::DictionaryValue;
 use crate::StorageDictionary;
 use agdb_db_error::DbError;
 use agdb_multi_map::StorageMultiMap;
@@ -21,7 +22,7 @@ where
     type Error = DbError;
 
     fn try_from(storage: Rc<RefCell<Data>>) -> Result<Self, Self::Error> {
-        let index = StorageMultiMap::<u64, i64, Data>::try_from(storage.clone())?;
+        let index = StorageMultiMap::<u64, DictionaryIndex, Data>::try_from(storage.clone())?;
         let mut values = StorageVec::<DictionaryValue<T>, Data>::try_from(storage.clone())?;
         values.push(&DictionaryValue::default())?;
 
@@ -56,7 +57,7 @@ where
             .0
             .borrow_mut()
             .value::<DictionaryDataStorageIndexes>(&storage_with_index.1)?;
-        let index = StorageMultiMap::<u64, i64, Data>::try_from((
+        let index = StorageMultiMap::<u64, DictionaryIndex, Data>::try_from((
             storage_with_index.0.clone(),
             indexes.index,
         ))?;

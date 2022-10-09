@@ -7,8 +7,8 @@ fn insert() {
     let index = dictionary.insert(&10).unwrap();
 
     assert_eq!(dictionary.len(), Ok(1));
-    assert_eq!(dictionary.value(index), Ok(Some(10_i64)));
-    assert_eq!(dictionary.count(index), Ok(Some(1)));
+    assert_eq!(dictionary.value(&index), Ok(Some(10_i64)));
+    assert_eq!(dictionary.count(&index), Ok(Some(1)));
 }
 
 #[test]
@@ -21,14 +21,14 @@ fn insert_multiple() {
 
     assert_eq!(dictionary.len(), Ok(3));
 
-    assert_eq!(dictionary.value(index1).unwrap(), Some(10_i64));
-    assert_eq!(dictionary.count(index1), Ok(Some(1)));
+    assert_eq!(dictionary.value(&index1).unwrap(), Some(10_i64));
+    assert_eq!(dictionary.count(&index1), Ok(Some(1)));
 
-    assert_eq!(dictionary.value(index2).unwrap(), Some(15_i64));
-    assert_eq!(dictionary.count(index2), Ok(Some(1)));
+    assert_eq!(dictionary.value(&index2).unwrap(), Some(15_i64));
+    assert_eq!(dictionary.count(&index2), Ok(Some(1)));
 
-    assert_eq!(dictionary.value(index3).unwrap(), Some(20_i64));
-    assert_eq!(dictionary.count(index3), Ok(Some(1)));
+    assert_eq!(dictionary.value(&index3).unwrap(), Some(20_i64));
+    assert_eq!(dictionary.count(&index3), Ok(Some(1)));
 }
 
 #[test]
@@ -45,5 +45,5 @@ fn insert_same() {
     dictionary.insert(&20).unwrap();
 
     assert_eq!(dictionary.len(), Ok(3));
-    assert_eq!(dictionary.count(index2), Ok(Some(3)));
+    assert_eq!(dictionary.count(&index2), Ok(Some(3)));
 }

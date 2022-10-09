@@ -1,4 +1,5 @@
 use crate::dictionary_data_memory::DictionaryDataMemory;
+use crate::dictionary_index::DictionaryIndex;
 use crate::dictionary_value::DictionaryValue;
 use agdb_multi_map::MultiMap;
 use agdb_serialize::Serialize;
@@ -10,7 +11,7 @@ where
 {
     fn default() -> Self {
         Self {
-            index: MultiMap::<u64, i64>::new(),
+            index: MultiMap::<u64, DictionaryIndex>::new(),
             values: vec![DictionaryValue::<T>::default()],
         }
     }

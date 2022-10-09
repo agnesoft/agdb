@@ -3,9 +3,9 @@ use agdb_serialize::Serialize;
 use agdb_storage::StorageIndex;
 use std::mem::size_of;
 
-pub(super) struct DictionaryDataStorageIndexes {
-    pub(super) index: StorageIndex,
-    pub(super) values: StorageIndex,
+pub(crate) struct DictionaryDataStorageIndexes {
+    pub(crate) index: StorageIndex,
+    pub(crate) values: StorageIndex,
 }
 
 impl Serialize for DictionaryDataStorageIndexes {

@@ -1,3 +1,4 @@
+use agdb_db_error::DbError;
 use agdb_serialize::Serialize;
 use agdb_storage::StorageIndex;
 use std::mem::size_of;
@@ -10,7 +11,7 @@ pub(super) struct GraphDataStorageIndexes {
 }
 
 impl Serialize for GraphDataStorageIndexes {
-    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(GraphDataStorageIndexes {
             from: StorageIndex::deserialize(bytes)?,
             to: StorageIndex::deserialize(&bytes[(StorageIndex::serialized_size() as usize)..])?,

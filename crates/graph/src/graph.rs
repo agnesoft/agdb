@@ -1,16 +1,5 @@
-use self::graph_data_memory::GraphDataMemory;
-use self::graph_impl::GraphImpl;
-
-mod graph_data;
-mod graph_data_memory;
-mod graph_data_storage;
-mod graph_data_storage_indexes;
-mod graph_edge;
-mod graph_edge_iterator;
-mod graph_impl;
-mod graph_node;
-mod graph_node_iterator;
-mod storage_graph;
+use crate::graph_data_memory::GraphDataMemory;
+use crate::graph_impl::GraphImpl;
 
 #[allow(dead_code)]
 pub(crate) type Graph = GraphImpl<GraphDataMemory>;

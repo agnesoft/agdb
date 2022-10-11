@@ -23,10 +23,7 @@ where
         }
 
         let current_index = self.index.clone();
-        self.index = self
-            .graph
-            .next_edge_from(&self.index)
-            .unwrap_or(GraphIndex::default());
+        self.index = self.graph.next_edge_from(&self.index).unwrap_or_default();
 
         Some(GraphEdge {
             graph: self.graph,

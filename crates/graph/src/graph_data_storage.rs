@@ -1,5 +1,6 @@
-use super::graph_data::GraphData;
-use super::graph_data_storage_indexes::GraphDataStorageIndexes;
+use crate::graph_data::GraphData;
+use crate::graph_data_storage_indexes::GraphDataStorageIndexes;
+use crate::graph_index::GraphIndex;
 use agdb_db_error::DbError;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
@@ -38,12 +39,12 @@ where
         self.from_meta.value(0)
     }
 
-    fn from(&self, index: i64) -> Result<i64, DbError> {
-        self.from.value(index as u64)
+    fn from(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        self.from.value(index.as_u64())
     }
 
-    fn from_meta(&self, index: i64) -> Result<i64, DbError> {
-        self.from_meta.value(index as u64)
+    fn from_meta(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        self.from_meta.value(index.as_u64())
     }
 
     fn grow(&mut self) -> Result<(), DbError> {
@@ -57,32 +58,32 @@ where
         Ok(self.to_meta.value(0)? as u64)
     }
 
-    fn set_from(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.from.set_value(index as u64, &value)
+    fn set_from(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.from.set_value(index.as_u64(), &value)
     }
 
-    fn set_from_meta(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.from_meta.set_value(index as u64, &value)
+    fn set_from_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.from_meta.set_value(index.as_u64(), &value)
     }
 
     fn set_node_count(&mut self, count: u64) -> Result<(), DbError> {
         self.to_meta.set_value(0, &(count as i64))
     }
 
-    fn set_to(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.to.set_value(index as u64, &value)
+    fn set_to(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.to.set_value(index.as_u64(), &value)
     }
 
-    fn set_to_meta(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.to_meta.set_value(index as u64, &value)
+    fn set_to_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.to_meta.set_value(index.as_u64(), &value)
     }
 
-    fn to(&self, index: i64) -> Result<i64, DbError> {
-        self.to.value(index as u64)
+    fn to(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        self.to.value(index.as_u64())
     }
 
-    fn to_meta(&self, index: i64) -> Result<i64, DbError> {
-        self.to_meta.value(index as u64)
+    fn to_meta(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        self.to_meta.value(index.as_u64())
     }
 
     fn transaction(&mut self) {

@@ -1,4 +1,5 @@
-use super::graph_data::GraphData;
+use crate::graph_data::GraphData;
+use crate::graph_index::GraphIndex;
 use agdb_db_error::DbError;
 
 pub struct GraphDataMemory {
@@ -21,12 +22,12 @@ impl GraphData for GraphDataMemory {
         Ok(self.from_meta[0])
     }
 
-    fn from(&self, index: i64) -> Result<i64, DbError> {
-        Ok(self.from[index as usize])
+    fn from(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        Ok(self.from[index.as_usize()])
     }
 
-    fn from_meta(&self, index: i64) -> Result<i64, DbError> {
-        Ok(self.from_meta[index as usize])
+    fn from_meta(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        Ok(self.from_meta[index.as_usize()])
     }
 
     fn grow(&mut self) -> Result<(), DbError> {
@@ -42,14 +43,14 @@ impl GraphData for GraphDataMemory {
         Ok(self.to_meta[0] as u64)
     }
 
-    fn set_from(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.from[index as usize] = value;
+    fn set_from(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.from[index.as_usize()] = value;
 
         Ok(())
     }
 
-    fn set_from_meta(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.from_meta[index as usize] = value;
+    fn set_from_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.from_meta[index.as_usize()] = value;
 
         Ok(())
     }
@@ -60,24 +61,24 @@ impl GraphData for GraphDataMemory {
         Ok(())
     }
 
-    fn set_to(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.to[index as usize] = value;
+    fn set_to(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.to[index.as_usize()] = value;
 
         Ok(())
     }
 
-    fn set_to_meta(&mut self, index: i64, value: i64) -> Result<(), DbError> {
-        self.to_meta[index as usize] = value;
+    fn set_to_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+        self.to_meta[index.as_usize()] = value;
 
         Ok(())
     }
 
-    fn to(&self, index: i64) -> Result<i64, DbError> {
-        Ok(self.to[index as usize])
+    fn to(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        Ok(self.to[index.as_usize()])
     }
 
-    fn to_meta(&self, index: i64) -> Result<i64, DbError> {
-        Ok(self.to_meta[index as usize])
+    fn to_meta(&self, index: &GraphIndex) -> Result<i64, DbError> {
+        Ok(self.to_meta[index.as_usize()])
     }
 
     fn transaction(&mut self) {}

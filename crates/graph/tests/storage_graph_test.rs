@@ -30,17 +30,17 @@ fn restore_from_file() {
         node2 = graph.insert_node().unwrap();
         node3 = graph.insert_node().unwrap();
 
-        edge1 = graph.insert_edge(node1, node2).unwrap();
-        edge2 = graph.insert_edge(node2, node3).unwrap();
-        edge3 = graph.insert_edge(node3, node1).unwrap();
+        edge1 = graph.insert_edge(&node1, &node2).unwrap();
+        edge2 = graph.insert_edge(&node2, &node3).unwrap();
+        edge3 = graph.insert_edge(&node3, &node1).unwrap();
     }
 
     let graph = StorageGraph::try_from((storage, index)).unwrap();
 
-    assert!(graph.node(node1).is_some());
-    assert!(graph.node(node2).is_some());
-    assert!(graph.node(node3).is_some());
-    assert!(graph.edge(edge1).is_some());
-    assert!(graph.edge(edge2).is_some());
-    assert!(graph.edge(edge3).is_some());
+    assert!(graph.node(&node1).is_some());
+    assert!(graph.node(&node2).is_some());
+    assert!(graph.node(&node3).is_some());
+    assert!(graph.edge(&edge1).is_some());
+    assert!(graph.edge(&edge2).is_some());
+    assert!(graph.edge(&edge3).is_some());
 }

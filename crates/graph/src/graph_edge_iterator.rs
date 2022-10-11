@@ -1,13 +1,14 @@
-use super::graph_data::GraphData;
-use super::graph_edge::GraphEdge;
-use super::graph_impl::GraphImpl;
+use crate::graph_data::GraphData;
+use crate::graph_edge::GraphEdge;
+use crate::graph_impl::GraphImpl;
+use crate::graph_index::GraphIndex;
 
 pub struct GraphEdgeIterator<'a, Data>
 where
     Data: GraphData,
 {
     pub(crate) graph: &'a GraphImpl<Data>,
-    pub(crate) index: i64,
+    pub(crate) index: GraphIndex,
 }
 
 impl<'a, Data> Iterator for GraphEdgeIterator<'a, Data>
@@ -17,16 +18,16 @@ where
     type Item = GraphEdge<'a, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index == 0 {
+        if !self.index.is_valid() {
             return None;
         }
 
-        let index = self.index;
-        self.index = self.graph.next_edge_from(self.index).unwrap_or(0);
+        let current_index = self.index.clone();
+        self.index = self.graph.next_edge_from(&self.index).unwrap_or_default();
 
         Some(GraphEdge {
             graph: self.graph,
-            index,
+            index: current_index,
         })
     }
 }

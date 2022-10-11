@@ -1,3 +1,4 @@
+use agdb_graph::GraphIndex;
 use agdb_graph::StorageGraph;
 use agdb_storage::StorageFile;
 use agdb_test_utilities::TestFile;
@@ -12,7 +13,7 @@ fn insert_node() {
     ));
     let mut graph = StorageGraph::try_from(storage).unwrap();
 
-    assert_eq!(graph.insert_node().unwrap(), 1);
+    assert_eq!(graph.insert_node(), Ok(GraphIndex::from(1)));
 }
 
 #[test]
@@ -26,7 +27,7 @@ fn insert_node_after_removal() {
     let index = graph.insert_node().unwrap();
     graph.insert_node().unwrap();
 
-    graph.remove_node(index).unwrap();
+    graph.remove_node(&index).unwrap();
 
     assert_eq!(graph.insert_node().unwrap(), index);
 }
@@ -47,7 +48,7 @@ fn node_count() {
 
     assert_eq!(graph.node_count().unwrap(), 3);
 
-    graph.remove_node(index).unwrap();
+    graph.remove_node(&index).unwrap();
 
     assert_eq!(graph.node_count().unwrap(), 2);
 }

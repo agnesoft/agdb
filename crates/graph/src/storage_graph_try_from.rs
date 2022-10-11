@@ -1,4 +1,4 @@
-use super::graph_data_storage::GraphDataStorage;
+use crate::graph_data_storage::GraphDataStorage;
 use crate::StorageGraph;
 use agdb_db_error::DbError;
 use agdb_storage::Storage;

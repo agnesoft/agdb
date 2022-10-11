@@ -1,5 +1,5 @@
-use super::graph_data_storage::GraphDataStorage;
-use super::graph_impl::GraphImpl;
+use crate::graph_data_storage::GraphDataStorage;
+use crate::graph_impl::GraphImpl;
 use agdb_storage::Storage;
 use agdb_storage::StorageFile;
 use agdb_storage::StorageIndex;

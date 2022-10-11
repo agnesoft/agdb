@@ -10,10 +10,13 @@ mod graph_default;
 mod graph_edge;
 mod graph_edge_iterator;
 mod graph_impl;
+mod graph_index;
+mod graph_index_from;
 mod graph_node;
 mod graph_node_iterator;
 mod storage_graph;
 mod storage_graph_try_from;
 
 pub use graph::Graph;
+pub use graph_index::GraphIndex;
 pub use storage_graph::StorageGraph;

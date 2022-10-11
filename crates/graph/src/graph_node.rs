@@ -22,10 +22,7 @@ where
     pub fn edge_from_iter(&self) -> GraphEdgeIterator<Data> {
         GraphEdgeIterator {
             graph: self.graph,
-            index: self
-                .graph
-                .first_edge_from(&self.index)
-                .unwrap_or(GraphIndex::default()),
+            index: self.graph.first_edge_from(&self.index).unwrap_or_default(),
         }
     }
 }

@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 agdb_graph = { path = "../graph", version = "<=0.1.0" }
+agdb_bit_set = { path = "../bit_set", version = "<=0.1.0" }

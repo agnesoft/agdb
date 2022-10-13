@@ -108,6 +108,10 @@ where
         Ok(GraphIndex::from(-self.data.from(index)?))
     }
 
+    pub(crate) fn edge_to(&self, index: &GraphIndex) -> GraphIndex {
+        GraphIndex::from(-self.data.to(index).unwrap_or_default())
+    }
+
     fn free_index(&mut self, index: &GraphIndex) -> Result<(), DbError> {
         let next_free = self.data.from_meta(&GraphIndex::default())?;
         self.data.set_from_meta(index, next_free)?;

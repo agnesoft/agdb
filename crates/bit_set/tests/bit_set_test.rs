@@ -1,6 +1,16 @@
 use agdb_bit_set::BitSet;
 
 #[test]
+fn clear() {
+    let mut bitset = BitSet::new();
+
+    bitset.insert(10_u64);
+    bitset.clear();
+
+    assert!(!bitset.value(10_u64));
+}
+
+#[test]
 fn derived_from_default() {
     let _bitset = BitSet::default();
 }

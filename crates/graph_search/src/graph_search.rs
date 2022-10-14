@@ -6,6 +6,9 @@ use agdb_graph::GraphIndex;
 
 pub struct GraphSearch<'a> {
     pub(crate) graph: &'a Graph,
+    pub(crate) result: Vec<GraphIndex>,
+    pub(crate) stack: Vec<GraphIndex>,
+    pub(crate) visited: BitSet,
 }
 
 impl<'a> GraphSearch<'a> {
@@ -14,24 +17,22 @@ impl<'a> GraphSearch<'a> {
         index: &GraphIndex,
         handler: &T,
     ) -> Vec<GraphIndex> {
+        self.clear();
         let mut distance = 0_u64;
-        let mut result = Vec::<GraphIndex>::new();
-        let mut stack = vec![index.clone()];
-        let mut visited = BitSet::new();
 
-        while !stack.is_empty() {
+        while !self.stack.is_empty() {
             distance += 1;
-            let current = stack;
-            stack = vec![];
+            let current = self.stack;
+            self.stack = vec![];
 
             for i in current {
-                if !visited.value(i.as_u64()) {
-                    visited.insert(i.as_u64());
+                if !self.visited.value(i.as_u64()) {
+                    self.visited.insert(i.as_u64());
 
                     match handler.process(&i, &distance) {
-                        SearchControl::Continue => result.push(i.clone()),
+                        SearchControl::Continue => self.result.push(i.clone()),
                         SearchControl::Finish => {
-                            stack.clear();
+                            self.stack.clear();
                             break;
                         }
                         SearchControl::Skip => (),
@@ -40,15 +41,21 @@ impl<'a> GraphSearch<'a> {
 
                     if let Some(node) = self.graph.node(&i) {
                         for edge in node.edge_from_iter() {
-                            stack.push(edge.index());
+                            self.stack.push(edge.index());
                         }
                     } else if let Some(edge) = self.graph.edge(&i) {
-                        stack.push(edge.to())
+                        self.stack.push(edge.to())
                     }
                 }
             }
         }
 
-        result
+        self.result
+    }
+
+    fn clear(&mut self) {
+        self.result.clear();
+        self.stack.clear();
+        self.visited.clear();
     }
 }

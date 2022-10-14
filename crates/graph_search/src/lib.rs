@@ -1,5 +1,6 @@
 mod graph_search;
 mod graph_search_from;
+mod graph_search_index;
 mod search_control;
 mod search_handler;
 

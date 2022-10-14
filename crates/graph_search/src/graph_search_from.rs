@@ -7,6 +7,7 @@ impl<'a> From<&'a Graph> for GraphSearch<'a> {
         GraphSearch {
             graph,
             visited: BitSet::new(),
+            stack: vec![],
             result: vec![],
         }
     }

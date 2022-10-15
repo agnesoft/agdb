@@ -6,7 +6,6 @@ pub struct GraphEdge<'a, Data>
 where
     Data: GraphData,
 {
-    #[allow(dead_code)]
     pub(crate) graph: &'a GraphImpl<Data>,
     pub(crate) index: GraphIndex,
 }
@@ -17,5 +16,9 @@ where
 {
     pub fn index(&self) -> GraphIndex {
         self.index.clone()
+    }
+
+    pub fn to_index(&self) -> GraphIndex {
+        self.graph.edge_to(&self.index)
     }
 }

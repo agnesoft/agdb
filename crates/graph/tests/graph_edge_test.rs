@@ -36,3 +36,14 @@ fn edge_iteration() {
 
     assert_eq!(actual, vec![edge3, edge2, edge1]);
 }
+
+#[test]
+fn to_index() {
+    let mut graph = Graph::new();
+    let node1 = graph.insert_node().unwrap();
+    let node2 = graph.insert_node().unwrap();
+
+    let index = graph.insert_edge(&node1, &node2).unwrap();
+
+    assert_eq!(graph.edge(&index).unwrap().to_index(), node2);
+}

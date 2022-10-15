@@ -4,6 +4,10 @@ pub struct BitSet {
 }
 
 impl BitSet {
+    pub fn clear(&mut self) {
+        self.data.clear();
+    }
+
     pub fn insert(&mut self, value: u64) {
         let byte_index = value as usize / 8;
         let bit_index = value as usize % 8;

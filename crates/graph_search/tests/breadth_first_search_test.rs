@@ -21,7 +21,7 @@ fn find_index() {
 
     impl SearchHandler for Handler {
         fn process(&self, _index: &GraphIndex, _distance: &u64) -> SearchControl {
-            SearchControl::Continue
+            SearchControl::Continue(true)
         }
     }
 

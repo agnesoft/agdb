@@ -1,6 +1,5 @@
 pub enum SearchControl {
-    Continue,
-    Finish,
-    Skip,
-    Stop,
+    Continue(bool),
+    Finish(bool),
+    Stop(bool),
 }

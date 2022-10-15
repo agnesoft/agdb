@@ -18,7 +18,7 @@ where
         self.index.clone()
     }
 
-    pub fn to(&self) -> GraphIndex {
+    pub fn to_index(&self) -> GraphIndex {
         self.graph.edge_to(&self.index)
     }
 }

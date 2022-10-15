@@ -1,9 +1,13 @@
 use crate::graph_search::GraphSearch;
 use agdb_bit_set::BitSet;
-use agdb_graph::Graph;
+use agdb_graph::GraphData;
+use agdb_graph::GraphImpl;
 
-impl<'a> From<&'a Graph> for GraphSearch<'a> {
-    fn from(graph: &'a Graph) -> Self {
+impl<'a, Data> From<&'a GraphImpl<Data>> for GraphSearch<'a, Data>
+where
+    Data: GraphData,
+{
+    fn from(graph: &'a GraphImpl<Data>) -> Self {
         GraphSearch {
             graph,
             visited: BitSet::new(),

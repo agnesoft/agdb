@@ -18,5 +18,8 @@ mod storage_graph;
 mod storage_graph_try_from;
 
 pub use graph::Graph;
+pub use graph_data::GraphData;
+pub use graph_edge_iterator::GraphEdgeIterator;
+pub use graph_impl::GraphImpl;
 pub use graph_index::GraphIndex;
 pub use storage_graph::StorageGraph;

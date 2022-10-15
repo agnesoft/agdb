@@ -133,6 +133,29 @@ fn finish_search() {
 }
 
 #[test]
+fn search_twice() {
+    let mut graph = Graph::new();
+
+    let node1 = graph.insert_node().unwrap();
+    let node2 = graph.insert_node().unwrap();
+    let node3 = graph.insert_node().unwrap();
+    let node4 = graph.insert_node().unwrap();
+
+    let edge1 = graph.insert_edge(&node1, &node2).unwrap();
+    let edge2 = graph.insert_edge(&node1, &node3).unwrap();
+    let edge3 = graph.insert_edge(&node1, &node4).unwrap();
+
+    let mut result = GraphSearch::from(&graph).breadth_first_search(&node1, &Handler::default());
+    let expected = vec![node1.clone(), edge3, edge2, edge1, node4, node3, node2];
+
+    assert_eq!(result, expected);
+
+    result = GraphSearch::from(&graph).breadth_first_search(&node1, &Handler::default());
+
+    assert_eq!(result, expected);
+}
+
+#[test]
 fn stop_at_distance() {
     let mut graph = Graph::new();
 

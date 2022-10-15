@@ -136,7 +136,7 @@ where
     }
 
     fn validate_index(&self, index: &GraphIndex) -> bool {
-        self.graph.node(&index).is_some() || self.graph.edge(&index).is_some()
+        self.graph.node(index).is_some() || self.graph.edge(index).is_some()
     }
 
     fn visit_index(&mut self, index: &GraphSearchIndex) -> bool {

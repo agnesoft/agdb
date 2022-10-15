@@ -44,11 +44,10 @@ where
         }
     }
 
-    fn add_index_to_stack(&mut self, node: GraphIndex, distance: u64) {
-        self.stack.push(GraphSearchIndex {
-            index: node,
-            distance,
-        });
+    fn add_index_to_stack(&mut self, index: GraphIndex, distance: u64) {
+        if self.validate_index(&index) {
+            self.stack.push(GraphSearchIndex { index, distance });
+        }
     }
 
     fn clear(&mut self) {
@@ -134,6 +133,10 @@ where
         swap(&mut res, &mut self.stack);
 
         res
+    }
+
+    fn validate_index(&self, index: &GraphIndex) -> bool {
+        self.graph.node(&index).is_some() || self.graph.edge(&index).is_some()
     }
 
     fn visit_index(&mut self, index: &GraphSearchIndex) -> bool {

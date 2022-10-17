@@ -1,5 +1,4 @@
 use crate::graph_search::GraphSearch;
-use agdb_bit_set::BitSet;
 use agdb_graph::GraphData;
 use agdb_graph::GraphImpl;
 
@@ -8,11 +7,6 @@ where
     Data: GraphData,
 {
     fn from(graph: &'a GraphImpl<Data>) -> Self {
-        GraphSearch {
-            graph,
-            visited: BitSet::new(),
-            stack: vec![],
-            result: vec![],
-        }
+        GraphSearch { graph }
     }
 }

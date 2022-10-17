@@ -164,8 +164,9 @@ fn stop_at_distance() {
     let node3 = graph.insert_node().unwrap();
 
     let edge1 = graph.insert_edge(&node1, &node2).unwrap();
-    let _edge2 = graph.insert_edge(&node2, &node3).unwrap();
-    let _edge3 = graph.insert_edge(&node3, &node1).unwrap();
+    let edge2 = graph.insert_edge(&node1, &node2).unwrap();
+    let _edge3 = graph.insert_edge(&node2, &node3).unwrap();
+    let _edge4 = graph.insert_edge(&node3, &node1).unwrap();
 
     let result = GraphSearch::from(&graph).breadth_first_search(
         &node1,
@@ -180,5 +181,5 @@ fn stop_at_distance() {
         },
     );
 
-    assert_eq!(result, vec![node1, edge1, node2]);
+    assert_eq!(result, vec![node1, edge2, edge1, node2]);
 }

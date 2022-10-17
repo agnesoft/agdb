@@ -1,7 +1,7 @@
 use crate::breadth_first_search::BreadthFirstSearch;
 use crate::depth_first_search::DepthFirstSearch;
 use crate::search_handler::SearchHandler;
-use crate::search_impl::GraphSearchImpl;
+use crate::search_impl::SearchImpl;
 use agdb_graph::GraphData;
 use agdb_graph::GraphImpl;
 use agdb_graph::GraphIndex;
@@ -23,7 +23,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.validate_index(index) {
-            GraphSearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index.clone())
+            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index.clone())
                 .search(handler)
         } else {
             vec![]
@@ -36,8 +36,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.validate_index(index) {
-            GraphSearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index.clone())
-                .search(handler)
+            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index.clone()).search(handler)
         } else {
             vec![]
         }

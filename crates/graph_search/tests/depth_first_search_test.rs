@@ -27,7 +27,7 @@ fn empty_graph() {
     let graph = Graph::new();
 
     let result =
-        GraphSearch::from(&graph).breadth_first_search(&GraphIndex::default(), &Handler::default());
+        GraphSearch::from(&graph).depth_first_search(&GraphIndex::default(), &Handler::default());
 
     assert_eq!(result, vec![]);
 }
@@ -47,11 +47,11 @@ fn cyclic_graph() {
     let edge5 = graph.insert_edge(&node3, &node1).unwrap();
     let edge6 = graph.insert_edge(&node3, &node1).unwrap();
 
-    let result = GraphSearch::from(&graph).breadth_first_search(&node1, &Handler::default());
+    let result = GraphSearch::from(&graph).depth_first_search(&node1, &Handler::default());
 
     assert_eq!(
         result,
-        vec![node1, edge2, edge1, node2, edge4, edge3, node3, edge6, edge5]
+        vec![node1, edge1, node2, edge3, node3, edge5, edge6, edge4, edge2]
     );
 }
 
@@ -68,11 +68,11 @@ fn full_search() {
     let edge2 = graph.insert_edge(&node1, &node3).unwrap();
     let edge3 = graph.insert_edge(&node1, &node4).unwrap();
 
-    let result = GraphSearch::from(&graph).breadth_first_search(&node1, &Handler::default());
+    let result = GraphSearch::from(&graph).depth_first_search(&node1, &Handler::default());
 
     assert_eq!(
         result,
-        vec![node1, edge3, edge2, edge1, node4, node3, node2]
+        vec![node1, edge1, node2, edge2, node3, edge3, node4]
     );
 }
 
@@ -89,7 +89,7 @@ fn filter_edges() {
     graph.insert_edge(&node1, &node3).unwrap();
     graph.insert_edge(&node1, &node4).unwrap();
 
-    let result = GraphSearch::from(&graph).breadth_first_search(
+    let result = GraphSearch::from(&graph).depth_first_search(
         &node1,
         &Handler {
             processor: |index: &GraphIndex, _distance: &u64| {
@@ -98,7 +98,7 @@ fn filter_edges() {
         },
     );
 
-    assert_eq!(result, vec![node1, node4, node3, node2]);
+    assert_eq!(result, vec![node1, node2, node3, node4]);
 }
 
 #[test]
@@ -116,7 +116,7 @@ fn finish_search() {
     graph.insert_edge(&node3, &node1).unwrap();
     graph.insert_edge(&node3, &node1).unwrap();
 
-    let result = GraphSearch::from(&graph).breadth_first_search(
+    let result = GraphSearch::from(&graph).depth_first_search(
         &node1,
         &Handler {
             processor: |index: &GraphIndex, _distance: &u64| {
@@ -145,12 +145,12 @@ fn search_twice() {
     let edge2 = graph.insert_edge(&node1, &node3).unwrap();
     let edge3 = graph.insert_edge(&node1, &node4).unwrap();
 
-    let mut result = GraphSearch::from(&graph).breadth_first_search(&node1, &Handler::default());
-    let expected = vec![node1.clone(), edge3, edge2, edge1, node4, node3, node2];
+    let mut result = GraphSearch::from(&graph).depth_first_search(&node1, &Handler::default());
+    let expected = vec![node1.clone(), edge1, node2, edge2, node3, edge3, node4];
 
     assert_eq!(result, expected);
 
-    result = GraphSearch::from(&graph).breadth_first_search(&node1, &Handler::default());
+    result = GraphSearch::from(&graph).depth_first_search(&node1, &Handler::default());
 
     assert_eq!(result, expected);
 }
@@ -168,7 +168,7 @@ fn stop_at_distance() {
     let _edge3 = graph.insert_edge(&node2, &node3).unwrap();
     let _edge4 = graph.insert_edge(&node3, &node1).unwrap();
 
-    let result = GraphSearch::from(&graph).breadth_first_search(
+    let result = GraphSearch::from(&graph).depth_first_search(
         &node1,
         &Handler {
             processor: |_index: &GraphIndex, distance: &u64| {
@@ -181,5 +181,5 @@ fn stop_at_distance() {
         },
     );
 
-    assert_eq!(result, vec![node1, edge2, edge1, node2]);
+    assert_eq!(result, vec![node1, edge1, node2, edge2]);
 }

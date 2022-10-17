@@ -10,7 +10,7 @@ use agdb_graph::GraphIndex;
 use std::marker::PhantomData;
 use std::mem::swap;
 
-pub(crate) struct GraphSearchImpl<'a, Data, SearchIt>
+pub(crate) struct SearchImpl<'a, Data, SearchIt>
 where
     Data: GraphData,
     SearchIt: SearchIterator,
@@ -22,7 +22,7 @@ where
     pub(crate) algorithm: PhantomData<SearchIt>,
 }
 
-impl<'a, Data, SearchIt> GraphSearchImpl<'a, Data, SearchIt>
+impl<'a, Data, SearchIt> SearchImpl<'a, Data, SearchIt>
 where
     Data: GraphData,
     SearchIt: SearchIterator,

@@ -50,7 +50,7 @@ where
         to: &GraphIndex,
         handler: &'a Handler,
     ) -> Vec<GraphIndex> {
-        if self.is_valid_node(from) && self.is_valid_node(to) {
+        if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
             PathSearchImpl::<'a, Data, Handler>::new(self.graph, from.clone(), to.clone(), handler)
                 .search()
         } else {

@@ -15,11 +15,11 @@ where
     Data: GraphData,
     SearchIt: SearchIterator,
 {
+    pub(crate) algorithm: PhantomData<SearchIt>,
     pub(crate) graph: &'a GraphImpl<Data>,
+    pub(crate) result: Vec<GraphIndex>,
     pub(crate) stack: Vec<SearchIndex>,
     pub(crate) visited: BitSet,
-    pub(crate) result: Vec<GraphIndex>,
-    pub(crate) algorithm: PhantomData<SearchIt>,
 }
 
 impl<'a, Data, SearchIt> SearchImpl<'a, Data, SearchIt>
@@ -29,11 +29,11 @@ where
 {
     pub(crate) fn new(graph: &'a GraphImpl<Data>, index: GraphIndex) -> Self {
         Self {
+            algorithm: PhantomData,
             graph,
+            result: vec![],
             stack: vec![SearchIndex { index, distance: 0 }],
             visited: BitSet::new(),
-            result: vec![],
-            algorithm: PhantomData,
         }
     }
 

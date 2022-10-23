@@ -51,7 +51,7 @@ where
     }
 
     pub(crate) fn search(&mut self) -> Vec<GraphIndex> {
-        while self.is_finished() {
+        while !self.is_finished() {
             self.sort_paths();
             self.process_last_path();
         }
@@ -62,7 +62,7 @@ where
     fn expand_edge(&mut self, mut path: Path, index: &GraphIndex, node_index: &GraphIndex) {
         let cost = self
             .handler
-            .process(&index, &(self.current_path.elements.len() as u64 + 1));
+            .process(index, &(self.current_path.elements.len() as u64 + 1));
 
         if cost != 0 && !self.visited.value(node_index.as_u64()) {
             path.elements.push(index.clone());
@@ -84,10 +84,12 @@ where
     }
 
     fn expand(&mut self, index: &GraphIndex) {
-        if let Some(node) = self.graph.node(index) {
-            for edge in node.edge_from_iter() {
-                self.expand_edge(self.current_path.clone(), &edge.index(), &edge.to_index());
-            }
+        let node = self
+            .graph
+            .node(index)
+            .expect("unexpected invalid node index");
+        for edge in node.edge_from_iter() {
+            self.expand_edge(self.current_path.clone(), &edge.index(), &edge.to_index());
         }
     }
 
@@ -105,16 +107,21 @@ where
     }
 
     fn process_index(&mut self, index: &GraphIndex) {
-        if index.value() == self.destination.value() {
-            swap(&mut self.result, &mut self.current_path.elements);
-        } else {
-            self.visited.insert(index.as_u64());
-            self.expand(index);
+        if !self.visited.value(index.as_u64()) {
+            if index.value() == self.destination.value() {
+                swap(&mut self.result, &mut self.current_path.elements);
+            } else {
+                self.visited.insert(index.as_u64());
+                self.expand(index);
+            }
         }
     }
 
     fn process_last_path(&mut self) {
-        self.current_path = self.paths.pop().unwrap_or_default();
+        self.current_path = self.paths.pop().unwrap_or(Path {
+            elements: vec![],
+            cost: 0,
+        });
         self.process_path();
     }
 

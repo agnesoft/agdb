@@ -47,7 +47,7 @@ fn edge_iteration() {
 
     let mut actual = Vec::<GraphIndex>::new();
 
-    for edge in graph.node(&node1).unwrap().edge_from_iter() {
+    for edge in graph.node(&node1).unwrap().edge_iter_from() {
         actual.push(edge.index());
     }
 

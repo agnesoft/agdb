@@ -1,5 +1,6 @@
 use crate::graph_data::GraphData;
 use crate::graph_edge_iterator::GraphEdgeIterator;
+use crate::graph_edge_reverse_iterator::GraphEdgeReverseIterator;
 use crate::graph_impl::GraphImpl;
 use crate::graph_index::GraphIndex;
 
@@ -19,10 +20,17 @@ where
         self.index.clone()
     }
 
-    pub fn edge_from_iter(&self) -> GraphEdgeIterator<Data> {
+    pub fn edge_iter_from(&self) -> GraphEdgeIterator<Data> {
         GraphEdgeIterator {
             graph: self.graph,
             index: self.graph.first_edge_from(&self.index).unwrap_or_default(),
+        }
+    }
+
+    pub fn edge_iter_to(&self) -> GraphEdgeReverseIterator<Data> {
+        GraphEdgeReverseIterator {
+            graph: self.graph,
+            index: self.graph.first_edge_to(&self.index).unwrap_or_default(),
         }
     }
 }

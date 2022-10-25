@@ -88,8 +88,8 @@ where
             .graph
             .node(index)
             .expect("unexpected invalid node index");
-        for edge in node.edge_from_iter() {
-            self.expand_edge(self.current_path.clone(), &edge.index(), &edge.to_index());
+        for edge in node.edge_iter_from() {
+            self.expand_edge(self.current_path.clone(), &edge.index(), &edge.index_to());
         }
     }
 

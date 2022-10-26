@@ -1,5 +1,7 @@
 use crate::breadth_first_search::BreadthFirstSearch;
+use crate::breadth_first_search_reverse::BreadthFirstSearchReverse;
 use crate::depth_first_search::DepthFirstSearch;
+use crate::depth_first_search_reverse::DepthFirstSearchReverse;
 use crate::path_search_impl::PathSearchImpl;
 use crate::search_handler::SearchHandler;
 use crate::search_impl::SearchImpl;
@@ -25,7 +27,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearch, false>::new(self.graph, index.clone())
+            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index.clone())
                 .search(handler)
         } else {
             vec![]
@@ -38,7 +40,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearch, true>::new(self.graph, index.clone())
+            SearchImpl::<'a, Data, BreadthFirstSearchReverse>::new(self.graph, index.clone())
                 .search(handler)
         } else {
             vec![]
@@ -51,8 +53,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearch, false>::new(self.graph, index.clone())
-                .search(handler)
+            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index.clone()).search(handler)
         } else {
             vec![]
         }
@@ -64,7 +65,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearch, true>::new(self.graph, index.clone())
+            SearchImpl::<'a, Data, DepthFirstSearchReverse>::new(self.graph, index.clone())
                 .search(handler)
         } else {
             vec![]

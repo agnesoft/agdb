@@ -1,11 +1,11 @@
 use crate::search_index::SearchIndex;
 use crate::search_iterator::SearchIterator;
 
-pub(crate) struct DepthFirstSearch {
+pub(crate) struct DepthFirstSearchReverse {
     index: Option<SearchIndex>,
 }
 
-impl SearchIterator for DepthFirstSearch {
+impl SearchIterator for DepthFirstSearchReverse {
     fn expand_edge<Data: agdb_graph::GraphData>(
         index: &agdb_graph::GraphIndex,
         graph: &agdb_graph::GraphImpl<Data>,
@@ -13,7 +13,7 @@ impl SearchIterator for DepthFirstSearch {
         graph
             .edge(index)
             .expect("invalid index, expected a valid edge index")
-            .index_to()
+            .index_from()
     }
 
     fn expand_node<Data: agdb_graph::GraphData>(
@@ -23,7 +23,7 @@ impl SearchIterator for DepthFirstSearch {
         graph
             .node(index)
             .expect("invalid index, expected a valid node index")
-            .edge_iter_from()
+            .edge_iter_to()
             .map(|edge| edge.index())
             .collect()
     }

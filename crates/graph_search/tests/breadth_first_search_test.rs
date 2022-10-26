@@ -33,6 +33,16 @@ fn empty_graph() {
 }
 
 #[test]
+fn empty_graph_reverse() {
+    let graph = Graph::new();
+
+    let result = GraphSearch::from(&graph)
+        .breadth_first_search_reverse(&GraphIndex::default(), &Handler::default());
+
+    assert_eq!(result, vec![]);
+}
+
+#[test]
 fn cyclic_graph() {
     let mut graph = Graph::new();
 

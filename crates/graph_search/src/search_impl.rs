@@ -9,7 +9,7 @@ use agdb_graph::GraphIndex;
 use std::marker::PhantomData;
 use std::mem::swap;
 
-pub(crate) struct SearchImpl<'a, Data, SearchIt, const REVERSE: bool>
+pub(crate) struct SearchImpl<'a, Data, SearchIt>
 where
     Data: GraphData,
     SearchIt: SearchIterator,
@@ -21,7 +21,7 @@ where
     pub(crate) visited: BitSet,
 }
 
-impl<'a, Data, SearchIt, const REVERSE: bool> SearchImpl<'a, Data, SearchIt, REVERSE>
+impl<'a, Data, SearchIt> SearchImpl<'a, Data, SearchIt>
 where
     Data: GraphData,
     SearchIt: SearchIterator,
@@ -42,11 +42,7 @@ where
         self.take_result()
     }
 
-    fn add_edges_to_stack<It: Iterator<Item = GraphIndex>>(
-        &mut self,
-        edge_indexes: It,
-        distance: u64,
-    ) {
+    fn add_edges_to_stack(&mut self, edge_indexes: Vec<GraphIndex>, distance: u64) {
         for index in edge_indexes {
             self.stack.push(SearchIndex { index, distance });
         }
@@ -57,24 +53,16 @@ where
     }
 
     fn expand_index(&mut self, index: &SearchIndex) {
-        if let Some(node) = self.graph.node(&index.index) {
-            if REVERSE {
-                self.add_edges_to_stack(
-                    node.edge_iter_to().map(|edge| edge.index()),
-                    index.distance + 1,
-                );
-            } else {
-                self.add_edges_to_stack(
-                    node.edge_iter_from().map(|edge| edge.index()),
-                    index.distance + 1,
-                );
-            }
-        } else if let Some(edge) = self.graph.edge(&index.index) {
-            if REVERSE {
-                self.add_index_to_stack(edge.index_from(), index.distance + 1);
-            } else {
-                self.add_index_to_stack(edge.index_to(), index.distance + 1);
-            }
+        if index.index.is_node() {
+            self.add_edges_to_stack(
+                SearchIt::expand_node(&index.index, self.graph),
+                index.distance + 1,
+            );
+        } else {
+            self.add_index_to_stack(
+                SearchIt::expand_edge(&index.index, self.graph),
+                index.distance + 1,
+            );
         }
     }
 

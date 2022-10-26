@@ -25,7 +25,20 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index.clone())
+            SearchImpl::<'a, Data, BreadthFirstSearch, false>::new(self.graph, index.clone())
+                .search(handler)
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn breadth_first_search_reverse<Handler: SearchHandler>(
+        &self,
+        index: &GraphIndex,
+        handler: &Handler,
+    ) -> Vec<GraphIndex> {
+        if self.is_valid_index(index) {
+            SearchImpl::<'a, Data, BreadthFirstSearch, true>::new(self.graph, index.clone())
                 .search(handler)
         } else {
             vec![]
@@ -38,7 +51,21 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index.clone()).search(handler)
+            SearchImpl::<'a, Data, DepthFirstSearch, false>::new(self.graph, index.clone())
+                .search(handler)
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn depth_first_search_reverse<Handler: SearchHandler>(
+        &self,
+        index: &GraphIndex,
+        handler: &Handler,
+    ) -> Vec<GraphIndex> {
+        if self.is_valid_index(index) {
+            SearchImpl::<'a, Data, DepthFirstSearch, true>::new(self.graph, index.clone())
+                .search(handler)
         } else {
             vec![]
         }

@@ -1,5 +1,7 @@
 mod breadth_first_search;
+mod breadth_first_search_reverse;
 mod depth_first_search;
+mod depth_first_search_reverse;
 mod graph_search;
 mod graph_search_from;
 mod path;

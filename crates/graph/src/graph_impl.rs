@@ -108,6 +108,14 @@ where
         Ok(GraphIndex::from(-self.data.from(index)?))
     }
 
+    pub fn first_edge_to(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {
+        Ok(GraphIndex::from(-self.data.to(index)?))
+    }
+
+    pub(crate) fn edge_from(&self, index: &GraphIndex) -> GraphIndex {
+        GraphIndex::from(-self.data.from(index).unwrap_or_default())
+    }
+
     pub(crate) fn edge_to(&self, index: &GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.to(index).unwrap_or_default())
     }
@@ -159,6 +167,10 @@ where
 
     pub(crate) fn next_edge_from(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.from_meta(index)?))
+    }
+
+    pub(crate) fn next_edge_to(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {
+        Ok(GraphIndex::from(-self.data.to_meta(index)?))
     }
 
     pub(crate) fn next_node(&self, index: &GraphIndex) -> Result<Option<GraphIndex>, DbError> {

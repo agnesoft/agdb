@@ -9,6 +9,7 @@ mod graph_data_storage_try_from;
 mod graph_default;
 mod graph_edge;
 mod graph_edge_iterator;
+mod graph_edge_reverse_iterator;
 mod graph_impl;
 mod graph_index;
 mod graph_index_from;
@@ -19,7 +20,6 @@ mod storage_graph_try_from;
 
 pub use graph::Graph;
 pub use graph_data::GraphData;
-pub use graph_edge_iterator::GraphEdgeIterator;
 pub use graph_impl::GraphImpl;
 pub use graph_index::GraphIndex;
 pub use storage_graph::StorageGraph;

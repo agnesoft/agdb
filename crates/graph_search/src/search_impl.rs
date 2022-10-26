@@ -4,7 +4,6 @@ use crate::SearchControl;
 use crate::SearchHandler;
 use agdb_bit_set::BitSet;
 use agdb_graph::GraphData;
-use agdb_graph::GraphEdgeIterator;
 use agdb_graph::GraphImpl;
 use agdb_graph::GraphIndex;
 use std::marker::PhantomData;
@@ -43,12 +42,9 @@ where
         self.take_result()
     }
 
-    fn add_edges_to_stack(&mut self, edges: GraphEdgeIterator<Data>, distance: u64) {
-        for edge in edges {
-            self.stack.push(SearchIndex {
-                index: edge.index(),
-                distance,
-            });
+    fn add_edges_to_stack(&mut self, edge_indexes: Vec<GraphIndex>, distance: u64) {
+        for index in edge_indexes {
+            self.stack.push(SearchIndex { index, distance });
         }
     }
 
@@ -57,10 +53,16 @@ where
     }
 
     fn expand_index(&mut self, index: &SearchIndex) {
-        if let Some(node) = self.graph.node(&index.index) {
-            self.add_edges_to_stack(node.edge_from_iter(), index.distance + 1);
-        } else if let Some(edge) = self.graph.edge(&index.index) {
-            self.add_index_to_stack(edge.to_index(), index.distance + 1);
+        if index.index.is_node() {
+            self.add_edges_to_stack(
+                SearchIt::expand_node(&index.index, self.graph),
+                index.distance + 1,
+            );
+        } else {
+            self.add_index_to_stack(
+                SearchIt::expand_edge(&index.index, self.graph),
+                index.distance + 1,
+            );
         }
     }
 

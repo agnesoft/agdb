@@ -3,7 +3,7 @@ use crate::graph_edge::GraphEdge;
 use crate::graph_impl::GraphImpl;
 use crate::graph_index::GraphIndex;
 
-pub struct GraphEdgeIterator<'a, Data>
+pub struct GraphEdgeReverseIterator<'a, Data>
 where
     Data: GraphData,
 {
@@ -11,7 +11,7 @@ where
     pub(crate) index: GraphIndex,
 }
 
-impl<'a, Data> Iterator for GraphEdgeIterator<'a, Data>
+impl<'a, Data> Iterator for GraphEdgeReverseIterator<'a, Data>
 where
     Data: GraphData,
 {
@@ -24,7 +24,7 @@ where
 
         let current_index = self.index.clone();
 
-        self.index = self.graph.next_edge_from(&self.index).unwrap_or_default();
+        self.index = self.graph.next_edge_to(&self.index).unwrap_or_default();
 
         Some(GraphEdge {
             graph: self.graph,

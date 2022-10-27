@@ -8,7 +8,7 @@ pub struct DbError {
 }
 
 impl DbError {
-    pub fn caused_by(mut self, error: DbError) -> DbError {
+    pub fn caused_by(mut self, error: Self) -> Self {
         self.cause = Some(Box::new(error));
 
         self

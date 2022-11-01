@@ -1,4 +1,7 @@
-use crate::{Query, QueryError, QueryResult, Transaction};
+use crate::Query;
+use crate::QueryError;
+use crate::QueryResult;
+use crate::Transaction;
 
 #[derive(Default)]
 pub struct Db {}

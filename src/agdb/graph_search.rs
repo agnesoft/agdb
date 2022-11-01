@@ -1,14 +1,28 @@
-use crate::breadth_first_search::BreadthFirstSearch;
-use crate::breadth_first_search_reverse::BreadthFirstSearchReverse;
-use crate::depth_first_search::DepthFirstSearch;
-use crate::depth_first_search_reverse::DepthFirstSearchReverse;
-use crate::path_search_impl::PathSearchImpl;
-use crate::search_handler::SearchHandler;
-use crate::search_impl::SearchImpl;
-use crate::PathSearchHandler;
-use agdb_graph::GraphData;
-use agdb_graph::GraphImpl;
-use agdb_graph::GraphIndex;
+pub mod path_search_handler;
+pub mod search_control;
+pub mod search_handler;
+
+mod breadth_first_search;
+mod breadth_first_search_reverse;
+mod depth_first_search;
+mod depth_first_search_reverse;
+mod path;
+mod path_search;
+mod search_impl;
+mod search_index;
+mod search_iterator;
+
+use self::breadth_first_search::BreadthFirstSearch;
+use self::breadth_first_search_reverse::BreadthFirstSearchReverse;
+use self::depth_first_search::DepthFirstSearch;
+use self::depth_first_search_reverse::DepthFirstSearchReverse;
+use self::path_search::PathSearch;
+use self::path_search_handler::PathSearchHandler;
+use self::search_handler::SearchHandler;
+use self::search_impl::SearchImpl;
+use crate::graph::graph_data::GraphData;
+use crate::graph::graph_impl::GraphImpl;
+use crate::graph::graph_index::GraphIndex;
 
 pub struct GraphSearch<'a, Data>
 where
@@ -79,7 +93,7 @@ where
         handler: &'a Handler,
     ) -> Vec<GraphIndex> {
         if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearchImpl::<'a, Data, Handler>::new(self.graph, from.clone(), to.clone(), handler)
+            PathSearch::<'a, Data, Handler>::new(self.graph, from.clone(), to.clone(), handler)
                 .search()
         } else {
             vec![]
@@ -92,5 +106,14 @@ where
 
     fn is_valid_node(&self, index: &GraphIndex) -> bool {
         self.graph.node(index).is_some()
+    }
+}
+
+impl<'a, Data> From<&'a GraphImpl<Data>> for GraphSearch<'a, Data>
+where
+    Data: GraphData,
+{
+    fn from(graph: &'a GraphImpl<Data>) -> Self {
+        GraphSearch { graph }
     }
 }

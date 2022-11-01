@@ -1,11 +1,11 @@
-use crate::search_index::SearchIndex;
-use crate::search_iterator::SearchIterator;
-use crate::SearchControl;
-use crate::SearchHandler;
-use agdb_bit_set::BitSet;
-use agdb_graph::GraphData;
-use agdb_graph::GraphImpl;
-use agdb_graph::GraphIndex;
+use super::search_control::SearchControl;
+use super::search_handler::SearchHandler;
+use super::search_index::SearchIndex;
+use super::search_iterator::SearchIterator;
+use crate::collections::bit_set::BitSet;
+use crate::graph::graph_data::GraphData;
+use crate::graph::graph_impl::GraphImpl;
+use crate::graph::graph_index::GraphIndex;
 use std::marker::PhantomData;
 use std::mem::swap;
 

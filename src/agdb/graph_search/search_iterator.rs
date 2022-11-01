@@ -1,7 +1,7 @@
-use crate::search_index::SearchIndex;
-use agdb_graph::GraphData;
-use agdb_graph::GraphImpl;
-use agdb_graph::GraphIndex;
+use super::search_index::SearchIndex;
+use crate::graph::graph_data::GraphData;
+use crate::graph::graph_impl::GraphImpl;
+use crate::graph::graph_index::GraphIndex;
 
 pub(crate) trait SearchIterator {
     fn expand_edge<Data: GraphData>(index: &GraphIndex, graph: &GraphImpl<Data>) -> GraphIndex;

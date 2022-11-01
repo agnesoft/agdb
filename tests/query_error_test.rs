@@ -1,6 +1,6 @@
-extern crate agdb;
+use agdb::QueryError;
 
 #[test]
 fn query_error_is_public_type() {
-    let _error = agdb::QueryError::default();
+    let _error = QueryError::default();
 }

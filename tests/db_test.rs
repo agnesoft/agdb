@@ -1,13 +1,16 @@
-extern crate agdb;
+use agdb::Db;
+use agdb::Query;
+use agdb::QueryError;
+use agdb::QueryResult;
 
 #[test]
 fn db_is_public_type() {
-    let _db = agdb::Db::default();
+    let _db = Db::default();
 }
 
 #[test]
 fn exec_takes_query_returns_query_result() {
-    let db = agdb::Db::default();
-    let query = agdb::Query::default();
-    let _result: Result<agdb::QueryResult, agdb::QueryError> = db.exec(query);
+    let db = Db::default();
+    let query = Query::default();
+    let _result: Result<QueryResult, QueryError> = db.exec(query);
 }

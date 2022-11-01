@@ -1,6 +1,6 @@
-extern crate agdb;
+use agdb::Query;
 
 #[test]
 fn query_is_public_type() {
-    let _query = agdb::Query::default();
+    let _query = Query::default();
 }

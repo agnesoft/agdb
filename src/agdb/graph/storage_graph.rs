@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 pub type StorageGraph<Data = StorageFile> = GraphImpl<GraphDataStorage<Data>>;
 
+#[allow(dead_code)]
 impl<Data> StorageGraph<Data>
 where
     Data: Storage,

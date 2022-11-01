@@ -1,8 +1,10 @@
 #[derive(Default)]
 pub struct BitSet {
+    #[allow(dead_code)]
     data: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl BitSet {
     pub fn clear(&mut self) {
         self.data.clear();

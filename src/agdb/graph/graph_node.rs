@@ -12,6 +12,7 @@ where
     pub(crate) index: GraphIndex,
 }
 
+#[allow(dead_code)]
 impl<'a, Data> GraphNode<'a, Data>
 where
     Data: GraphData,

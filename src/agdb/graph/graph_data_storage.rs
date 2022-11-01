@@ -14,6 +14,7 @@ where
     Data: Storage,
 {
     pub(crate) storage: Rc<RefCell<Data>>,
+    #[allow(dead_code)]
     pub(crate) storage_index: StorageIndex,
     #[allow(dead_code)]
     pub(crate) indexes: GraphDataStorageIndexes,

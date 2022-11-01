@@ -24,6 +24,7 @@ where
     pub(crate) phantom_data: PhantomData<(K, T)>,
 }
 
+#[allow(dead_code)]
 impl<K, T, Data> MapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,

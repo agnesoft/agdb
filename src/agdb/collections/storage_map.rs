@@ -17,6 +17,7 @@ use super::map_common::MapCommon;
 
 pub type StorageMap<K, T, Data = StorageFile> = MapImpl<K, T, MapDataStorage<K, T, Data>>;
 
+#[allow(dead_code)]
 impl<K, T, Data> StorageMap<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,

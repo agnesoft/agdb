@@ -22,6 +22,7 @@ where
     pub(crate) phantom_data: PhantomData<T>,
 }
 
+#[allow(dead_code)]
 impl<T, Data> StorageVec<T, Data>
 where
     T: Serialize,

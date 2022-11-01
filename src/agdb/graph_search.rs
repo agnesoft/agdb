@@ -31,6 +31,7 @@ where
     pub(crate) graph: &'a GraphImpl<Data>,
 }
 
+#[allow(dead_code)]
 impl<'a, Data> GraphSearch<'a, Data>
 where
     Data: GraphData,

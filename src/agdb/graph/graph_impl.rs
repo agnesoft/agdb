@@ -12,6 +12,7 @@ where
     pub(crate) data: Data,
 }
 
+#[allow(dead_code)]
 impl<Data> GraphImpl<Data>
 where
     Data: GraphData,

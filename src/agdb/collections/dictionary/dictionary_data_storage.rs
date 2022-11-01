@@ -19,6 +19,7 @@ where
     Data: Storage,
 {
     pub(crate) storage: Rc<RefCell<Data>>,
+    #[allow(dead_code)]
     pub(crate) storage_index: StorageIndex,
     pub(crate) index: StorageMultiMap<u64, DictionaryIndex, Data>,
     pub(crate) values: StorageVec<DictionaryValue<T>, Data>,

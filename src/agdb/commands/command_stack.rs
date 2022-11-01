@@ -62,7 +62,6 @@ mod tests {
 
     use super::*;
 
-    #[derive(Default)]
     struct Executor {
         redo_result: Vec<Result<(), DbError>>,
         undo_result: Vec<Result<(), DbError>>,

@@ -2,7 +2,7 @@ use crate::collections::map_common::map_data::MapData;
 use crate::collections::map_common::map_iterator::MapIterator;
 use crate::collections::map_common::map_value_state::MapValueState;
 use crate::collections::map_common::MapCommon;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::stable_hash::StableHash;
 use std::collections::HashMap;

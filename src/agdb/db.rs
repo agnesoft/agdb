@@ -1,3 +1,6 @@
+pub mod db_error;
+pub mod db_value;
+
 use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;

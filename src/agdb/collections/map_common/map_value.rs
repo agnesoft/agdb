@@ -1,5 +1,5 @@
 use super::map_value_state::MapValueState;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

@@ -1,7 +1,7 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_index::DictionaryIndex;
 use super::dictionary_value::DictionaryValue;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;

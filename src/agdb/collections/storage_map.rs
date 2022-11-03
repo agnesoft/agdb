@@ -1,4 +1,4 @@
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;

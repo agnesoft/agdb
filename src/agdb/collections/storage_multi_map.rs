@@ -3,7 +3,7 @@ use super::map_common::map_data_storage::MapDataStorage;
 use super::map_common::MapCommon;
 use super::multi_map::multi_map_impl::MultiMapImpl;
 use super::multi_map::MultiMap;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;

@@ -1,7 +1,6 @@
 mod collections;
 mod commands;
 mod db;
-mod db_error;
 mod graph;
 mod graph_search;
 mod query;
@@ -12,8 +11,8 @@ mod utilities;
 #[cfg(test)]
 mod test_utilities;
 
+pub use db::db_error::DbError;
 pub use db::Db;
-pub use db_error::DbError;
 pub use query::Query;
 pub use query::QueryError;
 pub use query::QueryResult;

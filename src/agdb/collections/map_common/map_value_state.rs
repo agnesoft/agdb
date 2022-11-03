@@ -1,4 +1,4 @@
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use std::mem::size_of;
 

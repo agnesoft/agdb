@@ -1,5 +1,5 @@
 use super::graph_index::GraphIndex;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 
 pub trait GraphData {
     fn capacity(&self) -> Result<u64, DbError>;

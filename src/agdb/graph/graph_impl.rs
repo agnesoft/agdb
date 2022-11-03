@@ -3,7 +3,7 @@ use super::graph_edge::GraphEdge;
 use super::graph_index::GraphIndex;
 use super::graph_node::GraphNode;
 use super::graph_node_iterator::GraphNodeIterator;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 
 pub struct GraphImpl<Data>
 where

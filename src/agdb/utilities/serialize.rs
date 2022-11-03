@@ -1,4 +1,4 @@
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use std::mem::size_of;
 
 pub trait Serialize: Sized {

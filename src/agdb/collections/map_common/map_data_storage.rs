@@ -1,7 +1,7 @@
 use super::map_data::MapData;
 use super::map_value::MapValue;
 use super::map_value_state::MapValueState;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;

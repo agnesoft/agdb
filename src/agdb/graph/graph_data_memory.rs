@@ -1,6 +1,6 @@
 use super::graph_data::GraphData;
 use super::graph_index::GraphIndex;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 
 pub struct GraphDataMemory {
     pub(crate) from: Vec<i64>,

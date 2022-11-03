@@ -1,5 +1,5 @@
 use super::Commands;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 
 pub trait CommandExecutor {
     fn redo(&mut self, command: &mut Commands) -> Result<(), DbError>;

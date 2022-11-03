@@ -34,7 +34,7 @@ impl Default for Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db_error::DbError;
+    use crate::db::db_error::DbError;
     use crate::graph::graph_index::GraphIndex;
 
     #[test]

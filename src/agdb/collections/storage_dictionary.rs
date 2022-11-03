@@ -5,7 +5,7 @@ use super::dictionary::dictionary_index::DictionaryIndex;
 use super::dictionary::dictionary_value::DictionaryValue;
 use super::storage_multi_map::StorageMultiMap;
 use super::storage_vec::StorageVec;
-use crate::db_error::DbError;
+use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;

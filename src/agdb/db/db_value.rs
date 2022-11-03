@@ -134,33 +134,24 @@ mod tests {
             DbValue::String { .. }
         ));
         assert!(matches!(
-            DbValue::from(Vec::<f32>::new()),
+            DbValue::from(vec![1.0_f32]),
             DbValue::VecDouble { .. }
         ));
         assert!(matches!(
-            DbValue::from(Vec::<f64>::new()),
+            DbValue::from(vec![1.0_f64]),
             DbValue::VecDouble { .. }
         ));
+        assert!(matches!(DbValue::from(vec![1_i32]), DbValue::VecInt { .. }));
+        assert!(matches!(DbValue::from(vec![1_i64]), DbValue::VecInt { .. }));
         assert!(matches!(
-            DbValue::from(Vec::<i32>::new()),
-            DbValue::VecInt { .. }
-        ));
-        assert!(matches!(
-            DbValue::from(Vec::<i64>::new()),
-            DbValue::VecInt { .. }
-        ));
-        assert!(matches!(
-            DbValue::from(Vec::<u32>::new()),
+            DbValue::from(vec![1_u32]),
             DbValue::VecUint { .. }
         ));
         assert!(matches!(
-            DbValue::from(Vec::<u64>::new()),
+            DbValue::from(vec![1_u64]),
             DbValue::VecUint { .. }
         ));
-        assert!(matches!(
-            DbValue::from(Vec::<&str>::new()),
-            DbValue::VecString { .. }
-        ));
+        assert!(matches!(DbValue::from(vec![""]), DbValue::VecString { .. }));
         assert!(matches!(
             DbValue::from(Vec::<String>::new()),
             DbValue::VecString { .. }

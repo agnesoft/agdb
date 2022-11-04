@@ -12,6 +12,8 @@ mod utilities;
 mod test_utilities;
 
 pub use db::db_error::DbError;
+pub use db::db_key::DbKey;
+pub use db::db_value::DbValue;
 pub use db::Db;
 pub use query::Query;
 pub use query::QueryError;

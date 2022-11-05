@@ -1,10 +1,11 @@
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DbValue {
     Bytes(Vec<u8>),
-    Double(f64),
+    Float(f64),
     Int(i64),
     Uint(u64),
     String(String),
-    VecDouble(Vec<f64>),
+    VecFloat(Vec<f64>),
     VecInt(Vec<i64>),
     VecUint(Vec<u64>),
     VecString(Vec<String>),
@@ -12,13 +13,13 @@ pub enum DbValue {
 
 impl From<f32> for DbValue {
     fn from(value: f32) -> Self {
-        DbValue::Double(value.into())
+        DbValue::Float(value.into())
     }
 }
 
 impl From<f64> for DbValue {
     fn from(value: f64) -> Self {
-        DbValue::Double(value)
+        DbValue::Float(value)
     }
 }
 
@@ -60,13 +61,13 @@ impl From<&str> for DbValue {
 
 impl From<Vec<f32>> for DbValue {
     fn from(value: Vec<f32>) -> Self {
-        DbValue::VecDouble(value.iter().map(|i| *i as f64).collect())
+        DbValue::VecFloat(value.iter().map(|i| *i as f64).collect())
     }
 }
 
 impl From<Vec<f64>> for DbValue {
     fn from(value: Vec<f64>) -> Self {
-        DbValue::VecDouble(value)
+        DbValue::VecFloat(value)
     }
 }
 
@@ -114,7 +115,40 @@ impl From<Vec<u8>> for DbValue {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
+
+    #[test]
+    fn derived_from_eq() {
+        let map = HashSet::<DbValue>::new();
+        map.insert(DbValue::from(1));
+    }
+
+    #[test]
+    fn derived_from_ord() {}
+
+    #[test]
+    fn derived_from_partial_ord() {}
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(DbValue::from(vec![1_u8]), DbValue::from(vec![1_u8]));
+        assert_eq!(DbValue::from(1.0_f64), DbValue::from(1.0_f64));
+        assert_eq!(DbValue::from(1_i64), DbValue::from(1_i64));
+        assert_eq!(DbValue::from(1_u64), DbValue::from(1_u64));
+        assert_eq!(
+            DbValue::from("Hello".to_string()),
+            DbValue::from("Hello".to_string())
+        );
+        assert_eq!(DbValue::from(vec![1.0_f64]), DbValue::from(vec![1.0_f64]));
+        assert_eq!(DbValue::from(vec![1_i64]), DbValue::from(vec![1_i64]));
+        assert_eq!(DbValue::from(vec![1_u64]), DbValue::from(vec![1_u64]));
+        assert_eq!(
+            DbValue::from(vec!["Hello".to_string()]),
+            DbValue::from(vec!["Hello".to_string()])
+        );
+    }
 
     #[test]
     fn from() {
@@ -122,8 +156,8 @@ mod tests {
             DbValue::from(Vec::<u8>::new()),
             DbValue::Bytes { .. }
         ));
-        assert!(matches!(DbValue::from(1.0_f32), DbValue::Double { .. }));
-        assert!(matches!(DbValue::from(1.0_f64), DbValue::Double { .. }));
+        assert!(matches!(DbValue::from(1.0_f32), DbValue::Float { .. }));
+        assert!(matches!(DbValue::from(1.0_f64), DbValue::Float { .. }));
         assert!(matches!(DbValue::from(1_i32), DbValue::Int { .. }));
         assert!(matches!(DbValue::from(1_i64), DbValue::Int { .. }));
         assert!(matches!(DbValue::from(1_u32), DbValue::Uint { .. }));
@@ -135,11 +169,11 @@ mod tests {
         ));
         assert!(matches!(
             DbValue::from(vec![1.0_f32]),
-            DbValue::VecDouble { .. }
+            DbValue::VecFloat { .. }
         ));
         assert!(matches!(
             DbValue::from(vec![1.0_f64]),
-            DbValue::VecDouble { .. }
+            DbValue::VecFloat { .. }
         ));
         assert!(matches!(DbValue::from(vec![1_i32]), DbValue::VecInt { .. }));
         assert!(matches!(DbValue::from(vec![1_i64]), DbValue::VecInt { .. }));

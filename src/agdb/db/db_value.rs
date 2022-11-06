@@ -1,11 +1,13 @@
+use super::db_float::DbFloat;
+
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DbValue {
     Bytes(Vec<u8>),
-    Float(f64),
+    Float(DbFloat),
     Int(i64),
     Uint(u64),
     String(String),
-    VecFloat(Vec<f64>),
+    VecFloat(Vec<DbFloat>),
     VecInt(Vec<i64>),
     VecUint(Vec<u64>),
     VecString(Vec<String>),
@@ -19,7 +21,7 @@ impl From<f32> for DbValue {
 
 impl From<f64> for DbValue {
     fn from(value: f64) -> Self {
-        DbValue::Float(value)
+        DbValue::Float(value.into())
     }
 }
 
@@ -61,13 +63,13 @@ impl From<&str> for DbValue {
 
 impl From<Vec<f32>> for DbValue {
     fn from(value: Vec<f32>) -> Self {
-        DbValue::VecFloat(value.iter().map(|i| *i as f64).collect())
+        DbValue::VecFloat(value.iter().map(|i| (*i).into()).collect())
     }
 }
 
 impl From<Vec<f64>> for DbValue {
     fn from(value: Vec<f64>) -> Self {
-        DbValue::VecFloat(value)
+        DbValue::VecFloat(value.iter().map(|i| (*i).into()).collect())
     }
 }
 
@@ -115,21 +117,33 @@ impl From<Vec<u8>> for DbValue {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn derived_from_eq() {
-        let map = HashSet::<DbValue>::new();
+        let mut map = HashSet::<DbValue>::new();
         map.insert(DbValue::from(1));
     }
 
     #[test]
-    fn derived_from_ord() {}
+    fn derived_from_ord() {
+        let mut vec = vec![
+            DbValue::from(1.1_f64),
+            DbValue::from(1.3_f64),
+            DbValue::from(-3.333_f64),
+        ];
+        vec.sort();
 
-    #[test]
-    fn derived_from_partial_ord() {}
+        assert_eq!(
+            vec,
+            vec![
+                DbValue::from(-3.333_f64),
+                DbValue::from(1.1_f64),
+                DbValue::from(1.3_f64)
+            ]
+        );
+    }
 
     #[test]
     fn derived_from_partial_eq() {

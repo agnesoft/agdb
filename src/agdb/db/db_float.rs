@@ -5,11 +5,7 @@ use std::hash::Hash;
 pub struct DbFloat(f64);
 
 impl DbFloat {
-    pub fn as_f64(&self) -> f64 {
-        self.0
-    }
-
-    pub fn to_f64(self) -> f64 {
+    pub fn to_f64(&self) -> f64 {
         self.0
     }
 }
@@ -42,13 +38,13 @@ impl PartialOrd for DbFloat {
 
 impl From<f32> for DbFloat {
     fn from(value: f32) -> Self {
-        DbFloat { 0: value.into() }
+        DbFloat(value.into())
     }
 }
 
 impl From<f64> for DbFloat {
     fn from(value: f64) -> Self {
-        DbFloat { 0: value }
+        DbFloat(value)
     }
 }
 
@@ -58,16 +54,10 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn as_f64() {
-        let float = DbFloat::from(1.0_f64);
-        let _first = float.as_f64();
-        let _second = float.as_f64();
-    }
-
-    #[test]
     fn derived_from_clone() {
         let float = DbFloat::from(1.0_f64);
         let _other = float.clone();
+        let _other2 = float;
     }
 
     #[test]

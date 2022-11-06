@@ -118,6 +118,7 @@ impl From<Vec<u8>> for DbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cmp::Ordering;
     use std::collections::HashSet;
 
     #[test]
@@ -127,7 +128,17 @@ mod tests {
     }
 
     #[test]
+    fn derived_from_debug() {
+        format!("{:?}", DbValue::from(""));
+    }
+
+    #[test]
     fn derived_from_ord() {
+        assert_eq!(DbValue::from("").cmp(&DbValue::from("")), Ordering::Equal);
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
         let mut vec = vec![
             DbValue::from(1.1_f64),
             DbValue::from(1.3_f64),

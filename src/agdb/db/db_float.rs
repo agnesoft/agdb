@@ -51,6 +51,7 @@ impl From<f64> for DbFloat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cmp::Ordering;
     use std::collections::HashSet;
 
     #[test]
@@ -81,6 +82,11 @@ mod tests {
 
     #[test]
     fn derived_from_ord() {
+        assert_eq!(DbFloat::from(1.0).cmp(&DbFloat::from(1.0)), Ordering::Equal);
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
         let mut vec = vec![
             DbFloat::from(1.1_f64),
             DbFloat::from(1.3_f64),

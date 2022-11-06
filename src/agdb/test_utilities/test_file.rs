@@ -34,7 +34,7 @@ impl TestFile {
         let parent = path.parent().unwrap();
 
         parent
-            .join(&Path::new(&(".".to_string() + &name)))
+            .join(Path::new(&(".".to_string() + &name)))
             .to_str()
             .unwrap()
             .to_string()
@@ -100,7 +100,7 @@ mod tests {
 
         let test_file = TestFile::default();
         assert!(!test_file.file_name().is_empty());
-        assert!(test_file.file_name().contains(&current_source_file));
+        assert!(test_file.file_name().contains(current_source_file));
     }
 
     #[test]
@@ -180,6 +180,6 @@ mod tests {
 
         let test_file = TestFile::new();
         assert!(!test_file.file_name().is_empty());
-        assert!(test_file.file_name().contains(&current_source_file));
+        assert!(test_file.file_name().contains(current_source_file));
     }
 }

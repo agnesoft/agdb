@@ -41,10 +41,9 @@ impl StableHash for &[u8] {
         for chunk in 0..chunks {
             let begin = chunk * CHUNK_SIZE;
             let end = begin + CHUNK_SIZE;
-            Self::add_to_hash(
-                &mut hash,
-                u64::from_le_bytes(self[begin..end].try_into().unwrap()),
-            );
+            let mut data = [0_u8; CHUNK_SIZE];
+            data.copy_from_slice(&self[begin..end]);
+            Self::add_to_hash(&mut hash, u64::from_le_bytes(data).stable_hash());
         }
 
         if remainder != 0 {
@@ -52,10 +51,10 @@ impl StableHash for &[u8] {
             let end = begin + remainder;
             let mut data = [0_u8; CHUNK_SIZE];
             data[0..remainder].copy_from_slice(&self[begin..end]);
-            Self::add_to_hash(&mut hash, u64::from_le_bytes(data));
+            Self::add_to_hash(&mut hash, u64::from_le_bytes(data).stable_hash());
         }
 
-        Self::add_to_hash(&mut hash, self.len() as u64);
+        Self::add_to_hash(&mut hash, (self.len() as u64).stable_hash());
 
         hash
     }
@@ -75,7 +74,7 @@ impl<T: StableHash> StableHash for Vec<T> {
             Self::add_to_hash(&mut hash, value.stable_hash());
         }
 
-        Self::add_to_hash(&mut hash, self.len() as u64);
+        Self::add_to_hash(&mut hash, (self.len() as u64).stable_hash());
 
         hash
     }

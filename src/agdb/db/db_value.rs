@@ -1,3 +1,5 @@
+use crate::utilities::stable_hash::StableHash;
+
 use super::db_float::DbFloat;
 
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -115,6 +117,22 @@ impl From<Vec<u8>> for DbValue {
     }
 }
 
+impl StableHash for DbValue {
+    fn stable_hash(&self) -> u64 {
+        match self {
+            DbValue::Bytes(value) => value.stable_hash(),
+            DbValue::Float(value) => value.stable_hash(),
+            DbValue::Int(value) => value.stable_hash(),
+            DbValue::Uint(value) => value.stable_hash(),
+            DbValue::String(value) => value.stable_hash(),
+            DbValue::VecFloat(value) => value.stable_hash(),
+            DbValue::VecInt(value) => value.stable_hash(),
+            DbValue::VecUint(value) => value.stable_hash(),
+            DbValue::VecString(value) => value.stable_hash(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,6 +148,12 @@ mod tests {
     #[test]
     fn derived_from_debug() {
         format!("{:?}", DbValue::from(""));
+    }
+
+    #[test]
+    fn derived_from_hash() {
+        let mut map = HashSet::<DbValue>::new();
+        map.insert(DbValue::from(1.0_f64));
     }
 
     #[test]
@@ -215,5 +239,18 @@ mod tests {
             DbValue::from(Vec::<String>::new()),
             DbValue::VecString { .. }
         ));
+    }
+
+    #[test]
+    fn stable_hash() {
+        assert_ne!(DbValue::from(vec![1_u8]).stable_hash(), 0);
+        assert_ne!(DbValue::from(1.0_f64).stable_hash(), 0);
+        assert_ne!(DbValue::from(1_i64).stable_hash(), 0);
+        assert_ne!(DbValue::from(1_u64).stable_hash(), 0);
+        assert_ne!(DbValue::from(" ").stable_hash(), 0);
+        assert_ne!(DbValue::from(vec![1_i64]).stable_hash(), 0);
+        assert_ne!(DbValue::from(vec![1_u64]).stable_hash(), 0);
+        assert_ne!(DbValue::from(vec![1.0_f64]).stable_hash(), 0);
+        assert_ne!(DbValue::from(vec![""]).stable_hash(), 0);
     }
 }

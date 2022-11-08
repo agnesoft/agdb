@@ -1,5 +1,7 @@
+use crate::utilities::stable_hash::StableHash;
 use std::cmp::Ordering;
 use std::hash::Hash;
+use std::hash::Hasher;
 
 #[derive(Clone, Debug)]
 pub struct DbFloat(f64);
@@ -13,7 +15,7 @@ impl DbFloat {
 impl Eq for DbFloat {}
 
 impl Hash for DbFloat {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state)
     }
 }
@@ -48,6 +50,12 @@ impl From<f64> for DbFloat {
     }
 }
 
+impl StableHash for DbFloat {
+    fn stable_hash(&self) -> u64 {
+        self.0.to_bits().stable_hash()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,7 +75,7 @@ mod tests {
     }
 
     #[test]
-    fn derived_from_eq() {
+    fn eq() {
         let float = DbFloat::from(1.0_f64);
         let other = DbFloat::from(1.0_f64);
 
@@ -75,18 +83,24 @@ mod tests {
     }
 
     #[test]
-    fn derived_from_hash() {
+    fn from() {
+        let _from_f32 = DbFloat::from(1.0_f32);
+        let _from_f64 = DbFloat::from(1.0_f64);
+    }
+
+    #[test]
+    fn hash() {
         let mut set = HashSet::<DbFloat>::new();
         set.insert(DbFloat::from(1.0_f64));
     }
 
     #[test]
-    fn derived_from_ord() {
+    fn ord() {
         assert_eq!(DbFloat::from(1.0).cmp(&DbFloat::from(1.0)), Ordering::Equal);
     }
 
     #[test]
-    fn derived_from_partial_ord() {
+    fn partial_ord() {
         let mut vec = vec![
             DbFloat::from(1.1_f64),
             DbFloat::from(1.3_f64),
@@ -105,9 +119,10 @@ mod tests {
     }
 
     #[test]
-    fn from() {
-        let _from_f32 = DbFloat::from(1.0_f32);
-        let _from_f64 = DbFloat::from(1.0_f64);
+    fn stable_hash() {
+        let hash = DbFloat::from(1.0_f64).stable_hash();
+
+        assert_ne!(hash, 0);
     }
 
     #[test]

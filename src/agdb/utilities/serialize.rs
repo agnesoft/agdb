@@ -36,20 +36,6 @@ impl Serialize for i64 {
     }
 }
 
-impl Serialize for String {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        Ok(String::from_utf8(bytes.to_vec())?)
-    }
-
-    fn serialize(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
-
-    fn serialized_size() -> u64 {
-        0
-    }
-}
-
 impl Serialize for u64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let buffer: [u8; size_of::<Self>()] = bytes
@@ -65,16 +51,33 @@ impl Serialize for u64 {
     }
 }
 
-impl<T: Serialize> Serialize for Vec<T> {
+impl Serialize for String {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(String::from_utf8(bytes.to_vec())?)
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+
+    fn serialized_size() -> u64 {
+        0
+    }
+}
+
+impl<T> Serialize for Vec<T>
+where
+    T: Serialize,
+{
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         const SIZE_OFFSET: usize = size_of::<u64>();
         let value_offset = T::serialized_size();
-        let size = u64::deserialize(bytes)? as usize;
+        let len = u64::deserialize(bytes)? as usize;
         let mut data: Self = vec![];
 
-        data.reserve(size);
+        data.reserve(len);
 
-        for i in 0..size {
+        for i in 0..len {
             let offset = SIZE_OFFSET + value_offset as usize * i;
             data.push(T::deserialize(&bytes[offset..])?);
         }
@@ -85,7 +88,7 @@ impl<T: Serialize> Serialize for Vec<T> {
     fn serialize(&self) -> Vec<u8> {
         const SIZE_OFFSET: usize = size_of::<u64>();
         let value_offset: usize = size_of::<T>();
-        let mut bytes: Vec<u8> = vec![];
+        let mut bytes = Vec::<u8>::new();
 
         bytes.reserve(SIZE_OFFSET + value_offset * self.len());
         bytes.extend((self.len() as u64).serialize());
@@ -101,6 +104,7 @@ impl<T: Serialize> Serialize for Vec<T> {
         0
     }
 }
+
 
 impl Serialize for Vec<u8> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {

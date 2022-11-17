@@ -347,13 +347,15 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         index: &StorageIndex,
         offset: u64,
         value: &V,
-    ) -> Result<(), DbError> {
+    ) -> Result<u64, DbError> {
         self.transaction();
         let mut record = self.data.record(index)?;
         let bytes = V::serialize(value);
         self.ensure_record_size(&mut record, index, offset, bytes.len() as u64)?;
         self.write(Self::value_position(record.position, offset), &bytes)?;
-        self.commit()
+        self.commit()?;
+
+        Ok(bytes.len() as u64)
     }
 
     fn move_at(

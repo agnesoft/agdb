@@ -19,6 +19,7 @@ where
     pub(crate) storage_index: StorageIndex,
     pub(crate) len: u64,
     pub(crate) capacity: u64,
+    pub(crate) indexes: Vec<StorageIndex>,
     pub(crate) phantom_data: PhantomData<T>,
 }
 
@@ -62,9 +63,21 @@ where
             )?;
         }
 
-        ref_storage.insert_at(&self.storage_index, Self::value_offset(self.len()), value)?;
+        if T::fixed_size() == 0 {
+            let value_index = ref_storage.insert(value)?;
+            ref_storage.insert_at(
+                &self.storage_index,
+                Self::value_offset(self.len()),
+                &value_index,
+            )?;
+            self.indexes.push(value_index);
+        } else {
+            ref_storage.insert_at(&self.storage_index, Self::value_offset(self.len()), value)?;
+        }
+
         self.len += 1;
         ref_storage.insert_at(&self.storage_index, 0, &self.len())?;
+
         ref_storage.commit()
     }
 
@@ -73,21 +86,36 @@ where
             return Err(DbError::from("index out of bounds"));
         }
 
-        let offset_from = Self::value_offset(index + 1);
-        let offset_to = Self::value_offset(index);
-        let size = Self::value_offset(self.len()) - offset_from;
+        let offset_from;
+        let offset_to;
+        let size;
 
         let mut ref_storage = self.storage.borrow_mut();
         ref_storage.transaction();
+
+        if T::fixed_size() == 0 {
+            let value_index = &self.indexes[index as usize];
+            ref_storage.remove(value_index)?;
+            self.indexes.remove(index as usize);
+        }
+
+        offset_from = Self::value_offset(index + 1);
+        offset_to = Self::value_offset(index);
+        size = Self::value_offset(self.len()) - offset_from;
         ref_storage.move_at(&self.storage_index, offset_from, offset_to, size)?;
         self.len -= 1;
         ref_storage.insert_at(&self.storage_index, 0, &self.len())?;
+
         ref_storage.commit()
     }
 
     pub fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
         if capacity <= self.capacity() {
             return Ok(());
+        }
+
+        if T::fixed_size() == 0 {
+            self.indexes.reserve((capacity - self.capacity) as usize);
         }
 
         let mut ref_storage = self.storage.borrow_mut();
@@ -99,7 +127,7 @@ where
         )
     }
 
-    pub fn resize(&mut self, size: u64) -> Result<(), DbError> {
+    pub fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
         if self.len() == size {
             return Ok(());
         }
@@ -108,16 +136,39 @@ where
         ref_storage.transaction();
 
         if size < self.len() {
+            if T::fixed_size() == 0 {
+                for index in size..self.len() {
+                    let value_index = &self.indexes[index as usize];
+                    ref_storage.remove(value_index)?;
+                }
+
+                self.indexes.resize(size as usize, StorageIndex::default());
+            }
+
             let offset = Self::value_offset(size);
             let byte_size = Self::value_offset(self.len()) - offset;
             ref_storage.insert_at(&self.storage_index, offset, &vec![0_u8; byte_size as usize])?;
-        } else if self.capacity() < size {
-            Self::reallocate(
-                &mut self.capacity,
-                size,
-                &mut ref_storage,
-                &self.storage_index,
-            )?;
+        } else if self.len() < size {
+            if self.capacity() < size {
+                Self::reallocate(
+                    &mut self.capacity,
+                    size,
+                    &mut ref_storage,
+                    &self.storage_index,
+                )?;
+            }
+
+            if T::fixed_size() == 0 {
+                for index in self.len()..size {
+                    let value_index = ref_storage.insert(value)?;
+                    ref_storage.insert_at(
+                        &self.storage_index,
+                        Self::value_offset(index),
+                        &value_index,
+                    )?;
+                    self.indexes.push(value_index);
+                }
+            }
         }
 
         self.len = size;
@@ -130,9 +181,20 @@ where
             return Err(DbError::from("index out of bounds"));
         }
 
-        self.storage
-            .borrow_mut()
-            .insert_at(&self.storage_index, Self::value_offset(index), value)
+        if T::fixed_size() == 0 {
+            let value_index = &self.indexes[index as usize];
+            let mut ref_storage = self.storage.borrow_mut();
+            let value_size = ref_storage.insert_at(&value_index, 0, value)?;
+            ref_storage.resize_value(value_index, value_size)?;
+        } else {
+            self.storage.borrow_mut().insert_at(
+                &self.storage_index,
+                Self::value_offset(index),
+                value,
+            )?;
+        }
+
+        Ok(())
     }
 
     pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
@@ -152,7 +214,18 @@ where
 
     #[allow(clippy::wrong_self_convention)]
     pub fn to_vec(&self) -> Result<Vec<T>, DbError> {
-        self.storage.borrow_mut().value(&self.storage_index)
+        if T::fixed_size() == 0 {
+            let mut vec = Vec::<T>::new();
+            vec.reserve(self.len() as usize);
+
+            for index in &self.indexes {
+                vec.push(self.storage.borrow_mut().value(index)?);
+            }
+
+            Ok(vec)
+        } else {
+            self.storage.borrow_mut().value(&self.storage_index)
+        }
     }
 
     pub fn value(&self, index: u64) -> Result<T, DbError> {
@@ -160,17 +233,31 @@ where
             return Err(DbError::from("index out of bounds"));
         }
 
-        self.storage
-            .borrow_mut()
-            .value_at::<T>(&self.storage_index, Self::value_offset(index))
+        if T::fixed_size() == 0 {
+            self.storage
+                .borrow_mut()
+                .value::<T>(&self.indexes[index as usize])
+        } else {
+            self.storage
+                .borrow_mut()
+                .value_at::<T>(&self.storage_index, Self::value_offset(index))
+        }
     }
 
     pub fn value_offset(index: u64) -> u64 {
-        u64::fixed_size() + index * T::fixed_size()
+        if T::fixed_size() == 0 {
+            u64::fixed_size() + index * StorageIndex::fixed_size()
+        } else {
+            u64::fixed_size() + index * T::fixed_size()
+        }
     }
 
     pub(crate) fn capacity_from_bytes(len: u64) -> u64 {
-        (len - u64::fixed_size()) / T::fixed_size()
+        if T::fixed_size() == 0 {
+            (len - u64::fixed_size()) / StorageIndex::fixed_size()
+        } else {
+            (len - u64::fixed_size()) / T::fixed_size()
+        }
     }
 
     fn reallocate(
@@ -192,13 +279,14 @@ where
     type Error = DbError;
 
     fn try_from(storage: Rc<RefCell<Data>>) -> Result<Self, Self::Error> {
-        let index = storage.borrow_mut().insert(&0_u64)?;
+        let storage_index = storage.borrow_mut().insert(&0_u64)?;
 
         Ok(Self {
             storage,
-            storage_index: index,
+            storage_index,
             len: 0,
             capacity: 0,
+            indexes: vec![],
             phantom_data: PhantomData,
         })
     }
@@ -216,23 +304,41 @@ impl<T: Serialize, Data: Storage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)>
             .0
             .borrow_mut()
             .value_size(&storage_with_index.1)?;
-        let size = storage_with_index
-            .0
-            .borrow_mut()
-            .value_at::<u64>(&storage_with_index.1, 0)?;
 
-        Ok(Self {
-            storage: storage_with_index.0,
-            storage_index: storage_with_index.1,
-            len: size,
-            capacity: Self::capacity_from_bytes(byte_size),
-            phantom_data: PhantomData,
-        })
+        if T::fixed_size() == 0 {
+            let indexes = storage_with_index
+                .0
+                .borrow_mut()
+                .value::<Vec<StorageIndex>>(&storage_with_index.1)?;
+
+            Ok(Self {
+                storage: storage_with_index.0,
+                storage_index: storage_with_index.1,
+                len: indexes.len() as u64,
+                capacity: Self::capacity_from_bytes(byte_size),
+                indexes,
+                phantom_data: PhantomData,
+            })
+        } else {
+            let len = storage_with_index
+                .0
+                .borrow_mut()
+                .value_at::<u64>(&storage_with_index.1, 0)?;
+
+            Ok(Self {
+                storage: storage_with_index.0,
+                storage_index: storage_with_index.1,
+                len,
+                capacity: Self::capacity_from_bytes(byte_size),
+                indexes: vec![],
+                phantom_data: PhantomData,
+            })
+        }
     }
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_fixed_size {
     use super::*;
     use crate::test_utilities::test_file::TestFile;
 
@@ -370,28 +476,6 @@ mod tests {
     }
 
     #[test]
-    fn remove_size_updated() {
-        let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
-        ));
-
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
-        vec.push(&1).unwrap();
-        vec.push(&3).unwrap();
-        vec.push(&5).unwrap();
-
-        vec.remove(1).unwrap();
-
-        assert_eq!(
-            storage
-                .borrow_mut()
-                .value::<Vec::<i64>>(&vec.storage_index()),
-            Ok(vec![1_i64, 5_i64])
-        );
-    }
-
-    #[test]
     fn reserve_larger() {
         let test_file = TestFile::new();
         let storage = Rc::new(RefCell::new(
@@ -432,7 +516,7 @@ mod tests {
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
 
-        vec.resize(6).unwrap();
+        vec.resize(6, &0).unwrap();
 
         assert_eq!(
             storage
@@ -454,7 +538,7 @@ mod tests {
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
 
-        vec.resize(100).unwrap();
+        vec.resize(100, &0).unwrap();
 
         let mut expected = vec![0_i64; 100];
         expected[0] = 1;
@@ -484,7 +568,7 @@ mod tests {
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
 
-        vec.resize(3).unwrap();
+        vec.resize(3, &0).unwrap();
 
         assert_eq!(
             storage
@@ -506,7 +590,7 @@ mod tests {
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
 
-        vec.resize(1).unwrap();
+        vec.resize(1, &0).unwrap();
 
         assert_eq!(
             storage
@@ -666,6 +750,491 @@ mod tests {
         ));
 
         let vec = StorageVec::<i64>::try_from(storage).unwrap();
+
+        assert_eq!(vec.value(0), Err(DbError::from("index out of bounds")));
+    }
+}
+
+#[cfg(test)]
+mod tests_dynamic_size {
+    use super::*;
+    use crate::test_utilities::test_file::TestFile;
+
+    #[test]
+    fn iter() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        assert_eq!(
+            vec.iter().collect::<Vec<String>>(),
+            vec!["Hello", ", ", "World", "!"]
+        );
+    }
+
+    #[test]
+    fn is_empty() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+
+        assert!(vec.is_empty());
+
+        vec.push(&"Hello, World!".to_string()).unwrap();
+
+        assert!(!vec.is_empty());
+    }
+
+    #[test]
+    fn len() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+
+        assert_eq!(vec.len(), 0);
+
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        assert_eq!(vec.len(), 4)
+    }
+
+    #[test]
+    fn min_capacity() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+
+        assert_eq!(vec.capacity(), 0);
+
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        assert_eq!(vec.capacity(), 64);
+    }
+
+    #[test]
+    fn push() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        let indexes = storage
+            .borrow_mut()
+            .value::<Vec<StorageIndex>>(&vec.storage_index())
+            .unwrap();
+
+        let mut values = Vec::<String>::new();
+
+        for index in indexes {
+            values.push(storage.borrow_mut().value::<String>(&index).unwrap());
+        }
+
+        assert_eq!(
+            values,
+            vec![
+                "Hello".to_string(),
+                ", ".to_string(),
+                "World".to_string(),
+                "!".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn remove() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        vec.remove(1).unwrap();
+
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "Hello".to_string(),
+                "World".to_string(),
+                "!".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn remove_at_end() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        vec.remove(2).unwrap();
+
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec!["Hello".to_string(), ", ".to_string(), "!".to_string(),])
+        );
+    }
+
+    #[test]
+    fn remove_index_out_of_bounds() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+
+        assert_eq!(vec.remove(0), Err(DbError::from("index out of bounds")));
+    }
+
+    #[test]
+    fn reserve_larger() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        assert_eq!(vec.capacity(), 0);
+
+        vec.reserve(20).unwrap();
+
+        assert_eq!(vec.capacity(), 20);
+    }
+
+    #[test]
+    fn reserve_smaller() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.reserve(20).unwrap();
+        vec.reserve(10).unwrap();
+
+        assert_eq!(vec.capacity(), 20);
+    }
+
+    #[test]
+    fn resize_larger() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        vec.resize(6, &" ".to_string()).unwrap();
+
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "Hello".to_string(),
+                ", ".to_string(),
+                "World".to_string(),
+                "!".to_string(),
+                " ".to_string(),
+                " ".to_string(),
+            ])
+        );
+    }
+
+    #[test]
+    fn resize_over_capacity() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        vec.resize(100, &" ".to_string()).unwrap();
+
+        let mut expected = Vec::<String>::new();
+        expected.resize(100, " ".to_string());
+        expected[0] = "Hello".to_string();
+        expected[1] = ", ".to_string();
+        expected[2] = "World".to_string();
+        expected[3] = "!".to_string();
+
+        assert_eq!(vec.len(), 100);
+        assert_eq!(vec.capacity(), 100);
+
+        assert_eq!(vec.to_vec(), Ok(expected));
+    }
+
+    #[test]
+    fn resize_same() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        vec.resize(4, &String::default()).unwrap();
+
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "Hello".to_string(),
+                ", ".to_string(),
+                "World".to_string(),
+                "!".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn resize_smaller() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        vec.resize(3, &String::default()).unwrap();
+
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "Hello".to_string(),
+                ", ".to_string(),
+                "World".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn set_value() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        vec.set_value(1, &" ".to_string()).unwrap();
+
+        assert_eq!(vec.value(0), Ok("Hello".to_string()));
+        assert_eq!(vec.value(1), Ok(" ".to_string()));
+        assert_eq!(vec.value(2), Ok("World".to_string()));
+        assert_eq!(vec.value(3), Ok("!".to_string()));
+    }
+
+    #[test]
+    fn set_value_out_of_bounds() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+
+        assert_eq!(
+            vec.set_value(0, &"".to_string()),
+            Err(DbError::from("index out of bounds"))
+        );
+    }
+
+    #[test]
+    fn shrink_to_fit() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        assert_eq!(vec.capacity(), 64);
+
+        vec.shrink_to_fit().unwrap();
+
+        assert_eq!(vec.capacity(), 4);
+
+        vec.shrink_to_fit().unwrap();
+
+        assert_eq!(vec.capacity(), 4);
+    }
+
+    #[test]
+    fn shrink_to_fit_empty() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+
+        assert_eq!(vec.capacity(), 0);
+
+        vec.shrink_to_fit().unwrap();
+
+        assert_eq!(vec.capacity(), 0);
+    }
+
+    #[test]
+    fn to_vec() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "Hello".to_string(),
+                ", ".to_string(),
+                "World".to_string(),
+                "!".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn try_from_storage_index() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let index;
+
+        {
+            let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+            vec.push(&"Hello".to_string()).unwrap();
+            vec.push(&", ".to_string()).unwrap();
+            vec.push(&"World".to_string()).unwrap();
+            vec.push(&"!".to_string()).unwrap();
+            index = vec.storage_index();
+        }
+
+        let vec = StorageVec::<String>::try_from((storage, index)).unwrap();
+
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "Hello".to_string(),
+                ", ".to_string(),
+                "World".to_string(),
+                "!".to_string()
+            ])
+        );
+    }
+
+    #[test]
+    fn try_from_storage_missing_index() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        assert_eq!(
+            StorageVec::<String>::try_from((storage, StorageIndex::from(1_i64)))
+                .err()
+                .unwrap(),
+            DbError::from("index '1' not found")
+        );
+    }
+
+    #[test]
+    fn value() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+
+        assert_eq!(vec.value(0), Ok("Hello".to_string()));
+        assert_eq!(vec.value(1), Ok(", ".to_string()));
+        assert_eq!(vec.value(2), Ok("World".to_string()));
+        assert_eq!(vec.value(3), Ok("!".to_string()));
+    }
+
+    #[test]
+    fn value_out_of_bounds() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            StorageFile::try_from(test_file.file_name().clone()).unwrap(),
+        ));
+
+        let vec = StorageVec::<String>::try_from(storage).unwrap();
 
         assert_eq!(vec.value(0), Err(DbError::from("index out of bounds")));
     }

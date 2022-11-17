@@ -72,7 +72,9 @@ where
             &values_index,
             StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + u64::fixed_size(),
             &hash,
-        )
+        )?;
+
+        Ok(())
     }
 
     fn set_meta(&mut self, index: &DictionaryIndex, meta: i64) -> Result<(), DbError> {
@@ -81,7 +83,9 @@ where
             &values_index,
             StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()),
             &meta,
-        )
+        )?;
+
+        Ok(())
     }
 
     fn set_value(

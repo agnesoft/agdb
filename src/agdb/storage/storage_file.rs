@@ -84,8 +84,8 @@ mod tests {
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset = (u64::fixed_size() + i64::fixed_size() * 3) as u64;
-        storage.insert_at(&index, 0, &4_u64).unwrap();
-        storage.insert_at(&index, offset, &10_i64).unwrap();
+        assert_eq!(storage.insert_at(&index, 0, &4_u64).unwrap(), 8);
+        assert_eq!(storage.insert_at(&index, offset, &10_i64).unwrap(), 8);
 
         assert_eq!(
             storage.value::<Vec<i64>>(&index).unwrap(),
@@ -100,8 +100,8 @@ mod tests {
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset = (u64::fixed_size() + i64::fixed_size() * 4) as u64;
-        storage.insert_at(&index, 0, &5_u64).unwrap();
-        storage.insert_at(&index, offset, &10_i64).unwrap();
+        assert_eq!(storage.insert_at(&index, 0, &5_u64).unwrap(), 8);
+        assert_eq!(storage.insert_at(&index, offset, &10_i64).unwrap(), 8);
 
         assert_eq!(
             storage.value::<Vec<i64>>(&index).unwrap(),
@@ -118,9 +118,12 @@ mod tests {
         let offset = (u64::fixed_size() + i64::fixed_size()) as u64;
         let size = i64::fixed_size() * 2;
 
-        storage
-            .insert_at(&index, offset, &vec![0_u8; size as usize])
-            .unwrap();
+        assert_eq!(
+            storage
+                .insert_at(&index, offset, &vec![0_u8; size as usize])
+                .unwrap(),
+            size
+        );
 
         assert_eq!(
             storage.value::<Vec<i64>>(&index).unwrap(),

@@ -84,7 +84,9 @@ where
         self.count = new_count;
         self.storage
             .borrow_mut()
-            .insert_at(&self.storage_index, 0, &self.count)
+            .insert_at(&self.storage_index, 0, &self.count)?;
+
+        Ok(())
     }
 
     fn set_meta_value(&mut self, pos: u64, meta_value: MapValueState) -> Result<(), DbError> {
@@ -92,20 +94,30 @@ where
             &self.storage_index,
             Self::record_offset(pos),
             &meta_value,
-        )
+        )?;
+
+        Ok(())
     }
 
     fn set_value(&mut self, pos: u64, value: MapValue<K, T>) -> Result<(), DbError> {
-        self.storage
-            .borrow_mut()
-            .insert_at(&self.storage_index, Self::record_offset(pos), &value)
+        self.storage.borrow_mut().insert_at(
+            &self.storage_index,
+            Self::record_offset(pos),
+            &value,
+        )?;
+
+        Ok(())
     }
 
     fn set_values(&mut self, values: Vec<MapValue<K, T>>) -> Result<(), DbError> {
         self.capacity = values.len() as u64;
-        self.storage
-            .borrow_mut()
-            .insert_at(&self.storage_index, size_of::<u64>() as u64, &values)
+        self.storage.borrow_mut().insert_at(
+            &self.storage_index,
+            size_of::<u64>() as u64,
+            &values,
+        )?;
+
+        Ok(())
     }
 
     fn take_values(&mut self) -> Result<Vec<MapValue<K, T>>, DbError> {

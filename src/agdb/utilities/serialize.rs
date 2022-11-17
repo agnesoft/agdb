@@ -54,11 +54,31 @@ impl Serialize for u64 {
 
 impl Serialize for String {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        Ok(String::from_utf8(bytes.to_vec())?)
+        if bytes.len() <= 16 {
+            let size = bytes[0] as usize;
+            Ok(String::from_utf8(bytes[1..(size + 1)].to_vec())?)
+        } else {
+            let size = u64::deserialize(bytes)? as usize;
+            Ok(String::from_utf8(
+                bytes[u64::fixed_size() as usize..(u64::fixed_size() as usize + size)].to_vec(),
+            )?)
+        }
     }
 
     fn serialize(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
+        let mut bytes = Vec::<u8>::new();
+
+        if self.len() < 16 {
+            bytes.reserve(1 + self.len());
+            bytes.push(self.len() as u8);
+            bytes.extend(self.as_bytes());
+        } else {
+            bytes.reserve(u64::fixed_size() as usize + self.len());
+            bytes.extend((self.len() as u64).serialize());
+            bytes.extend(self.as_bytes());
+        }
+
+        bytes
     }
 
     fn fixed_size() -> u64 {
@@ -220,9 +240,24 @@ mod tests {
     }
 
     #[test]
-    fn string() {
+    fn small_string_optimization() {
         let value = "Hello, World!".to_string();
         let bytes = value.serialize();
+
+        assert_eq!(bytes.len(), 14);
+
+        let actual = String::deserialize(&bytes);
+
+        assert_eq!(actual, Ok(value));
+    }
+
+    #[test]
+    fn string() {
+        let value = "Hello, World! This string is not short. No sir!".to_string();
+        let bytes = value.serialize();
+
+        assert_eq!(bytes.len(), 8 + value.len());
+
         let actual = String::deserialize(&bytes);
 
         assert_eq!(actual, Ok(value));
@@ -230,7 +265,7 @@ mod tests {
 
     #[test]
     fn string_bad_bytes() {
-        let bad_bytes = vec![0xdf, 0xff];
+        let bad_bytes = vec![2_u8, 0xdf, 0xff];
 
         assert!(String::deserialize(&bad_bytes).is_err());
     }

@@ -276,16 +276,14 @@ impl<Data: StorageData> StorageImpl<Data> {
 
     pub(crate) fn value_read_size<V: Serialize>(size: u64, offset: u64) -> Result<u64, DbError> {
         Self::validate_offset(size, offset)?;
-        let read_size;
         let max_size = size - offset;
+        let mut read_size = V::fixed_size();
 
-        if V::is_fixed_sized() {
-            read_size = V::fixed_size();
-            Self::validate_value_size(read_size, max_size)?;
-        } else {
+        if read_size == 0 {
             read_size = max_size;
         }
 
+        Self::validate_value_size(read_size, max_size)?;
         Ok(read_size)
     }
 

@@ -35,8 +35,4 @@ impl Serialize for GraphDataStorageIndexes {
 
         bytes
     }
-
-    fn fixed_size() -> u64 {
-        4 * StorageIndex::fixed_size()
-    }
 }

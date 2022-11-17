@@ -10,6 +10,17 @@ pub trait Serialize: Sized {
     }
 }
 
+impl Serialize for f64 {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let bits = u64::deserialize(bytes)?;
+        Ok(f64::from_bits(bits))
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        self.to_bits().serialize()
+    }
+}
+
 impl Serialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let buffer: [u8; size_of::<Self>()] = bytes
@@ -104,6 +115,22 @@ impl Serialize for Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cmp::Ordering;
+
+    #[test]
+    fn f64() {
+        let f = -3.333_f64;
+        let bytes = f.serialize();
+        let actual = f64::deserialize(&bytes).unwrap();
+
+        assert_eq!(f.total_cmp(&actual), Ordering::Equal);
+
+        let nan = f64::NAN;
+        let bytes = nan.serialize();
+        let actual_nan = f64::deserialize(&bytes).unwrap();
+
+        assert_eq!(nan.total_cmp(&actual_nan), Ordering::Equal);
+    }
 
     #[test]
     fn i64() {

@@ -19,10 +19,8 @@ where
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(DictionaryValue::<T> {
             meta: i64::deserialize(bytes)?,
-            hash: u64::deserialize(&bytes[(i64::serialized_size() as usize)..])?,
-            value: T::deserialize(
-                &bytes[((i64::serialized_size() + u64::serialized_size()) as usize)..],
-            )?,
+            hash: u64::deserialize(&bytes[(i64::fixed_size() as usize)..])?,
+            value: T::deserialize(&bytes[((i64::fixed_size() + u64::fixed_size()) as usize)..])?,
         })
     }
 

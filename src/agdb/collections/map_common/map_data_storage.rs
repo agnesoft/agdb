@@ -36,7 +36,7 @@ where
     }
 
     fn record_offset(pos: u64) -> u64 {
-        u64::serialized_size() * 2 + MapValue::<K, T>::serialized_size() * pos
+        u64::fixed_size() * 2 + MapValue::<K, T>::fixed_size() * pos
     }
 
     pub fn storage_index(&self) -> StorageIndex {

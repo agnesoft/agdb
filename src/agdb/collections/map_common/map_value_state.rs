@@ -28,7 +28,7 @@ impl Serialize for MapValueState {
         }
     }
 
-    fn serialized_size() -> u64 {
+    fn fixed_size() -> u64 {
         size_of::<u8>() as u64
     }
 }
@@ -66,6 +66,6 @@ mod tests {
     }
     #[test]
     fn serialized_size() {
-        assert_eq!(MapValueState::serialized_size(), 1);
+        assert_eq!(MapValueState::fixed_size(), 1);
     }
 }

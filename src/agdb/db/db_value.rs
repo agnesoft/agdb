@@ -223,17 +223,17 @@ impl Serialize for DbValue {
                 bytes.extend(&value.serialize());
             }
             DbValue::VecInt(value) => {
-                bytes.reserve(1 + value.len() * (i64::serialized_size() as usize));
+                bytes.reserve(1 + value.len() * (i64::fixed_size() as usize));
                 bytes.push(VEC_INT_META_VALUE);
                 bytes.extend(&value.serialize());
             }
             DbValue::VecUint(value) => {
-                bytes.reserve(1 + value.len() * (u64::serialized_size() as usize));
+                bytes.reserve(1 + value.len() * (u64::fixed_size() as usize));
                 bytes.push(VEC_UINT_META_VALUE);
                 bytes.extend(&value.serialize());
             }
             DbValue::VecFloat(value) => {
-                bytes.reserve(1 + value.len() * (DbFloat::serialized_size() as usize));
+                bytes.reserve(1 + value.len() * (DbFloat::fixed_size() as usize));
                 bytes.push(VEC_FLOAT_META_VALUE);
                 bytes.extend(&value.serialize());
             }
@@ -245,19 +245,37 @@ impl Serialize for DbValue {
 
         bytes
     }
+
+    fn serialized_size(&self) -> u64 {
+        match self {
+            DbValue::Bytes(value) => value.serialized_size(),
+            DbValue::Int(value) => value.serialized_size(),
+            DbValue::Uint(value) => value.serialized_size(),
+            DbValue::Float(value) => value.serialized_size(),
+            DbValue::String(value) => value.serialized_size(),
+            DbValue::VecInt(value) => value.serialized_size(),
+            DbValue::VecUint(value) => value.serialized_size(),
+            DbValue::VecFloat(value) => value.serialized_size(),
+            DbValue::VecString(value) => value.serialized_size(),
+        }
+    }
+
+    fn fixed_size() -> u64 {
+        0
+    }
 }
 
 impl StableHash for DbValue {
     fn stable_hash(&self) -> u64 {
         match self {
             DbValue::Bytes(value) => value.stable_hash(),
-            DbValue::Float(value) => value.stable_hash(),
             DbValue::Int(value) => value.stable_hash(),
             DbValue::Uint(value) => value.stable_hash(),
+            DbValue::Float(value) => value.stable_hash(),
             DbValue::String(value) => value.stable_hash(),
-            DbValue::VecFloat(value) => value.stable_hash(),
             DbValue::VecInt(value) => value.stable_hash(),
             DbValue::VecUint(value) => value.stable_hash(),
+            DbValue::VecFloat(value) => value.stable_hash(),
             DbValue::VecString(value) => value.stable_hash(),
         }
     }

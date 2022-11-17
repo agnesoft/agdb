@@ -59,6 +59,14 @@ impl Serialize for DbFloat {
     fn serialize(&self) -> Vec<u8> {
         self.0.serialize()
     }
+
+    fn serialized_size(&self) -> u64 {
+        self.0.serialized_size()
+    }
+
+    fn fixed_size() -> u64 {
+        f64::fixed_size()
+    }
 }
 
 impl StableHash for DbFloat {

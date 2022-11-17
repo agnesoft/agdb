@@ -12,9 +12,7 @@ impl Serialize for DictionaryDataStorageIndexes {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(DictionaryDataStorageIndexes {
             index: StorageIndex::deserialize(bytes)?,
-            values: StorageIndex::deserialize(
-                &bytes[(StorageIndex::serialized_size() as usize)..],
-            )?,
+            values: StorageIndex::deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
         })
     }
 

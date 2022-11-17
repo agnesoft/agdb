@@ -21,16 +21,16 @@ where
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             state: MapValueState::deserialize(bytes)?,
-            key: K::deserialize(&bytes[(MapValueState::serialized_size() as usize)..])?,
+            key: K::deserialize(&bytes[(MapValueState::fixed_size() as usize)..])?,
             value: T::deserialize(
-                &bytes[((MapValueState::serialized_size() + K::serialized_size()) as usize)..],
+                &bytes[((MapValueState::fixed_size() + K::fixed_size()) as usize)..],
             )?,
         })
     }
 
     fn serialize(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
-        data.reserve(Self::serialized_size() as usize);
+        data.reserve(Self::fixed_size() as usize);
         data.extend(self.state.serialize());
         data.extend(self.key.serialize());
         data.extend(self.value.serialize());
@@ -38,8 +38,12 @@ where
         data
     }
 
-    fn serialized_size() -> u64 {
-        MapValueState::serialized_size() + K::serialized_size() + T::serialized_size()
+    fn serialized_size(&self) -> u64 {
+        todo!()
+    }
+
+    fn fixed_size() -> u64 {
+        MapValueState::fixed_size() + K::fixed_size() + T::fixed_size()
     }
 }
 
@@ -87,6 +91,6 @@ mod tests {
     }
     #[test]
     fn serialized_size() {
-        assert_eq!(MapValue::<i64, i64>::serialized_size(), 17);
+        assert_eq!(MapValue::<i64, i64>::fixed_size(), 17);
     }
 }

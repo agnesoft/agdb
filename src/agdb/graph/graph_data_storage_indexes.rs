@@ -14,12 +14,12 @@ impl Serialize for GraphDataStorageIndexes {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(GraphDataStorageIndexes {
             from: StorageIndex::deserialize(bytes)?,
-            to: StorageIndex::deserialize(&bytes[(StorageIndex::serialized_size() as usize)..])?,
+            to: StorageIndex::deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
             from_meta: StorageIndex::deserialize(
-                &bytes[(StorageIndex::serialized_size() as usize * 2)..],
+                &bytes[(StorageIndex::fixed_size() as usize * 2)..],
             )?,
             to_meta: StorageIndex::deserialize(
-                &bytes[(StorageIndex::serialized_size() as usize * 3)..],
+                &bytes[(StorageIndex::fixed_size() as usize * 3)..],
             )?,
         })
     }
@@ -34,5 +34,13 @@ impl Serialize for GraphDataStorageIndexes {
         bytes.extend(self.to_meta.serialize());
 
         bytes
+    }
+
+    fn serialized_size(&self) -> u64 {
+        Self::fixed_size()
+    }
+
+    fn fixed_size() -> u64 {
+        4 * StorageIndex::fixed_size()
     }
 }

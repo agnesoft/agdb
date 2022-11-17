@@ -26,6 +26,40 @@ const VEC_UINT_META_VALUE: u8 = 6_u8;
 const VEC_FLOAT_META_VALUE: u8 = 7_u8;
 const VEC_STRING_META_VALUE: u8 = 8_u8;
 
+impl DbValue {
+    fn deserialize_vec_string(bytes: &[u8]) -> Result<Vec<String>, DbError> {
+        const LEN_OFFSET: usize = std::mem::size_of::<u64>();
+        let len = u64::deserialize(bytes)? as usize;
+        let mut data = Vec::<String>::new();
+
+        data.reserve(len);
+
+        let mut offset = LEN_OFFSET;
+
+        for _i in 0..len {
+            let string_len = u64::deserialize(&bytes[offset..])? as usize;
+            offset += LEN_OFFSET;
+            let string = String::deserialize(&bytes[offset..(offset + string_len)])?;
+            offset += string.len();
+            data.push(string);
+        }
+
+        Ok(data)
+    }
+
+    fn serialize_vec_string(vec: &Vec<String>) -> Vec<u8> {
+        let mut bytes = Vec::<u8>::new();
+        bytes.extend((vec.len() as u64).serialize());
+
+        for value in vec {
+            bytes.extend((value.len() as u64).serialize());
+            bytes.extend(value.as_bytes());
+        }
+
+        bytes
+    }
+}
+
 impl From<f32> for DbValue {
     fn from(value: f32) -> Self {
         DbValue::Float(value.into())
@@ -94,7 +128,7 @@ impl From<Vec<f64>> for DbValue {
 
 impl From<Vec<DbFloat>> for DbValue {
     fn from(value: Vec<DbFloat>) -> Self {
-        DbValue::VecFloat(value.iter().map(|i| i.clone()).collect())
+        DbValue::VecFloat(value)
     }
 }
 
@@ -155,7 +189,7 @@ impl Serialize for DbValue {
             VEC_INT_META_VALUE => Ok(DbValue::from(Vec::<i64>::deserialize(&bytes[1..])?)),
             VEC_UINT_META_VALUE => Ok(DbValue::from(Vec::<u64>::deserialize(&bytes[1..])?)),
             VEC_FLOAT_META_VALUE => Ok(DbValue::from(Vec::<DbFloat>::deserialize(&bytes[1..])?)),
-            VEC_STRING_META_VALUE => Ok(DbValue::from(Vec::<String>::deserialize(&bytes[1..])?)),
+            VEC_STRING_META_VALUE => Ok(DbValue::from(Self::deserialize_vec_string(&bytes[1..])?)),
             _ => Err(DbError::from("DbValue deserialization error: invalid data")),
         }
     }
@@ -205,7 +239,7 @@ impl Serialize for DbValue {
             }
             DbValue::VecString(value) => {
                 bytes.push(VEC_STRING_META_VALUE);
-                bytes.extend(&value.serialize());
+                bytes.extend(Self::serialize_vec_string(value));
             }
         }
 
@@ -452,7 +486,16 @@ mod tests {
 
     #[test]
     fn serialize_vec_float() {
-        let value = DbValue::from(vec![0.1_f64 + 0.2_f64, -0.0_f64, 3.14_f64]);
+        let value = DbValue::from(vec![0.1_f64 + 0.2_f64, -0.0_f64, std::f64::consts::PI]);
+        let bytes = value.serialize();
+        let actual = DbValue::deserialize(&bytes).unwrap();
+
+        assert_eq!(value, actual);
+    }
+
+    #[test]
+    fn serialize_vec_string() {
+        let value = DbValue::from(vec!["Hello", ", ", "World", "!"]);
         let bytes = value.serialize();
         let actual = DbValue::deserialize(&bytes).unwrap();
 

@@ -10,11 +10,37 @@ pub trait Serialize: Sized {
     }
 }
 
+impl Serialize for f64 {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let bits = u64::deserialize(bytes)?;
+        Ok(f64::from_bits(bits))
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        self.to_bits().serialize()
+    }
+}
+
 impl Serialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let buffer: [u8; size_of::<Self>()] = bytes
             .get(0..size_of::<Self>())
             .ok_or_else(|| DbError::from("i64 deserialization error: out of bounds"))?
+            .try_into()
+            .unwrap();
+        Ok(Self::from_le_bytes(buffer))
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        self.to_le_bytes().into()
+    }
+}
+
+impl Serialize for u64 {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let buffer: [u8; size_of::<Self>()] = bytes
+            .get(0..size_of::<Self>())
+            .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
             .try_into()
             .unwrap();
         Ok(Self::from_le_bytes(buffer))
@@ -39,31 +65,19 @@ impl Serialize for String {
     }
 }
 
-impl Serialize for u64 {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        let buffer: [u8; size_of::<Self>()] = bytes
-            .get(0..size_of::<Self>())
-            .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
-            .try_into()
-            .unwrap();
-        Ok(Self::from_le_bytes(buffer))
-    }
-
-    fn serialize(&self) -> Vec<u8> {
-        self.to_le_bytes().into()
-    }
-}
-
-impl<T: Serialize> Serialize for Vec<T> {
+impl<T> Serialize for Vec<T>
+where
+    T: Serialize,
+{
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         const SIZE_OFFSET: usize = size_of::<u64>();
         let value_offset = T::serialized_size();
-        let size = u64::deserialize(bytes)? as usize;
+        let len = u64::deserialize(bytes)? as usize;
         let mut data: Self = vec![];
 
-        data.reserve(size);
+        data.reserve(len);
 
-        for i in 0..size {
+        for i in 0..len {
             let offset = SIZE_OFFSET + value_offset as usize * i;
             data.push(T::deserialize(&bytes[offset..])?);
         }
@@ -74,7 +88,7 @@ impl<T: Serialize> Serialize for Vec<T> {
     fn serialize(&self) -> Vec<u8> {
         const SIZE_OFFSET: usize = size_of::<u64>();
         let value_offset: usize = size_of::<T>();
-        let mut bytes: Vec<u8> = vec![];
+        let mut bytes = Vec::<u8>::new();
 
         bytes.reserve(SIZE_OFFSET + value_offset * self.len());
         bytes.extend((self.len() as u64).serialize());
@@ -91,6 +105,7 @@ impl<T: Serialize> Serialize for Vec<T> {
     }
 }
 
+
 impl Serialize for Vec<u8> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(bytes.to_vec())
@@ -104,6 +119,22 @@ impl Serialize for Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cmp::Ordering;
+
+    #[test]
+    fn f64() {
+        let f = -3.333_f64;
+        let bytes = f.serialize();
+        let actual = f64::deserialize(&bytes).unwrap();
+
+        assert_eq!(f.total_cmp(&actual), Ordering::Equal);
+
+        let nan = f64::NAN;
+        let bytes = nan.serialize();
+        let actual_nan = f64::deserialize(&bytes).unwrap();
+
+        assert_eq!(nan.total_cmp(&actual_nan), Ordering::Equal);
+    }
 
     #[test]
     fn i64() {

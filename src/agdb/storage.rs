@@ -20,7 +20,7 @@ pub trait Storage {
         index: &StorageIndex,
         offset: u64,
         value: &V,
-    ) -> Result<(), DbError>;
+    ) -> Result<u64, DbError>;
     fn move_at(
         &mut self,
         index: &StorageIndex,

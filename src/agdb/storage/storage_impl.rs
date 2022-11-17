@@ -108,7 +108,7 @@ impl<Data: StorageData> StorageImpl<Data> {
     fn is_at_end(&mut self, record: &StorageRecord) -> Result<bool, DbError> {
         let file_size = self.data.seek(SeekFrom::End(0))?;
 
-        Ok((record.position + StorageRecord::serialized_size() + record.size) == file_size)
+        Ok((record.position + StorageRecord::fixed_size() + record.size) == file_size)
     }
 
     fn move_record_to_end(
@@ -120,7 +120,7 @@ impl<Data: StorageData> StorageImpl<Data> {
     ) -> Result<(), DbError> {
         let old_position = record.position;
         *record = self.copy_record_to_end(
-            record.position + StorageRecord::serialized_size(),
+            record.position + StorageRecord::fixed_size(),
             core::cmp::min(record.size, offset),
             index,
             new_size,
@@ -157,7 +157,7 @@ impl<Data: StorageData> StorageImpl<Data> {
 
         let position = self.data.seek(CURRENT)?;
         let mut record =
-            StorageRecord::deserialize(&self.read(CURRENT, StorageRecord::serialized_size())?)?;
+            StorageRecord::deserialize(&self.read(CURRENT, StorageRecord::fixed_size())?)?;
         record.position = position;
 
         self.data.seek(SeekFrom::Current(record.size as i64))?;
@@ -194,7 +194,7 @@ impl<Data: StorageData> StorageImpl<Data> {
         }
 
         self.data
-            .set_len(record.position + StorageRecord::serialized_size() + new_size)?;
+            .set_len(record.position + StorageRecord::fixed_size() + new_size)?;
         *self.data.record_mut(index) = record.clone();
 
         Ok(())
@@ -202,7 +202,7 @@ impl<Data: StorageData> StorageImpl<Data> {
 
     fn shrink_index(&mut self, index: &StorageIndex, current_pos: u64) -> Result<u64, DbError> {
         let record = self.data.record(index)?;
-        let record_size = StorageRecord::serialized_size() + record.size;
+        let record_size = StorageRecord::fixed_size() + record.size;
 
         if record.position != current_pos {
             self.copy_record(index, record.position, record_size, current_pos)?;
@@ -271,14 +271,13 @@ impl<Data: StorageData> StorageImpl<Data> {
     }
 
     pub(crate) fn value_position_u64(position: u64, offset: u64) -> u64 {
-        position + StorageRecord::serialized_size() + offset
+        position + StorageRecord::fixed_size() + offset
     }
 
     pub(crate) fn value_read_size<V: Serialize>(size: u64, offset: u64) -> Result<u64, DbError> {
         Self::validate_offset(size, offset)?;
-
-        let mut read_size = V::serialized_size();
         let max_size = size - offset;
+        let mut read_size = V::fixed_size();
 
         if read_size == 0 {
             read_size = max_size;

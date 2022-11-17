@@ -21,16 +21,16 @@ where
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             state: MapValueState::deserialize(bytes)?,
-            key: K::deserialize(&bytes[(MapValueState::serialized_size() as usize)..])?,
+            key: K::deserialize(&bytes[(MapValueState::fixed_size() as usize)..])?,
             value: T::deserialize(
-                &bytes[((MapValueState::serialized_size() + K::serialized_size()) as usize)..],
+                &bytes[((MapValueState::fixed_size() + K::fixed_size()) as usize)..],
             )?,
         })
     }
 
     fn serialize(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
-        data.reserve(Self::serialized_size() as usize);
+        data.reserve(Self::fixed_size() as usize);
         data.extend(self.state.serialize());
         data.extend(self.key.serialize());
         data.extend(self.value.serialize());
@@ -38,8 +38,8 @@ where
         data
     }
 
-    fn serialized_size() -> u64 {
-        MapValueState::serialized_size() + K::serialized_size() + T::serialized_size()
+    fn fixed_size() -> u64 {
+        MapValueState::fixed_size() + K::fixed_size() + T::fixed_size()
     }
 }
 
@@ -52,6 +52,7 @@ mod tests {
         let key_value = MapValue::<i64, i64>::default();
         format!("{:?}", key_value);
     }
+
     #[test]
     fn derived_from_default() {
         let key_value = MapValue::<i64, i64>::default();
@@ -64,6 +65,12 @@ mod tests {
             }
         )
     }
+
+    #[test]
+    fn fixed_size() {
+        assert_eq!(MapValue::<i64, i64>::fixed_size(), 17);
+    }
+
     #[test]
     fn i64_i64() {
         let key_value = MapValue {
@@ -75,6 +82,7 @@ mod tests {
         let other = MapValue::deserialize(&bytes);
         assert_eq!(other, Ok(key_value));
     }
+
     #[test]
     fn out_of_bounds() {
         let bytes = vec![0_u8; 16];
@@ -84,9 +92,5 @@ mod tests {
                 .description,
             "i64 deserialization error: out of bounds"
         );
-    }
-    #[test]
-    fn serialized_size() {
-        assert_eq!(MapValue::<i64, i64>::serialized_size(), 17);
     }
 }

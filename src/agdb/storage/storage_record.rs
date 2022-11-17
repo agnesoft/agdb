@@ -1,7 +1,6 @@
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
 use crate::utilities::serialize::Serialize;
-use std::mem::size_of;
 
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct StorageRecord {
@@ -15,7 +14,7 @@ impl Serialize for StorageRecord {
         Ok(StorageRecord {
             index: StorageIndex::deserialize(bytes)?,
             position: 0,
-            size: u64::deserialize(&bytes[(StorageIndex::serialized_size() as usize)..])?,
+            size: u64::deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
         })
     }
 
@@ -26,8 +25,8 @@ impl Serialize for StorageRecord {
         bytes
     }
 
-    fn serialized_size() -> u64 {
-        StorageIndex::serialized_size() + size_of::<u64>() as u64
+    fn fixed_size() -> u64 {
+        StorageIndex::fixed_size() + u64::fixed_size()
     }
 }
 

@@ -50,7 +50,7 @@ where
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().value_at::<u64>(
             &values_index,
-            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + i64::serialized_size(),
+            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + i64::fixed_size(),
         )
     }
 
@@ -70,7 +70,7 @@ where
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().insert_at(
             &values_index,
-            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + u64::serialized_size(),
+            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + u64::fixed_size(),
             &hash,
         )
     }

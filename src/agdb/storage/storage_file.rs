@@ -57,7 +57,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = (u64::serialized_size() + i64::serialized_size()) as u64;
+        let offset = (u64::fixed_size() + i64::fixed_size()) as u64;
         storage.insert_at(&index, offset, &10_i64).unwrap();
 
         assert_eq!(
@@ -83,7 +83,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = (u64::serialized_size() + i64::serialized_size() * 3) as u64;
+        let offset = (u64::fixed_size() + i64::fixed_size() * 3) as u64;
         storage.insert_at(&index, 0, &4_u64).unwrap();
         storage.insert_at(&index, offset, &10_i64).unwrap();
 
@@ -99,7 +99,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = (u64::serialized_size() + i64::serialized_size() * 4) as u64;
+        let offset = (u64::fixed_size() + i64::fixed_size() * 4) as u64;
         storage.insert_at(&index, 0, &5_u64).unwrap();
         storage.insert_at(&index, offset, &10_i64).unwrap();
 
@@ -115,8 +115,8 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = (u64::serialized_size() + i64::serialized_size()) as u64;
-        let size = i64::serialized_size() * 2;
+        let offset = (u64::fixed_size() + i64::fixed_size()) as u64;
+        let size = i64::fixed_size() * 2;
 
         storage
             .insert_at(&index, offset, &vec![0_u8; size as usize])
@@ -134,9 +134,9 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = (u64::serialized_size() + i64::serialized_size() * 2) as u64;
-        let offset_to = (u64::serialized_size() + i64::serialized_size()) as u64;
-        let size = u64::serialized_size();
+        let offset_from = (u64::fixed_size() + i64::fixed_size() * 2) as u64;
+        let offset_to = (u64::fixed_size() + i64::fixed_size()) as u64;
+        let size = u64::fixed_size();
 
         storage
             .move_at(&index, offset_from, offset_to, size)
@@ -154,9 +154,9 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = (u64::serialized_size() + i64::serialized_size()) as u64;
-        let offset_to = (u64::serialized_size() + i64::serialized_size() * 4) as u64;
-        let size = u64::serialized_size();
+        let offset_from = (u64::fixed_size() + i64::fixed_size()) as u64;
+        let offset_to = (u64::fixed_size() + i64::fixed_size() * 4) as u64;
+        let size = u64::fixed_size();
 
         storage
             .move_at(&index, offset_from, offset_to, size)
@@ -201,9 +201,9 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = (u64::serialized_size() + i64::serialized_size() * 3) as u64;
-        let offset_to = (u64::serialized_size() + i64::serialized_size() * 2) as u64;
-        let size = (u64::serialized_size() * 10) as u64;
+        let offset_from = (u64::fixed_size() + i64::fixed_size() * 3) as u64;
+        let offset_to = (u64::fixed_size() + i64::fixed_size() * 2) as u64;
+        let size = (u64::fixed_size() * 10) as u64;
 
         assert_eq!(
             storage.move_at(&index, offset_from, offset_to, size),
@@ -270,7 +270,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size();
+        let expected_size = i64::fixed_size();
 
         assert_eq!(storage.value_size(&index), Ok(expected_size));
 
@@ -296,7 +296,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size();
+        let expected_size = i64::fixed_size();
 
         assert_eq!(storage.value_size(&index), Ok(expected_size));
 
@@ -311,7 +311,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size();
+        let expected_size = i64::fixed_size();
 
         assert_eq!(storage.value_size(&index), Ok(expected_size));
 
@@ -326,7 +326,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size();
+        let expected_size = i64::fixed_size();
 
         assert_eq!(storage.value_size(&index), Ok(expected_size));
 
@@ -342,7 +342,7 @@ mod tests {
 
         let mut storage = StorageFile::try_from(test_file.file_name().as_str()).unwrap();
         let index = storage.insert(&3_i64).unwrap();
-        let size = u64::serialized_size() + i64::serialized_size() * 3;
+        let size = u64::fixed_size() + i64::fixed_size() * 3;
         storage.resize_value(&index, size).unwrap();
 
         assert_eq!(storage.value::<Vec<i64>>(&index), Ok(vec![0_i64; 3]));
@@ -490,7 +490,7 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         let actual_size = metadata(test_file.file_name()).unwrap().len();
-        let expected_size = (u64::serialized_size() * 2) * 2 + i64::serialized_size() * 2;
+        let expected_size = (u64::fixed_size() * 2) * 2 + i64::fixed_size() * 2;
 
         assert_eq!(actual_size, expected_size);
         assert_eq!(storage.value(&index1), Ok(1_i64));
@@ -639,7 +639,7 @@ mod tests {
         let data = vec![1_i64, 2_i64, 3_i64];
 
         let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size() + i64::serialized_size();
+        let offset = u64::fixed_size() + i64::fixed_size();
 
         assert_eq!(storage.value_at::<i64>(&index, offset), Ok(2_i64));
     }
@@ -652,7 +652,7 @@ mod tests {
         let data = vec![2_i64, 1_i64, 2_i64];
 
         let index = storage.insert(&data).unwrap();
-        let offset = u64::serialized_size();
+        let offset = u64::fixed_size();
 
         assert_eq!(
             storage.value_at::<Vec<i64>>(&index, offset),
@@ -678,7 +678,7 @@ mod tests {
 
         let data = vec![1_i64, 2_i64];
         let index = storage.insert(&data).unwrap();
-        let offset = (u64::serialized_size() + i64::serialized_size() * 2) as u64;
+        let offset = (u64::fixed_size() + i64::fixed_size() * 2) as u64;
 
         assert_eq!(
             storage.value_at::<i64>(&index, offset),
@@ -693,7 +693,7 @@ mod tests {
 
         let data = vec![1_i64, 2_i64];
         let index = storage.insert(&data).unwrap();
-        let offset = (u64::serialized_size() + i64::serialized_size() * 3) as u64;
+        let offset = (u64::fixed_size() + i64::fixed_size() * 3) as u64;
 
         assert_eq!(
             storage.value_at::<i64>(&index, offset),
@@ -731,7 +731,7 @@ mod tests {
         let mut storage = StorageFile::try_from(test_file.file_name().clone()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::serialized_size();
+        let expected_size = i64::fixed_size();
 
         assert_eq!(storage.value_size(&index), Ok(expected_size));
     }

@@ -26,40 +26,6 @@ const VEC_UINT_META_VALUE: u8 = 6_u8;
 const VEC_FLOAT_META_VALUE: u8 = 7_u8;
 const VEC_STRING_META_VALUE: u8 = 8_u8;
 
-impl DbValue {
-    fn deserialize_vec_string(bytes: &[u8]) -> Result<Vec<String>, DbError> {
-        const LEN_OFFSET: usize = std::mem::size_of::<u64>();
-        let len = u64::deserialize(bytes)? as usize;
-        let mut data = Vec::<String>::new();
-
-        data.reserve(len);
-
-        let mut offset = LEN_OFFSET;
-
-        for _i in 0..len {
-            let string_len = u64::deserialize(&bytes[offset..])? as usize;
-            offset += LEN_OFFSET;
-            let string = String::deserialize(&bytes[offset..(offset + string_len)])?;
-            offset += string.len();
-            data.push(string);
-        }
-
-        Ok(data)
-    }
-
-    fn serialize_vec_string(vec: &Vec<String>) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        bytes.extend((vec.len() as u64).serialize());
-
-        for value in vec {
-            bytes.extend((value.len() as u64).serialize());
-            bytes.extend(value.as_bytes());
-        }
-
-        bytes
-    }
-}
-
 impl From<f32> for DbValue {
     fn from(value: f32) -> Self {
         DbValue::Float(value.into())
@@ -189,7 +155,7 @@ impl Serialize for DbValue {
             VEC_INT_META_VALUE => Ok(DbValue::from(Vec::<i64>::deserialize(&bytes[1..])?)),
             VEC_UINT_META_VALUE => Ok(DbValue::from(Vec::<u64>::deserialize(&bytes[1..])?)),
             VEC_FLOAT_META_VALUE => Ok(DbValue::from(Vec::<DbFloat>::deserialize(&bytes[1..])?)),
-            VEC_STRING_META_VALUE => Ok(DbValue::from(Self::deserialize_vec_string(&bytes[1..])?)),
+            VEC_STRING_META_VALUE => Ok(DbValue::from(Vec::<String>::deserialize(&bytes[1..])?)),
             _ => Err(DbError::from("DbValue deserialization error: invalid data")),
         }
     }
@@ -223,27 +189,31 @@ impl Serialize for DbValue {
                 bytes.extend(&value.serialize());
             }
             DbValue::VecInt(value) => {
-                bytes.reserve(1 + value.len() * (i64::serialized_size() as usize));
+                bytes.reserve(1 + value.len() * (i64::fixed_size() as usize));
                 bytes.push(VEC_INT_META_VALUE);
                 bytes.extend(&value.serialize());
             }
             DbValue::VecUint(value) => {
-                bytes.reserve(1 + value.len() * (u64::serialized_size() as usize));
+                bytes.reserve(1 + value.len() * (u64::fixed_size() as usize));
                 bytes.push(VEC_UINT_META_VALUE);
                 bytes.extend(&value.serialize());
             }
             DbValue::VecFloat(value) => {
-                bytes.reserve(1 + value.len() * (DbFloat::serialized_size() as usize));
+                bytes.reserve(1 + value.len() * (DbFloat::fixed_size() as usize));
                 bytes.push(VEC_FLOAT_META_VALUE);
                 bytes.extend(&value.serialize());
             }
             DbValue::VecString(value) => {
                 bytes.push(VEC_STRING_META_VALUE);
-                bytes.extend(Self::serialize_vec_string(value));
+                bytes.extend(&value.serialize());
             }
         }
 
         bytes
+    }
+
+    fn fixed_size() -> u64 {
+        0
     }
 }
 
@@ -251,13 +221,13 @@ impl StableHash for DbValue {
     fn stable_hash(&self) -> u64 {
         match self {
             DbValue::Bytes(value) => value.stable_hash(),
-            DbValue::Float(value) => value.stable_hash(),
             DbValue::Int(value) => value.stable_hash(),
             DbValue::Uint(value) => value.stable_hash(),
+            DbValue::Float(value) => value.stable_hash(),
             DbValue::String(value) => value.stable_hash(),
-            DbValue::VecFloat(value) => value.stable_hash(),
             DbValue::VecInt(value) => value.stable_hash(),
             DbValue::VecUint(value) => value.stable_hash(),
+            DbValue::VecFloat(value) => value.stable_hash(),
             DbValue::VecString(value) => value.stable_hash(),
         }
     }
@@ -327,6 +297,11 @@ mod tests {
             DbValue::from(vec!["Hello".to_string()]),
             DbValue::from(vec!["Hello".to_string()])
         );
+    }
+
+    #[test]
+    fn is_fixed_size() {
+        assert_eq!(DbValue::fixed_size(), 0);
     }
 
     #[test]

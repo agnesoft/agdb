@@ -56,6 +56,10 @@ impl Serialize for StorageIndex {
     fn serialize(&self) -> Vec<u8> {
         self.index.serialize()
     }
+
+    fn fixed_size() -> u64 {
+        i64::fixed_size()
+    }
 }
 
 #[cfg(test)]

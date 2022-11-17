@@ -166,11 +166,11 @@ where
     }
 
     pub fn value_offset(index: u64) -> u64 {
-        u64::serialized_size() + index * T::serialized_size()
+        u64::fixed_size() + index * T::fixed_size()
     }
 
     pub(crate) fn capacity_from_bytes(len: u64) -> u64 {
-        (len - u64::serialized_size()) / T::serialized_size()
+        (len - u64::fixed_size()) / T::fixed_size()
     }
 
     fn reallocate(

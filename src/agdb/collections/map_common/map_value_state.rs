@@ -28,7 +28,7 @@ impl Serialize for MapValueState {
         }
     }
 
-    fn serialized_size() -> u64 {
+    fn fixed_size() -> u64 {
         size_of::<u8>() as u64
     }
 }
@@ -44,15 +44,23 @@ mod tests {
             Err(DbError::from("value out of bounds"))
         );
     }
+
     #[test]
     fn derived_from_default() {
         assert_eq!(MapValueState::default(), MapValueState::Empty);
     }
+
     #[test]
     fn derived_from_debug() {
         let value = MapValueState::Deleted;
         format!("{:?}", value);
     }
+
+    #[test]
+    fn fixed_size() {
+        assert_eq!(MapValueState::fixed_size(), 1);
+    }
+
     #[test]
     fn serialize() {
         let data = vec![
@@ -63,9 +71,5 @@ mod tests {
         let bytes = data.serialize();
         let other = Vec::<MapValueState>::deserialize(&bytes).unwrap();
         assert_eq!(data, other);
-    }
-    #[test]
-    fn serialized_size() {
-        assert_eq!(MapValueState::serialized_size(), 1);
     }
 }

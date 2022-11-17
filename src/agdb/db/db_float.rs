@@ -1,3 +1,4 @@
+use crate::utilities::serialize::Serialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -47,6 +48,16 @@ impl From<f32> for DbFloat {
 impl From<f64> for DbFloat {
     fn from(value: f64) -> Self {
         DbFloat(value)
+    }
+}
+
+impl Serialize for DbFloat {
+    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+        Ok(DbFloat::from(f64::deserialize(bytes)?))
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        self.0.serialize()
     }
 }
 
@@ -116,6 +127,15 @@ mod tests {
                 DbFloat::from(1.3_f64)
             ]
         );
+    }
+
+    #[test]
+    fn serialize() {
+        let float = DbFloat::from(0.1_f64 + 0.2_f64);
+        let bytes = float.serialize();
+        let actual = DbFloat::deserialize(&bytes).unwrap();
+
+        assert_eq!(float, actual);
     }
 
     #[test]

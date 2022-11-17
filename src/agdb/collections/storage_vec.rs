@@ -86,10 +86,6 @@ where
             return Err(DbError::from("index out of bounds"));
         }
 
-        let offset_from;
-        let offset_to;
-        let size;
-
         let mut ref_storage = self.storage.borrow_mut();
         ref_storage.transaction();
 
@@ -99,9 +95,9 @@ where
             self.indexes.remove(index as usize);
         }
 
-        offset_from = Self::value_offset(index + 1);
-        offset_to = Self::value_offset(index);
-        size = Self::value_offset(self.len()) - offset_from;
+        let offset_from = Self::value_offset(index + 1);
+        let offset_to = Self::value_offset(index);
+        let size = Self::value_offset(self.len()) - offset_from;
         ref_storage.move_at(&self.storage_index, offset_from, offset_to, size)?;
         self.len -= 1;
         ref_storage.insert_at(&self.storage_index, 0, &self.len())?;
@@ -127,6 +123,7 @@ where
         )
     }
 
+    #[allow(clippy::comparison_chain)]
     pub fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
         if self.len() == size {
             return Ok(());
@@ -184,7 +181,7 @@ where
         if T::fixed_size() == 0 {
             let value_index = &self.indexes[index as usize];
             let mut ref_storage = self.storage.borrow_mut();
-            let value_size = ref_storage.insert_at(&value_index, 0, value)?;
+            let value_size = ref_storage.insert_at(value_index, 0, value)?;
             ref_storage.resize_value(value_index, value_size)?;
         } else {
             self.storage.borrow_mut().insert_at(
@@ -962,7 +959,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -990,7 +987,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1018,7 +1015,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1044,7 +1041,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();

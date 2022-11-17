@@ -246,20 +246,6 @@ impl Serialize for DbValue {
         bytes
     }
 
-    fn serialized_size(&self) -> u64 {
-        match self {
-            DbValue::Bytes(value) => value.serialized_size(),
-            DbValue::Int(value) => value.serialized_size(),
-            DbValue::Uint(value) => value.serialized_size(),
-            DbValue::Float(value) => value.serialized_size(),
-            DbValue::String(value) => value.serialized_size(),
-            DbValue::VecInt(value) => value.serialized_size(),
-            DbValue::VecUint(value) => value.serialized_size(),
-            DbValue::VecFloat(value) => value.serialized_size(),
-            DbValue::VecString(value) => value.serialized_size(),
-        }
-    }
-
     fn fixed_size() -> u64 {
         0
     }

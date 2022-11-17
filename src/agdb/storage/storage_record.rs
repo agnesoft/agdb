@@ -25,10 +25,6 @@ impl Serialize for StorageRecord {
         bytes
     }
 
-    fn serialized_size(&self) -> u64 {
-        self.index.serialized_size() + self.size.serialized_size()
-    }
-
     fn fixed_size() -> u64 {
         StorageIndex::fixed_size() + u64::fixed_size()
     }

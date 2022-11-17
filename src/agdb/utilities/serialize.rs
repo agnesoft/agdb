@@ -4,9 +4,6 @@ use std::mem::size_of;
 pub trait Serialize: Sized {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
     fn serialize(&self) -> Vec<u8>;
-    fn serialized_size(&self) -> u64 {
-        Self::fixed_size()
-    }
     fn fixed_size() -> u64 {
         size_of::<Self>() as u64
     }
@@ -65,10 +62,6 @@ impl Serialize for String {
         self.as_bytes().to_vec()
     }
 
-    fn serialized_size(&self) -> u64 {
-        self.len() as u64
-    }
-
     fn fixed_size() -> u64 {
         0
     }
@@ -98,7 +91,7 @@ where
                 let value_len = u64::deserialize(&bytes[offset..(offset + LEN_OFFSET)])? as usize;
                 offset += LEN_OFFSET;
                 let value = T::deserialize(&bytes[offset..(offset + value_len)])?;
-                offset += value.serialized_size() as usize;
+                offset += value_len;
                 data.push(value);
             }
         }
@@ -122,16 +115,13 @@ where
             bytes.extend((self.len() as u64).serialize());
 
             for value in self {
-                bytes.extend(value.serialized_size().serialize());
-                bytes.extend(value.serialize());
+                let serialized_value = value.serialize();
+                bytes.extend((serialized_value.len() as u64).serialize());
+                bytes.extend(serialized_value);
             }
         }
 
         bytes
-    }
-
-    fn serialized_size(&self) -> u64 {
-        self.len() as u64
     }
 
     fn fixed_size() -> u64 {
@@ -148,10 +138,6 @@ impl Serialize for Vec<u8> {
         self.to_vec()
     }
 
-    fn serialized_size(&self) -> u64 {
-        self.len() as u64
-    }
-
     fn fixed_size() -> u64 {
         0
     }
@@ -161,6 +147,21 @@ impl Serialize for Vec<u8> {
 mod tests {
     use super::*;
     use std::cmp::Ordering;
+
+    #[test]
+    fn fixed_size() {
+        assert!(i64::is_fixed_sized());
+        assert_eq!(i64::fixed_size(), 8);
+
+        assert!(u64::is_fixed_sized());
+        assert_eq!(u64::fixed_size(), 8);
+
+        assert!(!Vec::<i64>::is_fixed_sized());
+        assert_eq!(Vec::<i64>::fixed_size(), 0);
+
+        assert!(!Vec::<String>::is_fixed_sized());
+        assert_eq!(String::fixed_size(), 0);
+    }
 
     #[test]
     fn f64() {
@@ -194,21 +195,6 @@ mod tests {
             i64::deserialize(&bytes),
             Err(DbError::from("i64 deserialization error: out of bounds"))
         );
-    }
-
-    #[test]
-    fn serialized_size() {
-        assert!(i64::is_fixed_sized());
-        assert_eq!(i64::fixed_size(), 8);
-
-        assert!(u64::is_fixed_sized());
-        assert_eq!(u64::fixed_size(), 8);
-
-        assert!(!Vec::<i64>::is_fixed_sized());
-        assert_eq!(Vec::<i64>::fixed_size(), 0);
-
-        assert!(!Vec::<String>::is_fixed_sized());
-        assert_eq!(String::fixed_size(), 0);
     }
 
     #[test]

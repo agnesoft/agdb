@@ -1,10 +1,83 @@
 use crate::db::db_error::DbError;
 use std::mem::size_of;
 
-pub trait Serialize: Sized + Copy {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
+pub trait Serialize: Sized + Copy + Default {
+    fn serialized_size() -> usize {
+        size_of::<Self>()
+    }
+
     fn serialize(&self) -> Vec<u8>;
-    fn serialized_size() -> usize;
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
+}
+
+impl Serialize for u64 {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self::from_le_bytes(
+            bytes
+                .get(0..Self::serialized_size())
+                .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl Serialize for usize {
+    fn serialized_size() -> usize {
+        u64::serialized_size()
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        (*self as u64).serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let value = u64::deserialize(bytes)?;
+        Ok(usize::try_from(value)
+            .map_err(|_| DbError::from("usize deserialization error: out of bounds"))?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn u64() {
+        let original = 10_u64;
+        let serialized_size = u64::serialized_size();
+        let bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        let deserialized = u64::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn u64_out_of_bounds() {
+        assert_eq!(
+            u64::deserialize(&Vec::<u8>::new()),
+            Err(DbError::from("u64 deserialization error: out of bounds"))
+        );
+    }
+
+    #[test]
+    fn usize() {
+        let original: usize = 10;
+        let serialized_size = usize::serialized_size();
+        let bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        let deserialized = usize::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
 }
 
 pub trait OldSerialize: Sized {
@@ -197,7 +270,7 @@ impl OldSerialize for Vec<u8> {
 }
 
 #[cfg(test)]
-mod tests {
+mod old_tests {
     use super::*;
     use std::cmp::Ordering;
 

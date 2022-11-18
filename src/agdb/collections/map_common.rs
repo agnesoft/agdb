@@ -10,7 +10,7 @@ use self::map_iterator::MapIterator;
 use self::map_value::MapValue;
 use self::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cmp::max;
 use std::hash::Hash;

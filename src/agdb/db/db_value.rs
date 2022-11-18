@@ -1,5 +1,5 @@
 use super::db_float::DbFloat;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
 

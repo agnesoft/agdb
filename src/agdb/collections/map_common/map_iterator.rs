@@ -1,6 +1,6 @@
 use super::map_data::MapData;
 use super::map_value_state::MapValueState;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 use std::marker::PhantomData;

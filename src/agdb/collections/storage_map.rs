@@ -2,7 +2,7 @@ use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::OldStorage;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
 use std::hash::Hash;

@@ -1,4 +1,4 @@
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cmp::Ordering;
 use std::hash::Hash;

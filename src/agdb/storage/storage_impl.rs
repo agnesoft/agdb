@@ -3,7 +3,7 @@ use crate::storage::storage_data::StorageData;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_record::StorageRecord;
 use crate::storage::write_ahead_log::WriteAheadLogRecord;
-use crate::storage::Storage;
+use crate::storage::OldStorage;
 use crate::utilities::serialize::OldSerialize;
 use std::cmp::max;
 use std::cmp::min;
@@ -320,7 +320,7 @@ impl<T: StorageData> Drop for StorageImpl<T> {
     }
 }
 
-impl<Data: StorageData> Storage for StorageImpl<Data> {
+impl<Data: StorageData> OldStorage for StorageImpl<Data> {
     fn commit(&mut self) -> Result<(), DbError> {
         if self.data.end_transaction() {
             self.data.clear_wal()?;

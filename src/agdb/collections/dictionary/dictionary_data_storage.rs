@@ -3,7 +3,7 @@ use crate::collections::storage_vec::StorageVec;
 use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::Storage;
+use crate::storage::OldStorage;
 use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
@@ -16,7 +16,7 @@ use super::dictionary_value::DictionaryValue;
 pub struct DictionaryDataStorage<T, Data = StorageFile>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
-    Data: Storage,
+    Data: OldStorage,
 {
     pub(crate) storage: Rc<RefCell<Data>>,
     #[allow(dead_code)]
@@ -28,7 +28,7 @@ where
 impl<T, Data> DictionaryData<T> for DictionaryDataStorage<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
-    Data: Storage,
+    Data: OldStorage,
 {
     fn capacity(&self) -> u64 {
         self.values.len() as u64

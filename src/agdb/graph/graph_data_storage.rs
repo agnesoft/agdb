@@ -5,13 +5,13 @@ use crate::collections::storage_vec::StorageVec;
 use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::Storage;
+use crate::storage::OldStorage;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct GraphDataStorage<Data = StorageFile>
 where
-    Data: Storage,
+    Data: OldStorage,
 {
     pub(crate) storage: Rc<RefCell<Data>>,
     #[allow(dead_code)]
@@ -26,7 +26,7 @@ where
 
 impl<Data> GraphData for GraphDataStorage<Data>
 where
-    Data: Storage,
+    Data: OldStorage,
 {
     fn capacity(&self) -> Result<u64, DbError> {
         Ok(self.from.len())
@@ -94,7 +94,7 @@ where
 
 impl<Data> TryFrom<Rc<RefCell<Data>>> for GraphDataStorage<Data>
 where
-    Data: Storage,
+    Data: OldStorage,
 {
     type Error = DbError;
 
@@ -129,7 +129,7 @@ where
     }
 }
 
-impl<Data: Storage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for GraphDataStorage<Data> {
+impl<Data: OldStorage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for GraphDataStorage<Data> {
     type Error = DbError;
 
     fn try_from(

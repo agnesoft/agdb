@@ -31,7 +31,7 @@ impl TryFrom<&str> for StorageFile {
 mod tests {
     use super::*;
     use crate::storage::storage_index::StorageIndex;
-    use crate::storage::Storage;
+    use crate::storage::OldStorage;
     use crate::test_utilities::test_file::TestFile;
     use crate::utilities::serialize::OldSerialize;
     use std::fs::metadata;

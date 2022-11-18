@@ -3,7 +3,7 @@ use super::graph_impl::GraphImpl;
 use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::Storage;
+use crate::storage::OldStorage;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -12,7 +12,7 @@ pub type StorageGraph<Data = StorageFile> = GraphImpl<GraphDataStorage<Data>>;
 #[allow(dead_code)]
 impl<Data> StorageGraph<Data>
 where
-    Data: Storage,
+    Data: OldStorage,
 {
     pub fn storage_index(&self) -> StorageIndex {
         self.data.storage_index.clone()
@@ -21,7 +21,7 @@ where
 
 impl<Data> TryFrom<Rc<RefCell<Data>>> for StorageGraph<Data>
 where
-    Data: Storage,
+    Data: OldStorage,
 {
     type Error = DbError;
 
@@ -32,7 +32,7 @@ where
     }
 }
 
-impl<Data: Storage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for StorageGraph<Data> {
+impl<Data: OldStorage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for StorageGraph<Data> {
     type Error = DbError;
 
     fn try_from(

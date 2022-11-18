@@ -1,6 +1,6 @@
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct StorageRecord {
@@ -9,7 +9,7 @@ pub struct StorageRecord {
     pub size: u64,
 }
 
-impl Serialize for StorageRecord {
+impl OldSerialize for StorageRecord {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(StorageRecord {
             index: StorageIndex::deserialize(bytes)?,

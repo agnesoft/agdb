@@ -1,6 +1,6 @@
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use std::mem::size_of;
 
 pub(crate) struct DictionaryDataStorageIndexes {
@@ -8,7 +8,7 @@ pub(crate) struct DictionaryDataStorageIndexes {
     pub(crate) values: StorageIndex,
 }
 
-impl Serialize for DictionaryDataStorageIndexes {
+impl OldSerialize for DictionaryDataStorageIndexes {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(DictionaryDataStorageIndexes {
             index: StorageIndex::deserialize(bytes)?,

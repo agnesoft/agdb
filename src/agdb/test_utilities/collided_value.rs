@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -13,9 +13,9 @@ impl<T> CollidedValue<T> {
     }
 }
 
-impl<T> Serialize for CollidedValue<T>
+impl<T> OldSerialize for CollidedValue<T>
 where
-    T: Serialize,
+    T: OldSerialize,
 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {

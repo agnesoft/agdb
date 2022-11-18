@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use std::mem::size_of;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
@@ -10,7 +10,7 @@ pub enum MapValueState {
     Valid,
 }
 
-impl Serialize for MapValueState {
+impl OldSerialize for MapValueState {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         match bytes.first() {
             Some(0) => Ok(MapValueState::Empty),

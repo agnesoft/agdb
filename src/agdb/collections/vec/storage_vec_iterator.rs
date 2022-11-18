@@ -1,11 +1,11 @@
 use crate::collections::storage_vec::StorageVec;
 use crate::storage::Storage;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use std::marker::PhantomData;
 
 pub struct StorageVecIterator<'a, T, Data>
 where
-    T: Serialize,
+    T: OldSerialize,
     Data: Storage,
 {
     pub(crate) index: u64,
@@ -15,7 +15,7 @@ where
 
 impl<'a, T, Data> Iterator for StorageVecIterator<'a, T, Data>
 where
-    T: Serialize,
+    T: OldSerialize,
     Data: Storage,
 {
     type Item = T;

@@ -9,7 +9,7 @@ mod dictionary_data_memory;
 
 use self::dictionary_data_memory::DictionaryDataMemory;
 use self::dictionary_impl::DictionaryImpl;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 
@@ -17,7 +17,7 @@ pub type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 
 impl<T> Dictionary<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     pub fn new() -> Dictionary<T> {
         Dictionary {
@@ -29,7 +29,7 @@ where
 
 impl<T> Default for Dictionary<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     fn default() -> Self {
         Self::new()

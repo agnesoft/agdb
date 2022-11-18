@@ -1,22 +1,22 @@
 use super::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct MapValue<K, T>
 where
-    K: Clone + Default + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + OldSerialize,
+    T: Clone + Default + OldSerialize,
 {
     pub state: MapValueState,
     pub key: K,
     pub value: T,
 }
 
-impl<K, T> Serialize for MapValue<K, T>
+impl<K, T> OldSerialize for MapValue<K, T>
 where
-    K: Clone + Default + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + OldSerialize,
+    T: Clone + Default + OldSerialize,
 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {

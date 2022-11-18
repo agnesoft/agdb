@@ -10,12 +10,12 @@ mod write_ahead_log;
 
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 
 pub trait Storage {
     fn commit(&mut self) -> Result<(), DbError>;
-    fn insert<V: Serialize>(&mut self, value: &V) -> Result<StorageIndex, DbError>;
-    fn insert_at<V: Serialize>(
+    fn insert<V: OldSerialize>(&mut self, value: &V) -> Result<StorageIndex, DbError>;
+    fn insert_at<V: OldSerialize>(
         &mut self,
         index: &StorageIndex,
         offset: u64,
@@ -33,7 +33,11 @@ pub trait Storage {
     fn shrink_to_fit(&mut self) -> Result<(), DbError>;
     fn size(&mut self) -> Result<u64, DbError>;
     fn transaction(&mut self);
-    fn value<V: Serialize>(&mut self, index: &StorageIndex) -> Result<V, DbError>;
-    fn value_at<V: Serialize>(&mut self, index: &StorageIndex, offset: u64) -> Result<V, DbError>;
+    fn value<V: OldSerialize>(&mut self, index: &StorageIndex) -> Result<V, DbError>;
+    fn value_at<V: OldSerialize>(
+        &mut self,
+        index: &StorageIndex,
+        offset: u64,
+    ) -> Result<V, DbError>;
     fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError>;
 }

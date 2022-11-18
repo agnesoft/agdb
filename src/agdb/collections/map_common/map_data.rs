@@ -1,14 +1,14 @@
 use super::map_value::MapValue;
 use super::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 
 pub trait MapData<K, T>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
 {
     fn capacity(&self) -> u64;
     fn commit(&mut self) -> Result<(), DbError>;

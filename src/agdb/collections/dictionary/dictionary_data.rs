@@ -1,12 +1,12 @@
 use super::dictionary_index::DictionaryIndex;
 use super::dictionary_value::DictionaryValue;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 
 pub trait DictionaryData<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     fn capacity(&self) -> u64;
     fn commit(&mut self) -> Result<(), DbError>;

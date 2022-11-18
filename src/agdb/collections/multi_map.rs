@@ -3,7 +3,7 @@ pub mod multi_map_impl;
 use self::multi_map_impl::MultiMapImpl;
 use super::map_common::map_data_memory::MapDataMemory;
 use super::map_common::MapCommon;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 
@@ -11,8 +11,8 @@ pub type MultiMap<K, T> = MultiMapImpl<K, T, MapDataMemory<K, T>>;
 
 impl<K, T> MultiMap<K, T>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Eq + PartialEq + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + Eq + PartialEq + OldSerialize,
 {
     pub fn new() -> MultiMap<K, T> {
         MultiMap::<K, T> {
@@ -25,8 +25,8 @@ where
 
 impl<K, T> Default for MultiMap<K, T>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Eq + PartialEq + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + Eq + PartialEq + OldSerialize,
 {
     fn default() -> Self {
         Self::new()

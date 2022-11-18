@@ -1,4 +1,4 @@
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -51,7 +51,7 @@ impl From<f64> for DbFloat {
     }
 }
 
-impl Serialize for DbFloat {
+impl OldSerialize for DbFloat {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(DbFloat::from(f64::deserialize(bytes)?))
     }

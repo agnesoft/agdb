@@ -1,5 +1,5 @@
 use super::db_float::DbFloat;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
 
@@ -140,7 +140,7 @@ impl From<Vec<u8>> for DbValue {
     }
 }
 
-impl Serialize for DbValue {
+impl OldSerialize for DbValue {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         if bytes.is_empty() {
             return Err(DbError::from("DbValue deserialization error: no data"));

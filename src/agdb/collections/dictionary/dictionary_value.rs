@@ -1,20 +1,20 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Default)]
 pub struct DictionaryValue<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     pub(crate) meta: i64,
     pub(crate) hash: u64,
     pub(crate) value: T,
 }
 
-impl<T> Serialize for DictionaryValue<T>
+impl<T> OldSerialize for DictionaryValue<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(DictionaryValue::<T> {

@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct StorageIndex {
@@ -46,7 +46,7 @@ impl From<usize> for StorageIndex {
     }
 }
 
-impl Serialize for StorageIndex {
+impl OldSerialize for StorageIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             index: i64::deserialize(bytes)?,

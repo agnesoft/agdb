@@ -1,14 +1,14 @@
 use super::map_data::MapData;
 use super::map_value_state::MapValueState;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
 pub struct MapIterator<'a, K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: MapData<K, T>,
 {
     pub(crate) pos: u64,
@@ -18,8 +18,8 @@ where
 
 impl<'a, K, T, Data> Iterator for MapIterator<'a, K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: MapData<K, T>,
 {
     type Item = (K, T);

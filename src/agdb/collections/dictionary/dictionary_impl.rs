@@ -2,13 +2,13 @@ use super::dictionary_data::DictionaryData;
 use super::dictionary_index::DictionaryIndex;
 use super::dictionary_value::DictionaryValue;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 
 pub struct DictionaryImpl<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
     Data: DictionaryData<T>,
 {
     pub(crate) data: Data,
@@ -18,7 +18,7 @@ where
 #[allow(dead_code)]
 impl<T, Data> DictionaryImpl<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
     Data: DictionaryData<T>,
 {
     pub fn count(&self, index: &DictionaryIndex) -> Result<Option<u64>, DbError> {

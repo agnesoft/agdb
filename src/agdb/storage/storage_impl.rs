@@ -4,7 +4,7 @@ use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_record::StorageRecord;
 use crate::storage::write_ahead_log::WriteAheadLogRecord;
 use crate::storage::Storage;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use std::cmp::max;
 use std::cmp::min;
 use std::io::SeekFrom;
@@ -274,7 +274,7 @@ impl<Data: StorageData> StorageImpl<Data> {
         position + StorageRecord::fixed_size() + offset
     }
 
-    pub(crate) fn value_read_size<V: Serialize>(size: u64, offset: u64) -> Result<u64, DbError> {
+    pub(crate) fn value_read_size<V: OldSerialize>(size: u64, offset: u64) -> Result<u64, DbError> {
         Self::validate_offset(size, offset)?;
         let max_size = size - offset;
         let mut read_size = V::fixed_size();
@@ -329,7 +329,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         Ok(())
     }
 
-    fn insert<V: Serialize>(&mut self, value: &V) -> Result<StorageIndex, DbError> {
+    fn insert<V: OldSerialize>(&mut self, value: &V) -> Result<StorageIndex, DbError> {
         self.transaction();
         let position = self.size()?;
         let bytes = value.serialize();
@@ -342,7 +342,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         Ok(record.index)
     }
 
-    fn insert_at<V: Serialize>(
+    fn insert_at<V: OldSerialize>(
         &mut self,
         index: &StorageIndex,
         offset: u64,
@@ -423,12 +423,16 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
         self.data.begin_transaction();
     }
 
-    fn value<V: Serialize>(&mut self, index: &StorageIndex) -> Result<V, DbError> {
+    fn value<V: OldSerialize>(&mut self, index: &StorageIndex) -> Result<V, DbError> {
         let record = self.data.record(index)?;
         V::deserialize(&self.read(Self::value_position(record.position, 0), record.size)?)
     }
 
-    fn value_at<V: Serialize>(&mut self, index: &StorageIndex, offset: u64) -> Result<V, DbError> {
+    fn value_at<V: OldSerialize>(
+        &mut self,
+        index: &StorageIndex,
+        offset: u64,
+    ) -> Result<V, DbError> {
         let record = self.data.record(index)?;
         let bytes = self.read(
             Self::value_position(record.position, offset),

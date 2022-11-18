@@ -3,7 +3,7 @@ use std::mem::size_of;
 
 pub trait FixedSize {}
 
-pub trait Serialize: Sized {
+pub trait OldSerialize: Sized {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
     fn serialize(&self) -> Vec<u8>;
     fn fixed_size() -> u64 {
@@ -11,7 +11,7 @@ pub trait Serialize: Sized {
     }
 }
 
-impl Serialize for f64 {
+impl OldSerialize for f64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let bits = u64::deserialize(bytes)?;
         Ok(f64::from_bits(bits))
@@ -22,7 +22,7 @@ impl Serialize for f64 {
     }
 }
 
-impl Serialize for i64 {
+impl OldSerialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let buffer: [u8; size_of::<Self>()] = bytes
             .get(0..size_of::<Self>())
@@ -37,7 +37,7 @@ impl Serialize for i64 {
     }
 }
 
-impl Serialize for u64 {
+impl OldSerialize for u64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let buffer: [u8; size_of::<Self>()] = bytes
             .get(0..size_of::<Self>())
@@ -52,7 +52,7 @@ impl Serialize for u64 {
     }
 }
 
-impl Serialize for String {
+impl OldSerialize for String {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.len() <= 16 {
             let size = bytes[0] as usize;
@@ -89,7 +89,7 @@ impl Serialize for String {
 struct VecSerializer;
 
 impl VecSerializer {
-    fn deserialize_dynamic<T: Serialize>(bytes: &[u8]) -> Result<Vec<T>, DbError> {
+    fn deserialize_dynamic<T: OldSerialize>(bytes: &[u8]) -> Result<Vec<T>, DbError> {
         const LEN_OFFSET: usize = size_of::<u64>();
         let len = u64::deserialize(bytes)? as usize;
         let mut data = Vec::<T>::new();
@@ -107,7 +107,7 @@ impl VecSerializer {
         Ok(data)
     }
 
-    fn serialize_dynamic<T: Serialize>(vec: &Vec<T>) -> Vec<u8> {
+    fn serialize_dynamic<T: OldSerialize>(vec: &Vec<T>) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
 
         bytes.extend((vec.len() as u64).serialize());
@@ -121,7 +121,7 @@ impl VecSerializer {
         bytes
     }
 
-    fn deserialize_fixed<T: Serialize>(bytes: &[u8]) -> Result<Vec<T>, DbError> {
+    fn deserialize_fixed<T: OldSerialize>(bytes: &[u8]) -> Result<Vec<T>, DbError> {
         const LEN_OFFSET: usize = size_of::<u64>();
         let len = u64::deserialize(bytes)? as usize;
         let mut data = Vec::<T>::new();
@@ -137,7 +137,7 @@ impl VecSerializer {
         Ok(data)
     }
 
-    fn serialize_fixed<T: Serialize>(vec: &Vec<T>) -> Vec<u8> {
+    fn serialize_fixed<T: OldSerialize>(vec: &Vec<T>) -> Vec<u8> {
         const LEN_OFFSET: usize = size_of::<u64>();
         let mut bytes = Vec::<u8>::new();
 
@@ -153,9 +153,9 @@ impl VecSerializer {
     }
 }
 
-impl<T> Serialize for Vec<T>
+impl<T> OldSerialize for Vec<T>
 where
-    T: Serialize,
+    T: OldSerialize,
 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if T::fixed_size() == 0 {
@@ -178,7 +178,7 @@ where
     }
 }
 
-impl Serialize for Vec<u8> {
+impl OldSerialize for Vec<u8> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(bytes.to_vec())
     }

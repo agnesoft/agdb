@@ -2,7 +2,7 @@ use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
 use std::hash::Hash;
@@ -20,8 +20,8 @@ pub type StorageMap<K, T, Data = StorageFile> = MapImpl<K, T, MapDataStorage<K, 
 #[allow(dead_code)]
 impl<K, T, Data> StorageMap<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: Storage,
 {
     pub fn storage_index(&self) -> StorageIndex {
@@ -31,8 +31,8 @@ where
 
 impl<K, T, Data> TryFrom<Rc<RefCell<Data>>> for StorageMap<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: Storage,
 {
     type Error = DbError;
@@ -54,8 +54,8 @@ where
 
 impl<K, T, Data> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for StorageMap<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: Storage,
 {
     type Error = DbError;

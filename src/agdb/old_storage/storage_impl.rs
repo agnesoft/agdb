@@ -1,9 +1,9 @@
 use crate::db::db_error::DbError;
-use crate::storage::storage_data::StorageData;
-use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_record::StorageRecord;
-use crate::storage::write_ahead_log::WriteAheadLogRecord;
-use crate::storage::OldStorage;
+use crate::old_storage::storage_data::StorageData;
+use crate::old_storage::storage_index::StorageIndex;
+use crate::old_storage::storage_record::StorageRecord;
+use crate::old_storage::write_ahead_log::WriteAheadLogRecord;
+use crate::old_storage::OldStorage;
 use crate::utilities::old_serialize::OldSerialize;
 use std::cmp::max;
 use std::cmp::min;

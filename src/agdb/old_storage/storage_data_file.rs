@@ -1,10 +1,10 @@
 use crate::db::db_error::DbError;
-use crate::storage::storage_data::StorageData;
-use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_record::StorageRecord;
-use crate::storage::storage_records::StorageRecords;
-use crate::storage::write_ahead_log::WriteAheadLog;
-use crate::storage::write_ahead_log::WriteAheadLogRecord;
+use crate::old_storage::storage_data::StorageData;
+use crate::old_storage::storage_index::StorageIndex;
+use crate::old_storage::storage_record::StorageRecord;
+use crate::old_storage::storage_records::StorageRecords;
+use crate::old_storage::write_ahead_log::WriteAheadLog;
+use crate::old_storage::write_ahead_log::WriteAheadLogRecord;
 use std::fs::File;
 use std::io::Read;
 use std::io::Seek;

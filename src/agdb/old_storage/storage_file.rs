@@ -1,6 +1,6 @@
 use crate::db::db_error::DbError;
-use crate::storage::storage_data_file::StorageDataFile;
-use crate::storage::storage_impl::StorageImpl;
+use crate::old_storage::storage_data_file::StorageDataFile;
+use crate::old_storage::storage_impl::StorageImpl;
 
 pub type StorageFile = StorageImpl<StorageDataFile>;
 
@@ -30,8 +30,8 @@ impl TryFrom<&str> for StorageFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::storage_index::StorageIndex;
-    use crate::storage::OldStorage;
+    use crate::old_storage::storage_index::StorageIndex;
+    use crate::old_storage::OldStorage;
     use crate::test_utilities::test_file::TestFile;
     use crate::utilities::old_serialize::OldSerialize;
     use std::fs::metadata;

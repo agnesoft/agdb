@@ -1,5 +1,4 @@
 use super::Storage;
-use crate::utilities::partial_serialize::PartialSerialize;
 use crate::utilities::serialize::Serialize;
 use crate::DbError;
 use crate::DbIndex;

@@ -1,5 +1,5 @@
-use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_record::StorageRecord;
+use crate::old_storage::storage_index::StorageIndex;
+use crate::old_storage::storage_record::StorageRecord;
 
 pub struct StorageRecords {
     pub(crate) records: Vec<StorageRecord>,

@@ -1,7 +1,7 @@
 use crate::db::db_error::DbError;
-use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_record::StorageRecord;
-use crate::storage::write_ahead_log::WriteAheadLogRecord;
+use crate::old_storage::storage_index::StorageIndex;
+use crate::old_storage::storage_record::StorageRecord;
+use crate::old_storage::write_ahead_log::WriteAheadLogRecord;
 use std::io::SeekFrom;
 
 pub trait StorageData<T = Self> {

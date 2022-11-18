@@ -1,4 +1,5 @@
 pub mod db_error;
+pub mod db_index;
 pub mod db_key;
 pub mod db_value;
 

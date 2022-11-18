@@ -1,4 +1,5 @@
-use crate::{utilities::old_serialize::Serialize, DbError};
+use crate::utilities::serialize::{Serialize, SerializeFixed};
+use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbIndex {
@@ -12,11 +13,11 @@ impl DbIndex {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<DbIndex, DbError> {
-        if bytes.len() > DbIndex::serialized_size() {
+        if bytes.len() > DbIndex::fixed_size() {
             return Err(DbError::from(format!(
                 "DbIndex::from_bytes error: value ({}) too long (>{})",
                 bytes.len(),
-                DbIndex::serialized_size()
+                DbIndex::fixed_size()
             )));
         }
 
@@ -51,7 +52,7 @@ impl DbIndex {
 impl Serialize for DbIndex {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(Self::serialized_size());
+        bytes.reserve(Self::fixed_size());
         bytes.extend(self.value.serialize());
         bytes.extend(self.meta.serialize());
 
@@ -61,10 +62,12 @@ impl Serialize for DbIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(DbIndex {
             value: u64::deserialize(bytes)?,
-            meta: u64::deserialize(&bytes[u64::serialized_size()..])?,
+            meta: u64::deserialize(&bytes[u64::fixed_size()..])?,
         })
     }
 }
+
+impl SerializeFixed for DbIndex {}
 
 impl From<usize> for DbIndex {
     fn from(value: usize) -> Self {
@@ -216,7 +219,7 @@ mod tests {
         original.set_value(1_u64);
         original.set_meta(2_u64);
 
-        let serialized_size = DbIndex::serialized_size();
+        let serialized_size = DbIndex::fixed_size();
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len(), serialized_size);

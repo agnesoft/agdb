@@ -1,18 +1,91 @@
-use crate::utilities::old_serialize::Serialize;
-use crate::DbError;
+use crate::db::db_error::DbError;
 use std::any::type_name;
+use std::mem::size_of;
 
-pub trait PartialSerialize: Sized {
-    fn serialized_size(&self) -> usize;
+pub trait Serialize: Sized {
     fn serialize(&self) -> Vec<u8>;
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
 }
 
-impl PartialSerialize for String {
-    fn serialized_size(&self) -> usize {
-        usize::serialized_size() + self.len()
+pub trait SerializeFixed: Serialize {
+    fn fixed_size() -> usize {
+        size_of::<Self>()
+    }
+}
+
+pub trait SerializeDynamic: Serialize {
+    fn serialized_size(&self) -> usize;
+}
+
+impl Serialize for i64 {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
     }
 
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self::from_le_bytes(
+            bytes
+                .get(0..Self::fixed_size())
+                .ok_or_else(|| DbError::from("i64 deserialization error: out of bounds"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl SerializeFixed for i64 {}
+
+impl Serialize for u64 {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self::from_le_bytes(
+            bytes
+                .get(0..Self::fixed_size())
+                .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl SerializeFixed for u64 {}
+
+impl Serialize for f64 {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self::from_le_bytes(
+            bytes
+                .get(0..Self::fixed_size())
+                .ok_or_else(|| DbError::from("f64 deserialization error: out of bounds"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl SerializeFixed for f64 {}
+
+impl Serialize for usize {
+    fn serialize(&self) -> Vec<u8> {
+        (*self as u64).serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        let value = u64::deserialize(bytes)?;
+        Ok(usize::try_from(value)?)
+    }
+}
+
+impl SerializeFixed for usize {
+    fn fixed_size() -> usize {
+        u64::fixed_size()
+    }
+}
+
+impl Serialize for String {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
         bytes.reserve(self.serialized_size());
@@ -24,7 +97,7 @@ impl PartialSerialize for String {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let begin = usize::serialized_size();
+        let begin = usize::fixed_size();
         let end = begin + len;
 
         Ok(String::from_utf8(
@@ -36,11 +109,13 @@ impl PartialSerialize for String {
     }
 }
 
-impl<T: Serialize> PartialSerialize for Vec<T> {
+impl SerializeDynamic for String {
     fn serialized_size(&self) -> usize {
-        usize::serialized_size() + self.len() * T::serialized_size()
+        usize::fixed_size() + self.len()
     }
+}
 
+impl<T: SerializeFixed> Serialize for Vec<T> {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
         bytes.reserve(self.serialized_size());
@@ -55,8 +130,8 @@ impl<T: Serialize> PartialSerialize for Vec<T> {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let mut begin = usize::serialized_size();
-        let mut end = begin + T::serialized_size();
+        let mut begin = usize::fixed_size();
+        let mut end = begin + T::fixed_size();
         let mut vec = Self::new();
         vec.reserve(len);
 
@@ -67,19 +142,21 @@ impl<T: Serialize> PartialSerialize for Vec<T> {
                     type_name::<T>()
                 ))
             })?)?);
-            begin += T::serialized_size();
-            end += T::serialized_size();
+            begin += T::fixed_size();
+            end += T::fixed_size();
         }
 
         Ok(vec)
     }
 }
 
-impl PartialSerialize for Vec<u8> {
+impl<T: SerializeFixed> SerializeDynamic for Vec<T> {
     fn serialized_size(&self) -> usize {
-        usize::serialized_size() + self.len()
+        usize::fixed_size() + self.len() * T::fixed_size()
     }
+}
 
+impl Serialize for Vec<u8> {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
         bytes.reserve(self.serialized_size());
@@ -91,7 +168,7 @@ impl PartialSerialize for Vec<u8> {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let begin = usize::serialized_size();
+        let begin = usize::fixed_size();
         let end = begin + len;
 
         Ok(bytes
@@ -101,17 +178,13 @@ impl PartialSerialize for Vec<u8> {
     }
 }
 
-impl PartialSerialize for Vec<String> {
+impl SerializeDynamic for Vec<u8> {
     fn serialized_size(&self) -> usize {
-        let mut size = usize::serialized_size();
-
-        for value in self {
-            size += value.serialized_size();
-        }
-
-        size
+        usize::fixed_size() + self.len()
     }
+}
 
+impl Serialize for Vec<String> {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
         bytes.reserve(self.serialized_size());
@@ -126,7 +199,7 @@ impl PartialSerialize for Vec<String> {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let mut begin = usize::serialized_size();
+        let mut begin = usize::fixed_size();
         let mut vec = Self::new();
         vec.reserve(len);
 
@@ -141,9 +214,102 @@ impl PartialSerialize for Vec<String> {
     }
 }
 
+impl SerializeDynamic for Vec<String> {
+    fn serialized_size(&self) -> usize {
+        let mut size = usize::fixed_size();
+
+        for value in self {
+            size += value.serialized_size();
+        }
+
+        size
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
+
+    #[test]
+    fn i64() {
+        let original = -10_i64;
+        let serialized_size = i64::fixed_size();
+        let mut bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        bytes.push(0);
+        let deserialized = i64::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn i64_out_of_bounds() {
+        assert_eq!(
+            i64::deserialize(&Vec::<u8>::new()),
+            Err(DbError::from("i64 deserialization error: out of bounds"))
+        );
+    }
+
+    #[test]
+    fn u64() {
+        let original = 10_u64;
+        let serialized_size = u64::fixed_size();
+        let mut bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        bytes.push(0);
+        let deserialized = u64::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn u64_out_of_bounds() {
+        assert_eq!(
+            u64::deserialize(&Vec::<u8>::new()),
+            Err(DbError::from("u64 deserialization error: out of bounds"))
+        );
+    }
+
+    #[test]
+    fn f64() {
+        let original = -PI;
+        let serialized_size = f64::fixed_size();
+        let mut bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        bytes.push(0);
+        let deserialized = f64::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn f64_out_of_bounds() {
+        assert_eq!(
+            f64::deserialize(&Vec::<u8>::new()),
+            Err(DbError::from("f64 deserialization error: out of bounds"))
+        );
+    }
+
+    #[test]
+    fn usize() {
+        let original: usize = 10;
+        let serialized_size = usize::fixed_size();
+        let mut bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        bytes.push(0);
+        let deserialized = usize::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
 
     #[test]
     fn string() {

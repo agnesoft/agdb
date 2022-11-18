@@ -21,3 +21,6 @@ pub use query::Query;
 pub use query::QueryError;
 pub use query::QueryResult;
 pub use transaction::Transaction;
+
+//remove
+pub use storage::file_storage::FileStorage;

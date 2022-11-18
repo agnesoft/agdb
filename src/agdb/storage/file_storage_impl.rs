@@ -2,6 +2,8 @@ use super::file_records::FileRecord;
 use super::file_records::FileRecords;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
+use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeFixedSized;
 use crate::DbError;
 use crate::DbIndex;
 use std::fs::File;
@@ -19,22 +21,6 @@ pub struct FileStorageImpl {
 }
 
 impl FileStorageImpl {
-    fn apply_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
-        if record.value.is_empty() {
-            self.set_len(record.pos)
-        } else {
-            self.write(record.pos, &record.value)
-        }
-    }
-
-    fn apply_wal(&mut self) -> Result<(), DbError> {
-        for record in self.wal.records()? {
-            self.apply_wal_record(record)?;
-        }
-
-        self.wal.clear()
-    }
-
     pub fn begin_transaction(&mut self) {
         self.transactions += 1;
     }
@@ -60,7 +46,7 @@ impl FileStorageImpl {
     }
 
     pub fn new(filename: &String) -> Result<Self, DbError> {
-        Ok(FileStorageImpl {
+        let mut data = FileStorageImpl {
             file: OpenOptions::new()
                 .read(true)
                 .write(true)
@@ -69,7 +55,12 @@ impl FileStorageImpl {
             file_records: FileRecords::new(),
             transactions: 0,
             wal: WriteAheadLog::new(filename)?,
-        })
+        };
+
+        data.apply_wal()?;
+        data.read_records()?;
+
+        Ok(data)
     }
 
     pub fn new_record(&mut self, pos: u64, value_len: u64) -> FileRecord {
@@ -123,7 +114,66 @@ impl FileStorageImpl {
         Ok(self.file.write_all(bytes)?)
     }
 
+    fn apply_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
+        if record.value.is_empty() {
+            self.set_len(record.pos)
+        } else {
+            self.write(record.pos, &record.value)
+        }
+    }
+
+    fn apply_wal(&mut self) -> Result<(), DbError> {
+        for record in self.wal.records()? {
+            self.apply_wal_record(record)?;
+        }
+
+        self.wal.clear()
+    }
+
     fn record_wal(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
-        todo!()
+        if pos == self.len()? {
+            self.wal.insert(pos, vec![])
+        } else {
+            let bytes = self.read_exact(pos, size)?;
+
+            self.wal.insert(pos, bytes)
+        }
+    }
+
+    fn read_record(&mut self) -> Result<FileRecord, DbError> {
+        let pos = self.file.seek(SeekFrom::Current(0))?;
+        let bytes = self.read_exact(pos, DbIndex::fixed_serialized_size())?;
+        let index = DbIndex::deserialize(&bytes)?;
+        self.file.seek(SeekFrom::Start(
+            pos + DbIndex::fixed_serialized_size() + index.meta(),
+        ))?;
+
+        Ok(FileRecord {
+            index: index.value(),
+            pos,
+            size: index.meta(),
+        })
+    }
+
+    fn read_records(&mut self) -> Result<(), DbError> {
+        let mut records: Vec<FileRecord> = vec![FileRecord::default()];
+        let len = self.len()?;
+        self.file.seek(SeekFrom::Start(0))?;
+
+        while self.file.seek(SeekFrom::Current(0))? < len {
+            records.push(self.read_record()?);
+        }
+
+        self.file_records.set_records(records);
+
+        Ok(())
+    }
+}
+
+impl Drop for FileStorageImpl {
+    fn drop(&mut self) {
+        if self.apply_wal().is_ok() {
+            let _ = self.wal.clear();
+        }
     }
 }

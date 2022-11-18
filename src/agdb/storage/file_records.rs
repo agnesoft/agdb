@@ -62,6 +62,10 @@ impl FileRecords {
         }
     }
 
+    pub fn set_records(&mut self, records: Vec<FileRecord>) {
+        self.records = records;
+    }
+
     pub fn set_size(&mut self, index: u64, size: u64) {
         if let Some(i) = self.records.get_mut(index as usize) {
             i.size = size;

@@ -88,6 +88,10 @@ impl FileStorage {
         }
     }
 
+    fn invalidate_record(&mut self, pos: u64) -> Result<(), DbError> {
+        self.data_mut().write(pos, &0_u64.serialize())
+    }
+
     fn read_value(&self, record: &FileRecord) -> Result<Vec<u8>, DbError> {
         self.data_mut().read_exact(record.pos, record.size)
     }
@@ -137,7 +141,7 @@ impl FileStorage {
         new_pos: u64,
         new_size: u64,
     ) -> Result<(), DbError> {
-        self.data_mut().write(record.pos, &0_u64.serialize())?;
+        self.invalidate_record(record.pos)?;
         self.data_mut().set_pos(record.index, new_pos);
         self.data_mut().set_size(record.index, new_size);
         record.pos = new_pos;
@@ -232,6 +236,15 @@ impl Storage for FileStorage {
         self.commit()?;
 
         Ok(value_len)
+    }
+
+    fn remove(&mut self, index: &DbIndex) -> Result<(), DbError> {
+        let record = self.data().record(index.value())?;
+        self.data_mut().remove_index(index.value());
+
+        self.transaction();
+        self.invalidate_record(record.pos)?;
+        self.commit()
     }
 
     fn replace<T: Serialize>(&mut self, index: &DbIndex, value: &T) -> Result<u64, DbError> {

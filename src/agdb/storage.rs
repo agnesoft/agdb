@@ -32,6 +32,7 @@ pub trait Storage {
         offset_to: u64,
         size: u64,
     ) -> Result<u64, DbError>;
+    fn remove(&mut self, index: &DbIndex) -> Result<(), DbError>;
     fn replace<T: Serialize>(&mut self, index: &DbIndex, value: &T) -> Result<u64, DbError>;
     fn replace_with_bytes(&mut self, index: &DbIndex, bytes: &[u8]) -> Result<u64, DbError>;
     fn resize_value(&mut self, index: &DbIndex, new_size: u64) -> Result<u64, DbError>;

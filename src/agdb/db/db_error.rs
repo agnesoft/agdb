@@ -1,3 +1,4 @@
+use std::array::TryFromSliceError;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -67,6 +68,13 @@ impl From<String> for DbError {
             cause: None,
             source_location: *Location::caller(),
         }
+    }
+}
+
+impl From<TryFromSliceError> for DbError {
+    #[track_caller]
+    fn from(error: TryFromSliceError) -> Self {
+        DbError::from(error.to_string())
     }
 }
 

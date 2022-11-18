@@ -1,4 +1,4 @@
-use crate::utilities::serialize::{Serialize, SerializeFixed};
+use crate::utilities::serialize::{Serialize, SerializeFixedSized};
 use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -13,15 +13,19 @@ impl DbIndex {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<DbIndex, DbError> {
-        if bytes.len() > DbIndex::fixed_size() {
+        if bytes.len() as u64 > DbIndex::fixed_serialized_size() {
             return Err(DbError::from(format!(
                 "DbIndex::from_bytes error: value ({}) too long (>{})",
                 bytes.len(),
-                DbIndex::fixed_size()
+                DbIndex::fixed_serialized_size()
             )));
         }
 
         DbIndex::deserialize(bytes)
+    }
+
+    pub fn from_values(value: u64, meta: u64) -> DbIndex {
+        DbIndex { value, meta }
     }
 
     pub fn is_valid(&self) -> bool {
@@ -30,6 +34,10 @@ impl DbIndex {
 
     pub fn meta(&self) -> u64 {
         self.meta
+    }
+
+    pub fn meta_as_usize(&self) -> usize {
+        usize::try_from(self.meta).unwrap_or(0)
     }
 
     pub fn new() -> DbIndex {
@@ -52,7 +60,7 @@ impl DbIndex {
 impl Serialize for DbIndex {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(Self::fixed_size());
+        bytes.reserve(Self::fixed_serialized_size() as usize);
         bytes.extend(self.value.serialize());
         bytes.extend(self.meta.serialize());
 
@@ -62,12 +70,12 @@ impl Serialize for DbIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(DbIndex {
             value: u64::deserialize(bytes)?,
-            meta: u64::deserialize(&bytes[u64::fixed_size()..])?,
+            meta: u64::deserialize(&bytes[u64::fixed_serialized_size() as usize..])?,
         })
     }
 }
 
-impl SerializeFixed for DbIndex {}
+impl SerializeFixedSized for DbIndex {}
 
 impl From<usize> for DbIndex {
     fn from(value: usize) -> Self {
@@ -177,6 +185,17 @@ mod tests {
     }
 
     #[test]
+    fn from_values() {
+        let mut left = DbIndex::new();
+        left.set_value(1_u64);
+        left.set_meta(2_u64);
+
+        let right = DbIndex::from_values(1_u64, 2_u64);
+
+        assert_eq!(left, right);
+    }
+
+    #[test]
     fn is_valid() {
         let mut index = DbIndex::default();
 
@@ -196,10 +215,12 @@ mod tests {
         let mut index = DbIndex::default();
 
         assert_eq!(index.meta(), 0);
+        assert_eq!(index.meta_as_usize(), 0);
 
         index.set_meta(1_u64);
 
         assert_eq!(index.meta(), 1_u64);
+        assert_eq!(index.meta_as_usize(), 1_usize);
     }
 
     #[test]
@@ -219,10 +240,10 @@ mod tests {
         original.set_value(1_u64);
         original.set_meta(2_u64);
 
-        let serialized_size = DbIndex::fixed_size();
+        let serialized_size = DbIndex::fixed_serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = DbIndex::deserialize(&bytes).unwrap();

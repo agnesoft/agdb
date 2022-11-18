@@ -7,14 +7,14 @@ pub trait Serialize: Sized {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
 }
 
-pub trait SerializeFixed: Serialize {
-    fn fixed_size() -> usize {
-        size_of::<Self>()
+pub trait SerializeFixedSized: Serialize {
+    fn fixed_serialized_size() -> u64 {
+        size_of::<Self>() as u64
     }
 }
 
-pub trait SerializeDynamic: Serialize {
-    fn serialized_size(&self) -> usize;
+pub trait SerializeDynamicSized: Serialize {
+    fn serialized_size(&self) -> u64;
 }
 
 impl Serialize for i64 {
@@ -25,14 +25,14 @@ impl Serialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self::from_le_bytes(
             bytes
-                .get(0..Self::fixed_size())
+                .get(0..Self::fixed_serialized_size() as usize)
                 .ok_or_else(|| DbError::from("i64 deserialization error: out of bounds"))?
                 .try_into()?,
         ))
     }
 }
 
-impl SerializeFixed for i64 {}
+impl SerializeFixedSized for i64 {}
 
 impl Serialize for u64 {
     fn serialize(&self) -> Vec<u8> {
@@ -42,14 +42,14 @@ impl Serialize for u64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self::from_le_bytes(
             bytes
-                .get(0..Self::fixed_size())
+                .get(0..Self::fixed_serialized_size() as usize)
                 .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
                 .try_into()?,
         ))
     }
 }
 
-impl SerializeFixed for u64 {}
+impl SerializeFixedSized for u64 {}
 
 impl Serialize for f64 {
     fn serialize(&self) -> Vec<u8> {
@@ -59,14 +59,14 @@ impl Serialize for f64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self::from_le_bytes(
             bytes
-                .get(0..Self::fixed_size())
+                .get(0..Self::fixed_serialized_size() as usize)
                 .ok_or_else(|| DbError::from("f64 deserialization error: out of bounds"))?
                 .try_into()?,
         ))
     }
 }
 
-impl SerializeFixed for f64 {}
+impl SerializeFixedSized for f64 {}
 
 impl Serialize for usize {
     fn serialize(&self) -> Vec<u8> {
@@ -79,16 +79,16 @@ impl Serialize for usize {
     }
 }
 
-impl SerializeFixed for usize {
-    fn fixed_size() -> usize {
-        u64::fixed_size()
+impl SerializeFixedSized for usize {
+    fn fixed_serialized_size() -> u64 {
+        u64::fixed_serialized_size()
     }
 }
 
 impl Serialize for String {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size());
+        bytes.reserve(self.serialized_size() as usize);
         bytes.extend(self.len().serialize());
         bytes.extend(self.as_bytes());
 
@@ -97,7 +97,7 @@ impl Serialize for String {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let begin = usize::fixed_size();
+        let begin = usize::fixed_serialized_size() as usize;
         let end = begin + len;
 
         Ok(String::from_utf8(
@@ -109,16 +109,16 @@ impl Serialize for String {
     }
 }
 
-impl SerializeDynamic for String {
-    fn serialized_size(&self) -> usize {
-        usize::fixed_size() + self.len()
+impl SerializeDynamicSized for String {
+    fn serialized_size(&self) -> u64 {
+        usize::fixed_serialized_size() + self.len() as u64
     }
 }
 
-impl<T: SerializeFixed> Serialize for Vec<T> {
+impl<T: SerializeFixedSized> Serialize for Vec<T> {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size());
+        bytes.reserve(self.serialized_size() as usize);
         bytes.extend(self.len().serialize());
 
         for value in self {
@@ -130,8 +130,8 @@ impl<T: SerializeFixed> Serialize for Vec<T> {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let mut begin = usize::fixed_size();
-        let mut end = begin + T::fixed_size();
+        let mut begin = usize::fixed_serialized_size() as usize;
+        let mut end = begin + T::fixed_serialized_size() as usize;
         let mut vec = Self::new();
         vec.reserve(len);
 
@@ -142,24 +142,24 @@ impl<T: SerializeFixed> Serialize for Vec<T> {
                     type_name::<T>()
                 ))
             })?)?);
-            begin += T::fixed_size();
-            end += T::fixed_size();
+            begin += T::fixed_serialized_size() as usize;
+            end += T::fixed_serialized_size() as usize;
         }
 
         Ok(vec)
     }
 }
 
-impl<T: SerializeFixed> SerializeDynamic for Vec<T> {
-    fn serialized_size(&self) -> usize {
-        usize::fixed_size() + self.len() * T::fixed_size()
+impl<T: SerializeFixedSized> SerializeDynamicSized for Vec<T> {
+    fn serialized_size(&self) -> u64 {
+        usize::fixed_serialized_size() + self.len() as u64 * T::fixed_serialized_size()
     }
 }
 
 impl Serialize for Vec<u8> {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size());
+        bytes.reserve(self.serialized_size() as usize);
         bytes.extend(self.len().serialize());
         bytes.extend(self);
 
@@ -168,7 +168,7 @@ impl Serialize for Vec<u8> {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let begin = usize::fixed_size();
+        let begin = usize::fixed_serialized_size() as usize;
         let end = begin + len;
 
         Ok(bytes
@@ -178,16 +178,16 @@ impl Serialize for Vec<u8> {
     }
 }
 
-impl SerializeDynamic for Vec<u8> {
-    fn serialized_size(&self) -> usize {
-        usize::fixed_size() + self.len()
+impl SerializeDynamicSized for Vec<u8> {
+    fn serialized_size(&self) -> u64 {
+        usize::fixed_serialized_size() + self.len() as u64
     }
 }
 
 impl Serialize for Vec<String> {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size());
+        bytes.reserve(self.serialized_size() as usize);
         bytes.extend(self.len().serialize());
 
         for value in self {
@@ -199,14 +199,14 @@ impl Serialize for Vec<String> {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
-        let mut begin = usize::fixed_size();
+        let mut begin = usize::fixed_serialized_size() as usize;
         let mut vec = Self::new();
         vec.reserve(len);
 
         for _ in 0..len {
             let value = String::deserialize(&bytes[begin..])
                 .map_err(|_| DbError::from("Vec<String> deserialization error: out of bounds"))?;
-            begin += value.serialized_size();
+            begin += value.serialized_size() as usize;
             vec.push(value);
         }
 
@@ -214,9 +214,9 @@ impl Serialize for Vec<String> {
     }
 }
 
-impl SerializeDynamic for Vec<String> {
-    fn serialized_size(&self) -> usize {
-        let mut size = usize::fixed_size();
+impl SerializeDynamicSized for Vec<String> {
+    fn serialized_size(&self) -> u64 {
+        let mut size = usize::fixed_serialized_size();
 
         for value in self {
             size += value.serialized_size();
@@ -234,10 +234,10 @@ mod tests {
     #[test]
     fn i64() {
         let original = -10_i64;
-        let serialized_size = i64::fixed_size();
+        let serialized_size = i64::fixed_serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = i64::deserialize(&bytes).unwrap();
@@ -256,10 +256,10 @@ mod tests {
     #[test]
     fn u64() {
         let original = 10_u64;
-        let serialized_size = u64::fixed_size();
+        let serialized_size = u64::fixed_serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = u64::deserialize(&bytes).unwrap();
@@ -278,10 +278,10 @@ mod tests {
     #[test]
     fn f64() {
         let original = -PI;
-        let serialized_size = f64::fixed_size();
+        let serialized_size = f64::fixed_serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = f64::deserialize(&bytes).unwrap();
@@ -300,10 +300,10 @@ mod tests {
     #[test]
     fn usize() {
         let original: usize = 10;
-        let serialized_size = usize::fixed_size();
+        let serialized_size = usize::fixed_serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = usize::deserialize(&bytes).unwrap();
@@ -317,7 +317,7 @@ mod tests {
         let serialized_size = original.serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = String::deserialize(&bytes).unwrap();
@@ -352,7 +352,7 @@ mod tests {
         let serialized_size = original.serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = Vec::<u8>::deserialize(&bytes).unwrap();
@@ -379,7 +379,7 @@ mod tests {
         let serialized_size = original.serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
 
         bytes.push(0);
         let deserialized = Vec::<u64>::deserialize(&bytes).unwrap();
@@ -406,7 +406,7 @@ mod tests {
         let serialized_size = original.serialized_size();
         let mut bytes = original.serialize();
 
-        assert_eq!(bytes.len(), serialized_size);
+        assert_eq!(bytes.len() as u64, serialized_size);
         bytes.push(0);
         let deserialized = Vec::<String>::deserialize(&bytes).unwrap();
 

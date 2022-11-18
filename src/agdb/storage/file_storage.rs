@@ -1,38 +1,85 @@
 use super::file_records::FileRecord;
-use super::file_storage_impl::FileStorageImpl;
+use super::file_records::FileRecords;
+use super::write_ahead_log::WriteAheadLog;
+use super::write_ahead_log::WriteAheadLogRecord;
 use super::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeFixedSized;
 use crate::DbError;
 use crate::DbIndex;
-use std::cell::Ref;
 use std::cell::RefCell;
-use std::cell::RefMut;
 use std::cmp::max;
 use std::cmp::min;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
 
 pub struct FileStorage {
-    data: RefCell<FileStorageImpl>,
+    file: RefCell<File>,
+    file_records: FileRecords,
+    transactions: u64,
+    wal: WriteAheadLog,
 }
 
 impl FileStorage {
-    pub fn new(filename: &String) -> Result<FileStorage, DbError> {
-        Ok(FileStorage {
-            data: RefCell::new(FileStorageImpl::new(filename)?),
-        })
+    pub fn new(filename: &String) -> Result<Self, DbError> {
+        let mut data = FileStorage {
+            file: RefCell::new(
+                OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .open(filename)?,
+            ),
+            file_records: FileRecords::new(),
+            transactions: 0,
+            wal: WriteAheadLog::new(filename)?,
+        };
+
+        data.apply_wal()?;
+        data.read_records()?;
+
+        Ok(data)
     }
 
     fn append(&mut self, bytes: &[u8]) -> Result<(), DbError> {
         let len = self.len()?;
-        self.data_mut().write(len, bytes)
+        self.write(len, bytes)
     }
 
-    fn data(&self) -> Ref<FileStorageImpl> {
-        self.data.borrow()
+    fn apply_wal(&mut self) -> Result<(), DbError> {
+        for record in self.wal.records()? {
+            self.apply_wal_record(record)?;
+        }
+
+        self.wal.clear()
     }
 
-    fn data_mut(&self) -> RefMut<FileStorageImpl> {
-        self.data.borrow_mut()
+    fn apply_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
+        if record.value.is_empty() {
+            self.set_len(record.pos)
+        } else {
+            self.write(record.pos, &record.value)
+        }
+    }
+
+    fn begin_transaction(&mut self) {
+        self.transactions += 1;
+    }
+
+    fn end_transaction(&mut self) -> Result<(), DbError> {
+        if self.transactions != 0 {
+            self.transactions -= 1;
+
+            if self.transactions == 0 {
+                self.wal.clear()?;
+            }
+        }
+
+        Ok(())
     }
 
     fn enlarge_value(&mut self, record: &mut FileRecord, new_size: u64) -> Result<u64, DbError> {
@@ -75,13 +122,13 @@ impl FileStorage {
         size: u64,
     ) -> Result<(), DbError> {
         if offset_from < offset_to {
-            self.data_mut().write(
+            self.write(
                 record.pos + offset_from,
                 &vec![0_u8; min(size, offset_to - offset_from) as usize],
             )
         } else {
             let position = max(offset_to + size, offset_from);
-            self.data_mut().write(
+            self.write(
                 record.pos + position,
                 &vec![0_u8; (offset_from + size - position) as usize],
             )
@@ -89,23 +136,98 @@ impl FileStorage {
     }
 
     fn invalidate_record(&mut self, pos: u64) -> Result<(), DbError> {
-        self.data_mut().write(pos, &0_u64.serialize())
+        self.write(pos, &0_u64.serialize())
     }
 
-    fn read_value(&self, record: &FileRecord) -> Result<Vec<u8>, DbError> {
-        self.data_mut().read_exact(record.pos, record.size)
+    fn new_record(&mut self, pos: u64, value_len: u64) -> FileRecord {
+        self.file_records.new_record(pos, value_len)
+    }
+
+    fn read_exact(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
+        self.file.borrow_mut().seek(SeekFrom::Start(pos))?;
+
+        let mut buffer = vec![0_u8; value_len as usize];
+        self.file.borrow_mut().read_exact(&mut buffer)?;
+
+        Ok(buffer)
+    }
+
+    fn read_record(&mut self) -> Result<FileRecord, DbError> {
+        let pos = self.file.borrow_mut().seek(SeekFrom::Current(0))?;
+        let bytes = self.read_exact(pos, DbIndex::fixed_serialized_size())?;
+        let index = DbIndex::deserialize(&bytes)?;
+        self.file.borrow_mut().seek(SeekFrom::Start(
+            pos + DbIndex::fixed_serialized_size() + index.meta(),
+        ))?;
+
+        Ok(FileRecord {
+            index: index.value(),
+            pos,
+            size: index.meta(),
+        })
+    }
+
+    fn read_records(&mut self) -> Result<(), DbError> {
+        let mut records: Vec<FileRecord> = vec![FileRecord::default()];
+        let len = self.len()?;
+        self.file.borrow_mut().seek(SeekFrom::Start(0))?;
+
+        while self.file.borrow_mut().seek(SeekFrom::Current(0))? < len {
+            records.push(self.read_record()?);
+        }
+
+        self.file_records.set_records(records);
+
+        Ok(())
+    }
+
+    fn read_value(&mut self, record: &FileRecord) -> Result<Vec<u8>, DbError> {
+        self.read_exact(record.pos, record.size)
+    }
+
+    fn record(&self, index: u64) -> Result<FileRecord, DbError> {
+        self.file_records.record(index)
+    }
+
+    fn record_wal(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
+        if pos == self.len()? {
+            self.wal.insert(pos, vec![])
+        } else {
+            let bytes = self.read_exact(pos, size)?;
+
+            self.wal.insert(pos, bytes)
+        }
+    }
+
+    fn records(&self) -> Vec<FileRecord> {
+        self.file_records.records()
+    }
+
+    fn remove_index(&mut self, index: u64) {
+        self.file_records.remove_index(index);
+    }
+
+    fn set_len(&mut self, len: u64) -> Result<(), DbError> {
+        Ok(self.file.borrow_mut().set_len(len)?)
+    }
+
+    fn set_pos(&mut self, index: u64, pos: u64) {
+        self.file_records.set_pos(index, pos);
+    }
+
+    fn set_size(&mut self, index: u64, size: u64) {
+        self.file_records.set_size(index, size);
     }
 
     fn shrink_index(&mut self, record: &FileRecord, mut current_pos: u64) -> Result<u64, DbError> {
         if record.pos != current_pos {
             let bytes = self.read_value(record)?;
-            self.data_mut().set_pos(record.index, current_pos);
-            self.data_mut().write(
+            self.set_pos(record.index, current_pos);
+            self.write(
                 current_pos,
                 &DbIndex::from_values(record.index, record.size).serialize(),
             )?;
-            self.data_mut()
-                .write(current_pos + DbIndex::fixed_serialized_size(), &bytes)?;
+            self.write(current_pos + DbIndex::fixed_serialized_size(), &bytes)?;
         }
 
         current_pos += DbIndex::fixed_serialized_size() + record.size;
@@ -135,6 +257,17 @@ impl FileStorage {
         Ok(new_size)
     }
 
+    fn truncate(&mut self, size: u64) -> Result<(), DbError> {
+        let current_size = self.file.borrow_mut().seek(SeekFrom::End(0))?;
+
+        if size < current_size {
+            self.record_wal(size, current_size - size)?;
+            self.set_len(size)?;
+        }
+
+        Ok(())
+    }
+
     fn update_record(
         &mut self,
         record: &mut FileRecord,
@@ -142,8 +275,8 @@ impl FileStorage {
         new_size: u64,
     ) -> Result<(), DbError> {
         self.invalidate_record(record.pos)?;
-        self.data_mut().set_pos(record.index, new_pos);
-        self.data_mut().set_size(record.index, new_size);
+        self.set_pos(record.index, new_pos);
+        self.set_size(record.index, new_size);
         record.pos = new_pos;
         record.size = new_size;
 
@@ -168,11 +301,18 @@ impl FileStorage {
 
         Ok(())
     }
+
+    fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
+        self.record_wal(pos, bytes.len() as u64)?;
+        self.file.borrow_mut().seek(SeekFrom::Start(pos))?;
+
+        Ok(self.file.borrow_mut().write_all(bytes)?)
+    }
 }
 
 impl Storage for FileStorage {
     fn commit(&mut self) -> Result<(), DbError> {
-        self.data_mut().end_transaction()
+        self.end_transaction()
     }
 
     fn insert<T: Serialize>(&mut self, value: &T) -> Result<DbIndex, DbError> {
@@ -189,7 +329,8 @@ impl Storage for FileStorage {
     }
 
     fn insert_bytes(&mut self, bytes: &[u8]) -> Result<DbIndex, DbError> {
-        let record = self.data_mut().new_record(self.len()?, bytes.len() as u64);
+        let len = self.len()?;
+        let record = self.new_record(len, bytes.len() as u64);
         let index = DbIndex::from_values(record.index, record.size);
 
         self.transaction();
@@ -206,18 +347,18 @@ impl Storage for FileStorage {
         offset: u64,
         bytes: &[u8],
     ) -> Result<u64, DbError> {
-        let mut record = self.data().record(index.value())?;
+        let mut record = self.record(index.value())?;
 
         self.transaction();
         let pos = self.ensure_size(&mut record, offset, bytes.len() as u64)?;
-        self.data_mut().write(pos + offset, bytes)?;
+        self.write(pos + offset, bytes)?;
         self.commit()?;
 
         Ok(record.size)
     }
 
     fn len(&self) -> Result<u64, DbError> {
-        self.data_mut().len()
+        Ok(self.file.borrow_mut().seek(SeekFrom::End(0))?)
     }
 
     fn move_at<T: Serialize>(
@@ -228,7 +369,7 @@ impl Storage for FileStorage {
         size: u64,
     ) -> Result<u64, DbError> {
         let bytes = self.value_as_bytes_at_size(index, offset_from, size)?;
-        let record = self.data().record(index.value())?;
+        let record = self.record(index.value())?;
 
         self.transaction();
         let value_len = self.insert_bytes_at(index, offset_to, &bytes)?;
@@ -239,8 +380,8 @@ impl Storage for FileStorage {
     }
 
     fn remove(&mut self, index: &DbIndex) -> Result<(), DbError> {
-        let record = self.data().record(index.value())?;
-        self.data_mut().remove_index(index.value());
+        let record = self.record(index.value())?;
+        self.remove_index(index.value());
 
         self.transaction();
         self.invalidate_record(record.pos)?;
@@ -261,7 +402,7 @@ impl Storage for FileStorage {
     }
 
     fn resize_value(&mut self, index: &DbIndex, new_size: u64) -> Result<u64, DbError> {
-        let mut record = self.data().record(index.value())?;
+        let mut record = self.record(index.value())?;
 
         self.transaction();
 
@@ -278,15 +419,15 @@ impl Storage for FileStorage {
 
     fn shrink_to_fit(&mut self) -> Result<(), DbError> {
         self.transaction();
-        let records = self.data().records();
+        let records = self.records();
         let size = self.shrink_records(records)?;
-        self.data_mut().truncate(size)?;
+        self.truncate(size)?;
 
         self.commit()
     }
 
     fn transaction(&mut self) {
-        self.data_mut().begin_transaction();
+        self.begin_transaction();
     }
 
     fn value<T: Serialize>(&self, index: &DbIndex) -> Result<T, DbError> {
@@ -307,11 +448,11 @@ impl Storage for FileStorage {
         offset: u64,
         size: u64,
     ) -> Result<Vec<u8>, DbError> {
-        let record = self.data().record(index.value())?;
+        let record = self.record(index.value())?;
         Self::validate_read_size(offset, size, record.size)?;
         let pos = record.pos + DbIndex::fixed_serialized_size() + offset;
 
-        self.data_mut().read_exact(pos, record.size)
+        self.read_exact(pos, record.size)
     }
 
     fn value_at<T: Serialize>(&self, index: &DbIndex, offset: u64) -> Result<T, DbError> {
@@ -319,7 +460,15 @@ impl Storage for FileStorage {
     }
 
     fn value_size(&self, index: &DbIndex) -> Result<u64, DbError> {
-        Ok(self.data().record(index.value())?.size)
+        Ok(self.record(index.value())?.size)
+    }
+}
+
+impl Drop for FileStorage {
+    fn drop(&mut self) {
+        if self.apply_wal().is_ok() {
+            let _ = self.wal.clear();
+        }
     }
 }
 

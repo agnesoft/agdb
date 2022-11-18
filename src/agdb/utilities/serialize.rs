@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn i64() {
         let original = -10_i64;
-        let serialized_size = u64::serialized_size();
+        let serialized_size = i64::serialized_size();
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len(), serialized_size);

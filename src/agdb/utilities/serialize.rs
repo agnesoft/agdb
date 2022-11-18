@@ -10,6 +10,21 @@ pub trait Serialize: Sized + Copy + Default {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
 }
 
+impl Serialize for i64 {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self::from_le_bytes(
+            bytes
+                .get(0..Self::serialized_size())
+                .ok_or_else(|| DbError::from("i64 deserialization error: out of bounds"))?
+                .try_into()?,
+        ))
+    }
+}
+
 impl Serialize for u64 {
     fn serialize(&self) -> Vec<u8> {
         self.to_le_bytes().to_vec()
@@ -20,6 +35,21 @@ impl Serialize for u64 {
             bytes
                 .get(0..Self::serialized_size())
                 .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
+                .try_into()?,
+        ))
+    }
+}
+
+impl Serialize for f64 {
+    fn serialize(&self) -> Vec<u8> {
+        self.to_le_bytes().to_vec()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self::from_le_bytes(
+            bytes
+                .get(0..Self::serialized_size())
+                .ok_or_else(|| DbError::from("f64 deserialization error: out of bounds"))?
                 .try_into()?,
         ))
     }
@@ -36,14 +66,36 @@ impl Serialize for usize {
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let value = u64::deserialize(bytes)?;
-        Ok(usize::try_from(value)
-            .map_err(|_| DbError::from("usize deserialization error: out of bounds"))?)
+        Ok(usize::try_from(value)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
+
+    #[test]
+    fn i64() {
+        let original = -10_i64;
+        let serialized_size = u64::serialized_size();
+        let mut bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        bytes.push(0);
+        let deserialized = i64::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn i64_out_of_bounds() {
+        assert_eq!(
+            i64::deserialize(&Vec::<u8>::new()),
+            Err(DbError::from("i64 deserialization error: out of bounds"))
+        );
+    }
 
     #[test]
     fn u64() {
@@ -64,6 +116,28 @@ mod tests {
         assert_eq!(
             u64::deserialize(&Vec::<u8>::new()),
             Err(DbError::from("u64 deserialization error: out of bounds"))
+        );
+    }
+
+    #[test]
+    fn f64() {
+        let original = -PI;
+        let serialized_size = f64::serialized_size();
+        let mut bytes = original.serialize();
+
+        assert_eq!(bytes.len(), serialized_size);
+
+        bytes.push(0);
+        let deserialized = f64::deserialize(&bytes).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn f64_out_of_bounds() {
+        assert_eq!(
+            f64::deserialize(&Vec::<u8>::new()),
+            Err(DbError::from("f64 deserialization error: out of bounds"))
         );
     }
 

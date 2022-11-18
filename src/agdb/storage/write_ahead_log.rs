@@ -24,9 +24,9 @@ impl WriteAheadLog {
 
     pub fn insert(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
         self.file.seek(SeekFrom::End(0))?;
-        self.file.write_all(&record.position.serialize())?;
+        self.file.write_all(&record.position.old_serialize())?;
         self.file
-            .write_all(&(record.bytes.len() as u64).serialize())?;
+            .write_all(&(record.bytes.len() as u64).old_serialize())?;
         self.file.write_all(&record.bytes)?;
 
         Ok(())
@@ -51,8 +51,8 @@ impl WriteAheadLog {
     }
 
     fn read_record(file: &mut File) -> Result<WriteAheadLogRecord, DbError> {
-        let position = u64::deserialize(&Self::read_exact(file, u64::fixed_size())?)?;
-        let size = u64::deserialize(&Self::read_exact(file, u64::fixed_size())?)?;
+        let position = u64::old_deserialize(&Self::read_exact(file, u64::fixed_size())?)?;
+        let size = u64::old_deserialize(&Self::read_exact(file, u64::fixed_size())?)?;
 
         Ok(WriteAheadLogRecord {
             position,

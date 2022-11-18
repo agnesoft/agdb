@@ -31,14 +31,14 @@ impl From<i64> for DictionaryIndex {
 }
 
 impl OldSerialize for DictionaryIndex {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
-            index: i64::deserialize(bytes)?,
+            index: i64::old_deserialize(bytes)?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        self.index.serialize()
+    fn old_serialize(&self) -> Vec<u8> {
+        self.index.old_serialize()
     }
 }
 

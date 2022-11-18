@@ -11,27 +11,27 @@ pub(crate) struct GraphDataStorageIndexes {
 }
 
 impl OldSerialize for GraphDataStorageIndexes {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(GraphDataStorageIndexes {
-            from: StorageIndex::deserialize(bytes)?,
-            to: StorageIndex::deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
-            from_meta: StorageIndex::deserialize(
+            from: StorageIndex::old_deserialize(bytes)?,
+            to: StorageIndex::old_deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
+            from_meta: StorageIndex::old_deserialize(
                 &bytes[(StorageIndex::fixed_size() as usize * 2)..],
             )?,
-            to_meta: StorageIndex::deserialize(
+            to_meta: StorageIndex::old_deserialize(
                 &bytes[(StorageIndex::fixed_size() as usize * 3)..],
             )?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
+    fn old_serialize(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![];
         bytes.reserve(4 * size_of::<i64>());
 
-        bytes.extend(self.from.serialize());
-        bytes.extend(self.to.serialize());
-        bytes.extend(self.from_meta.serialize());
-        bytes.extend(self.to_meta.serialize());
+        bytes.extend(self.from.old_serialize());
+        bytes.extend(self.to.old_serialize());
+        bytes.extend(self.from_meta.old_serialize());
+        bytes.extend(self.to_meta.old_serialize());
 
         bytes
     }

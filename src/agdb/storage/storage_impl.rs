@@ -72,7 +72,7 @@ impl<Data: StorageData> StorageImpl<Data> {
             size: record_size,
         };
 
-        self.append(&record.serialize())?;
+        self.append(&record.old_serialize())?;
         self.append(&bytes)?;
 
         Ok(record)
@@ -101,7 +101,7 @@ impl<Data: StorageData> StorageImpl<Data> {
     pub(crate) fn invalidate_record(&mut self, position: u64) -> Result<(), DbError> {
         self.write(
             SeekFrom::Start(position),
-            &StorageIndex::from(-1_i64).serialize(),
+            &StorageIndex::from(-1_i64).old_serialize(),
         )
     }
 
@@ -157,7 +157,7 @@ impl<Data: StorageData> StorageImpl<Data> {
 
         let position = self.data.seek(CURRENT)?;
         let mut record =
-            StorageRecord::deserialize(&self.read(CURRENT, StorageRecord::fixed_size())?)?;
+            StorageRecord::old_deserialize(&self.read(CURRENT, StorageRecord::fixed_size())?)?;
         record.position = position;
 
         self.data.seek(SeekFrom::Current(record.size as i64))?;
@@ -332,10 +332,10 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
     fn insert<V: OldSerialize>(&mut self, value: &V) -> Result<StorageIndex, DbError> {
         self.transaction();
         let position = self.size()?;
-        let bytes = value.serialize();
+        let bytes = value.old_serialize();
         let record = self.data.create_record(position, bytes.len() as u64);
 
-        self.append(&record.serialize())?;
+        self.append(&record.old_serialize())?;
         self.append(&bytes)?;
         self.commit()?;
 
@@ -350,7 +350,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
     ) -> Result<u64, DbError> {
         self.transaction();
         let mut record = self.data.record(index)?;
-        let bytes = V::serialize(value);
+        let bytes = V::old_serialize(value);
         self.ensure_record_size(&mut record, index, offset, bytes.len() as u64)?;
         self.write(Self::value_position(record.position, offset), &bytes)?;
         self.commit()?;
@@ -425,7 +425,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
 
     fn value<V: OldSerialize>(&mut self, index: &StorageIndex) -> Result<V, DbError> {
         let record = self.data.record(index)?;
-        V::deserialize(&self.read(Self::value_position(record.position, 0), record.size)?)
+        V::old_deserialize(&self.read(Self::value_position(record.position, 0), record.size)?)
     }
 
     fn value_at<V: OldSerialize>(
@@ -439,7 +439,7 @@ impl<Data: StorageData> Storage for StorageImpl<Data> {
             Self::value_read_size::<V>(record.size, offset)?,
         );
 
-        V::deserialize(&bytes?)
+        V::old_deserialize(&bytes?)
     }
 
     fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError> {

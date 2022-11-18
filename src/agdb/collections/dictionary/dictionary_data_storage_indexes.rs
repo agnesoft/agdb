@@ -9,19 +9,19 @@ pub(crate) struct DictionaryDataStorageIndexes {
 }
 
 impl OldSerialize for DictionaryDataStorageIndexes {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(DictionaryDataStorageIndexes {
-            index: StorageIndex::deserialize(bytes)?,
-            values: StorageIndex::deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
+            index: StorageIndex::old_deserialize(bytes)?,
+            values: StorageIndex::old_deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
+    fn old_serialize(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = vec![];
         bytes.reserve(4 * size_of::<i64>());
 
-        bytes.extend(self.index.serialize());
-        bytes.extend(self.values.serialize());
+        bytes.extend(self.index.old_serialize());
+        bytes.extend(self.values.old_serialize());
 
         bytes
     }

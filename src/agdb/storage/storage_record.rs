@@ -10,17 +10,17 @@ pub struct StorageRecord {
 }
 
 impl OldSerialize for StorageRecord {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(StorageRecord {
-            index: StorageIndex::deserialize(bytes)?,
+            index: StorageIndex::old_deserialize(bytes)?,
             position: 0,
-            size: u64::deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
+            size: u64::old_deserialize(&bytes[(StorageIndex::fixed_size() as usize)..])?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        let mut bytes = self.index.serialize();
-        bytes.extend(self.size.serialize());
+    fn old_serialize(&self) -> Vec<u8> {
+        let mut bytes = self.index.old_serialize();
+        bytes.extend(self.size.old_serialize());
 
         bytes
     }
@@ -54,8 +54,8 @@ mod tests {
             position: 64,
             size: 128,
         }
-        .serialize();
-        let record = StorageRecord::deserialize(&bytes).unwrap();
+        .old_serialize();
+        let record = StorageRecord::old_deserialize(&bytes).unwrap();
 
         assert_eq!(record.index, StorageIndex::from(1_i64));
         assert_eq!(record.position, 0);

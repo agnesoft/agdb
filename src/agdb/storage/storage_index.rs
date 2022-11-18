@@ -47,14 +47,14 @@ impl From<usize> for StorageIndex {
 }
 
 impl OldSerialize for StorageIndex {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
-            index: i64::deserialize(bytes)?,
+            index: i64::old_deserialize(bytes)?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        self.index.serialize()
+    fn old_serialize(&self) -> Vec<u8> {
+        self.index.old_serialize()
     }
 
     fn fixed_size() -> u64 {
@@ -100,8 +100,8 @@ mod tests {
     #[test]
     fn serialize() {
         let index = StorageIndex::from(1_i64);
-        let bytes = index.serialize();
-        let other = StorageIndex::deserialize(&bytes).unwrap();
+        let bytes = index.old_serialize();
+        let other = StorageIndex::old_deserialize(&bytes).unwrap();
 
         assert_eq!(index, other);
     }

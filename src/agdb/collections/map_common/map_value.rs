@@ -1,6 +1,6 @@
 use super::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct MapValue<K, T>

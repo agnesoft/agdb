@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use std::mem::size_of;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]

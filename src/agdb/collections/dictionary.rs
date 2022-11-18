@@ -9,7 +9,7 @@ mod dictionary_data_memory;
 
 use self::dictionary_data_memory::DictionaryDataMemory;
 use self::dictionary_impl::DictionaryImpl;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 

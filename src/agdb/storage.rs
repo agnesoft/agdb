@@ -11,7 +11,7 @@ mod write_ahead_log;
 
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::serialize::Serialize;
 use crate::DbIndex;
 

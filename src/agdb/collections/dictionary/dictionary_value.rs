@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Default)]

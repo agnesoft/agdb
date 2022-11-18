@@ -33,7 +33,7 @@ mod tests {
     use crate::storage::storage_index::StorageIndex;
     use crate::storage::OldStorage;
     use crate::test_utilities::test_file::TestFile;
-    use crate::utilities::serialize::OldSerialize;
+    use crate::utilities::old_serialize::OldSerialize;
     use std::fs::metadata;
 
     #[test]

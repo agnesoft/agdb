@@ -3,7 +3,7 @@ pub mod multi_map_impl;
 use self::multi_map_impl::MultiMapImpl;
 use super::map_common::map_data_memory::MapDataMemory;
 use super::map_common::MapCommon;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 

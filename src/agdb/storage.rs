@@ -1,4 +1,4 @@
-pub mod partial_storage;
+pub mod file_storage;
 pub mod storage_file;
 pub mod storage_index;
 
@@ -9,11 +9,11 @@ mod storage_record;
 mod storage_records;
 mod write_ahead_log;
 
-use self::partial_storage::PartialStorage;
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
 use crate::utilities::serialize::OldSerialize;
 use crate::utilities::serialize::Serialize;
+use crate::DbIndex;
 
 pub trait OldStorage {
     fn commit(&mut self) -> Result<(), DbError>;
@@ -45,21 +45,27 @@ pub trait OldStorage {
     fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError>;
 }
 
-pub trait Storage: PartialStorage {
-    fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError>;
+pub trait Storage {
+    fn commit(&mut self) -> Result<(), DbError>;
+    fn insert<T: Serialize>(&mut self, value: &T) -> Result<DbIndex, DbError>;
     fn insert_at<T: Serialize>(
         &mut self,
-        index: &StorageIndex,
+        index: &DbIndex,
         offset: usize,
         value: &T,
     ) -> Result<usize, DbError>;
     fn move_at<T: Serialize>(
         &mut self,
-        index: &StorageIndex,
+        index: &DbIndex,
         offset: usize,
         value: &T,
     ) -> Result<(), DbError>;
-    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<usize, DbError>;
-    fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError>;
-    fn value_at<T: Serialize>(&self, index: &StorageIndex, offset: usize) -> Result<T, DbError>;
+    fn replace<T: Serialize>(&mut self, index: &DbIndex, value: &T) -> Result<usize, DbError>;
+    fn value<T: Serialize>(&self, index: &DbIndex) -> Result<T, DbError>;
+    fn value_at<T: Serialize>(&self, index: &DbIndex, offset: usize) -> Result<T, DbError>;
+    fn resize_value(&mut self, index: &DbIndex, new_size: u64) -> Result<(), DbError>;
+    fn shrink_to_fit(&mut self) -> Result<(), DbError>;
+    fn size(&mut self) -> Result<u64, DbError>;
+    fn transaction(&mut self);
+    fn value_size(&self, index: &DbIndex) -> Result<usize, DbError>;
 }

@@ -49,10 +49,11 @@ mod tests {
     fn u64() {
         let original = 10_u64;
         let serialized_size = u64::serialized_size();
-        let bytes = original.serialize();
+        let mut bytes = original.serialize();
 
         assert_eq!(bytes.len(), serialized_size);
 
+        bytes.push(0);
         let deserialized = u64::deserialize(&bytes).unwrap();
 
         assert_eq!(original, deserialized);
@@ -70,10 +71,11 @@ mod tests {
     fn usize() {
         let original: usize = 10;
         let serialized_size = usize::serialized_size();
-        let bytes = original.serialize();
+        let mut bytes = original.serialize();
 
         assert_eq!(bytes.len(), serialized_size);
 
+        bytes.push(0);
         let deserialized = usize::deserialize(&bytes).unwrap();
 
         assert_eq!(original, deserialized);

@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_u8() {
+    fn ar_u8() {
         let original = vec![1_u8, 2_u8, 3_u8];
         let serialized_size = original.serialized_size();
         let mut bytes = original.serialize();
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn vec_u8_out_of_bounds() {
+    fn ar_u8_out_of_bounds() {
         let mut bytes = vec![1_u8, 2_u8, 3_u8].serialize();
         bytes.pop();
 
@@ -251,6 +251,16 @@ mod tests {
     fn vec_string_out_of_bounds() {
         let mut bytes = vec!["Hello".to_string(), "World".to_string()].serialize();
         bytes.pop();
+
+        assert_eq!(
+            Vec::<String>::deserialize(&bytes),
+            Err(DbError::from(
+                "Vec<String> deserialization error: out of bounds"
+            ))
+        );
+
+        let len: usize = 1;
+        bytes = len.serialize();
 
         assert_eq!(
             Vec::<String>::deserialize(&bytes),

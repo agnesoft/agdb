@@ -1,39 +1,39 @@
 use super::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct MapValue<K, T>
 where
-    K: Clone + Default + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + OldSerialize,
+    T: Clone + Default + OldSerialize,
 {
     pub state: MapValueState,
     pub key: K,
     pub value: T,
 }
 
-impl<K, T> Serialize for MapValue<K, T>
+impl<K, T> OldSerialize for MapValue<K, T>
 where
-    K: Clone + Default + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + OldSerialize,
+    T: Clone + Default + OldSerialize,
 {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
-            state: MapValueState::deserialize(bytes)?,
-            key: K::deserialize(&bytes[(MapValueState::fixed_size() as usize)..])?,
-            value: T::deserialize(
+            state: MapValueState::old_deserialize(bytes)?,
+            key: K::old_deserialize(&bytes[(MapValueState::fixed_size() as usize)..])?,
+            value: T::old_deserialize(
                 &bytes[((MapValueState::fixed_size() + K::fixed_size()) as usize)..],
             )?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
+    fn old_serialize(&self) -> Vec<u8> {
         let mut data = Vec::<u8>::new();
         data.reserve(Self::fixed_size() as usize);
-        data.extend(self.state.serialize());
-        data.extend(self.key.serialize());
-        data.extend(self.value.serialize());
+        data.extend(self.state.old_serialize());
+        data.extend(self.key.old_serialize());
+        data.extend(self.value.old_serialize());
 
         data
     }
@@ -78,8 +78,8 @@ mod tests {
             key: 1_i64,
             value: 10_i64,
         };
-        let bytes = key_value.serialize();
-        let other = MapValue::deserialize(&bytes);
+        let bytes = key_value.old_serialize();
+        let other = MapValue::old_deserialize(&bytes);
         assert_eq!(other, Ok(key_value));
     }
 
@@ -87,7 +87,7 @@ mod tests {
     fn out_of_bounds() {
         let bytes = vec![0_u8; 16];
         assert_eq!(
-            MapValue::<i64, i64>::deserialize(&bytes)
+            MapValue::<i64, i64>::old_deserialize(&bytes)
                 .unwrap_err()
                 .description,
             "i64 deserialization error: out of bounds"

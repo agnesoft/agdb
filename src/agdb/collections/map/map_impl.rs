@@ -3,7 +3,7 @@ use crate::collections::map_common::map_iterator::MapIterator;
 use crate::collections::map_common::map_value_state::MapValueState;
 use crate::collections::map_common::MapCommon;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -11,8 +11,8 @@ use std::marker::PhantomData;
 
 pub struct MapImpl<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: MapData<K, T>,
 {
     pub(crate) map_common: MapCommon<K, T, Data>,
@@ -22,8 +22,8 @@ where
 #[allow(dead_code)]
 impl<K, T, Data> MapImpl<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: MapData<K, T>,
 {
     pub fn capacity(&self) -> u64 {

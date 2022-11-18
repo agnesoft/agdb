@@ -1,8 +1,10 @@
+use std::array::TryFromSliceError;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as FMTResult;
 use std::io::Error as IOError;
+use std::num::TryFromIntError;
 use std::panic::Location;
 use std::string::FromUtf8Error;
 
@@ -67,6 +69,20 @@ impl From<String> for DbError {
             cause: None,
             source_location: *Location::caller(),
         }
+    }
+}
+
+impl From<TryFromSliceError> for DbError {
+    #[track_caller]
+    fn from(error: TryFromSliceError) -> Self {
+        DbError::from(error.to_string())
+    }
+}
+
+impl From<TryFromIntError> for DbError {
+    #[track_caller]
+    fn from(error: TryFromIntError) -> Self {
+        DbError::from(error.to_string())
     }
 }
 
@@ -152,6 +168,20 @@ mod tests {
     #[test]
     fn from_utf8_error() {
         let _error = DbError::from(String::from_utf8(vec![0xdf, 0xff]).unwrap_err());
+    }
+
+    #[test]
+    fn from_try_from_slice_error() {
+        let data = Vec::<u8>::new();
+        let bytes: &[u8] = &data;
+        let source_error = TryInto::<[u8; 8]>::try_into(bytes).unwrap_err();
+        let _error = DbError::from(source_error);
+    }
+
+    #[test]
+    fn from_try_int_error() {
+        let source_error = TryInto::<u32>::try_into(u64::MAX).unwrap_err();
+        let _error = DbError::from(source_error);
     }
 
     #[test]

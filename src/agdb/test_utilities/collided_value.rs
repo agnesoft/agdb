@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -13,18 +13,18 @@ impl<T> CollidedValue<T> {
     }
 }
 
-impl<T> Serialize for CollidedValue<T>
+impl<T> OldSerialize for CollidedValue<T>
 where
-    T: Serialize,
+    T: OldSerialize,
 {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
-            value: T::deserialize(bytes)?,
+            value: T::old_deserialize(bytes)?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        self.value.serialize()
+    fn old_serialize(&self) -> Vec<u8> {
+        self.value.old_serialize()
     }
 }
 
@@ -56,8 +56,8 @@ mod tests {
     #[test]
     fn serialize() {
         let value = CollidedValue::new(1_i64);
-        let bytes = value.serialize();
-        let other = CollidedValue::deserialize(&bytes).unwrap();
+        let bytes = value.old_serialize();
+        let other = CollidedValue::old_deserialize(&bytes).unwrap();
 
         assert_eq!(value, other);
     }

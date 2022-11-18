@@ -3,7 +3,7 @@ use crate::db::db_error::DbError;
 use crate::storage::storage_file::StorageFile;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use std::cell::RefCell;
 use std::cell::RefMut;
 use std::cmp::max;
@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 pub struct StorageVec<T, Data = StorageFile>
 where
-    T: Serialize,
+    T: OldSerialize,
     Data: Storage,
 {
     pub(crate) storage: Rc<RefCell<Data>>,
@@ -26,7 +26,7 @@ where
 #[allow(dead_code)]
 impl<T, Data> StorageVec<T, Data>
 where
-    T: Serialize,
+    T: OldSerialize,
     Data: Storage,
 {
     pub fn capacity(&self) -> u64 {
@@ -270,7 +270,7 @@ where
 
 impl<T, Data> TryFrom<Rc<RefCell<Data>>> for StorageVec<T, Data>
 where
-    T: Serialize,
+    T: OldSerialize,
     Data: Storage,
 {
     type Error = DbError;
@@ -289,7 +289,7 @@ where
     }
 }
 
-impl<T: Serialize, Data: Storage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)>
+impl<T: OldSerialize, Data: Storage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)>
     for StorageVec<T, Data>
 {
     type Error = DbError;

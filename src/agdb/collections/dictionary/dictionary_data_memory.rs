@@ -3,12 +3,12 @@ use super::dictionary_index::DictionaryIndex;
 use super::dictionary_value::DictionaryValue;
 use crate::collections::multi_map::MultiMap;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 
 pub struct DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     pub(crate) index: MultiMap<u64, DictionaryIndex>,
     pub(crate) values: Vec<DictionaryValue<T>>,
@@ -16,7 +16,7 @@ where
 
 impl<T> DictionaryData<T> for DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     fn capacity(&self) -> u64 {
         self.values.len() as u64
@@ -83,7 +83,7 @@ where
 
 impl<T> Default for DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + Serialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
 {
     fn default() -> Self {
         Self {

@@ -10,7 +10,7 @@ use self::map_iterator::MapIterator;
 use self::map_value::MapValue;
 use self::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cmp::max;
 use std::hash::Hash;
@@ -18,8 +18,8 @@ use std::marker::PhantomData;
 
 pub struct MapCommon<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: MapData<K, T>,
 {
     pub data: Data,
@@ -29,8 +29,8 @@ where
 #[allow(dead_code)]
 impl<K, T, Data> MapCommon<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: MapData<K, T>,
 {
     pub fn capacity(&self) -> u64 {
@@ -157,8 +157,8 @@ where
 
 impl<K, T, Data> From<Data> for MapCommon<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + Serialize,
-    T: Clone + Default + Serialize,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + OldSerialize,
     Data: MapData<K, T>,
 {
     fn from(data: Data) -> Self {

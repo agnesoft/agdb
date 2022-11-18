@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct DictionaryIndex {
@@ -30,15 +30,15 @@ impl From<i64> for DictionaryIndex {
     }
 }
 
-impl Serialize for DictionaryIndex {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+impl OldSerialize for DictionaryIndex {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
-            index: i64::deserialize(bytes)?,
+            index: i64::old_deserialize(bytes)?,
         })
     }
 
-    fn serialize(&self) -> Vec<u8> {
-        self.index.serialize()
+    fn old_serialize(&self) -> Vec<u8> {
+        self.index.old_serialize()
     }
 }
 

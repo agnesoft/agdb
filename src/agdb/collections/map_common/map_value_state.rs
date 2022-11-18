@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::OldSerialize;
 use std::mem::size_of;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
@@ -10,8 +10,8 @@ pub enum MapValueState {
     Valid,
 }
 
-impl Serialize for MapValueState {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+impl OldSerialize for MapValueState {
+    fn old_deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         match bytes.first() {
             Some(0) => Ok(MapValueState::Empty),
             Some(1) => Ok(MapValueState::Valid),
@@ -20,7 +20,7 @@ impl Serialize for MapValueState {
         }
     }
 
-    fn serialize(&self) -> Vec<u8> {
+    fn old_serialize(&self) -> Vec<u8> {
         match self {
             MapValueState::Empty => vec![0_u8],
             MapValueState::Deleted => vec![2_u8],
@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn bad_deserialization() {
         assert_eq!(
-            MapValueState::deserialize(&[10_u8]),
+            MapValueState::old_deserialize(&[10_u8]),
             Err(DbError::from("value out of bounds"))
         );
     }
@@ -68,8 +68,8 @@ mod tests {
             MapValueState::Empty,
             MapValueState::Deleted,
         ];
-        let bytes = data.serialize();
-        let other = Vec::<MapValueState>::deserialize(&bytes).unwrap();
+        let bytes = data.old_serialize();
+        let other = Vec::<MapValueState>::old_deserialize(&bytes).unwrap();
         assert_eq!(data, other);
     }
 }

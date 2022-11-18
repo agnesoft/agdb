@@ -3,7 +3,7 @@ use super::map_value::MapValue;
 use super::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::Storage;
+use crate::storage::OldStorage;
 use crate::utilities::serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 use std::rc::Rc;
 
-pub struct MapDataStorage<K, T, Data: Storage>
+pub struct MapDataStorage<K, T, Data: OldStorage>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + OldSerialize,
@@ -29,7 +29,7 @@ impl<K, T, Data> MapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + OldSerialize,
-    Data: Storage,
+    Data: OldStorage,
 {
     pub fn count(&self) -> u64 {
         self.count
@@ -54,7 +54,7 @@ impl<K, T, Data> MapData<K, T> for MapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + OldSerialize,
-    Data: Storage,
+    Data: OldStorage,
 {
     fn capacity(&self) -> u64 {
         self.capacity
@@ -133,7 +133,7 @@ impl<K, T, Data> TryFrom<Rc<RefCell<Data>>> for MapDataStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + OldSerialize,
-    Data: Storage,
+    Data: OldStorage,
 {
     type Error = DbError;
 
@@ -159,7 +159,7 @@ impl<K, T, Data> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for MapDataStorage<K
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + OldSerialize,
-    Data: Storage,
+    Data: OldStorage,
 {
     type Error = DbError;
 

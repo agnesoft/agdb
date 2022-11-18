@@ -1,3 +1,4 @@
+pub mod partial_storage;
 pub mod storage_file;
 pub mod storage_index;
 
@@ -8,11 +9,13 @@ mod storage_record;
 mod storage_records;
 mod write_ahead_log;
 
+use self::partial_storage::PartialStorage;
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
 use crate::utilities::serialize::OldSerialize;
+use crate::utilities::serialize::Serialize;
 
-pub trait Storage {
+pub trait OldStorage {
     fn commit(&mut self) -> Result<(), DbError>;
     fn insert<V: OldSerialize>(&mut self, value: &V) -> Result<StorageIndex, DbError>;
     fn insert_at<V: OldSerialize>(
@@ -40,4 +43,23 @@ pub trait Storage {
         offset: u64,
     ) -> Result<V, DbError>;
     fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError>;
+}
+
+pub trait Storage: PartialStorage {
+    fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError>;
+    fn insert_at<T: Serialize>(
+        &mut self,
+        index: &StorageIndex,
+        offset: usize,
+        value: &T,
+    ) -> Result<usize, DbError>;
+    fn move_at<T: Serialize>(
+        &mut self,
+        index: &StorageIndex,
+        offset: usize,
+        value: &T,
+    ) -> Result<(), DbError>;
+    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<usize, DbError>;
+    fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError>;
+    fn value_at<T: Serialize>(&self, index: &StorageIndex, offset: usize) -> Result<T, DbError>;
 }

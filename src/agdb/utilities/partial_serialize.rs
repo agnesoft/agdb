@@ -1,4 +1,4 @@
-use crate::utilities::serialize::Serialize;
+use crate::utilities::old_serialize::Serialize;
 use crate::DbError;
 use std::any::type_name;
 

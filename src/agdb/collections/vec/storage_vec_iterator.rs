@@ -1,6 +1,6 @@
 use crate::collections::storage_vec::StorageVec;
 use crate::storage::OldStorage;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use std::marker::PhantomData;
 
 pub struct StorageVecIterator<'a, T, Data>

@@ -1,7 +1,7 @@
 use super::dictionary_index::DictionaryIndex;
 use super::dictionary_value::DictionaryValue;
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::OldSerialize;
+use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 
 pub trait DictionaryData<T>

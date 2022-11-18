@@ -1,4 +1,4 @@
-use crate::{utilities::serialize::Serialize, DbError};
+use crate::{utilities::old_serialize::Serialize, DbError};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbIndex {

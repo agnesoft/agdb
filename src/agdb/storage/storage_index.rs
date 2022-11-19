@@ -2,7 +2,7 @@ use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeFixedSized;
 
-#[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct StorageIndex {
     pub(crate) index: u64,
 }

@@ -68,7 +68,7 @@ impl Serialize for DbIndex {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
-        Ok(DbIndex {
+        Ok(Self {
             value: u64::deserialize(bytes)?,
             meta: u64::deserialize(&bytes[u64::serialized_size() as usize..])?,
         })

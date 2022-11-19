@@ -1,11 +1,11 @@
 use super::VecStorage;
 use crate::collections::vec::vec_dynamic_sized::VecDynamicSized;
 use crate::collections::vec::vec_dynamic_sized_iterator::VecDynamicSizedIterator;
+use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
 use crate::utilities::serialize::SerializeDynamicSized;
 use crate::utilities::serialize::SerializeFixedSized;
 use crate::DbError;
-use crate::DbIndex;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::marker::PhantomData;
@@ -16,11 +16,11 @@ where
     T: SerializeDynamicSized,
     Data: Storage,
 {
-    fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError> {
-        let indexes = storage.borrow_mut().value::<Vec<DbIndex>>(index)?;
+    fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
+        let indexes = storage.borrow_mut().value::<Vec<StorageIndex>>(index)?;
         let len = indexes.len() as u64;
         let capacity = (storage.borrow_mut().value_size(index)? - u64::serialized_size())
-            / DbIndex::serialized_size();
+            / StorageIndex::serialized_size();
 
         Ok(VecStorage {
             phantom_data: PhantomData,
@@ -197,7 +197,7 @@ mod tests {
         ));
 
         assert_eq!(
-            VecStorage::<String>::from_storage(storage, &DbIndex::from(1_u64))
+            VecStorage::<String>::from_storage(storage, &StorageIndex::from(1_u64))
                 .err()
                 .unwrap(),
             DbError::from("FileStorage error: index (1) not found")
@@ -292,7 +292,7 @@ mod tests {
 
         let indexes = storage
             .borrow_mut()
-            .value::<Vec<DbIndex>>(&vec.storage_index())
+            .value::<Vec<StorageIndex>>(&vec.storage_index())
             .unwrap();
 
         let mut values = Vec::<String>::new();

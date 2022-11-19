@@ -2,11 +2,11 @@ pub mod vec_storage_dynamic_sized;
 pub mod vec_storage_fixed_sized;
 
 use crate::storage::file_storage::FileStorage;
+use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeFixedSized;
 use crate::DbError;
-use crate::DbIndex;
 use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -18,8 +18,8 @@ where
 {
     phantom_data: PhantomData<T>,
     storage: Rc<RefCell<Data>>,
-    storage_index: DbIndex,
-    indexes: Vec<DbIndex>,
+    storage_index: StorageIndex,
+    indexes: Vec<StorageIndex>,
     len: u64,
     capacity: u64,
 }
@@ -55,12 +55,12 @@ where
         })
     }
 
-    pub fn storage_index(&self) -> DbIndex {
+    pub fn storage_index(&self) -> StorageIndex {
         self.storage_index
     }
 
     fn index_offset(index: u64) -> u64 {
-        Self::offset::<DbIndex>(index)
+        Self::offset::<StorageIndex>(index)
     }
 
     fn offset<V: SerializeFixedSized>(index: u64) -> u64 {
@@ -93,7 +93,7 @@ where
             self.reallocate_indexes(size)?;
         }
 
-        let mut new_indexes = Vec::<DbIndex>::new();
+        let mut new_indexes = Vec::<StorageIndex>::new();
         new_indexes.reserve((size - self.len()) as usize);
 
         for _ in self.len()..size {
@@ -101,9 +101,8 @@ where
             new_indexes.push(index);
         }
 
-        self.indexes.extend(&new_indexes);
-
         let bytes = new_indexes.serialize();
+        self.indexes.extend(new_indexes.into_iter());
 
         self.storage.borrow_mut().insert_bytes_at(
             &self.storage_index,
@@ -121,7 +120,7 @@ where
 
     fn reallocate_indexes(&mut self, new_capacity: u64) -> Result<(), DbError> {
         self.indexes.shrink_to_fit();
-        self.reallocate::<DbIndex>(new_capacity)
+        self.reallocate::<StorageIndex>(new_capacity)
     }
 
     fn reallocate<V: SerializeFixedSized>(&mut self, new_capacity: u64) -> Result<(), DbError> {
@@ -152,7 +151,7 @@ where
         self.storage
             .borrow_mut()
             .insert_at(&self.storage_index, 0, &size)?;
-        self.indexes.resize(size as usize, DbIndex::default());
+        self.indexes.resize(size as usize, StorageIndex::default());
         self.len = size;
 
         Ok(())

@@ -1,9 +1,9 @@
 use super::VecStorage;
 use crate::collections::vec::vec_fixed_sized::VecFixedSized;
 use crate::collections::vec::vec_fixed_sized_iterator::VecFixedSizedIterator;
+use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
 use crate::DbError;
-use crate::DbIndex;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::marker::PhantomData;
@@ -16,7 +16,7 @@ where
     T: SerializeFixedSized,
     Data: Storage,
 {
-    fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError> {
+    fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
         let len = storage.borrow_mut().value::<u64>(index)?;
         let capacity = (storage.borrow_mut().value_size(index)? - u64::serialized_size())
             / T::serialized_size();
@@ -171,7 +171,7 @@ mod tests {
         ));
 
         assert_eq!(
-            VecStorage::<i64>::from_storage(storage, &DbIndex::from(1_u64))
+            VecStorage::<i64>::from_storage(storage, &StorageIndex::from(1_u64))
                 .err()
                 .unwrap(),
             DbError::from("FileStorage error: index (1) not found")

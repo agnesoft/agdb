@@ -3,52 +3,51 @@ pub mod storage_index;
 
 mod file_record;
 mod file_records;
-mod file_storage_impl;
 mod write_ahead_log;
 
+use self::storage_index::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::DbError;
-use crate::DbIndex;
 
 pub trait Storage {
     fn commit(&mut self) -> Result<(), DbError>;
-    fn insert<T: Serialize>(&mut self, value: &T) -> Result<DbIndex, DbError>;
+    fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError>;
     fn insert_at<T: Serialize>(
         &mut self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset: u64,
         value: &T,
     ) -> Result<u64, DbError>;
-    fn insert_bytes(&mut self, bytes: &[u8]) -> Result<DbIndex, DbError>;
+    fn insert_bytes(&mut self, bytes: &[u8]) -> Result<StorageIndex, DbError>;
     fn insert_bytes_at(
         &mut self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset: u64,
         bytes: &[u8],
     ) -> Result<u64, DbError>;
     fn len(&self) -> Result<u64, DbError>;
     fn move_at(
         &mut self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset_from: u64,
         offset_to: u64,
         size: u64,
     ) -> Result<u64, DbError>;
-    fn remove(&mut self, index: &DbIndex) -> Result<(), DbError>;
-    fn replace<T: Serialize>(&mut self, index: &DbIndex, value: &T) -> Result<u64, DbError>;
-    fn replace_with_bytes(&mut self, index: &DbIndex, bytes: &[u8]) -> Result<u64, DbError>;
-    fn resize_value(&mut self, index: &DbIndex, new_size: u64) -> Result<u64, DbError>;
+    fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError>;
+    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<u64, DbError>;
+    fn replace_with_bytes(&mut self, index: &StorageIndex, bytes: &[u8]) -> Result<u64, DbError>;
+    fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<u64, DbError>;
     fn shrink_to_fit(&mut self) -> Result<(), DbError>;
     fn transaction(&mut self);
-    fn value<T: Serialize>(&self, index: &DbIndex) -> Result<T, DbError>;
-    fn value_as_bytes(&self, index: &DbIndex) -> Result<Vec<u8>, DbError>;
-    fn value_as_bytes_at(&self, index: &DbIndex, offset: u64) -> Result<Vec<u8>, DbError>;
+    fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError>;
+    fn value_as_bytes(&self, index: &StorageIndex) -> Result<Vec<u8>, DbError>;
+    fn value_as_bytes_at(&self, index: &StorageIndex, offset: u64) -> Result<Vec<u8>, DbError>;
     fn value_as_bytes_at_size(
         &self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset: u64,
         size: u64,
     ) -> Result<Vec<u8>, DbError>;
-    fn value_at<T: Serialize>(&self, index: &DbIndex, offset: u64) -> Result<T, DbError>;
-    fn value_size(&self, index: &DbIndex) -> Result<u64, DbError>;
+    fn value_at<T: Serialize>(&self, index: &StorageIndex, offset: u64) -> Result<T, DbError>;
+    fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError>;
 }

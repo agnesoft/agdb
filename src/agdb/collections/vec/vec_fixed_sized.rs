@@ -1,8 +1,8 @@
 use super::vec_fixed_sized_iterator::VecFixedSizedIterator;
+use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
 use crate::utilities::serialize::SerializeFixedSized;
 use crate::DbError;
-use crate::DbIndex;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -11,7 +11,7 @@ where
     T: SerializeFixedSized,
     Data: Storage,
 {
-    fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError>;
+    fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError>;
     fn iter(&self) -> VecFixedSizedIterator<T, Data>;
     fn push(&mut self, value: &T) -> Result<(), DbError>;
     fn remove(&mut self, index: u64) -> Result<(), DbError>;

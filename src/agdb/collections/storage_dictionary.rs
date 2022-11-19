@@ -3,8 +3,8 @@ use super::dictionary::dictionary_data_storage_indexes::DictionaryDataStorageInd
 use super::dictionary::dictionary_impl::DictionaryImpl;
 use super::dictionary::dictionary_index::DictionaryIndex;
 use super::dictionary::dictionary_value::DictionaryValue;
+use super::old_storage_vec::OldStorageVec;
 use super::storage_multi_map::StorageMultiMap;
-use super::storage_vec::StorageVec;
 use crate::db::db_error::DbError;
 use crate::old_storage::storage_file::StorageFile;
 use crate::old_storage::storage_index::StorageIndex;
@@ -38,7 +38,7 @@ where
 
     fn try_from(storage: Rc<RefCell<Data>>) -> Result<Self, Self::Error> {
         let index = StorageMultiMap::<u64, DictionaryIndex, Data>::try_from(storage.clone())?;
-        let mut values = StorageVec::<DictionaryValue<T>, Data>::try_from(storage.clone())?;
+        let mut values = OldStorageVec::<DictionaryValue<T>, Data>::try_from(storage.clone())?;
         values.push(&DictionaryValue::default())?;
 
         let storage_index = storage.borrow_mut().insert(&DictionaryDataStorageIndexes {
@@ -76,7 +76,7 @@ where
             storage_with_index.0.clone(),
             indexes.index,
         ))?;
-        let values = StorageVec::<DictionaryValue<T>, Data>::try_from((
+        let values = OldStorageVec::<DictionaryValue<T>, Data>::try_from((
             storage_with_index.0.clone(),
             indexes.values,
         ))?;

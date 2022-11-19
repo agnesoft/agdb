@@ -1,4 +1,4 @@
-use super::vec::storage_vec_iterator::StorageVecIterator;
+use super::vec::old_storage_vec_iterator::OldStorageVecIterator;
 use crate::db::db_error::DbError;
 use crate::old_storage::storage_file::StorageFile;
 use crate::old_storage::storage_index::StorageIndex;
@@ -10,7 +10,7 @@ use std::cmp::max;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-pub struct StorageVec<T, Data = StorageFile>
+pub struct OldStorageVec<T, Data = StorageFile>
 where
     T: OldSerialize,
     Data: OldStorage,
@@ -24,7 +24,7 @@ where
 }
 
 #[allow(dead_code)]
-impl<T, Data> StorageVec<T, Data>
+impl<T, Data> OldStorageVec<T, Data>
 where
     T: OldSerialize,
     Data: OldStorage,
@@ -37,8 +37,8 @@ where
         self.len() == 0
     }
 
-    pub fn iter(&self) -> StorageVecIterator<T, Data> {
-        StorageVecIterator::<T, Data> {
+    pub fn iter(&self) -> OldStorageVecIterator<T, Data> {
+        OldStorageVecIterator::<T, Data> {
             index: 0,
             vec: self,
             phantom_data: PhantomData,
@@ -268,7 +268,7 @@ where
     }
 }
 
-impl<T, Data> TryFrom<Rc<RefCell<Data>>> for StorageVec<T, Data>
+impl<T, Data> TryFrom<Rc<RefCell<Data>>> for OldStorageVec<T, Data>
 where
     T: OldSerialize,
     Data: OldStorage,
@@ -290,7 +290,7 @@ where
 }
 
 impl<T: OldSerialize, Data: OldStorage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)>
-    for StorageVec<T, Data>
+    for OldStorageVec<T, Data>
 {
     type Error = DbError;
 
@@ -346,7 +346,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -361,7 +361,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
 
         assert!(vec.is_empty());
 
@@ -377,7 +377,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(vec.len(), 0);
 
@@ -395,7 +395,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
@@ -413,7 +413,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage.clone()).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -433,7 +433,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -450,7 +450,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -467,7 +467,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(vec.remove(0), Err(DbError::from("index out of bounds")));
     }
@@ -479,7 +479,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         assert_eq!(vec.capacity(), 0);
 
         vec.reserve(20).unwrap();
@@ -494,7 +494,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.reserve(20).unwrap();
         vec.reserve(10).unwrap();
 
@@ -508,7 +508,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage.clone()).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -530,7 +530,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage.clone()).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -560,7 +560,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage.clone()).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -582,7 +582,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage.clone()).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -604,7 +604,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -623,7 +623,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(
             vec.set_value(0, &10),
@@ -638,7 +638,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -661,7 +661,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
@@ -677,7 +677,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -695,14 +695,14 @@ mod tests_fixed_size {
         let index;
 
         {
-            let mut vec = StorageVec::<i64>::try_from(storage.clone()).unwrap();
+            let mut vec = OldStorageVec::<i64>::try_from(storage.clone()).unwrap();
             vec.push(&1).unwrap();
             vec.push(&3).unwrap();
             vec.push(&5).unwrap();
             index = vec.storage_index();
         }
 
-        let vec = StorageVec::<i64>::try_from((storage, index)).unwrap();
+        let vec = OldStorageVec::<i64>::try_from((storage, index)).unwrap();
 
         assert_eq!(vec.to_vec(), Ok(vec![1_i64, 3_i64, 5_i64]));
     }
@@ -715,7 +715,7 @@ mod tests_fixed_size {
         ));
 
         assert_eq!(
-            StorageVec::<i64>::try_from((storage, StorageIndex::from(1_i64)))
+            OldStorageVec::<i64>::try_from((storage, StorageIndex::from(1_i64)))
                 .err()
                 .unwrap(),
             DbError::from("index '1' not found")
@@ -729,7 +729,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<i64>::try_from(storage).unwrap();
         vec.push(&1).unwrap();
         vec.push(&3).unwrap();
         vec.push(&5).unwrap();
@@ -746,7 +746,7 @@ mod tests_fixed_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let vec = StorageVec::<i64>::try_from(storage).unwrap();
+        let vec = OldStorageVec::<i64>::try_from(storage).unwrap();
 
         assert_eq!(vec.value(0), Err(DbError::from("index out of bounds")));
     }
@@ -764,7 +764,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -783,7 +783,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
 
         assert!(vec.is_empty());
 
@@ -799,7 +799,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
 
         assert_eq!(vec.len(), 0);
 
@@ -818,7 +818,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
@@ -837,7 +837,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage.clone()).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -872,7 +872,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -897,7 +897,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -918,7 +918,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
 
         assert_eq!(vec.remove(0), Err(DbError::from("index out of bounds")));
     }
@@ -930,7 +930,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         assert_eq!(vec.capacity(), 0);
 
         vec.reserve(20).unwrap();
@@ -945,7 +945,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.reserve(20).unwrap();
         vec.reserve(10).unwrap();
 
@@ -959,7 +959,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -987,7 +987,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1015,7 +1015,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1041,7 +1041,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1066,7 +1066,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1087,7 +1087,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
 
         assert_eq!(
             vec.set_value(0, &"".to_string()),
@@ -1102,7 +1102,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1126,7 +1126,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
@@ -1142,7 +1142,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1169,7 +1169,7 @@ mod tests_dynamic_size {
         let index;
 
         {
-            let mut vec = StorageVec::<String>::try_from(storage.clone()).unwrap();
+            let mut vec = OldStorageVec::<String>::try_from(storage.clone()).unwrap();
             vec.push(&"Hello".to_string()).unwrap();
             vec.push(&", ".to_string()).unwrap();
             vec.push(&"World".to_string()).unwrap();
@@ -1177,7 +1177,7 @@ mod tests_dynamic_size {
             index = vec.storage_index();
         }
 
-        let vec = StorageVec::<String>::try_from((storage, index)).unwrap();
+        let vec = OldStorageVec::<String>::try_from((storage, index)).unwrap();
 
         assert_eq!(
             vec.to_vec(),
@@ -1198,7 +1198,7 @@ mod tests_dynamic_size {
         ));
 
         assert_eq!(
-            StorageVec::<String>::try_from((storage, StorageIndex::from(1_i64)))
+            OldStorageVec::<String>::try_from((storage, StorageIndex::from(1_i64)))
                 .err()
                 .unwrap(),
             DbError::from("index '1' not found")
@@ -1212,7 +1212,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let mut vec = StorageVec::<String>::try_from(storage).unwrap();
+        let mut vec = OldStorageVec::<String>::try_from(storage).unwrap();
         vec.push(&"Hello".to_string()).unwrap();
         vec.push(&", ".to_string()).unwrap();
         vec.push(&"World".to_string()).unwrap();
@@ -1231,7 +1231,7 @@ mod tests_dynamic_size {
             StorageFile::try_from(test_file.file_name().clone()).unwrap(),
         ));
 
-        let vec = StorageVec::<String>::try_from(storage).unwrap();
+        let vec = OldStorageVec::<String>::try_from(storage).unwrap();
 
         assert_eq!(vec.value(0), Err(DbError::from("index out of bounds")));
     }

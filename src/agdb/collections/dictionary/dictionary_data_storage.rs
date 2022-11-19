@@ -1,5 +1,5 @@
+use crate::collections::old_storage_vec::OldStorageVec;
 use crate::collections::storage_multi_map::StorageMultiMap;
-use crate::collections::storage_vec::StorageVec;
 use crate::db::db_error::DbError;
 use crate::old_storage::storage_file::StorageFile;
 use crate::old_storage::storage_index::StorageIndex;
@@ -22,7 +22,7 @@ where
     #[allow(dead_code)]
     pub(crate) storage_index: StorageIndex,
     pub(crate) index: StorageMultiMap<u64, DictionaryIndex, Data>,
-    pub(crate) values: StorageVec<DictionaryValue<T>, Data>,
+    pub(crate) values: OldStorageVec<DictionaryValue<T>, Data>,
 }
 
 impl<T, Data> DictionaryData<T> for DictionaryDataStorage<T, Data>
@@ -50,7 +50,7 @@ where
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().value_at::<u64>(
             &values_index,
-            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + i64::fixed_size(),
+            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + i64::fixed_size(),
         )
     }
 
@@ -58,7 +58,7 @@ where
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().value_at::<i64>(
             &values_index,
-            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()),
+            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()),
         )
     }
 
@@ -70,7 +70,7 @@ where
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().insert_at(
             &values_index,
-            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + u64::fixed_size(),
+            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + u64::fixed_size(),
             &hash,
         )?;
 
@@ -81,7 +81,7 @@ where
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().insert_at(
             &values_index,
-            StorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()),
+            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()),
             &meta,
         )?;
 

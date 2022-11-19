@@ -1,19 +1,19 @@
-use crate::collections::storage_vec::StorageVec;
+use crate::collections::old_storage_vec::OldStorageVec;
 use crate::old_storage::OldStorage;
 use crate::utilities::old_serialize::OldSerialize;
 use std::marker::PhantomData;
 
-pub struct StorageVecIterator<'a, T, Data>
+pub struct OldStorageVecIterator<'a, T, Data>
 where
     T: OldSerialize,
     Data: OldStorage,
 {
     pub(crate) index: u64,
-    pub(crate) vec: &'a StorageVec<T, Data>,
+    pub(crate) vec: &'a OldStorageVec<T, Data>,
     pub(crate) phantom_data: PhantomData<T>,
 }
 
-impl<'a, T, Data> Iterator for StorageVecIterator<'a, T, Data>
+impl<'a, T, Data> Iterator for OldStorageVecIterator<'a, T, Data>
 where
     T: OldSerialize,
     Data: OldStorage,

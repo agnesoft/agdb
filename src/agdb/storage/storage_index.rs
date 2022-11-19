@@ -37,6 +37,7 @@ mod tests {
     use std::cmp::Ordering;
 
     #[test]
+    #[allow(clippy::clone_on_copy)]
     fn derived_from_clone() {
         let index = StorageIndex::default();
         let other = index.clone();

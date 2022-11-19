@@ -1,12 +1,12 @@
 use super::file_record::FileRecord;
 use super::file_records::FileRecords;
+use super::storage_index::StorageIndex;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
 use super::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeFixedSized;
 use crate::DbError;
-use crate::DbIndex;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::cmp::min;
@@ -92,17 +92,14 @@ impl FileStorage {
     }
 
     fn enlarge_at_end(&mut self, record: &mut FileRecord, new_size: u64) -> Result<(), DbError> {
-        self.write(
-            record.pos,
-            &DbIndex::from_values(record.index, new_size).serialize(),
-        )?;
-
-        self.append(&vec![0_u8; (new_size - record.size) as usize])?;
-
-        self.set_size(record.index, new_size);
+        let old_size = record.size;
         record.size = new_size;
-
-        Ok(())
+        self.set_size(record.index, new_size);
+        self.write(
+            record.pos + u64::serialized_size(),
+            &record.size.serialize(),
+        )?;
+        self.append(&vec![0_u8; (new_size - old_size) as usize])
     }
 
     fn ensure_size(
@@ -158,8 +155,6 @@ impl FileStorage {
 
         let len = self.len()?;
         self.update_record(record, len, new_size)?;
-
-        self.append(&DbIndex::from_values(record.index, record.size).serialize())?;
         self.append(&bytes)
     }
 
@@ -178,17 +173,14 @@ impl FileStorage {
 
     fn read_record(&mut self) -> Result<FileRecord, DbError> {
         let pos = self.file.borrow_mut().seek(SeekFrom::Current(0))?;
-        let bytes = self.read_exact(pos, DbIndex::serialized_size())?;
-        let index = DbIndex::deserialize(&bytes)?;
-        self.file.borrow_mut().seek(SeekFrom::Start(
-            pos + DbIndex::serialized_size() + index.meta(),
-        ))?;
+        let bytes = self.read_exact(pos, Self::record_serialized_size())?;
+        let index = u64::deserialize(&bytes)?;
+        let size = u64::deserialize(&bytes[u64::serialized_size() as usize..])?;
+        self.file
+            .borrow_mut()
+            .seek(SeekFrom::Start(pos + Self::record_serialized_size() + size))?;
 
-        Ok(FileRecord {
-            index: index.value(),
-            pos,
-            size: index.meta(),
-        })
+        Ok(FileRecord { index, pos, size })
     }
 
     fn read_records(&mut self) -> Result<(), DbError> {
@@ -221,6 +213,10 @@ impl FileStorage {
 
     fn record(&self, index: u64) -> Result<FileRecord, DbError> {
         self.file_records.record(index)
+    }
+
+    fn record_serialized_size() -> u64 {
+        u64::serialized_size() * 2
     }
 
     fn record_wal(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
@@ -257,14 +253,15 @@ impl FileStorage {
         if record.pos != current_pos {
             let bytes = self.read_value(record)?;
             self.set_pos(record.index, current_pos);
-            self.write(
-                current_pos,
-                &DbIndex::from_values(record.index, record.size).serialize(),
-            )?;
-            self.write(current_pos + DbIndex::serialized_size(), &bytes)?;
+            self.write_record(&FileRecord {
+                index: record.index,
+                pos: current_pos,
+                size: record.size,
+            })?;
+            self.write(current_pos + Self::record_serialized_size(), &bytes)?;
         }
 
-        Ok(current_pos + DbIndex::serialized_size() + record.size)
+        Ok(current_pos + Self::record_serialized_size() + record.size)
     }
 
     fn shrink_records(&mut self, records: Vec<FileRecord>) -> Result<u64, DbError> {
@@ -311,8 +308,7 @@ impl FileStorage {
         self.set_size(record.index, new_size);
         record.pos = new_pos;
         record.size = new_size;
-
-        Ok(())
+        self.write_record(record)
     }
 
     fn validate_read_size(offset: u64, read_size: u64, value_size: u64) -> Result<(), DbError> {
@@ -340,6 +336,15 @@ impl FileStorage {
 
         Ok(self.file.borrow_mut().write_all(bytes)?)
     }
+
+    fn write_record(&mut self, record: &FileRecord) -> Result<(), DbError> {
+        let mut bytes = Vec::<u8>::new();
+        bytes.reserve(Self::record_serialized_size() as usize);
+        bytes.extend(record.index.serialize());
+        bytes.extend(record.size.serialize());
+
+        self.write(record.pos, &bytes)
+    }
 }
 
 impl Storage for FileStorage {
@@ -347,39 +352,38 @@ impl Storage for FileStorage {
         self.end_transaction()
     }
 
-    fn insert<T: Serialize>(&mut self, value: &T) -> Result<DbIndex, DbError> {
+    fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError> {
         self.insert_bytes(&value.serialize())
     }
 
     fn insert_at<T: Serialize>(
         &mut self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset: u64,
         value: &T,
     ) -> Result<u64, DbError> {
         self.insert_bytes_at(index, offset, &value.serialize())
     }
 
-    fn insert_bytes(&mut self, bytes: &[u8]) -> Result<DbIndex, DbError> {
+    fn insert_bytes(&mut self, bytes: &[u8]) -> Result<StorageIndex, DbError> {
         let len = self.len()?;
         let record = self.new_record(len, bytes.len() as u64);
-        let index = DbIndex::from_values(record.index, record.size);
 
         self.transaction();
-        self.append(&index.serialize())?;
+        self.write_record(&record)?;
         self.append(bytes)?;
         self.commit()?;
 
-        Ok(index)
+        Ok(StorageIndex::from(record.index))
     }
 
     fn insert_bytes_at(
         &mut self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset: u64,
         bytes: &[u8],
     ) -> Result<u64, DbError> {
-        let mut record = self.record(index.value())?;
+        let mut record = self.record(index.value)?;
 
         self.transaction();
         self.ensure_size(&mut record, offset, bytes.len() as u64)?;
@@ -396,7 +400,7 @@ impl Storage for FileStorage {
 
     fn move_at(
         &mut self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset_from: u64,
         offset_to: u64,
         size: u64,
@@ -405,27 +409,27 @@ impl Storage for FileStorage {
 
         self.transaction();
         let value_len = self.insert_bytes_at(index, offset_to, &bytes)?;
-        let record = self.record(index.value())?;
+        let record = self.record(index.value)?;
         self.erase_bytes(record.value_start(), offset_from, offset_to, size)?;
         self.commit()?;
 
         Ok(value_len)
     }
 
-    fn remove(&mut self, index: &DbIndex) -> Result<(), DbError> {
-        let record = self.record(index.value())?;
-        self.remove_index(index.value());
+    fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError> {
+        let record = self.record(index.value)?;
+        self.remove_index(index.value);
 
         self.transaction();
         self.invalidate_record(record.pos)?;
         self.commit()
     }
 
-    fn replace<T: Serialize>(&mut self, index: &DbIndex, value: &T) -> Result<u64, DbError> {
+    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<u64, DbError> {
         self.replace_with_bytes(index, &value.serialize())
     }
 
-    fn replace_with_bytes(&mut self, index: &DbIndex, bytes: &[u8]) -> Result<u64, DbError> {
+    fn replace_with_bytes(&mut self, index: &StorageIndex, bytes: &[u8]) -> Result<u64, DbError> {
         self.transaction();
         self.insert_bytes_at(index, 0, bytes)?;
         let len = self.resize_value(index, bytes.len() as u64)?;
@@ -435,8 +439,8 @@ impl Storage for FileStorage {
     }
 
     #[allow(clippy::comparison_chain)]
-    fn resize_value(&mut self, index: &DbIndex, new_size: u64) -> Result<u64, DbError> {
-        let mut record = self.record(index.value())?;
+    fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<u64, DbError> {
+        let mut record = self.record(index.value)?;
 
         self.transaction();
 
@@ -464,38 +468,38 @@ impl Storage for FileStorage {
         self.begin_transaction();
     }
 
-    fn value<T: Serialize>(&self, index: &DbIndex) -> Result<T, DbError> {
+    fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError> {
         T::deserialize(&self.value_as_bytes(index)?)
     }
 
-    fn value_as_bytes(&self, index: &DbIndex) -> Result<Vec<u8>, DbError> {
+    fn value_as_bytes(&self, index: &StorageIndex) -> Result<Vec<u8>, DbError> {
         self.value_as_bytes_at(index, 0)
     }
 
-    fn value_as_bytes_at(&self, index: &DbIndex, offset: u64) -> Result<Vec<u8>, DbError> {
+    fn value_as_bytes_at(&self, index: &StorageIndex, offset: u64) -> Result<Vec<u8>, DbError> {
         let size = self.value_size(index)?;
         self.value_as_bytes_at_size(index, offset, size - min(size, offset))
     }
 
     fn value_as_bytes_at_size(
         &self,
-        index: &DbIndex,
+        index: &StorageIndex,
         offset: u64,
         size: u64,
     ) -> Result<Vec<u8>, DbError> {
-        let record = self.record(index.value())?;
+        let record = self.record(index.value)?;
         Self::validate_read_size(offset, size, record.size)?;
         let pos = record.value_start() + offset;
 
         self.read_exact(pos, size)
     }
 
-    fn value_at<T: Serialize>(&self, index: &DbIndex, offset: u64) -> Result<T, DbError> {
+    fn value_at<T: Serialize>(&self, index: &StorageIndex, offset: u64) -> Result<T, DbError> {
         T::deserialize(&self.value_as_bytes_at(index, offset)?)
     }
 
-    fn value_size(&self, index: &DbIndex) -> Result<u64, DbError> {
-        Ok(self.record(index.value())?.size)
+    fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError> {
+        Ok(self.record(index.value)?.size)
     }
 }
 
@@ -536,7 +540,7 @@ mod tests {
             .insert(&vec!["Hello".to_string(), "World".to_string()])
             .unwrap();
 
-        assert_eq!(index2.value(), index4.value());
+        assert_eq!(index2, index4);
     }
 
     #[test]
@@ -561,7 +565,7 @@ mod tests {
             .insert(&vec!["Hello".to_string(), "World".to_string()])
             .unwrap();
 
-        assert_eq!(index2.value(), index4.value());
+        assert_eq!(index2, index4);
     }
 
     #[test]
@@ -590,9 +594,9 @@ mod tests {
         let index5 = storage.insert(&1_u64).unwrap();
         let index6 = storage.insert(&vec![0_u8; 0]).unwrap();
 
-        assert_eq!(index2.value(), index4.value());
-        assert_eq!(index1.value(), index5.value());
-        assert_eq!(index6.value(), 4);
+        assert_eq!(index2, index4);
+        assert_eq!(index1, index5);
+        assert_eq!(index6.value, 4);
     }
 
     #[test]
@@ -602,42 +606,38 @@ mod tests {
 
         let value1 = "Hello, World!".to_string();
         let index1 = storage.insert(&value1).unwrap();
-        assert!(index1.is_valid());
         assert_eq!(
             storage.value_size(&index1),
             Ok(value1.serialized_size() as u64)
         );
-        assert_eq!(storage.value_size(&index1), Ok(index1.meta()));
+        assert_eq!(storage.value_size(&index1), Ok(value1.serialized_size()));
         assert_eq!(storage.value(&index1), Ok(value1));
 
         let value2 = 10_i64;
         let index2 = storage.insert(&value2).unwrap();
-        assert!(index2.is_valid());
         assert_eq!(
             storage.value_size(&index2),
             Ok(i64::serialized_size() as u64)
         );
-        assert_eq!(storage.value_size(&index2), Ok(index2.meta()));
+        assert_eq!(storage.value_size(&index2), Ok(i64::serialized_size()));
         assert_eq!(storage.value(&index2), Ok(value2));
 
         let value3 = vec![1_u64, 2_u64, 3_u64];
         let index3 = storage.insert(&value3).unwrap();
-        assert!(index3.is_valid());
         assert_eq!(
             storage.value_size(&index3),
             Ok(value3.serialized_size() as u64)
         );
-        assert_eq!(storage.value_size(&index3), Ok(index3.meta()));
+        assert_eq!(storage.value_size(&index3), Ok(value3.serialized_size()));
         assert_eq!(storage.value(&index3), Ok(value3));
 
         let value4 = vec!["Hello".to_string(), "World".to_string()];
         let index4 = storage.insert(&value4).unwrap();
-        assert!(index4.is_valid());
         assert_eq!(
             storage.value_size(&index4),
             Ok(value4.serialized_size() as u64)
         );
-        assert_eq!(storage.value_size(&index4), Ok(index4.meta()));
+        assert_eq!(storage.value_size(&index4), Ok(value4.serialized_size()));
         assert_eq!(storage.value(&index4), Ok(value4));
     }
 
@@ -729,7 +729,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.insert_at(&DbIndex::from(1_u64), 8, &1_i64),
+            storage.insert_at(&StorageIndex::from(1_u64), 8, &1_i64),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -935,7 +935,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.remove(&DbIndex::from(1_u64)),
+            storage.remove(&StorageIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -959,7 +959,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.replace(&DbIndex::from(1_u64), &10_i64),
+            storage.replace(&StorageIndex::from(1_u64), &10_i64),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1027,7 +1027,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.resize_value(&DbIndex::from(1_u64), 1),
+            storage.resize_value(&StorageIndex::from(1_u64), 1),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1160,14 +1160,14 @@ mod tests {
 
         assert_eq!(storage.value::<Vec<i64>>(&index1), Ok(value1));
         assert_eq!(
-            storage.value::<u64>(&DbIndex::default()),
+            storage.value::<u64>(&StorageIndex::default()),
             Err(DbError::from("FileStorage error: index (0) not found"))
         );
         assert_eq!(
             storage.value::<u64>(&index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value()
+                index2.value
             )))
         );
         assert_eq!(storage.value::<Vec<i64>>(&index3), Ok(value3));
@@ -1196,28 +1196,28 @@ mod tests {
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value::<u64>(&DbIndex::default()),
+            storage.value::<u64>(&StorageIndex::default()),
             Err(DbError::from("FileStorage error: index (0) not found"))
         );
         assert_eq!(
             storage.value::<Vec<i64>>(&index1),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index1.value()
+                index1.value
             )))
         );
         assert_eq!(
             storage.value::<u64>(&index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value()
+                index2.value
             )))
         );
         assert_eq!(
             storage.value::<Vec<i64>>(&index3),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index3.value()
+                index3.value
             )))
         );
     }
@@ -1240,7 +1240,7 @@ mod tests {
         }
 
         let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(DbIndex::serialized_size(), 2_u64.serialize())
+        wal.insert(u64::serialized_size() * 2, 2_u64.serialize())
             .unwrap();
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
@@ -1319,7 +1319,7 @@ mod tests {
             storage.value::<i64>(&index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value()
+                index2.value
             )))
         );
         assert_eq!(storage.value(&index3), Ok(3_i64));
@@ -1366,7 +1366,7 @@ mod tests {
             storage.value::<i64>(&index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index.value()
+                index.value
             )))
         );
     }
@@ -1390,7 +1390,7 @@ mod tests {
             storage.value::<i64>(&index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index.value()
+                index.value
             )))
         );
     }
@@ -1439,7 +1439,7 @@ mod tests {
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value_at::<i64>(&DbIndex::from(1_u64), 8),
+            storage.value_at::<i64>(&StorageIndex::from(1_u64), 8),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1482,7 +1482,7 @@ mod tests {
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value::<i64>(&DbIndex::from(1_u64)),
+            storage.value::<i64>(&StorageIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1519,7 +1519,7 @@ mod tests {
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value_size(&DbIndex::from(1_u64)),
+            storage.value_size(&StorageIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }

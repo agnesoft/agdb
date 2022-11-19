@@ -1094,6 +1094,34 @@ mod tests {
     }
 
     #[test]
+    fn restore_from_file_with_wal() {
+        let test_file = TestFile::new();
+        let value1 = vec![1_i64, 2_i64, 3_i64];
+        let value2 = 64_u64;
+        let value3 = vec![4_i64, 5_i64, 6_i64, 7_i64, 8_i64, 9_i64, 10_i64];
+        let index1;
+        let index2;
+        let index3;
+
+        {
+            let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+            index1 = storage.insert(&value1).unwrap();
+            index2 = storage.insert(&value2).unwrap();
+            index3 = storage.insert(&value3).unwrap();
+        }
+
+        let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+        wal.insert(DbIndex::serialized_size(), 2_u64.serialize())
+            .unwrap();
+
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        assert_eq!(storage.value::<Vec<i64>>(&index1), Ok(vec![1_i64, 2_i64]));
+        assert_eq!(storage.value::<u64>(&index2), Ok(value2));
+        assert_eq!(storage.value::<Vec<i64>>(&index3), Ok(value3));
+    }
+
+    #[test]
     fn shrink_to_fit() {
         let test_file = TestFile::new();
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();

@@ -383,7 +383,7 @@ impl Storage for FileStorage {
         offset: u64,
         bytes: &[u8],
     ) -> Result<u64, DbError> {
-        let mut record = self.record(index.value())?;
+        let mut record = self.record(index.value)?;
 
         self.transaction();
         self.ensure_size(&mut record, offset, bytes.len() as u64)?;
@@ -409,7 +409,7 @@ impl Storage for FileStorage {
 
         self.transaction();
         let value_len = self.insert_bytes_at(index, offset_to, &bytes)?;
-        let record = self.record(index.value())?;
+        let record = self.record(index.value)?;
         self.erase_bytes(record.value_start(), offset_from, offset_to, size)?;
         self.commit()?;
 
@@ -417,8 +417,8 @@ impl Storage for FileStorage {
     }
 
     fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError> {
-        let record = self.record(index.value())?;
-        self.remove_index(index.value());
+        let record = self.record(index.value)?;
+        self.remove_index(index.value);
 
         self.transaction();
         self.invalidate_record(record.pos)?;
@@ -440,7 +440,7 @@ impl Storage for FileStorage {
 
     #[allow(clippy::comparison_chain)]
     fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<u64, DbError> {
-        let mut record = self.record(index.value())?;
+        let mut record = self.record(index.value)?;
 
         self.transaction();
 
@@ -487,7 +487,7 @@ impl Storage for FileStorage {
         offset: u64,
         size: u64,
     ) -> Result<Vec<u8>, DbError> {
-        let record = self.record(index.value())?;
+        let record = self.record(index.value)?;
         Self::validate_read_size(offset, size, record.size)?;
         let pos = record.value_start() + offset;
 
@@ -499,7 +499,7 @@ impl Storage for FileStorage {
     }
 
     fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError> {
-        Ok(self.record(index.value())?.size)
+        Ok(self.record(index.value)?.size)
     }
 }
 
@@ -540,7 +540,7 @@ mod tests {
             .insert(&vec!["Hello".to_string(), "World".to_string()])
             .unwrap();
 
-        assert_eq!(index2.value(), index4.value());
+        assert_eq!(index2, index4);
     }
 
     #[test]
@@ -565,7 +565,7 @@ mod tests {
             .insert(&vec!["Hello".to_string(), "World".to_string()])
             .unwrap();
 
-        assert_eq!(index2.value(), index4.value());
+        assert_eq!(index2, index4);
     }
 
     #[test]
@@ -594,9 +594,9 @@ mod tests {
         let index5 = storage.insert(&1_u64).unwrap();
         let index6 = storage.insert(&vec![0_u8; 0]).unwrap();
 
-        assert_eq!(index2.value(), index4.value());
-        assert_eq!(index1.value(), index5.value());
-        assert_eq!(index6.value(), 4);
+        assert_eq!(index2, index4);
+        assert_eq!(index1, index5);
+        assert_eq!(index6.value, 4);
     }
 
     #[test]
@@ -606,7 +606,6 @@ mod tests {
 
         let value1 = "Hello, World!".to_string();
         let index1 = storage.insert(&value1).unwrap();
-        assert!(index1.is_valid());
         assert_eq!(
             storage.value_size(&index1),
             Ok(value1.serialized_size() as u64)
@@ -616,7 +615,6 @@ mod tests {
 
         let value2 = 10_i64;
         let index2 = storage.insert(&value2).unwrap();
-        assert!(index2.is_valid());
         assert_eq!(
             storage.value_size(&index2),
             Ok(i64::serialized_size() as u64)
@@ -626,7 +624,6 @@ mod tests {
 
         let value3 = vec![1_u64, 2_u64, 3_u64];
         let index3 = storage.insert(&value3).unwrap();
-        assert!(index3.is_valid());
         assert_eq!(
             storage.value_size(&index3),
             Ok(value3.serialized_size() as u64)
@@ -636,7 +633,6 @@ mod tests {
 
         let value4 = vec!["Hello".to_string(), "World".to_string()];
         let index4 = storage.insert(&value4).unwrap();
-        assert!(index4.is_valid());
         assert_eq!(
             storage.value_size(&index4),
             Ok(value4.serialized_size() as u64)
@@ -1171,7 +1167,7 @@ mod tests {
             storage.value::<u64>(&index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value()
+                index2.value
             )))
         );
         assert_eq!(storage.value::<Vec<i64>>(&index3), Ok(value3));
@@ -1207,21 +1203,21 @@ mod tests {
             storage.value::<Vec<i64>>(&index1),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index1.value()
+                index1.value
             )))
         );
         assert_eq!(
             storage.value::<u64>(&index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value()
+                index2.value
             )))
         );
         assert_eq!(
             storage.value::<Vec<i64>>(&index3),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index3.value()
+                index3.value
             )))
         );
     }
@@ -1323,7 +1319,7 @@ mod tests {
             storage.value::<i64>(&index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value()
+                index2.value
             )))
         );
         assert_eq!(storage.value(&index3), Ok(3_i64));
@@ -1370,7 +1366,7 @@ mod tests {
             storage.value::<i64>(&index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index.value()
+                index.value
             )))
         );
     }
@@ -1394,7 +1390,7 @@ mod tests {
             storage.value::<i64>(&index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index.value()
+                index.value
             )))
         );
     }

@@ -120,6 +120,7 @@ impl FileStorage {
         Ok(())
     }
 
+    #[allow(clippy::comparison_chain)]
     fn erase_bytes(
         &mut self,
         pos: u64,
@@ -430,6 +431,7 @@ impl Storage for FileStorage {
         Ok(len)
     }
 
+    #[allow(clippy::comparison_chain)]
     fn resize_value(&mut self, index: &DbIndex, new_size: u64) -> Result<u64, DbError> {
         let mut record = self.record(index.value())?;
 
@@ -514,6 +516,49 @@ mod tests {
     #[test]
     fn bad_file() {
         assert!(FileStorage::new(&"/a/".to_string()).is_err());
+    }
+
+    #[test]
+    fn index_reuse() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
+        let index2 = storage.insert(&10_i64).unwrap();
+        let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
+
+        storage.remove(&index2).unwrap();
+
+        let index4 = storage
+            .insert(&vec!["Hello".to_string(), "World".to_string()])
+            .unwrap();
+
+        assert_eq!(index2.value(), index4.value());
+    }
+
+    #[test]
+    fn index_reuse_after_restore() {
+        let test_file = TestFile::new();
+
+        let index2;
+
+        {
+            let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+            let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
+            index2 = storage.insert(&10_i64).unwrap();
+            let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
+
+            storage.remove(&index2).unwrap();
+        }
+
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        let index4 = storage
+            .insert(&vec!["Hello".to_string(), "World".to_string()])
+            .unwrap();
+
+        assert_eq!(index2.value(), index4.value());
     }
 
     #[test]
@@ -859,6 +904,55 @@ mod tests {
             storage.remove(&DbIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
+    }
+
+    #[test]
+    fn replace_larger() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        let index = storage.insert(&1_i64).unwrap();
+        let value = "Hello, World!".to_string();
+        let expected_size = value.serialized_size();
+
+        assert_eq!(storage.replace(&index, &value).unwrap(), expected_size);
+        assert_eq!(storage.value_size(&index).unwrap(), expected_size);
+    }
+
+    #[test]
+    fn replace_missing_index() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        assert_eq!(
+            storage.replace(&DbIndex::from(1_u64), &10_i64),
+            Err(DbError::from("FileStorage error: index (1) not found"))
+        );
+    }
+
+    #[test]
+    fn replace_same_size() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        let index = storage.insert(&1_i64).unwrap();
+        let size = storage.value_size(&index).unwrap();
+
+        assert_eq!(storage.replace(&index, &10_i64).unwrap(), size);
+        assert_eq!(storage.value_size(&index).unwrap(), size);
+    }
+
+    #[test]
+    fn replace_smaller() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        let index = storage.insert(&"Hello, World!".to_string()).unwrap();
+        let value = 1_i64;
+        let expected_size = i64::serialized_size();
+
+        assert_eq!(storage.replace(&index, &value).unwrap(), expected_size);
+        assert_eq!(storage.value_size(&index).unwrap(), expected_size);
     }
 
     #[test]

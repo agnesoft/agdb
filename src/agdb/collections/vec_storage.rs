@@ -56,7 +56,7 @@ where
     }
 
     pub fn storage_index(&self) -> DbIndex {
-        self.storage_index.clone()
+        self.storage_index
     }
 
     fn index_offset(index: u64) -> u64 {

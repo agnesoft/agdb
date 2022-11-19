@@ -17,14 +17,14 @@ where
     Data: Storage,
 {
     fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError> {
-        let len = storage.borrow_mut().value::<u64>(&index)?;
-        let capacity = (storage.borrow_mut().value_size(&index)? - u64::serialized_size())
+        let len = storage.borrow_mut().value::<u64>(index)?;
+        let capacity = (storage.borrow_mut().value_size(index)? - u64::serialized_size())
             / T::serialized_size();
 
         Ok(VecStorage {
             phantom_data: PhantomData,
             storage,
-            storage_index: index.clone(),
+            storage_index: *index,
             indexes: vec![],
             len,
             capacity,
@@ -88,6 +88,7 @@ where
         self.reallocate::<T>(capacity)
     }
 
+    #[allow(clippy::comparison_chain)]
     fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
         if self.len() == size {
             return Ok(());

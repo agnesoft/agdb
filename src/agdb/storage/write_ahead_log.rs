@@ -30,7 +30,7 @@ impl WriteAheadLog {
         Ok(())
     }
 
-    pub fn new(filename: &String) -> Result<WriteAheadLog, DbError> {
+    pub fn new(filename: &str) -> Result<WriteAheadLog, DbError> {
         Ok(Self {
             file: OpenOptions::new()
                 .read(true)
@@ -84,5 +84,20 @@ impl WriteAheadLog {
         name.insert(pos, '.');
 
         name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wal_filename() {
+        assert_eq!(WriteAheadLog::wal_filename("file"), ".file");
+        assert_eq!(WriteAheadLog::wal_filename("/file"), "/.file");
+        assert_eq!(
+            WriteAheadLog::wal_filename("\\some\\path\\file"),
+            "\\some\\path\\.file"
+        );
     }
 }

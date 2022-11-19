@@ -13,14 +13,6 @@ impl From<u64> for StorageIndex {
     }
 }
 
-impl From<usize> for StorageIndex {
-    fn from(index: usize) -> Self {
-        Self {
-            value: index as u64,
-        }
-    }
-}
-
 impl Serialize for StorageIndex {
     fn serialize(&self) -> Vec<u8> {
         self.value.serialize()
@@ -42,9 +34,31 @@ impl SerializeFixedSized for StorageIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cmp::Ordering;
 
     #[test]
-    fn ordering() {
+    fn derived_from_clone() {
+        let index = StorageIndex::default();
+        let other = index.clone();
+
+        assert_eq!(index, other);
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", StorageIndex::default());
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        assert_eq!(
+            StorageIndex::default().cmp(&StorageIndex::default()),
+            Ordering::Equal
+        );
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
         let mut indexes = vec![
             StorageIndex::default(),
             StorageIndex::from(100_u64),

@@ -19,14 +19,14 @@ impl FileRecords {
             let index = self.records[0].index;
             self.records[0].index = self.records[index as usize].index;
             record = FileRecord { index, pos, size };
-            self.records[index as usize] = record.clone();
+            self.records[index as usize] = record;
         } else {
             record = FileRecord {
                 index: self.records.len() as u64,
                 pos,
                 size,
             };
-            self.records.push(record.clone());
+            self.records.push(record);
         }
 
         record
@@ -38,7 +38,7 @@ impl FileRecords {
 
         for record in &self.records {
             if self.is_valid(record) {
-                res.push(record.clone());
+                res.push(*record);
             }
         }
 
@@ -72,7 +72,7 @@ impl FileRecords {
     pub fn record(&self, index: u64) -> Result<FileRecord, DbError> {
         if let Some(record) = self.records.get(index as usize) {
             if self.is_valid(record) {
-                return Ok(record.clone());
+                return Ok(*record);
             }
         }
 

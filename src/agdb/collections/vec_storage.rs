@@ -7,6 +7,7 @@ use crate::utilities::serialize::SerializeFixedSized;
 use crate::DbError;
 use crate::DbIndex;
 use std::cell::RefCell;
+use std::cmp::max;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
@@ -15,10 +16,7 @@ where
     T: SerializeDynamicSized,
     Data: Storage,
 {
-    fn capacity(&self) -> u64;
-    fn is_empty(&self) -> bool;
     fn iter(&self) -> VecStorageIterator<T, Data>;
-    fn len(&self) -> u64;
     fn push(&mut self, value: &T) -> Result<(), DbError>;
     fn remove(&mut self, index: u64) -> Result<(), DbError>;
     fn reserve(&mut self, capacity: u64) -> Result<(), DbError>;
@@ -27,17 +25,13 @@ where
     fn shrink_to_fit(&mut self) -> Result<(), DbError>;
     fn to_vec(&self) -> Result<Vec<T>, DbError>;
     fn value(&self, index: u64) -> Result<T, DbError>;
-    fn value_offset(index: u64) -> u64;
 }
 pub trait VecFixedSized<T, Data>
 where
     T: SerializeFixedSized,
     Data: Storage,
 {
-    fn capacity(&self) -> u64;
-    fn is_empty(&self) -> bool;
     fn iter(&self) -> VecStorageIterator<T, Data>;
-    fn len(&self) -> u64;
     fn push(&mut self, value: &T) -> Result<(), DbError>;
     fn remove(&mut self, index: u64) -> Result<(), DbError>;
     fn reserve(&mut self, capacity: u64) -> Result<(), DbError>;
@@ -46,7 +40,6 @@ where
     fn shrink_to_fit(&mut self) -> Result<(), DbError>;
     fn to_vec(&self) -> Result<Vec<T>, DbError>;
     fn value(&self, index: u64) -> Result<T, DbError>;
-    fn value_offset(index: u64) -> u64;
 }
 
 pub struct VecStorage<T, Data = FileStorage>
@@ -58,6 +51,8 @@ where
     storage: Rc<RefCell<Data>>,
     storage_index: DbIndex,
     indexes: Vec<DbIndex>,
+    len: u64,
+    capacity: u64,
 }
 
 impl<T, Data> VecStorage<T, Data>
@@ -65,6 +60,18 @@ where
     T: Serialize,
     Data: Storage,
 {
+    pub fn capacity(&self) -> u64 {
+        self.capacity
+    }
+
+    pub fn len(&self) -> u64 {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn new(data: Rc<RefCell<Data>>) -> Result<Self, DbError> {
         todo!()
     }
@@ -76,6 +83,76 @@ where
     pub fn storage_index(&self) -> DbIndex {
         self.storage_index.clone()
     }
+
+    fn dynamic_offset(index: u64) -> u64 {
+        u64::serialized_size() + DbIndex::serialized_size() * index
+    }
+
+    fn grow_dynamic(&mut self, size: u64, value: &T) -> Result<(), DbError> {
+        if size >= self.capacity() {
+            self.reallocate_dynamic(size)?;
+        }
+
+        let mut new_indexes = Vec::<DbIndex>::new();
+        new_indexes.reserve((size - self.len()) as usize);
+
+        for _ in self.len()..size {
+            let index = self.storage.borrow_mut().insert(value)?;
+            new_indexes.push(index);
+        }
+
+        self.indexes.extend(&new_indexes);
+
+        let bytes = new_indexes.serialize();
+
+        self.storage.borrow_mut().insert_bytes_at(
+            &self.storage_index,
+            Self::dynamic_offset(self.len),
+            &bytes[8..],
+        )?;
+
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &size)?;
+        self.len = size;
+
+        Ok(())
+    }
+
+    fn reallocate_dynamic(&mut self, new_capacity: u64) -> Result<(), DbError> {
+        self.capacity = self.storage.borrow_mut().resize_value(
+            &self.storage_index,
+            u64::serialized_size() + DbIndex::serialized_size() * max(64, new_capacity),
+        )?;
+
+        Ok(())
+    }
+
+    fn shrink_dynamic(&mut self, size: u64) -> Result<(), DbError> {
+        for i in size..self.len() {
+            let index = self.indexes[i as usize];
+            self.storage.borrow_mut().remove(&index)?;
+        }
+
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &size)?;
+        self.indexes.resize(size as usize, DbIndex::default());
+        self.len = size;
+
+        Ok(())
+    }
+
+    fn validate_index(&self, index: u64) -> Result<(), DbError> {
+        if self.len() <= index {
+            return Err(DbError::from(format!(
+                "VecStorage error: index ({}) out of bounds ({})",
+                index, self.len
+            )));
+        }
+
+        Ok(())
+    }
 }
 
 impl<T, Data> VecDynamicSized<T, Data> for VecStorage<T, Data>
@@ -83,56 +160,118 @@ where
     T: SerializeDynamicSized,
     Data: Storage,
 {
-    fn capacity(&self) -> u64 {
-        todo!()
-    }
-
-    fn is_empty(&self) -> bool {
-        todo!()
-    }
-
     fn iter(&self) -> VecStorageIterator<T, Data> {
         todo!()
     }
 
-    fn len(&self) -> u64 {
-        todo!()
-    }
-
     fn push(&mut self, value: &T) -> Result<(), DbError> {
-        todo!()
+        self.storage.borrow_mut().transaction();
+
+        if self.len() == self.capacity() {
+            self.reallocate_dynamic(self.capacity * 2)?;
+        }
+
+        let index = self.storage.borrow_mut().insert(value)?;
+        self.indexes.push(index);
+        self.storage.borrow_mut().insert_at(
+            &self.storage_index,
+            Self::dynamic_offset(self.len),
+            &index,
+        )?;
+
+        self.len += 1;
+
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &self.len)?;
+
+        self.storage.borrow_mut().commit()
     }
 
     fn remove(&mut self, index: u64) -> Result<(), DbError> {
-        todo!()
+        self.validate_index(index)?;
+
+        self.storage.borrow_mut().transaction();
+        let value_index = self.indexes[index as usize];
+        self.storage.borrow_mut().remove(&value_index)?;
+        self.indexes.remove(index as usize);
+        let offset_from = Self::dynamic_offset(index + 1);
+        self.storage.borrow_mut().move_at(
+            &self.storage_index,
+            Self::dynamic_offset(index + 1),
+            Self::dynamic_offset(index),
+            Self::dynamic_offset(self.len) - offset_from,
+        )?;
+        self.len -= 1;
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &self.len)?;
+
+        self.storage.borrow_mut().commit()
     }
 
     fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
-        todo!()
+        if capacity <= self.capacity() {
+            return Ok(());
+        }
+
+        self.reallocate_dynamic(capacity)
     }
 
     fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
-        todo!()
+        if self.len() == size {
+            return Ok(());
+        }
+
+        self.storage.borrow_mut().transaction();
+
+        if size < self.len() {
+            self.shrink_dynamic(size)?;
+        } else if self.len() < size {
+            self.grow_dynamic(size, value)?;
+        }
+
+        self.storage.borrow_mut().commit()
     }
 
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
-        todo!()
+        self.validate_index(index)?;
+
+        let old_index = self.indexes[index as usize];
+
+        self.storage.borrow_mut().transaction();
+        self.storage.borrow_mut().remove(&old_index)?;
+        let new_index = self.storage.borrow_mut().insert(value)?;
+        self.indexes[index as usize] = new_index;
+        self.storage.borrow_mut().insert_at(
+            &self.storage_index,
+            Self::dynamic_offset(index),
+            &new_index,
+        )?;
+
+        self.storage.borrow_mut().commit()
     }
 
     fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        todo!()
+        self.reallocate_dynamic(self.len())
     }
 
     fn to_vec(&self) -> Result<Vec<T>, DbError> {
-        todo!()
+        let mut vec = Vec::<T>::new();
+        vec.reserve(self.len() as usize);
+
+        for index in &self.indexes {
+            vec.push(self.storage.borrow_mut().value(index)?);
+        }
+
+        Ok(vec)
     }
 
     fn value(&self, index: u64) -> Result<T, DbError> {
-        todo!()
-    }
-
-    fn value_offset(index: u64) -> u64 {
-        todo!()
+        self.validate_index(index)?;
+        self.storage
+            .borrow_mut()
+            .value(&self.indexes[index as usize])
     }
 }
 
@@ -141,19 +280,7 @@ where
     T: SerializeFixedSized,
     Data: Storage,
 {
-    fn capacity(&self) -> u64 {
-        todo!()
-    }
-
-    fn is_empty(&self) -> bool {
-        todo!()
-    }
-
     fn iter(&self) -> VecStorageIterator<T, Data> {
-        todo!()
-    }
-
-    fn len(&self) -> u64 {
         todo!()
     }
 
@@ -186,10 +313,6 @@ where
     }
 
     fn value(&self, index: u64) -> Result<T, DbError> {
-        todo!()
-    }
-
-    fn value_offset(index: u64) -> u64 {
         todo!()
     }
 }

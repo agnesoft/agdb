@@ -1,11 +1,5 @@
+use super::file_record::FileRecord;
 use crate::DbError;
-
-#[derive(Clone, Default)]
-pub struct FileRecord {
-    pub index: u64,
-    pub pos: u64,
-    pub size: u64,
-}
 
 pub struct FileRecords {
     records: Vec<FileRecord>,
@@ -74,13 +68,15 @@ impl FileRecords {
 
     pub fn record(&self, index: u64) -> Result<FileRecord, DbError> {
         if let Some(i) = self.records.get(index as usize) {
-            Ok(i.clone())
-        } else {
-            Err(DbError::from(format!(
-                "FileStorage error: index {} not found",
-                index
-            )))
+            if i.index != 0 {
+                return Ok(i.clone());
+            }
         }
+
+        Err(DbError::from(format!(
+            "FileStorage error: index ({}) not found",
+            index
+        )))
     }
 
     pub fn remove_index(&mut self, index: u64) {

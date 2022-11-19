@@ -1,5 +1,6 @@
 pub mod file_storage;
 
+mod file_record;
 mod file_records;
 mod file_storage_impl;
 mod write_ahead_log;
@@ -25,7 +26,7 @@ pub trait Storage {
         bytes: &[u8],
     ) -> Result<u64, DbError>;
     fn len(&self) -> Result<u64, DbError>;
-    fn move_at<T: Serialize>(
+    fn move_at(
         &mut self,
         index: &DbIndex,
         offset_from: u64,

@@ -60,8 +60,8 @@ impl WriteAheadLog {
     }
 
     fn read_record(file: &mut File) -> Result<WriteAheadLogRecord, DbError> {
-        let pos = u64::deserialize(&Self::read_exact(file, u64::fixed_serialized_size())?)?;
-        let size = u64::deserialize(&Self::read_exact(file, u64::fixed_serialized_size())?)?;
+        let pos = u64::deserialize(&Self::read_exact(file, u64::serialized_size())?)?;
+        let size = u64::deserialize(&Self::read_exact(file, u64::serialized_size())?)?;
 
         Ok(WriteAheadLogRecord {
             pos,

@@ -13,11 +13,11 @@ impl DbIndex {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<DbIndex, DbError> {
-        if bytes.len() as u64 > DbIndex::fixed_serialized_size() {
+        if bytes.len() as u64 > DbIndex::serialized_size() {
             return Err(DbError::from(format!(
                 "DbIndex::from_bytes error: value ({}) too long (>{})",
                 bytes.len(),
-                DbIndex::fixed_serialized_size()
+                DbIndex::serialized_size()
             )));
         }
 
@@ -60,7 +60,7 @@ impl DbIndex {
 impl Serialize for DbIndex {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(Self::fixed_serialized_size() as usize);
+        bytes.reserve(Self::serialized_size() as usize);
         bytes.extend(self.value.serialize());
         bytes.extend(self.meta.serialize());
 
@@ -70,7 +70,7 @@ impl Serialize for DbIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(DbIndex {
             value: u64::deserialize(bytes)?,
-            meta: u64::deserialize(&bytes[u64::fixed_serialized_size() as usize..])?,
+            meta: u64::deserialize(&bytes[u64::serialized_size() as usize..])?,
         })
     }
 }
@@ -240,7 +240,7 @@ mod tests {
         original.set_value(1_u64);
         original.set_meta(2_u64);
 
-        let serialized_size = DbIndex::fixed_serialized_size();
+        let serialized_size = DbIndex::serialized_size();
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);

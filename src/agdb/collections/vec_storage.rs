@@ -1,4 +1,5 @@
-use super::vec::vec_storage_iterator::VecStorageIterator;
+use super::vec::vec_storage_iterator_dynamic_sized::VecStorageIteratorDynamicSized;
+use super::vec::vec_storage_iterator_fixed_size::VecStorageIteratorFixedSized;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
@@ -17,7 +18,7 @@ where
     Data: Storage,
 {
     fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError>;
-    fn iter(&self) -> VecStorageIterator<T, Data>;
+    fn iter(&self) -> VecStorageIteratorDynamicSized<T, Data>;
     fn push(&mut self, value: &T) -> Result<(), DbError>;
     fn remove(&mut self, index: u64) -> Result<(), DbError>;
     fn reserve(&mut self, capacity: u64) -> Result<(), DbError>;
@@ -33,7 +34,7 @@ where
     Data: Storage,
 {
     fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError>;
-    fn iter(&self) -> VecStorageIterator<T, Data>;
+    fn iter(&self) -> VecStorageIteratorFixedSized<T, Data>;
     fn push(&mut self, value: &T) -> Result<(), DbError>;
     fn remove(&mut self, index: u64) -> Result<(), DbError>;
     fn reserve(&mut self, capacity: u64) -> Result<(), DbError>;
@@ -223,8 +224,12 @@ where
         })
     }
 
-    fn iter(&self) -> VecStorageIterator<T, Data> {
-        todo!()
+    fn iter(&self) -> VecStorageIteratorDynamicSized<T, Data> {
+        VecStorageIteratorDynamicSized::<T, Data> {
+            index: 0,
+            vec: self,
+            phantom_data: PhantomData,
+        }
     }
 
     fn push(&mut self, value: &T) -> Result<(), DbError> {
@@ -358,8 +363,12 @@ where
         })
     }
 
-    fn iter(&self) -> VecStorageIterator<T, Data> {
-        todo!()
+    fn iter(&self) -> VecStorageIteratorFixedSized<T, Data> {
+        VecStorageIteratorFixedSized::<T, Data> {
+            index: 0,
+            vec: self,
+            phantom_data: PhantomData,
+        }
     }
 
     fn push(&mut self, value: &T) -> Result<(), DbError> {

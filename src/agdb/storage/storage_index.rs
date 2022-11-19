@@ -4,45 +4,31 @@ use crate::utilities::serialize::SerializeFixedSized;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct StorageIndex {
-    pub(crate) index: u64,
-}
-
-impl StorageIndex {
-    pub fn as_usize(&self) -> usize {
-        self.value() as usize
-    }
-
-    pub fn is_valid(&self) -> bool {
-        0 < self.index
-    }
-
-    pub fn value(&self) -> u64 {
-        self.index
-    }
+    pub value: u64,
 }
 
 impl From<u64> for StorageIndex {
     fn from(index: u64) -> Self {
-        Self { index }
+        Self { value: index }
     }
 }
 
 impl From<usize> for StorageIndex {
     fn from(index: usize) -> Self {
         Self {
-            index: index as u64,
+            value: index as u64,
         }
     }
 }
 
 impl Serialize for StorageIndex {
     fn serialize(&self) -> Vec<u8> {
-        self.index.serialize()
+        self.value.serialize()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
-            index: u64::deserialize(bytes)?,
+            value: u64::deserialize(bytes)?,
         })
     }
 }
@@ -56,15 +42,6 @@ impl SerializeFixedSized for StorageIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn is_valid() {
-        assert!(!StorageIndex::default().is_valid());
-        assert!(!StorageIndex::from(0_u64).is_valid());
-
-        assert!(StorageIndex::from(1_u64).is_valid());
-        assert!(StorageIndex::from(100_u64).is_valid());
-    }
 
     #[test]
     fn ordering() {

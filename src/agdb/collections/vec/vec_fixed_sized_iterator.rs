@@ -1,10 +1,10 @@
-use crate::collections::vec_storage::VecFixedSized;
+use super::vec_fixed_sized::VecFixedSized;
 use crate::collections::vec_storage::VecStorage;
 use crate::storage::Storage;
 use crate::utilities::serialize::SerializeFixedSized;
 use std::marker::PhantomData;
 
-pub struct VecStorageIteratorFixedSized<'a, T, Data>
+pub struct VecFixedSizedIterator<'a, T, Data>
 where
     T: SerializeFixedSized,
     Data: Storage,
@@ -14,7 +14,7 @@ where
     pub(crate) phantom_data: PhantomData<T>,
 }
 
-impl<'a, T, Data> Iterator for VecStorageIteratorFixedSized<'a, T, Data>
+impl<'a, T, Data> Iterator for VecFixedSizedIterator<'a, T, Data>
 where
     T: SerializeFixedSized,
     Data: Storage,

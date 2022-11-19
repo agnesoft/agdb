@@ -1,5 +1,5 @@
 use crate::collections::storage_vec::StorageVec;
-use crate::storage::OldStorage;
+use crate::old_storage::OldStorage;
 use crate::utilities::old_serialize::OldSerialize;
 use std::marker::PhantomData;
 

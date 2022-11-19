@@ -1,65 +1,53 @@
-pub mod partial_storage;
-pub mod storage_file;
-pub mod storage_index;
+pub mod file_storage;
 
-mod storage_data;
-mod storage_data_file;
-mod storage_impl;
-mod storage_record;
-mod storage_records;
+mod file_record;
+mod file_records;
+mod file_storage_impl;
 mod write_ahead_log;
 
-use self::partial_storage::PartialStorage;
-use crate::db::db_error::DbError;
-use crate::storage::storage_index::StorageIndex;
-use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::serialize::Serialize;
+use crate::DbError;
+use crate::DbIndex;
 
-pub trait OldStorage {
+pub trait Storage {
     fn commit(&mut self) -> Result<(), DbError>;
-    fn insert<V: OldSerialize>(&mut self, value: &V) -> Result<StorageIndex, DbError>;
-    fn insert_at<V: OldSerialize>(
+    fn insert<T: Serialize>(&mut self, value: &T) -> Result<DbIndex, DbError>;
+    fn insert_at<T: Serialize>(
         &mut self,
-        index: &StorageIndex,
+        index: &DbIndex,
         offset: u64,
-        value: &V,
+        value: &T,
     ) -> Result<u64, DbError>;
+    fn insert_bytes(&mut self, bytes: &[u8]) -> Result<DbIndex, DbError>;
+    fn insert_bytes_at(
+        &mut self,
+        index: &DbIndex,
+        offset: u64,
+        bytes: &[u8],
+    ) -> Result<u64, DbError>;
+    fn len(&self) -> Result<u64, DbError>;
     fn move_at(
         &mut self,
-        index: &StorageIndex,
+        index: &DbIndex,
         offset_from: u64,
         offset_to: u64,
         size: u64,
-    ) -> Result<(), DbError>;
-    fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError>;
-    fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<(), DbError>;
+    ) -> Result<u64, DbError>;
+    fn remove(&mut self, index: &DbIndex) -> Result<(), DbError>;
+    fn replace<T: Serialize>(&mut self, index: &DbIndex, value: &T) -> Result<u64, DbError>;
+    fn replace_with_bytes(&mut self, index: &DbIndex, bytes: &[u8]) -> Result<u64, DbError>;
+    fn resize_value(&mut self, index: &DbIndex, new_size: u64) -> Result<u64, DbError>;
     fn shrink_to_fit(&mut self) -> Result<(), DbError>;
-    fn size(&mut self) -> Result<u64, DbError>;
     fn transaction(&mut self);
-    fn value<V: OldSerialize>(&mut self, index: &StorageIndex) -> Result<V, DbError>;
-    fn value_at<V: OldSerialize>(
-        &mut self,
-        index: &StorageIndex,
+    fn value<T: Serialize>(&self, index: &DbIndex) -> Result<T, DbError>;
+    fn value_as_bytes(&self, index: &DbIndex) -> Result<Vec<u8>, DbError>;
+    fn value_as_bytes_at(&self, index: &DbIndex, offset: u64) -> Result<Vec<u8>, DbError>;
+    fn value_as_bytes_at_size(
+        &self,
+        index: &DbIndex,
         offset: u64,
-    ) -> Result<V, DbError>;
-    fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError>;
-}
-
-pub trait Storage: PartialStorage {
-    fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError>;
-    fn insert_at<T: Serialize>(
-        &mut self,
-        index: &StorageIndex,
-        offset: usize,
-        value: &T,
-    ) -> Result<usize, DbError>;
-    fn move_at<T: Serialize>(
-        &mut self,
-        index: &StorageIndex,
-        offset: usize,
-        value: &T,
-    ) -> Result<(), DbError>;
-    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<usize, DbError>;
-    fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError>;
-    fn value_at<T: Serialize>(&self, index: &StorageIndex, offset: usize) -> Result<T, DbError>;
+        size: u64,
+    ) -> Result<Vec<u8>, DbError>;
+    fn value_at<T: Serialize>(&self, index: &DbIndex, offset: u64) -> Result<T, DbError>;
+    fn value_size(&self, index: &DbIndex) -> Result<u64, DbError>;
 }

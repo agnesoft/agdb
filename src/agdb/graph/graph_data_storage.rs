@@ -3,9 +3,9 @@ use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_index::GraphIndex;
 use crate::collections::storage_vec::StorageVec;
 use crate::db::db_error::DbError;
-use crate::storage::storage_file::StorageFile;
-use crate::storage::storage_index::StorageIndex;
-use crate::storage::OldStorage;
+use crate::old_storage::storage_file::StorageFile;
+use crate::old_storage::storage_index::StorageIndex;
+use crate::old_storage::OldStorage;
 use std::cell::RefCell;
 use std::rc::Rc;
 

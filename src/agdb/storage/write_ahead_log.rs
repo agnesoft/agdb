@@ -1,5 +1,6 @@
-use crate::db::db_error::DbError;
-use crate::utilities::old_serialize::OldSerialize;
+use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeFixedSized;
+use crate::DbError;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Read;
@@ -7,14 +8,13 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct WriteAheadLogRecord {
-    pub position: u64,
-    pub bytes: Vec<u8>,
-}
-
 pub struct WriteAheadLog {
     file: File,
+}
+
+pub struct WriteAheadLogRecord {
+    pub pos: u64,
+    pub value: Vec<u8>,
 }
 
 impl WriteAheadLog {
@@ -22,14 +22,22 @@ impl WriteAheadLog {
         Ok(self.file.set_len(0)?)
     }
 
-    pub fn insert(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
+    pub fn insert(&mut self, pos: u64, value: Vec<u8>) -> Result<(), DbError> {
         self.file.seek(SeekFrom::End(0))?;
-        self.file.write_all(&record.position.old_serialize())?;
-        self.file
-            .write_all(&(record.bytes.len() as u64).old_serialize())?;
-        self.file.write_all(&record.bytes)?;
+        self.file.write_all(&pos.serialize())?;
+        self.file.write_all(&value.serialize())?;
 
         Ok(())
+    }
+
+    pub fn new(filename: &str) -> Result<WriteAheadLog, DbError> {
+        Ok(Self {
+            file: OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(WriteAheadLog::wal_filename(filename))?,
+        })
     }
 
     pub fn records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
@@ -47,20 +55,21 @@ impl WriteAheadLog {
     fn read_exact(file: &mut File, size: u64) -> Result<Vec<u8>, DbError> {
         let mut buffer = vec![0_u8; size as usize];
         file.read_exact(&mut buffer)?;
+
         Ok(buffer)
     }
 
     fn read_record(file: &mut File) -> Result<WriteAheadLogRecord, DbError> {
-        let position = u64::old_deserialize(&Self::read_exact(file, u64::fixed_size())?)?;
-        let size = u64::old_deserialize(&Self::read_exact(file, u64::fixed_size())?)?;
+        let pos = u64::deserialize(&Self::read_exact(file, u64::serialized_size())?)?;
+        let size = u64::deserialize(&Self::read_exact(file, u64::serialized_size())?)?;
 
         Ok(WriteAheadLogRecord {
-            position,
-            bytes: Self::read_exact(file, size)?,
+            pos,
+            value: Self::read_exact(file, size)?,
         })
     }
 
-    pub(crate) fn wal_filename(filename: &str) -> String {
+    fn wal_filename(filename: &str) -> String {
         let pos;
 
         if let Some(slash) = filename.rfind('/') {
@@ -71,106 +80,24 @@ impl WriteAheadLog {
             pos = 0;
         }
 
-        let mut copy = filename.to_owned();
-        copy.insert(pos, '.');
-        copy
-    }
-}
+        let mut name = filename.to_owned();
+        name.insert(pos, '.');
 
-impl TryFrom<&String> for WriteAheadLog {
-    type Error = DbError;
-
-    fn try_from(filename: &String) -> Result<Self, Self::Error> {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(WriteAheadLog::wal_filename(filename))?;
-
-        Ok(WriteAheadLog { file })
+        name
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn clear() {
-        let test_file = TestFile::new();
-
-        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
-        let record = WriteAheadLogRecord {
-            position: 1,
-            bytes: vec![1_u8; 5],
-        };
-
-        wal.insert(record).unwrap();
-        wal.clear().unwrap();
-
-        assert_eq!(wal.records(), Ok(vec![]));
-    }
-
-    #[test]
-    fn filename_constructed() {
-        let test_file = TestFile::new();
-        WriteAheadLog::try_from(test_file.file_name()).unwrap();
-    }
-
-    #[test]
-    fn insert() {
-        let test_file = TestFile::from(".\\write_ahead_log_test.rs-insert.testfile");
-
-        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
-        let record = WriteAheadLogRecord {
-            position: 1,
-            bytes: vec![1_u8; 5],
-        };
-
-        wal.insert(record.clone()).unwrap();
-
-        assert_eq!(wal.records(), Ok(vec![record]));
-    }
-
-    #[test]
-    fn insert_empty() {
-        let test_file = TestFile::from("./write_ahead_log_test.rs-insert_empty.testfile");
-
-        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
-        let record = WriteAheadLogRecord {
-            position: 16,
-            bytes: vec![],
-        };
-
-        wal.insert(record.clone()).unwrap();
-
-        assert_eq!(wal.records(), Ok(vec![record]));
-    }
-
-    #[test]
-    fn record_derived_from_debug() {
-        let record = WriteAheadLogRecord::default();
-        format!("{:?}", record);
-    }
-
-    #[test]
-    fn records() {
-        let test_file = TestFile::from("write_ahead_log_test.rs-records.testfile");
-
-        let mut wal = WriteAheadLog::try_from(test_file.file_name()).unwrap();
-        let record1 = WriteAheadLogRecord {
-            position: 1,
-            bytes: vec![1_u8; 5],
-        };
-        let record2 = WriteAheadLogRecord {
-            position: 15,
-            bytes: vec![2_u8; 3],
-        };
-
-        wal.insert(record1.clone()).unwrap();
-        wal.insert(record2.clone()).unwrap();
-
-        assert_eq!(wal.records(), Ok(vec![record1, record2]));
+    fn wal_filename() {
+        assert_eq!(WriteAheadLog::wal_filename("file"), ".file");
+        assert_eq!(WriteAheadLog::wal_filename("/file"), "/.file");
+        assert_eq!(
+            WriteAheadLog::wal_filename("\\some\\path\\file"),
+            "\\some\\path\\.file"
+        );
     }
 }

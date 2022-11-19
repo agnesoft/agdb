@@ -1,5 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::storage::storage_index::StorageIndex;
+use crate::old_storage::storage_index::StorageIndex;
 use crate::utilities::old_serialize::OldSerialize;
 use std::mem::size_of;
 

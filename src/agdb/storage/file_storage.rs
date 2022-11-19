@@ -198,13 +198,16 @@ impl FileStorage {
 
         while self.file.borrow_mut().seek(SeekFrom::Current(0))? < len {
             let record = self.read_record()?;
-            let index = record.index as usize;
 
-            if records.len() <= index {
-                records.resize(index + 1, FileRecord::default());
+            if record.index != 0 {
+                let index = record.index as usize;
+
+                if records.len() <= index {
+                    records.resize(index + 1, FileRecord::default());
+                }
+
+                records[index] = record;
             }
-
-            records[index] = record;
         }
 
         self.file_records.set_records(records);
@@ -559,6 +562,37 @@ mod tests {
             .unwrap();
 
         assert_eq!(index2.value(), index4.value());
+    }
+
+    #[test]
+    fn index_reuse_chain_after_restore() {
+        let test_file = TestFile::new();
+
+        let index1;
+        let index2;
+
+        {
+            let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+            index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
+            index2 = storage.insert(&10_i64).unwrap();
+            let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
+
+            storage.remove(&index1).unwrap();
+            storage.remove(&index2).unwrap();
+        }
+
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+
+        let index4 = storage
+            .insert(&vec!["Hello".to_string(), "World".to_string()])
+            .unwrap();
+        let index5 = storage.insert(&1_u64).unwrap();
+        let index6 = storage.insert(&vec![0_u8; 0]).unwrap();
+
+        assert_eq!(index2.value(), index4.value());
+        assert_eq!(index1.value(), index5.value());
+        assert_eq!(index6.value(), 4);
     }
 
     #[test]

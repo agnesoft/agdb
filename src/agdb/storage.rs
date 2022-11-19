@@ -1,4 +1,5 @@
 pub mod file_storage;
+pub mod storage_index;
 
 mod file_record;
 mod file_records;

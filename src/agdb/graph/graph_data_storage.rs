@@ -1,32 +1,89 @@
 use super::graph_data::GraphData;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_index::GraphIndex;
-use crate::collections::old_storage_vec::OldStorageVec;
+use crate::collections::vec::vec_fixed_sized::VecFixedSized;
+use crate::collections::vec_storage::VecStorage;
 use crate::db::db_error::DbError;
-use crate::old_storage::storage_file::StorageFile;
-use crate::old_storage::storage_index::StorageIndex;
-use crate::old_storage::OldStorage;
+use crate::storage::file_storage::FileStorage;
+use crate::storage::storage_index::StorageIndex;
+use crate::storage::Storage;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct GraphDataStorage<Data = StorageFile>
+pub struct GraphDataStorage<Data = FileStorage>
 where
-    Data: OldStorage,
+    Data: Storage,
 {
     pub(crate) storage: Rc<RefCell<Data>>,
     #[allow(dead_code)]
     pub(crate) storage_index: StorageIndex,
     #[allow(dead_code)]
     pub(crate) indexes: GraphDataStorageIndexes,
-    pub(crate) from: OldStorageVec<i64, Data>,
-    pub(crate) to: OldStorageVec<i64, Data>,
-    pub(crate) from_meta: OldStorageVec<i64, Data>,
-    pub(crate) to_meta: OldStorageVec<i64, Data>,
+    pub(crate) from: VecStorage<i64, Data>,
+    pub(crate) to: VecStorage<i64, Data>,
+    pub(crate) from_meta: VecStorage<i64, Data>,
+    pub(crate) to_meta: VecStorage<i64, Data>,
+}
+
+impl<Data> GraphDataStorage<Data>
+where
+    Data: Storage,
+{
+    pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
+        let mut from = VecStorage::<i64, Data>::new(storage.clone())?;
+        from.push(&0)?;
+        let mut to = VecStorage::<i64, Data>::new(storage.clone())?;
+        to.push(&0)?;
+        let mut from_meta = VecStorage::<i64, Data>::new(storage.clone())?;
+        from_meta.push(&i64::MIN)?;
+        let mut to_meta = VecStorage::<i64, Data>::new(storage.clone())?;
+        to_meta.push(&0)?;
+
+        let indexes = GraphDataStorageIndexes {
+            from: from.storage_index(),
+            to: to.storage_index(),
+            from_meta: from_meta.storage_index(),
+            to_meta: to_meta.storage_index(),
+        };
+
+        let index = storage.borrow_mut().insert(&indexes)?;
+
+        Ok(GraphDataStorage::<Data> {
+            storage,
+            storage_index: index,
+            indexes,
+            from,
+            to,
+            from_meta,
+            to_meta,
+        })
+    }
+
+    pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
+        let indexes = storage
+            .borrow_mut()
+            .value::<GraphDataStorageIndexes>(index)?;
+
+        let from = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.from)?;
+        let to = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.to)?;
+        let from_meta = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.from_meta)?;
+        let to_meta = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.to_meta)?;
+
+        Ok(GraphDataStorage::<Data> {
+            storage,
+            storage_index: *index,
+            indexes,
+            from,
+            to,
+            from_meta,
+            to_meta,
+        })
+    }
 }
 
 impl<Data> GraphData for GraphDataStorage<Data>
 where
-    Data: OldStorage,
+    Data: Storage,
 {
     fn capacity(&self) -> Result<u64, DbError> {
         Ok(self.from.len())
@@ -89,82 +146,5 @@ where
 
     fn transaction(&mut self) {
         self.storage.borrow_mut().transaction()
-    }
-}
-
-impl<Data> TryFrom<Rc<RefCell<Data>>> for GraphDataStorage<Data>
-where
-    Data: OldStorage,
-{
-    type Error = DbError;
-
-    fn try_from(storage: Rc<RefCell<Data>>) -> Result<Self, Self::Error> {
-        let mut from = OldStorageVec::<i64, Data>::try_from(storage.clone())?;
-        from.push(&0)?;
-        let mut to = OldStorageVec::<i64, Data>::try_from(storage.clone())?;
-        to.push(&0)?;
-        let mut from_meta = OldStorageVec::<i64, Data>::try_from(storage.clone())?;
-        from_meta.push(&i64::MIN)?;
-        let mut to_meta = OldStorageVec::<i64, Data>::try_from(storage.clone())?;
-        to_meta.push(&0)?;
-
-        let indexes = GraphDataStorageIndexes {
-            from: from.storage_index(),
-            to: to.storage_index(),
-            from_meta: from_meta.storage_index(),
-            to_meta: to_meta.storage_index(),
-        };
-
-        let index = storage.borrow_mut().insert(&indexes)?;
-
-        Ok(GraphDataStorage::<Data> {
-            storage,
-            storage_index: index,
-            indexes,
-            from,
-            to,
-            from_meta,
-            to_meta,
-        })
-    }
-}
-
-impl<Data: OldStorage> TryFrom<(Rc<RefCell<Data>>, StorageIndex)> for GraphDataStorage<Data> {
-    type Error = DbError;
-
-    fn try_from(
-        storage_with_index: (Rc<RefCell<Data>>, StorageIndex),
-    ) -> Result<Self, Self::Error> {
-        let indexes = storage_with_index
-            .0
-            .borrow_mut()
-            .value::<GraphDataStorageIndexes>(&storage_with_index.1)?;
-
-        let from = OldStorageVec::<i64, Data>::try_from((
-            storage_with_index.0.clone(),
-            indexes.from.clone(),
-        ))?;
-        let to = OldStorageVec::<i64, Data>::try_from((
-            storage_with_index.0.clone(),
-            indexes.to.clone(),
-        ))?;
-        let from_meta = OldStorageVec::<i64, Data>::try_from((
-            storage_with_index.0.clone(),
-            indexes.from_meta.clone(),
-        ))?;
-        let to_meta = OldStorageVec::<i64, Data>::try_from((
-            storage_with_index.0.clone(),
-            indexes.to_meta.clone(),
-        ))?;
-
-        Ok(GraphDataStorage::<Data> {
-            storage: storage_with_index.0,
-            storage_index: storage_with_index.1,
-            indexes,
-            from,
-            to,
-            from_meta,
-            to_meta,
-        })
     }
 }

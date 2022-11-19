@@ -1,7 +1,7 @@
 pub mod graph_data;
 pub mod graph_impl;
 pub mod graph_index;
-pub mod storage_graph;
+pub mod graph_storage;
 
 mod graph_data_memory;
 mod graph_data_storage;

@@ -11,11 +11,12 @@ use std::cmp::max;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-pub trait VecDynamicSized<T, Data>
+pub trait VecDynamicSized<T, Data>: Sized
 where
     T: SerializeDynamicSized,
     Data: Storage,
 {
+    fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError>;
     fn iter(&self) -> VecStorageIterator<T, Data>;
     fn push(&mut self, value: &T) -> Result<(), DbError>;
     fn remove(&mut self, index: u64) -> Result<(), DbError>;
@@ -26,11 +27,12 @@ where
     fn to_vec(&self) -> Result<Vec<T>, DbError>;
     fn value(&self, index: u64) -> Result<T, DbError>;
 }
-pub trait VecFixedSized<T, Data>
+pub trait VecFixedSized<T, Data>: Sized
 where
     T: SerializeFixedSized,
     Data: Storage,
 {
+    fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError>;
     fn iter(&self) -> VecStorageIterator<T, Data>;
     fn push(&mut self, value: &T) -> Result<(), DbError>;
     fn remove(&mut self, index: u64) -> Result<(), DbError>;
@@ -72,25 +74,55 @@ where
         self.len() == 0
     }
 
-    pub fn new(data: Rc<RefCell<Data>>) -> Result<Self, DbError> {
-        todo!()
-    }
+    pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
+        let storage_index = storage.borrow_mut().insert(&0_u64)?;
 
-    pub fn from_storage(data: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError> {
-        todo!()
+        Ok(VecStorage {
+            phantom_data: PhantomData,
+            storage,
+            storage_index,
+            indexes: vec![],
+            len: 0,
+            capacity: 0,
+        })
     }
 
     pub fn storage_index(&self) -> DbIndex {
         self.storage_index.clone()
     }
 
-    fn dynamic_offset(index: u64) -> u64 {
-        u64::serialized_size() + DbIndex::serialized_size() * index
+    fn index_offset(index: u64) -> u64 {
+        Self::offset::<DbIndex>(index)
+    }
+
+    fn offset<V: SerializeFixedSized>(index: u64) -> u64 {
+        u64::serialized_size() + V::serialized_size() * index
+    }
+
+    fn grow<V: SerializeFixedSized>(&mut self, size: u64, value: &T) -> Result<(), DbError> {
+        if size >= self.capacity() {
+            self.reallocate::<V>(size)?;
+        }
+
+        let bytes = value.serialize().repeat((size - self.len()) as usize);
+
+        self.storage.borrow_mut().insert_bytes_at(
+            &self.storage_index,
+            Self::offset::<V>(self.len),
+            &bytes,
+        )?;
+
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &size)?;
+        self.len = size;
+
+        Ok(())
     }
 
     fn grow_dynamic(&mut self, size: u64, value: &T) -> Result<(), DbError> {
         if size >= self.capacity() {
-            self.reallocate_dynamic(size)?;
+            self.reallocate_indexes(size)?;
         }
 
         let mut new_indexes = Vec::<DbIndex>::new();
@@ -107,7 +139,7 @@ where
 
         self.storage.borrow_mut().insert_bytes_at(
             &self.storage_index,
-            Self::dynamic_offset(self.len),
+            Self::index_offset(self.len),
             &bytes[8..],
         )?;
 
@@ -119,11 +151,26 @@ where
         Ok(())
     }
 
-    fn reallocate_dynamic(&mut self, new_capacity: u64) -> Result<(), DbError> {
-        self.capacity = self.storage.borrow_mut().resize_value(
+    fn reallocate_indexes(&mut self, new_capacity: u64) -> Result<(), DbError> {
+        self.indexes.shrink_to_fit();
+        self.reallocate::<DbIndex>(new_capacity)
+    }
+
+    fn reallocate<V: SerializeFixedSized>(&mut self, new_capacity: u64) -> Result<(), DbError> {
+        self.capacity = max(64, new_capacity);
+        self.storage.borrow_mut().resize_value(
             &self.storage_index,
-            u64::serialized_size() + DbIndex::serialized_size() * max(64, new_capacity),
+            u64::serialized_size() + V::serialized_size() * self.capacity,
         )?;
+
+        Ok(())
+    }
+
+    fn shrink<V: SerializeFixedSized>(&mut self, size: u64) -> Result<(), DbError> {
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &size)?;
+        self.len = size;
 
         Ok(())
     }
@@ -160,6 +207,22 @@ where
     T: SerializeDynamicSized,
     Data: Storage,
 {
+    fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError> {
+        let indexes = storage.borrow_mut().value::<Vec<DbIndex>>(&index)?;
+        let len = indexes.len() as u64;
+        let capacity = (storage.borrow_mut().value_size(&index)? - u64::serialized_size())
+            / DbIndex::serialized_size();
+
+        Ok(VecStorage {
+            phantom_data: PhantomData,
+            storage,
+            storage_index: index.clone(),
+            indexes,
+            len,
+            capacity,
+        })
+    }
+
     fn iter(&self) -> VecStorageIterator<T, Data> {
         todo!()
     }
@@ -168,14 +231,14 @@ where
         self.storage.borrow_mut().transaction();
 
         if self.len() == self.capacity() {
-            self.reallocate_dynamic(self.capacity * 2)?;
+            self.reallocate_indexes(self.capacity * 2)?;
         }
 
         let index = self.storage.borrow_mut().insert(value)?;
         self.indexes.push(index);
         self.storage.borrow_mut().insert_at(
             &self.storage_index,
-            Self::dynamic_offset(self.len),
+            Self::index_offset(self.len),
             &index,
         )?;
 
@@ -195,12 +258,12 @@ where
         let value_index = self.indexes[index as usize];
         self.storage.borrow_mut().remove(&value_index)?;
         self.indexes.remove(index as usize);
-        let offset_from = Self::dynamic_offset(index + 1);
+        let offset_from = Self::index_offset(index + 1);
         self.storage.borrow_mut().move_at(
             &self.storage_index,
-            Self::dynamic_offset(index + 1),
-            Self::dynamic_offset(index),
-            Self::dynamic_offset(self.len) - offset_from,
+            offset_from,
+            Self::index_offset(index),
+            Self::index_offset(self.len) - offset_from,
         )?;
         self.len -= 1;
         self.storage
@@ -215,7 +278,7 @@ where
             return Ok(());
         }
 
-        self.reallocate_dynamic(capacity)
+        self.reallocate_indexes(capacity)
     }
 
     fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
@@ -245,7 +308,7 @@ where
         self.indexes[index as usize] = new_index;
         self.storage.borrow_mut().insert_at(
             &self.storage_index,
-            Self::dynamic_offset(index),
+            Self::index_offset(index),
             &new_index,
         )?;
 
@@ -253,7 +316,7 @@ where
     }
 
     fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        self.reallocate_dynamic(self.len())
+        self.reallocate_indexes(self.len())
     }
 
     fn to_vec(&self) -> Result<Vec<T>, DbError> {
@@ -280,40 +343,116 @@ where
     T: SerializeFixedSized,
     Data: Storage,
 {
+    fn from_storage(storage: Rc<RefCell<Data>>, index: &DbIndex) -> Result<Self, DbError> {
+        let len = storage.borrow_mut().value::<u64>(&index)?;
+        let capacity = (storage.borrow_mut().value_size(&index)? - u64::serialized_size())
+            / T::serialized_size();
+
+        Ok(VecStorage {
+            phantom_data: PhantomData,
+            storage,
+            storage_index: index.clone(),
+            indexes: vec![],
+            len,
+            capacity,
+        })
+    }
+
     fn iter(&self) -> VecStorageIterator<T, Data> {
         todo!()
     }
 
     fn push(&mut self, value: &T) -> Result<(), DbError> {
-        todo!()
+        self.storage.borrow_mut().transaction();
+
+        if self.len() == self.capacity() {
+            self.reallocate::<T>(self.capacity * 2)?;
+        }
+
+        self.storage.borrow_mut().insert_at(
+            &self.storage_index,
+            Self::offset::<T>(self.len),
+            value,
+        )?;
+
+        self.len += 1;
+
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &self.len)?;
+
+        self.storage.borrow_mut().commit()
     }
 
     fn remove(&mut self, index: u64) -> Result<(), DbError> {
-        todo!()
+        self.validate_index(index)?;
+
+        self.storage.borrow_mut().transaction();
+        let offset_from = Self::index_offset(index + 1);
+        self.storage.borrow_mut().move_at(
+            &self.storage_index,
+            offset_from,
+            Self::offset::<T>(index),
+            Self::offset::<T>(self.len) - offset_from,
+        )?;
+        self.len -= 1;
+        self.storage
+            .borrow_mut()
+            .insert_at(&self.storage_index, 0, &self.len)?;
+
+        self.storage.borrow_mut().commit()
     }
 
     fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
-        todo!()
+        if capacity <= self.capacity() {
+            return Ok(());
+        }
+
+        self.reallocate::<T>(capacity)
     }
 
     fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
-        todo!()
+        if self.len() == size {
+            return Ok(());
+        }
+
+        self.storage.borrow_mut().transaction();
+
+        if size < self.len() {
+            self.shrink::<T>(size)?;
+        } else if self.len() < size {
+            self.grow::<T>(size, value)?;
+        }
+
+        self.storage.borrow_mut().commit()
     }
 
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
-        todo!()
+        self.validate_index(index)?;
+
+        self.storage.borrow_mut().insert_at(
+            &self.storage_index,
+            Self::offset::<T>(index),
+            value,
+        )?;
+
+        Ok(())
     }
 
     fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        todo!()
+        self.reallocate::<T>(self.len())
     }
 
     fn to_vec(&self) -> Result<Vec<T>, DbError> {
-        todo!()
+        self.storage
+            .borrow_mut()
+            .value::<Vec<T>>(&self.storage_index)
     }
 
     fn value(&self, index: u64) -> Result<T, DbError> {
-        todo!()
+        self.storage
+            .borrow_mut()
+            .value_at::<T>(&self.storage_index, Self::offset::<T>(index))
     }
 }
 

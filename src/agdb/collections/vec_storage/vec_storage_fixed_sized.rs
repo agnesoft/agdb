@@ -88,21 +88,20 @@ where
         self.reallocate::<T>(capacity)
     }
 
-    #[allow(clippy::comparison_chain)]
     fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
-        if self.len() == size {
-            return Ok(());
+        match self.len().cmp(&size) {
+            std::cmp::Ordering::Less => {
+                self.storage.borrow_mut().transaction();
+                self.grow::<T>(size, value)?;
+                self.storage.borrow_mut().commit()
+            }
+            std::cmp::Ordering::Equal => Ok(()),
+            std::cmp::Ordering::Greater => {
+                self.storage.borrow_mut().transaction();
+                self.shrink::<T>(size)?;
+                self.storage.borrow_mut().commit()
+            }
         }
-
-        self.storage.borrow_mut().transaction();
-
-        if size < self.len() {
-            self.shrink::<T>(size)?;
-        } else if self.len() < size {
-            self.grow::<T>(size, value)?;
-        }
-
-        self.storage.borrow_mut().commit()
     }
 
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {

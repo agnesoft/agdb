@@ -1,12 +1,11 @@
-use super::vec_dynamic_sized::VecDynamicSized;
 use crate::collections::vec_storage::VecStorage;
+use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
-use crate::utilities::serialize::SerializeDynamicSized;
 use std::marker::PhantomData;
 
-pub struct VecDynamicSizedIterator<'a, T, Data>
+pub struct VecStorageIterator<'a, T, Data>
 where
-    T: SerializeDynamicSized,
+    T: StorageValue,
     Data: Storage,
 {
     pub(crate) index: u64,
@@ -14,9 +13,9 @@ where
     pub(crate) phantom_data: PhantomData<T>,
 }
 
-impl<'a, T, Data> Iterator for VecDynamicSizedIterator<'a, T, Data>
+impl<'a, T, Data> Iterator for VecStorageIterator<'a, T, Data>
 where
-    T: SerializeDynamicSized,
+    T: StorageValue,
     Data: Storage,
 {
     type Item = T;

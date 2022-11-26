@@ -263,6 +263,7 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
+        assert_eq!(serialized_size, f64::static_serialized_size());
 
         bytes.push(0);
         let deserialized = f64::deserialize(&bytes).unwrap();
@@ -285,6 +286,7 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
+        assert_eq!(serialized_size, usize::static_serialized_size());
 
         bytes.push(0);
         let deserialized = usize::deserialize(&bytes).unwrap();
@@ -299,6 +301,7 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
+        assert_eq!(String::static_serialized_size(), 0);
 
         bytes.push(0);
         let deserialized = String::deserialize(&bytes).unwrap();
@@ -334,6 +337,7 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
+        assert_eq!(Vec::<u8>::static_serialized_size(), 0);
 
         bytes.push(0);
         let deserialized = Vec::<u8>::deserialize(&bytes).unwrap();
@@ -361,6 +365,7 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
+        assert_eq!(Vec::<u64>::static_serialized_size(), 0);
 
         bytes.push(0);
         let deserialized = Vec::<u64>::deserialize(&bytes).unwrap();
@@ -392,6 +397,7 @@ mod tests {
         let deserialized = Vec::<String>::deserialize(&bytes).unwrap();
 
         assert_eq!(original, deserialized);
+        assert_eq!(Vec::<String>::static_serialized_size(), 0);
     }
 
     #[test]

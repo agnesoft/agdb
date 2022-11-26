@@ -49,3 +49,24 @@ impl Serialize for GraphDataStorageIndexes {
         StorageIndex::static_serialized_size() * 4
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialize() {
+        let indexes = GraphDataStorageIndexes {
+            from: StorageIndex::default(),
+            to: StorageIndex::default(),
+            from_meta: StorageIndex::default(),
+            to_meta: StorageIndex::default(),
+        };
+
+        assert_ne!(indexes.serialized_size(), 0);
+        assert_eq!(
+            indexes.serialized_size(),
+            GraphDataStorageIndexes::static_serialized_size()
+        );
+    }
+}

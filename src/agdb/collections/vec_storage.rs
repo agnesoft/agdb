@@ -85,7 +85,6 @@ where
 
         self.set_value_bytes(self.len(), value)?;
         self.set_len(self.len() + 1)?;
-
         self.storage.borrow_mut().commit()
     }
 
@@ -96,7 +95,6 @@ where
         self.remove_value_bytes(index)?;
         self.move_left(index)?;
         self.set_len(self.len() - 1)?;
-
         self.storage.borrow_mut().commit()
     }
 
@@ -124,10 +122,8 @@ where
         self.validate_index(index)?;
 
         self.storage.borrow_mut().transaction();
-        let bytes = self.value_bytes(index)?;
-        T::remove(&mut *self.storage.borrow_mut(), &bytes)?;
+        self.remove_value_bytes(index)?;
         self.set_value_bytes(index, value)?;
-
         self.storage.borrow_mut().commit()
     }
 
@@ -144,8 +140,7 @@ where
         vector.reserve(self.len() as usize);
 
         for index in 0..self.len() {
-            let bytes = self.value_bytes(index)?;
-            vector.push(T::load(&*self.storage.borrow_mut(), &bytes)?);
+            vector.push(self.load_value(index)?);
         }
 
         Ok(vector)
@@ -153,9 +148,7 @@ where
 
     pub fn value(&self, index: u64) -> Result<T, DbError> {
         self.validate_index(index)?;
-
-        let bytes = self.value_bytes(index)?;
-        T::load(&*self.storage.borrow_mut(), &bytes)
+        self.load_value(index)
     }
 
     fn offset(index: u64) -> u64 {
@@ -167,21 +160,22 @@ where
             self.reallocate(size)?;
         }
 
-        let old_len = self.len();
-        self.set_len(size)?;
-
-        for index in old_len..self.len() {
+        for index in self.len()..size {
             self.set_value_bytes(index, value)?;
         }
 
-        Ok(())
+        self.set_len(size)
+    }
+
+    fn load_value(&self, index: u64) -> Result<T, DbError> {
+        let bytes = self.value_bytes(index)?;
+        T::load(&*self.storage.borrow_mut(), &bytes)
     }
 
     fn move_left(&mut self, index: u64) -> Result<(), DbError> {
         let offset_from = Self::offset(index + 1);
         let offset_to = Self::offset(index);
         let move_len = T::storage_len() * (self.len() - index);
-
         self.storage
             .borrow_mut()
             .move_at(&self.storage_index, offset_from, offset_to, move_len)
@@ -189,7 +183,6 @@ where
 
     fn reallocate(&mut self, new_capacity: u64) -> Result<(), DbError> {
         self.capacity = new_capacity;
-
         self.storage.borrow_mut().resize_value(
             &self.storage_index,
             self.len().serialized_size() + T::storage_len() * self.capacity,
@@ -198,13 +191,11 @@ where
 
     fn remove_value_bytes(&mut self, index: u64) -> Result<(), DbError> {
         let bytes = self.value_bytes(index)?;
-
         T::remove(&mut *self.storage.borrow_mut(), &bytes)
     }
 
     fn set_len(&mut self, new_len: u64) -> Result<(), DbError> {
         self.len = new_len;
-
         self.storage
             .borrow_mut()
             .insert_at(&self.storage_index, 0, &self.len)
@@ -212,23 +203,17 @@ where
 
     fn set_value_bytes(&mut self, index: u64, value: &T) -> Result<(), DbError> {
         let bytes = value.store(&mut *self.storage.borrow_mut())?;
-
         self.storage
             .borrow_mut()
             .insert_bytes_at(&self.storage_index, Self::offset(index), &bytes)
     }
 
     fn shrink(&mut self, size: u64) -> Result<(), DbError> {
-        self.len = size;
-
         for index in size..self.len() {
-            let bytes = self.value_bytes(index)?;
-            T::remove(&mut *self.storage.borrow_mut(), &bytes)?;
+            self.remove_value_bytes(index)?;
         }
 
-        self.storage
-            .borrow_mut()
-            .insert_at(&self.storage_index, 0, &self.len)
+        self.set_len(size)
     }
 
     fn validate_index(&self, index: u64) -> Result<(), DbError> {

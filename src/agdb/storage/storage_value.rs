@@ -28,24 +28,6 @@ impl StorageValue for i64 {
     }
 }
 
-impl StorageValue for u64 {
-    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
-        Ok(self.serialize())
-    }
-
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        u64::deserialize(bytes)
-    }
-
-    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
-        Ok(())
-    }
-
-    fn storage_len() -> u64 {
-        u64::static_serialized_size()
-    }
-}
-
 impl StorageValue for String {
     fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
         let index = storage.insert(self)?;

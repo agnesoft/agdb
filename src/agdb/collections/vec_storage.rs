@@ -57,7 +57,7 @@ where
         self.len() == 0
     }
 
-    fn iter(&self) -> VecStorageIterator<T, Data> {
+    pub fn iter(&self) -> VecStorageIterator<T, Data> {
         VecStorageIterator::<T, Data> {
             index: 0,
             vec: self,
@@ -134,6 +134,31 @@ where
 
     pub fn storage_index(&self) -> StorageIndex {
         self.storage_index
+    }
+
+    pub fn swap(&mut self, index: u64, other: u64) -> Result<(), DbError> {
+        if index == other {
+            return Ok(());
+        }
+
+        self.validate_index(index)?;
+        self.validate_index(other)?;
+
+        let bytes = self.value_bytes(index)?;
+        let offset_from = Self::offset(other);
+        let offset_to = Self::offset(index);
+        let size = T::storage_len();
+
+        self.storage.borrow_mut().transaction();
+        self.storage
+            .borrow_mut()
+            .move_at(&self.storage_index, offset_from, offset_to, size)?;
+        self.storage.borrow_mut().insert_bytes_at(
+            &self.storage_index,
+            Self::offset(other),
+            &bytes,
+        )?;
+        self.storage.borrow_mut().commit()
     }
 
     pub fn to_vec(&self) -> Result<Vec<T>, DbError> {
@@ -672,6 +697,75 @@ mod tests {
         vec.shrink_to_fit().unwrap();
 
         assert_eq!(vec.capacity(), 0);
+    }
+
+    #[test]
+    fn swap() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut vec = VecStorage::<String>::new(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+        vec.swap(0, 2).unwrap();
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "World".to_string(),
+                ", ".to_string(),
+                "Hello".to_string(),
+                "!".to_string()
+            ])
+        );
+    }
+    #[test]
+    fn swap_self() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut vec = VecStorage::<String>::new(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+        vec.swap(1, 1).unwrap();
+        assert_eq!(
+            vec.to_vec(),
+            Ok(vec![
+                "Hello".to_string(),
+                ", ".to_string(),
+                "World".to_string(),
+                "!".to_string()
+            ])
+        );
+    }
+    #[test]
+    fn swap_invalid() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut vec = VecStorage::<String>::new(storage).unwrap();
+        vec.push(&"Hello".to_string()).unwrap();
+        vec.push(&", ".to_string()).unwrap();
+        vec.push(&"World".to_string()).unwrap();
+        vec.push(&"!".to_string()).unwrap();
+        assert_eq!(
+            vec.swap(1, 10),
+            Err(DbError::from(
+                "VecStorage error: index (10) out of bounds (4)"
+            ))
+        );
+        assert_eq!(
+            vec.swap(10, 1),
+            Err(DbError::from(
+                "VecStorage error: index (10) out of bounds (4)"
+            ))
+        );
     }
 
     #[test]

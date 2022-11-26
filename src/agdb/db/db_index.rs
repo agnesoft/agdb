@@ -1,4 +1,4 @@
-use crate::utilities::serialize::{Serialize, SerializeFixedSized};
+use crate::utilities::serialize::Serialize;
 use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -13,11 +13,11 @@ impl DbIndex {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<DbIndex, DbError> {
-        if bytes.len() as u64 > DbIndex::serialized_size() {
+        if bytes.len() as u64 >= DbIndex::static_serialized_size() {
             return Err(DbError::from(format!(
                 "DbIndex::from_bytes error: value ({}) too long (>{})",
                 bytes.len(),
-                DbIndex::serialized_size()
+                DbIndex::static_serialized_size()
             )));
         }
 
@@ -60,7 +60,7 @@ impl DbIndex {
 impl Serialize for DbIndex {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
-        bytes.reserve(Self::serialized_size() as usize);
+        bytes.reserve(Self::static_serialized_size() as usize);
         bytes.extend(self.value.serialize());
         bytes.extend(self.meta.serialize());
 
@@ -70,12 +70,18 @@ impl Serialize for DbIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         Ok(Self {
             value: u64::deserialize(bytes)?,
-            meta: u64::deserialize(&bytes[u64::serialized_size() as usize..])?,
+            meta: u64::deserialize(&bytes[u64::static_serialized_size() as usize..])?,
         })
     }
-}
 
-impl SerializeFixedSized for DbIndex {}
+    fn serialized_size(&self) -> u64 {
+        self.value.serialized_size() + self.meta.serialized_size()
+    }
+
+    fn static_serialized_size() -> u64 {
+        u64::static_serialized_size() * 2
+    }
+}
 
 impl From<usize> for DbIndex {
     fn from(value: usize) -> Self {
@@ -240,7 +246,7 @@ mod tests {
         original.set_value(1_u64);
         original.set_meta(2_u64);
 
-        let serialized_size = DbIndex::serialized_size();
+        let serialized_size = original.serialized_size();
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);

@@ -1,6 +1,5 @@
 use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize::SerializeFixedSized;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct StorageIndex {
@@ -23,11 +22,13 @@ impl Serialize for StorageIndex {
             value: u64::deserialize(bytes)?,
         })
     }
-}
 
-impl SerializeFixedSized for StorageIndex {
-    fn serialized_size() -> u64 {
-        i64::serialized_size()
+    fn serialized_size(&self) -> u64 {
+        self.value.serialized_size()
+    }
+
+    fn static_serialized_size() -> u64 {
+        i64::static_serialized_size()
     }
 }
 

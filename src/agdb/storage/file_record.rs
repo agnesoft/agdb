@@ -1,4 +1,4 @@
-use crate::utilities::serialize::SerializeFixedSized;
+use crate::utilities::serialize::Serialize;
 
 #[derive(Clone, Copy, Default)]
 pub struct FileRecord {
@@ -9,7 +9,7 @@ pub struct FileRecord {
 
 impl FileRecord {
     pub fn value_start(&self) -> u64 {
-        self.pos + u64::serialized_size() * 2
+        self.pos + self.index.serialized_size() + self.size.serialized_size()
     }
 
     pub fn end(&self) -> u64 {

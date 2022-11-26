@@ -18,14 +18,14 @@ pub trait Storage {
         index: &StorageIndex,
         offset: u64,
         value: &T,
-    ) -> Result<u64, DbError>;
+    ) -> Result<(), DbError>;
     fn insert_bytes(&mut self, bytes: &[u8]) -> Result<StorageIndex, DbError>;
     fn insert_bytes_at(
         &mut self,
         index: &StorageIndex,
         offset: u64,
         bytes: &[u8],
-    ) -> Result<u64, DbError>;
+    ) -> Result<(), DbError>;
     fn len(&self) -> Result<u64, DbError>;
     fn move_at(
         &mut self,
@@ -33,11 +33,11 @@ pub trait Storage {
         offset_from: u64,
         offset_to: u64,
         size: u64,
-    ) -> Result<u64, DbError>;
+    ) -> Result<(), DbError>;
     fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError>;
-    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<u64, DbError>;
-    fn replace_with_bytes(&mut self, index: &StorageIndex, bytes: &[u8]) -> Result<u64, DbError>;
-    fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<u64, DbError>;
+    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<(), DbError>;
+    fn replace_with_bytes(&mut self, index: &StorageIndex, bytes: &[u8]) -> Result<(), DbError>;
+    fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<(), DbError>;
     fn shrink_to_fit(&mut self) -> Result<(), DbError>;
     fn transaction(&mut self);
     fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError>;

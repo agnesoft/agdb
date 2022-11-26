@@ -1,4 +1,5 @@
 use crate::db::db_error::DbError;
+use std::any::type_name;
 use std::mem::size_of;
 
 pub trait Serialize: Sized {
@@ -148,8 +149,12 @@ impl<T: Serialize> Serialize for Vec<T> {
         vec.reserve(len);
 
         for _ in 0..len {
-            let value = T::deserialize(&bytes[begin..])
-                .map_err(|_| DbError::from("Vec<T> deserialization error: out of bounds"))?;
+            let value = T::deserialize(&bytes[begin..]).map_err(|_| {
+                DbError::from(format!(
+                    "Vec<{}> deserialization error: out of bounds",
+                    type_name::<T>()
+                ))
+            })?;
             begin += value.serialized_size() as usize;
             vec.push(value);
         }
@@ -396,9 +401,10 @@ mod tests {
 
         assert_eq!(
             Vec::<String>::deserialize(&bytes),
-            Err(DbError::from(
-                "Vec<String> deserialization error: out of bounds"
-            ))
+            Err(DbError::from(format!(
+                "Vec<{}> deserialization error: out of bounds",
+                type_name::<String>()
+            )))
         );
 
         let len: usize = 1;
@@ -406,9 +412,10 @@ mod tests {
 
         assert_eq!(
             Vec::<String>::deserialize(&bytes),
-            Err(DbError::from(
-                "Vec<String> deserialization error: out of bounds"
-            ))
+            Err(DbError::from(format!(
+                "Vec<{}> deserialization error: out of bounds",
+                type_name::<String>()
+            )))
         );
     }
 }

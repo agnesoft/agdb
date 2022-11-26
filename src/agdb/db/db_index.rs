@@ -13,7 +13,7 @@ impl DbIndex {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<DbIndex, DbError> {
-        if bytes.len() as u64 >= DbIndex::static_serialized_size() {
+        if bytes.len() as u64 > DbIndex::static_serialized_size() {
             return Err(DbError::from(format!(
                 "DbIndex::from_bytes error: value ({}) too long (>{})",
                 bytes.len(),

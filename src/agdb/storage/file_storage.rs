@@ -504,10 +504,9 @@ impl Drop for FileStorage {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::metadata;
-
     use super::*;
     use crate::test_utilities::test_file::TestFile;
+    use std::fs::metadata;
 
     #[test]
     fn bad_file() {

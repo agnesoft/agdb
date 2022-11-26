@@ -1,5 +1,6 @@
 pub mod file_storage;
 pub mod storage_index;
+pub mod storage_value;
 
 mod file_record;
 mod file_records;

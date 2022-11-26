@@ -1,6 +1,7 @@
 use super::storage_index::StorageIndex;
 use super::Storage;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 
 pub trait StorageValue: Serialize {

@@ -1,6 +1,7 @@
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use std::mem::size_of;
 
 pub(crate) struct GraphDataStorageIndexes {
@@ -39,16 +40,11 @@ impl Serialize for GraphDataStorageIndexes {
     }
 
     fn serialized_size(&self) -> u64 {
-        self.from.serialized_size()
-            + self.to.serialized_size()
-            + self.from_meta.serialized_size()
-            + self.to_meta.serialized_size()
-    }
-
-    fn static_serialized_size() -> u64 {
-        StorageIndex::static_serialized_size() * 4
+        Self::static_serialized_size()
     }
 }
+
+impl SerializeStatic for GraphDataStorageIndexes {}
 
 #[cfg(test)]
 mod tests {

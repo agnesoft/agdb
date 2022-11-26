@@ -1,4 +1,5 @@
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 use std::fs::File;
 use std::fs::OpenOptions;

@@ -5,6 +5,7 @@ use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
 use super::Storage;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 use std::cell::RefCell;
 use std::cmp::max;

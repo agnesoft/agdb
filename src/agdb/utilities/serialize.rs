@@ -6,7 +6,6 @@ pub trait Serialize: Sized {
     fn serialize(&self) -> Vec<u8>;
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
     fn serialized_size(&self) -> u64;
-    fn static_serialized_size() -> u64;
 }
 
 impl Serialize for i64 {
@@ -24,10 +23,6 @@ impl Serialize for i64 {
     }
 
     fn serialized_size(&self) -> u64 {
-        size_of::<Self>() as u64
-    }
-
-    fn static_serialized_size() -> u64 {
         size_of::<Self>() as u64
     }
 }
@@ -49,10 +44,6 @@ impl Serialize for u64 {
     fn serialized_size(&self) -> u64 {
         size_of::<Self>() as u64
     }
-
-    fn static_serialized_size() -> u64 {
-        size_of::<Self>() as u64
-    }
 }
 
 impl Serialize for f64 {
@@ -72,10 +63,6 @@ impl Serialize for f64 {
     fn serialized_size(&self) -> u64 {
         size_of::<Self>() as u64
     }
-
-    fn static_serialized_size() -> u64 {
-        size_of::<Self>() as u64
-    }
 }
 
 impl Serialize for usize {
@@ -90,10 +77,6 @@ impl Serialize for usize {
 
     fn serialized_size(&self) -> u64 {
         size_of::<u64>() as u64
-    }
-
-    fn static_serialized_size() -> u64 {
-        size_of::<Self>() as u64
     }
 }
 
@@ -122,10 +105,6 @@ impl Serialize for String {
 
     fn serialized_size(&self) -> u64 {
         self.len().serialized_size() + self.len() as u64
-    }
-
-    fn static_serialized_size() -> u64 {
-        0
     }
 }
 
@@ -171,10 +150,6 @@ impl<T: Serialize> Serialize for Vec<T> {
 
         len
     }
-
-    fn static_serialized_size() -> u64 {
-        0
-    }
 }
 
 impl Serialize for Vec<u8> {
@@ -200,10 +175,6 @@ impl Serialize for Vec<u8> {
 
     fn serialized_size(&self) -> u64 {
         self.len().serialized_size() + self.len() as u64
-    }
-
-    fn static_serialized_size() -> u64 {
-        0
     }
 }
 
@@ -263,7 +234,6 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
-        assert_eq!(serialized_size, f64::static_serialized_size());
 
         bytes.push(0);
         let deserialized = f64::deserialize(&bytes).unwrap();
@@ -286,7 +256,6 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
-        assert_eq!(serialized_size, usize::static_serialized_size());
 
         bytes.push(0);
         let deserialized = usize::deserialize(&bytes).unwrap();
@@ -301,7 +270,6 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
-        assert_eq!(String::static_serialized_size(), 0);
 
         bytes.push(0);
         let deserialized = String::deserialize(&bytes).unwrap();
@@ -337,7 +305,6 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
-        assert_eq!(Vec::<u8>::static_serialized_size(), 0);
 
         bytes.push(0);
         let deserialized = Vec::<u8>::deserialize(&bytes).unwrap();
@@ -365,7 +332,6 @@ mod tests {
         let mut bytes = original.serialize();
 
         assert_eq!(bytes.len() as u64, serialized_size);
-        assert_eq!(Vec::<u64>::static_serialized_size(), 0);
 
         bytes.push(0);
         let deserialized = Vec::<u64>::deserialize(&bytes).unwrap();
@@ -397,7 +363,6 @@ mod tests {
         let deserialized = Vec::<String>::deserialize(&bytes).unwrap();
 
         assert_eq!(original, deserialized);
-        assert_eq!(Vec::<String>::static_serialized_size(), 0);
     }
 
     #[test]

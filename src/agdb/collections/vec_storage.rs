@@ -6,6 +6,7 @@ use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 use std::cell::RefCell;
 use std::cmp::max;

@@ -1,4 +1,5 @@
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -75,13 +76,11 @@ impl Serialize for DbIndex {
     }
 
     fn serialized_size(&self) -> u64 {
-        self.value.serialized_size() + self.meta.serialized_size()
-    }
-
-    fn static_serialized_size() -> u64 {
-        u64::static_serialized_size() * 2
+        Self::static_serialized_size()
     }
 }
+
+impl SerializeStatic for DbIndex {}
 
 impl From<usize> for DbIndex {
     fn from(value: usize) -> Self {

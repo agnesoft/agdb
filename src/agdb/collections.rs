@@ -1,5 +1,6 @@
 pub mod bit_set;
 pub mod dictionary;
+pub mod map_storage;
 pub mod multi_map;
 pub mod old_storage_vec;
 pub mod storage_dictionary;

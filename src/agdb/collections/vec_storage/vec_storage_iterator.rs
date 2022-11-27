@@ -8,9 +8,9 @@ where
     T: StorageValue,
     Data: Storage,
 {
-    pub(crate) index: u64,
-    pub(crate) vec: &'a VecStorage<T, Data>,
-    pub(crate) phantom_data: PhantomData<T>,
+    pub index: u64,
+    pub vec: &'a VecStorage<T, Data>,
+    pub phantom_data: PhantomData<T>,
 }
 
 impl<'a, T, Data> Iterator for VecStorageIterator<'a, T, Data>

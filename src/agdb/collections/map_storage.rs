@@ -153,12 +153,6 @@ where
         Ok(())
     }
 
-    pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        self.states.shrink_to_fit()?;
-        self.keys.shrink_to_fit()?;
-        self.values.shrink_to_fit()
-    }
-
     pub fn storage_index(&self) -> StorageIndex {
         self.storage_index
     }
@@ -412,7 +406,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_reallocate() {
+    fn insert_reallocates() {
         let test_file = TestFile::new();
         let storage = Rc::new(RefCell::new(
             FileStorage::new(test_file.file_name()).unwrap(),
@@ -435,7 +429,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_reallocate_with_collisions() {
+    fn insert_reallocates_with_collisions() {
         let test_file = TestFile::new();
         let storage = Rc::new(RefCell::new(
             FileStorage::new(test_file.file_name()).unwrap(),
@@ -443,12 +437,12 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        for i in 0..100 {
-            map.insert(&(i * 64), &i).unwrap();
+        for i in 1..100 {
+            map.insert(&(i * 64 - 1), &i).unwrap();
         }
 
-        for i in 0..100 {
-            assert_eq!(map.value(&(i * 64)), Ok(Some(i)));
+        for i in 1..100 {
+            assert_eq!(map.value(&(i * 64 - 1)), Ok(Some(i)));
         }
     }
 
@@ -469,6 +463,22 @@ mod tests {
 
         assert_eq!(map.value(&1), Ok(Some(10)));
         assert_eq!(map.value(&5), Ok(Some(20)));
+    }
+
+    #[test]
+    fn is_empty() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+
+        assert!(map.is_empty());
+        map.insert(&1, &10).unwrap();
+        assert!(!map.is_empty());
+        map.remove(&1).unwrap();
+        assert!(map.is_empty());
     }
 
     #[test]
@@ -571,7 +581,7 @@ mod tests {
         assert_eq!(map.len(), 100);
         assert_eq!(map.capacity(), 128);
 
-        for i in 0..100 {
+        for i in (0..100).rev() {
             map.remove(&i).unwrap();
         }
 

@@ -51,3 +51,18 @@ impl Serialize for MapStorageIndex {
 }
 
 impl SerializeStatic for MapStorageIndex {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bad_deserialize() {
+        assert_eq!(
+            MapStorageIndex::deserialize(&Vec::<u8>::new())
+                .err()
+                .unwrap(),
+            DbError::from("MapStorageIndex deserialization error: not enough data")
+        );
+    }
+}

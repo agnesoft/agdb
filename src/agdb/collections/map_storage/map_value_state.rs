@@ -4,7 +4,7 @@ use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 use std::mem::size_of;
 
-#[derive(Copy, Clone, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub enum MapValueState {
     #[default]
     Empty,
@@ -58,5 +58,34 @@ impl StorageValue for MapValueState {
 
     fn storage_len() -> u64 {
         Self::static_serialized_size()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bad_deserialize() {
+        assert_eq!(
+            MapValueState::deserialize(&Vec::<u8>::new()).err().unwrap(),
+            DbError::from("MapValueState deserialization error: unknown value")
+        );
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        let value = MapValueState::Deleted;
+        format!("{:?}", value);
+    }
+
+    #[test]
+    fn derived_from_default() {
+        assert_eq!(MapValueState::default(), MapValueState::Empty);
+    }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(MapValueState::default().serialized_size(), 1);
     }
 }

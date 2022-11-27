@@ -16,6 +16,7 @@ use crate::DbError;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -23,7 +24,7 @@ use std::rc::Rc;
 #[allow(dead_code)]
 pub struct MapStorage<K, T, Data = FileStorage>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue + Display,
     T: Default + StorageValue,
     Data: Storage,
 {
@@ -38,7 +39,7 @@ where
 #[allow(dead_code)]
 impl<K, T, Data> MapStorage<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue + Display,
     T: Default + StorageValue,
     Data: Storage,
 {
@@ -66,7 +67,7 @@ where
         })
     }
 
-    pub fn insert(&mut self, key: K, value: T) -> Result<Option<T>, DbError> {
+    pub fn insert(&mut self, key: &K, value: &T) -> Result<Option<T>, DbError> {
         self.storage.borrow_mut().transaction();
 
         let index = self.find_or_free(&key)?;
@@ -119,6 +120,10 @@ where
     }
 
     pub fn remove(&mut self, key: &K) -> Result<(), DbError> {
+        if self.capacity() == 0 {
+            return Ok(());
+        }
+
         let mut pos = key.stable_hash() % self.capacity();
 
         loop {
@@ -170,6 +175,10 @@ where
     }
 
     pub fn value(&self, key: &K) -> Result<Option<T>, DbError> {
+        if self.capacity() == 0 {
+            return Ok(None);
+        }
+
         let mut pos = key.stable_hash() % self.capacity();
 
         loop {
@@ -274,17 +283,18 @@ where
         new_capacity: u64,
         empty_list: &mut Vec<bool>,
     ) -> Result<(), DbError> {
-        let mut pos = self.keys.value(*i)?.stable_hash() % new_capacity;
+        let key = self.keys.value(*i)?;
+        let mut pos = key.stable_hash() % new_capacity;
 
         loop {
-            if pos == *i {
-                *i += 1;
-                break;
-            }
-
             if empty_list[pos as usize] {
                 empty_list[pos as usize] = false;
                 self.swap(*i, pos)?;
+
+                if *i == pos {
+                    *i += 1;
+                }
+
                 break;
             }
 
@@ -300,11 +310,10 @@ where
 
     fn rehash_values(&mut self, current_capacity: u64, new_capacity: u64) -> Result<(), DbError> {
         let mut i = 0_u64;
-        let states = self.states.to_vec()?;
         let mut empty_list = vec![true; new_capacity as usize];
 
         while i != current_capacity {
-            self.rehash_value(states[i as usize], &mut i, new_capacity, &mut empty_list)?;
+            self.rehash_value(self.states.value(i)?, &mut i, new_capacity, &mut empty_list)?;
         }
 
         Ok(())
@@ -342,6 +351,48 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
+    fn from_storage_index() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let index;
+
+        {
+            let mut map = MapStorage::<u64, u64>::new(storage.clone()).unwrap();
+            map.insert(&1, &1).unwrap();
+            map.insert(&3, &2).unwrap();
+            map.insert(&5, &3).unwrap();
+            map.remove(&3).unwrap();
+            index = map.storage_index();
+        }
+
+        let map = MapStorage::<u64, u64>::from_storage(storage, &index).unwrap();
+
+        let mut expected = HashMap::<u64, u64>::new();
+        expected.insert(1, 1);
+        expected.insert(5, 3);
+
+        assert_eq!(map.to_hash_map(), Ok(expected));
+    }
+
+    #[test]
+    fn from_storage_missing_index() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        assert_eq!(
+            MapStorage::<u64, u64>::from_storage(storage, &StorageIndex::from(1_u64))
+                .err()
+                .unwrap(),
+            DbError::from("FileStorage error: index (1) not found")
+        );
+    }
+
+    #[test]
     fn insert() {
         let test_file = TestFile::new();
         let storage = Rc::new(RefCell::new(
@@ -350,9 +401,9 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        map.insert(1, 10).unwrap();
-        map.insert(5, 15).unwrap();
-        map.insert(7, 20).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.insert(&5, &15).unwrap();
+        map.insert(&7, &20).unwrap();
 
         assert_eq!(map.len(), 3);
         assert_eq!(map.value(&1), Ok(Some(10)));
@@ -369,10 +420,10 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        assert_eq!(map.capacity(), 1);
+        assert_eq!(map.capacity(), 0);
 
         for i in 0..100 {
-            map.insert(i, i).unwrap();
+            map.insert(&i, &i).unwrap();
         }
 
         assert_eq!(map.len(), 100);
@@ -393,7 +444,7 @@ mod tests {
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
         for i in 0..100 {
-            map.insert(i * 64, i).unwrap();
+            map.insert(&(i * 64), &i).unwrap();
         }
 
         for i in 0..100 {
@@ -410,10 +461,10 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        assert_eq!(map.insert(1, 10), Ok(None));
-        assert_eq!(map.insert(5, 15), Ok(None));
+        assert_eq!(map.insert(&1, &10), Ok(None));
+        assert_eq!(map.insert(&5, &15), Ok(None));
         assert_eq!(map.len(), 2);
-        assert_eq!(map.insert(5, 20), Ok(Some(15)));
+        assert_eq!(map.insert(&5, &20), Ok(Some(15)));
         assert_eq!(map.len(), 2);
 
         assert_eq!(map.value(&1), Ok(Some(10)));
@@ -429,11 +480,11 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        map.insert(1, 10).unwrap();
-        map.insert(5, 15).unwrap();
-        map.insert(7, 20).unwrap();
-        map.insert(2, 30).unwrap();
-        map.insert(4, 13).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.insert(&5, &15).unwrap();
+        map.insert(&7, &20).unwrap();
+        map.insert(&2, &30).unwrap();
+        map.insert(&4, &13).unwrap();
         map.remove(&7).unwrap();
 
         let mut actual = map.iter().collect::<Vec<(u64, u64)>>();
@@ -452,9 +503,9 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        map.insert(1, 10).unwrap();
-        map.insert(5, 15).unwrap();
-        map.insert(7, 20).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.insert(&5, &15).unwrap();
+        map.insert(&7, &20).unwrap();
 
         assert_eq!(map.len(), 3);
         map.remove(&5).unwrap();
@@ -474,9 +525,9 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        map.insert(1, 10).unwrap();
-        map.insert(5, 15).unwrap();
-        map.insert(7, 20).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.insert(&5, &15).unwrap();
+        map.insert(&7, &20).unwrap();
 
         assert_eq!(map.len(), 3);
 
@@ -514,7 +565,7 @@ mod tests {
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
         for i in 0..100 {
-            map.insert(i, i).unwrap();
+            map.insert(&i, &i).unwrap();
         }
 
         assert_eq!(map.len(), 100);
@@ -536,7 +587,7 @@ mod tests {
         ));
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
-        map.insert(1, 1).unwrap();
+        map.insert(&1, &1).unwrap();
 
         let capacity = map.capacity() + 10;
         let size = map.len();
@@ -556,7 +607,7 @@ mod tests {
         ));
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
-        map.insert(1, 1).unwrap();
+        map.insert(&1, &1).unwrap();
 
         let capacity = map.capacity();
         let size = map.len();
@@ -575,7 +626,7 @@ mod tests {
         ));
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
-        map.insert(1, 1).unwrap();
+        map.insert(&1, &1).unwrap();
 
         let current_capacity = map.capacity();
         let capacity = current_capacity - 10;
@@ -595,9 +646,9 @@ mod tests {
         ));
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
-        map.insert(1, 10).unwrap();
-        map.insert(5, 15).unwrap();
-        map.insert(7, 20).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.insert(&5, &15).unwrap();
+        map.insert(&7, &20).unwrap();
         map.remove(&5).unwrap();
 
         let other = map.to_hash_map().unwrap();
@@ -622,48 +673,6 @@ mod tests {
     }
 
     #[test]
-    fn try_from_storage_index() {
-        let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-
-        let index;
-
-        {
-            let mut map = MapStorage::<u64, u64>::new(storage.clone()).unwrap();
-            map.insert(1, 1).unwrap();
-            map.insert(3, 2).unwrap();
-            map.insert(5, 3).unwrap();
-            map.remove(&3).unwrap();
-            index = map.storage_index();
-        }
-
-        let map = MapStorage::<u64, u64>::from_storage(storage, &index).unwrap();
-
-        let mut expected = HashMap::<u64, u64>::new();
-        expected.insert(1, 1);
-        expected.insert(5, 3);
-
-        assert_eq!(map.to_hash_map(), Ok(expected));
-    }
-
-    #[test]
-    fn try_from_storage_missing_index() {
-        let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-
-        assert_eq!(
-            MapStorage::<u64, u64>::from_storage(storage, &StorageIndex::from(1_u64))
-                .err()
-                .unwrap(),
-            DbError::from("index '1' not found")
-        );
-    }
-
-    #[test]
     fn value_missing() {
         let test_file = TestFile::new();
         let storage = Rc::new(RefCell::new(
@@ -684,9 +693,9 @@ mod tests {
 
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
 
-        map.insert(127, 10).unwrap();
-        map.insert(255, 11).unwrap();
-        map.insert(191, 12).unwrap();
+        map.insert(&127, &10).unwrap();
+        map.insert(&255, &11).unwrap();
+        map.insert(&191, &12).unwrap();
 
         assert_eq!(map.value(&127), Ok(Some(10)));
         assert_eq!(map.value(&255), Ok(Some(11)));

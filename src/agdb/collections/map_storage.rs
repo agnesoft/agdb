@@ -70,10 +70,10 @@ where
     pub fn insert(&mut self, key: &K, value: &T) -> Result<Option<T>, DbError> {
         self.storage.borrow_mut().transaction();
 
-        let index = self.find_or_free(&key)?;
+        let index = self.find_or_free(key)?;
         self.states.set_value(index.0, &MapValueState::Valid)?;
-        self.keys.set_value(index.0, &key)?;
-        self.values.set_value(index.0, &value)?;
+        self.keys.set_value(index.0, key)?;
+        self.values.set_value(index.0, value)?;
         self.storage.borrow_mut().commit()?;
 
         Ok(index.1)
@@ -268,7 +268,7 @@ where
         state: MapValueState,
         i: &mut u64,
         new_capacity: u64,
-        empty_list: &mut Vec<bool>,
+        empty_list: &mut [bool],
     ) -> Result<(), DbError> {
         match state {
             MapValueState::Empty => self.rehash_empty(i),
@@ -281,7 +281,7 @@ where
         &mut self,
         i: &mut u64,
         new_capacity: u64,
-        empty_list: &mut Vec<bool>,
+        empty_list: &mut [bool],
     ) -> Result<(), DbError> {
         let key = self.keys.value(*i)?;
         let mut pos = key.stable_hash() % new_capacity;

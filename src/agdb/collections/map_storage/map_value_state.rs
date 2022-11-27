@@ -4,7 +4,7 @@ use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 use std::mem::size_of;
 
-#[derive(Copy, Clone, Default, PartialEq)]
+#[derive(Copy, Clone, Default, Eq, PartialEq)]
 pub enum MapValueState {
     #[default]
     Empty,

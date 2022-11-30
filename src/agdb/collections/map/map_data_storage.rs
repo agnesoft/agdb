@@ -75,6 +75,10 @@ where
             values,
         })
     }
+
+    pub fn storage_index(&self) -> StorageIndex {
+        self.storage_index
+    }
 }
 
 impl<K, T, Data> MapData<K, T> for MapDataStorage<K, T, Data>

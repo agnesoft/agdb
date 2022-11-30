@@ -11,7 +11,7 @@ where
     T: Default + Eq + PartialEq,
     Data: MapData<K, T>,
 {
-    multi_map: MultiMapImpl<K, T, Data>,
+    pub(crate) multi_map: MultiMapImpl<K, T, Data>,
 }
 
 impl<K, T, Data> MapImpl<K, T, Data>
@@ -31,13 +31,17 @@ where
     pub fn insert(&mut self, key: &K, value: &T) -> Result<Option<T>, DbError> {
         let old_value = self.value(key)?;
 
-        if let Some(old) = old_value {
-            self.multi_map.replace(key, &old, value)?;
+        if let Some(old) = &old_value {
+            self.multi_map.replace(key, old, value)?;
         } else {
             self.multi_map.insert(key, value)?;
         }
 
         Ok(old_value)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.multi_map.is_empty()
     }
 
     pub fn iter(&self) -> MapIterator<K, T, Data> {

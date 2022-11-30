@@ -13,8 +13,8 @@ where
     T: Default + Eq + PartialEq,
     Data: MapData<K, T>,
 {
-    data: Data,
-    phantom_marker: PhantomData<(K, T)>,
+    pub(crate) data: Data,
+    pub(crate) phantom_marker: PhantomData<(K, T)>,
 }
 
 impl<K, T, Data> MultiMapImpl<K, T, Data>
@@ -51,6 +51,10 @@ where
         self.data.set_key(index, key)?;
         self.data.set_value(index, value)?;
         self.data.commit()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn iter(&self) -> MapIterator<K, T, Data> {

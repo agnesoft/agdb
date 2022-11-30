@@ -1,8 +1,8 @@
-use super::map_common::map_data_memory::MapDataMemory;
-use super::map_common::map_data_storage::MapDataStorage;
-use super::map_common::MapCommon;
-use super::multi_map::multi_map_impl::MultiMapImpl;
-use super::multi_map::MultiMap;
+use super::old_map_common::map_data_memory::MapDataMemory;
+use super::old_map_common::map_data_storage::MapDataStorage;
+use super::old_map_common::MapCommon;
+use super::old_multi_map::multi_map_impl::OldMultiMapImpl;
+use super::old_multi_map::MultiMap;
 use crate::db::db_error::DbError;
 use crate::old_storage::storage_file::StorageFile;
 use crate::old_storage::storage_index::StorageIndex;
@@ -13,7 +13,8 @@ use std::cell::RefCell;
 use std::hash::Hash;
 use std::rc::Rc;
 
-pub type StorageMultiMap<K, T, Data = StorageFile> = MultiMapImpl<K, T, MapDataStorage<K, T, Data>>;
+pub type StorageMultiMap<K, T, Data = StorageFile> =
+    OldMultiMapImpl<K, T, MapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
 impl<K, T, Data> StorageMultiMap<K, T, Data>

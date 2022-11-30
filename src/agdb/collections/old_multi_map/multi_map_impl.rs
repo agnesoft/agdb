@@ -1,13 +1,13 @@
 use super::MapCommon;
-use crate::collections::map_common::map_data::MapData;
-use crate::collections::map_common::map_iterator::MapIterator;
-use crate::collections::map_common::map_value_state::MapValueState;
+use crate::collections::old_map_common::map_data::MapData;
+use crate::collections::old_map_common::map_iterator::MapIterator;
+use crate::collections::old_map_common::map_value_state::MapValueState;
 use crate::db::db_error::DbError;
 use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 
-pub struct MultiMapImpl<K, T, Data>
+pub struct OldMultiMapImpl<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + Eq + PartialEq + OldSerialize,
@@ -17,7 +17,7 @@ where
 }
 
 #[allow(dead_code)]
-impl<K, T, Data> MultiMapImpl<K, T, Data>
+impl<K, T, Data> OldMultiMapImpl<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + Eq + PartialEq + OldSerialize,

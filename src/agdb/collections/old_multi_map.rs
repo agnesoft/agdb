@@ -1,13 +1,13 @@
 pub mod multi_map_impl;
 
-use self::multi_map_impl::MultiMapImpl;
-use super::map_common::map_data_memory::MapDataMemory;
-use super::map_common::MapCommon;
+use self::multi_map_impl::OldMultiMapImpl;
+use super::old_map_common::map_data_memory::MapDataMemory;
+use super::old_map_common::MapCommon;
 use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 
-pub type MultiMap<K, T> = MultiMapImpl<K, T, MapDataMemory<K, T>>;
+pub type MultiMap<K, T> = OldMultiMapImpl<K, T, MapDataMemory<K, T>>;
 
 impl<K, T> MultiMap<K, T>
 where

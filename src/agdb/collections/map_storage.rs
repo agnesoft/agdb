@@ -1,11 +1,10 @@
 pub mod map_storage_iterator;
 
 mod map_storage_index;
-mod map_value_state;
 
 use self::map_storage_index::MapStorageIndex;
 use self::map_storage_iterator::MapStorageIterator;
-use self::map_value_state::MapValueState;
+use super::map::map_value_state::MapValueState;
 use super::vec_storage::VecStorage;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;

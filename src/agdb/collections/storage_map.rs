@@ -10,12 +10,12 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 use std::rc::Rc;
 
-use super::map::map_impl::MapImpl;
-use super::map_common::map_data_storage::MapDataStorage;
-use super::map_common::map_value::MapValue;
-use super::map_common::MapCommon;
+use super::old_map::map_impl::OldMapImpl;
+use super::old_map_common::map_data_storage::MapDataStorage;
+use super::old_map_common::map_value::MapValue;
+use super::old_map_common::MapCommon;
 
-pub type StorageMap<K, T, Data = StorageFile> = MapImpl<K, T, MapDataStorage<K, T, Data>>;
+pub type StorageMap<K, T, Data = StorageFile> = OldMapImpl<K, T, MapDataStorage<K, T, Data>>;
 
 #[allow(dead_code)]
 impl<K, T, Data> StorageMap<K, T, Data>

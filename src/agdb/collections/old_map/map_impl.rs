@@ -1,7 +1,7 @@
-use crate::collections::map_common::map_data::MapData;
-use crate::collections::map_common::map_iterator::MapIterator;
-use crate::collections::map_common::map_value_state::MapValueState;
-use crate::collections::map_common::MapCommon;
+use crate::collections::old_map_common::map_data::MapData;
+use crate::collections::old_map_common::map_iterator::MapIterator;
+use crate::collections::old_map_common::map_value_state::MapValueState;
+use crate::collections::old_map_common::MapCommon;
 use crate::db::db_error::DbError;
 use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-pub struct MapImpl<K, T, Data>
+pub struct OldMapImpl<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + OldSerialize,
@@ -20,7 +20,7 @@ where
 }
 
 #[allow(dead_code)]
-impl<K, T, Data> MapImpl<K, T, Data>
+impl<K, T, Data> OldMapImpl<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + OldSerialize,
     T: Clone + Default + OldSerialize,

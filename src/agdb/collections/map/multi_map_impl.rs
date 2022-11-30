@@ -28,6 +28,10 @@ where
     }
 
     pub fn contains(&self, key: &K, value: &T) -> Result<bool, DbError> {
+        if self.capacity() == 0 {
+            return Ok(false);
+        }
+
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
 
@@ -50,6 +54,7 @@ where
         self.data.set_state(index, MapValueState::Valid)?;
         self.data.set_key(index, key)?;
         self.data.set_value(index, value)?;
+        self.data.set_len(self.len() + 1)?;
         self.data.commit()
     }
 
@@ -70,6 +75,10 @@ where
     }
 
     pub fn remove_key(&mut self, key: &K) -> Result<(), DbError> {
+        if self.capacity() == 0 {
+            return Ok(());
+        }
+
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
         let mut len = self.len();
@@ -91,12 +100,20 @@ where
 
         if len != self.len() {
             self.data.set_len(len)?;
+
+            if self.len() <= self.min_len() {
+                self.rehash(self.capacity() / 2)?;
+            }
         }
 
         self.data.commit()
     }
 
     pub fn remove_value(&mut self, key: &K, value: &T) -> Result<(), DbError> {
+        if self.capacity() == 0 {
+            return Ok(());
+        }
+
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
 
@@ -110,6 +127,11 @@ where
                 {
                     self.data.set_state(pos, MapValueState::Deleted)?;
                     self.data.set_len(self.len() - 1)?;
+
+                    if self.len() <= self.min_len() {
+                        self.rehash(self.capacity() / 2)?;
+                    }
+
                     break;
                 }
                 MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
@@ -120,6 +142,10 @@ where
     }
 
     pub fn replace(&mut self, key: &K, value: &T, new_value: &T) -> Result<(), DbError> {
+        if self.capacity() == 0 {
+            return Ok(());
+        }
+
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
 
@@ -150,6 +176,10 @@ where
     }
 
     pub fn value(&self, key: &K) -> Result<Option<T>, DbError> {
+        if self.capacity() == 0 {
+            return Ok(None);
+        }
+
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
 
@@ -167,6 +197,10 @@ where
     }
 
     pub fn values(&self, key: &K) -> Result<Vec<T>, DbError> {
+        if self.capacity() == 0 {
+            return Ok(vec![]);
+        }
+
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
         let mut values = Vec::<T>::new();
@@ -187,11 +221,21 @@ where
     }
 
     fn free_index(&mut self, key: &K) -> Result<u64, DbError> {
-        if self.len() == self.max_len() {
+        if self.len() >= self.max_len() {
             self.rehash(self.capacity() * 2)?;
         }
 
-        todo!()
+        let hash = key.stable_hash();
+        let mut pos = hash % self.capacity();
+
+        loop {
+            match self.data.state(pos)? {
+                MapValueState::Empty | MapValueState::Deleted => break,
+                MapValueState::Valid => pos = self.next_pos(pos),
+            }
+        }
+
+        Ok(pos)
     }
 
     fn grow(&mut self, current_capacity: u64, new_capacity: u64) -> Result<(), DbError> {

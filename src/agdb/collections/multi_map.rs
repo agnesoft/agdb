@@ -5,6 +5,7 @@ use std::hash::Hash;
 
 pub type MultiMap<K, T> = MultiMapImpl<K, T, MapDataMemory<K, T>>;
 
+#[allow(dead_code)]
 impl<K, T> MultiMap<K, T>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash,
@@ -193,6 +194,23 @@ mod tests {
         map.remove_value(&5, &10).unwrap();
 
         assert_eq!(map.len(), 0);
+    }
+
+    #[test]
+    fn replace() {
+        let mut map = MultiMap::<i64, i64>::new();
+        map.insert(&1, &10).unwrap();
+        map.insert(&1, &20).unwrap();
+        map.insert(&1, &30).unwrap();
+
+        map.replace(&1, &20, &50).unwrap();
+
+        assert_eq!(map.values(&1), Ok(vec![10, 50, 30]));
+
+        map.remove_value(&1, &50).unwrap();
+        map.replace(&1, &30, &40).unwrap();
+
+        assert_eq!(map.values(&1), Ok(vec![10, 40]));
     }
 
     #[test]

@@ -17,6 +17,7 @@ where
     pub(crate) phantom_marker: PhantomData<(K, T)>,
 }
 
+#[allow(dead_code)]
 impl<K, T, Data> MultiMapImpl<K, T, Data>
 where
     K: Default + Eq + Hash + PartialEq + StableHash,

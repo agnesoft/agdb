@@ -14,6 +14,7 @@ where
     pub(crate) multi_map: MultiMapImpl<K, T, Data>,
 }
 
+#[allow(dead_code)]
 impl<K, T, Data> MapImpl<K, T, Data>
 where
     K: Default + Eq + Hash + PartialEq + StableHash,

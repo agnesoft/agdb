@@ -3,13 +3,12 @@ use crate::collections::map::map_value_state::MapValueState;
 use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::stable_hash::StableHash;
-use std::fmt::Display;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
 pub struct MapStorageIterator<'a, K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue + Display,
+    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
     T: Default + StorageValue,
     Data: Storage,
 {
@@ -20,7 +19,7 @@ where
 
 impl<'a, K, T, Data> Iterator for MapStorageIterator<'a, K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue + Display,
+    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
     T: Default + StorageValue,
     Data: Storage,
 {

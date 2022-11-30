@@ -1,12 +1,11 @@
 use crate::collections::map::map_data::MapData;
+use crate::collections::map::map_iterator::MapIterator;
 use crate::collections::map::map_value_state::MapValueState;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
 use std::cmp::max;
 use std::hash::Hash;
 use std::marker::PhantomData;
-
-use super::multi_map_iterator::MultiMapIterator;
 
 pub struct MultiMapImpl<K, T, Data>
 where
@@ -54,8 +53,8 @@ where
         self.data.commit()
     }
 
-    pub fn iter(&self) -> MultiMapIterator<K, T, Data> {
-        MultiMapIterator {
+    pub fn iter(&self) -> MapIterator<K, T, Data> {
+        MapIterator {
             pos: 0,
             data: &self.data,
             phantom_data: PhantomData,

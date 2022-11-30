@@ -3,14 +3,14 @@ use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbError;
 
-pub struct MapStorageIndex {
+pub struct MapDataStorageIndex {
     pub len: u64,
     pub states_index: StorageIndex,
     pub keys_index: StorageIndex,
     pub values_index: StorageIndex,
 }
 
-impl Serialize for MapStorageIndex {
+impl Serialize for MapDataStorageIndex {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::<u8>::new();
         bytes.reserve(self.serialized_size() as usize);
@@ -25,11 +25,11 @@ impl Serialize for MapStorageIndex {
     fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
         if bytes.len() < Self::static_serialized_size() as usize {
             return Err(DbError::from(
-                "MapStorageIndex deserialization error: not enough data",
+                "MapDataStorageIndex deserialization error: not enough data",
             ));
         }
 
-        Ok(MapStorageIndex {
+        Ok(MapDataStorageIndex {
             len: u64::deserialize(bytes)?,
             states_index: StorageIndex::deserialize(
                 &bytes[u64::static_serialized_size() as usize..],
@@ -50,7 +50,7 @@ impl Serialize for MapStorageIndex {
     }
 }
 
-impl SerializeStatic for MapStorageIndex {}
+impl SerializeStatic for MapDataStorageIndex {}
 
 #[cfg(test)]
 mod tests {
@@ -59,10 +59,10 @@ mod tests {
     #[test]
     fn bad_deserialize() {
         assert_eq!(
-            MapStorageIndex::deserialize(&Vec::<u8>::new())
+            MapDataStorageIndex::deserialize(&Vec::<u8>::new())
                 .err()
                 .unwrap(),
-            DbError::from("MapStorageIndex deserialization error: not enough data")
+            DbError::from("MapDataStorageIndex deserialization error: not enough data")
         );
     }
 }

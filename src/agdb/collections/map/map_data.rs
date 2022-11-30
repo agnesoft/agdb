@@ -1,8 +1,7 @@
+use super::map_value_state::MapValueState;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
 use std::hash::Hash;
-
-use super::map_value_state::MapValueState;
 
 pub trait MapData<K, T>
 where

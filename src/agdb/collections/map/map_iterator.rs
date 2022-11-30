@@ -4,7 +4,7 @@ use crate::utilities::stable_hash::StableHash;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-pub struct MultiMapIterator<'a, K, T, Data>
+pub struct MapIterator<'a, K, T, Data>
 where
     K: Default + Eq + Hash + PartialEq + StableHash,
     T: Default + Eq + PartialEq,
@@ -15,7 +15,7 @@ where
     pub phantom_data: PhantomData<(K, T)>,
 }
 
-impl<'a, K, T, Data> Iterator for MultiMapIterator<'a, K, T, Data>
+impl<'a, K, T, Data> Iterator for MapIterator<'a, K, T, Data>
 where
     K: Default + Eq + Hash + PartialEq + StableHash,
     T: Default + Eq + PartialEq,

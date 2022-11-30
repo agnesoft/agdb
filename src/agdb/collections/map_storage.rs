@@ -15,7 +15,6 @@ use crate::DbError;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
@@ -23,7 +22,7 @@ use std::rc::Rc;
 #[allow(dead_code)]
 pub struct MapStorage<K, T, Data = FileStorage>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue + Display,
+    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
     T: Default + StorageValue,
     Data: Storage,
 {
@@ -38,7 +37,7 @@ where
 #[allow(dead_code)]
 impl<K, T, Data> MapStorage<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue + Display,
+    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
     T: Default + StorageValue,
     Data: Storage,
 {

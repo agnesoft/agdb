@@ -27,7 +27,24 @@ where
         self.data.capacity()
     }
 
-    pub fn contains(&self, key: &K, value: &T) -> Result<bool, DbError> {
+    pub fn contains(&self, key: &K) -> Result<bool, DbError> {
+        if self.capacity() == 0 {
+            return Ok(false);
+        }
+
+        let hash = key.stable_hash();
+        let mut pos = hash % self.capacity();
+
+        loop {
+            match self.data.state(pos)? {
+                MapValueState::Empty => return Ok(false),
+                MapValueState::Valid if self.data.key(pos)? == *key => return Ok(true),
+                MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
+            }
+        }
+    }
+
+    pub fn contains_value(&self, key: &K, value: &T) -> Result<bool, DbError> {
         if self.capacity() == 0 {
             return Ok(false);
         }

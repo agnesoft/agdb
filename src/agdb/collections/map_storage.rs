@@ -62,6 +62,79 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
+    fn contains_key() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+        map.insert(&1, &10).unwrap();
+
+        assert_eq!(map.contains(&1), Ok(true));
+    }
+
+    #[test]
+    fn contains_key_removed() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.remove(&1).unwrap();
+
+        assert_eq!(map.contains(&1), Ok(false));
+    }
+
+    #[test]
+    fn contains_key_missing() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+        map.insert(&1, &10).unwrap();
+
+        assert_eq!(map.contains(&2), Ok(false));
+    }
+    #[test]
+    fn contains_value() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+        map.insert(&1, &10).unwrap();
+
+        assert_eq!(map.contains_value(&1, &10), Ok(true));
+    }
+
+    #[test]
+    fn contains_value_removed() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.remove(&1).unwrap();
+
+        assert_eq!(map.contains_value(&1, &1), Ok(false));
+    }
+
+    #[test]
+    fn contains_value_missing() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+        map.insert(&1, &10).unwrap();
+
+        assert_eq!(map.contains_value(&1, &1), Ok(false));
+    }
+
+    #[test]
     fn from_storage_index() {
         let test_file = TestFile::new();
         let storage = Rc::new(RefCell::new(

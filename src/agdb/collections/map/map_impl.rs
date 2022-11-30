@@ -24,8 +24,12 @@ where
         self.multi_map.capacity()
     }
 
-    pub fn contains(&self, key: &K, value: &T) -> Result<bool, DbError> {
-        self.multi_map.contains(key, value)
+    pub fn contains(&self, key: &K) -> Result<bool, DbError> {
+        self.multi_map.contains(key)
+    }
+
+    pub fn contains_value(&self, key: &K, value: &T) -> Result<bool, DbError> {
+        self.multi_map.contains_value(key, value)
     }
 
     pub fn insert(&mut self, key: &K, value: &T) -> Result<Option<T>, DbError> {

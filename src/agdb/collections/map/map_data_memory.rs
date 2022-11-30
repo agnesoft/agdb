@@ -15,6 +15,21 @@ where
     values: Vec<T>,
 }
 
+impl<K, T> MapDataMemory<K, T>
+where
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash,
+    T: Clone + Default + Eq + PartialEq,
+{
+    pub fn new() -> Self {
+        Self {
+            len: 0,
+            states: vec![],
+            keys: vec![],
+            values: vec![],
+        }
+    }
+}
+
 impl<K, T> MapData<K, T> for MapDataMemory<K, T>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash,

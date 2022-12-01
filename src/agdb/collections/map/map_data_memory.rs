@@ -82,15 +82,7 @@ where
     }
 
     fn state(&self, index: u64) -> Result<MapValueState, DbError> {
-        if let Some(s) = self.states.get(index as usize) {
-            Ok(s.clone())
-        } else {
-            Err(DbError::from(format!(
-                "MapDataMemory::state() error: index '{}' out of bounds ({})",
-                index,
-                self.keys.len()
-            )))
-        }
+        Ok(self.states[index as usize].clone())
     }
 
     fn swap(&mut self, index: u64, other: u64) -> Result<(), DbError> {

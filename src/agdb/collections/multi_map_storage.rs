@@ -92,6 +92,7 @@ mod tests {
         }
 
         let map = MultiMapStorage::<u64, String>::from_storage(storage, &index).unwrap();
+
         let mut values = Vec::<(u64, String)>::new();
         values.reserve(3);
 

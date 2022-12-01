@@ -69,6 +69,9 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+
+        assert_eq!(map.contains(&1), Ok(false));
+
         map.insert(&1, &10).unwrap();
 
         assert_eq!(map.contains(&1), Ok(true));
@@ -105,6 +108,9 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
         let mut map = MapStorage::<u64, u64>::new(storage).unwrap();
+
+        assert_eq!(map.contains_value(&1, &10), Ok(false));
+
         map.insert(&1, &10).unwrap();
 
         assert_eq!(map.contains_value(&1, &10), Ok(true));
@@ -353,7 +359,14 @@ mod tests {
 
         assert_eq!(map.len(), 0);
         assert_eq!(map.remove(&0), Ok(()));
-        assert_eq!(map.len(), 0);
+
+        map.insert(&1, &10).unwrap();
+
+        assert_eq!(map.len(), 1);
+
+        map.remove(&0).unwrap();
+
+        assert_eq!(map.len(), 1);
     }
 
     #[test]

@@ -25,7 +25,7 @@ mod tests {
 
     #[test]
     fn insert() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.insert(&1, &10).unwrap();
         map.insert(&5, &15).unwrap();
@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn insert_reallocate() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         assert_eq!(map.capacity(), 0);
 
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn insert_reallocate_with_collisions() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         for i in 0..50 {
             map.insert(&(i * 64), &i).unwrap();
@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn insert_same_key() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.insert(&1, &10).unwrap();
         map.insert(&5, &15).unwrap();
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.insert(&1, &10).unwrap();
         map.insert(&5, &15).unwrap();
@@ -96,16 +96,16 @@ mod tests {
         map.insert(&4, &13).unwrap();
         map.remove_key(&7).unwrap();
 
-        let mut actual = map.iter().collect::<Vec<(i64, i64)>>();
+        let mut actual = map.iter().collect::<Vec<(u64, u64)>>();
         actual.sort();
-        let expected: Vec<(i64, i64)> = vec![(1, 10), (2, 30), (2, 50), (4, 13), (5, 15), (5, 15)];
+        let expected: Vec<(u64, u64)> = vec![(1, 10), (2, 30), (2, 50), (4, 13), (5, 15), (5, 15)];
 
         assert_eq!(actual, expected);
     }
 
     #[test]
     fn remove_deleted_key() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.insert(&1, &10).unwrap();
         map.insert(&5, &15).unwrap();
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn remove_key() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.insert(&1, &7).unwrap();
         map.insert(&5, &10).unwrap();
@@ -137,12 +137,12 @@ mod tests {
 
         assert_eq!(map.len(), 1);
         assert_eq!(map.value(&1), Ok(Some(7)));
-        assert_eq!(map.values(&5), Ok(Vec::<i64>::new()));
+        assert_eq!(map.values(&5), Ok(vec![]));
     }
 
     #[test]
     fn remove_missing_key() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         assert_eq!(map.len(), 0);
 
@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn remove_shrinks_capacity() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         for i in 0..100 {
             map.insert(&i, &i).unwrap();
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn remove_value() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.insert(&1, &7).unwrap();
         map.insert(&5, &10).unwrap();
@@ -184,21 +184,43 @@ mod tests {
 
         assert_eq!(map.len(), 3);
         assert_eq!(map.value(&1), Ok(Some(7)));
-        assert_eq!(map.values(&5), Ok(vec![10_i64, 20_i64]));
+        assert_eq!(map.values(&5), Ok(vec![10, 20]));
     }
 
     #[test]
     fn remove_missing_value() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.remove_value(&5, &10).unwrap();
 
         assert_eq!(map.len(), 0);
+
+        map.insert(&1, &10).unwrap();
+
+        map.remove_value(&5, &10).unwrap();
+
+        assert_eq!(map.len(), 1);
+    }
+
+    #[test]
+    fn remove_value_shrinks_capacity() {
+        let mut map = MultiMap::<u64, u64>::new();
+
+        for i in 1..40 {
+            map.insert(&i, &i).unwrap();
+        }
+
+        for i in 1..30 {
+            map.remove_value(&i, &i).unwrap();
+        }
+
+        assert_eq!(map.len(), 10);
     }
 
     #[test]
     fn replace() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
+
         map.insert(&1, &10).unwrap();
         map.insert(&1, &20).unwrap();
         map.insert(&1, &30).unwrap();
@@ -214,8 +236,23 @@ mod tests {
     }
 
     #[test]
+    fn replace_missing() {
+        let mut map = MultiMap::<u64, u64>::new();
+
+        map.replace(&1, &20, &50).unwrap();
+
+        assert!(!map.contains(&1).unwrap());
+
+        map.insert(&1, &10).unwrap();
+
+        map.replace(&0, &20, &50).unwrap();
+
+        assert!(!map.contains(&0).unwrap());
+    }
+
+    #[test]
     fn reserve_larger() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
         map.insert(&1, &1).unwrap();
 
         let capacity = map.capacity() + 10;
@@ -230,7 +267,7 @@ mod tests {
 
     #[test]
     fn reserve_same() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
         map.insert(&1, &1).unwrap();
 
         let capacity = map.capacity();
@@ -244,7 +281,7 @@ mod tests {
 
     #[test]
     fn reserve_smaller() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
         map.insert(&1, &1).unwrap();
 
         let current_capacity = map.capacity();
@@ -259,14 +296,14 @@ mod tests {
 
     #[test]
     fn value_missing() {
-        let map = MultiMap::<i64, i64>::new();
+        let map = MultiMap::<u64, u64>::new();
 
         assert_eq!(map.value(&0), Ok(None));
     }
 
     #[test]
     fn values_at_end() {
-        let mut map = MultiMap::<i64, i64>::new();
+        let mut map = MultiMap::<u64, u64>::new();
 
         map.insert(&127, &10).unwrap();
         map.insert(&255, &11).unwrap();
@@ -275,5 +312,12 @@ mod tests {
         assert_eq!(map.value(&127), Ok(Some(10)));
         assert_eq!(map.value(&255), Ok(Some(11)));
         assert_eq!(map.value(&191), Ok(Some(12)));
+    }
+
+    #[test]
+    fn values() {
+        let map = MultiMap::<u64, u64>::new();
+
+        assert_eq!(map.values(&1).unwrap(), vec![]);
     }
 }

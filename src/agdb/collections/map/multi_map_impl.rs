@@ -143,12 +143,7 @@ where
                 MapValueState::Valid
                     if self.data.key(pos)? == *key && self.data.value(pos)? == *value =>
                 {
-                    self.data.set_state(pos, MapValueState::Deleted)?;
-                    self.data.set_len(self.len() - 1)?;
-
-                    if self.len() <= self.min_len() {
-                        self.rehash(self.capacity() / 2)?;
-                    }
+                    self.remove_index(pos)?;
 
                     break;
                 }
@@ -288,11 +283,6 @@ where
         }
     }
 
-    fn rehash_empty(&mut self, i: &mut u64) -> Result<(), DbError> {
-        *i += 1;
-        Ok(())
-    }
-
     fn rehash_deleted(&mut self, i: &mut u64, new_capacity: u64) -> Result<(), DbError> {
         if *i < new_capacity {
             self.data.set_state(*i, MapValueState::Empty)?;
@@ -302,18 +292,9 @@ where
         Ok(())
     }
 
-    fn rehash_value(
-        &mut self,
-        state: MapValueState,
-        i: &mut u64,
-        new_capacity: u64,
-        empty_list: &mut [bool],
-    ) -> Result<(), DbError> {
-        match state {
-            MapValueState::Empty => self.rehash_empty(i),
-            MapValueState::Deleted => self.rehash_deleted(i, new_capacity),
-            MapValueState::Valid => self.rehash_valid(i, new_capacity, empty_list),
-        }
+    fn rehash_empty(&mut self, i: &mut u64) -> Result<(), DbError> {
+        *i += 1;
+        Ok(())
     }
 
     fn rehash_valid(
@@ -347,6 +328,20 @@ where
         Ok(())
     }
 
+    fn rehash_value(
+        &mut self,
+        state: MapValueState,
+        i: &mut u64,
+        new_capacity: u64,
+        empty_list: &mut [bool],
+    ) -> Result<(), DbError> {
+        match state {
+            MapValueState::Empty => self.rehash_empty(i),
+            MapValueState::Deleted => self.rehash_deleted(i, new_capacity),
+            MapValueState::Valid => self.rehash_valid(i, new_capacity, empty_list),
+        }
+    }
+
     fn rehash_values(&mut self, current_capacity: u64, new_capacity: u64) -> Result<(), DbError> {
         let mut i = 0_u64;
         let mut empty_list = vec![true; new_capacity as usize];
@@ -356,6 +351,17 @@ where
         }
 
         Ok(())
+    }
+
+    fn remove_index(&mut self, index: u64) -> Result<(), DbError> {
+        self.data.set_state(index, MapValueState::Deleted)?;
+        self.data.set_len(self.len() - 1)?;
+
+        if self.len() <= self.min_len() {
+            self.rehash(self.capacity() / 2)
+        } else {
+            Ok(())
+        }
     }
 
     fn shrink(&mut self, current_capacity: u64, new_capacity: u64) -> Result<(), DbError> {

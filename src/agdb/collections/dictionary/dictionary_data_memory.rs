@@ -1,7 +1,7 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_index::DictionaryIndex;
 use super::dictionary_value::DictionaryValue;
-use crate::collections::multi_map::MultiMap;
+use crate::collections::old_multi_map::MultiMap;
 use crate::db::db_error::DbError;
 use crate::utilities::old_serialize::OldSerialize;
 use crate::utilities::stable_hash::StableHash;

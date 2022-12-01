@@ -46,16 +46,68 @@ mod tests {
 
     #[test]
     fn new() {
-        todo!()
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MultiMapStorage::<u64, String>::new(storage).unwrap();
+        map.insert(&1, &"Hello".to_string()).unwrap();
+        map.insert(&1, &"World".to_string()).unwrap();
+        map.insert(&1, &"!".to_string()).unwrap();
+
+        let mut values = Vec::<(u64, String)>::new();
+        values.reserve(3);
+
+        for (key, value) in map.iter() {
+            values.push((key, value));
+        }
+
+        values.sort();
+
+        assert_eq!(
+            values,
+            vec![
+                (1, "!".to_string()),
+                (1, "Hello".to_string()),
+                (1, "World".to_string())
+            ]
+        );
     }
 
     #[test]
     fn from_storage() {
-        todo!()
-    }
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
 
-    #[test]
-    fn storage_index() {
-        todo!()
+        let index;
+
+        {
+            let mut map = MultiMapStorage::<u64, String>::new(storage.clone()).unwrap();
+            map.insert(&1, &"Hello".to_string()).unwrap();
+            map.insert(&1, &"World".to_string()).unwrap();
+            map.insert(&1, &"!".to_string()).unwrap();
+            index = map.storage_index();
+        }
+
+        let map = MultiMapStorage::<u64, String>::from_storage(storage, &index).unwrap();
+        let mut values = Vec::<(u64, String)>::new();
+        values.reserve(3);
+
+        for (key, value) in map.iter() {
+            values.push((key, value));
+        }
+
+        values.sort();
+
+        assert_eq!(
+            values,
+            vec![
+                (1, "!".to_string()),
+                (1, "Hello".to_string()),
+                (1, "World".to_string())
+            ]
+        );
     }
 }

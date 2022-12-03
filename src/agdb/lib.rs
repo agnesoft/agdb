@@ -3,7 +3,6 @@ mod commands;
 mod db;
 mod graph;
 mod graph_search;
-mod old_storage;
 mod query;
 mod storage;
 mod transaction;

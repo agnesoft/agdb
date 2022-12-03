@@ -313,7 +313,7 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
 
-        let mut dictionary = DictionaryStorage::<String>::new(storage.clone()).unwrap();
+        let mut dictionary = DictionaryStorage::<String>::new(storage).unwrap();
         let index1 = dictionary.insert(&"Hello".to_string()).unwrap();
         dictionary.insert(&"Hello".to_string()).unwrap();
         dictionary.insert(&"Hello".to_string()).unwrap();

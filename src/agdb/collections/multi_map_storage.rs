@@ -127,7 +127,7 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
 
-        let mut map = MultiMapStorage::<u64, String>::new(storage.clone()).unwrap();
+        let mut map = MultiMapStorage::<u64, String>::new(storage).unwrap();
         map.insert(&1, &"Hello".to_string()).unwrap();
         map.insert(&1, &"World".to_string()).unwrap();
         map.insert(&1, &"!".to_string()).unwrap();

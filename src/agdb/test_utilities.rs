@@ -1,4 +1,4 @@
 #[cfg(test)]
-pub mod collided_value;
+pub mod collision_value;
 #[cfg(test)]
 pub mod test_file;

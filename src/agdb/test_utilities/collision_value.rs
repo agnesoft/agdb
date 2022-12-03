@@ -6,23 +6,23 @@ use crate::utilities::serialize_static::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct CollidedValue<T> {
+pub struct CollisionValue<T> {
     pub value: T,
 }
 
-impl<T> CollidedValue<T> {
+impl<T> CollisionValue<T> {
     pub fn new(value: T) -> Self {
-        CollidedValue { value }
+        CollisionValue { value }
     }
 }
 
-impl<T> StableHash for CollidedValue<T> {
+impl<T> StableHash for CollisionValue<T> {
     fn stable_hash(&self) -> u64 {
         1
     }
 }
 
-impl<T> Serialize for CollidedValue<T>
+impl<T> Serialize for CollisionValue<T>
 where
     T: Serialize,
 {
@@ -41,9 +41,9 @@ where
     }
 }
 
-impl<T> SerializeStatic for CollidedValue<T> where T: SerializeStatic {}
+impl<T> SerializeStatic for CollisionValue<T> where T: SerializeStatic {}
 
-impl<T> StorageValue for CollidedValue<T>
+impl<T> StorageValue for CollisionValue<T>
 where
     T: StorageValue,
 {
@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn derived_from_clone() {
-        let value = CollidedValue::new(1_i64);
+        let value = CollisionValue::new(1_i64);
         let other = value.clone();
 
         assert_eq!(value, other);
@@ -80,23 +80,26 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        let value = CollidedValue::new(1_i64);
+        let value = CollisionValue::new(1_i64);
 
         format!("{:?}", value);
     }
 
     #[test]
     fn serialize() {
-        let value = CollidedValue::new(1_i64);
+        let value = CollisionValue::new(1_i64);
         let bytes = value.serialize();
-        let other = CollidedValue::deserialize(&bytes).unwrap();
+
+        assert_eq!(bytes.len() as u64, value.serialized_size());
+
+        let other = CollisionValue::deserialize(&bytes).unwrap();
 
         assert_eq!(value, other);
     }
 
     #[test]
     fn stable_hash() {
-        let value = CollidedValue::new(1_i64);
+        let value = CollisionValue::new(1_i64);
 
         assert_eq!(value.stable_hash(), 1_u64);
     }

@@ -29,7 +29,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::collided_value::CollidedValue;
+    use crate::test_utilities::collision_value::CollisionValue;
 
     #[test]
     fn count_invalid_index() {
@@ -97,15 +97,15 @@ mod tests {
 
     #[test]
     fn index_with_collisions() {
-        let mut dictionary = Dictionary::<CollidedValue<i64>>::new();
+        let mut dictionary = Dictionary::<CollisionValue<i64>>::new();
 
-        let index1 = dictionary.insert(&CollidedValue::new(1)).unwrap();
-        let index2 = dictionary.insert(&CollidedValue::new(2)).unwrap();
-        let index3 = dictionary.insert(&CollidedValue::new(3)).unwrap();
+        let index1 = dictionary.insert(&CollisionValue::new(1)).unwrap();
+        let index2 = dictionary.insert(&CollisionValue::new(2)).unwrap();
+        let index3 = dictionary.insert(&CollisionValue::new(3)).unwrap();
 
-        assert_eq!(dictionary.index(&CollidedValue::new(1)), Ok(Some(index1)));
-        assert_eq!(dictionary.index(&CollidedValue::new(2)), Ok(Some(index2)));
-        assert_eq!(dictionary.index(&CollidedValue::new(3)), Ok(Some(index3)));
+        assert_eq!(dictionary.index(&CollisionValue::new(1)), Ok(Some(index1)));
+        assert_eq!(dictionary.index(&CollisionValue::new(2)), Ok(Some(index2)));
+        assert_eq!(dictionary.index(&CollisionValue::new(3)), Ok(Some(index3)));
     }
 
     #[test]

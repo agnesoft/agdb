@@ -49,7 +49,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::collided_value::CollidedValue;
+    use crate::test_utilities::collision_value::CollisionValue;
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
@@ -136,15 +136,15 @@ mod tests {
         let storage = Rc::new(RefCell::new(
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
-        let mut dictionary = DictionaryStorage::<CollidedValue<i64>>::new(storage).unwrap();
+        let mut dictionary = DictionaryStorage::<CollisionValue<i64>>::new(storage).unwrap();
 
-        let index1 = dictionary.insert(&CollidedValue::new(1)).unwrap();
-        let index2 = dictionary.insert(&CollidedValue::new(2)).unwrap();
-        let index3 = dictionary.insert(&CollidedValue::new(3)).unwrap();
+        let index1 = dictionary.insert(&CollisionValue::new(1)).unwrap();
+        let index2 = dictionary.insert(&CollisionValue::new(2)).unwrap();
+        let index3 = dictionary.insert(&CollisionValue::new(3)).unwrap();
 
-        assert_eq!(dictionary.index(&CollidedValue::new(1)), Ok(Some(index1)));
-        assert_eq!(dictionary.index(&CollidedValue::new(2)), Ok(Some(index2)));
-        assert_eq!(dictionary.index(&CollidedValue::new(3)), Ok(Some(index3)));
+        assert_eq!(dictionary.index(&CollisionValue::new(1)), Ok(Some(index1)));
+        assert_eq!(dictionary.index(&CollisionValue::new(2)), Ok(Some(index2)));
+        assert_eq!(dictionary.index(&CollisionValue::new(3)), Ok(Some(index3)));
     }
 
     #[test]

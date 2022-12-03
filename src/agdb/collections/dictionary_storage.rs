@@ -302,6 +302,38 @@ mod tests {
     }
 
     #[test]
+    fn to_dictionary() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let mut dictionary = DictionaryStorage::<String>::new(storage.clone()).unwrap();
+        let index1 = dictionary.insert(&"Hello".to_string()).unwrap();
+        dictionary.insert(&"Hello".to_string()).unwrap();
+        dictionary.insert(&"Hello".to_string()).unwrap();
+        let index2 = dictionary.insert(&"World".to_string()).unwrap();
+        let index3 = dictionary.insert(&"!".to_string()).unwrap();
+        dictionary.remove(index3).unwrap();
+
+        let mem_dictionary = dictionary.to_dictionary().unwrap();
+
+        assert_eq!(mem_dictionary.len().unwrap(), 2);
+        assert_eq!(mem_dictionary.count(index1).unwrap(), Some(3));
+        assert_eq!(mem_dictionary.count(index2).unwrap(), Some(1));
+        assert_eq!(mem_dictionary.count(index3).unwrap(), None);
+        assert_eq!(
+            mem_dictionary.value(index1).unwrap(),
+            Some("Hello".to_string())
+        );
+        assert_eq!(
+            mem_dictionary.value(index2).unwrap(),
+            Some("World".to_string())
+        );
+        assert_eq!(mem_dictionary.value(index3).unwrap(), None);
+    }
+
+    #[test]
     fn value_missing_index() {
         let test_file = TestFile::new();
         let storage = Rc::new(RefCell::new(

@@ -213,16 +213,16 @@ impl Serialize for DbValue {
     }
 
     fn serialized_size(&self) -> u64 {
-        1 + match self {
-            DbValue::Bytes(value) => value.serialized_size(),
-            DbValue::Int(value) => value.serialized_size(),
-            DbValue::Uint(value) => value.serialized_size(),
-            DbValue::Float(value) => value.serialized_size(),
-            DbValue::String(value) => value.serialized_size(),
-            DbValue::VecInt(value) => value.serialized_size(),
-            DbValue::VecUint(value) => value.serialized_size(),
-            DbValue::VecFloat(value) => value.serialized_size(),
-            DbValue::VecString(value) => value.serialized_size(),
+        match self {
+            DbValue::Bytes(value) => 1 + value.serialized_size(),
+            DbValue::Int(value) => 8 + value.serialized_size(),
+            DbValue::Uint(value) => 8 + value.serialized_size(),
+            DbValue::Float(value) => 8 + value.serialized_size(),
+            DbValue::String(value) => 1 + value.serialized_size(),
+            DbValue::VecInt(value) => 1 + value.serialized_size(),
+            DbValue::VecUint(value) => 1 + value.serialized_size(),
+            DbValue::VecFloat(value) => 1 + value.serialized_size(),
+            DbValue::VecString(value) => 1 + value.serialized_size(),
         }
     }
 }
@@ -376,7 +376,7 @@ mod tests {
         let value = DbValue::from(1_i64);
         let bytes = value.serialize();
 
-        assert_eq!(bytes.len(), 16);
+        assert_eq!(bytes.len() as u64, value.serialized_size());
 
         let other = DbValue::deserialize(&bytes).unwrap();
 
@@ -388,7 +388,7 @@ mod tests {
         let value = DbValue::from(i64::MAX);
         let bytes = value.serialize();
 
-        assert_eq!(bytes.len(), 16);
+        assert_eq!(bytes.len() as u64, value.serialized_size());
 
         let other = DbValue::deserialize(&bytes).unwrap();
 
@@ -400,7 +400,7 @@ mod tests {
         let value = DbValue::from(i64::MIN);
         let bytes = value.serialize();
 
-        assert_eq!(bytes.len(), 16);
+        assert_eq!(bytes.len() as u64, value.serialized_size());
 
         let other = DbValue::deserialize(&bytes).unwrap();
 
@@ -412,7 +412,7 @@ mod tests {
         let value = DbValue::from(-1_i64);
         let bytes = value.serialize();
 
-        assert_eq!(bytes.len(), 16);
+        assert_eq!(bytes.len() as u64, value.serialized_size());
 
         let other = DbValue::deserialize(&bytes).unwrap();
 
@@ -424,7 +424,7 @@ mod tests {
         let value = DbValue::from(u64::MAX / 2);
         let bytes = value.serialize();
 
-        assert_eq!(bytes.len(), 16);
+        assert_eq!(bytes.len() as u64, value.serialized_size());
 
         let other = DbValue::deserialize(&bytes).unwrap();
 
@@ -436,7 +436,7 @@ mod tests {
         let value = DbValue::from(0.1_f64 + 0.2_f64);
         let bytes = value.serialize();
 
-        assert_eq!(bytes.len(), 16);
+        assert_eq!(bytes.len() as u64, value.serialized_size());
 
         let other = DbValue::deserialize(&bytes).unwrap();
 

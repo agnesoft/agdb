@@ -1,110 +1,162 @@
-use crate::collections::old_storage_vec::OldStorageVec;
-use crate::collections::storage_multi_map::StorageMultiMap;
+use super::dictionary_data::DictionaryData;
+use super::dictionary_data_memory::DictionaryDataMemory;
+use super::dictionary_data_storage_indexes::DictionaryDataStorageIndexes;
+use crate::collections::multi_map_storage::MultiMapStorage;
+use crate::collections::vec_storage::VecStorage;
 use crate::db::db_error::DbError;
-use crate::old_storage::storage_file::StorageFile;
-use crate::old_storage::storage_index::StorageIndex;
-use crate::old_storage::OldStorage;
-use crate::utilities::old_serialize::OldSerialize;
+use crate::storage::file_storage::FileStorage;
+use crate::storage::storage_index::StorageIndex;
+use crate::storage::storage_value::StorageValue;
+use crate::storage::Storage;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use super::dictionary_data::DictionaryData;
-use super::dictionary_index::DictionaryIndex;
-use super::dictionary_value::DictionaryValue;
-
-pub struct DictionaryDataStorage<T, Data = StorageFile>
+pub struct DictionaryDataStorage<T, Data = FileStorage>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
-    Data: OldStorage,
+    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    Data: Storage,
 {
-    pub(crate) storage: Rc<RefCell<Data>>,
-    #[allow(dead_code)]
-    pub(crate) storage_index: StorageIndex,
-    pub(crate) index: StorageMultiMap<u64, DictionaryIndex, Data>,
-    pub(crate) values: OldStorageVec<DictionaryValue<T>, Data>,
+    storage: Rc<RefCell<Data>>,
+    storage_index: StorageIndex,
+    index: MultiMapStorage<u64, u64, Data>,
+    counts: VecStorage<u64, Data>,
+    hashes: VecStorage<u64, Data>,
+    values: VecStorage<T, Data>,
+}
+
+impl<T, Data> DictionaryDataStorage<T, Data>
+where
+    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    Data: Storage,
+{
+    pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
+        let index = MultiMapStorage::<u64, u64, Data>::new(storage.clone())?;
+        let mut counts = VecStorage::<u64, Data>::new(storage.clone())?;
+        let mut hashes = VecStorage::<u64, Data>::new(storage.clone())?;
+        let mut values = VecStorage::<T, Data>::new(storage.clone())?;
+
+        counts.push(&0)?;
+        hashes.push(&0)?;
+        values.push(&T::default())?;
+
+        let data_index = DictionaryDataStorageIndexes {
+            index_index: index.storage_index(),
+            counts_index: counts.storage_index(),
+            hashes_index: hashes.storage_index(),
+            values_index: values.storage_index(),
+        };
+
+        let storage_index = storage.borrow_mut().insert(&data_index)?;
+
+        Ok(Self {
+            storage,
+            storage_index,
+            index,
+            counts,
+            hashes,
+            values,
+        })
+    }
+
+    pub fn from_storage(
+        storage: Rc<RefCell<Data>>,
+        storage_index: &StorageIndex,
+    ) -> Result<Self, DbError> {
+        let data_index = storage
+            .borrow_mut()
+            .value::<DictionaryDataStorageIndexes>(storage_index)?;
+        let index = MultiMapStorage::<u64, u64, Data>::from_storage(
+            storage.clone(),
+            &data_index.index_index,
+        )?;
+        let counts =
+            VecStorage::<u64, Data>::from_storage(storage.clone(), &data_index.counts_index)?;
+        let hashes =
+            VecStorage::<u64, Data>::from_storage(storage.clone(), &data_index.hashes_index)?;
+        let values =
+            VecStorage::<T, Data>::from_storage(storage.clone(), &data_index.values_index)?;
+
+        Ok(Self {
+            storage,
+            storage_index: *storage_index,
+            index,
+            counts,
+            hashes,
+            values,
+        })
+    }
+
+    pub fn storage_index(&self) -> StorageIndex {
+        self.storage_index
+    }
+
+    pub fn to_dictionary_data_memory(&self) -> Result<DictionaryDataMemory<T>, DbError> {
+        Ok(DictionaryDataMemory {
+            index: self.index.to_multi_map()?,
+            counts: self.counts.to_vec()?,
+            hashes: self.hashes.to_vec()?,
+            values: self.values.to_vec()?,
+        })
+    }
 }
 
 impl<T, Data> DictionaryData<T> for DictionaryDataStorage<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
-    Data: OldStorage,
+    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    Data: Storage,
 {
     fn capacity(&self) -> u64 {
-        self.values.len() as u64
+        self.counts.len() as u64
     }
 
     fn commit(&mut self) -> Result<(), DbError> {
         self.storage.borrow_mut().commit()
     }
 
-    fn indexes(&self, hash: u64) -> Result<Vec<DictionaryIndex>, DbError> {
+    fn count(&self, index: u64) -> Result<u64, DbError> {
+        self.counts.value(index)
+    }
+
+    fn indexes(&self, hash: u64) -> Result<Vec<u64>, DbError> {
         self.index.values(&hash)
     }
 
-    fn insert(&mut self, hash: u64, index: &DictionaryIndex) -> Result<(), DbError> {
-        self.index.insert(hash, index.clone())
+    fn insert(&mut self, hash: u64, index: u64) -> Result<(), DbError> {
+        self.index.insert(&hash, &index)
     }
 
-    fn hash(&self, index: &DictionaryIndex) -> Result<u64, DbError> {
-        let values_index = self.values.storage_index();
-        self.storage.borrow_mut().value_at::<u64>(
-            &values_index,
-            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + i64::fixed_size(),
-        )
+    fn hash(&self, index: u64) -> Result<u64, DbError> {
+        self.hashes.value(index)
     }
 
-    fn count(&self, index: &DictionaryIndex) -> Result<i64, DbError> {
-        let values_index = self.values.storage_index();
-        self.storage.borrow_mut().value_at::<i64>(
-            &values_index,
-            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()),
-        )
+    fn remove(&mut self, hash: u64, index: u64) -> Result<(), DbError> {
+        self.index.remove_value(&hash, &index)
     }
 
-    fn remove(&mut self, hash: u64, index: &DictionaryIndex) -> Result<(), DbError> {
-        self.index.remove_value(&hash, index)
+    fn set_capacity(&mut self, capacity: u64) -> Result<(), DbError> {
+        self.counts.resize(capacity, &0)?;
+        self.hashes.resize(capacity, &0)?;
+        self.values.resize(capacity, &T::default())
     }
 
-    fn set_hash(&mut self, index: &DictionaryIndex, hash: u64) -> Result<(), DbError> {
-        let values_index = self.values.storage_index();
-        self.storage.borrow_mut().insert_at(
-            &values_index,
-            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()) + u64::fixed_size(),
-            &hash,
-        )?;
-
-        Ok(())
+    fn set_count(&mut self, index: u64, count: u64) -> Result<(), DbError> {
+        self.counts.set_value(index, &count)
     }
 
-    fn set_count(&mut self, index: &DictionaryIndex, meta: i64) -> Result<(), DbError> {
-        let values_index = self.values.storage_index();
-        self.storage.borrow_mut().insert_at(
-            &values_index,
-            OldStorageVec::<DictionaryValue<T>>::value_offset(index.as_u64()),
-            &meta,
-        )?;
-
-        Ok(())
+    fn set_hash(&mut self, index: u64, hash: u64) -> Result<(), DbError> {
+        self.hashes.set_value(index, &hash)
     }
 
-    fn set_value(
-        &mut self,
-        index: &DictionaryIndex,
-        value: DictionaryValue<T>,
-    ) -> Result<(), DbError> {
-        if self.capacity() == index.as_u64() {
-            self.values.push(&value)
-        } else {
-            self.values.set_value(index.as_u64(), &value)
-        }
+    fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
+        self.values.set_value(index, &value)
     }
 
     fn transaction(&mut self) {
         self.storage.borrow_mut().transaction()
     }
 
-    fn value(&self, index: &DictionaryIndex) -> Result<DictionaryValue<T>, DbError> {
-        self.values.value(index.as_u64())
+    fn value(&self, index: u64) -> Result<T, DbError> {
+        self.values.value(index)
     }
 }

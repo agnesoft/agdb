@@ -8,10 +8,10 @@ pub struct DictionaryDataMemory<T>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
 {
-    pub(crate) index: MultiMap<u64, u64>,
-    pub(crate) counts: Vec<u64>,
-    pub(crate) hashes: Vec<u64>,
-    pub(crate) values: Vec<T>,
+    pub(super) index: MultiMap<u64, u64>,
+    pub(super) counts: Vec<u64>,
+    pub(super) hashes: Vec<u64>,
+    pub(super) values: Vec<T>,
 }
 
 impl<T> DictionaryDataMemory<T>
@@ -52,7 +52,7 @@ where
         Ok(self.hashes[index as usize])
     }
 
-    fn count(&self, index: u64) -> Result<i64, DbError> {
+    fn count(&self, index: u64) -> Result<u64, DbError> {
         Ok(self.counts[index as usize])
     }
 
@@ -63,15 +63,15 @@ where
     }
 
     fn set_capacity(&mut self, capacity: u64) -> Result<(), DbError> {
-        self.counts.resize(capacity, 0);
-        self.hashes.resize(capacity, 0);
-        self.values.resize(capacity, T::default());
+        self.counts.resize(capacity as usize, 0);
+        self.hashes.resize(capacity as usize, 0);
+        self.values.resize(capacity as usize, T::default());
 
         Ok(())
     }
 
-    fn set_count(&mut self, index: u64, count: i64) -> Result<(), DbError> {
-        self.counts[index.as_usize()] = count;
+    fn set_count(&mut self, index: u64, count: u64) -> Result<(), DbError> {
+        self.counts[index as usize] = count;
 
         Ok(())
     }
@@ -83,7 +83,7 @@ where
     }
 
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
-        self.values[index as usize] = value;
+        self.values[index as usize] = value.clone();
 
         Ok(())
     }

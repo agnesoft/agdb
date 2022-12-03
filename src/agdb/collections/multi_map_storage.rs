@@ -1,5 +1,6 @@
 use super::map::map_data_storage::MapDataStorage;
 use super::map::multi_map_impl::MultiMapImpl;
+use super::multi_map::MultiMap;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_value::StorageValue;
@@ -16,8 +17,8 @@ pub type MultiMapStorage<K, T, Data = FileStorage> = MultiMapImpl<K, T, MapDataS
 #[allow(dead_code)]
 impl<K, T, Data> MultiMapStorage<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StorageValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
@@ -36,6 +37,13 @@ where
 
     pub fn storage_index(&self) -> StorageIndex {
         self.data.storage_index()
+    }
+
+    pub fn to_multi_map(&self) -> Result<MultiMap<K, T>, DbError> {
+        Ok(MultiMap {
+            data: self.data.to_map_data_memory()?,
+            phantom_marker: PhantomData,
+        })
     }
 }
 

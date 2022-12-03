@@ -21,7 +21,7 @@ where
 {
     pub fn count(&self, index: u64) -> Result<Option<u64>, DbError> {
         if self.is_valid_index(index) {
-            Ok(self.data.count(index)?)
+            Ok(Some(self.data.count(index)?))
         } else {
             Ok(None)
         }
@@ -77,7 +77,7 @@ where
     pub fn value(&self, index: u64) -> Result<Option<T>, DbError> {
         let mut v = None;
 
-        if self.is_valid_index(index) && 0 < self.data.count(index) {
+        if self.is_valid_index(index) && 0 < self.data.count(index)? {
             v = Some(self.data.value(index)?);
         }
 
@@ -86,7 +86,7 @@ where
 
     fn find_value(&self, hash: u64, value: &T) -> Result<Option<u64>, DbError> {
         for index in self.data.indexes(hash)? {
-            if value == self.data.value(index)? {
+            if *value == self.data.value(index)? {
                 return Ok(Some(index));
             }
         }

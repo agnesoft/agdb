@@ -18,8 +18,8 @@ pub type MapStorage<K, T, Data = FileStorage> = MapImpl<K, T, MapDataStorage<K, 
 #[allow(dead_code)]
 impl<K, T, Data> MapStorage<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StorageValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {

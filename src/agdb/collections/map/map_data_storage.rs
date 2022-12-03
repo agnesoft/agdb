@@ -1,4 +1,5 @@
 use super::map_data::MapData;
+use super::map_data_memory::MapDataMemory;
 use super::map_data_storage_index::MapDataStorageIndex;
 use super::map_value_state::MapValueState;
 use crate::collections::vec_storage::VecStorage;
@@ -29,8 +30,8 @@ where
 #[allow(dead_code)]
 impl<K, T, Data> MapDataStorage<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StorageValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
@@ -79,6 +80,15 @@ where
 
     pub fn storage_index(&self) -> StorageIndex {
         self.storage_index
+    }
+
+    pub fn to_map_data_memory(&self) -> Result<MapDataMemory<K, T>, DbError> {
+        Ok(MapDataMemory {
+            len: self.data_index.len,
+            states: self.states.to_vec()?,
+            keys: self.keys.to_vec()?,
+            values: self.values.to_vec()?,
+        })
     }
 }
 

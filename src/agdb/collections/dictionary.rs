@@ -13,13 +13,14 @@ use std::marker::PhantomData;
 
 pub type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 
+#[allow(dead_code)]
 impl<T> Dictionary<T>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
 {
     pub fn new() -> Dictionary<T> {
         Dictionary {
-            data: DictionaryDataMemory::<T>::default(),
+            data: DictionaryDataMemory::<T>::new(),
             phantom_data: PhantomData,
         }
     }
@@ -40,7 +41,7 @@ mod tests {
 
     #[test]
     fn derived_from_default() {
-        let _dictionary = Dictionary::<i64>::default();
+        let _dictionary = Dictionary::<i64>::new();
     }
 
     #[test]
@@ -64,7 +65,7 @@ mod tests {
         let mut dictionary = Dictionary::<i64>::new();
 
         let index = dictionary.insert(&10).unwrap();
-        dictionary.remove(&index).unwrap();
+        dictionary.remove(index).unwrap();
 
         assert_eq!(dictionary.index(&10), Ok(None));
     }
@@ -77,21 +78,21 @@ mod tests {
         let index2 = dictionary.insert(&10).unwrap();
         let index3 = dictionary.insert(&7).unwrap();
 
-        dictionary.remove(&index2).unwrap();
-        dictionary.remove(&index1).unwrap();
-        dictionary.remove(&index3).unwrap();
+        dictionary.remove(index2).unwrap();
+        dictionary.remove(index1).unwrap();
+        dictionary.remove(index3).unwrap();
 
-        assert_eq!(dictionary.count(&index1), Ok(None));
-        assert_eq!(dictionary.count(&index2), Ok(None));
-        assert_eq!(dictionary.count(&index3), Ok(None));
+        assert_eq!(dictionary.count(index1), Ok(None));
+        assert_eq!(dictionary.count(index2), Ok(None));
+        assert_eq!(dictionary.count(index3), Ok(None));
 
         assert_eq!(dictionary.insert(&3), Ok(index3.clone()));
         assert_eq!(dictionary.insert(&2), Ok(index1.clone()));
         assert_eq!(dictionary.insert(&1), Ok(index2.clone()));
 
-        assert_eq!(dictionary.value(&index1), Ok(Some(2)));
-        assert_eq!(dictionary.value(&index2), Ok(Some(1)));
-        assert_eq!(dictionary.value(&index3), Ok(Some(3)));
+        assert_eq!(dictionary.value(index1), Ok(Some(2)));
+        assert_eq!(dictionary.value(index2), Ok(Some(1)));
+        assert_eq!(dictionary.value(index3), Ok(Some(3)));
     }
 
     #[test]
@@ -114,8 +115,8 @@ mod tests {
         let index = dictionary.insert(&10).unwrap();
 
         assert_eq!(dictionary.len(), Ok(1));
-        assert_eq!(dictionary.value(&index), Ok(Some(10_i64)));
-        assert_eq!(dictionary.count(&index), Ok(Some(1)));
+        assert_eq!(dictionary.value(index), Ok(Some(10_i64)));
+        assert_eq!(dictionary.count(index), Ok(Some(1)));
     }
 
     #[test]
@@ -128,14 +129,14 @@ mod tests {
 
         assert_eq!(dictionary.len(), Ok(3));
 
-        assert_eq!(dictionary.value(&index1).unwrap(), Some(10_i64));
-        assert_eq!(dictionary.count(&index1), Ok(Some(1)));
+        assert_eq!(dictionary.value(index1).unwrap(), Some(10_i64));
+        assert_eq!(dictionary.count(index1), Ok(Some(1)));
 
-        assert_eq!(dictionary.value(&index2).unwrap(), Some(15_i64));
-        assert_eq!(dictionary.count(&index2), Ok(Some(1)));
+        assert_eq!(dictionary.value(index2).unwrap(), Some(15_i64));
+        assert_eq!(dictionary.count(index2), Ok(Some(1)));
 
-        assert_eq!(dictionary.value(&index3).unwrap(), Some(20_i64));
-        assert_eq!(dictionary.count(&index3), Ok(Some(1)));
+        assert_eq!(dictionary.value(index3).unwrap(), Some(20_i64));
+        assert_eq!(dictionary.count(index3), Ok(Some(1)));
     }
 
     #[test]
@@ -152,7 +153,7 @@ mod tests {
         dictionary.insert(&20).unwrap();
 
         assert_eq!(dictionary.len(), Ok(3));
-        assert_eq!(dictionary.count(&index2), Ok(Some(3)));
+        assert_eq!(dictionary.count(index2), Ok(Some(3)));
     }
 
     #[test]
@@ -160,10 +161,10 @@ mod tests {
         let mut dictionary = Dictionary::<i64>::new();
 
         let index = dictionary.insert(&10).unwrap();
-        dictionary.remove(&index).unwrap();
+        dictionary.remove(index).unwrap();
 
-        assert_eq!(dictionary.value(&index), Ok(None));
-        assert_eq!(dictionary.count(&index), Ok(None));
+        assert_eq!(dictionary.value(index), Ok(None));
+        assert_eq!(dictionary.count(index), Ok(None));
     }
 
     #[test]
@@ -174,19 +175,19 @@ mod tests {
         dictionary.insert(&10).unwrap();
         dictionary.insert(&10).unwrap();
 
-        assert_eq!(dictionary.value(&index), Ok(Some(10)));
-        assert_eq!(dictionary.count(&index), Ok(Some(3)));
+        assert_eq!(dictionary.value(index), Ok(Some(10)));
+        assert_eq!(dictionary.count(index), Ok(Some(3)));
 
-        dictionary.remove(&index).unwrap();
+        dictionary.remove(index).unwrap();
 
-        assert_eq!(dictionary.value(&index), Ok(Some(10)));
-        assert_eq!(dictionary.count(&index), Ok(Some(2)));
+        assert_eq!(dictionary.value(index), Ok(Some(10)));
+        assert_eq!(dictionary.count(index), Ok(Some(2)));
 
-        dictionary.remove(&index).unwrap();
-        dictionary.remove(&index).unwrap();
+        dictionary.remove(index).unwrap();
+        dictionary.remove(index).unwrap();
 
-        assert_eq!(dictionary.value(&index), Ok(None));
-        assert_eq!(dictionary.count(&index), Ok(None));
+        assert_eq!(dictionary.value(index), Ok(None));
+        assert_eq!(dictionary.count(index), Ok(None));
     }
 
     #[test]

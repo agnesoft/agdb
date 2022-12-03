@@ -1,5 +1,6 @@
 use super::map::map_data_storage::MapDataStorage;
 use super::map::multi_map_impl::MultiMapImpl;
+use super::multi_map::MultiMap;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_value::StorageValue;
@@ -16,8 +17,8 @@ pub type MultiMapStorage<K, T, Data = FileStorage> = MultiMapImpl<K, T, MapDataS
 #[allow(dead_code)]
 impl<K, T, Data> MultiMapStorage<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StorageValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
@@ -36,6 +37,13 @@ where
 
     pub fn storage_index(&self) -> StorageIndex {
         self.data.storage_index()
+    }
+
+    pub fn to_multi_map(&self) -> Result<MultiMap<K, T>, DbError> {
+        Ok(MultiMap {
+            data: self.data.to_map_data_memory()?,
+            phantom_marker: PhantomData,
+        })
     }
 }
 
@@ -97,6 +105,39 @@ mod tests {
         values.reserve(3);
 
         for (key, value) in map.iter() {
+            values.push((key, value));
+        }
+
+        values.sort();
+
+        assert_eq!(
+            values,
+            vec![
+                (1, "!".to_string()),
+                (1, "Hello".to_string()),
+                (1, "World".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn to_multi_map() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let mut map = MultiMapStorage::<u64, String>::new(storage).unwrap();
+        map.insert(&1, &"Hello".to_string()).unwrap();
+        map.insert(&1, &"World".to_string()).unwrap();
+        map.insert(&1, &"!".to_string()).unwrap();
+
+        let mem_map = map.to_multi_map().unwrap();
+
+        let mut values = Vec::<(u64, String)>::new();
+        values.reserve(3);
+
+        for (key, value) in mem_map.iter() {
             values.push((key, value));
         }
 

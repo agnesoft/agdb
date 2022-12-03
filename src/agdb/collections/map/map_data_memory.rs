@@ -9,10 +9,10 @@ where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash,
     T: Clone + Default + Eq + PartialEq,
 {
-    len: u64,
-    states: Vec<MapValueState>,
-    keys: Vec<K>,
-    values: Vec<T>,
+    pub(super) len: u64,
+    pub(super) states: Vec<MapValueState>,
+    pub(super) keys: Vec<K>,
+    pub(super) values: Vec<T>,
 }
 
 #[allow(dead_code)]

@@ -220,6 +220,11 @@ mod tests {
 
         assert_eq!(dictionary.value(index), Ok(None));
         assert_eq!(dictionary.count(index), Ok(None));
+
+        dictionary.remove(index).unwrap();
+
+        assert_eq!(dictionary.value(index), Ok(None));
+        assert_eq!(dictionary.count(index), Ok(None));
     }
 
     #[test]

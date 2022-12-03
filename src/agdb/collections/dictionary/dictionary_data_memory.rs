@@ -1,94 +1,96 @@
 use super::dictionary_data::DictionaryData;
-use super::dictionary_index::DictionaryIndex;
-use super::dictionary_value::DictionaryValue;
-use crate::collections::old_multi_map::MultiMap;
+use crate::collections::multi_map::MultiMap;
 use crate::db::db_error::DbError;
-use crate::utilities::old_serialize::OldSerialize;
+use crate::storage::storage_value::StorageValue;
 use crate::utilities::stable_hash::StableHash;
 
 pub struct DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
 {
-    pub(crate) index: MultiMap<u64, DictionaryIndex>,
-    pub(crate) values: Vec<DictionaryValue<T>>,
+    pub(crate) index: MultiMap<u64, u64>,
+    pub(crate) counts: Vec<u64>,
+    pub(crate) hashes: Vec<u64>,
+    pub(crate) values: Vec<T>,
+}
+
+impl<T> DictionaryDataMemory<T>
+where
+    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+{
+    pub fn new() -> Self {
+        Self {
+            index: MultiMap::new(),
+            counts: vec![0],
+            hashes: vec![0],
+            values: vec![T::default()],
+        }
+    }
 }
 
 impl<T> DictionaryData<T> for DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
 {
     fn capacity(&self) -> u64 {
-        self.values.len() as u64
+        self.counts.len() as u64
     }
 
     fn commit(&mut self) -> Result<(), DbError> {
         Ok(())
     }
 
-    fn indexes(&self, hash: u64) -> Result<Vec<DictionaryIndex>, DbError> {
+    fn indexes(&self, hash: u64) -> Result<Vec<u64>, DbError> {
         self.index.values(&hash)
     }
 
-    fn insert(&mut self, hash: u64, index: &DictionaryIndex) -> Result<(), DbError> {
-        self.index.insert(hash, index.clone())
+    fn insert(&mut self, hash: u64, index: u64) -> Result<(), DbError> {
+        self.index.insert(&hash, &index)
     }
 
-    fn hash(&self, index: &DictionaryIndex) -> Result<u64, DbError> {
-        Ok(self.values[index.as_usize()].hash)
+    fn hash(&self, index: u64) -> Result<u64, DbError> {
+        Ok(self.hashes[index as usize])
     }
 
-    fn meta(&self, index: &DictionaryIndex) -> Result<i64, DbError> {
-        Ok(self.values[index.as_usize()].meta)
+    fn count(&self, index: u64) -> Result<i64, DbError> {
+        Ok(self.counts[index as usize])
     }
 
-    fn remove(&mut self, hash: u64, index: &DictionaryIndex) -> Result<(), DbError> {
-        self.index.remove_value(&hash, index)?;
+    fn remove(&mut self, hash: u64, index: u64) -> Result<(), DbError> {
+        self.index.remove_value(&hash, &index)?;
 
         Ok(())
     }
 
-    fn set_hash(&mut self, index: &DictionaryIndex, hash: u64) -> Result<(), DbError> {
-        self.values[index.as_usize()].hash = hash;
+    fn set_capacity(&mut self, capacity: u64) -> Result<(), DbError> {
+        self.counts.resize(capacity, 0);
+        self.hashes.resize(capacity, 0);
+        self.values.resize(capacity, T::default());
 
         Ok(())
     }
 
-    fn set_meta(&mut self, index: &DictionaryIndex, meta: i64) -> Result<(), DbError> {
-        self.values[index.as_usize()].meta = meta;
+    fn set_count(&mut self, index: u64, count: i64) -> Result<(), DbError> {
+        self.counts[index.as_usize()] = count;
 
         Ok(())
     }
 
-    fn set_value(
-        &mut self,
-        index: &DictionaryIndex,
-        value: DictionaryValue<T>,
-    ) -> Result<(), DbError> {
-        if self.capacity() == index.as_u64() {
-            self.values.push(value);
-        } else {
-            self.values[index.as_usize()] = value;
-        }
+    fn set_hash(&mut self, index: u64, hash: u64) -> Result<(), DbError> {
+        self.hashes[index as usize] = hash;
+
+        Ok(())
+    }
+
+    fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
+        self.values[index as usize] = value;
 
         Ok(())
     }
 
     fn transaction(&mut self) {}
 
-    fn value(&self, index: &DictionaryIndex) -> Result<DictionaryValue<T>, DbError> {
-        Ok(self.values[index.as_usize()].clone())
-    }
-}
-
-impl<T> Default for DictionaryDataMemory<T>
-where
-    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
-{
-    fn default() -> Self {
-        Self {
-            index: MultiMap::<u64, DictionaryIndex>::new(),
-            values: vec![DictionaryValue::<T>::default()],
-        }
+    fn value(&self, index: u64) -> Result<T, DbError> {
+        Ok(self.values[index as usize].clone())
     }
 }

@@ -1,15 +1,13 @@
 pub mod dictionary_data_storage;
 pub mod dictionary_data_storage_indexes;
 pub mod dictionary_impl;
-pub mod dictionary_index;
-pub mod dictionary_value;
 
 mod dictionary_data;
 mod dictionary_data_memory;
 
 use self::dictionary_data_memory::DictionaryDataMemory;
 use self::dictionary_impl::DictionaryImpl;
-use crate::utilities::old_serialize::OldSerialize;
+use crate::storage::storage_value::StorageValue;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 
@@ -17,7 +15,7 @@ pub type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 
 impl<T> Dictionary<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
+    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
 {
     pub fn new() -> Dictionary<T> {
         Dictionary {
@@ -27,18 +25,8 @@ where
     }
 }
 
-impl<T> Default for Dictionary<T>
-where
-    T: Clone + Default + Eq + PartialEq + StableHash + OldSerialize,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::super::dictionary::dictionary_index::DictionaryIndex;
     use super::*;
     use crate::test_utilities::collided_value::CollidedValue;
 
@@ -46,8 +34,8 @@ mod tests {
     fn count_invalid_index() {
         let dictionary = Dictionary::<i64>::new();
 
-        assert_eq!(dictionary.count(&DictionaryIndex::default()), Ok(None));
-        assert_eq!(dictionary.count(&DictionaryIndex::from(-1_i64)), Ok(None));
+        assert_eq!(dictionary.count(0), Ok(None));
+        assert_eq!(dictionary.count(u64::MAX), Ok(None));
     }
 
     #[test]
@@ -209,9 +197,7 @@ mod tests {
 
         assert_eq!(dictionary.len(), Ok(1));
 
-        dictionary
-            .remove(&DictionaryIndex::from(index.value() + 1))
-            .unwrap();
+        dictionary.remove(index + 1).unwrap();
 
         assert_eq!(dictionary.len(), Ok(1));
     }
@@ -219,6 +205,6 @@ mod tests {
     #[test]
     fn value_missing_index() {
         let dictionary = Dictionary::<i64>::new();
-        assert_eq!(dictionary.value(&DictionaryIndex::from(1_i64)), Ok(None));
+        assert_eq!(dictionary.value(1), Ok(None));
     }
 }

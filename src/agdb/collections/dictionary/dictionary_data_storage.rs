@@ -54,7 +54,7 @@ where
         )
     }
 
-    fn meta(&self, index: &DictionaryIndex) -> Result<i64, DbError> {
+    fn count(&self, index: &DictionaryIndex) -> Result<i64, DbError> {
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().value_at::<i64>(
             &values_index,
@@ -77,7 +77,7 @@ where
         Ok(())
     }
 
-    fn set_meta(&mut self, index: &DictionaryIndex, meta: i64) -> Result<(), DbError> {
+    fn set_count(&mut self, index: &DictionaryIndex, meta: i64) -> Result<(), DbError> {
         let values_index = self.values.storage_index();
         self.storage.borrow_mut().insert_at(
             &values_index,

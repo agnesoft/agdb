@@ -21,10 +21,15 @@ where
 {
     pub fn count(&self, index: u64) -> Result<Option<u64>, DbError> {
         if self.is_valid_index(index) {
-            Ok(Some(self.data.count(index)?))
+            let count = self.data.count(index)?;
+
+            if count != 0 {
+                return Ok(Some(count));
+            }
         } else {
-            Ok(None)
         }
+
+        Ok(None)
     }
 
     pub fn len(&self) -> Result<u64, DbError> {
@@ -58,7 +63,7 @@ where
         if self.is_valid_index(index) {
             let count = self.data.count(index)?;
 
-            if 0 < count {
+            if count != 0 {
                 self.data.transaction();
 
                 if count == 1 {
@@ -77,7 +82,7 @@ where
     pub fn value(&self, index: u64) -> Result<Option<T>, DbError> {
         let mut v = None;
 
-        if self.is_valid_index(index) && 0 < self.data.count(index)? {
+        if self.is_valid_index(index) && self.data.count(index)? != 0 {
             v = Some(self.data.value(index)?);
         }
 

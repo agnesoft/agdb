@@ -121,9 +121,9 @@ mod tests {
         assert_eq!(dictionary.count(index2), Ok(None));
         assert_eq!(dictionary.count(index3), Ok(None));
 
-        assert_eq!(dictionary.insert(&3), Ok(index3.clone()));
-        assert_eq!(dictionary.insert(&2), Ok(index1.clone()));
-        assert_eq!(dictionary.insert(&1), Ok(index2.clone()));
+        assert_eq!(dictionary.insert(&3), Ok(index3));
+        assert_eq!(dictionary.insert(&2), Ok(index1));
+        assert_eq!(dictionary.insert(&1), Ok(index2));
 
         assert_eq!(dictionary.value(index1), Ok(Some(2)));
         assert_eq!(dictionary.value(index2), Ok(Some(1)));

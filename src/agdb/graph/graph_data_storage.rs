@@ -29,6 +29,8 @@ where
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
+        storage.borrow_mut().transaction();
+
         let mut from = VecStorage::<i64, Data>::new(storage.clone())?;
         from.push(&0)?;
         let mut to = VecStorage::<i64, Data>::new(storage.clone())?;
@@ -46,6 +48,8 @@ where
         };
 
         let index = storage.borrow_mut().insert(&indexes)?;
+
+        storage.borrow_mut().commit()?;
 
         Ok(GraphDataStorage::<Data> {
             storage,

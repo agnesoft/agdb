@@ -30,20 +30,15 @@ impl Serialize for DictionaryDataStorageIndexes {
         }
 
         Ok(DictionaryDataStorageIndexes {
-            index_index: StorageIndex::deserialize(
-                &bytes[u64::static_serialized_size() as usize..],
-            )?,
+            index_index: StorageIndex::deserialize(bytes)?,
             counts_index: StorageIndex::deserialize(
-                &bytes[(u64::static_serialized_size() + StorageIndex::static_serialized_size())
-                    as usize..],
+                &bytes[StorageIndex::static_serialized_size() as usize..],
             )?,
             hashes_index: StorageIndex::deserialize(
-                &bytes[(u64::static_serialized_size() + StorageIndex::static_serialized_size() * 2)
-                    as usize..],
+                &bytes[(StorageIndex::static_serialized_size() * 2) as usize..],
             )?,
             values_index: StorageIndex::deserialize(
-                &bytes[(u64::static_serialized_size() + StorageIndex::static_serialized_size() * 3)
-                    as usize..],
+                &bytes[(StorageIndex::static_serialized_size() * 3) as usize..],
             )?,
         })
     }

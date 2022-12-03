@@ -36,6 +36,8 @@ where
         let mut hashes = VecStorage::<u64, Data>::new(storage.clone())?;
         let mut values = VecStorage::<T, Data>::new(storage.clone())?;
 
+        storage.borrow_mut().transaction();
+
         counts.push(&0)?;
         hashes.push(&0)?;
         values.push(&T::default())?;
@@ -48,6 +50,8 @@ where
         };
 
         let storage_index = storage.borrow_mut().insert(&data_index)?;
+
+        storage.borrow_mut().commit()?;
 
         Ok(Self {
             storage,
@@ -149,7 +153,7 @@ where
     }
 
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
-        self.values.set_value(index, &value)
+        self.values.set_value(index, value)
     }
 
     fn transaction(&mut self) {

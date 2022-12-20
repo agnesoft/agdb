@@ -1,7 +1,7 @@
+use super::query_id::QueryId;
 use super::search_query::SearchQuery;
 
-#[allow(dead_code)]
 pub enum QueryIds {
-    Ids(Vec<u64>),
+    Ids(Vec<QueryId>),
     Search(SearchQuery),
 }

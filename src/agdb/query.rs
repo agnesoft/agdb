@@ -1,3 +1,4 @@
+mod condition;
 mod insert_aliases_query;
 mod insert_edges_query;
 mod insert_nodes_query;

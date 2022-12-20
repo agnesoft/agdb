@@ -111,7 +111,7 @@ where
     Data: Storage,
 {
     fn capacity(&self) -> u64 {
-        self.counts.len() as u64
+        self.counts.len()
     }
 
     fn commit(&mut self) -> Result<(), DbError> {

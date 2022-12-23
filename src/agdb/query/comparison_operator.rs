@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-pub enum LogicOperator {
+pub enum ComparisonOperator {
     Equal,
     GreaterThan,
     GreaterThanOrEqual,

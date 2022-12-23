@@ -1,8 +1,8 @@
 use crate::DbValue;
 
-use super::logic_operator::LogicOperator;
+use super::comparison_operator::ComparisonOperator;
 
 pub struct KeyValueCondition {
     pub value: DbValue,
-    pub operator: LogicOperator,
+    pub operator: ComparisonOperator,
 }

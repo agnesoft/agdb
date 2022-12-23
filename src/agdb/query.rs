@@ -1,3 +1,4 @@
+mod comparison_operator;
 mod condition;
 mod direction;
 mod distance_condition;
@@ -7,7 +8,6 @@ mod insert_edges_query;
 mod insert_nodes_query;
 mod insert_query;
 mod key_value_condition;
-mod logic_operator;
 mod query_error;
 mod query_id;
 mod query_ids;

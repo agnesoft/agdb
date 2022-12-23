@@ -1,12 +1,7 @@
 use super::condition::Condition;
+use super::direction::Direction;
 use super::query_id::QueryId;
 use crate::DbKey;
-
-#[allow(dead_code)]
-pub enum Direction {
-    From,
-    To,
-}
 
 #[allow(dead_code)]
 pub struct SearchQuery {

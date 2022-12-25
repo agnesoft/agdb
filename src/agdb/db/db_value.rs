@@ -3,7 +3,7 @@ use crate::utilities::serialize::Serialize;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
 
-#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DbValue {
     Bytes(Vec<u8>),
     Int(i64),

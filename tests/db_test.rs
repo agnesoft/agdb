@@ -2,6 +2,7 @@ use agdb::Db;
 use agdb::DbError;
 use agdb::DbKey;
 use agdb::DbValue;
+use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryResult;
 
@@ -17,5 +18,7 @@ fn public_types() {
 
 #[test]
 fn exec_takes_query_returns_query_result() {
-    let _db = Db::default();
+    let db = Db::default();
+    let query = QueryBuilder::insert().node().query();
+    let _result = db.exec(query);
 }

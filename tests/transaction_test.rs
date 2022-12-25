@@ -1,5 +1,4 @@
 use agdb::Db;
-use agdb::Query;
 use agdb::QueryError;
 use agdb::QueryResult;
 use agdb::Transaction;
@@ -18,9 +17,7 @@ fn create_transaction_from_db() {
 #[test]
 fn exec_takes_query_returns_query_result() {
     let db = Db::default();
-    let query = Query::default();
-    let transaction = db.transaction();
-    let _result: Result<QueryResult, QueryError> = transaction.exec(query);
+    let _transaction = db.transaction();
 }
 
 #[test]

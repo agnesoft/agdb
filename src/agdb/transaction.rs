@@ -1,4 +1,4 @@
-use crate::Query;
+use crate::query::Query;
 use crate::QueryError;
 use crate::QueryResult;
 

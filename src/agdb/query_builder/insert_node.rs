@@ -5,11 +5,11 @@ use crate::query::insert_nodes_query::InsertNodesQuery;
 use crate::query::query_values::QueryValues;
 use crate::Query;
 
-pub struct InsertNodeBuilder(pub InsertNodesQuery);
+pub struct InsertNode(pub InsertNodesQuery);
 
-impl InsertNodeBuilder {
+impl InsertNode {
     pub fn alias(mut self, name: &str) -> InsertNodeAlias {
-        self.0.alias = name.to_string();
+        self.0.aliases.push(name.to_string());
 
         InsertNodeAlias(self.0)
     }

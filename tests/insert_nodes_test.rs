@@ -21,6 +21,24 @@ fn insert_nodes_aliases_values() {
 }
 
 #[test]
+fn insert_nodes_aliases_values_id() {
+    let _query = QueryBuilder::insert()
+        .nodes()
+        .aliases(&["alias1".to_string(), "alias2".to_string()])
+        .values_id("alias3".into())
+        .query();
+}
+
+#[test]
+fn insert_nodes_aliases_values_ids() {
+    let _query = QueryBuilder::insert()
+        .nodes()
+        .aliases(&["alias1".to_string(), "alias2".to_string()])
+        .values_ids(&["alias3".into(), 4.into()])
+        .query();
+}
+
+#[test]
 fn insert_nodes_count() {
     let _query = QueryBuilder::insert().nodes().count(2).query();
 }
@@ -55,5 +73,21 @@ fn insert_nodes_values() {
             &[("key", "value").into(), ("key2", "value2").into()],
             &[("key", "value3").into()],
         ])
+        .query();
+}
+
+#[test]
+fn insert_nodes_values_id() {
+    let _query = QueryBuilder::insert()
+        .nodes()
+        .values_id("alias3".into())
+        .query();
+}
+
+#[test]
+fn insert_nodes_values_ids() {
+    let _query = QueryBuilder::insert()
+        .nodes()
+        .values_ids(&["alias3".into(), 4.into()])
         .query();
 }

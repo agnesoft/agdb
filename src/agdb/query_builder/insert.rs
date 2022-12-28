@@ -1,16 +1,24 @@
+use super::insert_node::InsertNode;
+use super::insert_nodes::InsertNodes;
 use crate::query::insert_nodes_query::InsertNodesQuery;
 use crate::query::query_values::QueryValues;
-
-use super::insert_node::InsertNodeBuilder;
 
 pub struct InsertBuilder {}
 
 impl InsertBuilder {
-    pub fn node(self) -> InsertNodeBuilder {
-        InsertNodeBuilder(InsertNodesQuery {
+    pub fn node(self) -> InsertNode {
+        InsertNode(InsertNodesQuery {
             count: 1,
             values: QueryValues::None,
-            alias: String::new(),
+            aliases: vec![],
+        })
+    }
+
+    pub fn nodes(self) -> InsertNodes {
+        InsertNodes(InsertNodesQuery {
+            count: 0,
+            values: QueryValues::None,
+            aliases: vec![],
         })
     }
 }

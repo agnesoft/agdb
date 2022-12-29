@@ -10,7 +10,7 @@ impl Transaction {
         Ok(QueryResult::default())
     }
 
-    pub fn exec(&self, _query: Query) -> Result<QueryResult, QueryError> {
+    pub fn exec<T: Query>(&self, _query: T) -> Result<QueryResult, QueryError> {
         Ok(QueryResult::default())
     }
 

@@ -29,13 +29,19 @@ impl InsertNodes {
     }
 
     pub fn values_id(mut self, id: QueryId) -> InsertNodesValues {
-        self.0.values = QueryValues::Query(QueryIds::Id(id));
+        self.0.values = QueryValues::Ids(QueryIds::Id(id));
 
         InsertNodesValues(self.0)
     }
 
     pub fn values_ids(mut self, ids: &[QueryId]) -> InsertNodesValues {
-        self.0.values = QueryValues::Query(QueryIds::Ids(ids.to_vec()));
+        self.0.values = QueryValues::Ids(QueryIds::Ids(ids.to_vec()));
+
+        InsertNodesValues(self.0)
+    }
+
+    pub fn values_single(mut self, key_values: &[DbKeyValue]) -> InsertNodesValues {
+        self.0.values = QueryValues::Single(key_values.to_vec());
 
         InsertNodesValues(self.0)
     }

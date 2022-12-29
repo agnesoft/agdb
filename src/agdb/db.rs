@@ -16,7 +16,8 @@ use crate::Transaction;
 pub struct Db {}
 
 impl Db {
-    pub fn exec(&self, _query: Query) -> Result<QueryResult, QueryError> {
+    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, QueryError> {
+        let _data = query.data();
         Ok(QueryResult::default())
     }
 

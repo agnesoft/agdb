@@ -24,7 +24,7 @@ use self::query_ids::QueryIds;
 use self::search_query::SearchQuery;
 use self::select_query::SelectQuery;
 
-pub enum Query {
+pub enum QueryData {
     Insert(InsertQuery),
     InsertAliases(InsertAliasQuery),
     InsertEdges(InsertEdgesQuery),
@@ -36,4 +36,8 @@ pub enum Query {
     SelectCount(SearchQuery),
     SelectKeyCount(QueryIds),
     SelectKeys(QueryIds),
+}
+
+pub trait Query {
+    fn data(self) -> QueryData;
 }

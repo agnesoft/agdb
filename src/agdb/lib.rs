@@ -20,6 +20,6 @@ pub use db::db_value::DbValue;
 pub use db::Db;
 pub use query::query_error::QueryError;
 pub use query::query_result::QueryResult;
-pub use query::Query;
+pub use query::QueryData;
 pub use query_builder::QueryBuilder;
 pub use transaction::Transaction;

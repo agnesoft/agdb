@@ -4,13 +4,12 @@ use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryValues;
 use crate::DbKeyValue;
-use crate::Query;
 
 pub struct InsertNodeAlias(pub InsertNodesQuery);
 
 impl InsertNodeAlias {
-    pub fn query(self) -> Query {
-        Query::InsertNodes(self.0)
+    pub fn query(self) -> InsertNodesQuery {
+        self.0
     }
 
     pub fn values(mut self, key_values: &[DbKeyValue]) -> InsertNodeValues {
@@ -20,7 +19,7 @@ impl InsertNodeAlias {
     }
 
     pub fn values_id(mut self, id: QueryId) -> InsertNodeValues {
-        self.0.values = QueryValues::Query(QueryIds::Ids(vec![id]));
+        self.0.values = QueryValues::Ids(QueryIds::Id(id));
 
         InsertNodeValues(self.0)
     }

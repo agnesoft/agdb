@@ -1,11 +1,24 @@
+use super::insert_edge::InsertEdge;
 use super::insert_node::InsertNode;
 use super::insert_nodes::InsertNodes;
+use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;
+use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryValues;
 
 pub struct InsertBuilder {}
 
 impl InsertBuilder {
+    pub fn edge(self) -> InsertEdge {
+        InsertEdge(InsertEdgesQuery {
+            from: QueryIds::Id(0.into()),
+            to: QueryIds::Id(0.into()),
+            values: QueryValues::None,
+            count: 1,
+            each: false,
+        })
+    }
+
     pub fn node(self) -> InsertNode {
         InsertNode(InsertNodesQuery {
             count: 1,

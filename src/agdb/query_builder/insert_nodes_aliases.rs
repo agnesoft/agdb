@@ -31,7 +31,7 @@ impl InsertNodesAliases {
         InsertNodesValues(self.0)
     }
 
-    pub fn values_single(mut self, key_values: &[DbKeyValue]) -> InsertNodesValues {
+    pub fn values_uniform(mut self, key_values: &[DbKeyValue]) -> InsertNodesValues {
         self.0.values = QueryValues::Single(key_values.to_vec());
 
         InsertNodesValues(self.0)

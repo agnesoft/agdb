@@ -1,4 +1,5 @@
 use super::insert_edge::InsertEdge;
+use super::insert_edges::InsertEdges;
 use super::insert_node::InsertNode;
 use super::insert_nodes::InsertNodes;
 use crate::query::insert_edges_query::InsertEdgesQuery;
@@ -14,7 +15,15 @@ impl InsertBuilder {
             from: QueryIds::Id(0.into()),
             to: QueryIds::Id(0.into()),
             values: QueryValues::None,
-            count: 1,
+            each: false,
+        })
+    }
+
+    pub fn edges(self) -> InsertEdges {
+        InsertEdges(InsertEdgesQuery {
+            from: QueryIds::Ids(vec![]),
+            to: QueryIds::Ids(vec![]),
+            values: QueryValues::None,
             each: false,
         })
     }

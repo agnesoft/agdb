@@ -6,11 +6,6 @@ fn insert_node() {
 }
 
 #[test]
-fn insert_node_alias() {
-    let _query = QueryBuilder::insert().node().alias("alias").query();
-}
-
-#[test]
 fn insert_node_values() {
     let _query = QueryBuilder::insert()
         .node()
@@ -24,6 +19,11 @@ fn insert_node_values_id() {
         .node()
         .values_id("alias".into())
         .query();
+}
+
+#[test]
+fn insert_node_alias() {
+    let _query = QueryBuilder::insert().node().alias("alias").query();
 }
 
 #[test]

@@ -98,9 +98,9 @@ fn insert_nodes_values_ids() {
 }
 
 #[test]
-fn insert_nodes_values_single() {
+fn insert_nodes_values_uniform() {
     let _query = QueryBuilder::insert()
         .nodes()
-        .values_single(&[("key", "value").into(), ("key2", "value2").into()])
+        .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
         .query();
 }

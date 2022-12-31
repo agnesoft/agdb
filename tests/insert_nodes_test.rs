@@ -39,11 +39,11 @@ fn insert_nodes_aliases_values_ids() {
 }
 
 #[test]
-fn insert_nodes_aliases_values_single() {
+fn insert_nodes_aliases_values_uniform() {
     let _query = QueryBuilder::insert()
         .nodes()
         .aliases(&["alias1".to_string(), "alias2".to_string()])
-        .values_single(&[("key", "value").into(), ("key2", "value2").into()])
+        .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
         .query();
 }
 
@@ -62,11 +62,11 @@ fn insert_nodes_count_values_id() {
 }
 
 #[test]
-fn insert_nodes_count_values_single() {
+fn insert_nodes_count_values_uniform() {
     let _query = QueryBuilder::insert()
         .nodes()
         .count(2)
-        .values_single(&[("key", "value").into(), ("key2", "value2").into()])
+        .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
         .query();
 }
 

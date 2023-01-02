@@ -1,9 +1,9 @@
 use super::query_ids::QueryIds;
 use super::Query;
 
-pub struct InsertAliasQuery {
+pub struct InsertAliasesQuery {
     pub ids: QueryIds,
     pub aliases: Vec<String>,
 }
 
-impl Query for InsertAliasQuery {}
+impl Query for InsertAliasesQuery {}

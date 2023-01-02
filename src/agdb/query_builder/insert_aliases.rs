@@ -1,14 +1,14 @@
-use super::insert_alias_of::InsertAliasOf;
+use super::insert_aliases_of::InsertAliasesOf;
 use crate::query::{
-    insert_aliases_query::InsertAliasQuery, query_id::QueryId, query_ids::QueryIds,
+    insert_aliases_query::InsertAliasesQuery, query_id::QueryId, query_ids::QueryIds,
 };
 
-pub struct InsertAliases(pub InsertAliasQuery);
+pub struct InsertAliases(pub InsertAliasesQuery);
 
 impl InsertAliases {
-    pub fn of(mut self, ids: &[QueryId]) -> InsertAliasOf {
+    pub fn of(mut self, ids: &[QueryId]) -> InsertAliasesOf {
         self.0.ids = QueryIds::Ids(ids.to_vec());
 
-        InsertAliasOf(self.0)
+        InsertAliasesOf(self.0)
     }
 }

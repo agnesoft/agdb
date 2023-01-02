@@ -1,7 +1,7 @@
 mod insert;
 mod insert_alias;
-mod insert_alias_of;
 mod insert_aliases;
+mod insert_aliases_of;
 mod insert_edge;
 mod insert_edge_from;
 mod insert_edge_from_to;
@@ -23,6 +23,8 @@ mod insert_values_into;
 mod insert_values_multi;
 mod remove;
 mod remove_alias;
+mod remove_values;
+mod remove_values_from;
 mod select;
 mod select_from;
 

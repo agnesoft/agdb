@@ -23,6 +23,7 @@ mod insert_values_into;
 mod insert_values_multi;
 mod remove;
 mod remove_alias;
+mod remove_ids;
 mod remove_values;
 mod remove_values_from;
 mod select;

@@ -10,6 +10,7 @@ impl Select {
     pub fn from(self, origin: QueryId) -> SelectFrom {
         SelectFrom(SearchQuery {
             origin,
+            destination: QueryId::Id(0),
             direction: Direction::From,
             limit: 0,
             offset: 0,

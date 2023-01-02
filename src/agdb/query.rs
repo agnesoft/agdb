@@ -13,31 +13,14 @@ pub mod query_id;
 pub mod query_ids;
 pub mod query_result;
 pub mod query_values;
+pub mod remove_aliases_query;
+pub mod remove_query;
+pub mod remove_values_query;
 pub mod search_query;
+pub mod select_aliases_query;
+pub mod select_count_query;
+pub mod select_key_count_query;
+pub mod select_keys_query;
 pub mod select_query;
 
-use self::insert_aliases_query::InsertAliasQuery;
-use self::insert_edges_query::InsertEdgesQuery;
-use self::insert_nodes_query::InsertNodesQuery;
-use self::insert_values_query::InsertValuesQuery;
-use self::query_ids::QueryIds;
-use self::search_query::SearchQuery;
-use self::select_query::SelectQuery;
-
-pub enum QueryData {
-    Insert(InsertValuesQuery),
-    InsertAliases(InsertAliasQuery),
-    InsertEdges(InsertEdgesQuery),
-    InsertNodes(InsertNodesQuery),
-    Remove(SelectQuery),
-    Search(SearchQuery),
-    Select(SelectQuery),
-    SelectAliases(QueryIds),
-    SelectCount(SearchQuery),
-    SelectKeyCount(QueryIds),
-    SelectKeys(QueryIds),
-}
-
-pub trait Query {
-    fn data(self) -> QueryData;
-}
+pub trait Query {}

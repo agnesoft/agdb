@@ -1,9 +1,12 @@
+use super::insert_alias::InsertAlias;
+use super::insert_aliases::InsertAliases;
 use super::insert_edge::InsertEdge;
 use super::insert_edges::InsertEdges;
 use super::insert_node::InsertNode;
 use super::insert_nodes::InsertNodes;
 use super::insert_values::InsertValues;
 use super::insert_values_multi::InsertValuesMulti;
+use crate::query::insert_aliases_query::InsertAliasQuery;
 use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;
 use crate::query::insert_values_query::InsertValuesQuery;
@@ -14,6 +17,20 @@ use crate::DbKeyValue;
 pub struct Insert {}
 
 impl Insert {
+    pub fn alias(self, name: &str) -> InsertAlias {
+        InsertAlias(InsertAliasQuery {
+            ids: QueryIds::Id(0.into()),
+            aliases: vec![name.to_string()],
+        })
+    }
+
+    pub fn aliases(self, names: &[String]) -> InsertAliases {
+        InsertAliases(InsertAliasQuery {
+            ids: QueryIds::Ids(vec![]),
+            aliases: names.to_vec(),
+        })
+    }
+
     pub fn edge(self) -> InsertEdge {
         InsertEdge(InsertEdgesQuery {
             from: QueryIds::Id(0.into()),

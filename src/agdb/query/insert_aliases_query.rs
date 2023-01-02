@@ -1,6 +1,6 @@
 use super::query_ids::QueryIds;
 
 pub struct InsertAliasQuery {
-    pub id: QueryIds,
+    pub ids: QueryIds,
     pub aliases: Vec<String>,
 }

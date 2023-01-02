@@ -1,4 +1,7 @@
 mod insert;
+mod insert_alias;
+mod insert_alias_of;
+mod insert_aliases;
 mod insert_edge;
 mod insert_edge_from;
 mod insert_edge_from_to;

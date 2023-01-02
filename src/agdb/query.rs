@@ -6,7 +6,7 @@ pub mod edge_count_condition;
 pub mod insert_aliases_query;
 pub mod insert_edges_query;
 pub mod insert_nodes_query;
-pub mod insert_query;
+pub mod insert_values_query;
 pub mod key_value_condition;
 pub mod query_error;
 pub mod query_id;
@@ -19,13 +19,13 @@ pub mod select_query;
 use self::insert_aliases_query::InsertAliasQuery;
 use self::insert_edges_query::InsertEdgesQuery;
 use self::insert_nodes_query::InsertNodesQuery;
-use self::insert_query::InsertQuery;
+use self::insert_values_query::InsertValuesQuery;
 use self::query_ids::QueryIds;
 use self::search_query::SearchQuery;
 use self::select_query::SelectQuery;
 
 pub enum QueryData {
-    Insert(InsertQuery),
+    Insert(InsertValuesQuery),
     InsertAliases(InsertAliasQuery),
     InsertEdges(InsertEdgesQuery),
     InsertNodes(InsertNodesQuery),

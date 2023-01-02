@@ -15,17 +15,20 @@ mod insert_nodes;
 mod insert_nodes_aliases;
 mod insert_nodes_count;
 mod insert_nodes_values;
+mod insert_values;
+mod insert_values_into;
+mod insert_values_multi;
 mod select;
 mod select_from;
 
-use self::insert::InsertBuilder;
+use self::insert::Insert;
 use self::select::Select;
 
 pub struct QueryBuilder {}
 
 impl QueryBuilder {
-    pub fn insert() -> InsertBuilder {
-        InsertBuilder {}
+    pub fn insert() -> Insert {
+        Insert {}
     }
 
     pub fn select() -> Select {

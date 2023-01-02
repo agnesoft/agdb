@@ -2,14 +2,18 @@ use super::insert_edge::InsertEdge;
 use super::insert_edges::InsertEdges;
 use super::insert_node::InsertNode;
 use super::insert_nodes::InsertNodes;
+use super::insert_values::InsertValues;
+use super::insert_values_multi::InsertValuesMulti;
 use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;
+use crate::query::insert_values_query::InsertValuesQuery;
 use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryValues;
+use crate::DbKeyValue;
 
-pub struct InsertBuilder {}
+pub struct Insert {}
 
-impl InsertBuilder {
+impl Insert {
     pub fn edge(self) -> InsertEdge {
         InsertEdge(InsertEdgesQuery {
             from: QueryIds::Id(0.into()),
@@ -41,6 +45,20 @@ impl InsertBuilder {
             count: 0,
             values: QueryValues::None,
             aliases: vec![],
+        })
+    }
+
+    pub fn values(self, key_values: &[DbKeyValue]) -> InsertValues {
+        InsertValues(InsertValuesQuery {
+            ids: QueryIds::Id(0.into()),
+            values: QueryValues::Single(key_values.to_vec()),
+        })
+    }
+
+    pub fn values_multi(self, key_values: &[&[DbKeyValue]]) -> InsertValuesMulti {
+        InsertValuesMulti(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect()),
         })
     }
 }

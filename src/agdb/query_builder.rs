@@ -27,6 +27,9 @@ mod remove_ids;
 mod remove_values;
 mod remove_values_from;
 mod select;
+mod select_alias;
+mod select_aliases;
+mod select_aliases_of;
 mod select_from;
 
 use self::insert::Insert;

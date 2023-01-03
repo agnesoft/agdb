@@ -1,7 +1,8 @@
+use super::query_ids::QueryIds;
 use super::Query;
 
 pub struct SelectAliasesQuery {
-    pub ids: Vec<u64>,
+    pub ids: QueryIds,
 }
 
 impl Query for SelectAliasesQuery {}

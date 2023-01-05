@@ -15,6 +15,6 @@ pub fn remove_ids() {
 #[test]
 pub fn remove_query() {
     let _query = QueryBuilder::remove()
-        .query(QueryBuilder::select().from("origin".into()).query())
+        .query(QueryBuilder::select().ids().from("origin".into()).query())
         .query();
 }

@@ -107,7 +107,7 @@ fn insert_edges_from_to_values_uniform() {
 fn insert_edges_from_query_to() {
     let _query = QueryBuilder::insert()
         .edges()
-        .from_query(QueryBuilder::select().from(1.into()).query())
+        .from_query(QueryBuilder::select().ids().from(1.into()).query())
         .to(&["alias".into()])
         .query();
 }
@@ -117,6 +117,6 @@ fn insert_edges_from_to_query() {
     let _query = QueryBuilder::insert()
         .edges()
         .from(&["alias".into()])
-        .to_query(QueryBuilder::select().from(2.into()).query())
+        .to_query(QueryBuilder::select().ids().from(2.into()).query())
         .query();
 }

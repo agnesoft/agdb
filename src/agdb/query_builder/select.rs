@@ -1,7 +1,7 @@
+use super::search::Search;
 use super::select_alias::SelectAlias;
 use super::select_aliases::SelectAliases;
-use super::select_from::SelectFrom;
-use crate::query::direction::Direction;
+use super::select_id::SelectId;
 use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
@@ -22,12 +22,22 @@ impl Select {
         })
     }
 
-    pub fn from(self, origin: QueryId) -> SelectFrom {
-        SelectFrom(SearchQuery {
-            origin,
+    pub fn id(self) -> SelectId {
+        SelectId(SearchQuery {
+            origin: QueryId::Id(0),
             destination: QueryId::Id(0),
-            direction: Direction::From,
-            limit: 0,
+            limit: 1,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
+    }
+
+    pub fn ids(self) -> Search {
+        Search(SearchQuery {
+            origin: QueryId::Id(0),
+            destination: QueryId::Id(0),
+            limit: 1,
             offset: 0,
             order_by: vec![],
             conditions: vec![],

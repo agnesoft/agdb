@@ -1,4 +1,5 @@
-use super::{query_ids::QueryIds, Query};
+use super::query_ids::QueryIds;
+use super::Query;
 
 pub struct SelectKeysQuery(pub QueryIds);
 

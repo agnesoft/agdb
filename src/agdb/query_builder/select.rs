@@ -22,6 +22,17 @@ impl Select {
         })
     }
 
+    pub fn count(self) -> SelectId {
+        SelectId(SearchQuery {
+            origin: QueryId::Id(0),
+            destination: QueryId::Id(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
+    }
+
     pub fn id(self) -> SelectId {
         SelectId(SearchQuery {
             origin: QueryId::Id(0),

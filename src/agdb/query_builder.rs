@@ -36,6 +36,8 @@ mod select_aliases_of;
 mod select_id;
 mod select_id_from;
 mod select_id_to;
+mod select_key_count;
+mod select_key_count_from;
 mod select_limit;
 mod select_offset;
 

@@ -2,10 +2,12 @@ use super::search::Search;
 use super::select_alias::SelectAlias;
 use super::select_aliases::SelectAliases;
 use super::select_id::SelectId;
+use super::select_key_count::SelectKeyCount;
 use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
 use crate::query::select_aliases_query::SelectAliasesQuery;
+use crate::query::select_key_count_query::SelectKeyCountQuery;
 
 pub struct Select {}
 
@@ -53,5 +55,9 @@ impl Select {
             order_by: vec![],
             conditions: vec![],
         })
+    }
+
+    pub fn key_count(self) -> SelectKeyCount {
+        SelectKeyCount(SelectKeyCountQuery(QueryIds::Id(0.into())))
     }
 }

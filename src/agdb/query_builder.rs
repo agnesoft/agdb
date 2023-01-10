@@ -38,6 +38,8 @@ mod select_id_from;
 mod select_id_to;
 mod select_key_count;
 mod select_key_count_from;
+mod select_keys;
+mod select_keys_from;
 mod select_limit;
 mod select_offset;
 

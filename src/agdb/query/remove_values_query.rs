@@ -1,6 +1,6 @@
-use super::select_query::SelectQuery;
+use super::select_values_query::SelectValuesQuery;
 use super::Query;
 
-pub struct RemoveValuesQuery(pub SelectQuery);
+pub struct RemoveValuesQuery(pub SelectValuesQuery);
 
 impl Query for RemoveValuesQuery {}

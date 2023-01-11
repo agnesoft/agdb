@@ -7,7 +7,7 @@ use crate::query::remove_aliases_query::RemoveAliasesQuery;
 use crate::query::remove_query::RemoveQuery;
 use crate::query::remove_values_query::RemoveValuesQuery;
 use crate::query::search_query::SearchQuery;
-use crate::query::select_query::SelectQuery;
+use crate::query::select_values_query::SelectValuesQuery;
 use crate::DbKey;
 
 pub struct Remove {}
@@ -38,14 +38,14 @@ impl Remove {
     }
 
     pub fn value(self, key: DbKey) -> RemoveValues {
-        RemoveValues(RemoveValuesQuery(SelectQuery {
+        RemoveValues(RemoveValuesQuery(SelectValuesQuery {
             keys: vec![key],
             ids: QueryIds::Id(0.into()),
         }))
     }
 
     pub fn values(self, keys: &[DbKey]) -> RemoveValues {
-        RemoveValues(RemoveValuesQuery(SelectQuery {
+        RemoveValues(RemoveValuesQuery(SelectValuesQuery {
             keys: keys.to_vec(),
             ids: QueryIds::Id(0.into()),
         }))

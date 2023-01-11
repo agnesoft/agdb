@@ -42,6 +42,8 @@ mod select_keys;
 mod select_keys_from;
 mod select_limit;
 mod select_offset;
+mod select_values;
+mod select_values_from;
 
 use self::insert::Insert;
 use self::remove::Remove;

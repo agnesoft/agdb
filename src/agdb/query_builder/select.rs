@@ -1,7 +1,6 @@
-use super::search::Search;
 use super::select_alias::SelectAlias;
 use super::select_aliases::SelectAliases;
-use super::select_id::SelectId;
+use super::select_ids::SelectIds;
 use super::select_key_count::SelectKeyCount;
 use super::select_keys::SelectKeys;
 use super::select_values::SelectValues;
@@ -11,6 +10,7 @@ use crate::query::search_query::SearchQuery;
 use crate::query::select_aliases_query::SelectAliasesQuery;
 use crate::query::select_key_count_query::SelectKeyCountQuery;
 use crate::query::select_keys_query::SelectKeysQuery;
+use crate::query::select_query::SelectQuery;
 use crate::query::select_values_query::SelectValuesQuery;
 use crate::DbKey;
 
@@ -29,37 +29,16 @@ impl Select {
         })
     }
 
-    pub fn count(self) -> SelectId {
-        SelectId(SearchQuery {
-            origin: QueryId::Id(0),
-            destination: QueryId::Id(0),
-            limit: 0,
-            offset: 0,
-            order_by: vec![],
-            conditions: vec![],
-        })
+    pub fn id(self, id: QueryId) -> SelectIds {
+        SelectIds(SelectQuery(QueryIds::Id(id)))
     }
 
-    pub fn id(self) -> SelectId {
-        SelectId(SearchQuery {
-            origin: QueryId::Id(0),
-            destination: QueryId::Id(0),
-            limit: 1,
-            offset: 0,
-            order_by: vec![],
-            conditions: vec![],
-        })
+    pub fn ids(self, ids: &[QueryId]) -> SelectIds {
+        SelectIds(SelectQuery(QueryIds::Ids(ids.to_vec())))
     }
 
-    pub fn ids(self) -> Search {
-        Search(SearchQuery {
-            origin: QueryId::Id(0),
-            destination: QueryId::Id(0),
-            limit: 1,
-            offset: 0,
-            order_by: vec![],
-            conditions: vec![],
-        })
+    pub fn search(self, search: SearchQuery) -> SelectIds {
+        SelectIds(SelectQuery(QueryIds::Search(search)))
     }
 
     pub fn keys(self) -> SelectKeys {

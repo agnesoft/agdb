@@ -1,25 +1,25 @@
 use agdb::QueryBuilder;
 
 #[test]
-fn select_values_from() {
+fn select_values_id() {
     let _query = QueryBuilder::select()
         .values(&["key1".into(), "key2".into()])
-        .from("alias".into())
+        .id("alias".into())
         .query();
 }
 
 #[test]
-fn select_values_from_ids() {
+fn select_values_ids() {
     let _query = QueryBuilder::select()
         .values(&["key1".into(), "key2".into()])
-        .from_ids(&["alias".into()])
+        .ids(&["alias".into()])
         .query();
 }
 
 #[test]
-fn select_values_from_query() {
+fn select_values_search() {
     let _query = QueryBuilder::select()
         .values(&["key1".into(), "key2".into()])
-        .from_query(QueryBuilder::select().id().from("alias".into()).query())
+        .search(QueryBuilder::search().from("alias".into()).query())
         .query();
 }

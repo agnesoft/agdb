@@ -1,8 +1,8 @@
 use crate::query::select_key_count_query::SelectKeyCountQuery;
 
-pub struct SelectKeyCountFrom(pub SelectKeyCountQuery);
+pub struct SelectKeyCountIds(pub SelectKeyCountQuery);
 
-impl SelectKeyCountFrom {
+impl SelectKeyCountIds {
     pub fn query(self) -> SelectKeyCountQuery {
         self.0
     }

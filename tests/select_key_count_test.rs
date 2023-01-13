@@ -1,25 +1,25 @@
 use agdb::QueryBuilder;
 
 #[test]
-fn select_key_count_from() {
+fn select_key_count_id() {
     let _query = QueryBuilder::select()
         .key_count()
-        .from("alias".into())
+        .id("alias".into())
         .query();
 }
 
 #[test]
-fn select_key_count_from_ids() {
+fn select_key_count_ids() {
     let _query = QueryBuilder::select()
         .key_count()
-        .from_ids(&["alias".into()])
+        .ids(&["alias".into()])
         .query();
 }
 
 #[test]
-fn select_key_count_from_query() {
+fn select_key_count_search() {
     let _query = QueryBuilder::select()
         .key_count()
-        .from_query(QueryBuilder::select().id().from("alias".into()).query())
+        .search(QueryBuilder::search().from("alias".into()).query())
         .query();
 }

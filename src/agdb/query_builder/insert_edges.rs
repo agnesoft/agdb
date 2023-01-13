@@ -14,7 +14,7 @@ impl InsertEdges {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn from_query(mut self, query: SearchQuery) -> InsertEdgesFrom {
+    pub fn from_search(mut self, query: SearchQuery) -> InsertEdgesFrom {
         self.0.from = QueryIds::Search(query);
 
         InsertEdgesFrom(self.0)

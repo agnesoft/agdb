@@ -33,6 +33,7 @@ mod select;
 mod select_alias;
 mod select_aliases;
 mod select_aliases_of;
+mod select_from;
 mod select_key_count;
 mod select_key_count_from;
 mod select_keys;

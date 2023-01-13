@@ -20,6 +20,7 @@ pub mod search_query;
 pub mod select_aliases_query;
 pub mod select_key_count_query;
 pub mod select_keys_query;
+pub mod select_query;
 pub mod select_values_query;
 
 pub trait Query {}

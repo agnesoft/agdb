@@ -21,7 +21,7 @@ impl RemoveValues {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn from_query(mut self, query: SearchQuery) -> RemoveValuesFrom {
+    pub fn from_search(mut self, query: SearchQuery) -> RemoveValuesFrom {
         self.0 .0.ids = QueryIds::Search(query);
 
         RemoveValuesFrom(self.0)

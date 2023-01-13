@@ -33,9 +33,6 @@ mod select;
 mod select_alias;
 mod select_aliases;
 mod select_aliases_of;
-mod select_id;
-mod select_id_from;
-mod select_id_to;
 mod select_key_count;
 mod select_key_count_from;
 mod select_keys;
@@ -47,6 +44,7 @@ mod select_values_from;
 
 use self::insert::Insert;
 use self::remove::Remove;
+use self::search::Search;
 use self::select::Select;
 
 pub struct QueryBuilder {}
@@ -58,6 +56,10 @@ impl QueryBuilder {
 
     pub fn remove() -> Remove {
         Remove {}
+    }
+
+    pub fn search() -> Search {
+        Search {}
     }
 
     pub fn select() -> Select {

@@ -14,9 +14,9 @@ fn select_keys_from_ids() {
 }
 
 #[test]
-fn select_keys_from_query() {
+fn select_keys_from_search() {
     let _query = QueryBuilder::select()
         .keys()
-        .from_query(QueryBuilder::select().id().from("alias".into()).query())
+        .from_search(QueryBuilder::search().from("alias".into()).query())
         .query();
 }

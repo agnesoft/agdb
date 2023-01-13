@@ -3,18 +3,28 @@ use super::search_to::SearchTo;
 use crate::query::query_id::QueryId;
 use crate::query::search_query::SearchQuery;
 
-pub struct Search(pub SearchQuery);
+pub struct Search {}
 
 impl Search {
-    pub fn from(mut self, id: QueryId) -> SearchFrom {
-        self.0.origin = id;
-
-        SearchFrom(self.0)
+    pub fn from(self, id: QueryId) -> SearchFrom {
+        SearchFrom(SearchQuery {
+            origin: id,
+            destination: QueryId::Id(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
     }
 
-    pub fn to(mut self, id: QueryId) -> SearchTo {
-        self.0.destination = id;
-
-        SearchTo(self.0)
+    pub fn to(self, id: QueryId) -> SearchTo {
+        SearchTo(SearchQuery {
+            origin: QueryId::Id(0),
+            destination: id,
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
     }
 }

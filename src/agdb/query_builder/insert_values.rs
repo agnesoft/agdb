@@ -19,7 +19,7 @@ impl InsertValues {
         InsertValuesInto(self.0)
     }
 
-    pub fn into_query(mut self, query: SearchQuery) -> InsertValuesInto {
+    pub fn into_search(mut self, query: SearchQuery) -> InsertValuesInto {
         self.0.ids = QueryIds::Search(query);
 
         InsertValuesInto(self.0)

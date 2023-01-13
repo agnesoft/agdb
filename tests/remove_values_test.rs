@@ -17,10 +17,10 @@ fn remove_value_from_ids() {
 }
 
 #[test]
-fn remove_value_from_query() {
+fn remove_value_from_search() {
     let _query = QueryBuilder::remove()
         .value("key1".into())
-        .from_query(QueryBuilder::select().ids().from("alias1".into()).query())
+        .from_search(QueryBuilder::search().from("alias1".into()).query())
         .query();
 }
 
@@ -41,9 +41,9 @@ fn remove_values_from_ids() {
 }
 
 #[test]
-fn remove_values_from_query() {
+fn remove_values_from_search() {
     let _query = QueryBuilder::remove()
         .values(&["key1".into(), "key2".into()])
-        .from_query(QueryBuilder::select().ids().from("alias1".into()).query())
+        .from_search(QueryBuilder::search().from("alias1".into()).query())
         .query();
 }

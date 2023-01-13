@@ -13,7 +13,7 @@ impl SelectAliases {
         SelectAliasesOf(self.0)
     }
 
-    pub fn of_query(mut self, query: SearchQuery) -> SelectAliasesOf {
+    pub fn search(mut self, query: SearchQuery) -> SelectAliasesOf {
         self.0.ids = QueryIds::Search(query);
 
         SelectAliasesOf(self.0)

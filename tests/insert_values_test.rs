@@ -17,10 +17,10 @@ fn insert_values_into_ids() {
 }
 
 #[test]
-fn insert_values_into_query() {
+fn insert_values_into_search() {
     let _query = QueryBuilder::insert()
         .values(&[("key", "value").into()])
-        .into_query(QueryBuilder::select().id().from(1.into()).query())
+        .into_search(QueryBuilder::search().from(1.into()).query())
         .query();
 }
 
@@ -33,9 +33,9 @@ fn insert_values_multi_into_ids() {
 }
 
 #[test]
-fn insert_values_multi_into_query() {
+fn insert_values_multi_into_search() {
     let _query = QueryBuilder::insert()
         .values_multi(&[&[("key", "value").into()]])
-        .into_query(QueryBuilder::select().id().from(1.into()).query())
+        .into_search(QueryBuilder::search().from(1.into()).query())
         .query();
 }

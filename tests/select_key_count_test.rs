@@ -17,9 +17,9 @@ fn select_key_count_from_ids() {
 }
 
 #[test]
-fn select_key_count_from_query() {
+fn select_key_count_from_search() {
     let _query = QueryBuilder::select()
         .key_count()
-        .from_query(QueryBuilder::select().id().from("alias".into()).query())
+        .from_search(QueryBuilder::search().from("alias".into()).query())
         .query();
 }

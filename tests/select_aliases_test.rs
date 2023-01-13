@@ -16,9 +16,9 @@ fn select_aliases_of() {
 }
 
 #[test]
-fn select_aliases_of_query() {
+fn select_aliases_search() {
     let _query = QueryBuilder::select()
         .aliases()
-        .of_query(QueryBuilder::select().ids().from(1.into()).query())
+        .search(QueryBuilder::search().from(1.into()).query())
         .query();
 }

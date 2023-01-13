@@ -22,7 +22,7 @@ impl SelectValues {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn from_query(mut self, query: SearchQuery) -> SelectValuesFrom {
+    pub fn from_search(mut self, query: SearchQuery) -> SelectValuesFrom {
         self.0.ids = QueryIds::Search(query);
 
         SelectValuesFrom(self.0)

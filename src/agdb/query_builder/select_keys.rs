@@ -22,7 +22,7 @@ impl SelectKeys {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn from_query(mut self, query: SearchQuery) -> SelectKeysFrom {
+    pub fn from_search(mut self, query: SearchQuery) -> SelectKeysFrom {
         self.0 .0 = QueryIds::Search(query);
 
         SelectKeysFrom(self.0)

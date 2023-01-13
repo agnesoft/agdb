@@ -17,9 +17,9 @@ fn select_values_from_ids() {
 }
 
 #[test]
-fn select_values_from_query() {
+fn select_values_from_search() {
     let _query = QueryBuilder::select()
         .values(&["key1".into(), "key2".into()])
-        .from_query(QueryBuilder::select().id().from("alias".into()).query())
+        .from_search(QueryBuilder::search().from("alias".into()).query())
         .query();
 }

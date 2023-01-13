@@ -1,6 +1,35 @@
 use agdb::QueryBuilder;
 
 #[test]
+fn insert_edge_from_to() {
+    let _query = QueryBuilder::insert()
+        .edge()
+        .from("alias1".into())
+        .to("alias2".into())
+        .query();
+}
+
+#[test]
+fn insert_edge_from_to_values() {
+    let _query = QueryBuilder::insert()
+        .edge()
+        .from("alias1".into())
+        .to("alias2".into())
+        .values(&[("key", "value").into()])
+        .query();
+}
+
+#[test]
+fn insert_edge_from_to_values_id() {
+    let _query = QueryBuilder::insert()
+        .edge()
+        .from("alias1".into())
+        .to("alias2".into())
+        .values_id("alias".into())
+        .query();
+}
+
+#[test]
 fn insert_edges_from_to() {
     let _query = QueryBuilder::insert()
         .edges()
@@ -107,16 +136,16 @@ fn insert_edges_from_to_values_uniform() {
 fn insert_edges_from_query_to() {
     let _query = QueryBuilder::insert()
         .edges()
-        .from_query(QueryBuilder::select().ids().from(1.into()).query())
+        .from_search(QueryBuilder::search().from(1.into()).query())
         .to(&["alias".into()])
         .query();
 }
 
 #[test]
-fn insert_edges_from_to_query() {
+fn insert_edges_from_to_search() {
     let _query = QueryBuilder::insert()
         .edges()
         .from(&["alias".into()])
-        .to_query(QueryBuilder::select().ids().from(2.into()).query())
+        .to_search(QueryBuilder::search().from(2.into()).query())
         .query();
 }

@@ -33,7 +33,7 @@ impl Remove {
         RemoveIds(RemoveQuery(QueryIds::Ids(ids.to_vec())))
     }
 
-    pub fn query(self, query: SearchQuery) -> RemoveIds {
+    pub fn search(self, query: SearchQuery) -> RemoveIds {
         RemoveIds(RemoveQuery(QueryIds::Search(query)))
     }
 

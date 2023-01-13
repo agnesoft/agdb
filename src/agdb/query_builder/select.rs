@@ -1,6 +1,6 @@
 use super::select_alias::SelectAlias;
 use super::select_aliases::SelectAliases;
-use super::select_from::SelectFrom;
+use super::select_ids::SelectIds;
 use super::select_key_count::SelectKeyCount;
 use super::select_keys::SelectKeys;
 use super::select_values::SelectValues;
@@ -29,16 +29,16 @@ impl Select {
         })
     }
 
-    pub fn from(self, id: QueryId) -> SelectFrom {
-        SelectFrom(SelectQuery(QueryIds::Id(id)))
+    pub fn id(self, id: QueryId) -> SelectIds {
+        SelectIds(SelectQuery(QueryIds::Id(id)))
     }
 
-    pub fn from_ids(self, ids: &[QueryId]) -> SelectFrom {
-        SelectFrom(SelectQuery(QueryIds::Ids(ids.to_vec())))
+    pub fn ids(self, ids: &[QueryId]) -> SelectIds {
+        SelectIds(SelectQuery(QueryIds::Ids(ids.to_vec())))
     }
 
-    pub fn from_search(self, search: SearchQuery) -> SelectFrom {
-        SelectFrom(SelectQuery(QueryIds::Search(search)))
+    pub fn search(self, search: SearchQuery) -> SelectIds {
+        SelectIds(SelectQuery(QueryIds::Search(search)))
     }
 
     pub fn keys(self) -> SelectKeys {

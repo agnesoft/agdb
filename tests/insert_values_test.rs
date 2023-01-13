@@ -1,41 +1,41 @@
 use agdb::QueryBuilder;
 
 #[test]
-fn insert_values_into() {
+fn insert_values_id() {
     let _query = QueryBuilder::insert()
         .values(&[("key", "value").into()])
-        .into("alias".into())
+        .id("alias".into())
         .query();
 }
 
 #[test]
-fn insert_values_into_ids() {
+fn insert_values_ids() {
     let _query = QueryBuilder::insert()
         .values(&[("key", "value").into()])
-        .into_ids(&["alias".into()])
+        .ids(&["alias".into()])
         .query();
 }
 
 #[test]
-fn insert_values_into_search() {
+fn insert_values_search() {
     let _query = QueryBuilder::insert()
         .values(&[("key", "value").into()])
-        .into_search(QueryBuilder::search().from(1.into()).query())
+        .search(QueryBuilder::search().from(1.into()).query())
         .query();
 }
 
 #[test]
-fn insert_values_multi_into_ids() {
+fn insert_values_multi_ids() {
     let _query = QueryBuilder::insert()
         .values_multi(&[&[("key", "value").into()]])
-        .into_ids(&["alias".into()])
+        .ids(&["alias".into()])
         .query();
 }
 
 #[test]
-fn insert_values_multi_into_search() {
+fn insert_values_multi_search() {
     let _query = QueryBuilder::insert()
         .values_multi(&[&[("key", "value").into()]])
-        .into_search(QueryBuilder::search().from(1.into()).query())
+        .search(QueryBuilder::search().from(1.into()).query())
         .query();
 }

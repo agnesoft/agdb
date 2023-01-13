@@ -1,8 +1,8 @@
 use crate::query::remove_values_query::RemoveValuesQuery;
 
-pub struct RemoveValuesFrom(pub RemoveValuesQuery);
+pub struct RemoveValuesIds(pub RemoveValuesQuery);
 
-impl RemoveValuesFrom {
+impl RemoveValuesIds {
     pub fn query(self) -> RemoveValuesQuery {
         self.0
     }

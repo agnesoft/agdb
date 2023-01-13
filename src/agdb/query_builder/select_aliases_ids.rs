@@ -1,8 +1,8 @@
 use crate::query::select_aliases_query::SelectAliasesQuery;
 
-pub struct SelectAliasesOf(pub SelectAliasesQuery);
+pub struct SelectAliasesIds(pub SelectAliasesQuery);
 
-impl SelectAliasesOf {
+impl SelectAliasesIds {
     pub fn query(self) -> SelectAliasesQuery {
         self.0
     }

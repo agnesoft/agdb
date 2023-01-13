@@ -1,8 +1,8 @@
 use agdb::QueryBuilder;
 
 #[test]
-fn select_alias_of() {
-    let _query = QueryBuilder::select().alias().of(1).query();
+fn select_alias_id() {
+    let _query = QueryBuilder::select().alias().id(1).query();
 }
 
 #[test]
@@ -11,8 +11,8 @@ fn select_aliases() {
 }
 
 #[test]
-fn select_aliases_of() {
-    let _query = QueryBuilder::select().aliases().of(&[1, 2]).query();
+fn select_aliases_ids() {
+    let _query = QueryBuilder::select().aliases().ids(&[1, 2]).query();
 }
 
 #[test]

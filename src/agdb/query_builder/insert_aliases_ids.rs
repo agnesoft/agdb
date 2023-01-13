@@ -1,8 +1,8 @@
 use crate::query::insert_aliases_query::InsertAliasesQuery;
 
-pub struct InsertAliasesOf(pub InsertAliasesQuery);
+pub struct InsertAliasesIds(pub InsertAliasesQuery);
 
-impl InsertAliasesOf {
+impl InsertAliasesIds {
     pub fn query(self) -> InsertAliasesQuery {
         self.0
     }

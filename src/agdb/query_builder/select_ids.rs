@@ -1,8 +1,8 @@
 use crate::query::select_query::SelectQuery;
 
-pub struct SelectFrom(pub SelectQuery);
+pub struct SelectIds(pub SelectQuery);
 
-impl SelectFrom {
+impl SelectIds {
     pub fn query(self) -> SelectQuery {
         self.0
     }

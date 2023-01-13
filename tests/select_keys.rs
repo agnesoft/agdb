@@ -1,22 +1,19 @@
 use agdb::QueryBuilder;
 
 #[test]
-fn select_keys_from() {
-    let _query = QueryBuilder::select().keys().from("alias".into()).query();
+fn select_keys_id() {
+    let _query = QueryBuilder::select().keys().id("alias".into()).query();
 }
 
 #[test]
-fn select_keys_from_ids() {
-    let _query = QueryBuilder::select()
-        .keys()
-        .from_ids(&["alias".into()])
-        .query();
+fn select_keys_ids() {
+    let _query = QueryBuilder::select().keys().ids(&["alias".into()]).query();
 }
 
 #[test]
-fn select_keys_from_search() {
+fn select_keys_search() {
     let _query = QueryBuilder::select()
         .keys()
-        .from_search(QueryBuilder::search().from("alias".into()).query())
+        .search(QueryBuilder::search().from("alias".into()).query())
         .query();
 }

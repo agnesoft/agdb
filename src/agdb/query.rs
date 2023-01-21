@@ -1,7 +1,6 @@
-pub mod comparison_operator;
+pub mod comparison;
 pub mod condition;
 pub mod direction;
-pub mod distance_condition;
 pub mod edge_count_condition;
 pub mod insert_aliases_query;
 pub mod insert_edges_query;

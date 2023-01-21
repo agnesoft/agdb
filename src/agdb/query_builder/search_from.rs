@@ -1,6 +1,7 @@
 use super::search_to::SearchTo;
 use super::select_limit::SelectLimit;
 use super::select_offset::SelectOffset;
+use super::where_::Where;
 use crate::query::query_id::QueryId;
 use crate::query::search_query::SearchQuery;
 
@@ -27,5 +28,9 @@ impl SearchFrom {
         self.0.destination = id;
 
         SearchTo(self.0)
+    }
+
+    pub fn where_(self) -> Where {
+        Where(self.0)
     }
 }

@@ -42,6 +42,9 @@ mod select_limit;
 mod select_offset;
 mod select_values;
 mod select_values_ids;
+mod where_;
+mod where_key;
+mod where_logic_operator;
 
 use self::insert::Insert;
 use self::remove::Remove;

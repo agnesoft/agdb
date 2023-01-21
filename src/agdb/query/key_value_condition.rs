@@ -1,8 +1,8 @@
-use crate::DbValue;
+use crate::DbKey;
 
-use super::comparison_operator::ComparisonOperator;
+use super::comparison::Comparison;
 
 pub struct KeyValueCondition {
-    pub value: DbValue,
-    pub operator: ComparisonOperator,
+    pub key: DbKey,
+    pub comparison: Comparison,
 }

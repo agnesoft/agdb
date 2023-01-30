@@ -1,6 +1,5 @@
 use super::condition::Condition;
 use super::query_id::QueryId;
-use super::Query;
 use crate::DbKey;
 
 #[allow(dead_code)]
@@ -12,5 +11,3 @@ pub struct SearchQuery {
     pub order_by: Vec<DbKey>,
     pub conditions: Vec<Condition>,
 }
-
-impl Query for SearchQuery {}

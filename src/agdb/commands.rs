@@ -1,10 +1,22 @@
-pub mod command_executor;
-pub mod command_stack;
+pub mod insert_alias;
+pub mod insert_edge;
+pub mod insert_node;
+pub mod remove_alias;
+pub mod remove_edge;
+pub mod remove_node;
 
-mod cmd;
+use self::insert_alias::InsertAlias;
+use self::insert_edge::InsertEdge;
+use self::insert_node::InsertNode;
+use self::remove_alias::RemoveAlias;
+use self::remove_edge::RemoveEdge;
+use self::remove_node::RemoveNode;
 
-#[allow(dead_code)]
 pub enum Commands {
-    InsertEdge,
-    InsertNode,
+    InsertAlias(InsertAlias),
+    InsertEdge(InsertEdge),
+    InsertNode(InsertNode),
+    RemoveAlias(RemoveAlias),
+    RemoveEdge(RemoveEdge),
+    RemoveNode(RemoveNode),
 }

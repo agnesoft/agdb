@@ -1,7 +1,7 @@
 use crate::DbKey;
 use crate::DbValue;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DbKeyValue {
     pub key: DbKey,
     pub value: DbValue,

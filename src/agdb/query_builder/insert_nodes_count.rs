@@ -3,13 +3,14 @@ use crate::query::insert_nodes_query::InsertNodesQuery;
 use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryValues;
+use crate::query::Query;
 use crate::DbKeyValue;
 
 pub struct InsertNodesCount(pub InsertNodesQuery);
 
 impl InsertNodesCount {
-    pub fn query(self) -> InsertNodesQuery {
-        self.0
+    pub fn query(self) -> Query {
+        Query::InsertNodes(self.0)
     }
 
     pub fn values_id(mut self, id: QueryId) -> InsertNodesValues {

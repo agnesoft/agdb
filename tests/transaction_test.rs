@@ -6,7 +6,7 @@ use agdb::Transaction;
 
 #[test]
 fn exec_takes_query_returns_query_result() {
-    let db = Db::default();
+    let db = Db::new("").unwrap();
     let transaction = db.transaction();
     let query = QueryBuilder::insert().node().query();
     let _result = transaction.exec(query);
@@ -14,21 +14,21 @@ fn exec_takes_query_returns_query_result() {
 
 #[test]
 fn create_transaction_from_transaction() {
-    let db = Db::default();
+    let db = Db::new("").unwrap();
     let transaction = db.transaction();
     let _nested_transaction: Transaction = transaction.transaction();
 }
 
 #[test]
 fn transaction_commit() {
-    let db = Db::default();
+    let db = Db::new("").unwrap();
     let transaction = db.transaction();
     let _result: Result<QueryResult, QueryError> = transaction.commit();
 }
 
 #[test]
 fn transaction_rollback() {
-    let db = Db::default();
+    let db = Db::new("").unwrap();
     let transaction = db.transaction();
     let _result: Result<QueryResult, QueryError> = transaction.rollback();
 }

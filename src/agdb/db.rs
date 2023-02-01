@@ -7,59 +7,59 @@ pub mod db_value;
 
 mod db_float;
 
-use crate::commands::insert_node::InsertNode;
 use crate::commands::Commands;
-use crate::graph::Graph;
-use crate::query::insert_nodes_query::InsertNodesQuery;
+use crate::db_data::DbData;
+use crate::graph::graph_index::GraphIndex;
 use crate::query::Query;
 use crate::DbError;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::Transaction;
+use std::sync::RwLock;
 
-#[derive(Default)]
 pub struct Db {
-    pub graph: Graph,
+    data: RwLock<DbData>,
+}
+
+struct Context {
+    pub index: GraphIndex,
 }
 
 impl Db {
-    fn commands(query: &Query) -> Vec<Commands> {
-        match query {
-            Query::InsertAliases(query_data) => todo!(),
-            Query::InsertEdges(query_data) => todo!(),
-            Query::InsertNodes(query_data) => Self::insert_nodes(query_data),
-            Query::InsertValues(query_data) => todo!(),
-            Query::RemoveAliases(query_data) => todo!(),
-            Query::Remove(query_data) => todo!(),
-            Query::RemoveValues(query_data) => todo!(),
-            Query::Search(query_data) => todo!(),
-            Query::SelectAliases(query_data) => todo!(),
-            Query::SelectKeys(query_data) => todo!(),
-            Query::SelectKeyCount(query_data) => todo!(),
-            Query::Select(query_data) => todo!(),
-            Query::SelectValues(query_data) => todo!(),
-        }
-    }
-
-    fn insert_nodes(query_data: &InsertNodesQuery) -> Vec<Commands> {
-        let mut commands = Vec::<Commands>::new();
-
-        for i in 0..query_data.count {
-            commands.push(Commands::InsertNode(InsertNode {}));
-        }
-
-        commands
-    }
-
     pub fn exec(&self, query: &Query) -> Result<QueryResult, QueryError> {
-        let stack = Self::commands(query);
+        let mut context = Context {
+            index: GraphIndex::default(),
+        };
+        let commands = query.commands();
+        let mut result = QueryResult {
+            result: 0,
+            elements: vec![],
+        };
 
-        Ok(QueryResult::default())
+        for command in commands {
+            match command {
+                Commands::InsertAlias(_) => todo!(),
+                Commands::InsertEdge(_) => todo!(),
+                Commands::InsertNode(_) => {
+                    context.index = self.data.write()?.graph.insert_node()?;
+                    result.result += 1;
+                    result.elements.push(crate::DbElement {
+                        index: context.index.as_u64(),
+                        values: vec![],
+                    });
+                }
+                Commands::RemoveAlias(_) => todo!(),
+                Commands::RemoveEdge(_) => todo!(),
+                Commands::RemoveNode(_) => todo!(),
+            }
+        }
+
+        Ok(result)
     }
 
     pub fn new(_filename: &str) -> Result<Db, DbError> {
         Ok(Self {
-            graph: Graph::new(),
+            data: RwLock::new(DbData::new()?),
         })
     }
 

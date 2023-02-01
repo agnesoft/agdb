@@ -8,7 +8,7 @@ use agdb::QueryResult;
 
 #[test]
 fn public_types() {
-    let _db = Db::default();
+    let _db = Db::new("").unwrap();
     let _query_error = QueryError::default();
     let _result = QueryResult::default();
     let _db_error = DbError::from("");
@@ -18,7 +18,7 @@ fn public_types() {
 
 #[test]
 fn exec_takes_query_returns_query_result() {
-    let db = Db::default();
+    let mut db = Db::new("").unwrap();
     let query = QueryBuilder::insert().node().query();
-    let _result = db.exec(query);
+    let _result = db.exec(&query);
 }

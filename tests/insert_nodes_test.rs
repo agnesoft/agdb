@@ -1,8 +1,27 @@
+#[path = "../src/agdb/test_utilities/test_file.rs"]
+mod test_file;
+
+use agdb::Db;
+use agdb::DbElement;
 use agdb::QueryBuilder;
+use test_file::TestFile;
 
 #[test]
 fn insert_node() {
-    let _query = QueryBuilder::insert().node().query();
+    let test_file = TestFile::new();
+
+    let db = Db::new(test_file.file_name()).unwrap();
+    let query = QueryBuilder::insert().node().query();
+    let result = db.exec(&query).unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(
+        result.elements,
+        vec![DbElement {
+            index: 1,
+            values: vec![]
+        }]
+    )
 }
 
 #[test]
@@ -23,7 +42,20 @@ fn insert_node_values_id() {
 
 #[test]
 fn insert_node_alias() {
-    let _query = QueryBuilder::insert().node().alias("alias").query();
+    let test_file = TestFile::new();
+
+    let db = Db::new(test_file.file_name()).unwrap();
+    let query = QueryBuilder::insert().node().alias("alias").query();
+    let result = db.exec(&query).unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(
+        result.elements,
+        vec![DbElement {
+            index: 1,
+            values: vec![]
+        }]
+    )
 }
 
 #[test]

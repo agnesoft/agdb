@@ -112,7 +112,7 @@ mod tests {
     fn derived_from_debug() {
         let error = DbError::from("error");
 
-        format!("{:?}", error);
+        format!("{error:?}");
     }
 
     #[test]

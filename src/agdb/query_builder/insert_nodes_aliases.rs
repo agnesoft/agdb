@@ -5,12 +5,13 @@ use crate::query::query_values::QueryValues;
 use crate::DbKeyValue;
 
 use super::insert_nodes_values::InsertNodesValues;
+use crate::query::Query;
 
 pub struct InsertNodesAliases(pub InsertNodesQuery);
 
 impl InsertNodesAliases {
-    pub fn query(self) -> InsertNodesQuery {
-        self.0
+    pub fn query(self) -> Query {
+        Query::InsertNodes(self.0)
     }
 
     pub fn values(mut self, key_values: &[&[DbKeyValue]]) -> InsertNodesValues {

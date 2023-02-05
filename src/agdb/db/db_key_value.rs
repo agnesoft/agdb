@@ -1,7 +1,7 @@
 use crate::DbKey;
 use crate::DbValue;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DbKeyValue {
     pub key: DbKey,
     pub value: DbValue,
@@ -17,5 +17,35 @@ where
             key: value.0.into(),
             value: value.1.into(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!(
+            "{:?}",
+            DbKeyValue {
+                key: DbKey::Int(0),
+                value: DbKey::Int(0)
+            }
+        );
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            DbKeyValue {
+                key: DbKey::Int(0),
+                value: DbKey::Int(0)
+            },
+            DbKeyValue {
+                key: DbKey::Int(0),
+                value: DbKey::Int(0)
+            }
+        );
     }
 }

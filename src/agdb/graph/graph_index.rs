@@ -52,7 +52,7 @@ mod tests {
     fn derived_from_debug() {
         let index = GraphIndex::default();
 
-        format!("{:?}", index);
+        format!("{index:?}");
     }
 
     #[test]

@@ -82,7 +82,7 @@ mod tests {
     fn derived_from_debug() {
         let value = CollisionValue::new(1_i64);
 
-        format!("{:?}", value);
+        format!("{value:?}");
     }
 
     #[test]

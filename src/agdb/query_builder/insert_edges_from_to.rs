@@ -4,6 +4,7 @@ use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryValues;
+use crate::query::Query;
 use crate::DbKeyValue;
 
 pub struct InsertEdgesFromTo(pub InsertEdgesQuery);
@@ -15,8 +16,8 @@ impl InsertEdgesFromTo {
         InsertEdgesEach(self.0)
     }
 
-    pub fn query(self) -> InsertEdgesQuery {
-        self.0
+    pub fn query(self) -> Query {
+        Query::InsertEdges(self.0)
     }
 
     pub fn values(mut self, key_values: &[&[DbKeyValue]]) -> InsertEdgesValues {

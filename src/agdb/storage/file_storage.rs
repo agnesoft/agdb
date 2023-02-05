@@ -314,8 +314,7 @@ impl FileStorage {
     fn validate_read_size(offset: u64, read_size: u64, value_size: u64) -> Result<(), DbError> {
         if offset > value_size {
             return Err(DbError::from(format!(
-                "FileStorage error: offset ({}) out of bounds ({})",
-                offset, value_size
+                "FileStorage error: offset ({offset}) out of bounds ({value_size})"
             )));
         }
 

@@ -43,9 +43,9 @@ impl WriteAheadLog {
     pub fn records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
         let mut records = Vec::<WriteAheadLogRecord>::new();
         let size = self.file.seek(SeekFrom::End(0))?;
-        self.file.seek(SeekFrom::Start(0))?;
+        self.file.rewind()?;
 
-        while self.file.seek(SeekFrom::Current(0))? < size {
+        while self.file.stream_position()? < size {
             records.push(Self::read_record(&mut self.file)?);
         }
 

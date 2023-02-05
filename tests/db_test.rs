@@ -18,7 +18,7 @@ fn public_types() {
 
 #[test]
 fn exec_takes_query_returns_query_result() {
-    let mut db = Db::new("").unwrap();
+    let db = Db::new("").unwrap();
     let query = QueryBuilder::insert().node().query();
     let _result = db.exec(&query);
 }

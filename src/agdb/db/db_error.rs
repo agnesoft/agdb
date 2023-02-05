@@ -7,7 +7,6 @@ use std::io::Error as IOError;
 use std::num::TryFromIntError;
 use std::panic::Location;
 use std::string::FromUtf8Error;
-use std::sync::PoisonError;
 
 #[derive(Debug)]
 pub struct DbError {

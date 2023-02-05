@@ -21,3 +21,27 @@ impl<T> From<PoisonError<T>> for QueryError {
         }
     }
 }
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!(
+            "{:?}",
+            QueryError {
+                description: String::new()
+            }
+        );
+    }
+
+    #[test]
+    fn from_db_error() {
+        let _ = QueryError::from(DbError::from(""));
+    }
+
+    #[test]
+    fn from_poison_error() {
+        let _ = QueryError::from(PoisonError::<i32>::new(0));
+    }
+}

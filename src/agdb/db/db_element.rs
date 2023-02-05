@@ -5,3 +5,18 @@ pub struct DbElement {
     pub index: u64,
     pub values: Vec<DbKeyValue>,
 }
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!(
+            "{:?}",
+            DbElement {
+                index: 0,
+                values: vec![]
+            }
+        );
+    }
+}

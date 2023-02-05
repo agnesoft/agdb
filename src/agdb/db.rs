@@ -38,7 +38,12 @@ impl Db {
 
         for command in commands {
             match command {
-                Commands::InsertAlias(_) => todo!(),
+                Commands::InsertAlias(data) => {
+                    self.data
+                        .write()?
+                        .aliases
+                        .insert(data.alias, context.index.clone());
+                }
                 Commands::InsertEdge(_) => todo!(),
                 Commands::InsertNode(_) => {
                     context.index = self.data.write()?.graph.insert_node()?;

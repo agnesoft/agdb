@@ -77,8 +77,7 @@ impl FileRecords {
         }
 
         Err(DbError::from(format!(
-            "FileStorage error: index ({}) not found",
-            index
+            "FileStorage error: index ({index}) not found"
         )))
     }
 

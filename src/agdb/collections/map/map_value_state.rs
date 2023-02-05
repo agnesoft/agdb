@@ -76,7 +76,7 @@ mod tests {
     #[test]
     fn derived_from_debug() {
         let value = MapValueState::Deleted;
-        format!("{:?}", value);
+        format!("{value:?}");
     }
 
     #[test]

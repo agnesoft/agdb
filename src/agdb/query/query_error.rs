@@ -22,6 +22,7 @@ impl<T> From<PoisonError<T>> for QueryError {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

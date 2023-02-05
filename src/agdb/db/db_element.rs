@@ -6,6 +6,7 @@ pub struct DbElement {
     pub values: Vec<DbKeyValue>,
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

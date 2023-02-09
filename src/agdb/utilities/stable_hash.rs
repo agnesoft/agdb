@@ -1,4 +1,5 @@
-use std::{mem::size_of, ops::BitXor};
+use std::mem::size_of;
+use std::ops::BitXor;
 
 const HASH_CONSTANT: u64 = 0x517cc1b727220a95;
 

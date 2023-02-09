@@ -1,7 +1,6 @@
 mod collections;
 mod commands;
 mod db;
-mod db_data;
 mod graph;
 mod graph_search;
 mod query;

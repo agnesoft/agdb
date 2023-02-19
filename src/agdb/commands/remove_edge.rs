@@ -1,5 +1,17 @@
-use crate::graph::graph_index::GraphIndex;
+#[derive(Debug, PartialEq)]
+pub struct RemoveEdge {}
 
-pub struct RemoveEdge {
-    pub id: GraphIndex,
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", RemoveEdge {});
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(RemoveEdge {}, RemoveEdge {});
+    }
 }

@@ -28,11 +28,7 @@ pub struct Db {
 
 impl Db {
     pub fn exec(&self, query: &Query) -> Result<QueryResult, QueryError> {
-        let mut context = Context {
-            index: 0,
-            from: 0,
-            to: 0,
-        };
+        let mut context = Context { index: 0 };
         let commands = query.commands();
         let mut result = QueryResult {
             result: 0,

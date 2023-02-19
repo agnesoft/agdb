@@ -152,7 +152,7 @@ impl Db {
     ) -> Result<(), QueryError> {
         let mut mut_data = self.data.write()?;
         let graph_index = mut_data.graph.insert_edge(&from, &to)?.index;
-        mut_data.next_edge += 1;
+        mut_data.next_edge -= 1;
         Ok(mut_data.indexes.insert(&context.index, &graph_index)?)
     }
 

@@ -1,8 +1,8 @@
-use crate::graph::graph_index::GraphIndex;
+use crate::query::query_id::QueryId;
 
 #[derive(Debug, PartialEq)]
 pub struct RemoveNode {
-    pub id: GraphIndex,
+    pub id: QueryId,
 }
 
 #[cfg(test)]
@@ -11,23 +11,14 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!(
-            "{:?}",
-            RemoveNode {
-                id: GraphIndex { index: 0 }
-            }
-        );
+        format!("{:?}", RemoveNode { id: QueryId::Id(0) });
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            RemoveNode {
-                id: GraphIndex { index: 0 }
-            },
-            RemoveNode {
-                id: GraphIndex { index: 0 }
-            }
+            RemoveNode { id: QueryId::Id(0) },
+            RemoveNode { id: QueryId::Id(0) }
         );
     }
 }

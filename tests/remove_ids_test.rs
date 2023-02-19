@@ -1,15 +1,94 @@
+#[path = "../src/agdb/test_utilities/test_file.rs"]
+mod test_file;
+
+use agdb::Db;
 use agdb::QueryBuilder;
+use test_file::TestFile;
 
 #[test]
-pub fn remove_id() {
-    let _query = QueryBuilder::remove().id("alias".into()).query();
+pub fn remove_node() {
+    let test_file = TestFile::new();
+
+    let db = Db::new(test_file.file_name()).unwrap();
+    db.exec(&QueryBuilder::insert().node().query()).unwrap();
+
+    let query = QueryBuilder::remove().id(1.into()).query();
+    let result = db.exec(&query).unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(result.elements, vec![]);
 }
 
 #[test]
-pub fn remove_ids() {
-    let _query = QueryBuilder::remove()
+pub fn remove_nodes() {
+    let test_file = TestFile::new();
+
+    let db = Db::new(test_file.file_name()).unwrap();
+    db.exec(
+        &QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".to_string(), "alias2".to_string()])
+            .query(),
+    )
+    .unwrap();
+
+    let query = QueryBuilder::remove()
         .ids(&["alias".into(), "alias2".into()])
         .query();
+    let result = db.exec(&query).unwrap();
+
+    assert_eq!(result.result, 2);
+    assert_eq!(result.elements, vec![]);
+}
+
+#[test]
+pub fn remove_edge() {
+    let test_file = TestFile::new();
+
+    let db = Db::new(test_file.file_name()).unwrap();
+    db.exec(&QueryBuilder::insert().node().alias("alias1").query())
+        .unwrap();
+    db.exec(&QueryBuilder::insert().node().query()).unwrap();
+    db.exec(
+        &QueryBuilder::insert()
+            .edge()
+            .from("alias1".into())
+            .to(2.into())
+            .query(),
+    )
+    .unwrap();
+
+    let query = QueryBuilder::remove().id((-1).into()).query();
+    let result = db.exec(&query).unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(result.elements, vec![]);
+}
+
+#[test]
+pub fn remove_edges() {
+    let test_file = TestFile::new();
+
+    let db = Db::new(test_file.file_name()).unwrap();
+    db.exec(&QueryBuilder::insert().node().alias("alias1").query())
+        .unwrap();
+    db.exec(&QueryBuilder::insert().node().query()).unwrap();
+    db.exec(
+        &QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into(), 2.into()])
+            .to(&[2.into(), "alias1".into()])
+            .query(),
+    )
+    .unwrap();
+
+    let query = QueryBuilder::remove()
+        .ids(&[(-1).into(), (-2).into()])
+        .query();
+    let result = db.exec(&query).unwrap();
+
+    assert_eq!(result.result, 2);
+    assert_eq!(result.elements, vec![]);
 }
 
 #[test]

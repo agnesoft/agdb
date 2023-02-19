@@ -61,7 +61,7 @@ impl Query {
             Query::InsertNodes(query) => query.commands(),
             Query::InsertValues(_) => todo!(),
             Query::RemoveAliases(_) => todo!(),
-            Query::Remove(_) => todo!(),
+            Query::Remove(query) => query.commands(),
             Query::RemoveValues(_) => todo!(),
             Query::Search(_) => todo!(),
             Query::SelectAliases(_) => todo!(),

@@ -13,7 +13,6 @@ fn insert_edge_from_to() {
     let db = Db::new(test_file.file_name()).unwrap();
     db.exec(&QueryBuilder::insert().node().alias("alias1").query())
         .unwrap();
-
     db.exec(&QueryBuilder::insert().node().query()).unwrap();
 
     let query = QueryBuilder::insert()

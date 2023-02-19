@@ -12,6 +12,8 @@ mod db_float;
 use self::db_context::Context;
 use self::db_data::DbData;
 use crate::collections::indexed_map::IndexedMap;
+use crate::commands::insert_alias::InsertAlias;
+use crate::commands::insert_edge::InsertEdge;
 use crate::commands::Commands;
 use crate::graph::graph_index::GraphIndex;
 use crate::query::query_id::QueryId;
@@ -59,65 +61,90 @@ impl Db {
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
         match command {
-            Commands::InsertAlias(data) => {
-                self.data
-                    .write()?
-                    .aliases
-                    .insert(&data.alias, &context.index)?;
-            }
-            Commands::InsertEdge(data) => {
-                let from;
-                let to;
-
-                {
-                    let db_data = self.data.read()?;
-                    from = Self::graph_index_from_query_id(
-                        &data.from,
-                        &db_data.aliases,
-                        &db_data.indexes,
-                    )?;
-                    to = Self::graph_index_from_query_id(
-                        &data.to,
-                        &db_data.aliases,
-                        &db_data.indexes,
-                    )?;
-                    context.index = db_data.next_edge;
-                }
-
-                {
-                    let mut mut_data = self.data.write()?;
-                    let graph_index = mut_data.graph.insert_edge(&from, &to)?.index;
-                    mut_data.next_edge += 1;
-                    mut_data.indexes.insert(&context.index, &graph_index)?;
-                }
-
-                result.result += 1;
-                result.elements.push(crate::DbElement {
-                    index: context.index,
-                    values: vec![],
-                });
-            }
-            Commands::InsertNode(_) => {
-                {
-                    let mut mut_data = self.data.write()?;
-                    context.index = mut_data.next_node;
-                    let graph_index = mut_data.graph.insert_node()?.index;
-                    mut_data.next_node += 1;
-                    mut_data.indexes.insert(&context.index, &graph_index)?;
-                }
-
-                result.result += 1;
-                result.elements.push(crate::DbElement {
-                    index: context.index,
-                    values: vec![],
-                });
-            }
+            Commands::InsertAlias(data) => self.insert_alias(data, context)?,
+            Commands::InsertEdge(data) => self.insert_edge(data, context, result)?,
+            Commands::InsertNode(_) => self.insert_node(context, result)?,
             Commands::RemoveAlias(_) => todo!(),
             Commands::RemoveEdge(_) => todo!(),
             Commands::RemoveNode(_) => todo!(),
         }
 
         Ok(())
+    }
+
+    fn insert_alias(&self, data: InsertAlias, context: &mut Context) -> Result<(), QueryError> {
+        Ok(self
+            .data
+            .write()?
+            .aliases
+            .insert(&data.alias, &context.index)?)
+    }
+
+    fn insert_node(
+        &self,
+        context: &mut Context,
+        result: &mut QueryResult,
+    ) -> Result<(), QueryError> {
+        self.insert_node_write_data(context)?;
+
+        result.result += 1;
+        result.elements.push(crate::DbElement {
+            index: context.index,
+            values: vec![],
+        });
+
+        Ok(())
+    }
+
+    fn insert_node_write_data(&self, context: &mut Context) -> Result<(), QueryError> {
+        let mut mut_data = self.data.write()?;
+        context.index = mut_data.next_node;
+        let graph_index = mut_data.graph.insert_node()?.index;
+        mut_data.next_node += 1;
+        Ok(mut_data.indexes.insert(&context.index, &graph_index)?)
+    }
+
+    fn insert_edge(
+        &self,
+        data: InsertEdge,
+        context: &mut Context,
+        result: &mut QueryResult,
+    ) -> Result<(), QueryError> {
+        let (from, to) = self.validate_from_to(data, context)?;
+        self.insert_edge_write_data(from, to, context)?;
+
+        result.result += 1;
+        result.elements.push(crate::DbElement {
+            index: context.index,
+            values: vec![],
+        });
+
+        Ok(())
+    }
+
+    fn insert_edge_write_data(
+        &self,
+        from: GraphIndex,
+        to: GraphIndex,
+        context: &mut Context,
+    ) -> Result<(), QueryError> {
+        let mut mut_data = self.data.write()?;
+        let graph_index = mut_data.graph.insert_edge(&from, &to)?.index;
+        mut_data.next_edge += 1;
+        Ok(mut_data.indexes.insert(&context.index, &graph_index)?)
+    }
+
+    fn validate_from_to(
+        &self,
+        data: InsertEdge,
+        context: &mut Context,
+    ) -> Result<(GraphIndex, GraphIndex), QueryError> {
+        let db_data = self.data.read()?;
+        let from = Self::graph_index_from_query_id(&data.from, &db_data.aliases, &db_data.indexes)?;
+        let to = Self::graph_index_from_query_id(&data.to, &db_data.aliases, &db_data.indexes)?;
+        context.index = db_data.next_edge;
+
+        Ok((from, to))
     }
 
     fn graph_index_from_query_id(

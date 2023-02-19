@@ -21,3 +21,24 @@ impl From<i64> for QueryId {
         Self::Id(value)
     }
 }
+
+impl QueryId {
+    pub fn is_node(&self) -> bool {
+        match self {
+            QueryId::Id(id) => 0 < *id,
+            QueryId::Alias(_) => true,
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn is_node() {
+        assert!(QueryId::Id(1).is_node());
+        assert!(!QueryId::Id(0).is_node());
+        assert!(!QueryId::Id(-1).is_node());
+    }
+}

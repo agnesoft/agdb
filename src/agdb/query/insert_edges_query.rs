@@ -12,6 +12,20 @@ pub struct InsertEdgesQuery {
 }
 
 impl InsertEdgesQuery {
+    pub(crate) fn commands(&self) -> Vec<Commands> {
+        match &self.from {
+            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
+            QueryIds::Id(id) => self.one_to_many(id),
+            QueryIds::Ids(ids) => {
+                if self.each {
+                    self.many_to_many_each(ids)
+                } else {
+                    self.many_to_many(ids)
+                }
+            }
+        }
+    }
+
     fn one_to_many(&self, from: &QueryId) -> Vec<Commands> {
         let mut commands = Vec::<Commands>::new();
 
@@ -86,20 +100,6 @@ impl InsertEdgesQuery {
         }
 
         commands
-    }
-
-    pub(crate) fn commands(&self) -> Vec<Commands> {
-        match &self.from {
-            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
-            QueryIds::Id(id) => self.one_to_many(id),
-            QueryIds::Ids(ids) => {
-                if self.each {
-                    self.many_to_many_each(ids)
-                } else {
-                    self.many_to_many(ids)
-                }
-            }
-        }
     }
 }
 

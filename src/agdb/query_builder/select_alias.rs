@@ -5,7 +5,7 @@ use crate::query::select_aliases_query::SelectAliasesQuery;
 pub struct SelectAlias(pub SelectAliasesQuery);
 
 impl SelectAlias {
-    pub fn id(mut self, id: u64) -> SelectAliasesIds {
+    pub fn id(mut self, id: i64) -> SelectAliasesIds {
         self.0.ids = QueryIds::Id(id.into());
 
         SelectAliasesIds(self.0)

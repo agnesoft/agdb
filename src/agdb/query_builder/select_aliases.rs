@@ -8,7 +8,7 @@ use crate::query::Query;
 pub struct SelectAliases(pub SelectAliasesQuery);
 
 impl SelectAliases {
-    pub fn ids(mut self, ids: &[u64]) -> SelectAliasesIds {
+    pub fn ids(mut self, ids: &[i64]) -> SelectAliasesIds {
         self.0.ids = QueryIds::Ids(ids.iter().map(|id| QueryId::from(*id)).collect());
 
         SelectAliasesIds(self.0)

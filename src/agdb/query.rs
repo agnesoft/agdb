@@ -57,7 +57,7 @@ impl Query {
     pub fn commands(&self) -> Vec<Commands> {
         match self {
             Query::InsertAliases(_) => todo!(),
-            Query::InsertEdges(_) => todo!(),
+            Query::InsertEdges(query) => query.commands(),
             Query::InsertNodes(query) => query.commands(),
             Query::InsertValues(_) => todo!(),
             Query::RemoveAliases(_) => todo!(),

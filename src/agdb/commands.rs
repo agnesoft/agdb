@@ -12,6 +12,7 @@ use self::remove_alias::RemoveAlias;
 use self::remove_edge::RemoveEdge;
 use self::remove_node::RemoveNode;
 
+#[derive(Debug, PartialEq)]
 pub enum Commands {
     InsertAlias(InsertAlias),
     InsertEdge(InsertEdge),
@@ -19,4 +20,22 @@ pub enum Commands {
     RemoveAlias(RemoveAlias),
     RemoveEdge(RemoveEdge),
     RemoveNode(RemoveNode),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", Commands::InsertNode(InsertNode {}));
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            Commands::InsertNode(InsertNode {}),
+            Commands::InsertNode(InsertNode {})
+        );
+    }
 }

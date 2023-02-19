@@ -1,6 +1,6 @@
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum QueryId {
-    Id(u64),
+    Id(i64),
     Alias(String),
 }
 
@@ -16,8 +16,8 @@ impl From<String> for QueryId {
     }
 }
 
-impl From<u64> for QueryId {
-    fn from(value: u64) -> Self {
+impl From<i64> for QueryId {
+    fn from(value: i64) -> Self {
         Self::Id(value)
     }
 }

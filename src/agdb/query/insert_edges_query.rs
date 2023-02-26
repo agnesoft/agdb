@@ -106,7 +106,7 @@ impl InsertEdgesQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::catch_unwidn_silent::catch_unwind_silent;
+    use crate::test_utilities::catch_unwind_silent::catch_unwind_silent;
 
     #[test]
     fn one_to_one() {

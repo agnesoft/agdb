@@ -56,11 +56,11 @@ pub enum Query {
 impl Query {
     pub fn commands(&self) -> Vec<Commands> {
         match self {
-            Query::InsertAliases(_) => todo!(),
+            Query::InsertAliases(query) => query.commands(),
             Query::InsertEdges(query) => query.commands(),
             Query::InsertNodes(query) => query.commands(),
             Query::InsertValues(_) => todo!(),
-            Query::RemoveAliases(_) => todo!(),
+            Query::RemoveAliases(query) => query.commands(),
             Query::Remove(query) => query.commands(),
             Query::RemoveValues(_) => todo!(),
             Query::Search(_) => todo!(),

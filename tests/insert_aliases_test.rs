@@ -40,13 +40,9 @@ fn insert_aliases_alias() {
     let test_file = TestFile::new();
 
     let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(
-        &QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias".into(), "".into()])
-            .query(),
-    )
-    .unwrap();
+    db.exec(&QueryBuilder::insert().node().alias("alias").query())
+        .unwrap();
+    db.exec(&QueryBuilder::insert().node().query()).unwrap();
     let query = QueryBuilder::insert()
         .aliases(&["alias1".into(), "alias2".into()])
         .ids(&["alias".into(), 2.into()])

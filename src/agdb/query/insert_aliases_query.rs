@@ -13,23 +13,23 @@ impl InsertAliasesQuery {
         match &self.ids {
             QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
             QueryIds::Id(id) => self.id(id),
-            QueryIds::Ids(ids) => self.ids(&ids),
+            QueryIds::Ids(ids) => self.ids(ids),
         }
     }
 
-    fn id(&self, id: &super::query_id::QueryId) -> Vec<Commands> {
+    fn id(&self, id: &QueryId) -> Vec<Commands> {
         vec![Commands::InsertAlias(InsertAlias {
-            id: Some(id.clone()),
+            id: id.clone(),
             alias: self.aliases[0].clone(),
         })]
     }
 
-    fn ids(&self, ids: &Vec<QueryId>) -> Vec<Commands> {
+    fn ids(&self, ids: &[QueryId]) -> Vec<Commands> {
         let mut commands = Vec::<Commands>::new();
 
         for (id, alias) in ids.iter().zip(self.aliases.iter()) {
             commands.push(Commands::InsertAlias(InsertAlias {
-                id: Some(id.clone()),
+                id: id.clone(),
                 alias: alias.clone(),
             }));
         }

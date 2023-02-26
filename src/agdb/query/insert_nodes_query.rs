@@ -1,5 +1,4 @@
 use super::query_values::QueryValues;
-use crate::commands::insert_alias::InsertAlias;
 use crate::commands::insert_node::InsertNode;
 use crate::commands::Commands;
 
@@ -15,15 +14,13 @@ impl InsertNodesQuery {
 
         if self.aliases.is_empty() {
             for _i in 0..self.count {
-                commands.push(Commands::InsertNode(InsertNode {}));
+                commands.push(Commands::InsertNode(InsertNode { alias: None }));
             }
         } else {
             for alias in &self.aliases {
-                commands.push(Commands::InsertNode(InsertNode {}));
-                commands.push(Commands::InsertAlias(InsertAlias {
-                    id: None,
-                    alias: alias.clone(),
-                }))
+                commands.push(Commands::InsertNode(InsertNode {
+                    alias: Some(alias.clone()),
+                }));
             }
         }
 

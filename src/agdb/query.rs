@@ -60,7 +60,7 @@ impl Query {
             Query::InsertEdges(query) => query.commands(),
             Query::InsertNodes(query) => query.commands(),
             Query::InsertValues(_) => todo!(),
-            Query::RemoveAliases(_) => todo!(),
+            Query::RemoveAliases(query) => query.commands(),
             Query::Remove(query) => query.commands(),
             Query::RemoveValues(_) => todo!(),
             Query::Search(_) => todo!(),

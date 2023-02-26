@@ -1,5 +1,7 @@
 #[derive(Debug, PartialEq)]
-pub struct InsertNode {}
+pub struct InsertNode {
+    pub alias: Option<String>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -7,11 +9,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", InsertNode {});
+        format!("{:?}", InsertNode { alias: None });
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(InsertNode {}, InsertNode {});
+        assert_eq!(InsertNode { alias: None }, InsertNode { alias: None });
     }
 }

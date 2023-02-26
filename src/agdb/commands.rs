@@ -28,14 +28,14 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", Commands::InsertNode(InsertNode {}));
+        format!("{:?}", Commands::InsertNode(InsertNode { alias: None }));
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            Commands::InsertNode(InsertNode {}),
-            Commands::InsertNode(InsertNode {})
+            Commands::InsertNode(InsertNode { alias: None }),
+            Commands::InsertNode(InsertNode { alias: None })
         );
     }
 }

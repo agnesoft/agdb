@@ -21,6 +21,7 @@ impl InsertNodesQuery {
             for alias in &self.aliases {
                 commands.push(Commands::InsertNode(InsertNode {}));
                 commands.push(Commands::InsertAlias(InsertAlias {
+                    id: None,
                     alias: alias.clone(),
                 }))
             }

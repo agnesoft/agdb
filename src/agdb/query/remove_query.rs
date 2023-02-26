@@ -41,7 +41,7 @@ impl RemoveQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::catch_unwidn_silent::catch_unwind_silent;
+    use crate::test_utilities::catch_unwind_silent::catch_unwind_silent;
 
     #[test]
     fn invalid_query_preprocessing_many_many() {

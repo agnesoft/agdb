@@ -11,7 +11,6 @@ mod db_float;
 
 use self::db_context::Context;
 use self::db_data::DbData;
-use crate::collections::indexed_map::IndexedMap;
 use crate::commands::insert_alias::InsertAlias;
 use crate::commands::insert_edge::InsertEdge;
 use crate::commands::Commands;
@@ -54,52 +53,87 @@ impl Db {
         Transaction::default()
     }
 
-    fn process_command(
+    fn get_from_to(
         &self,
-        command: Commands,
+        data: InsertEdge,
+        context: &mut Context,
+    ) -> Result<(GraphIndex, GraphIndex), QueryError> {
+        let db_data = self.data.read()?;
+        let from = Self::graph_index_from_query_id(&data.from, &*self.data.read()?)?;
+        let to = Self::graph_index_from_query_id(&data.to, &*self.data.read()?)?;
+        context.index = db_data.next_edge;
+
+        Ok((from, to))
+    }
+
+    fn get_index(&self, context: &Context, id: &Option<QueryId>) -> Result<i64, QueryError> {
+        Ok(if let Some(id) = id {
+            Self::get_index_from_id(id, &*self.data.read()?)?
+        } else {
+            context.index
+        })
+    }
+
+    fn get_index_from_id(id: &QueryId, db_data: &DbData) -> Result<i64, QueryError> {
+        Ok(match id {
+            QueryId::Id(id) => {
+                let _ = db_data
+                    .indexes
+                    .value(id)?
+                    .ok_or(QueryError::from(format!("Id '{id}' not found")))?;
+                *id
+            }
+            QueryId::Alias(alias) => db_data
+                .aliases
+                .value(alias)?
+                .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?,
+        })
+    }
+
+    fn graph_index_from_query_id(id: &QueryId, data: &DbData) -> Result<GraphIndex, QueryError> {
+        Ok(GraphIndex::from(Self::get_index_from_id(id, data)?))
+    }
+
+    fn insert_alias(
+        &self,
+        data: InsertAlias,
+        context: &Context,
+        result: &mut QueryResult,
+    ) -> Result<(), QueryError> {
+        let index = &self.get_index(context, &data.id)?;
+        self.data.write()?.aliases.insert(&data.alias, index)?;
+        result.result += 1;
+        Ok(())
+    }
+
+    fn insert_edge(
+        &self,
+        data: InsertEdge,
         context: &mut Context,
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
-        match command {
-            Commands::InsertAlias(data) => self.insert_alias(data, context),
-            Commands::InsertEdge(data) => self.insert_edge(data, context, result),
-            Commands::InsertNode(_) => self.insert_node(context, result),
-            Commands::RemoveAlias(_) => todo!(),
-            Commands::RemoveEdge(data) => self.remove_edge(data, result),
-            Commands::RemoveNode(data) => self.remove_node(data, result),
-        }
-    }
+        let (from, to) = self.get_from_to(data, context)?;
+        self.insert_edge_write_data(from, to, context)?;
 
-    fn remove_node(
-        &self,
-        data: crate::commands::remove_node::RemoveNode,
-        result: &mut QueryResult,
-    ) -> Result<(), QueryError> {
-        let mut db_data = self.data.write()?;
-        let index = Self::graph_index_from_query_id(&data.id, &db_data.aliases, &db_data.indexes)?;
-        db_data.graph.remove_node(&index)?;
         result.result += 1;
+        result.elements.push(crate::DbElement {
+            index: context.index,
+            values: vec![],
+        });
+
         Ok(())
     }
 
-    fn remove_edge(
+    fn insert_edge_write_data(
         &self,
-        data: crate::commands::remove_edge::RemoveEdge,
-        result: &mut QueryResult,
+        from: GraphIndex,
+        to: GraphIndex,
+        context: &mut Context,
     ) -> Result<(), QueryError> {
-        let mut db_data = self.data.write()?;
-        let index = Self::graph_index_from_query_id(&data.id, &db_data.aliases, &db_data.indexes)?;
-        db_data.graph.remove_edge(&index)?;
-        result.result += 1;
-        Ok(())
-    }
-
-    fn insert_alias(&self, data: InsertAlias, context: &mut Context) -> Result<(), QueryError> {
-        Ok(self
-            .data
-            .write()?
-            .aliases
-            .insert(&data.alias, &context.index)?)
+        let mut mut_data = self.data.write()?;
+        let graph_index = mut_data.graph.insert_edge(&from, &to)?.index;
+        mut_data.next_edge -= 1;
+        Ok(mut_data.indexes.insert(&context.index, &graph_index)?)
     }
 
     fn insert_node(
@@ -126,65 +160,43 @@ impl Db {
         Ok(mut_data.indexes.insert(&context.index, &graph_index)?)
     }
 
-    fn insert_edge(
+    fn process_command(
         &self,
-        data: InsertEdge,
+        command: Commands,
         context: &mut Context,
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
-        let (from, to) = self.validate_from_to(data, context)?;
-        self.insert_edge_write_data(from, to, context)?;
+        match command {
+            Commands::InsertAlias(data) => self.insert_alias(data, context, result),
+            Commands::InsertEdge(data) => self.insert_edge(data, context, result),
+            Commands::InsertNode(_) => self.insert_node(context, result),
+            Commands::RemoveAlias(_) => todo!(),
+            Commands::RemoveEdge(data) => self.remove_edge(data, result),
+            Commands::RemoveNode(data) => self.remove_node(data, result),
+        }
+    }
 
+    fn remove_edge(
+        &self,
+        data: crate::commands::remove_edge::RemoveEdge,
+        result: &mut QueryResult,
+    ) -> Result<(), QueryError> {
+        let mut db_data = self.data.write()?;
+        let index = Self::graph_index_from_query_id(&data.id, &*db_data)?;
+        db_data.graph.remove_edge(&index)?;
         result.result += 1;
-        result.elements.push(crate::DbElement {
-            index: context.index,
-            values: vec![],
-        });
-
         Ok(())
     }
 
-    fn insert_edge_write_data(
+    fn remove_node(
         &self,
-        from: GraphIndex,
-        to: GraphIndex,
-        context: &mut Context,
+        data: crate::commands::remove_node::RemoveNode,
+        result: &mut QueryResult,
     ) -> Result<(), QueryError> {
-        let mut mut_data = self.data.write()?;
-        let graph_index = mut_data.graph.insert_edge(&from, &to)?.index;
-        mut_data.next_edge -= 1;
-        Ok(mut_data.indexes.insert(&context.index, &graph_index)?)
-    }
-
-    fn validate_from_to(
-        &self,
-        data: InsertEdge,
-        context: &mut Context,
-    ) -> Result<(GraphIndex, GraphIndex), QueryError> {
-        let db_data = self.data.read()?;
-        let from = Self::graph_index_from_query_id(&data.from, &db_data.aliases, &db_data.indexes)?;
-        let to = Self::graph_index_from_query_id(&data.to, &db_data.aliases, &db_data.indexes)?;
-        context.index = db_data.next_edge;
-
-        Ok((from, to))
-    }
-
-    fn graph_index_from_query_id(
-        id: &QueryId,
-        aliases: &IndexedMap<String, i64>,
-        indexes: &IndexedMap<i64, i64>,
-    ) -> Result<GraphIndex, QueryError> {
-        Ok(match id {
-            QueryId::Id(id) => GraphIndex::from(
-                indexes
-                    .value(id)?
-                    .ok_or(QueryError::from(format!("Id '{id}' not found")))?,
-            ),
-            QueryId::Alias(alias) => GraphIndex::from(
-                aliases
-                    .value(alias)?
-                    .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?,
-            ),
-        })
+        let mut db_data = self.data.write()?;
+        let index = Self::graph_index_from_query_id(&data.id, &*db_data)?;
+        db_data.graph.remove_node(&index)?;
+        result.result += 1;
+        Ok(())
     }
 }

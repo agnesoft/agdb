@@ -4,6 +4,7 @@ pub mod insert_node;
 pub mod remove_alias;
 pub mod remove_edge;
 pub mod remove_node;
+pub mod select_id;
 
 use self::insert_alias::InsertAlias;
 use self::insert_edge::InsertEdge;
@@ -11,6 +12,7 @@ use self::insert_node::InsertNode;
 use self::remove_alias::RemoveAlias;
 use self::remove_edge::RemoveEdge;
 use self::remove_node::RemoveNode;
+use self::select_id::SelectId;
 
 #[derive(Debug, PartialEq)]
 pub enum Commands {
@@ -20,6 +22,7 @@ pub enum Commands {
     RemoveAlias(RemoveAlias),
     RemoveEdge(RemoveEdge),
     RemoveNode(RemoveNode),
+    SelectId(SelectId),
 }
 
 #[cfg(test)]

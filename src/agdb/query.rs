@@ -67,7 +67,7 @@ impl Query {
             Query::SelectAliases(_) => todo!(),
             Query::SelectKeys(_) => todo!(),
             Query::SelectKeyCount(_) => todo!(),
-            Query::Select(_) => todo!(),
+            Query::Select(query) => query.commands(),
             Query::SelectValues(_) => todo!(),
         }
     }

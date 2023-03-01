@@ -15,7 +15,7 @@ impl SelectQuery {
         }
     }
 
-    fn ids(ids: &Vec<QueryId>) -> Vec<Commands> {
+    fn ids(ids: &[QueryId]) -> Vec<Commands> {
         ids.iter()
             .map(|id| Commands::SelectId(SelectId { id: id.clone() }))
             .collect()

@@ -36,7 +36,7 @@ pub struct Db {
 impl Db {
     pub fn exec(&self, query: &Query) -> Result<QueryResult, QueryError> {
         let mut context = Context { index: 0 };
-        let commands = query.commands();
+        let commands = query.commands()?;
         let mut result = QueryResult {
             result: 0,
             elements: vec![],
@@ -59,7 +59,7 @@ impl Db {
         Transaction::default()
     }
 
-    fn from_to(
+    fn get_from_to(
         &self,
         data: InsertEdge,
         context: &mut Context,
@@ -121,7 +121,7 @@ impl Db {
         context: &mut Context,
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
-        let (from, to) = self.from_to(data, context)?;
+        let (from, to) = self.get_from_to(data, context)?;
         self.insert_edge_write_data(from, to, context)?;
 
         result.result += 1;

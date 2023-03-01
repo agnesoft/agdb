@@ -2,6 +2,7 @@ use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use crate::commands::insert_alias::InsertAlias;
 use crate::commands::Commands;
+use crate::QueryError;
 
 pub struct InsertAliasesQuery {
     pub ids: QueryIds,
@@ -9,11 +10,13 @@ pub struct InsertAliasesQuery {
 }
 
 impl InsertAliasesQuery {
-    pub(crate) fn commands(&self) -> Vec<Commands> {
+    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.ids {
-            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
-            QueryIds::Id(id) => self.id(id),
-            QueryIds::Ids(ids) => self.ids(ids),
+            QueryIds::Id(id) => Ok(self.id(id)),
+            QueryIds::Ids(ids) => Ok(self.ids(ids)),
+            QueryIds::All | QueryIds::Search(_) => {
+                Err(QueryError::from("Invalid insert aliases query"))
+            }
         }
     }
 
@@ -41,22 +44,49 @@ impl InsertAliasesQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::catch_unwind_silent::catch_unwind_silent;
 
     #[test]
-    fn invalid_query() {
-        let result = catch_unwind_silent(|| {
-            let query = InsertAliasesQuery {
-                ids: QueryIds::All,
-                aliases: vec![],
-            };
-
-            query.commands();
-        });
+    fn valid_id() {
+        let query = InsertAliasesQuery {
+            ids: QueryIds::Id(QueryId::Id(0)),
+            aliases: vec!["alias".to_string()],
+        };
 
         assert_eq!(
-            *result.unwrap_err().downcast_ref::<&str>().unwrap(),
-            "Invalid query"
+            query.commands(),
+            Ok(vec![Commands::InsertAlias(InsertAlias {
+                id: QueryId::Id(0),
+                alias: "alias".to_string()
+            })])
+        )
+    }
+
+    #[test]
+    fn valid_ids() {
+        let query = InsertAliasesQuery {
+            ids: QueryIds::Ids(vec![QueryId::Id(0)]),
+            aliases: vec!["alias".to_string()],
+        };
+
+        assert_eq!(
+            query.commands(),
+            Ok(vec![Commands::InsertAlias(InsertAlias {
+                id: QueryId::Id(0),
+                alias: "alias".to_string()
+            })])
+        )
+    }
+
+    #[test]
+    fn invalid_query_all() {
+        let query = InsertAliasesQuery {
+            ids: QueryIds::All,
+            aliases: vec![],
+        };
+
+        assert_eq!(
+            query.commands().unwrap_err().description,
+            QueryError::from("Invalid insert aliases query").description
         );
     }
 }

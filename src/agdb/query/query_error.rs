@@ -1,7 +1,7 @@
 use crate::DbError;
 use std::sync::PoisonError;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct QueryError {
     pub description: String,
 }
@@ -42,6 +42,18 @@ mod tests {
     fn derived_from_debug() {
         format!(
             "{:?}",
+            QueryError {
+                description: String::new()
+            }
+        );
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            QueryError {
+                description: String::new()
+            },
             QueryError {
                 description: String::new()
             }

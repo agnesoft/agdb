@@ -36,6 +36,7 @@ use self::select_keys_query::SelectKeysQuery;
 use self::select_query::SelectQuery;
 use self::select_values_query::SelectValuesQuery;
 use crate::commands::Commands;
+use crate::QueryError;
 
 pub enum Query {
     InsertAliases(InsertAliasesQuery),
@@ -54,7 +55,7 @@ pub enum Query {
 }
 
 impl Query {
-    pub fn commands(&self) -> Vec<Commands> {
+    pub fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match self {
             Query::InsertAliases(query) => query.commands(),
             Query::InsertEdges(query) => query.commands(),
@@ -67,7 +68,7 @@ impl Query {
             Query::SelectAliases(_) => todo!(),
             Query::SelectKeys(_) => todo!(),
             Query::SelectKeyCount(_) => todo!(),
-            Query::Select(_) => todo!(),
+            Query::Select(query) => query.commands(),
             Query::SelectValues(_) => todo!(),
         }
     }

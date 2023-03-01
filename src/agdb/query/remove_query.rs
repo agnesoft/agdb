@@ -3,15 +3,16 @@ use super::query_ids::QueryIds;
 use crate::commands::remove_edge::RemoveEdge;
 use crate::commands::remove_node::RemoveNode;
 use crate::commands::Commands;
+use crate::QueryError;
 
 pub struct RemoveQuery(pub QueryIds);
 
 impl RemoveQuery {
-    pub(crate) fn commands(&self) -> Vec<Commands> {
+    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.0 {
-            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
-            QueryIds::Id(id) => Self::id(id),
-            QueryIds::Ids(ids) => Self::ids(ids),
+            QueryIds::Id(id) => Ok(Self::id(id)),
+            QueryIds::Ids(ids) => Ok(Self::ids(ids)),
+            QueryIds::All | QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
         }
     }
 
@@ -41,18 +42,38 @@ impl RemoveQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::catch_unwind_silent::catch_unwind_silent;
 
     #[test]
-    fn invalid_query_preprocessing_many_many() {
-        let result = catch_unwind_silent(|| {
-            let query = RemoveQuery(QueryIds::All);
-            query.commands();
-        });
+    fn valid_id() {
+        let query = RemoveQuery(QueryIds::Id(QueryId::Id(1)));
 
         assert_eq!(
-            *result.unwrap_err().downcast_ref::<&str>().unwrap(),
-            "Invalid query"
+            query.commands(),
+            Ok(vec![Commands::RemoveNode(RemoveNode {
+                id: QueryId::Id(1)
+            })])
+        )
+    }
+
+    #[test]
+    fn valid_ids() {
+        let query = RemoveQuery(QueryIds::Ids(vec![QueryId::Id(1)]));
+
+        assert_eq!(
+            query.commands(),
+            Ok(vec![Commands::RemoveNode(RemoveNode {
+                id: QueryId::Id(1)
+            })])
+        )
+    }
+
+    #[test]
+    fn invalid_query_all() {
+        let query = RemoveQuery(QueryIds::All);
+
+        assert_eq!(
+            query.commands().unwrap_err().description,
+            QueryError::from("Invalid remove query").description
         );
     }
 }

@@ -3,6 +3,7 @@ use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
 use crate::commands::insert_edge::InsertEdge;
 use crate::commands::Commands;
+use crate::QueryError;
 
 pub struct InsertEdgesQuery {
     pub from: QueryIds,
@@ -12,9 +13,8 @@ pub struct InsertEdgesQuery {
 }
 
 impl InsertEdgesQuery {
-    pub(crate) fn commands(&self) -> Vec<Commands> {
+    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.from {
-            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
             QueryIds::Id(id) => self.one_to_many(id),
             QueryIds::Ids(ids) => {
                 if self.each {
@@ -23,14 +23,16 @@ impl InsertEdgesQuery {
                     self.many_to_many(ids)
                 }
             }
+            QueryIds::All | QueryIds::Search(_) => {
+                Err(QueryError::from("Invalid insert edges query"))
+            }
         }
     }
 
-    fn one_to_many(&self, from: &QueryId) -> Vec<Commands> {
+    fn one_to_many(&self, from: &QueryId) -> Result<Vec<Commands>, QueryError> {
         let mut commands = Vec::<Commands>::new();
 
         match &self.to {
-            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
             QueryIds::Id(to) => commands.push(Commands::InsertEdge(InsertEdge {
                 from: from.clone(),
                 to: to.clone(),
@@ -43,16 +45,18 @@ impl InsertEdgesQuery {
                     }))
                 }
             }
+            QueryIds::All | QueryIds::Search(_) => {
+                return Err(QueryError::from("Invalid insert edges query"))
+            }
         }
 
-        commands
+        Ok(commands)
     }
 
-    fn many_to_many(&self, from: &Vec<QueryId>) -> Vec<Commands> {
+    fn many_to_many(&self, from: &Vec<QueryId>) -> Result<Vec<Commands>, QueryError> {
         let mut commands = Vec::<Commands>::new();
 
         match &self.to {
-            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
             QueryIds::Id(id) => {
                 for from in from {
                     commands.push(Commands::InsertEdge(InsertEdge {
@@ -69,16 +73,18 @@ impl InsertEdgesQuery {
                     }))
                 }
             }
+            QueryIds::All | QueryIds::Search(_) => {
+                return Err(QueryError::from("Invalid insert edges query"))
+            }
         }
 
-        commands
+        Ok(commands)
     }
 
-    fn many_to_many_each(&self, from: &Vec<QueryId>) -> Vec<Commands> {
+    fn many_to_many_each(&self, from: &Vec<QueryId>) -> Result<Vec<Commands>, QueryError> {
         let mut commands = Vec::<Commands>::new();
 
         match &self.to {
-            QueryIds::All | QueryIds::Search(_) => panic!("Invalid query"),
             QueryIds::Id(to) => {
                 for from in from {
                     commands.push(Commands::InsertEdge(InsertEdge {
@@ -97,16 +103,18 @@ impl InsertEdgesQuery {
                     }
                 }
             }
+            QueryIds::All | QueryIds::Search(_) => {
+                return Err(QueryError::from("Invalid insert edges query"))
+            }
         }
 
-        commands
+        Ok(commands)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::catch_unwind_silent::catch_unwind_silent;
 
     #[test]
     fn one_to_one() {
@@ -118,7 +126,7 @@ mod tests {
         };
 
         assert_eq!(
-            query.commands(),
+            query.commands().unwrap(),
             vec![Commands::InsertEdge(InsertEdge {
                 from: QueryId::Id(1),
                 to: QueryId::Id(2)
@@ -136,7 +144,7 @@ mod tests {
         };
 
         assert_eq!(
-            query.commands(),
+            query.commands().unwrap(),
             vec![Commands::InsertEdge(InsertEdge {
                 from: QueryId::Alias("alias".to_string()),
                 to: QueryId::Alias("alias2".to_string())
@@ -154,7 +162,7 @@ mod tests {
         };
 
         assert_eq!(
-            query.commands(),
+            query.commands().unwrap(),
             vec![
                 Commands::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
@@ -178,7 +186,7 @@ mod tests {
         };
 
         assert_eq!(
-            query.commands(),
+            query.commands().unwrap(),
             vec![
                 Commands::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
@@ -202,7 +210,7 @@ mod tests {
         };
 
         assert_eq!(
-            query.commands(),
+            query.commands().unwrap(),
             vec![
                 Commands::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
@@ -226,7 +234,7 @@ mod tests {
         };
 
         assert_eq!(
-            query.commands(),
+            query.commands().unwrap(),
             vec![
                 Commands::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
@@ -250,7 +258,7 @@ mod tests {
         };
 
         assert_eq!(
-            query.commands(),
+            query.commands().unwrap(),
             vec![
                 Commands::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
@@ -274,77 +282,61 @@ mod tests {
 
     #[test]
     fn invalid_query_preprocessing_from() {
-        let result = catch_unwind_silent(|| {
-            let query = InsertEdgesQuery {
-                from: QueryIds::All,
-                to: QueryIds::Id(QueryId::Id(2)),
-                values: QueryValues::None,
-                each: false,
-            };
-
-            query.commands();
-        });
+        let query = InsertEdgesQuery {
+            from: QueryIds::All,
+            to: QueryIds::Id(QueryId::Id(2)),
+            values: QueryValues::None,
+            each: false,
+        };
 
         assert_eq!(
-            *result.unwrap_err().downcast_ref::<&str>().unwrap(),
-            "Invalid query"
+            query.commands().unwrap_err().description,
+            QueryError::from("Invalid insert edges query").description
         );
     }
 
     #[test]
     fn invalid_query_preprocessing_to() {
-        let result = catch_unwind_silent(|| {
-            let query = InsertEdgesQuery {
-                from: QueryIds::Id(QueryId::Id(2)),
-                to: QueryIds::All,
-                values: QueryValues::None,
-                each: false,
-            };
-
-            query.commands();
-        });
+        let query = InsertEdgesQuery {
+            from: QueryIds::Id(QueryId::Id(2)),
+            to: QueryIds::All,
+            values: QueryValues::None,
+            each: false,
+        };
 
         assert_eq!(
-            *result.unwrap_err().downcast_ref::<&str>().unwrap(),
-            "Invalid query"
+            query.commands().unwrap_err().description,
+            QueryError::from("Invalid insert edges query").description
         );
     }
 
     #[test]
     fn invalid_query_preprocessing_many_each() {
-        let result = catch_unwind_silent(|| {
-            let query = InsertEdgesQuery {
-                from: QueryIds::Ids(vec![QueryId::Id(2)]),
-                to: QueryIds::All,
-                values: QueryValues::None,
-                each: false,
-            };
-
-            query.commands();
-        });
+        let query = InsertEdgesQuery {
+            from: QueryIds::Ids(vec![QueryId::Id(2)]),
+            to: QueryIds::All,
+            values: QueryValues::None,
+            each: false,
+        };
 
         assert_eq!(
-            *result.unwrap_err().downcast_ref::<&str>().unwrap(),
-            "Invalid query"
+            query.commands().unwrap_err().description,
+            QueryError::from("Invalid insert edges query").description
         );
     }
 
     #[test]
     fn invalid_query_preprocessing_many_many() {
-        let result = catch_unwind_silent(|| {
-            let query = InsertEdgesQuery {
-                from: QueryIds::Ids(vec![QueryId::Id(2)]),
-                to: QueryIds::All,
-                values: QueryValues::None,
-                each: true,
-            };
-
-            query.commands();
-        });
+        let query = InsertEdgesQuery {
+            from: QueryIds::Ids(vec![QueryId::Id(2)]),
+            to: QueryIds::All,
+            values: QueryValues::None,
+            each: true,
+        };
 
         assert_eq!(
-            *result.unwrap_err().downcast_ref::<&str>().unwrap(),
-            "Invalid query"
+            query.commands().unwrap_err().description,
+            QueryError::from("Invalid insert edges query").description
         );
     }
 }

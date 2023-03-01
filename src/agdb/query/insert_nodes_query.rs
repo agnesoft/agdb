@@ -1,6 +1,7 @@
 use super::query_values::QueryValues;
 use crate::commands::insert_node::InsertNode;
 use crate::commands::Commands;
+use crate::QueryError;
 
 pub struct InsertNodesQuery {
     pub count: u64,
@@ -9,7 +10,7 @@ pub struct InsertNodesQuery {
 }
 
 impl InsertNodesQuery {
-    pub(crate) fn commands(&self) -> Vec<Commands> {
+    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         let mut commands = Vec::<Commands>::new();
 
         if self.aliases.is_empty() {
@@ -24,6 +25,6 @@ impl InsertNodesQuery {
             }
         }
 
-        commands
+        Ok(commands)
     }
 }

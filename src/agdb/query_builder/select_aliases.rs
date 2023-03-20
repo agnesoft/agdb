@@ -3,7 +3,7 @@ use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
 use crate::query::select_aliases_query::SelectAliasesQuery;
-use crate::query::Query;
+use crate::query::OldQuery;
 
 pub struct SelectAliases(pub SelectAliasesQuery);
 
@@ -20,9 +20,9 @@ impl SelectAliases {
         SelectAliasesIds(self.0)
     }
 
-    pub fn query(mut self) -> Query {
+    pub fn query(mut self) -> OldQuery {
         self.0.ids = QueryIds::All;
 
-        Query::SelectAliases(self.0)
+        OldQuery::SelectAliases(self.0)
     }
 }

@@ -10,8 +10,8 @@ use test_file::TestFile;
 fn select_id_alias() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(&QueryBuilder::insert().node().alias("alias").query())
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
         .unwrap();
     let query = QueryBuilder::select().id("alias".into()).query();
     let result = db.exec(&query).unwrap();
@@ -30,8 +30,8 @@ fn select_id_alias() {
 fn select_from_ids() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(
         &QueryBuilder::insert()
             .nodes()
             .aliases(&["alias".into(), "alias2".into()])

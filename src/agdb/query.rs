@@ -38,7 +38,7 @@ use self::select_values_query::SelectValuesQuery;
 use crate::commands::Commands;
 use crate::QueryError;
 
-pub enum Query {
+pub enum OldQuery {
     InsertAliases(InsertAliasesQuery),
     InsertEdges(InsertEdgesQuery),
     InsertNodes(InsertNodesQuery),
@@ -54,22 +54,28 @@ pub enum Query {
     SelectValues(SelectValuesQuery),
 }
 
-impl Query {
+impl OldQuery {
     pub fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match self {
-            Query::InsertAliases(query) => query.commands(),
-            Query::InsertEdges(query) => query.commands(),
-            Query::InsertNodes(query) => query.commands(),
-            Query::InsertValues(_) => todo!(),
-            Query::RemoveAliases(query) => query.commands(),
-            Query::Remove(query) => query.commands(),
-            Query::RemoveValues(_) => todo!(),
-            Query::Search(_) => todo!(),
-            Query::SelectAliases(_) => todo!(),
-            Query::SelectKeys(_) => todo!(),
-            Query::SelectKeyCount(_) => todo!(),
-            Query::Select(query) => query.commands(),
-            Query::SelectValues(_) => todo!(),
+            OldQuery::InsertAliases(query) => query.commands(),
+            OldQuery::InsertEdges(query) => query.commands(),
+            OldQuery::InsertNodes(query) => query.commands(),
+            OldQuery::InsertValues(_) => todo!(),
+            OldQuery::RemoveAliases(query) => query.commands(),
+            OldQuery::Remove(query) => query.commands(),
+            OldQuery::RemoveValues(_) => todo!(),
+            OldQuery::Search(_) => todo!(),
+            OldQuery::SelectAliases(_) => todo!(),
+            OldQuery::SelectKeys(_) => todo!(),
+            OldQuery::SelectKeyCount(_) => todo!(),
+            OldQuery::Select(query) => query.commands(),
+            OldQuery::SelectValues(_) => todo!(),
         }
     }
 }
+
+pub trait Query {
+    fn commands(&self) -> Result<Vec<Commands>, QueryError>;
+}
+
+pub trait QueryMut: Query {}

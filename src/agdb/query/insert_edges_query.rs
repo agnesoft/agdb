@@ -1,6 +1,8 @@
 use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
+use super::Query;
+use super::QueryMut;
 use crate::commands::insert_edge::InsertEdge;
 use crate::commands::Commands;
 use crate::QueryError;
@@ -12,8 +14,8 @@ pub struct InsertEdgesQuery {
     pub each: bool,
 }
 
-impl InsertEdgesQuery {
-    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
+impl Query for InsertEdgesQuery {
+    fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.from {
             QueryIds::Id(id) => self.one_to_many(id),
             QueryIds::Ids(ids) => {
@@ -28,7 +30,11 @@ impl InsertEdgesQuery {
             }
         }
     }
+}
 
+impl QueryMut for InsertEdgesQuery {}
+
+impl InsertEdgesQuery {
     fn one_to_many(&self, from: &QueryId) -> Result<Vec<Commands>, QueryError> {
         let mut commands = Vec::<Commands>::new();
 

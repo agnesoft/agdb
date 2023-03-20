@@ -1,3 +1,5 @@
+use super::Query;
+use super::QueryMut;
 use crate::commands::remove_alias::RemoveAlias;
 use crate::commands::Commands;
 use crate::QueryError;
@@ -6,8 +8,8 @@ pub struct RemoveAliasesQuery {
     pub aliases: Vec<String>,
 }
 
-impl RemoveAliasesQuery {
-    pub fn commands(&self) -> Result<Vec<Commands>, QueryError> {
+impl Query for RemoveAliasesQuery {
+    fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         Ok(self
             .aliases
             .iter()
@@ -19,3 +21,5 @@ impl RemoveAliasesQuery {
             .collect())
     }
 }
+
+impl QueryMut for RemoveAliasesQuery {}

@@ -9,11 +9,11 @@ use test_file::TestFile;
 fn remove_alias() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(&QueryBuilder::insert().node().alias("alias").query())
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
         .unwrap();
     let query = QueryBuilder::remove().alias("alias").query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(result.elements, vec![]);
@@ -23,8 +23,8 @@ fn remove_alias() {
 fn remove_aliases() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(
         &QueryBuilder::insert()
             .nodes()
             .aliases(&["alias".into(), "alias2".into()])
@@ -34,7 +34,7 @@ fn remove_aliases() {
     let query = QueryBuilder::remove()
         .aliases(&["alias".into(), "alias2".into()])
         .query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 2);
     assert_eq!(result.elements, vec![]);

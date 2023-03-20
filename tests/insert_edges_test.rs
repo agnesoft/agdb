@@ -10,17 +10,17 @@ use test_file::TestFile;
 fn insert_edge_from_to() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(&QueryBuilder::insert().node().alias("alias1").query())
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
         .unwrap();
-    db.exec(&QueryBuilder::insert().node().query()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
 
     let query = QueryBuilder::insert()
         .edge()
         .from("alias1".into())
         .to(2.into())
         .query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(

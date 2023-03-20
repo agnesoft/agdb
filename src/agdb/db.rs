@@ -1,3 +1,4 @@
+pub mod db_data;
 pub mod db_element;
 pub mod db_error;
 pub mod db_index;
@@ -6,7 +7,6 @@ pub mod db_key_value;
 pub mod db_value;
 
 mod db_context;
-mod db_data;
 mod db_float;
 
 use self::db_context::Context;
@@ -21,7 +21,10 @@ use crate::commands::select_id::SelectId;
 use crate::commands::Commands;
 use crate::graph::graph_index::GraphIndex;
 use crate::query::query_id::QueryId;
+use crate::query::OldQuery;
 use crate::query::Query;
+use crate::query::QueryMut;
+use crate::transaction::TransactionMut;
 use crate::DbElement;
 use crate::DbError;
 use crate::QueryError;
@@ -34,7 +37,56 @@ pub struct Db {
 }
 
 impl Db {
-    pub fn exec(&self, query: &Query) -> Result<QueryResult, QueryError> {
+    pub fn new(_filename: &str) -> Result<Db, DbError> {
+        Ok(Self {
+            data: RwLock::new(DbData::new()?),
+        })
+    }
+
+    pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
+        self.transaction(|transaction| transaction.exec(query))
+    }
+
+    pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
+        self.transaction_mut(|transaction| transaction.exec_mut(query))
+    }
+
+    pub fn transaction<T, E>(&self, f: impl Fn(&Transaction) -> Result<T, E>) -> Result<T, E> {
+        let transaction = Transaction {
+            data: &self.data.read().unwrap(),
+        };
+
+        let result = f(&transaction);
+
+        if result.is_ok() {
+            transaction.commit();
+        } else {
+            transaction.rollback();
+        }
+
+        result
+    }
+
+    pub fn transaction_mut<T, E>(
+        &mut self,
+        f: impl Fn(&mut TransactionMut) -> Result<T, E>,
+    ) -> Result<T, E> {
+        let mut transaction = TransactionMut {
+            data: &mut self.data.write().unwrap(),
+        };
+
+        let result = f(&mut transaction);
+
+        if result.is_ok() {
+            transaction.commit();
+        } else {
+            transaction.rollback();
+        }
+
+        result
+    }
+
+    pub fn exec_old(&self, query: &OldQuery) -> Result<QueryResult, QueryError> {
         let mut context = Context { index: 0 };
         let commands = query.commands()?;
         let mut result = QueryResult {
@@ -47,16 +99,6 @@ impl Db {
         }
 
         Ok(result)
-    }
-
-    pub fn new(_filename: &str) -> Result<Db, DbError> {
-        Ok(Self {
-            data: RwLock::new(DbData::new()?),
-        })
-    }
-
-    pub fn transaction(&self) -> Transaction {
-        Transaction::default()
     }
 
     fn get_from_to(

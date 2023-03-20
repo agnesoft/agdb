@@ -1,5 +1,7 @@
 use super::query_id::QueryId;
 use super::query_ids::QueryIds;
+use super::Query;
+use super::QueryMut;
 use crate::commands::remove_edge::RemoveEdge;
 use crate::commands::remove_node::RemoveNode;
 use crate::commands::Commands;
@@ -7,15 +9,19 @@ use crate::QueryError;
 
 pub struct RemoveQuery(pub QueryIds);
 
-impl RemoveQuery {
-    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
+impl Query for RemoveQuery {
+    fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.0 {
             QueryIds::Id(id) => Ok(Self::id(id)),
             QueryIds::Ids(ids) => Ok(Self::ids(ids)),
             QueryIds::All | QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
         }
     }
+}
 
+impl QueryMut for RemoveQuery {}
+
+impl RemoveQuery {
     fn id(id: &QueryId) -> Vec<Commands> {
         if id.is_node() {
             vec![Commands::RemoveNode(RemoveNode { id: id.clone() })]

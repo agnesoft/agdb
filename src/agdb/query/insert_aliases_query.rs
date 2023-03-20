@@ -1,5 +1,7 @@
 use super::query_id::QueryId;
 use super::query_ids::QueryIds;
+use super::Query;
+use super::QueryMut;
 use crate::commands::insert_alias::InsertAlias;
 use crate::commands::Commands;
 use crate::QueryError;
@@ -9,8 +11,8 @@ pub struct InsertAliasesQuery {
     pub aliases: Vec<String>,
 }
 
-impl InsertAliasesQuery {
-    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
+impl Query for InsertAliasesQuery {
+    fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.ids {
             QueryIds::Id(id) => Ok(self.id(id)),
             QueryIds::Ids(ids) => Ok(self.ids(ids)),
@@ -19,7 +21,11 @@ impl InsertAliasesQuery {
             }
         }
     }
+}
 
+impl QueryMut for InsertAliasesQuery {}
+
+impl InsertAliasesQuery {
     fn id(&self, id: &QueryId) -> Vec<Commands> {
         vec![Commands::InsertAlias(InsertAlias {
             id: id.clone(),

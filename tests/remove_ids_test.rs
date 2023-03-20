@@ -9,11 +9,11 @@ use test_file::TestFile;
 pub fn remove_node() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(&QueryBuilder::insert().node().query()).unwrap();
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
 
     let query = QueryBuilder::remove().id(1.into()).query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(result.elements, vec![]);
@@ -23,8 +23,8 @@ pub fn remove_node() {
 pub fn remove_nodes() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(
         &QueryBuilder::insert()
             .nodes()
             .aliases(&["alias".to_string(), "alias2".to_string()])
@@ -35,7 +35,7 @@ pub fn remove_nodes() {
     let query = QueryBuilder::remove()
         .ids(&["alias".into(), "alias2".into()])
         .query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 2);
     assert_eq!(result.elements, vec![]);
@@ -45,11 +45,11 @@ pub fn remove_nodes() {
 pub fn remove_edge() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(&QueryBuilder::insert().node().alias("alias1").query())
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
         .unwrap();
-    db.exec(&QueryBuilder::insert().node().query()).unwrap();
-    db.exec(
+    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
+    db.exec_mut(
         &QueryBuilder::insert()
             .edge()
             .from("alias1".into())
@@ -59,7 +59,7 @@ pub fn remove_edge() {
     .unwrap();
 
     let query = QueryBuilder::remove().id((-1).into()).query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(result.elements, vec![]);
@@ -69,11 +69,11 @@ pub fn remove_edge() {
 pub fn remove_edges() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
-    db.exec(&QueryBuilder::insert().node().alias("alias1").query())
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
         .unwrap();
-    db.exec(&QueryBuilder::insert().node().query()).unwrap();
-    db.exec(
+    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
+    db.exec_mut(
         &QueryBuilder::insert()
             .edges()
             .from(&["alias1".into(), 2.into()])
@@ -85,7 +85,7 @@ pub fn remove_edges() {
     let query = QueryBuilder::remove()
         .ids(&[(-1).into(), (-2).into()])
         .query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 2);
     assert_eq!(result.elements, vec![]);

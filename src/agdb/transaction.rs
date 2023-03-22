@@ -25,14 +25,6 @@ impl<'a> Transaction<'a> {
         Ok(result)
     }
 
-    pub(crate) fn commit(self) -> Result<QueryResult, QueryError> {
-        Ok(QueryResult::default())
-    }
-
-    pub(crate) fn rollback(self) -> Result<QueryResult, QueryError> {
-        Ok(QueryResult::default())
-    }
-
     fn process_command(
         &self,
         command: Commands,

@@ -43,31 +43,25 @@ impl Db {
             data: &self.data.read().unwrap(),
         };
 
-        let result = f(&transaction);
-
-        if result.is_ok() {
-            transaction.commit();
-        } else {
-            transaction.rollback();
-        }
-
-        result
+        f(&transaction)
     }
 
-    pub fn transaction_mut<T, E>(
+    pub fn transaction_mut<T, E: From<QueryError>>(
         &mut self,
         f: impl Fn(&mut TransactionMut) -> Result<T, E>,
     ) -> Result<T, E> {
-        let mut transaction = TransactionMut {
-            data: &mut self.data.write().unwrap(),
-        };
+        let mut data = self
+            .data
+            .write()
+            .map_err(|err| QueryError::from(err.to_string()))?;
+        let mut transaction = TransactionMut::new(&mut data);
 
         let result = f(&mut transaction);
 
         if result.is_ok() {
-            transaction.commit();
+            transaction.commit()?;
         } else {
-            transaction.rollback();
+            transaction.rollback()?;
         }
 
         result

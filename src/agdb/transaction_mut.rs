@@ -15,14 +15,19 @@ use crate::query::QueryMut;
 use crate::DbElement;
 use crate::QueryError;
 use crate::QueryResult;
+use crate::Transaction;
 
 pub struct TransactionMut<'a> {
     pub(crate) data: &'a mut DbData,
 }
 
 impl<'a> TransactionMut<'a> {
+    pub fn new(data: &'a mut DbData) -> Self {
+        Self { data }
+    }
+
     pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
-        Ok(QueryResult::default())
+        Transaction { data: self.data }.exec(query)
     }
 
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
@@ -39,12 +44,12 @@ impl<'a> TransactionMut<'a> {
         Ok(result)
     }
 
-    pub(crate) fn commit(self) -> Result<QueryResult, QueryError> {
-        Ok(QueryResult::default())
+    pub(crate) fn commit(self) -> Result<(), QueryError> {
+        Ok(())
     }
 
-    pub(crate) fn rollback(self) -> Result<QueryResult, QueryError> {
-        Ok(QueryResult::default())
+    pub(crate) fn rollback(self) -> Result<(), QueryError> {
+        Ok(())
     }
 
     fn get_from_to(

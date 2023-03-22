@@ -1,6 +1,8 @@
 use crate::collections::indexed_map::IndexedMap;
 use crate::graph::Graph;
+use crate::query::query_id::QueryId;
 use crate::DbError;
+use crate::QueryError;
 
 pub struct DbData {
     pub graph: Graph,
@@ -20,4 +22,20 @@ impl DbData {
             next_edge: -1,
         })
     }
+}
+
+pub(crate) fn index_from_id(id: &QueryId, db_data: &DbData) -> Result<i64, QueryError> {
+    Ok(match id {
+        QueryId::Id(id) => {
+            let _ = db_data
+                .indexes
+                .value(id)?
+                .ok_or(QueryError::from(format!("Id '{id}' not found")))?;
+            *id
+        }
+        QueryId::Alias(alias) => db_data
+            .aliases
+            .value(alias)?
+            .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?,
+    })
 }

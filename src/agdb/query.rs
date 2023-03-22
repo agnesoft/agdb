@@ -36,6 +36,7 @@ use self::select_keys_query::SelectKeysQuery;
 use self::select_query::SelectQuery;
 use self::select_values_query::SelectValuesQuery;
 use crate::commands::Commands;
+use crate::commands_mut::CommandsMut;
 use crate::QueryError;
 
 pub enum OldQuery {
@@ -54,28 +55,10 @@ pub enum OldQuery {
     SelectValues(SelectValuesQuery),
 }
 
-impl OldQuery {
-    pub fn commands(&self) -> Result<Vec<Commands>, QueryError> {
-        match self {
-            OldQuery::InsertAliases(query) => query.commands(),
-            OldQuery::InsertEdges(query) => query.commands(),
-            OldQuery::InsertNodes(query) => query.commands(),
-            OldQuery::InsertValues(_) => todo!(),
-            OldQuery::RemoveAliases(query) => query.commands(),
-            OldQuery::Remove(query) => query.commands(),
-            OldQuery::RemoveValues(_) => todo!(),
-            OldQuery::Search(_) => todo!(),
-            OldQuery::SelectAliases(_) => todo!(),
-            OldQuery::SelectKeys(_) => todo!(),
-            OldQuery::SelectKeyCount(_) => todo!(),
-            OldQuery::Select(query) => query.commands(),
-            OldQuery::SelectValues(_) => todo!(),
-        }
-    }
-}
-
 pub trait Query {
     fn commands(&self) -> Result<Vec<Commands>, QueryError>;
 }
 
-pub trait QueryMut: Query {}
+pub trait QueryMut {
+    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError>;
+}

@@ -1,8 +1,7 @@
 use super::query_values::QueryValues;
-use super::Query;
 use super::QueryMut;
-use crate::commands::insert_node::InsertNode;
-use crate::commands::Commands;
+use crate::commands_mut::insert_node::InsertNode;
+use crate::commands_mut::CommandsMut;
 use crate::QueryError;
 
 pub struct InsertNodesQuery {
@@ -11,17 +10,17 @@ pub struct InsertNodesQuery {
     pub aliases: Vec<String>,
 }
 
-impl Query for InsertNodesQuery {
-    fn commands(&self) -> Result<Vec<Commands>, QueryError> {
-        let mut commands = Vec::<Commands>::new();
+impl QueryMut for InsertNodesQuery {
+    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
+        let mut commands = Vec::<CommandsMut>::new();
 
         if self.aliases.is_empty() {
             for _i in 0..self.count {
-                commands.push(Commands::InsertNode(InsertNode { alias: None }));
+                commands.push(CommandsMut::InsertNode(InsertNode { alias: None }));
             }
         } else {
             for alias in &self.aliases {
-                commands.push(Commands::InsertNode(InsertNode {
+                commands.push(CommandsMut::InsertNode(InsertNode {
                     alias: Some(alias.clone()),
                 }));
             }
@@ -30,5 +29,3 @@ impl Query for InsertNodesQuery {
         Ok(commands)
     }
 }
-
-impl QueryMut for InsertNodesQuery {}

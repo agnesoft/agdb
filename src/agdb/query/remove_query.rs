@@ -1,16 +1,15 @@
 use super::query_id::QueryId;
 use super::query_ids::QueryIds;
-use super::Query;
 use super::QueryMut;
-use crate::commands::remove_edge::RemoveEdge;
-use crate::commands::remove_node::RemoveNode;
-use crate::commands::Commands;
+use crate::commands_mut::remove_edge::RemoveEdge;
+use crate::commands_mut::remove_node::RemoveNode;
+use crate::commands_mut::CommandsMut;
 use crate::QueryError;
 
 pub struct RemoveQuery(pub QueryIds);
 
-impl Query for RemoveQuery {
-    fn commands(&self) -> Result<Vec<Commands>, QueryError> {
+impl QueryMut for RemoveQuery {
+    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.0 {
             QueryIds::Id(id) => Ok(Self::id(id)),
             QueryIds::Ids(ids) => Ok(Self::ids(ids)),
@@ -19,25 +18,23 @@ impl Query for RemoveQuery {
     }
 }
 
-impl QueryMut for RemoveQuery {}
-
 impl RemoveQuery {
-    fn id(id: &QueryId) -> Vec<Commands> {
+    fn id(id: &QueryId) -> Vec<CommandsMut> {
         if id.is_node() {
-            vec![Commands::RemoveNode(RemoveNode { id: id.clone() })]
+            vec![CommandsMut::RemoveNode(RemoveNode { id: id.clone() })]
         } else {
-            vec![Commands::RemoveEdge(RemoveEdge { id: id.clone() })]
+            vec![CommandsMut::RemoveEdge(RemoveEdge { id: id.clone() })]
         }
     }
 
-    fn ids(ids: &Vec<QueryId>) -> Vec<Commands> {
-        let mut commands = Vec::<Commands>::new();
+    fn ids(ids: &Vec<QueryId>) -> Vec<CommandsMut> {
+        let mut commands = Vec::<CommandsMut>::new();
 
         for id in ids {
             if id.is_node() {
-                commands.push(Commands::RemoveNode(RemoveNode { id: id.clone() }));
+                commands.push(CommandsMut::RemoveNode(RemoveNode { id: id.clone() }));
             } else {
-                commands.push(Commands::RemoveEdge(RemoveEdge { id: id.clone() }));
+                commands.push(CommandsMut::RemoveEdge(RemoveEdge { id: id.clone() }));
             }
         }
 
@@ -55,7 +52,7 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![Commands::RemoveNode(RemoveNode {
+            Ok(vec![CommandsMut::RemoveNode(RemoveNode {
                 id: QueryId::Id(1)
             })])
         )
@@ -67,7 +64,7 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![Commands::RemoveNode(RemoveNode {
+            Ok(vec![CommandsMut::RemoveNode(RemoveNode {
                 id: QueryId::Id(1)
             })])
         )

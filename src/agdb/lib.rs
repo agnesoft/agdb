@@ -1,5 +1,6 @@
 mod collections;
 mod commands;
+mod commands_mut;
 mod db;
 mod graph;
 mod graph_search;
@@ -7,6 +8,7 @@ mod query;
 mod query_builder;
 mod storage;
 mod transaction;
+mod transaction_mut;
 mod utilities;
 
 #[cfg(test)]

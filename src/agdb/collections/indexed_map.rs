@@ -140,4 +140,14 @@ mod tests {
         assert_eq!(map.value(&key), Ok(None));
         assert_eq!(map.key(&value), Ok(None));
     }
+
+    #[test]
+    fn value() {
+        let mut map = IndexedMap::<i64, i64>::new();
+        map.insert(&1, &1).unwrap();
+        map.insert(&2, &2).unwrap();
+        map.insert(&-1, &-3).unwrap();
+
+        assert_eq!(map.value(&-1), Ok(Some(-3)));
+    }
 }

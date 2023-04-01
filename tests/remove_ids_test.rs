@@ -15,7 +15,7 @@ pub fn remove_node() {
     let query = QueryBuilder::remove().id(1.into()).query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 1);
+    assert_eq!(result.result, -1);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -37,7 +37,7 @@ pub fn remove_nodes() {
         .query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 2);
+    assert_eq!(result.result, -2);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -61,7 +61,7 @@ pub fn remove_edge() {
     let query = QueryBuilder::remove().id((-1).into()).query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 1);
+    assert_eq!(result.result, -1);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -87,7 +87,7 @@ pub fn remove_edges() {
         .query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 2);
+    assert_eq!(result.result, -2);
     assert_eq!(result.elements, vec![]);
 }
 

@@ -1,17 +1,20 @@
 use crate::commands::select_id::SelectId;
 use crate::commands::Commands;
-use crate::db::db_data;
-use crate::db::db_data::DbData;
 use crate::query::Query;
+use crate::Db;
 use crate::DbElement;
 use crate::QueryError;
 use crate::QueryResult;
 
 pub struct Transaction<'a> {
-    pub(crate) data: &'a DbData,
+    db: &'a Db,
 }
 
 impl<'a> Transaction<'a> {
+    pub fn new(data: &'a Db) -> Self {
+        Self { db: data }
+    }
+
     pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult {
             result: 0,
@@ -36,7 +39,7 @@ impl<'a> Transaction<'a> {
     }
 
     fn select_id(&self, data: SelectId, result: &mut QueryResult) -> Result<(), QueryError> {
-        let index = db_data::index_from_id(&data.id, self.data)?;
+        let index = self.db.index_from_id(&data.id)?;
         result.result += 1;
         result.elements.push(DbElement {
             index,

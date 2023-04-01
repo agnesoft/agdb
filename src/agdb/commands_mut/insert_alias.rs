@@ -1,9 +1,29 @@
+use super::remove_alias::RemoveAlias;
+use super::CommandsMut;
 use crate::query::query_id::QueryId;
+use crate::Db;
+use crate::QueryError;
+use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertAlias {
-    pub id: QueryId,
-    pub alias: String,
+    pub(crate) id: QueryId,
+    pub(crate) alias: String,
+}
+
+impl InsertAlias {
+    pub(crate) fn process(
+        &self,
+        db: &mut Db,
+        result: &mut QueryResult,
+    ) -> Result<CommandsMut, QueryError> {
+        let index = db.index_from_id(&self.id)?;
+        db.aliases.insert(&self.alias, &index)?;
+        result.result += 1;
+        Ok(CommandsMut::RemoveAlias(RemoveAlias {
+            alias: self.alias.clone(),
+        }))
+    }
 }
 
 #[cfg(test)]

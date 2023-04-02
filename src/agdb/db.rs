@@ -57,15 +57,8 @@ impl Db {
         f: impl Fn(&mut TransactionMut) -> Result<T, E>,
     ) -> Result<T, E> {
         let mut transaction = TransactionMut::new(&mut *self);
-
         let result = f(&mut transaction);
-
-        if result.is_ok() {
-            transaction.commit()?;
-        } else {
-            transaction.rollback()?;
-        }
-
+        Self::finish_transaction(transaction, result.is_ok())?;
         result
     }
 
@@ -85,5 +78,13 @@ impl Db {
         self.indexes
             .value(&db_id)?
             .ok_or(QueryError::from(format!("Id '{}' not found", db_id.id)))
+    }
+
+    fn finish_transaction(transaction: TransactionMut, result: bool) -> Result<(), QueryError> {
+        if result {
+            transaction.commit()
+        } else {
+            transaction.rollback()
+        }
     }
 }

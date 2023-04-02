@@ -161,7 +161,7 @@ mod tests {
             &node1,
             &Handler {
                 processor: |index: &GraphIndex, _distance: &u64| {
-                    if index.value() == 2 {
+                    if index.index == 2 {
                         SearchControl::Finish(true)
                     } else {
                         SearchControl::Continue(false)
@@ -187,7 +187,7 @@ mod tests {
         let edge3 = graph.insert_edge(&node1, &node4).unwrap();
 
         let mut result = GraphSearch::from(&graph).depth_first_search(&node1, &Handler::default());
-        let expected = vec![node1.clone(), edge1, node2, edge2, node3, edge3, node4];
+        let expected = vec![node1, edge1, node2, edge2, node3, edge3, node4];
 
         assert_eq!(result, expected);
 

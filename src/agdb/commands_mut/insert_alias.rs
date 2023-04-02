@@ -1,9 +1,26 @@
-use crate::query::query_id::QueryId;
+use super::remove_alias::RemoveAlias;
+use super::CommandsMut;
+use crate::db::db_context::Context;
+use crate::Db;
+use crate::QueryError;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertAlias {
-    pub id: QueryId,
-    pub alias: String,
+    pub(crate) alias: String,
+}
+
+impl InsertAlias {
+    pub(crate) fn process(
+        &self,
+        db: &mut Db,
+        context: &Context,
+    ) -> Result<CommandsMut, QueryError> {
+        db.aliases.insert(&self.alias, &context.id)?;
+
+        Ok(CommandsMut::RemoveAlias(RemoveAlias {
+            alias: self.alias.clone(),
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -15,7 +32,6 @@ mod tests {
         format!(
             "{:?}",
             InsertAlias {
-                id: QueryId::Id(0),
                 alias: String::new()
             }
         );
@@ -25,11 +41,9 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             InsertAlias {
-                id: QueryId::Id(0),
                 alias: String::new()
             },
             InsertAlias {
-                id: QueryId::Id(0),
                 alias: String::new()
             }
         );

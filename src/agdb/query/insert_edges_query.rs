@@ -1,8 +1,10 @@
 use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
-use crate::commands::insert_edge::InsertEdge;
-use crate::commands::Commands;
+use super::QueryMut;
+use crate::commands_mut::insert_edge::InsertEdge;
+use crate::commands_mut::insert_index::InsertIndex;
+use crate::commands_mut::CommandsMut;
 use crate::QueryError;
 
 pub struct InsertEdgesQuery {
@@ -12,8 +14,8 @@ pub struct InsertEdgesQuery {
     pub each: bool,
 }
 
-impl InsertEdgesQuery {
-    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
+impl QueryMut for InsertEdgesQuery {
+    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.from {
             QueryIds::Id(id) => self.one_to_many(id),
             QueryIds::Ids(ids) => {
@@ -28,49 +30,27 @@ impl InsertEdgesQuery {
             }
         }
     }
+}
 
-    fn one_to_many(&self, from: &QueryId) -> Result<Vec<Commands>, QueryError> {
-        let mut commands = Vec::<Commands>::new();
-
-        match &self.to {
-            QueryIds::Id(to) => commands.push(Commands::InsertEdge(InsertEdge {
+impl InsertEdgesQuery {
+    fn insert_edge(from: &QueryId, to: &QueryId) -> Vec<CommandsMut> {
+        vec![
+            CommandsMut::InsertEdge(InsertEdge {
                 from: from.clone(),
                 to: to.clone(),
-            })),
-            QueryIds::Ids(ids) => {
-                for to in ids {
-                    commands.push(Commands::InsertEdge(InsertEdge {
-                        from: from.clone(),
-                        to: to.clone(),
-                    }))
-                }
-            }
-            QueryIds::All | QueryIds::Search(_) => {
-                return Err(QueryError::from("Invalid insert edges query"))
-            }
-        }
-
-        Ok(commands)
+            }),
+            CommandsMut::InsertIndex(InsertIndex {}),
+        ]
     }
 
-    fn many_to_many(&self, from: &Vec<QueryId>) -> Result<Vec<Commands>, QueryError> {
-        let mut commands = Vec::<Commands>::new();
+    fn one_to_many(&self, from: &QueryId) -> Result<Vec<CommandsMut>, QueryError> {
+        let mut commands = Vec::<CommandsMut>::new();
 
         match &self.to {
-            QueryIds::Id(id) => {
-                for from in from {
-                    commands.push(Commands::InsertEdge(InsertEdge {
-                        from: from.clone(),
-                        to: id.clone(),
-                    }))
-                }
-            }
+            QueryIds::Id(to) => commands.extend(Self::insert_edge(from, to)),
             QueryIds::Ids(ids) => {
-                for i in 0..from.len() {
-                    commands.push(Commands::InsertEdge(InsertEdge {
-                        from: from.get(i).unwrap_or(&QueryId::Id(0)).clone(),
-                        to: ids.get(i).unwrap_or(&QueryId::Id(0)).clone(),
-                    }))
+                for to in ids {
+                    commands.extend(Self::insert_edge(from, to));
                 }
             }
             QueryIds::All | QueryIds::Search(_) => {
@@ -81,25 +61,41 @@ impl InsertEdgesQuery {
         Ok(commands)
     }
 
-    fn many_to_many_each(&self, from: &Vec<QueryId>) -> Result<Vec<Commands>, QueryError> {
-        let mut commands = Vec::<Commands>::new();
+    fn many_to_many(&self, from: &Vec<QueryId>) -> Result<Vec<CommandsMut>, QueryError> {
+        let mut commands = Vec::<CommandsMut>::new();
 
         match &self.to {
             QueryIds::Id(to) => {
                 for from in from {
-                    commands.push(Commands::InsertEdge(InsertEdge {
-                        from: from.clone(),
-                        to: to.clone(),
-                    }))
+                    commands.extend(Self::insert_edge(from, to));
+                }
+            }
+            QueryIds::Ids(ids) => {
+                for (from, to) in from.iter().zip(ids.iter()) {
+                    commands.extend(Self::insert_edge(from, to));
+                }
+            }
+            QueryIds::All | QueryIds::Search(_) => {
+                return Err(QueryError::from("Invalid insert edges query"))
+            }
+        }
+
+        Ok(commands)
+    }
+
+    fn many_to_many_each(&self, from: &Vec<QueryId>) -> Result<Vec<CommandsMut>, QueryError> {
+        let mut commands = Vec::<CommandsMut>::new();
+
+        match &self.to {
+            QueryIds::Id(to) => {
+                for from in from {
+                    commands.extend(Self::insert_edge(from, to));
                 }
             }
             QueryIds::Ids(ids) => {
                 for from in from {
                     for to in ids {
-                        commands.push(Commands::InsertEdge(InsertEdge {
-                            from: from.clone(),
-                            to: to.clone(),
-                        }))
+                        commands.extend(Self::insert_edge(from, to));
                     }
                 }
             }
@@ -127,10 +123,13 @@ mod tests {
 
         assert_eq!(
             query.commands().unwrap(),
-            vec![Commands::InsertEdge(InsertEdge {
-                from: QueryId::Id(1),
-                to: QueryId::Id(2)
-            })]
+            vec![
+                CommandsMut::InsertEdge(InsertEdge {
+                    from: QueryId::Id(1),
+                    to: QueryId::Id(2)
+                }),
+                CommandsMut::InsertIndex(InsertIndex {})
+            ]
         );
     }
 
@@ -145,10 +144,13 @@ mod tests {
 
         assert_eq!(
             query.commands().unwrap(),
-            vec![Commands::InsertEdge(InsertEdge {
-                from: QueryId::Alias("alias".to_string()),
-                to: QueryId::Alias("alias2".to_string())
-            })]
+            vec![
+                CommandsMut::InsertEdge(InsertEdge {
+                    from: QueryId::Alias("alias".to_string()),
+                    to: QueryId::Alias("alias2".to_string()),
+                }),
+                CommandsMut::InsertIndex(InsertIndex {})
+            ]
         );
     }
 
@@ -164,14 +166,16 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
                     to: QueryId::Id(2)
                 }),
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
                     to: QueryId::Id(3)
                 }),
+                CommandsMut::InsertIndex(InsertIndex {}),
             ]
         );
     }
@@ -188,14 +192,16 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
                     to: QueryId::Id(3)
                 }),
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(2),
                     to: QueryId::Id(3)
                 }),
+                CommandsMut::InsertIndex(InsertIndex {}),
             ]
         );
     }
@@ -212,14 +218,16 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
                     to: QueryId::Id(3)
                 }),
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(2),
                     to: QueryId::Id(3)
                 }),
+                CommandsMut::InsertIndex(InsertIndex {}),
             ]
         );
     }
@@ -236,14 +244,16 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
                     to: QueryId::Id(3)
                 }),
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(2),
                     to: QueryId::Id(4)
                 }),
+                CommandsMut::InsertIndex(InsertIndex {}),
             ]
         );
     }
@@ -260,22 +270,26 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
                     to: QueryId::Id(3)
                 }),
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(1),
                     to: QueryId::Id(4)
                 }),
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(2),
                     to: QueryId::Id(3)
                 }),
-                Commands::InsertEdge(InsertEdge {
+                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::Id(2),
                     to: QueryId::Id(4)
                 }),
+                CommandsMut::InsertIndex(InsertIndex {}),
             ]
         );
     }

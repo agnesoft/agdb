@@ -22,7 +22,7 @@ where
             self.index = next;
             return Some(GraphNode {
                 graph: self.graph,
-                index: self.index.clone(),
+                index: self.index,
             });
         }
 

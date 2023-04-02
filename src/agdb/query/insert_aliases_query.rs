@@ -1,7 +1,11 @@
 use super::query_id::QueryId;
 use super::query_ids::QueryIds;
-use crate::commands::insert_alias::InsertAlias;
-use crate::commands::Commands;
+use super::QueryMut;
+use crate::commands_mut::insert_alias::InsertAlias;
+use crate::commands_mut::insert_alias_id::InsertAliasId;
+use crate::commands_mut::remove_alias::RemoveAlias;
+use crate::commands_mut::CommandsMut;
+use crate::DbId;
 use crate::QueryError;
 
 pub struct InsertAliasesQuery {
@@ -9,32 +13,45 @@ pub struct InsertAliasesQuery {
     pub aliases: Vec<String>,
 }
 
-impl InsertAliasesQuery {
-    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
+impl QueryMut for InsertAliasesQuery {
+    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.ids {
-            QueryIds::Id(id) => Ok(self.id(id)),
+            QueryIds::Id(id) => Ok(self.id(id, &self.aliases[0])),
             QueryIds::Ids(ids) => Ok(self.ids(ids)),
             QueryIds::All | QueryIds::Search(_) => {
                 Err(QueryError::from("Invalid insert aliases query"))
             }
         }
     }
+}
 
-    fn id(&self, id: &QueryId) -> Vec<Commands> {
-        vec![Commands::InsertAlias(InsertAlias {
-            id: id.clone(),
-            alias: self.aliases[0].clone(),
-        })]
+impl InsertAliasesQuery {
+    fn id(&self, id: &QueryId, new_alias: &str) -> Vec<CommandsMut> {
+        match id {
+            QueryId::Id(id) => {
+                vec![CommandsMut::InsertAliasId(InsertAliasId {
+                    id: DbId { id: *id },
+                    alias: new_alias.to_string(),
+                })]
+            }
+            QueryId::Alias(alias) => {
+                vec![
+                    CommandsMut::RemoveAlias(RemoveAlias {
+                        alias: alias.clone(),
+                    }),
+                    CommandsMut::InsertAlias(InsertAlias {
+                        alias: new_alias.to_string(),
+                    }),
+                ]
+            }
+        }
     }
 
-    fn ids(&self, ids: &[QueryId]) -> Vec<Commands> {
-        let mut commands = Vec::<Commands>::new();
+    fn ids(&self, ids: &[QueryId]) -> Vec<CommandsMut> {
+        let mut commands = Vec::<CommandsMut>::new();
 
-        for (id, alias) in ids.iter().zip(self.aliases.iter()) {
-            commands.push(Commands::InsertAlias(InsertAlias {
-                id: id.clone(),
-                alias: alias.clone(),
-            }));
+        for (id, alias) in ids.iter().zip(&self.aliases) {
+            commands.extend(self.id(id, alias));
         }
 
         commands
@@ -54,8 +71,8 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![Commands::InsertAlias(InsertAlias {
-                id: QueryId::Id(0),
+            Ok(vec![CommandsMut::InsertAliasId(InsertAliasId {
+                id: DbId { id: 0 },
                 alias: "alias".to_string()
             })])
         )
@@ -70,8 +87,8 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![Commands::InsertAlias(InsertAlias {
-                id: QueryId::Id(0),
+            Ok(vec![CommandsMut::InsertAliasId(InsertAliasId {
+                id: DbId { id: 0 },
                 alias: "alias".to_string()
             })])
         )

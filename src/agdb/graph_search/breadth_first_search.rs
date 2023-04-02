@@ -171,7 +171,7 @@ mod tests {
             &node1,
             &Handler {
                 processor: |index: &GraphIndex, _distance: &u64| {
-                    if index.value() == 2 {
+                    if index.index == 2 {
                         SearchControl::Finish(true)
                     } else {
                         SearchControl::Continue(false)
@@ -198,7 +198,7 @@ mod tests {
 
         let mut result =
             GraphSearch::from(&graph).breadth_first_search(&node1, &Handler::default());
-        let expected = vec![node1.clone(), edge3, edge2, edge1, node4, node3, node2];
+        let expected = vec![node1, edge3, edge2, edge1, node4, node3, node2];
 
         assert_eq!(result, expected);
 

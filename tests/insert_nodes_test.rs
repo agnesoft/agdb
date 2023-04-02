@@ -3,22 +3,24 @@ mod test_file;
 
 use agdb::Db;
 use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
+use agdb::QueryError;
 use test_file::TestFile;
 
 #[test]
 fn insert_node() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
+    let mut db = Db::new(test_file.file_name()).unwrap();
     let query = QueryBuilder::insert().node().query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: 1,
+            index: DbId { id: 1 },
             values: vec![]
         }]
     )
@@ -44,18 +46,52 @@ fn insert_node_values_id() {
 fn insert_node_alias() {
     let test_file = TestFile::new();
 
-    let db = Db::new(test_file.file_name()).unwrap();
+    let mut db = Db::new(test_file.file_name()).unwrap();
     let query = QueryBuilder::insert().node().alias("alias").query();
-    let result = db.exec(&query).unwrap();
+    let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: 1,
+            index: DbId { id: 1 },
             values: vec![]
         }]
-    )
+    );
+}
+
+#[test]
+fn insert_node_alias_rollback() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<(), QueryError> {
+            let result = transaction
+                .exec_mut(&QueryBuilder::insert().node().alias("alias").query())
+                .unwrap();
+
+            assert_eq!(result.result, 1);
+            assert_eq!(
+                result.elements,
+                vec![DbElement {
+                    index: DbId { id: 1 },
+                    values: vec![]
+                }]
+            );
+
+            Err(QueryError::from("error"))
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "error");
+
+    let error2 = db
+        .exec(&QueryBuilder::select().id("alias".into()).query())
+        .unwrap_err();
+
+    assert_eq!(error2.description, "Alias 'alias' not found");
 }
 
 #[test]

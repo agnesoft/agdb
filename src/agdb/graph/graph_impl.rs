@@ -24,7 +24,7 @@ where
 
         Some(GraphEdge {
             graph: self,
-            index: index.clone(),
+            index: *index,
         })
     }
 
@@ -65,7 +65,7 @@ where
 
         Some(GraphNode {
             graph: self,
-            index: index.clone(),
+            index: *index,
         })
     }
 
@@ -84,7 +84,7 @@ where
         self.data.transaction();
         self.remove_from_edge(index)?;
         self.remove_to_edge(index)?;
-        self.free_index(&GraphIndex::from(-index.value()))?;
+        self.free_index(&GraphIndex::from(-index.index))?;
 
         self.data.commit()
     }
@@ -125,7 +125,7 @@ where
         let next_free = self.data.from_meta(&GraphIndex::default())?;
         self.data.set_from_meta(index, next_free)?;
         self.data
-            .set_from_meta(&GraphIndex::default(), -index.value())
+            .set_from_meta(&GraphIndex::default(), -index.index)
     }
 
     fn get_free_index(&mut self) -> Result<i64, DbError> {
@@ -145,7 +145,7 @@ where
     }
 
     fn invalid_index(index: &GraphIndex) -> DbError {
-        DbError::from(format!("'{}' is invalid index", index.value()))
+        DbError::from(format!("'{}' is invalid index", index.index))
     }
 
     fn is_removed_index(&self, index: &GraphIndex) -> Result<bool, DbError> {
@@ -175,7 +175,7 @@ where
     }
 
     pub(crate) fn next_node(&self, index: &GraphIndex) -> Result<Option<GraphIndex>, DbError> {
-        for i in (index.value() + 1)..(self.data.capacity()? as i64) {
+        for i in (index.index + 1)..(self.data.capacity()? as i64) {
             let next = GraphIndex::from(i);
             if self.is_valid_node(&next)? && !self.is_removed_index(&next)? {
                 return Ok(Some(next));
@@ -195,7 +195,7 @@ where
         } else {
             let mut previous = first;
 
-            while self.data.from_meta(&previous)? != -index.value() {
+            while self.data.from_meta(&previous)? != -index.index {
                 previous = GraphIndex::from(self.data.from_meta(&previous)?);
             }
 
@@ -211,7 +211,7 @@ where
 
         while edge.is_valid() {
             self.remove_to_edge(&edge)?;
-            let current_index = -edge.value();
+            let current_index = -edge.index;
             edge = GraphIndex::from(-self.data.from_meta(&edge)?);
             self.free_index(&GraphIndex::from(current_index))?;
         }
@@ -229,7 +229,7 @@ where
         } else {
             let mut previous = first;
 
-            while self.data.to_meta(&previous)? != -index.value() {
+            while self.data.to_meta(&previous)? != -index.index {
                 previous = GraphIndex::from(self.data.to_meta(&previous)?);
             }
 
@@ -245,7 +245,7 @@ where
 
         while edge.is_valid() {
             self.remove_from_edge(&edge)?;
-            let current_index = -edge.value();
+            let current_index = -edge.index;
             edge = GraphIndex::from(-self.data.to_meta(&edge)?);
             self.free_index(&GraphIndex::from(current_index))?;
         }
@@ -259,8 +259,8 @@ where
         from: &GraphIndex,
         to: &GraphIndex,
     ) -> Result<(), DbError> {
-        self.data.set_from(index, -from.value())?;
-        self.data.set_to(index, -to.value())?;
+        self.data.set_from(index, -from.index)?;
+        self.data.set_to(index, -to.index)?;
         self.update_from_edge(from, index)?;
         self.update_to_edge(to, index)
     }
@@ -268,7 +268,7 @@ where
     fn update_from_edge(&mut self, node: &GraphIndex, edge: &GraphIndex) -> Result<(), DbError> {
         let next = self.data.from(node)?;
         self.data.set_from_meta(edge, next)?;
-        self.data.set_from(node, -edge.value())?;
+        self.data.set_from(node, -edge.index)?;
 
         let count = self.data.from_meta(node)?;
         self.data.set_from_meta(node, count + 1)
@@ -277,7 +277,7 @@ where
     fn update_to_edge(&mut self, node: &GraphIndex, edge: &GraphIndex) -> Result<(), DbError> {
         let next = self.data.to(node)?;
         self.data.set_to_meta(edge, next)?;
-        self.data.set_to(node, -edge.value())?;
+        self.data.set_to(node, -edge.index)?;
 
         let count = self.data.to_meta(node)?;
         self.data.set_to_meta(node, count + 1)

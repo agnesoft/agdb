@@ -22,7 +22,7 @@ where
             return None;
         }
 
-        let current_index = self.index.clone();
+        let current_index = self.index;
 
         self.index = self.graph.next_edge_to(&self.index).unwrap_or_default();
 

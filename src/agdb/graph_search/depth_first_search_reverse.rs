@@ -88,7 +88,7 @@ mod tests {
 
         let result =
             GraphSearch::from(&graph).depth_first_search_reverse(&node4, &Handler::default());
-        let expected = vec![node4.clone(), edge3, node3, edge2, node2, edge1, node1];
+        let expected = vec![node4, edge3, node3, edge2, node2, edge1, node1];
 
         assert_eq!(result, expected);
     }

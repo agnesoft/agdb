@@ -5,7 +5,6 @@ use crate::query::insert_nodes_query::InsertNodesQuery;
 use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryValues;
-use crate::query::Query;
 
 pub struct InsertNode(pub InsertNodesQuery);
 
@@ -28,7 +27,7 @@ impl InsertNode {
         InsertNodeValues(self.0)
     }
 
-    pub fn query(self) -> Query {
-        Query::InsertNodes(self.0)
+    pub fn query(self) -> InsertNodesQuery {
+        self.0
     }
 }

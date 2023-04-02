@@ -1,6 +1,9 @@
 use super::query_values::QueryValues;
-use crate::commands::insert_node::InsertNode;
-use crate::commands::Commands;
+use super::QueryMut;
+use crate::commands_mut::insert_alias::InsertAlias;
+use crate::commands_mut::insert_index::InsertIndex;
+use crate::commands_mut::insert_node::InsertNode;
+use crate::commands_mut::CommandsMut;
 use crate::QueryError;
 
 pub struct InsertNodesQuery {
@@ -9,18 +12,21 @@ pub struct InsertNodesQuery {
     pub aliases: Vec<String>,
 }
 
-impl InsertNodesQuery {
-    pub(crate) fn commands(&self) -> Result<Vec<Commands>, QueryError> {
-        let mut commands = Vec::<Commands>::new();
+impl QueryMut for InsertNodesQuery {
+    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
+        let mut commands = Vec::<CommandsMut>::new();
 
         if self.aliases.is_empty() {
             for _i in 0..self.count {
-                commands.push(Commands::InsertNode(InsertNode { alias: None }));
+                commands.push(CommandsMut::InsertNode(InsertNode {}));
+                commands.push(CommandsMut::InsertIndex(InsertIndex {}));
             }
         } else {
             for alias in &self.aliases {
-                commands.push(Commands::InsertNode(InsertNode {
-                    alias: Some(alias.clone()),
+                commands.push(CommandsMut::InsertNode(InsertNode {}));
+                commands.push(CommandsMut::InsertIndex(InsertIndex {}));
+                commands.push(CommandsMut::InsertAlias(InsertAlias {
+                    alias: alias.clone(),
                 }));
             }
         }

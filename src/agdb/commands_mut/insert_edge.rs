@@ -1,12 +1,11 @@
-use super::remove_edge::RemoveEdge;
+use super::remove_edge_index::RemoveEdgeIndex;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
 use crate::query::query_id::QueryId;
 use crate::Db;
-use crate::DbElement;
+use crate::DbId;
 use crate::QueryError;
-use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertEdge {
@@ -19,43 +18,20 @@ impl InsertEdge {
         &self,
         db: &mut Db,
         context: &mut Context,
-        result: &mut QueryResult,
     ) -> Result<CommandsMut, QueryError> {
-        let (from, to) = self.get_from_to(db, context)?;
-        Self::insert_edge_write_data(db, from, to, context)?;
+        let (from, to) = self.get_from_to(db)?;
+        context.graph_index = db.graph.insert_edge(&from, &to)?;
+        context.id = DbId { id: -db.next_index };
 
-        result.result += 1;
-        result.elements.push(DbElement {
-            index: context.index,
-            values: vec![],
-        });
-
-        Ok(CommandsMut::RemoveEdge(RemoveEdge {
-            id: QueryId::Id(context.index),
+        Ok(CommandsMut::RemoveEdgeIndex(RemoveEdgeIndex {
+            index: context.graph_index,
         }))
     }
 
-    fn get_from_to(
-        &self,
-        db: &Db,
-        context: &mut Context,
-    ) -> Result<(GraphIndex, GraphIndex), QueryError> {
+    fn get_from_to(&self, db: &Db) -> Result<(GraphIndex, GraphIndex), QueryError> {
         let from = db.graph_index_from_id(&self.from)?;
         let to = db.graph_index_from_id(&self.to)?;
-        context.index = db.next_edge;
-
         Ok((from, to))
-    }
-
-    fn insert_edge_write_data(
-        db: &mut Db,
-        from: GraphIndex,
-        to: GraphIndex,
-        context: &mut Context,
-    ) -> Result<(), QueryError> {
-        let graph_index = db.graph.insert_edge(&from, &to)?.index;
-        db.next_edge -= 1;
-        Ok(db.indexes.insert(&context.index, &graph_index)?)
     }
 }
 

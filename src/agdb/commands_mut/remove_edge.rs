@@ -1,33 +1,32 @@
 use super::insert_edge::InsertEdge;
 use super::CommandsMut;
+use crate::db::db_context::Context;
 use crate::query::query_id::QueryId;
 use crate::Db;
 use crate::QueryError;
-use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
-pub struct RemoveEdge {
-    pub(crate) id: QueryId,
-}
+pub struct RemoveEdge {}
 
 impl RemoveEdge {
     pub(crate) fn process(
         &self,
         db: &mut Db,
-        result: &mut QueryResult,
+        context: &Context,
     ) -> Result<CommandsMut, QueryError> {
-        let index = db.graph_index_from_id(&self.id)?;
         let edge = db
             .graph
-            .edge(&index)
-            .ok_or(QueryError::from(format!("Id '{}' not found", index.index)))?;
+            .edge(&context.graph_index)
+            .ok_or(QueryError::from(format!(
+                "Index '{}' not found",
+                context.graph_index.index
+            )))?;
         let undo = CommandsMut::InsertEdge(InsertEdge {
             from: QueryId::Id(edge.index_from().index),
             to: QueryId::Id(edge.index_to().index),
         });
-        db.graph.remove_edge(&index)?;
-        db.indexes.remove_value(&index.index)?;
-        result.result -= 1;
+        db.graph.remove_edge(&context.graph_index)?;
+
         Ok(undo)
     }
 }
@@ -38,14 +37,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", RemoveEdge { id: QueryId::Id(0) });
+        format!("{:?}", RemoveEdge {});
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(
-            RemoveEdge { id: QueryId::Id(0) },
-            RemoveEdge { id: QueryId::Id(0) }
-        );
+        assert_eq!(RemoveEdge {}, RemoveEdge {});
     }
 }

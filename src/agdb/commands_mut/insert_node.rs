@@ -1,47 +1,25 @@
-use super::remove_node::RemoveNode;
+use super::remove_node_index::RemoveNodeIndex;
 use super::CommandsMut;
-use crate::query::query_id::QueryId;
+use crate::db::db_context::Context;
 use crate::Db;
-use crate::DbElement;
+use crate::DbId;
 use crate::QueryError;
-use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
-pub struct InsertNode {
-    pub(crate) alias: Option<String>,
-}
+pub struct InsertNode {}
 
 impl InsertNode {
     pub(crate) fn process(
         &self,
         db: &mut Db,
-        result: &mut QueryResult,
+        context: &mut Context,
     ) -> Result<CommandsMut, QueryError> {
-        let index = self.insert_node_write_data(db)?;
+        context.graph_index = db.graph.insert_node()?;
+        context.id = DbId { id: db.next_index };
 
-        result.result += 1;
-        result.elements.push(DbElement {
-            index,
-            values: vec![],
-        });
-
-        Ok(CommandsMut::RemoveNode(RemoveNode {
-            id: QueryId::Id(index),
+        Ok(CommandsMut::RemoveNodeIndex(RemoveNodeIndex {
+            index: context.graph_index,
         }))
-    }
-
-    fn insert_node_write_data(&self, db: &mut Db) -> Result<i64, QueryError> {
-        let index = db.next_node;
-        let graph_index = db.graph.insert_node()?.index;
-        db.next_node += 1;
-
-        if let Some(alias) = &self.alias {
-            db.aliases.insert(alias, &index)?
-        }
-
-        db.indexes.insert(&index, &graph_index)?;
-
-        Ok(index)
     }
 }
 
@@ -51,11 +29,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", InsertNode { alias: None });
+        format!("{:?}", InsertNode {});
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(InsertNode { alias: None }, InsertNode { alias: None });
+        assert_eq!(InsertNode {}, InsertNode {});
     }
 }

@@ -3,6 +3,7 @@ mod test_file;
 
 use agdb::Db;
 use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
 use test_file::TestFile;
 
@@ -26,7 +27,7 @@ fn insert_edge_from_to() {
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: -1,
+            index: DbId { id: -1 },
             values: vec![]
         }]
     )

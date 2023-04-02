@@ -1,8 +1,10 @@
 use crate::commands::select_id::SelectId;
 use crate::commands::Commands;
+use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::Db;
 use crate::DbElement;
+use crate::DbId;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -39,12 +41,27 @@ impl<'a> Transaction<'a> {
     }
 
     fn select_id(&self, data: SelectId, result: &mut QueryResult) -> Result<(), QueryError> {
-        let index = self.db.index_from_id(&data.id)?;
+        let db_id = match data.id {
+            QueryId::Id(id) => DbId { id },
+            QueryId::Alias(alias) => self
+                .db
+                .aliases
+                .value(&alias)?
+                .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?,
+        };
+
+        let _ = self
+            .db
+            .indexes
+            .value(&db_id)?
+            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.id)))?;
+
         result.result += 1;
         result.elements.push(DbElement {
-            index,
+            index: db_id,
             values: vec![],
         });
+
         Ok(())
     }
 }

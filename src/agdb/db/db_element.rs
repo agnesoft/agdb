@@ -1,8 +1,9 @@
 use super::db_key_value::DbKeyValue;
+use crate::DbId;
 
 #[derive(Debug, PartialEq)]
 pub struct DbElement {
-    pub index: i64,
+    pub index: DbId,
     pub values: Vec<DbKeyValue>,
 }
 
@@ -15,7 +16,7 @@ mod tests {
         format!(
             "{:?}",
             DbElement {
-                index: 0,
+                index: DbId { id: 0 },
                 values: vec![]
             }
         );

@@ -1,6 +1,6 @@
-use super::insert_alias::InsertAlias;
+use super::insert_alias_id::InsertAliasId;
 use super::CommandsMut;
-use crate::query::query_id::QueryId;
+use crate::db::db_context::Context;
 use crate::Db;
 use crate::QueryError;
 use crate::QueryResult;
@@ -15,12 +15,20 @@ impl RemoveAlias {
         &self,
         db: &mut Db,
         result: &mut QueryResult,
+        context: &mut Context,
     ) -> Result<CommandsMut, QueryError> {
-        let id = db.aliases.value(&self.alias)?.unwrap_or_default();
+        context.id = db
+            .aliases
+            .value(&self.alias)?
+            .ok_or(QueryError::from(format!(
+                "Alias '{}' not found",
+                self.alias
+            )))?;
         db.aliases.remove_key(&self.alias)?;
-        result.result += 1;
-        Ok(CommandsMut::InsertAlias(InsertAlias {
-            id: QueryId::Id(id),
+        result.result -= 1;
+
+        Ok(CommandsMut::InsertAliasId(InsertAliasId {
+            id: context.id,
             alias: self.alias.clone(),
         }))
     }

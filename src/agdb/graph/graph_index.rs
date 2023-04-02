@@ -1,25 +1,11 @@
-#[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+use crate::utilities::stable_hash::StableHash;
+
+#[derive(Clone, Copy, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct GraphIndex {
-    pub(crate) index: i64,
+    pub index: i64,
 }
 
 impl GraphIndex {
-    pub fn as_u64(&self) -> u64 {
-        if self.is_edge() {
-            (-self.value()) as u64
-        } else {
-            self.value() as u64
-        }
-    }
-
-    pub fn as_usize(&self) -> usize {
-        if self.is_edge() {
-            (-self.value()) as usize
-        } else {
-            self.value() as usize
-        }
-    }
-
     pub fn is_edge(&self) -> bool {
         self.index < 0
     }
@@ -32,14 +18,32 @@ impl GraphIndex {
         self.index != 0
     }
 
-    pub fn value(&self) -> i64 {
-        self.index
+    pub(crate) fn as_u64(&self) -> u64 {
+        if self.is_edge() {
+            (-self.index) as u64
+        } else {
+            self.index as u64
+        }
+    }
+
+    pub(crate) fn as_usize(&self) -> usize {
+        if self.is_edge() {
+            (-self.index) as usize
+        } else {
+            self.index as usize
+        }
     }
 }
 
 impl From<i64> for GraphIndex {
     fn from(index: i64) -> Self {
         Self { index }
+    }
+}
+
+impl StableHash for GraphIndex {
+    fn stable_hash(&self) -> u64 {
+        self.index.stable_hash()
     }
 }
 

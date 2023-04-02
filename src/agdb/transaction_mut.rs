@@ -1,8 +1,10 @@
 use crate::commands_mut::CommandsMut;
 use crate::db::db_context::Context;
+use crate::graph::graph_index::GraphIndex;
 use crate::query::Query;
 use crate::query::QueryMut;
 use crate::Db;
+use crate::DbId;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::Transaction;
@@ -25,7 +27,10 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
-        let mut context = Context { index: 0 };
+        let mut context = Context {
+            id: DbId { id: 0 },
+            graph_index: GraphIndex { index: 0 },
+        };
         let mut result = QueryResult {
             result: 0,
             elements: vec![],
@@ -44,7 +49,10 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub(crate) fn rollback(mut self) -> Result<(), QueryError> {
-        let mut context = Context { index: 0 };
+        let mut context = Context {
+            id: DbId { id: 0 },
+            graph_index: GraphIndex { index: 0 },
+        };
         let mut result = QueryResult {
             result: 0,
             elements: vec![],
@@ -66,12 +74,19 @@ impl<'a> TransactionMut<'a> {
         result: &mut QueryResult,
     ) -> Result<CommandsMut, QueryError> {
         match command {
-            CommandsMut::InsertAlias(data) => data.process(&mut self.db, result),
-            CommandsMut::InsertEdge(data) => data.process(&mut self.db, context, result),
-            CommandsMut::InsertNode(data) => data.process(&mut self.db, result),
-            CommandsMut::RemoveAlias(data) => data.process(&mut self.db, result),
-            CommandsMut::RemoveEdge(data) => data.process(&mut self.db, result),
-            CommandsMut::RemoveNode(data) => data.process(&mut self.db, result),
+            CommandsMut::InsertAlias(data) => data.process(&mut self.db, result, context),
+            CommandsMut::InsertAliasId(data) => data.process(&mut self.db, result),
+            CommandsMut::InsertEdge(data) => data.process(&mut self.db, context),
+            CommandsMut::InsertIndex(data) => data.process(&mut self.db, result, context),
+            CommandsMut::InsertIndexId(data) => data.process(&mut self.db),
+            CommandsMut::InsertNode(data) => data.process(&mut self.db, context),
+            CommandsMut::RemoveAlias(data) => data.process(&mut self.db, result, context),
+            CommandsMut::RemoveEdge(data) => data.process(&mut self.db, context),
+            CommandsMut::RemoveIndex(data) => data.process(&mut self.db, context),
+            CommandsMut::RemoveEdgeIndex(data) => data.process(&mut self.db),
+            CommandsMut::RemoveIndexId(data) => data.process(&mut self.db, context),
+            CommandsMut::RemoveNode(data) => data.process(&mut self.db, result, context),
+            CommandsMut::RemoveNodeIndex(data) => data.process(&mut self.db, result),
         }
     }
 }

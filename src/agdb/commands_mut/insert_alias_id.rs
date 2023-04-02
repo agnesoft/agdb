@@ -1,23 +1,23 @@
 use super::remove_alias::RemoveAlias;
 use super::CommandsMut;
-use crate::db::db_context::Context;
 use crate::Db;
+use crate::DbId;
 use crate::QueryError;
 use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
-pub struct InsertAlias {
+pub struct InsertAliasId {
+    pub(crate) id: DbId,
     pub(crate) alias: String,
 }
 
-impl InsertAlias {
+impl InsertAliasId {
     pub(crate) fn process(
         &self,
         db: &mut Db,
         result: &mut QueryResult,
-        context: &Context,
     ) -> Result<CommandsMut, QueryError> {
-        db.aliases.insert(&self.alias, &context.id)?;
+        db.aliases.insert(&self.alias, &self.id)?;
         result.result += 1;
 
         Ok(CommandsMut::RemoveAlias(RemoveAlias {
@@ -34,7 +34,8 @@ mod tests {
     fn derived_from_debug() {
         format!(
             "{:?}",
-            InsertAlias {
+            InsertAliasId {
+                id: DbId { id: 0 },
                 alias: String::new()
             }
         );
@@ -43,10 +44,12 @@ mod tests {
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            InsertAlias {
+            InsertAliasId {
+                id: DbId { id: 0 },
                 alias: String::new()
             },
-            InsertAlias {
+            InsertAliasId {
+                id: DbId { id: 0 },
                 alias: String::new()
             }
         );

@@ -18,3 +18,33 @@ impl InsertIndexId {
         Ok(CommandsMut::RemoveIndexId(RemoveIndexId { id: self.id }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!(
+            "{:?}",
+            InsertIndexId {
+                id: DbId { id: 0 },
+                graph_index: GraphIndex { index: 0 }
+            }
+        );
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            InsertIndexId {
+                id: DbId { id: 0 },
+                graph_index: GraphIndex { index: 0 }
+            },
+            InsertIndexId {
+                id: DbId { id: 0 },
+                graph_index: GraphIndex { index: 0 }
+            }
+        );
+    }
+}

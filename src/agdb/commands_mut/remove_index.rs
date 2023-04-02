@@ -32,3 +32,18 @@ impl RemoveIndex {
         }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", RemoveIndex {});
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(RemoveIndex {}, RemoveIndex {});
+    }
+}

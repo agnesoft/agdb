@@ -60,7 +60,7 @@ impl<'a> TransactionMut<'a> {
         let mut undo_commands = vec![];
         std::mem::swap(&mut self.undo_stack, &mut undo_commands);
 
-        for command in undo_commands {
+        for command in undo_commands.into_iter().rev() {
             self.process_command(command, &mut context, &mut result)?;
         }
 

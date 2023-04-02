@@ -51,12 +51,22 @@ impl StableHash for GraphIndex {
 mod tests {
     use super::*;
     use std::cmp::Ordering;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::Hash;
+    use std::hash::Hasher;
 
     #[test]
     fn derived_from_debug() {
         let index = GraphIndex::default();
 
         format!("{index:?}");
+    }
+
+    #[test]
+    fn derived_from_hash() {
+        let mut hasher = DefaultHasher::new();
+        GraphIndex { index: 1 }.hash(&mut hasher);
+        assert_ne!(hasher.finish(), 0);
     }
 
     #[test]

@@ -31,3 +31,21 @@ impl RemoveIndexId {
         }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", RemoveIndexId { id: DbId { id: 0 } });
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            RemoveIndexId { id: DbId { id: 0 } },
+            RemoveIndexId { id: DbId { id: 0 } }
+        );
+    }
+}

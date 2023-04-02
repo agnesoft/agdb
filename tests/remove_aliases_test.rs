@@ -3,6 +3,8 @@ mod test_file;
 
 use agdb::Db;
 use agdb::QueryBuilder;
+use agdb::QueryError;
+use agdb::QueryResult;
 use test_file::TestFile;
 
 #[test]
@@ -38,4 +40,37 @@ fn remove_aliases() {
 
     assert_eq!(result.result, 0);
     assert_eq!(result.elements, vec![]);
+}
+
+#[test]
+fn remove_aliases_rollback() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(
+        &QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into(), "alias2".into()])
+            .query(),
+    )
+    .unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<QueryResult, QueryError> {
+            let query = QueryBuilder::remove()
+                .aliases(&["alias".into(), "alias2".into()])
+                .query();
+            let _ = transaction.exec_mut(&query).unwrap();
+
+            transaction.exec(&QueryBuilder::select().id("alias2".into()).query())
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "Alias 'alias2' not found");
+
+    let result = db
+        .exec(&QueryBuilder::select().id("alias2".into()).query())
+        .unwrap();
+
+    assert_eq!(result.result, 1);
 }

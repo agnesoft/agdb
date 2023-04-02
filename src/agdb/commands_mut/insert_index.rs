@@ -27,3 +27,18 @@ impl InsertIndex {
         Ok(CommandsMut::RemoveIndexId(RemoveIndexId { id: context.id }))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", InsertIndex {});
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(InsertIndex {}, InsertIndex {});
+    }
+}

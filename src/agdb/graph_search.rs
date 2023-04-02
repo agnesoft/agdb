@@ -42,8 +42,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index.clone())
-                .search(handler)
+            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, *index).search(handler)
         } else {
             vec![]
         }
@@ -55,7 +54,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearchReverse>::new(self.graph, index.clone())
+            SearchImpl::<'a, Data, BreadthFirstSearchReverse>::new(self.graph, *index)
                 .search(handler)
         } else {
             vec![]
@@ -68,7 +67,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index.clone()).search(handler)
+            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, *index).search(handler)
         } else {
             vec![]
         }
@@ -80,8 +79,7 @@ where
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearchReverse>::new(self.graph, index.clone())
-                .search(handler)
+            SearchImpl::<'a, Data, DepthFirstSearchReverse>::new(self.graph, *index).search(handler)
         } else {
             vec![]
         }
@@ -94,8 +92,7 @@ where
         handler: &'a Handler,
     ) -> Vec<GraphIndex> {
         if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<'a, Data, Handler>::new(self.graph, from.clone(), to.clone(), handler)
-                .search()
+            PathSearch::<'a, Data, Handler>::new(self.graph, *from, *to, handler).search()
         } else {
             vec![]
         }

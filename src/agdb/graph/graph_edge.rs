@@ -13,7 +13,7 @@ where
     Data: GraphData,
 {
     pub fn index(&self) -> GraphIndex {
-        self.index.clone()
+        self.index
     }
 
     pub fn index_from(&self) -> GraphIndex {

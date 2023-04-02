@@ -47,7 +47,7 @@ impl Db {
     }
 
     pub fn transaction<T, E>(&self, f: impl Fn(&Transaction) -> Result<T, E>) -> Result<T, E> {
-        let transaction = Transaction::new(&self);
+        let transaction = Transaction::new(self);
 
         f(&transaction)
     }
@@ -70,12 +70,12 @@ impl Db {
     }
 
     pub(crate) fn graph_index_from_id(&self, id: &QueryId) -> Result<GraphIndex, QueryError> {
-        Ok(GraphIndex::from(self.index_from_id(id)?))
+        self.index_from_id(id)
     }
 
     pub(crate) fn index_from_id(&self, id: &QueryId) -> Result<GraphIndex, QueryError> {
         let db_id = match id {
-            QueryId::Id(id) => DbId { id: id.clone() },
+            QueryId::Id(id) => DbId { id: *id },
             QueryId::Alias(alias) => self
                 .aliases
                 .value(alias)?

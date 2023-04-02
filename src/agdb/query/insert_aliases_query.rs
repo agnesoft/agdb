@@ -30,7 +30,7 @@ impl InsertAliasesQuery {
         match id {
             QueryId::Id(id) => {
                 vec![CommandsMut::InsertAliasId(InsertAliasId {
-                    id: DbId { id: id.clone() },
+                    id: DbId { id: *id },
                     alias: self.aliases[0].clone(),
                 })]
             }

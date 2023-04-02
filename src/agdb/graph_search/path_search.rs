@@ -65,7 +65,7 @@ where
             .process(index, &(self.current_path.elements.len() as u64 + 1));
 
         if cost != 0 && !self.visited.value(node_index.as_u64()) {
-            path.elements.push(index.clone());
+            path.elements.push(*index);
             path.cost += cost;
             self.expand_node(path, node_index);
         }
@@ -77,7 +77,7 @@ where
             .process(index, &(self.current_path.elements.len() as u64 + 1));
 
         if cost != 0 {
-            path.elements.push(index.clone());
+            path.elements.push(*index);
             path.cost += cost;
             self.paths.push(path);
         }
@@ -102,7 +102,7 @@ where
             .current_path
             .elements
             .last()
-            .map_or(GraphIndex::default(), |index| index.clone());
+            .map_or(GraphIndex::default(), |index| *index);
         self.process_index(&index);
     }
 

@@ -24,7 +24,7 @@ where
 
         Some(GraphEdge {
             graph: self,
-            index: index.clone(),
+            index: *index,
         })
     }
 
@@ -65,7 +65,7 @@ where
 
         Some(GraphNode {
             graph: self,
-            index: index.clone(),
+            index: *index,
         })
     }
 

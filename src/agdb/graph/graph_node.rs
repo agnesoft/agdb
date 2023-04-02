@@ -18,7 +18,7 @@ where
     Data: GraphData,
 {
     pub fn index(&self) -> GraphIndex {
-        self.index.clone()
+        self.index
     }
 
     pub fn edge_iter_from(&self) -> GraphEdgeIterator<Data> {

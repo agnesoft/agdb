@@ -23,7 +23,7 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
-        Transaction::new(&self.db).exec(query)
+        Transaction::new(self.db).exec(query)
     }
 
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
@@ -74,19 +74,19 @@ impl<'a> TransactionMut<'a> {
         result: &mut QueryResult,
     ) -> Result<CommandsMut, QueryError> {
         match command {
-            CommandsMut::InsertAlias(data) => data.process(&mut self.db, context),
-            CommandsMut::InsertAliasId(data) => data.process(&mut self.db),
-            CommandsMut::InsertEdge(data) => data.process(&mut self.db, context),
-            CommandsMut::InsertIndex(data) => data.process(&mut self.db, result, context),
-            CommandsMut::InsertIndexId(data) => data.process(&mut self.db),
-            CommandsMut::InsertNode(data) => data.process(&mut self.db, context),
-            CommandsMut::RemoveAlias(data) => data.process(&mut self.db, context),
-            CommandsMut::RemoveEdge(data) => data.process(&mut self.db, context),
-            CommandsMut::RemoveIndex(data) => data.process(&mut self.db, result, context),
-            CommandsMut::RemoveEdgeIndex(data) => data.process(&mut self.db),
-            CommandsMut::RemoveIndexId(data) => data.process(&mut self.db, result, context),
-            CommandsMut::RemoveNode(data) => data.process(&mut self.db, context),
-            CommandsMut::RemoveNodeIndex(data) => data.process(&mut self.db),
+            CommandsMut::InsertAlias(data) => data.process(self.db, context),
+            CommandsMut::InsertAliasId(data) => data.process(self.db),
+            CommandsMut::InsertEdge(data) => data.process(self.db, context),
+            CommandsMut::InsertIndex(data) => data.process(self.db, result, context),
+            CommandsMut::InsertIndexId(data) => data.process(self.db),
+            CommandsMut::InsertNode(data) => data.process(self.db, context),
+            CommandsMut::RemoveAlias(data) => data.process(self.db, context),
+            CommandsMut::RemoveEdge(data) => data.process(self.db, context),
+            CommandsMut::RemoveIndex(data) => data.process(self.db, result, context),
+            CommandsMut::RemoveEdgeIndex(data) => data.process(self.db),
+            CommandsMut::RemoveIndexId(data) => data.process(self.db, result, context),
+            CommandsMut::RemoveNode(data) => data.process(self.db, context),
+            CommandsMut::RemoveNodeIndex(data) => data.process(self.db),
         }
     }
 }

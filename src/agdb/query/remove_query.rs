@@ -46,9 +46,9 @@ impl RemoveQuery {
     }
 
     fn remove_index(id: &QueryId) -> Vec<CommandsMut> {
-        let commands = match id {
+        match id {
             QueryId::Id(id) => vec![CommandsMut::RemoveIndexId(RemoveIndexId {
-                id: DbId { id: id.clone() },
+                id: DbId { id: *id },
             })],
             QueryId::Alias(alias) => vec![
                 CommandsMut::RemoveAlias(RemoveAlias {
@@ -56,9 +56,7 @@ impl RemoveQuery {
                 }),
                 CommandsMut::RemoveIndex(RemoveIndex {}),
             ],
-        };
-
-        commands
+        }
     }
 }
 

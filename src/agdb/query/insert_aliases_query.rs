@@ -51,7 +51,7 @@ impl InsertAliasesQuery {
         let mut commands = Vec::<CommandsMut>::new();
 
         for (id, alias) in ids.iter().zip(&self.aliases) {
-            commands.extend(self.id(id, &alias));
+            commands.extend(self.id(id, alias));
         }
 
         commands

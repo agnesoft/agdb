@@ -3,7 +3,6 @@ use super::CommandsMut;
 use crate::graph::graph_index::GraphIndex;
 use crate::Db;
 use crate::QueryError;
-use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct RemoveNodeIndex {
@@ -11,13 +10,8 @@ pub struct RemoveNodeIndex {
 }
 
 impl RemoveNodeIndex {
-    pub(crate) fn process(
-        &self,
-        db: &mut Db,
-        result: &mut QueryResult,
-    ) -> Result<CommandsMut, QueryError> {
+    pub(crate) fn process(&self, db: &mut Db) -> Result<CommandsMut, QueryError> {
         db.graph.remove_node(&self.index)?;
-        result.result -= 1;
         Ok(CommandsMut::InsertNode(InsertNode {}))
     }
 }

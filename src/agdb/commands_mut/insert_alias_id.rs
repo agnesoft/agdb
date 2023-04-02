@@ -3,7 +3,6 @@ use super::CommandsMut;
 use crate::Db;
 use crate::DbId;
 use crate::QueryError;
-use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertAliasId {
@@ -12,13 +11,8 @@ pub struct InsertAliasId {
 }
 
 impl InsertAliasId {
-    pub(crate) fn process(
-        &self,
-        db: &mut Db,
-        result: &mut QueryResult,
-    ) -> Result<CommandsMut, QueryError> {
+    pub(crate) fn process(&self, db: &mut Db) -> Result<CommandsMut, QueryError> {
         db.aliases.insert(&self.alias, &self.id)?;
-        result.result += 1;
 
         Ok(CommandsMut::RemoveAlias(RemoveAlias {
             alias: self.alias.clone(),

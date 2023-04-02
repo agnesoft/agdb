@@ -3,7 +3,6 @@ use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
 use crate::QueryError;
-use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct RemoveAlias {
@@ -14,7 +13,6 @@ impl RemoveAlias {
     pub(crate) fn process(
         &self,
         db: &mut Db,
-        result: &mut QueryResult,
         context: &mut Context,
     ) -> Result<CommandsMut, QueryError> {
         context.id = db
@@ -25,7 +23,6 @@ impl RemoveAlias {
                 self.alias
             )))?;
         db.aliases.remove_key(&self.alias)?;
-        result.result -= 1;
 
         Ok(CommandsMut::InsertAliasId(InsertAliasId {
             id: context.id,

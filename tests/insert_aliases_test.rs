@@ -14,7 +14,7 @@ fn insert_alias_id() {
     let query = QueryBuilder::insert().alias("alias").id(1.into()).query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 1);
+    assert_eq!(result.result, 0);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -31,7 +31,7 @@ fn insert_aliases_ids() {
         .query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 2);
+    assert_eq!(result.result, 0);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -49,6 +49,6 @@ fn insert_aliases_alias() {
         .query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 2);
+    assert_eq!(result.result, 0);
     assert_eq!(result.elements, vec![]);
 }

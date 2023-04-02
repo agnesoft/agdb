@@ -58,7 +58,7 @@ pub fn remove_edge() {
     )
     .unwrap();
 
-    let query = QueryBuilder::remove().id((-1).into()).query();
+    let query = QueryBuilder::remove().id((-3).into()).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, -1);
@@ -83,7 +83,7 @@ pub fn remove_edges() {
     .unwrap();
 
     let query = QueryBuilder::remove()
-        .ids(&[(-1).into(), (-2).into()])
+        .ids(&[(-3).into(), (-4).into()])
         .query();
     let result = db.exec_mut(&query).unwrap();
 

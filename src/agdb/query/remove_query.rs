@@ -72,7 +72,10 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::RemoveNode(RemoveNode {})])
+            Ok(vec![
+                CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId { id: 1 } }),
+                CommandsMut::RemoveNode(RemoveNode {})
+            ])
         )
     }
 
@@ -82,7 +85,10 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::RemoveNode(RemoveNode {})])
+            Ok(vec![
+                CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId { id: 1 } }),
+                CommandsMut::RemoveNode(RemoveNode {})
+            ])
         )
     }
 

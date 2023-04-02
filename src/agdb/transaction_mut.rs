@@ -74,19 +74,19 @@ impl<'a> TransactionMut<'a> {
         result: &mut QueryResult,
     ) -> Result<CommandsMut, QueryError> {
         match command {
-            CommandsMut::InsertAlias(data) => data.process(&mut self.db, result, context),
-            CommandsMut::InsertAliasId(data) => data.process(&mut self.db, result),
+            CommandsMut::InsertAlias(data) => data.process(&mut self.db, context),
+            CommandsMut::InsertAliasId(data) => data.process(&mut self.db),
             CommandsMut::InsertEdge(data) => data.process(&mut self.db, context),
             CommandsMut::InsertIndex(data) => data.process(&mut self.db, result, context),
             CommandsMut::InsertIndexId(data) => data.process(&mut self.db),
             CommandsMut::InsertNode(data) => data.process(&mut self.db, context),
-            CommandsMut::RemoveAlias(data) => data.process(&mut self.db, result, context),
+            CommandsMut::RemoveAlias(data) => data.process(&mut self.db, context),
             CommandsMut::RemoveEdge(data) => data.process(&mut self.db, context),
-            CommandsMut::RemoveIndex(data) => data.process(&mut self.db, context),
+            CommandsMut::RemoveIndex(data) => data.process(&mut self.db, result, context),
             CommandsMut::RemoveEdgeIndex(data) => data.process(&mut self.db),
-            CommandsMut::RemoveIndexId(data) => data.process(&mut self.db, context),
-            CommandsMut::RemoveNode(data) => data.process(&mut self.db, result, context),
-            CommandsMut::RemoveNodeIndex(data) => data.process(&mut self.db, result),
+            CommandsMut::RemoveIndexId(data) => data.process(&mut self.db, result, context),
+            CommandsMut::RemoveNode(data) => data.process(&mut self.db, context),
+            CommandsMut::RemoveNodeIndex(data) => data.process(&mut self.db),
         }
     }
 }

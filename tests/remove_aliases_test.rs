@@ -15,7 +15,7 @@ fn remove_alias() {
     let query = QueryBuilder::remove().alias("alias").query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 1);
+    assert_eq!(result.result, 0);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -36,6 +36,6 @@ fn remove_aliases() {
         .query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 2);
+    assert_eq!(result.result, 0);
     assert_eq!(result.elements, vec![]);
 }

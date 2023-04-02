@@ -27,7 +27,7 @@ fn insert_edge_from_to() {
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: DbId { id: -1 },
+            index: DbId { id: -3 },
             values: vec![]
         }]
     )

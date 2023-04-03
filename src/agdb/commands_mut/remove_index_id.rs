@@ -18,17 +18,18 @@ impl RemoveIndexId {
         result: &mut QueryResult,
         context: &mut Context,
     ) -> Result<CommandsMut, QueryError> {
-        context.graph_index = db
-            .indexes
-            .value(&self.id)?
-            .ok_or(QueryError::from(format!("Id '{}' not found", &self.id.id)))?;
-        db.indexes.remove_key(&self.id)?;
-        result.result -= 1;
+        if let Some(graph_index) = db.indexes.value(&self.id)? {
+            context.graph_index = graph_index;
+            db.indexes.remove_key(&self.id)?;
+            result.result -= 1;
 
-        Ok(CommandsMut::InsertIndexId(InsertIndexId {
-            id: self.id,
-            graph_index: context.graph_index,
-        }))
+            Ok(CommandsMut::InsertIndexId(InsertIndexId {
+                id: self.id,
+                graph_index: context.graph_index,
+            }))
+        } else {
+            Ok(CommandsMut::None)
+        }
     }
 }
 

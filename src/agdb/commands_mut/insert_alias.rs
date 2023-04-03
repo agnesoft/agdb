@@ -15,6 +15,10 @@ impl InsertAlias {
         db: &mut Db,
         context: &Context,
     ) -> Result<CommandsMut, QueryError> {
+        if self.alias.is_empty() {
+            return Err(QueryError::from("Empty alias is not allowed"));
+        }
+
         db.aliases.insert(&self.alias, &context.id)?;
 
         Ok(CommandsMut::RemoveAlias(RemoveAlias {

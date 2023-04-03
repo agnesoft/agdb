@@ -12,6 +12,10 @@ pub struct InsertAliasId {
 
 impl InsertAliasId {
     pub(crate) fn process(&self, db: &mut Db) -> Result<CommandsMut, QueryError> {
+        if self.alias.is_empty() {
+            return Err(QueryError::from("Empty alias is not allowed"));
+        }
+
         db.aliases.insert(&self.alias, &self.id)?;
 
         Ok(CommandsMut::RemoveAlias(RemoveAlias {

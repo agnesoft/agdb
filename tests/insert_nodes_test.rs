@@ -61,6 +61,17 @@ fn insert_node_alias() {
 }
 
 #[test]
+fn insert_node_alias_empty() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    let query = QueryBuilder::insert().node().alias("").query();
+    let error = db.exec_mut(&query).unwrap_err();
+
+    assert_eq!(error.description, "Empty alias is not allowed");
+}
+
+#[test]
 fn insert_node_alias_rollback() {
     let test_file = TestFile::new();
 

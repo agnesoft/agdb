@@ -24,7 +24,8 @@ pub fn remove_node_rollback() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
+        .unwrap();
 
     let error = db
         .transaction_mut(|transaction| {
@@ -41,7 +42,7 @@ pub fn remove_node_rollback() {
     assert_eq!(error.description, "Id '1' not found");
 
     let result = db
-        .exec(&QueryBuilder::select().id(1.into()).query())
+        .exec(&QueryBuilder::select().id("alias".into()).query())
         .unwrap();
 
     assert_eq!(result.result, 1);
@@ -191,6 +192,28 @@ pub fn remove_missing_node_alias() {
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 0);
+}
+
+#[test]
+pub fn remove_node_with_alias() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
+        .unwrap();
+
+    let result = db
+        .exec_mut(&QueryBuilder::remove().id(1.into()).query())
+        .unwrap();
+
+    assert_eq!(result.result, -1);
+    assert_eq!(result.elements, vec![]);
+
+    let error = db
+        .exec(&QueryBuilder::select().id("alias".into()).query())
+        .unwrap_err();
+
+    assert_eq!(error.description, "Alias 'alias' not found");
 }
 
 #[test]

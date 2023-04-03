@@ -75,6 +75,7 @@ impl<'a> TransactionMut<'a> {
     ) -> Result<CommandsMut, QueryError> {
         match command {
             CommandsMut::InsertAlias(data) => data.process(self.db, context),
+            CommandsMut::RemoveAliasId(data) => data.process(self.db),
             CommandsMut::InsertAliasResult(data) => data.process(self.db, result, context),
             CommandsMut::InsertAliasId(data) => data.process(self.db),
             CommandsMut::InsertAliasIdResult(data) => data.process(self.db, result),

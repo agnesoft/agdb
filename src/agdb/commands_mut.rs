@@ -7,6 +7,7 @@ pub mod insert_index;
 pub mod insert_index_id;
 pub mod insert_node;
 pub mod remove_alias;
+pub mod remove_alias_id;
 pub mod remove_alias_result;
 pub mod remove_edge;
 pub mod remove_edge_index;
@@ -24,6 +25,7 @@ use self::insert_index::InsertIndex;
 use self::insert_index_id::InsertIndexId;
 use self::insert_node::InsertNode;
 use self::remove_alias::RemoveAlias;
+use self::remove_alias_id::RemoveAliasId;
 use self::remove_alias_result::RemoveAliasResult;
 use self::remove_edge::RemoveEdge;
 use self::remove_edge_index::RemoveEdgeIndex;
@@ -44,6 +46,7 @@ pub enum CommandsMut {
     InsertIndexId(InsertIndexId),
     InsertNode(InsertNode),
     RemoveAlias(RemoveAlias),
+    RemoveAliasId(RemoveAliasId),
     RemoveAliasResult(RemoveAliasResult),
     RemoveEdge(RemoveEdge),
     RemoveEdgeIndex(RemoveEdgeIndex),

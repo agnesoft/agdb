@@ -75,18 +75,22 @@ impl<'a> TransactionMut<'a> {
     ) -> Result<CommandsMut, QueryError> {
         match command {
             CommandsMut::InsertAlias(data) => data.process(self.db, context),
+            CommandsMut::InsertAliasResult(data) => data.process(self.db, result, context),
             CommandsMut::InsertAliasId(data) => data.process(self.db),
+            CommandsMut::InsertAliasIdResult(data) => data.process(self.db, result),
             CommandsMut::InsertEdge(data) => data.process(self.db, context),
             CommandsMut::InsertIndex(data) => data.process(self.db, result, context),
             CommandsMut::InsertIndexId(data) => data.process(self.db),
             CommandsMut::InsertNode(data) => data.process(self.db, context),
             CommandsMut::RemoveAlias(data) => data.process(self.db, context),
+            CommandsMut::RemoveAliasResult(data) => data.process(self.db, result, context),
             CommandsMut::RemoveEdge(data) => data.process(self.db, context),
             CommandsMut::RemoveIndex(data) => data.process(self.db, result, context),
             CommandsMut::RemoveEdgeIndex(data) => data.process(self.db),
             CommandsMut::RemoveIndexId(data) => data.process(self.db, result, context),
             CommandsMut::RemoveNode(data) => data.process(self.db, context),
             CommandsMut::RemoveNodeIndex(data) => data.process(self.db),
+            CommandsMut::None => Ok(CommandsMut::None),
         }
     }
 }

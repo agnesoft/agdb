@@ -1,5 +1,6 @@
 use super::QueryMut;
 use crate::commands_mut::remove_alias::RemoveAlias;
+use crate::commands_mut::remove_alias_result::RemoveAliasResult;
 use crate::commands_mut::CommandsMut;
 use crate::QueryError;
 
@@ -13,9 +14,9 @@ impl QueryMut for RemoveAliasesQuery {
             .aliases
             .iter()
             .map(|alias| {
-                CommandsMut::RemoveAlias(RemoveAlias {
+                CommandsMut::RemoveAliasResult(RemoveAliasResult(RemoveAlias {
                     alias: alias.clone(),
-                })
+                }))
             })
             .collect())
     }

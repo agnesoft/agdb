@@ -158,6 +158,42 @@ pub fn remove_edges() {
 }
 
 #[test]
+pub fn remove_missing_edge() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let query = QueryBuilder::remove().id((-3).into()).query();
+    let result = db.exec_mut(&query).unwrap();
+
+    assert_eq!(result.result, 0);
+}
+
+#[test]
+pub fn remove_missing_node() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let query = QueryBuilder::remove().id(1.into()).query();
+    let result = db.exec_mut(&query).unwrap();
+
+    assert_eq!(result.result, 0);
+}
+
+#[test]
+pub fn remove_missing_node_alias() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let query = QueryBuilder::remove().id("alias".into()).query();
+    let result = db.exec_mut(&query).unwrap();
+
+    assert_eq!(result.result, 0);
+}
+
+#[test]
 pub fn remove_search() {
     let _query = QueryBuilder::remove()
         .search(QueryBuilder::search().from("origin".into()).query())

@@ -15,21 +15,17 @@ impl RemoveIndex {
         result: &mut QueryResult,
         context: &Context,
     ) -> Result<CommandsMut, QueryError> {
-        let index = db
-            .indexes
-            .value(&context.id)?
-            .ok_or(QueryError::from(format!(
-                "Id '{}' not found",
-                &context.id.id
-            )))?;
-        result.result -= 1;
+        if let Some(graph_index) = db.indexes.value(&context.id)? {
+            db.indexes.remove_key(&context.id)?;
+            result.result -= 1;
 
-        db.indexes.remove_key(&context.id)?;
-
-        Ok(CommandsMut::InsertIndexId(InsertIndexId {
-            id: context.id,
-            graph_index: index,
-        }))
+            Ok(CommandsMut::InsertIndexId(InsertIndexId {
+                id: context.id,
+                graph_index,
+            }))
+        } else {
+            Ok(CommandsMut::None)
+        }
     }
 }
 

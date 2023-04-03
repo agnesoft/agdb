@@ -1,30 +1,27 @@
-use super::insert_alias_id::InsertAliasId;
+use super::remove_alias::RemoveAlias;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
 use crate::QueryError;
+use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
-pub struct RemoveAlias {
-    pub(crate) alias: String,
-}
+pub struct RemoveAliasResult(pub(crate) RemoveAlias);
 
-impl RemoveAlias {
+impl RemoveAliasResult {
     pub(crate) fn process(
         &self,
         db: &mut Db,
+        result: &mut QueryResult,
         context: &mut Context,
     ) -> Result<CommandsMut, QueryError> {
-        if let Some(id) = db.aliases.value(&self.alias)? {
-            context.id = id;
-            db.aliases.remove_key(&self.alias)?;
-            Ok(CommandsMut::InsertAliasId(InsertAliasId {
-                id: context.id,
-                alias: self.alias.clone(),
-            }))
-        } else {
-            Ok(CommandsMut::None)
+        let undo = self.0.process(db, context)?;
+
+        if undo != CommandsMut::None {
+            result.result -= 1;
         }
+
+        Ok(undo)
     }
 }
 
@@ -36,21 +33,21 @@ mod tests {
     fn derived_from_debug() {
         format!(
             "{:?}",
-            RemoveAlias {
+            RemoveAliasResult(RemoveAlias {
                 alias: String::new()
-            }
+            })
         );
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            RemoveAlias {
+            RemoveAliasResult(RemoveAlias {
                 alias: String::new()
-            },
-            RemoveAlias {
+            }),
+            RemoveAliasResult(RemoveAlias {
                 alias: String::new()
-            }
+            })
         );
     }
 }

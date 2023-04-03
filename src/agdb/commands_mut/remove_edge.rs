@@ -14,20 +14,17 @@ impl RemoveEdge {
         db: &mut Db,
         context: &Context,
     ) -> Result<CommandsMut, QueryError> {
-        let edge = db
-            .graph
-            .edge(&context.graph_index)
-            .ok_or(QueryError::from(format!(
-                "Index '{}' not found",
-                context.graph_index.index
-            )))?;
-        let undo = CommandsMut::InsertEdge(InsertEdge {
-            from: QueryId::Id(edge.index_from().index),
-            to: QueryId::Id(edge.index_to().index),
-        });
-        db.graph.remove_edge(&context.graph_index)?;
+        if let Some(edge) = db.graph.edge(&context.graph_index) {
+            let undo = CommandsMut::InsertEdge(InsertEdge {
+                from: QueryId::Id(edge.index_from().index),
+                to: QueryId::Id(edge.index_to().index),
+            });
+            db.graph.remove_edge(&context.graph_index)?;
 
-        Ok(undo)
+            Ok(undo)
+        } else {
+            Ok(CommandsMut::None)
+        }
     }
 }
 

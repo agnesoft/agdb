@@ -17,7 +17,7 @@ fn remove_alias() {
     let query = QueryBuilder::remove().alias("alias").query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 0);
+    assert_eq!(result.result, -1);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -38,7 +38,7 @@ fn remove_aliases() {
         .query();
     let result = db.exec_mut(&query).unwrap();
 
-    assert_eq!(result.result, 0);
+    assert_eq!(result.result, -2);
     assert_eq!(result.elements, vec![]);
 }
 
@@ -60,7 +60,10 @@ fn remove_aliases_rollback() {
             let query = QueryBuilder::remove()
                 .aliases(&["alias".into(), "alias2".into()])
                 .query();
-            let _ = transaction.exec_mut(&query).unwrap();
+            let result = transaction.exec_mut(&query).unwrap();
+
+            assert_eq!(result.result, -2);
+            assert_eq!(result.elements, vec![]);
 
             transaction.exec(&QueryBuilder::select().id("alias2".into()).query())
         })
@@ -73,4 +76,36 @@ fn remove_aliases_rollback() {
         .unwrap();
 
     assert_eq!(result.result, 1);
+}
+
+#[test]
+fn remove_missing_alias() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    let query = QueryBuilder::remove().alias("alias").query();
+    let result = db.exec_mut(&query).unwrap();
+
+    assert_eq!(result.result, 0);
+    assert_eq!(result.elements, vec![]);
+}
+
+#[test]
+fn remove_missing_alias_rollback() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<(), QueryError> {
+            let query = QueryBuilder::remove().alias("alias").query();
+            let result = transaction.exec_mut(&query).unwrap();
+
+            assert_eq!(result.result, 0);
+
+            Err("error".into())
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "error");
 }

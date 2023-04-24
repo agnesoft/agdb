@@ -25,9 +25,7 @@ impl QueryMut for InsertEdgesQuery {
                     self.many_to_many(ids)
                 }
             }
-            QueryIds::All | QueryIds::Search(_) => {
-                Err(QueryError::from("Invalid insert edges query"))
-            }
+            QueryIds::Search(_) => Err(QueryError::from("Invalid insert edges query")),
         }
     }
 }
@@ -53,9 +51,7 @@ impl InsertEdgesQuery {
                     commands.extend(Self::insert_edge(from, to));
                 }
             }
-            QueryIds::All | QueryIds::Search(_) => {
-                return Err(QueryError::from("Invalid insert edges query"))
-            }
+            QueryIds::Search(_) => return Err(QueryError::from("Invalid insert edges query")),
         }
 
         Ok(commands)
@@ -75,9 +71,7 @@ impl InsertEdgesQuery {
                     commands.extend(Self::insert_edge(from, to));
                 }
             }
-            QueryIds::All | QueryIds::Search(_) => {
-                return Err(QueryError::from("Invalid insert edges query"))
-            }
+            QueryIds::Search(_) => return Err(QueryError::from("Invalid insert edges query")),
         }
 
         Ok(commands)
@@ -99,9 +93,7 @@ impl InsertEdgesQuery {
                     }
                 }
             }
-            QueryIds::All | QueryIds::Search(_) => {
-                return Err(QueryError::from("Invalid insert edges query"))
-            }
+            QueryIds::Search(_) => return Err(QueryError::from("Invalid insert edges query")),
         }
 
         Ok(commands)
@@ -111,6 +103,7 @@ impl InsertEdgesQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::search_query::SearchQuery;
 
     #[test]
     fn one_to_one() {
@@ -297,7 +290,14 @@ mod tests {
     #[test]
     fn invalid_query_preprocessing_from() {
         let query = InsertEdgesQuery {
-            from: QueryIds::All,
+            from: QueryIds::Search(SearchQuery {
+                origin: QueryId::Id(0),
+                destination: QueryId::Id(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
             to: QueryIds::Id(QueryId::Id(2)),
             values: QueryValues::None,
             each: false,
@@ -313,7 +313,14 @@ mod tests {
     fn invalid_query_preprocessing_to() {
         let query = InsertEdgesQuery {
             from: QueryIds::Id(QueryId::Id(2)),
-            to: QueryIds::All,
+            to: QueryIds::Search(SearchQuery {
+                origin: QueryId::Id(0),
+                destination: QueryId::Id(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
             values: QueryValues::None,
             each: false,
         };
@@ -328,7 +335,14 @@ mod tests {
     fn invalid_query_preprocessing_many_each() {
         let query = InsertEdgesQuery {
             from: QueryIds::Ids(vec![QueryId::Id(2)]),
-            to: QueryIds::All,
+            to: QueryIds::Search(SearchQuery {
+                origin: QueryId::Id(0),
+                destination: QueryId::Id(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
             values: QueryValues::None,
             each: false,
         };
@@ -343,7 +357,14 @@ mod tests {
     fn invalid_query_preprocessing_many_many() {
         let query = InsertEdgesQuery {
             from: QueryIds::Ids(vec![QueryId::Id(2)]),
-            to: QueryIds::All,
+            to: QueryIds::Search(SearchQuery {
+                origin: QueryId::Id(0),
+                destination: QueryId::Id(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
             values: QueryValues::None,
             each: true,
         };

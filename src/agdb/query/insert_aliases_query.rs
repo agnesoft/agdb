@@ -20,9 +20,7 @@ impl QueryMut for InsertAliasesQuery {
         match &self.ids {
             QueryIds::Id(id) => Ok(self.id(id, &self.aliases[0])),
             QueryIds::Ids(ids) => Ok(self.ids(ids)),
-            QueryIds::All | QueryIds::Search(_) => {
-                Err(QueryError::from("Invalid insert aliases query"))
-            }
+            QueryIds::Search(_) => Err(QueryError::from("Invalid insert aliases query")),
         }
     }
 }
@@ -65,6 +63,7 @@ impl InsertAliasesQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::search_query::SearchQuery;
 
     #[test]
     fn valid_id() {
@@ -105,7 +104,14 @@ mod tests {
     #[test]
     fn invalid_query_all() {
         let query = InsertAliasesQuery {
-            ids: QueryIds::All,
+            ids: QueryIds::Search(SearchQuery {
+                origin: QueryId::Id(0),
+                destination: QueryId::Id(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
             aliases: vec![],
         };
 

@@ -18,7 +18,7 @@ impl QueryMut for RemoveQuery {
         match &self.0 {
             QueryIds::Id(id) => Ok(Self::id(id)),
             QueryIds::Ids(ids) => Ok(Self::ids(ids)),
-            QueryIds::All | QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
+            QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
         }
     }
 }
@@ -70,6 +70,7 @@ impl RemoveQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::search_query::SearchQuery;
 
     #[test]
     fn valid_id() {
@@ -102,7 +103,14 @@ mod tests {
 
     #[test]
     fn invalid_query_all() {
-        let query = RemoveQuery(QueryIds::All);
+        let query = RemoveQuery(QueryIds::Search(SearchQuery {
+            origin: QueryId::Id(0),
+            destination: QueryId::Id(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        }));
 
         assert_eq!(
             query.commands().unwrap_err().description,

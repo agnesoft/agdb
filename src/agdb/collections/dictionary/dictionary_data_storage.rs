@@ -1,6 +1,5 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_data_memory::DictionaryDataMemory;
-use super::dictionary_data_storage_indexes::DictionaryDataStorageIndexes;
 use crate::collections::multi_map_storage::MultiMapStorage;
 use crate::collections::vec_storage::VecStorage;
 use crate::db::db_error::DbError;
@@ -8,6 +7,8 @@ use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
+use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -23,6 +24,13 @@ where
     counts: VecStorage<u64, Data>,
     hashes: VecStorage<u64, Data>,
     values: VecStorage<T, Data>,
+}
+
+struct DictionaryDataStorageIndexes {
+    index_index: StorageIndex,
+    counts_index: StorageIndex,
+    hashes_index: StorageIndex,
+    values_index: StorageIndex,
 }
 
 impl<T, Data> DictionaryDataStorage<T, Data>
@@ -162,5 +170,60 @@ where
 
     fn value(&self, index: u64) -> Result<T, DbError> {
         self.values.value(index)
+    }
+}
+
+impl Serialize for DictionaryDataStorageIndexes {
+    fn serialize(&self) -> Vec<u8> {
+        let mut bytes = Vec::<u8>::new();
+        bytes.reserve(self.serialized_size() as usize);
+        bytes.extend(self.index_index.serialize());
+        bytes.extend(self.counts_index.serialize());
+        bytes.extend(self.hashes_index.serialize());
+        bytes.extend(self.values_index.serialize());
+
+        bytes
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+        if bytes.len() < Self::static_serialized_size() as usize {
+            return Err(DbError::from(
+                "DictionaryDataStorageIndexes deserialization error: not enough data",
+            ));
+        }
+
+        Ok(DictionaryDataStorageIndexes {
+            index_index: StorageIndex::deserialize(bytes)?,
+            counts_index: StorageIndex::deserialize(
+                &bytes[StorageIndex::static_serialized_size() as usize..],
+            )?,
+            hashes_index: StorageIndex::deserialize(
+                &bytes[(StorageIndex::static_serialized_size() * 2) as usize..],
+            )?,
+            values_index: StorageIndex::deserialize(
+                &bytes[(StorageIndex::static_serialized_size() * 3) as usize..],
+            )?,
+        })
+    }
+
+    fn serialized_size(&self) -> u64 {
+        Self::static_serialized_size()
+    }
+}
+
+impl SerializeStatic for DictionaryDataStorageIndexes {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bad_deserialize() {
+        assert_eq!(
+            DictionaryDataStorageIndexes::deserialize(&Vec::<u8>::new())
+                .err()
+                .unwrap(),
+            DbError::from("DictionaryDataStorageIndexes deserialization error: not enough data")
+        );
     }
 }

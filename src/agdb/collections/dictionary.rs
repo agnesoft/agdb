@@ -1,9 +1,8 @@
+pub mod dictionary_data;
+pub mod dictionary_data_memory;
 pub mod dictionary_data_storage;
-pub mod dictionary_data_storage_indexes;
 pub mod dictionary_impl;
-
-mod dictionary_data;
-mod dictionary_data_memory;
+pub mod dictionary_index;
 
 use self::dictionary_data_memory::DictionaryDataMemory;
 use self::dictionary_impl::DictionaryImpl;
@@ -29,14 +28,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::dictionary::dictionary_index::DictionaryIndex;
     use crate::test_utilities::collision_value::CollisionValue;
 
     #[test]
     fn count_invalid_index() {
         let dictionary = Dictionary::<i64>::new();
 
-        assert_eq!(dictionary.count(0), Ok(None));
-        assert_eq!(dictionary.count(u64::MAX), Ok(None));
+        assert_eq!(dictionary.count(DictionaryIndex(0)), Ok(None));
+        assert_eq!(dictionary.count(DictionaryIndex(u64::MAX)), Ok(None));
     }
 
     #[test]
@@ -161,12 +161,12 @@ mod tests {
         let mut dictionary = Dictionary::<i64>::new();
 
         let index = dictionary.insert(&10).unwrap();
-        dictionary.remove(index).unwrap();
+        assert!(dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(None));
         assert_eq!(dictionary.count(index), Ok(None));
 
-        dictionary.remove(index).unwrap();
+        assert!(!dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(None));
         assert_eq!(dictionary.count(index), Ok(None));
@@ -183,13 +183,13 @@ mod tests {
         assert_eq!(dictionary.value(index), Ok(Some(10)));
         assert_eq!(dictionary.count(index), Ok(Some(3)));
 
-        dictionary.remove(index).unwrap();
+        assert!(dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(Some(10)));
         assert_eq!(dictionary.count(index), Ok(Some(2)));
 
-        dictionary.remove(index).unwrap();
-        dictionary.remove(index).unwrap();
+        assert!(dictionary.remove(index).unwrap());
+        assert!(dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(None));
         assert_eq!(dictionary.count(index), Ok(None));
@@ -203,7 +203,7 @@ mod tests {
 
         assert_eq!(dictionary.len(), Ok(1));
 
-        dictionary.remove(index + 1).unwrap();
+        assert!(!dictionary.remove(DictionaryIndex(index.0 + 1)).unwrap());
 
         assert_eq!(dictionary.len(), Ok(1));
     }
@@ -211,6 +211,6 @@ mod tests {
     #[test]
     fn value_missing_index() {
         let dictionary = Dictionary::<i64>::new();
-        assert_eq!(dictionary.value(1), Ok(None));
+        assert_eq!(dictionary.value(DictionaryIndex(1)), Ok(None));
     }
 }

@@ -4,9 +4,9 @@ use crate::query::query_ids::QueryIds;
 
 pub struct InsertAlias(pub InsertAliasesQuery);
 
-pub struct InsertAliasesIds(pub InsertAliasesQuery);
-
 pub struct InsertAliases(pub InsertAliasesQuery);
+
+pub struct InsertAliasesIds(pub InsertAliasesQuery);
 
 impl InsertAlias {
     pub fn of<T: Into<QueryId>>(mut self, id: T) -> InsertAliasesIds {

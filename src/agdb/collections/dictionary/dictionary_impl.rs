@@ -1,4 +1,5 @@
 use super::dictionary_data::DictionaryData;
+use super::dictionary_index::DictionaryIndex;
 use crate::db::db_error::DbError;
 use crate::storage::storage_value::StorageValue;
 use crate::utilities::stable_hash::StableHash;
@@ -9,8 +10,8 @@ where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
     Data: DictionaryData<T>,
 {
-    pub(crate) data: Data,
-    pub(crate) phantom_data: PhantomData<T>,
+    pub data: Data,
+    pub phantom_data: PhantomData<T>,
 }
 
 #[allow(dead_code)]
@@ -19,14 +20,13 @@ where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
     Data: DictionaryData<T>,
 {
-    pub fn count(&self, index: u64) -> Result<Option<u64>, DbError> {
-        if self.is_valid_index(index) {
-            let count = self.data.count(index)?;
+    pub fn count(&self, index: DictionaryIndex) -> Result<Option<u64>, DbError> {
+        if self.is_valid_index(index.0) {
+            let count = self.data.count(index.0)?;
 
             if count != 0 {
                 return Ok(Some(count));
             }
-        } else {
         }
 
         Ok(None)
@@ -36,11 +36,11 @@ where
         self.data.count(0)
     }
 
-    pub fn index(&self, value: &T) -> Result<Option<u64>, DbError> {
+    pub fn index(&self, value: &T) -> Result<Option<DictionaryIndex>, DbError> {
         self.find_value(value.stable_hash(), value)
     }
 
-    pub fn insert(&mut self, value: &T) -> Result<u64, DbError> {
+    pub fn insert(&mut self, value: &T) -> Result<DictionaryIndex, DbError> {
         let hash = value.stable_hash();
         let index;
 
@@ -48,10 +48,10 @@ where
 
         if let Some(i) = self.find_value(hash, value)? {
             index = i;
-            let count = self.data.count(index)?;
-            self.data.set_count(index, count + 1)?;
+            let count = self.data.count(index.0)?;
+            self.data.set_count(index.0, count + 1)?;
         } else {
-            index = self.insert_new(hash, value)?;
+            index = DictionaryIndex(self.insert_new(hash, value)?);
         }
 
         self.data.commit()?;
@@ -59,40 +59,41 @@ where
         Ok(index)
     }
 
-    pub fn remove(&mut self, index: u64) -> Result<(), DbError> {
-        if self.is_valid_index(index) {
-            let count = self.data.count(index)?;
+    pub fn remove(&mut self, index: DictionaryIndex) -> Result<bool, DbError> {
+        if self.is_valid_index(index.0) {
+            let count = self.data.count(index.0)?;
 
             if count != 0 {
                 self.data.transaction();
 
                 if count == 1 {
-                    self.remove_value(index)?
+                    self.remove_value(index.0)?
                 } else {
-                    self.data.set_count(index, count - 1)?
+                    self.data.set_count(index.0, count - 1)?
                 }
 
                 self.data.commit()?;
+                return Ok(true);
             }
         }
 
-        Ok(())
+        Ok(false)
     }
 
-    pub fn value(&self, index: u64) -> Result<Option<T>, DbError> {
+    pub fn value(&self, index: DictionaryIndex) -> Result<Option<T>, DbError> {
         let mut v = None;
 
-        if self.is_valid_index(index) && self.data.count(index)? != 0 {
-            v = Some(self.data.value(index)?);
+        if self.is_valid_index(index.0) && self.data.count(index.0)? != 0 {
+            v = Some(self.data.value(index.0)?);
         }
 
         Ok(v)
     }
 
-    fn find_value(&self, hash: u64, value: &T) -> Result<Option<u64>, DbError> {
+    fn find_value(&self, hash: u64, value: &T) -> Result<Option<DictionaryIndex>, DbError> {
         for index in self.data.indexes(hash)? {
             if *value == self.data.value(index)? {
-                return Ok(Some(index));
+                return Ok(Some(DictionaryIndex(index)));
             }
         }
 

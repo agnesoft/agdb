@@ -49,6 +49,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::dictionary::dictionary_index::DictionaryIndex;
     use crate::test_utilities::collision_value::CollisionValue;
     use crate::test_utilities::test_file::TestFile;
 
@@ -60,7 +61,7 @@ mod tests {
         ));
         let dictionary = DictionaryStorage::<i64>::new(storage).unwrap();
 
-        assert_eq!(dictionary.count(u64::MAX), Ok(None));
+        assert_eq!(dictionary.count(DictionaryIndex(u64::MAX)), Ok(None));
     }
 
     #[test]
@@ -266,7 +267,7 @@ mod tests {
 
         assert_eq!(dictionary.len(), Ok(1));
 
-        dictionary.remove(index + 1).unwrap();
+        dictionary.remove(DictionaryIndex(index.0 + 1)).unwrap();
 
         assert_eq!(dictionary.len(), Ok(1));
     }
@@ -345,6 +346,6 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
         let dictionary = DictionaryStorage::<i64>::new(storage).unwrap();
-        assert_eq!(dictionary.value(1), Ok(None));
+        assert_eq!(dictionary.value(DictionaryIndex(1)), Ok(None));
     }
 }

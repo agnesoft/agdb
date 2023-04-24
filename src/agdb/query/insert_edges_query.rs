@@ -40,7 +40,7 @@ impl InsertEdgesQuery {
         ]
     }
 
-    fn many_to_many(&self, from: &Vec<QueryId>) -> Result<Vec<CommandsMut>, QueryError> {
+    fn many_to_many(&self, from: &[QueryId]) -> Result<Vec<CommandsMut>, QueryError> {
         let mut commands = Vec::<CommandsMut>::new();
 
         match &self.to {

@@ -9,8 +9,8 @@ where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
     Data: DictionaryData<T>,
 {
-    pub(crate) data: Data,
-    pub(crate) phantom_data: PhantomData<T>,
+    pub data: Data,
+    pub phantom_data: PhantomData<T>,
 }
 
 #[allow(dead_code)]
@@ -26,7 +26,6 @@ where
             if count != 0 {
                 return Ok(Some(count));
             }
-        } else {
         }
 
         Ok(None)

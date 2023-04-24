@@ -28,7 +28,7 @@ impl<'a> TransactionMut<'a> {
 
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
         let mut context = Context {
-            id: DbId { id: 0 },
+            id: DbId(0),
             graph_index: GraphIndex { index: 0 },
         };
         let mut result = QueryResult {
@@ -50,7 +50,7 @@ impl<'a> TransactionMut<'a> {
 
     pub(crate) fn rollback(mut self) -> Result<(), QueryError> {
         let mut context = Context {
-            id: DbId { id: 0 },
+            id: DbId(0),
             graph_index: GraphIndex { index: 0 },
         };
         let mut result = QueryResult {

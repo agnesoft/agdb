@@ -68,7 +68,7 @@ impl Db {
 
     pub(crate) fn index_from_id(&self, id: &QueryId) -> Result<GraphIndex, QueryError> {
         let db_id = match id {
-            QueryId::Id(id) => DbId { id: *id },
+            QueryId::Id(id) => DbId(*id),
             QueryId::Alias(alias) => self
                 .aliases
                 .value(alias)?
@@ -77,7 +77,7 @@ impl Db {
 
         self.indexes
             .value(&db_id)?
-            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.id)))
+            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.0)))
     }
 
     fn finish_transaction(transaction: TransactionMut, result: bool) -> Result<(), QueryError> {

@@ -28,7 +28,7 @@ fn insert_edge_from_to() {
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: DbId { id: -3 },
+            index: DbId(-3),
             values: vec![]
         }]
     );
@@ -56,7 +56,7 @@ fn insert_edge_from_to_rollback() {
             assert_eq!(
                 result.elements,
                 vec![DbElement {
-                    index: DbId { id: -3 },
+                    index: DbId(-3),
                     values: vec![]
                 }]
             );

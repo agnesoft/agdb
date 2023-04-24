@@ -33,7 +33,7 @@ mod tests {
         format!(
             "{:?}",
             InsertAliasId {
-                id: DbId { id: 0 },
+                id: DbId(0),
                 alias: String::new()
             }
         );
@@ -43,11 +43,11 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             InsertAliasId {
-                id: DbId { id: 0 },
+                id: DbId(0),
                 alias: String::new()
             },
             InsertAliasId {
-                id: DbId { id: 0 },
+                id: DbId(0),
                 alias: String::new()
             }
         );

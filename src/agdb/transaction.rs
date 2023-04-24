@@ -42,7 +42,7 @@ impl<'a> Transaction<'a> {
 
     fn select_id(&self, data: SelectId, result: &mut QueryResult) -> Result<(), QueryError> {
         let db_id = match data.id {
-            QueryId::Id(id) => DbId { id },
+            QueryId::Id(id) => DbId(id),
             QueryId::Alias(alias) => self
                 .db
                 .aliases
@@ -54,7 +54,7 @@ impl<'a> Transaction<'a> {
             .db
             .indexes
             .value(&db_id)?
-            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.id)))?;
+            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.0)))?;
 
         result.result += 1;
         result.elements.push(DbElement {

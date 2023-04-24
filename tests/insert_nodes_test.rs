@@ -20,7 +20,7 @@ fn insert_node() {
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: DbId { id: 1 },
+            index: DbId(1),
             values: vec![]
         }]
     )
@@ -54,7 +54,7 @@ fn insert_node_alias() {
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: DbId { id: 1 },
+            index: DbId(1),
             values: vec![]
         }]
     );
@@ -87,7 +87,7 @@ fn insert_node_alias_rollback() {
             assert_eq!(
                 result.elements,
                 vec![DbElement {
-                    index: DbId { id: 1 },
+                    index: DbId(1),
                     values: vec![]
                 }]
             );

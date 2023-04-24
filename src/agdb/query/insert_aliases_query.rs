@@ -30,7 +30,7 @@ impl InsertAliasesQuery {
             QueryId::Id(id) => {
                 vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
                     InsertAliasId {
-                        id: DbId { id: *id },
+                        id: DbId(*id),
                         alias: new_alias.to_string(),
                     },
                 ))]
@@ -75,7 +75,7 @@ mod tests {
             query.commands(),
             Ok(vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
                 InsertAliasId {
-                    id: DbId { id: 0 },
+                    id: DbId(0),
                     alias: "alias".to_string()
                 }
             ))])
@@ -93,7 +93,7 @@ mod tests {
             query.commands(),
             Ok(vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
                 InsertAliasId {
-                    id: DbId { id: 0 },
+                    id: DbId(0),
                     alias: "alias".to_string()
                 }
             ))])

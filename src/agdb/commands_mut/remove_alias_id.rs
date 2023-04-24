@@ -29,14 +29,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", RemoveAliasId { id: DbId { id: 0 } });
+        format!("{:?}", RemoveAliasId { id: DbId(0) });
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(
-            RemoveAliasId { id: DbId { id: 0 } },
-            RemoveAliasId { id: DbId { id: 0 } }
-        );
+        assert_eq!(RemoveAliasId { id: DbId(0) }, RemoveAliasId { id: DbId(0) });
     }
 }

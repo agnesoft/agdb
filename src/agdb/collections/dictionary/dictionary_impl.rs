@@ -59,7 +59,7 @@ where
         Ok(index)
     }
 
-    pub fn remove(&mut self, index: DictionaryIndex) -> Result<(), DbError> {
+    pub fn remove(&mut self, index: DictionaryIndex) -> Result<bool, DbError> {
         if self.is_valid_index(index.0) {
             let count = self.data.count(index.0)?;
 
@@ -73,10 +73,11 @@ where
                 }
 
                 self.data.commit()?;
+                return Ok(true);
             }
         }
 
-        Ok(())
+        Ok(false)
     }
 
     pub fn value(&self, index: DictionaryIndex) -> Result<Option<T>, DbError> {

@@ -7,6 +7,7 @@ mod tests {
     use std::cmp::Ordering;
 
     #[test]
+    #[allow(clippy::clone_on_copy)]
     fn derived_from_clone() {
         let _ = DictionaryIndex(0).clone();
     }

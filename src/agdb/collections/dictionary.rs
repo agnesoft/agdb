@@ -161,12 +161,12 @@ mod tests {
         let mut dictionary = Dictionary::<i64>::new();
 
         let index = dictionary.insert(&10).unwrap();
-        dictionary.remove(index).unwrap();
+        assert!(dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(None));
         assert_eq!(dictionary.count(index), Ok(None));
 
-        dictionary.remove(index).unwrap();
+        assert!(!dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(None));
         assert_eq!(dictionary.count(index), Ok(None));
@@ -183,13 +183,13 @@ mod tests {
         assert_eq!(dictionary.value(index), Ok(Some(10)));
         assert_eq!(dictionary.count(index), Ok(Some(3)));
 
-        dictionary.remove(index).unwrap();
+        assert!(dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(Some(10)));
         assert_eq!(dictionary.count(index), Ok(Some(2)));
 
-        dictionary.remove(index).unwrap();
-        dictionary.remove(index).unwrap();
+        assert!(dictionary.remove(index).unwrap());
+        assert!(dictionary.remove(index).unwrap());
 
         assert_eq!(dictionary.value(index), Ok(None));
         assert_eq!(dictionary.count(index), Ok(None));
@@ -203,7 +203,7 @@ mod tests {
 
         assert_eq!(dictionary.len(), Ok(1));
 
-        dictionary.remove(DictionaryIndex(index.0 + 1)).unwrap();
+        assert!(!dictionary.remove(DictionaryIndex(index.0 + 1)).unwrap());
 
         assert_eq!(dictionary.len(), Ok(1));
     }

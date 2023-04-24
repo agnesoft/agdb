@@ -14,14 +14,23 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", Commands::SelectId(SelectId { id: QueryId::Id(0) }));
+        format!(
+            "{:?}",
+            Commands::SelectId(SelectId {
+                id: QueryId::from(0)
+            })
+        );
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            Commands::SelectId(SelectId { id: QueryId::Id(0) }),
-            Commands::SelectId(SelectId { id: QueryId::Id(0) })
+            Commands::SelectId(SelectId {
+                id: QueryId::from(0)
+            }),
+            Commands::SelectId(SelectId {
+                id: QueryId::from(0)
+            })
         );
     }
 }

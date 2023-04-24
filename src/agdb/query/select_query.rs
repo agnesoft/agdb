@@ -31,29 +31,33 @@ mod tests {
 
     #[test]
     fn valid_id() {
-        let query = SelectQuery(QueryIds::Ids(vec![QueryId::Id(0)]));
+        let query = SelectQuery(QueryIds::Ids(vec![QueryId::from(0)]));
 
         assert_eq!(
             query.commands(),
-            Ok(vec![Commands::SelectId(SelectId { id: QueryId::Id(0) })])
+            Ok(vec![Commands::SelectId(SelectId {
+                id: QueryId::from(0)
+            })])
         )
     }
 
     #[test]
     fn valid_ids() {
-        let query = SelectQuery(QueryIds::Ids(vec![QueryId::Id(0)]));
+        let query = SelectQuery(QueryIds::Ids(vec![QueryId::from(0)]));
 
         assert_eq!(
             query.commands(),
-            Ok(vec![Commands::SelectId(SelectId { id: QueryId::Id(0) })])
+            Ok(vec![Commands::SelectId(SelectId {
+                id: QueryId::from(0)
+            })])
         )
     }
 
     #[test]
     fn invalid_query_all() {
         let query = SelectQuery(QueryIds::Search(SearchQuery {
-            origin: QueryId::Id(0),
-            destination: QueryId::Id(0),
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
             limit: 0,
             offset: 0,
             order_by: vec![],

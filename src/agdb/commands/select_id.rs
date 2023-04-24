@@ -11,14 +11,23 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", SelectId { id: QueryId::Id(0) });
+        format!(
+            "{:?}",
+            SelectId {
+                id: QueryId::from(0)
+            }
+        );
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            SelectId { id: QueryId::Id(0) },
-            SelectId { id: QueryId::Id(0) }
+            SelectId {
+                id: QueryId::from(0)
+            },
+            SelectId {
+                id: QueryId::from(0)
+            }
         );
     }
 }

@@ -17,8 +17,8 @@ impl RemoveEdgeIndex {
             self.index.index
         )))?;
         let undo = CommandsMut::InsertEdge(InsertEdge {
-            from: QueryId::Id(edge.index_from().index),
-            to: QueryId::Id(edge.index_to().index),
+            from: QueryId::from(edge.index_from().index),
+            to: QueryId::from(edge.index_to().index),
         });
         db.graph.remove_edge(&self.index)?;
 

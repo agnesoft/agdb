@@ -81,8 +81,8 @@ mod tests {
     #[test]
     fn one_to_one() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Ids(vec![QueryId::Id(1)]),
-            to: QueryIds::Ids(vec![QueryId::Id(2)]),
+            from: QueryIds::Ids(vec![QueryId::from(1)]),
+            to: QueryIds::Ids(vec![QueryId::from(2)]),
             values: QueryValues::None,
             each: false,
         };
@@ -91,8 +91,8 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(2)
+                    from: QueryId::from(1),
+                    to: QueryId::from(2)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {})
             ]
@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn one_to_many() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Ids(vec![QueryId::Id(1)]),
+            from: QueryIds::Ids(vec![QueryId::from(1)]),
             to: QueryIds::Ids(vec![QueryId::from(2), QueryId::from(3)]),
             values: QueryValues::None,
             each: true,
@@ -133,13 +133,13 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(2)
+                    from: QueryId::from(1),
+                    to: QueryId::from(2)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(1),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
             ]
@@ -159,13 +159,13 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(1),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(2),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(2),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
             ]
@@ -185,13 +185,13 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(1),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(2),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(2),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
             ]
@@ -211,13 +211,13 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(1),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(2),
-                    to: QueryId::Id(4)
+                    from: QueryId::from(2),
+                    to: QueryId::from(4)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
             ]
@@ -237,23 +237,23 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(1),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(1),
-                    to: QueryId::Id(4)
+                    from: QueryId::from(1),
+                    to: QueryId::from(4)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(2),
-                    to: QueryId::Id(3)
+                    from: QueryId::from(2),
+                    to: QueryId::from(3)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
                 CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Id(2),
-                    to: QueryId::Id(4)
+                    from: QueryId::from(2),
+                    to: QueryId::from(4)
                 }),
                 CommandsMut::InsertIndex(InsertIndex {}),
             ]
@@ -264,14 +264,14 @@ mod tests {
     fn invalid_query_preprocessing_from() {
         let query = InsertEdgesQuery {
             from: QueryIds::Search(SearchQuery {
-                origin: QueryId::Id(0),
-                destination: QueryId::Id(0),
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
                 conditions: vec![],
             }),
-            to: QueryIds::Ids(vec![QueryId::Id(2)]),
+            to: QueryIds::Ids(vec![QueryId::from(2)]),
             values: QueryValues::None,
             each: false,
         };
@@ -285,10 +285,10 @@ mod tests {
     #[test]
     fn invalid_query_preprocessing_to() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Ids(vec![QueryId::Id(2)]),
+            from: QueryIds::Ids(vec![QueryId::from(2)]),
             to: QueryIds::Search(SearchQuery {
-                origin: QueryId::Id(0),
-                destination: QueryId::Id(0),
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
@@ -307,10 +307,10 @@ mod tests {
     #[test]
     fn invalid_query_preprocessing_many_each() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Ids(vec![QueryId::Id(2)]),
+            from: QueryIds::Ids(vec![QueryId::from(2)]),
             to: QueryIds::Search(SearchQuery {
-                origin: QueryId::Id(0),
-                destination: QueryId::Id(0),
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
@@ -329,10 +329,10 @@ mod tests {
     #[test]
     fn invalid_query_preprocessing_many_many() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Ids(vec![QueryId::Id(2)]),
+            from: QueryIds::Ids(vec![QueryId::from(2)]),
             to: QueryIds::Search(SearchQuery {
-                origin: QueryId::Id(0),
-                destination: QueryId::Id(0),
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
                 limit: 0,
                 offset: 0,
                 order_by: vec![],

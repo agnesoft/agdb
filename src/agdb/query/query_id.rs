@@ -1,6 +1,8 @@
+use crate::DbId;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryId {
-    Id(i64),
+    Id(DbId),
     Alias(String),
 }
 
@@ -18,6 +20,12 @@ impl From<String> for QueryId {
 
 impl From<i64> for QueryId {
     fn from(value: i64) -> Self {
+        Self::Id(DbId(value))
+    }
+}
+
+impl From<DbId> for QueryId {
+    fn from(value: DbId) -> Self {
         Self::Id(value)
     }
 }
@@ -25,7 +33,7 @@ impl From<i64> for QueryId {
 impl QueryId {
     pub fn is_node(&self) -> bool {
         match self {
-            QueryId::Id(id) => 0 < *id,
+            QueryId::Id(id) => 0 < id.0,
             QueryId::Alias(_) => true,
         }
     }
@@ -37,8 +45,8 @@ mod test {
 
     #[test]
     fn is_node() {
-        assert!(QueryId::Id(1).is_node());
-        assert!(!QueryId::Id(0).is_node());
-        assert!(!QueryId::Id(-1).is_node());
+        assert!(QueryId::from(1).is_node());
+        assert!(!QueryId::from(0).is_node());
+        assert!(!QueryId::from(-1).is_node());
     }
 }

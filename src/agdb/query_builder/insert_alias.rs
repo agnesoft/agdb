@@ -6,8 +6,8 @@ use crate::query::query_ids::QueryIds;
 pub struct InsertAlias(pub InsertAliasesQuery);
 
 impl InsertAlias {
-    pub fn id(mut self, id: QueryId) -> InsertAliasesIds {
-        self.0.ids = QueryIds::Ids(vec![id]);
+    pub fn of<T: Into<QueryId>>(mut self, id: T) -> InsertAliasesIds {
+        self.0.ids = QueryIds::Ids(vec![id.into()]);
 
         InsertAliasesIds(self.0)
     }

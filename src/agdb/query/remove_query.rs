@@ -8,7 +8,6 @@ use crate::commands_mut::remove_index::RemoveIndex;
 use crate::commands_mut::remove_index_id::RemoveIndexId;
 use crate::commands_mut::remove_node::RemoveNode;
 use crate::commands_mut::CommandsMut;
-use crate::DbId;
 use crate::QueryError;
 
 pub struct RemoveQuery(pub QueryIds);
@@ -28,7 +27,7 @@ impl RemoveQuery {
 
         if id.is_node() {
             if let QueryId::Id(id) = id {
-                commands.push(CommandsMut::RemoveAliasId(RemoveAliasId { id: DbId(*id) }));
+                commands.push(CommandsMut::RemoveAliasId(RemoveAliasId { id: *id }));
             }
 
             commands.push(CommandsMut::RemoveNode(RemoveNode {}));
@@ -51,7 +50,7 @@ impl RemoveQuery {
 
     fn remove_index(id: &QueryId) -> Vec<CommandsMut> {
         match id {
-            QueryId::Id(id) => vec![CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId(*id) })],
+            QueryId::Id(id) => vec![CommandsMut::RemoveIndexId(RemoveIndexId { id: *id })],
             QueryId::Alias(alias) => vec![
                 CommandsMut::RemoveAlias(RemoveAlias {
                     alias: alias.clone(),
@@ -66,10 +65,11 @@ impl RemoveQuery {
 mod tests {
     use super::*;
     use crate::query::search_query::SearchQuery;
+    use crate::DbId;
 
     #[test]
     fn valid_id() {
-        let query = RemoveQuery(QueryIds::Ids(vec![QueryId::Id(1)]));
+        let query = RemoveQuery(QueryIds::Ids(vec![QueryId::from(1)]));
 
         assert_eq!(
             query.commands(),
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn valid_ids() {
-        let query = RemoveQuery(QueryIds::Ids(vec![QueryId::Id(-3)]));
+        let query = RemoveQuery(QueryIds::Ids(vec![QueryId::from(-3)]));
 
         assert_eq!(
             query.commands(),
@@ -97,8 +97,8 @@ mod tests {
     #[test]
     fn invalid_query_all() {
         let query = RemoveQuery(QueryIds::Search(SearchQuery {
-            origin: QueryId::Id(0),
-            destination: QueryId::Id(0),
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
             limit: 0,
             offset: 0,
             order_by: vec![],

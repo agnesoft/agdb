@@ -44,8 +44,8 @@ mod tests {
         format!(
             "{:?}",
             InsertEdge {
-                from: QueryId::Id(0),
-                to: QueryId::Id(0)
+                from: QueryId::from(0),
+                to: QueryId::from(0)
             }
         );
     }
@@ -54,12 +54,12 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             InsertEdge {
-                from: QueryId::Id(0),
-                to: QueryId::Id(0)
+                from: QueryId::from(0),
+                to: QueryId::from(0)
             },
             InsertEdge {
-                from: QueryId::Id(0),
-                to: QueryId::Id(0)
+                from: QueryId::from(0),
+                to: QueryId::from(0)
             }
         );
     }

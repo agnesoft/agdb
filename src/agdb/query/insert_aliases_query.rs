@@ -18,7 +18,6 @@ pub struct InsertAliasesQuery {
 impl QueryMut for InsertAliasesQuery {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.ids {
-            QueryIds::Id(id) => Ok(self.id(id, &self.aliases[0])),
             QueryIds::Ids(ids) => Ok(self.ids(ids)),
             QueryIds::Search(_) => Err(QueryError::from("Invalid insert aliases query")),
         }
@@ -68,7 +67,7 @@ mod tests {
     #[test]
     fn valid_id() {
         let query = InsertAliasesQuery {
-            ids: QueryIds::Id(QueryId::Id(0)),
+            ids: QueryIds::Ids(vec![QueryId::Id(0)]),
             aliases: vec!["alias".to_string()],
         };
 

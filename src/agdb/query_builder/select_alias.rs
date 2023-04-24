@@ -6,7 +6,7 @@ pub struct SelectAlias(pub SelectAliasesQuery);
 
 impl SelectAlias {
     pub fn id(mut self, id: i64) -> SelectAliasesIds {
-        self.0.ids = QueryIds::Id(id.into());
+        self.0.ids = QueryIds::Ids(vec![id.into()]);
 
         SelectAliasesIds(self.0)
     }

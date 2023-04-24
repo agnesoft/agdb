@@ -17,7 +17,6 @@ pub struct InsertEdgesQuery {
 impl QueryMut for InsertEdgesQuery {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.from {
-            QueryIds::Id(id) => self.one_to_many(id),
             QueryIds::Ids(ids) => {
                 if self.each {
                     self.many_to_many_each(ids)
@@ -41,31 +40,10 @@ impl InsertEdgesQuery {
         ]
     }
 
-    fn one_to_many(&self, from: &QueryId) -> Result<Vec<CommandsMut>, QueryError> {
-        let mut commands = Vec::<CommandsMut>::new();
-
-        match &self.to {
-            QueryIds::Id(to) => commands.extend(Self::insert_edge(from, to)),
-            QueryIds::Ids(ids) => {
-                for to in ids {
-                    commands.extend(Self::insert_edge(from, to));
-                }
-            }
-            QueryIds::Search(_) => return Err(QueryError::from("Invalid insert edges query")),
-        }
-
-        Ok(commands)
-    }
-
     fn many_to_many(&self, from: &Vec<QueryId>) -> Result<Vec<CommandsMut>, QueryError> {
         let mut commands = Vec::<CommandsMut>::new();
 
         match &self.to {
-            QueryIds::Id(to) => {
-                for from in from {
-                    commands.extend(Self::insert_edge(from, to));
-                }
-            }
             QueryIds::Ids(ids) => {
                 for (from, to) in from.iter().zip(ids.iter()) {
                     commands.extend(Self::insert_edge(from, to));
@@ -81,11 +59,6 @@ impl InsertEdgesQuery {
         let mut commands = Vec::<CommandsMut>::new();
 
         match &self.to {
-            QueryIds::Id(to) => {
-                for from in from {
-                    commands.extend(Self::insert_edge(from, to));
-                }
-            }
             QueryIds::Ids(ids) => {
                 for from in from {
                     for to in ids {
@@ -108,8 +81,8 @@ mod tests {
     #[test]
     fn one_to_one() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Id(QueryId::Id(1)),
-            to: QueryIds::Id(QueryId::Id(2)),
+            from: QueryIds::Ids(vec![QueryId::Id(1)]),
+            to: QueryIds::Ids(vec![QueryId::Id(2)]),
             values: QueryValues::None,
             each: false,
         };
@@ -129,8 +102,8 @@ mod tests {
     #[test]
     fn alias_to_alias() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Id(QueryId::Alias("alias".to_string())),
-            to: QueryIds::Id(QueryId::Alias("alias2".to_string())),
+            from: QueryIds::Ids(vec![QueryId::Alias("alias".to_string())]),
+            to: QueryIds::Ids(vec![QueryId::Alias("alias2".to_string())]),
             values: QueryValues::None,
             each: false,
         };
@@ -150,7 +123,7 @@ mod tests {
     #[test]
     fn one_to_many() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Id(QueryId::Id(1)),
+            from: QueryIds::Ids(vec![QueryId::Id(1)]),
             to: QueryIds::Ids(vec![QueryId::from(2), QueryId::from(3)]),
             values: QueryValues::None,
             each: false,
@@ -177,7 +150,7 @@ mod tests {
     fn many_to_one() {
         let query = InsertEdgesQuery {
             from: QueryIds::Ids(vec![QueryId::from(1), QueryId::from(2)]),
-            to: QueryIds::Id(QueryId::from(3)),
+            to: QueryIds::Ids(vec![QueryId::from(3)]),
             values: QueryValues::None,
             each: false,
         };
@@ -203,7 +176,7 @@ mod tests {
     fn many_to_each() {
         let query = InsertEdgesQuery {
             from: QueryIds::Ids(vec![QueryId::from(1), QueryId::from(2)]),
-            to: QueryIds::Id(QueryId::from(3)),
+            to: QueryIds::Ids(vec![QueryId::from(3)]),
             values: QueryValues::None,
             each: true,
         };
@@ -298,7 +271,7 @@ mod tests {
                 order_by: vec![],
                 conditions: vec![],
             }),
-            to: QueryIds::Id(QueryId::Id(2)),
+            to: QueryIds::Ids(vec![QueryId::Id(2)]),
             values: QueryValues::None,
             each: false,
         };
@@ -312,7 +285,7 @@ mod tests {
     #[test]
     fn invalid_query_preprocessing_to() {
         let query = InsertEdgesQuery {
-            from: QueryIds::Id(QueryId::Id(2)),
+            from: QueryIds::Ids(vec![QueryId::Id(2)]),
             to: QueryIds::Search(SearchQuery {
                 origin: QueryId::Id(0),
                 destination: QueryId::Id(0),

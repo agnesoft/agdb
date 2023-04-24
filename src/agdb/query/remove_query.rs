@@ -16,7 +16,6 @@ pub struct RemoveQuery(pub QueryIds);
 impl QueryMut for RemoveQuery {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.0 {
-            QueryIds::Id(id) => Ok(Self::id(id)),
             QueryIds::Ids(ids) => Ok(Self::ids(ids)),
             QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
         }
@@ -74,7 +73,7 @@ mod tests {
 
     #[test]
     fn valid_id() {
-        let query = RemoveQuery(QueryIds::Id(QueryId::Id(1)));
+        let query = RemoveQuery(QueryIds::Ids(vec![QueryId::Id(1)]));
 
         assert_eq!(
             query.commands(),

@@ -10,7 +10,6 @@ pub struct SelectQuery(pub QueryIds);
 impl Query for SelectQuery {
     fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.0 {
-            QueryIds::Id(id) => Ok(vec![Commands::SelectId(SelectId { id: id.clone() })]),
             QueryIds::Ids(ids) => Ok(Self::ids(ids)),
             QueryIds::Search(_) => Err(QueryError::from("Invalid select query")),
         }
@@ -32,7 +31,7 @@ mod tests {
 
     #[test]
     fn valid_id() {
-        let query = SelectQuery(QueryIds::Id(QueryId::Id(0)));
+        let query = SelectQuery(QueryIds::Ids(vec![QueryId::Id(0)]));
 
         assert_eq!(
             query.commands(),

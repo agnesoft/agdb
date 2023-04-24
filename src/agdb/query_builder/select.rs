@@ -19,7 +19,7 @@ pub struct Select {}
 impl Select {
     pub fn alias(self) -> SelectAlias {
         SelectAlias(SelectAliasesQuery {
-            ids: QueryIds::Id(0.into()),
+            ids: QueryIds::Ids(vec![0.into()]),
         })
     }
 
@@ -30,7 +30,7 @@ impl Select {
     }
 
     pub fn id(self, id: QueryId) -> SelectIds {
-        SelectIds(SelectQuery(QueryIds::Id(id)))
+        SelectIds(SelectQuery(QueryIds::Ids(vec![id])))
     }
 
     pub fn ids(self, ids: &[QueryId]) -> SelectIds {
@@ -42,17 +42,17 @@ impl Select {
     }
 
     pub fn keys(self) -> SelectKeys {
-        SelectKeys(SelectKeysQuery(QueryIds::Id(0.into())))
+        SelectKeys(SelectKeysQuery(QueryIds::Ids(vec![0.into()])))
     }
 
     pub fn key_count(self) -> SelectKeyCount {
-        SelectKeyCount(SelectKeyCountQuery(QueryIds::Id(0.into())))
+        SelectKeyCount(SelectKeyCountQuery(QueryIds::Ids(vec![0.into()])))
     }
 
     pub fn values(self, keys: &[DbKey]) -> SelectValues {
         SelectValues(SelectValuesQuery {
             keys: keys.to_vec(),
-            ids: QueryIds::Id(0.into()),
+            ids: QueryIds::Ids(vec![0.into()]),
         })
     }
 }

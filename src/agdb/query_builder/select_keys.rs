@@ -8,7 +8,7 @@ pub struct SelectKeys(pub SelectKeysQuery);
 
 impl SelectKeys {
     pub fn id(mut self, id: QueryId) -> SelectKeysIds {
-        self.0 .0 = QueryIds::Id(id);
+        self.0 .0 = QueryIds::Ids(vec![id]);
 
         SelectKeysIds(self.0)
     }

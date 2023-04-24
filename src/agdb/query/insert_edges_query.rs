@@ -126,7 +126,7 @@ mod tests {
             from: QueryIds::Ids(vec![QueryId::Id(1)]),
             to: QueryIds::Ids(vec![QueryId::from(2), QueryId::from(3)]),
             values: QueryValues::None,
-            each: false,
+            each: true,
         };
 
         assert_eq!(
@@ -152,7 +152,7 @@ mod tests {
             from: QueryIds::Ids(vec![QueryId::from(1), QueryId::from(2)]),
             to: QueryIds::Ids(vec![QueryId::from(3)]),
             values: QueryValues::None,
-            each: false,
+            each: true,
         };
 
         assert_eq!(

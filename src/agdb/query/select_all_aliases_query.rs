@@ -9,3 +9,14 @@ impl Query for SelectAllAliases {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn commands() {
+        SelectAllAliases {}.commands().unwrap();
+    }
+}

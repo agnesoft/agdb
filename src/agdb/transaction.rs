@@ -4,7 +4,6 @@ use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::Db;
 use crate::DbElement;
-use crate::DbId;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -42,7 +41,7 @@ impl<'a> Transaction<'a> {
 
     fn select_id(&self, data: SelectId, result: &mut QueryResult) -> Result<(), QueryError> {
         let db_id = match data.id {
-            QueryId::Id(id) => DbId(id),
+            QueryId::Id(id) => id,
             QueryId::Alias(alias) => self
                 .db
                 .aliases

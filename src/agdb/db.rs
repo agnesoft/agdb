@@ -68,7 +68,7 @@ impl Db {
 
     pub(crate) fn index_from_id(&self, id: &QueryId) -> Result<GraphIndex, QueryError> {
         let db_id = match id {
-            QueryId::Id(id) => DbId(*id),
+            QueryId::Id(id) => *id,
             QueryId::Alias(alias) => self
                 .aliases
                 .value(alias)?

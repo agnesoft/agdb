@@ -9,7 +9,7 @@ impl Search {
     pub fn from(self, id: QueryId) -> SearchFrom {
         SearchFrom(SearchQuery {
             origin: id,
-            destination: QueryId::Id(0),
+            destination: QueryId::from(0),
             limit: 0,
             offset: 0,
             order_by: vec![],
@@ -19,7 +19,7 @@ impl Search {
 
     pub fn to(self, id: QueryId) -> SearchTo {
         SearchTo(SearchQuery {
-            origin: QueryId::Id(0),
+            origin: QueryId::from(0),
             destination: id,
             limit: 0,
             offset: 0,

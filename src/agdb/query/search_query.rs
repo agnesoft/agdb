@@ -22,8 +22,8 @@ mod tests {
         format!(
             "{:?}",
             SearchQuery {
-                origin: QueryId::Id(0),
-                destination: QueryId::Id(0),
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
@@ -35,8 +35,8 @@ mod tests {
     #[test]
     fn derived_from_clone() {
         let left = SearchQuery {
-            origin: QueryId::Id(0),
-            destination: QueryId::Id(0),
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
             limit: 0,
             offset: 0,
             order_by: vec![],
@@ -51,16 +51,16 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             SearchQuery {
-                origin: QueryId::Id(0),
-                destination: QueryId::Id(0),
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
                 limit: 0,
                 offset: 0,
                 order_by: vec![],
                 conditions: vec![]
             },
             SearchQuery {
-                origin: QueryId::Id(0),
-                destination: QueryId::Id(0),
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
                 limit: 0,
                 offset: 0,
                 order_by: vec![],

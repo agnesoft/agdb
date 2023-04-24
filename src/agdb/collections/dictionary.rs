@@ -1,9 +1,7 @@
+pub mod dictionary_data;
+pub mod dictionary_data_memory;
 pub mod dictionary_data_storage;
-pub mod dictionary_data_storage_indexes;
 pub mod dictionary_impl;
-
-mod dictionary_data;
-mod dictionary_data_memory;
 
 use self::dictionary_data_memory::DictionaryDataMemory;
 use self::dictionary_impl::DictionaryImpl;

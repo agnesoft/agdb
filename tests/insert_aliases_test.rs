@@ -2,17 +2,18 @@
 mod test_file;
 
 use agdb::Db;
+use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use test_file::TestFile;
 
 #[test]
-fn insert_alias_id() {
+fn insert_alias_of() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    let query = QueryBuilder::insert().alias("alias").id(1.into()).query();
+    let query = QueryBuilder::insert().alias("alias").of(DbId(1)).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
@@ -20,7 +21,7 @@ fn insert_alias_id() {
 }
 
 #[test]
-fn insert_aliases_ids() {
+fn insert_aliases_of() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -28,7 +29,7 @@ fn insert_aliases_ids() {
         .unwrap();
     let query = QueryBuilder::insert()
         .aliases(&["alias".into(), "alias2".into()])
-        .ids(&[1.into(), 2.into()])
+        .of(&[1.into(), 2.into()])
         .query();
     let result = db.exec_mut(&query).unwrap();
 
@@ -46,7 +47,7 @@ fn insert_aliases_alias() {
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
     let query = QueryBuilder::insert()
         .aliases(&["alias1".into(), "alias2".into()])
-        .ids(&["alias".into(), 2.into()])
+        .of(&["alias".into(), 2.into()])
         .query();
     let result = db.exec_mut(&query).unwrap();
 
@@ -67,7 +68,7 @@ fn insert_aliases_rollback() {
         .transaction_mut(|transaction| -> Result<(), QueryError> {
             let query = QueryBuilder::insert()
                 .aliases(&["alias1".into(), "alias2".into()])
-                .ids(&["alias".into(), 2.into()])
+                .of(&["alias".into(), 2.into()])
                 .query();
             let _ = transaction.exec_mut(&query).unwrap();
             let _ = transaction
@@ -98,7 +99,7 @@ fn insert_alias_empty() {
 
     let mut db = Db::new(test_file.file_name()).unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    let query = QueryBuilder::insert().alias("").id(1.into()).query();
+    let query = QueryBuilder::insert().alias("").of(1).query();
     let error = db.exec_mut(&query).unwrap_err();
 
     assert_eq!(error.description, "Empty alias is not allowed");

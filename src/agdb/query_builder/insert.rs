@@ -17,7 +17,7 @@ use crate::DbKeyValue;
 pub struct Insert {}
 
 impl Insert {
-    pub fn alias(self, name: &str) -> InsertAlias {
+    pub fn alias<T: ToString>(self, name: T) -> InsertAlias {
         InsertAlias(InsertAliasesQuery {
             ids: QueryIds::Ids(vec![0.into()]),
             aliases: vec![name.to_string()],

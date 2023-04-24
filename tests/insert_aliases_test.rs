@@ -99,7 +99,7 @@ fn insert_alias_empty() {
 
     let mut db = Db::new(test_file.file_name()).unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    let query = QueryBuilder::insert().alias("").of(1).query();
+    let query = QueryBuilder::insert().alias(String::new()).of(1).query();
     let error = db.exec_mut(&query).unwrap_err();
 
     assert_eq!(error.description, "Empty alias is not allowed");

@@ -2,29 +2,44 @@ use super::remove_alias::RemoveAlias;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
+use crate::DbId;
 use crate::QueryError;
+use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertAlias {
+    pub(crate) id: Option<DbId>,
     pub(crate) alias: String,
+    pub(crate) result: bool,
 }
 
 impl InsertAlias {
     pub(crate) fn process(
         &self,
         db: &mut Db,
+        result: &mut QueryResult,
         context: &Context,
     ) -> Result<CommandsMut, QueryError> {
-        if self.alias.is_empty() {
-            return Err(QueryError::from("Empty alias is not allowed"));
+        let undo = insert_alias(db, &self.id.unwrap_or(context.id), &self.alias)?;
+
+        if self.result {
+            result.result += 1;
         }
 
-        db.aliases.insert(&self.alias, &context.id)?;
-
-        Ok(CommandsMut::RemoveAlias(RemoveAlias {
-            alias: self.alias.clone(),
-        }))
+        Ok(undo)
     }
+}
+
+fn insert_alias(db: &mut Db, id: &DbId, alias: &String) -> Result<CommandsMut, QueryError> {
+    if alias.is_empty() {
+        return Err(QueryError::from("Empty alias is not allowed"));
+    }
+
+    db.aliases.insert(alias, id)?;
+
+    Ok(CommandsMut::RemoveAlias(RemoveAlias {
+        alias: alias.clone(),
+    }))
 }
 
 #[cfg(test)]
@@ -36,7 +51,9 @@ mod tests {
         format!(
             "{:?}",
             InsertAlias {
-                alias: String::new()
+                id: None,
+                alias: String::new(),
+                result: false
             }
         );
     }
@@ -45,10 +62,14 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             InsertAlias {
-                alias: String::new()
+                id: None,
+                alias: String::new(),
+                result: false
             },
             InsertAlias {
-                alias: String::new()
+                id: None,
+                alias: String::new(),
+                result: false
             }
         );
     }

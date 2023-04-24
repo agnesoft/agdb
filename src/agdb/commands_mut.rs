@@ -1,7 +1,4 @@
 pub mod insert_alias;
-pub mod insert_alias_id;
-pub mod insert_alias_id_result;
-pub mod insert_alias_result;
 pub mod insert_edge;
 pub mod insert_index;
 pub mod insert_index_id;
@@ -17,9 +14,6 @@ pub mod remove_node;
 pub mod remove_node_index;
 
 use self::insert_alias::InsertAlias;
-use self::insert_alias_id::InsertAliasId;
-use self::insert_alias_id_result::InsertAliasIdResult;
-use self::insert_alias_result::InsertAliasResult;
 use self::insert_edge::InsertEdge;
 use self::insert_index::InsertIndex;
 use self::insert_index_id::InsertIndexId;
@@ -38,9 +32,6 @@ use self::remove_node_index::RemoveNodeIndex;
 pub enum CommandsMut {
     None,
     InsertAlias(InsertAlias),
-    InsertAliasResult(InsertAliasResult),
-    InsertAliasId(InsertAliasId),
-    InsertAliasIdResult(InsertAliasIdResult),
     InsertEdge(InsertEdge),
     InsertIndex(InsertIndex),
     InsertIndexId(InsertIndexId),
@@ -62,14 +53,29 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", CommandsMut::InsertNode(InsertNode {}));
+        format!(
+            "{:?}",
+            CommandsMut::InsertAlias(InsertAlias {
+                id: None,
+                alias: String::new(),
+                result: false
+            })
+        );
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            CommandsMut::InsertNode(InsertNode {}),
-            CommandsMut::InsertNode(InsertNode {})
+            CommandsMut::InsertAlias(InsertAlias {
+                id: None,
+                alias: String::new(),
+                result: false
+            }),
+            CommandsMut::InsertAlias(InsertAlias {
+                id: None,
+                alias: String::new(),
+                result: false
+            })
         );
     }
 }

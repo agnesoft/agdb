@@ -1,4 +1,4 @@
-use super::insert_alias_id::InsertAliasId;
+use super::insert_alias::InsertAlias;
 use super::CommandsMut;
 use crate::Db;
 use crate::DbId;
@@ -13,9 +13,10 @@ impl RemoveAliasId {
     pub(crate) fn process(&self, db: &mut Db) -> Result<CommandsMut, QueryError> {
         if let Some(alias) = db.aliases.key(&self.id)? {
             db.aliases.remove_value(&self.id)?;
-            Ok(CommandsMut::InsertAliasId(InsertAliasId {
-                id: self.id,
+            Ok(CommandsMut::InsertAlias(InsertAlias {
+                id: Some(self.id),
                 alias,
+                result: false,
             }))
         } else {
             Ok(CommandsMut::None)

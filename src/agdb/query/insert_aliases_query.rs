@@ -2,9 +2,6 @@ use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::QueryMut;
 use crate::commands_mut::insert_alias::InsertAlias;
-use crate::commands_mut::insert_alias_id::InsertAliasId;
-use crate::commands_mut::insert_alias_id_result::InsertAliasIdResult;
-use crate::commands_mut::insert_alias_result::InsertAliasResult;
 use crate::commands_mut::remove_alias::RemoveAlias;
 use crate::commands_mut::CommandsMut;
 use crate::DbId;
@@ -28,21 +25,22 @@ impl InsertAliasesQuery {
     fn id(&self, id: &QueryId, new_alias: &str) -> Vec<CommandsMut> {
         match id {
             QueryId::Id(id) => {
-                vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
-                    InsertAliasId {
-                        id: DbId(*id),
-                        alias: new_alias.to_string(),
-                    },
-                ))]
+                vec![CommandsMut::InsertAlias(InsertAlias {
+                    id: Some(DbId(*id)),
+                    alias: new_alias.to_string(),
+                    result: true,
+                })]
             }
             QueryId::Alias(alias) => {
                 vec![
                     CommandsMut::RemoveAlias(RemoveAlias {
                         alias: alias.clone(),
                     }),
-                    CommandsMut::InsertAliasResult(InsertAliasResult(InsertAlias {
+                    CommandsMut::InsertAlias(InsertAlias {
+                        id: None,
                         alias: new_alias.to_string(),
-                    })),
+                        result: true,
+                    }),
                 ]
             }
         }
@@ -73,12 +71,11 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
-                InsertAliasId {
-                    id: DbId(0),
-                    alias: "alias".to_string()
-                }
-            ))])
+            Ok(vec![CommandsMut::InsertAlias(InsertAlias {
+                id: Some(DbId(0)),
+                alias: "alias".to_string(),
+                result: true,
+            })])
         )
     }
 
@@ -91,12 +88,11 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
-                InsertAliasId {
-                    id: DbId(0),
-                    alias: "alias".to_string()
-                }
-            ))])
+            Ok(vec![CommandsMut::InsertAlias(InsertAlias {
+                id: Some(DbId(0)),
+                alias: "alias".to_string(),
+                result: true,
+            })])
         )
     }
 

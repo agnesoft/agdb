@@ -21,7 +21,7 @@ impl InsertEdge {
     ) -> Result<CommandsMut, QueryError> {
         let (from, to) = self.get_from_to(db)?;
         context.graph_index = db.graph.insert_edge(&from, &to)?;
-        context.id = DbId { id: -db.next_index };
+        context.id = DbId(-db.next_index);
 
         Ok(CommandsMut::RemoveEdgeIndex(RemoveEdgeIndex {
             index: context.graph_index,

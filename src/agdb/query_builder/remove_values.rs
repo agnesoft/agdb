@@ -8,7 +8,7 @@ pub struct RemoveValues(pub RemoveValuesQuery);
 
 impl RemoveValues {
     pub fn id(mut self, id: QueryId) -> RemoveValuesIds {
-        self.0 .0.ids = QueryIds::Id(id);
+        self.0 .0.ids = QueryIds::Ids(vec![id]);
 
         RemoveValuesIds(self.0)
     }

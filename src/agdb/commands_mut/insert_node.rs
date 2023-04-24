@@ -15,7 +15,7 @@ impl InsertNode {
         context: &mut Context,
     ) -> Result<CommandsMut, QueryError> {
         context.graph_index = db.graph.insert_node()?;
-        context.id = DbId { id: db.next_index };
+        context.id = DbId(db.next_index);
 
         Ok(CommandsMut::RemoveNodeIndex(RemoveNodeIndex {
             index: context.graph_index,

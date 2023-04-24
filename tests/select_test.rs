@@ -21,7 +21,7 @@ fn select_id_alias() {
     assert_eq!(
         result.elements,
         vec![DbElement {
-            index: DbId { id: 1 },
+            index: DbId(1),
             values: vec![]
         }]
     );
@@ -49,11 +49,11 @@ fn select_from_ids() {
         result.elements,
         vec![
             DbElement {
-                index: DbId { id: 1 },
+                index: DbId(1),
                 values: vec![]
             },
             DbElement {
-                index: DbId { id: 2 },
+                index: DbId(2),
                 values: vec![]
             }
         ]

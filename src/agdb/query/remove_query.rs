@@ -16,9 +16,8 @@ pub struct RemoveQuery(pub QueryIds);
 impl QueryMut for RemoveQuery {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.0 {
-            QueryIds::Id(id) => Ok(Self::id(id)),
             QueryIds::Ids(ids) => Ok(Self::ids(ids)),
-            QueryIds::All | QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
+            QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
         }
     }
 }
@@ -29,9 +28,7 @@ impl RemoveQuery {
 
         if id.is_node() {
             if let QueryId::Id(id) = id {
-                commands.push(CommandsMut::RemoveAliasId(RemoveAliasId {
-                    id: DbId { id: *id },
-                }));
+                commands.push(CommandsMut::RemoveAliasId(RemoveAliasId { id: DbId(*id) }));
             }
 
             commands.push(CommandsMut::RemoveNode(RemoveNode {}));
@@ -54,9 +51,7 @@ impl RemoveQuery {
 
     fn remove_index(id: &QueryId) -> Vec<CommandsMut> {
         match id {
-            QueryId::Id(id) => vec![CommandsMut::RemoveIndexId(RemoveIndexId {
-                id: DbId { id: *id },
-            })],
+            QueryId::Id(id) => vec![CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId(*id) })],
             QueryId::Alias(alias) => vec![
                 CommandsMut::RemoveAlias(RemoveAlias {
                     alias: alias.clone(),
@@ -70,16 +65,17 @@ impl RemoveQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::search_query::SearchQuery;
 
     #[test]
     fn valid_id() {
-        let query = RemoveQuery(QueryIds::Id(QueryId::Id(1)));
+        let query = RemoveQuery(QueryIds::Ids(vec![QueryId::Id(1)]));
 
         assert_eq!(
             query.commands(),
             Ok(vec![
-                CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId { id: 1 } }),
-                CommandsMut::RemoveAliasId(RemoveAliasId { id: DbId { id: 1 } }),
+                CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId(1) }),
+                CommandsMut::RemoveAliasId(RemoveAliasId { id: DbId(1) }),
                 CommandsMut::RemoveNode(RemoveNode {})
             ])
         )
@@ -92,9 +88,7 @@ mod tests {
         assert_eq!(
             query.commands(),
             Ok(vec![
-                CommandsMut::RemoveIndexId(RemoveIndexId {
-                    id: DbId { id: -3 }
-                }),
+                CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId(-3) }),
                 CommandsMut::RemoveEdge(RemoveEdge {})
             ])
         )
@@ -102,7 +96,14 @@ mod tests {
 
     #[test]
     fn invalid_query_all() {
-        let query = RemoveQuery(QueryIds::All);
+        let query = RemoveQuery(QueryIds::Search(SearchQuery {
+            origin: QueryId::Id(0),
+            destination: QueryId::Id(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        }));
 
         assert_eq!(
             query.commands().unwrap_err().description,

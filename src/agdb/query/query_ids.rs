@@ -3,8 +3,6 @@ use super::search_query::SearchQuery;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryIds {
-    All,
-    Id(QueryId),
     Ids(Vec<QueryId>),
     Search(SearchQuery),
 }
@@ -15,12 +13,12 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", QueryIds::All);
+        format!("{:?}", QueryIds::Ids(vec![QueryId::Id(0)]));
     }
 
     #[test]
     fn derived_from_clone() {
-        let left = QueryIds::All;
+        let left = QueryIds::Ids(vec![QueryId::Id(0)]);
         let right = left.clone();
 
         assert_eq!(left, right);
@@ -28,6 +26,9 @@ mod tests {
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(QueryIds::All, QueryIds::All);
+        assert_eq!(
+            QueryIds::Ids(vec![QueryId::Id(0)]),
+            QueryIds::Ids(vec![QueryId::Id(0)])
+        );
     }
 }

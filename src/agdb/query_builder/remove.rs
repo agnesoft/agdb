@@ -26,7 +26,7 @@ impl Remove {
     }
 
     pub fn id(self, id: QueryId) -> RemoveIds {
-        RemoveIds(RemoveQuery(QueryIds::Id(id)))
+        RemoveIds(RemoveQuery(QueryIds::Ids(vec![id])))
     }
 
     pub fn ids(self, ids: &[QueryId]) -> RemoveIds {
@@ -40,14 +40,14 @@ impl Remove {
     pub fn value(self, key: DbKey) -> RemoveValues {
         RemoveValues(RemoveValuesQuery(SelectValuesQuery {
             keys: vec![key],
-            ids: QueryIds::Id(0.into()),
+            ids: QueryIds::Ids(vec![0.into()]),
         }))
     }
 
     pub fn values(self, keys: &[DbKey]) -> RemoveValues {
         RemoveValues(RemoveValuesQuery(SelectValuesQuery {
             keys: keys.to_vec(),
-            ids: QueryIds::Id(0.into()),
+            ids: QueryIds::Ids(vec![0.into()]),
         }))
     }
 }

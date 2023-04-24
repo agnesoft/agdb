@@ -1,13 +1,11 @@
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DbId {
-    pub id: i64,
-}
+pub struct DbId(pub i64);
 
 impl StableHash for DbId {
     fn stable_hash(&self) -> u64 {
-        self.id.stable_hash()
+        self.0.stable_hash()
     }
 }
 
@@ -23,20 +21,20 @@ mod tests {
     #[test]
     fn derived_from_hash() {
         let mut hasher = DefaultHasher::new();
-        DbId { id: 1 }.hash(&mut hasher);
+        DbId(1).hash(&mut hasher);
         assert_ne!(hasher.finish(), 0);
     }
 
     #[test]
     fn derived_from_ord() {
-        assert_eq!(DbId { id: 1 }.cmp(&DbId { id: 1 }), Ordering::Equal);
+        assert_eq!(DbId(1).cmp(&DbId(1)), Ordering::Equal);
     }
 
     #[test]
     fn derived_from_partial_ord() {
-        let mut ids = vec![DbId { id: 3 }, DbId { id: 0 }, DbId { id: -1 }];
+        let mut ids = vec![DbId(3), DbId(0), DbId(-1)];
         ids.sort();
 
-        assert_eq!(ids, vec![DbId { id: -1 }, DbId { id: 0 }, DbId { id: 3 }]);
+        assert_eq!(ids, vec![DbId(-1), DbId(0), DbId(3)]);
     }
 }

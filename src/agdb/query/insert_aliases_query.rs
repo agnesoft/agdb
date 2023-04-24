@@ -2,9 +2,6 @@ use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::QueryMut;
 use crate::commands_mut::insert_alias::InsertAlias;
-use crate::commands_mut::insert_alias_id::InsertAliasId;
-use crate::commands_mut::insert_alias_id_result::InsertAliasIdResult;
-use crate::commands_mut::insert_alias_result::InsertAliasResult;
 use crate::commands_mut::remove_alias::RemoveAlias;
 use crate::commands_mut::CommandsMut;
 use crate::DbId;
@@ -18,11 +15,8 @@ pub struct InsertAliasesQuery {
 impl QueryMut for InsertAliasesQuery {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.ids {
-            QueryIds::Id(id) => Ok(self.id(id, &self.aliases[0])),
             QueryIds::Ids(ids) => Ok(self.ids(ids)),
-            QueryIds::All | QueryIds::Search(_) => {
-                Err(QueryError::from("Invalid insert aliases query"))
-            }
+            QueryIds::Search(_) => Err(QueryError::from("Invalid insert aliases query")),
         }
     }
 }
@@ -31,21 +25,22 @@ impl InsertAliasesQuery {
     fn id(&self, id: &QueryId, new_alias: &str) -> Vec<CommandsMut> {
         match id {
             QueryId::Id(id) => {
-                vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
-                    InsertAliasId {
-                        id: DbId { id: *id },
-                        alias: new_alias.to_string(),
-                    },
-                ))]
+                vec![CommandsMut::InsertAlias(InsertAlias {
+                    id: Some(DbId(*id)),
+                    alias: new_alias.to_string(),
+                    result: true,
+                })]
             }
             QueryId::Alias(alias) => {
                 vec![
                     CommandsMut::RemoveAlias(RemoveAlias {
                         alias: alias.clone(),
                     }),
-                    CommandsMut::InsertAliasResult(InsertAliasResult(InsertAlias {
+                    CommandsMut::InsertAlias(InsertAlias {
+                        id: None,
                         alias: new_alias.to_string(),
-                    })),
+                        result: true,
+                    }),
                 ]
             }
         }
@@ -65,22 +60,22 @@ impl InsertAliasesQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::search_query::SearchQuery;
 
     #[test]
     fn valid_id() {
         let query = InsertAliasesQuery {
-            ids: QueryIds::Id(QueryId::Id(0)),
+            ids: QueryIds::Ids(vec![QueryId::Id(0)]),
             aliases: vec!["alias".to_string()],
         };
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
-                InsertAliasId {
-                    id: DbId { id: 0 },
-                    alias: "alias".to_string()
-                }
-            ))])
+            Ok(vec![CommandsMut::InsertAlias(InsertAlias {
+                id: Some(DbId(0)),
+                alias: "alias".to_string(),
+                result: true,
+            })])
         )
     }
 
@@ -93,19 +88,25 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::InsertAliasIdResult(InsertAliasIdResult(
-                InsertAliasId {
-                    id: DbId { id: 0 },
-                    alias: "alias".to_string()
-                }
-            ))])
+            Ok(vec![CommandsMut::InsertAlias(InsertAlias {
+                id: Some(DbId(0)),
+                alias: "alias".to_string(),
+                result: true,
+            })])
         )
     }
 
     #[test]
     fn invalid_query_all() {
         let query = InsertAliasesQuery {
-            ids: QueryIds::All,
+            ids: QueryIds::Search(SearchQuery {
+                origin: QueryId::Id(0),
+                destination: QueryId::Id(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
             aliases: vec![],
         };
 

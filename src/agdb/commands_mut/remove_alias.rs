@@ -1,4 +1,4 @@
-use super::insert_alias_id::InsertAliasId;
+use super::insert_alias::InsertAlias;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
@@ -18,9 +18,10 @@ impl RemoveAlias {
         if let Some(id) = db.aliases.value(&self.alias)? {
             context.id = id;
             db.aliases.remove_key(&self.alias)?;
-            Ok(CommandsMut::InsertAliasId(InsertAliasId {
-                id: context.id,
+            Ok(CommandsMut::InsertAlias(InsertAlias {
+                id: Some(context.id),
                 alias: self.alias.clone(),
+                result: false,
             }))
         } else {
             Ok(CommandsMut::None)

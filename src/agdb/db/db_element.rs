@@ -16,7 +16,7 @@ mod tests {
         format!(
             "{:?}",
             DbElement {
-                index: DbId { id: 0 },
+                index: DbId(0),
                 values: vec![]
             }
         );

@@ -28,7 +28,7 @@ mod tests {
         format!(
             "{:?}",
             InsertIndexId {
-                id: DbId { id: 0 },
+                id: DbId(0),
                 graph_index: GraphIndex { index: 0 }
             }
         );
@@ -38,11 +38,11 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             InsertIndexId {
-                id: DbId { id: 0 },
+                id: DbId(0),
                 graph_index: GraphIndex { index: 0 }
             },
             InsertIndexId {
-                id: DbId { id: 0 },
+                id: DbId(0),
                 graph_index: GraphIndex { index: 0 }
             }
         );

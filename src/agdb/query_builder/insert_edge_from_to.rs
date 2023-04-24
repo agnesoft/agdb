@@ -19,7 +19,7 @@ impl InsertEdgeFromTo {
     }
 
     pub fn values_id(mut self, id: QueryId) -> InsertEdgeValues {
-        self.0.values = QueryValues::Ids(QueryIds::Id(id));
+        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id]));
 
         InsertEdgeValues(self.0)
     }

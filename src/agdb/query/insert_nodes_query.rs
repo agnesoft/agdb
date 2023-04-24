@@ -26,7 +26,9 @@ impl QueryMut for InsertNodesQuery {
                 commands.push(CommandsMut::InsertNode(InsertNode {}));
                 commands.push(CommandsMut::InsertIndex(InsertIndex {}));
                 commands.push(CommandsMut::InsertAlias(InsertAlias {
+                    id: None,
                     alias: alias.clone(),
+                    result: false,
                 }));
             }
         }

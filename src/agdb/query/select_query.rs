@@ -10,9 +10,8 @@ pub struct SelectQuery(pub QueryIds);
 impl Query for SelectQuery {
     fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.0 {
-            QueryIds::Id(id) => Ok(vec![Commands::SelectId(SelectId { id: id.clone() })]),
             QueryIds::Ids(ids) => Ok(Self::ids(ids)),
-            QueryIds::All | QueryIds::Search(_) => Err(QueryError::from("Invalid select query")),
+            QueryIds::Search(_) => Err(QueryError::from("Invalid select query")),
         }
     }
 }
@@ -28,10 +27,11 @@ impl SelectQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::search_query::SearchQuery;
 
     #[test]
     fn valid_id() {
-        let query = SelectQuery(QueryIds::Id(QueryId::Id(0)));
+        let query = SelectQuery(QueryIds::Ids(vec![QueryId::Id(0)]));
 
         assert_eq!(
             query.commands(),
@@ -51,7 +51,14 @@ mod tests {
 
     #[test]
     fn invalid_query_all() {
-        let query = SelectQuery(QueryIds::All);
+        let query = SelectQuery(QueryIds::Search(SearchQuery {
+            origin: QueryId::Id(0),
+            destination: QueryId::Id(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        }));
 
         assert_eq!(
             query.commands().unwrap_err().description,

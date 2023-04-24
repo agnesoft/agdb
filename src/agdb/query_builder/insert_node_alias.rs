@@ -19,7 +19,7 @@ impl InsertNodeAlias {
     }
 
     pub fn values_id(mut self, id: QueryId) -> InsertNodeValues {
-        self.0.values = QueryValues::Ids(QueryIds::Id(id));
+        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id]));
 
         InsertNodeValues(self.0)
     }

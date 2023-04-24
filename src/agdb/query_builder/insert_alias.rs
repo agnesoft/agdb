@@ -7,7 +7,7 @@ pub struct InsertAlias(pub InsertAliasesQuery);
 
 impl InsertAlias {
     pub fn id(mut self, id: QueryId) -> InsertAliasesIds {
-        self.0.ids = QueryIds::Id(id);
+        self.0.ids = QueryIds::Ids(vec![id]);
 
         InsertAliasesIds(self.0)
     }

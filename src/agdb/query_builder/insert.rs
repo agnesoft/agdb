@@ -19,7 +19,7 @@ pub struct Insert {}
 impl Insert {
     pub fn alias(self, name: &str) -> InsertAlias {
         InsertAlias(InsertAliasesQuery {
-            ids: QueryIds::Id(0.into()),
+            ids: QueryIds::Ids(vec![0.into()]),
             aliases: vec![name.to_string()],
         })
     }
@@ -33,8 +33,8 @@ impl Insert {
 
     pub fn edge(self) -> InsertEdge {
         InsertEdge(InsertEdgesQuery {
-            from: QueryIds::Id(0.into()),
-            to: QueryIds::Id(0.into()),
+            from: QueryIds::Ids(vec![0.into()]),
+            to: QueryIds::Ids(vec![0.into()]),
             values: QueryValues::None,
             each: false,
         })
@@ -67,7 +67,7 @@ impl Insert {
 
     pub fn values(self, key_values: &[DbKeyValue]) -> InsertValues {
         InsertValues(InsertValuesQuery {
-            ids: QueryIds::Id(0.into()),
+            ids: QueryIds::Ids(vec![0.into()]),
             values: QueryValues::Single(key_values.to_vec()),
         })
     }

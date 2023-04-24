@@ -7,7 +7,7 @@ pub struct InsertEdge(pub InsertEdgesQuery);
 
 impl InsertEdge {
     pub fn from(mut self, id: QueryId) -> InsertEdgeFrom {
-        self.0.from = QueryIds::Id(id);
+        self.0.from = QueryIds::Ids(vec![id]);
 
         InsertEdgeFrom(self.0)
     }

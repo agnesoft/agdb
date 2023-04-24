@@ -8,7 +8,7 @@ pub struct InsertValues(pub InsertValuesQuery);
 
 impl InsertValues {
     pub fn id(mut self, id: QueryId) -> InsertValuesIds {
-        self.0.ids = QueryIds::Id(id);
+        self.0.ids = QueryIds::Ids(vec![id]);
 
         InsertValuesIds(self.0)
     }

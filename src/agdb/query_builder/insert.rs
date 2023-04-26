@@ -3,7 +3,7 @@ use super::insert_alias::InsertAliases;
 use super::insert_edge::InsertEdge;
 use super::insert_edges::InsertEdges;
 use super::insert_node::InsertNode;
-use super::insert_nodes::InsertNodes;
+use super::insert_node::InsertNodes;
 use super::insert_values::InsertValues;
 use super::insert_values_multi::InsertValuesMulti;
 use crate::query::insert_aliases_query::InsertAliasesQuery;

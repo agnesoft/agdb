@@ -36,7 +36,10 @@ impl InsertEdgesQuery {
                 from: from.clone(),
                 to: to.clone(),
             }),
-            CommandsMut::InsertIndex(InsertIndex {}),
+            CommandsMut::InsertIndex(InsertIndex {
+                id: None,
+                graph_index: None,
+            }),
         ]
     }
 
@@ -94,7 +97,10 @@ mod tests {
                     from: QueryId::from(1),
                     to: QueryId::from(2)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {})
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                })
             ]
         );
     }
@@ -115,7 +121,10 @@ mod tests {
                     from: QueryId::Alias("alias".to_string()),
                     to: QueryId::Alias("alias2".to_string()),
                 }),
-                CommandsMut::InsertIndex(InsertIndex {})
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                })
             ]
         );
     }
@@ -136,12 +145,18 @@ mod tests {
                     from: QueryId::from(1),
                     to: QueryId::from(2)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
                 CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::from(1),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
             ]
         );
     }
@@ -162,12 +177,18 @@ mod tests {
                     from: QueryId::from(1),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
                 CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::from(2),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
             ]
         );
     }
@@ -188,12 +209,18 @@ mod tests {
                     from: QueryId::from(1),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
                 CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::from(2),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
             ]
         );
     }
@@ -214,12 +241,18 @@ mod tests {
                     from: QueryId::from(1),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
                 CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::from(2),
                     to: QueryId::from(4)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
             ]
         );
     }
@@ -240,22 +273,34 @@ mod tests {
                     from: QueryId::from(1),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
                 CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::from(1),
                     to: QueryId::from(4)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
                 CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::from(2),
                     to: QueryId::from(3)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
                 CommandsMut::InsertEdge(InsertEdge {
                     from: QueryId::from(2),
                     to: QueryId::from(4)
                 }),
-                CommandsMut::InsertIndex(InsertIndex {}),
+                CommandsMut::InsertIndex(InsertIndex {
+                    id: None,
+                    graph_index: None,
+                }),
             ]
         );
     }

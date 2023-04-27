@@ -2,7 +2,6 @@ use super::remove_node_index::RemoveNodeIndex;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
-use crate::DbId;
 use crate::QueryError;
 
 #[derive(Debug, PartialEq)]
@@ -15,7 +14,6 @@ impl InsertNode {
         context: &mut Context,
     ) -> Result<CommandsMut, QueryError> {
         context.graph_index = db.graph.insert_node()?;
-        context.id = DbId(db.next_index);
 
         Ok(CommandsMut::RemoveNodeIndex(RemoveNodeIndex {
             index: context.graph_index,

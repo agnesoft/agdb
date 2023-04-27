@@ -1,4 +1,4 @@
-use super::insert_index_id::InsertIndexId;
+use super::insert_index::InsertIndex;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
@@ -23,9 +23,9 @@ impl RemoveIndexId {
             db.indexes.remove_key(&self.id)?;
             result.result -= 1;
 
-            Ok(CommandsMut::InsertIndexId(InsertIndexId {
-                id: self.id,
-                graph_index: context.graph_index,
+            Ok(CommandsMut::InsertIndex(InsertIndex {
+                id: Some(self.id),
+                graph_index: Some(context.graph_index),
             }))
         } else {
             Ok(CommandsMut::None)

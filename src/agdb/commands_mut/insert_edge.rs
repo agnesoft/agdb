@@ -4,7 +4,6 @@ use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
 use crate::query::query_id::QueryId;
 use crate::Db;
-use crate::DbId;
 use crate::QueryError;
 
 #[derive(Debug, PartialEq)]
@@ -21,7 +20,6 @@ impl InsertEdge {
     ) -> Result<CommandsMut, QueryError> {
         let (from, to) = self.get_from_to(db)?;
         context.graph_index = db.graph.insert_edge(&from, &to)?;
-        context.id = DbId(-db.next_index);
 
         Ok(CommandsMut::RemoveEdgeIndex(RemoveEdgeIndex {
             index: context.graph_index,

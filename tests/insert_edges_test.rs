@@ -17,11 +17,7 @@ fn insert_edge_from_to() {
         .unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
 
-    let query = QueryBuilder::insert()
-        .edge()
-        .from("alias1".into())
-        .to(2.into())
-        .query();
+    let query = QueryBuilder::insert().edge().from("alias1").to(2).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
@@ -45,11 +41,7 @@ fn insert_edge_from_to_rollback() {
 
     let error = db
         .transaction_mut(|transaction| -> Result<(), QueryError> {
-            let query = QueryBuilder::insert()
-                .edge()
-                .from("alias1".into())
-                .to(2.into())
-                .query();
+            let query = QueryBuilder::insert().edge().from("alias1").to(2).query();
             let result = transaction.exec_mut(&query).unwrap();
 
             assert_eq!(result.result, 1);
@@ -78,8 +70,8 @@ fn insert_edge_from_to_rollback() {
 fn insert_edge_from_to_values() {
     let _query = QueryBuilder::insert()
         .edge()
-        .from("alias1".into())
-        .to("alias2".into())
+        .from("alias1")
+        .to("alias2")
         .values(&[("key", "value").into()])
         .query();
 }
@@ -88,9 +80,9 @@ fn insert_edge_from_to_values() {
 fn insert_edge_from_to_values_id() {
     let _query = QueryBuilder::insert()
         .edge()
-        .from("alias1".into())
-        .to("alias2".into())
-        .values_id("alias".into())
+        .from("alias1")
+        .to("alias2")
+        .values_id("alias")
         .query();
 }
 
@@ -131,7 +123,7 @@ fn insert_edges_from_to_each_values_id() {
         .from(&["alias1".into(), "alias2".into()])
         .to(&["alias3".into(), "alias4".into()])
         .each()
-        .values_id("alias".into())
+        .values_id("alias")
         .query();
 }
 
@@ -173,7 +165,7 @@ fn insert_edges_from_to_values_id() {
         .edges()
         .from(&["alias1".into(), "alias2".into()])
         .to(&["alias2".into()])
-        .values_id("alias".into())
+        .values_id("alias")
         .query();
 }
 

@@ -1,14 +1,6 @@
 mod insert;
 mod insert_alias;
 mod insert_edge;
-mod insert_edge_from;
-mod insert_edge_from_to;
-mod insert_edge_values;
-mod insert_edges;
-mod insert_edges_each;
-mod insert_edges_from;
-mod insert_edges_from_to;
-mod insert_edges_values;
 mod insert_node;
 mod insert_values;
 mod insert_values_ids;

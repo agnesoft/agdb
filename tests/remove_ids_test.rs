@@ -78,14 +78,8 @@ pub fn remove_edge() {
     db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
         .unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    db.exec_mut(
-        &QueryBuilder::insert()
-            .edge()
-            .from("alias1".into())
-            .to(2.into())
-            .query(),
-    )
-    .unwrap();
+    db.exec_mut(&QueryBuilder::insert().edge().from("alias1").to(2).query())
+        .unwrap();
 
     let query = QueryBuilder::remove().id((-3).into()).query();
     let result = db.exec_mut(&query).unwrap();
@@ -102,14 +96,8 @@ pub fn remove_edge_rollback() {
     db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
         .unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    db.exec_mut(
-        &QueryBuilder::insert()
-            .edge()
-            .from("alias1".into())
-            .to(2.into())
-            .query(),
-    )
-    .unwrap();
+    db.exec_mut(&QueryBuilder::insert().edge().from("alias1").to(2).query())
+        .unwrap();
 
     let error = db
         .transaction_mut(|transaction| {

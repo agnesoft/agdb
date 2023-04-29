@@ -1,7 +1,7 @@
 use super::insert_alias::InsertAlias;
 use super::insert_alias::InsertAliases;
 use super::insert_edge::InsertEdge;
-use super::insert_edges::InsertEdges;
+use super::insert_edge::InsertEdges;
 use super::insert_node::InsertNode;
 use super::insert_node::InsertNodes;
 use super::insert_values::InsertValues;

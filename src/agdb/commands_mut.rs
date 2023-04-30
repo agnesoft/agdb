@@ -6,7 +6,6 @@ pub mod remove_alias;
 pub mod remove_edge;
 pub mod remove_edge_index;
 pub mod remove_index;
-pub mod remove_index_id;
 pub mod remove_node;
 pub mod remove_node_index;
 
@@ -18,7 +17,6 @@ use self::remove_alias::RemoveAlias;
 use self::remove_edge::RemoveEdge;
 use self::remove_edge_index::RemoveEdgeIndex;
 use self::remove_index::RemoveIndex;
-use self::remove_index_id::RemoveIndexId;
 use self::remove_node::RemoveNode;
 use self::remove_node_index::RemoveNodeIndex;
 
@@ -35,7 +33,6 @@ pub enum CommandsMut {
     RemoveNode(RemoveNode),
     RemoveNodeIndex(RemoveNodeIndex),
     RemoveIndex(RemoveIndex),
-    RemoveIndexId(RemoveIndexId),
 }
 
 #[cfg(test)]

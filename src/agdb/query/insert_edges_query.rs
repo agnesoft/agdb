@@ -32,10 +32,7 @@ impl QueryMut for InsertEdgesQuery {
 impl InsertEdgesQuery {
     fn insert_edge(from: &QueryId, to: &QueryId) -> Vec<CommandsMut> {
         vec![
-            CommandsMut::InsertEdge(InsertEdge {
-                from: from.clone(),
-                to: to.clone(),
-            }),
+            CommandsMut::InsertEdge(InsertEdge::new(from.clone(), to.clone())),
             CommandsMut::InsertIndex(InsertIndex::new()),
         ]
     }
@@ -90,10 +87,7 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(2)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(2))),
                 CommandsMut::InsertIndex(InsertIndex::new())
             ]
         );
@@ -111,10 +105,10 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::Alias("alias".to_string()),
-                    to: QueryId::Alias("alias2".to_string()),
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(
+                    QueryId::Alias("alias".to_string()),
+                    QueryId::Alias("alias2".to_string()),
+                )),
                 CommandsMut::InsertIndex(InsertIndex::new())
             ]
         );
@@ -132,15 +126,9 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(2)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(2))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
@@ -158,15 +146,9 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(2),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
@@ -184,15 +166,9 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(2),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
@@ -210,15 +186,9 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(2),
-                    to: QueryId::from(4)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(4))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
@@ -236,25 +206,13 @@ mod tests {
         assert_eq!(
             query.commands().unwrap(),
             vec![
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(1),
-                    to: QueryId::from(4)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(4))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(2),
-                    to: QueryId::from(3)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(3))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
-                CommandsMut::InsertEdge(InsertEdge {
-                    from: QueryId::from(2),
-                    to: QueryId::from(4)
-                }),
+                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(4))),
                 CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );

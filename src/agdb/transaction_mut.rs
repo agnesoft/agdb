@@ -39,8 +39,8 @@ impl<'a> TransactionMut<'a> {
 
         self.commands = query.commands()?;
 
-        for command in self.commands {
-            self.redo_command(command, &mut context, &mut result)?;
+        for command in &mut self.commands {
+            Self::redo_command(command, &mut self.db, &mut context, &mut result)?;
         }
 
         Ok(result)
@@ -51,51 +51,42 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub(crate) fn rollback(mut self) -> Result<(), QueryError> {
-        let mut context = Context {
-            id: DbId(0),
-            graph_index: GraphIndex { index: 0 },
-        };
-        let mut result = QueryResult {
-            result: 0,
-            elements: vec![],
-        };
-
-        for command in self.commands {
-            self.undo_command(command)?;
+        for command in &mut self.commands {
+            Self::undo_command(command, &mut self.db)?;
         }
 
         Ok(())
     }
 
     fn redo_command(
-        &mut self,
-        command: CommandsMut,
+        command: &mut CommandsMut,
+        db: &mut Db,
         context: &mut Context,
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
         match command {
-            CommandsMut::InsertAlias(data) => data.redo(self.db, result, context),
-            CommandsMut::InsertEdge(data) => data.redo(self.db, context),
-            CommandsMut::InsertIndex(data) => data.redo(self.db, result, context),
-            CommandsMut::InsertNode(data) => data.redo(self.db, context),
-            CommandsMut::RemoveAlias(data) => data.redo(self.db, result, context),
-            CommandsMut::RemoveEdge(data) => data.redo(self.db, context),
-            CommandsMut::RemoveIndex(data) => data.redo(self.db, result, context),
-            CommandsMut::RemoveNode(data) => data.redo(self.db, context),
+            CommandsMut::InsertAlias(data) => data.redo(db, result, context),
+            CommandsMut::InsertEdge(data) => data.redo(db, context),
+            CommandsMut::InsertIndex(data) => data.redo(db, result, context),
+            CommandsMut::InsertNode(data) => data.redo(db, context),
+            CommandsMut::RemoveAlias(data) => data.redo(db, result, context),
+            CommandsMut::RemoveEdge(data) => data.redo(db, context),
+            CommandsMut::RemoveIndex(data) => data.redo(db, result, context),
+            CommandsMut::RemoveNode(data) => data.redo(db, context),
             CommandsMut::None => Ok(()),
         }
     }
 
-    fn undo_command(&mut self, command: CommandsMut) -> Result<(), QueryError> {
+    fn undo_command(command: &mut CommandsMut, db: &mut Db) -> Result<(), QueryError> {
         match command {
-            CommandsMut::InsertAlias(data) => data.undo(self.db),
-            CommandsMut::InsertEdge(data) => data.undo(self.db),
-            CommandsMut::InsertIndex(data) => data.undo(self.db),
-            CommandsMut::InsertNode(data) => data.undo(self.db),
-            CommandsMut::RemoveAlias(data) => data.undo(self.db),
-            CommandsMut::RemoveEdge(data) => data.undo(self.db),
-            CommandsMut::RemoveIndex(data) => data.undo(self.db),
-            CommandsMut::RemoveNode(data) => data.undo(self.db),
+            CommandsMut::InsertAlias(data) => data.undo(db),
+            CommandsMut::InsertEdge(data) => data.undo(db),
+            CommandsMut::InsertIndex(data) => data.undo(db),
+            CommandsMut::InsertNode(data) => data.undo(db),
+            CommandsMut::RemoveAlias(data) => data.undo(db),
+            CommandsMut::RemoveEdge(data) => data.undo(db),
+            CommandsMut::RemoveIndex(data) => data.undo(db),
+            CommandsMut::RemoveNode(data) => data.undo(db),
             CommandsMut::None => Ok(()),
         }
     }

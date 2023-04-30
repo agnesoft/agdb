@@ -14,39 +14,52 @@ pub struct RemoveAlias {
 }
 
 impl RemoveAlias {
-    pub(crate) fn process(
-        &self,
+    pub(crate) fn redo(
+        &mut self,
         db: &mut Db,
-        result: &mut QueryResult,
+        result: &QueryResult,
         context: &mut Context,
-    ) -> Result<CommandsMut, QueryError> {
-        if let Some(id) = &self.id {
-            if let Some(alias) = db.aliases.key(id)? {
-                db.aliases.remove_value(id)?;
-
-                return Ok(CommandsMut::InsertAlias(InsertAlias {
-                    id: Some(*id),
-                    alias,
-                    result: false,
-                }));
-            }
-        } else if let Some(id) = db.aliases.value(&self.alias)? {
-            context.id = id;
-            db.aliases.remove_key(&self.alias)?;
-
-            if self.result {
-                result.result -= 1;
-            }
-
-            return Ok(CommandsMut::InsertAlias(InsertAlias {
-                id: Some(context.id),
-                alias: self.alias.clone(),
-                result: false,
-            }));
-        }
-
-        Ok(CommandsMut::None)
+    ) -> Result<(), QueryError> {
+        todo!()
     }
+
+    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+        todo!()
+    }
+
+    // pub(crate) fn process(
+    //     &self,
+    //     db: &mut Db,
+    //     result: &mut QueryResult,
+    //     context: &mut Context,
+    // ) -> Result<CommandsMut, QueryError> {
+    //     if let Some(id) = &self.id {
+    //         if let Some(alias) = db.aliases.key(id)? {
+    //             db.aliases.remove_value(id)?;
+
+    //             return Ok(CommandsMut::InsertAlias(InsertAlias {
+    //                 id: Some(*id),
+    //                 alias,
+    //                 result: false,
+    //             }));
+    //         }
+    //     } else if let Some(id) = db.aliases.value(&self.alias)? {
+    //         context.id = id;
+    //         db.aliases.remove_key(&self.alias)?;
+
+    //         if self.result {
+    //             result.result -= 1;
+    //         }
+
+    //         return Ok(CommandsMut::InsertAlias(InsertAlias {
+    //             id: Some(context.id),
+    //             alias: self.alias.clone(),
+    //             result: false,
+    //         }));
+    //     }
+
+    //     Ok(CommandsMut::None)
+    // }
 }
 
 #[cfg(test)]

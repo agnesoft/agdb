@@ -8,11 +8,19 @@ use crate::QueryError;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertEdge {
-    pub(crate) from: QueryId,
-    pub(crate) to: QueryId,
+    from: QueryId,
+    to: QueryId,
 }
 
 impl InsertEdge {
+    pub(crate) fn redo(&mut self, db: &mut Db, context: &mut Context) -> Result<(), QueryError> {
+        todo!()
+    }
+
+    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+        todo!()
+    }
+
     pub(crate) fn process(
         &self,
         db: &mut Db,

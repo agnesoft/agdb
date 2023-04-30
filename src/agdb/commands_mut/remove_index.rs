@@ -12,26 +12,39 @@ pub struct RemoveIndex {
 }
 
 impl RemoveIndex {
-    pub(crate) fn process(
-        &self,
+    pub(crate) fn redo(
+        &mut self,
         db: &mut Db,
-        result: &mut QueryResult,
+        result: &QueryResult,
         context: &mut Context,
-    ) -> Result<CommandsMut, QueryError> {
-        let id = self.id.unwrap_or(context.id);
-
-        if let Some(graph_index) = db.indexes.value(&id)? {
-            context.graph_index = graph_index;
-            db.indexes.remove_key(&id)?;
-            result.result -= 1;
-            Ok(CommandsMut::InsertIndex(InsertIndex {
-                id: Some(id),
-                graph_index: Some(graph_index),
-            }))
-        } else {
-            Ok(CommandsMut::None)
-        }
+    ) -> Result<(), QueryError> {
+        todo!()
     }
+
+    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+        todo!()
+    }
+
+    // pub(crate) fn process(
+    //     &self,
+    //     db: &mut Db,
+    //     result: &mut QueryResult,
+    //     context: &mut Context,
+    // ) -> Result<CommandsMut, QueryError> {
+    //     let id = self.id.unwrap_or(context.id);
+
+    //     if let Some(graph_index) = db.indexes.value(&id)? {
+    //         context.graph_index = graph_index;
+    //         db.indexes.remove_key(&id)?;
+    //         result.result -= 1;
+    //         Ok(CommandsMut::InsertIndex(InsertIndex {
+    //             id: Some(id),
+    //             graph_index: Some(graph_index),
+    //         }))
+    //     } else {
+    //         Ok(CommandsMut::None)
+    //     }
+    // }
 }
 
 #[cfg(test)]

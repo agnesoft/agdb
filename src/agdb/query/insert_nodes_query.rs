@@ -19,23 +19,16 @@ impl QueryMut for InsertNodesQuery {
         if self.aliases.is_empty() {
             for _i in 0..self.count {
                 commands.push(CommandsMut::InsertNode(InsertNode::new()));
-                commands.push(CommandsMut::InsertIndex(InsertIndex {
-                    id: None,
-                    graph_index: None,
-                }));
+                commands.push(CommandsMut::InsertIndex(InsertIndex::new()));
             }
         } else {
             for alias in &self.aliases {
                 commands.push(CommandsMut::InsertNode(InsertNode::new()));
-                commands.push(CommandsMut::InsertIndex(InsertIndex {
-                    id: None,
-                    graph_index: None,
-                }));
-                commands.push(CommandsMut::InsertAlias(InsertAlias {
-                    id: None,
-                    alias: alias.clone(),
-                    result: false,
-                }));
+                commands.push(CommandsMut::InsertIndex(InsertIndex::new()));
+                commands.push(CommandsMut::InsertAlias(InsertAlias::new(
+                    alias.clone(),
+                    None,
+                )));
             }
         }
 

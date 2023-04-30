@@ -1,5 +1,3 @@
-use super::remove_alias::RemoveAlias;
-use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
 use crate::DbId;
@@ -8,40 +6,49 @@ use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertAlias {
-    pub(crate) id: Option<DbId>,
-    pub(crate) alias: String,
-    pub(crate) result: bool,
+    id: Option<DbId>,
+    alias: String,
+    result: bool,
 }
 
 impl InsertAlias {
-    pub(crate) fn process(
-        &self,
+    pub(crate) fn new(alias: String, id: Option<DbId>) -> Self {
+        Self {
+            id,
+            alias,
+            result: id.is_some(),
+        }
+    }
+
+    pub(crate) fn redo(
+        &mut self,
         db: &mut Db,
         result: &mut QueryResult,
         context: &Context,
-    ) -> Result<CommandsMut, QueryError> {
-        let undo = insert_alias(db, &self.id.unwrap_or(context.id), &self.alias)?;
+    ) -> Result<(), QueryError> {
+        if self.alias.is_empty() {
+            return Err(QueryError::from("Empty alias is not allowed"));
+        }
+
+        let id = if let Some(id) = self.id {
+            id
+        } else {
+            self.id = Some(context.id);
+            context.id
+        };
+
+        db.aliases.insert(&self.alias, &id)?;
 
         if self.result {
             result.result += 1;
         }
 
-        Ok(undo)
-    }
-}
-
-fn insert_alias(db: &mut Db, id: &DbId, alias: &String) -> Result<CommandsMut, QueryError> {
-    if alias.is_empty() {
-        return Err(QueryError::from("Empty alias is not allowed"));
+        Ok(())
     }
 
-    db.aliases.insert(alias, id)?;
-
-    Ok(CommandsMut::RemoveAlias(RemoveAlias {
-        id: Some(*id),
-        alias: alias.clone(),
-        result: false,
-    }))
+    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+        Ok(db.aliases.remove_key(&self.alias)?)
+    }
 }
 
 #[cfg(test)]
@@ -50,29 +57,14 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!(
-            "{:?}",
-            InsertAlias {
-                id: None,
-                alias: String::new(),
-                result: false
-            }
-        );
+        format!("{:?}", InsertAlias::new(String::new(), None));
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            InsertAlias {
-                id: None,
-                alias: String::new(),
-                result: false
-            },
-            InsertAlias {
-                id: None,
-                alias: String::new(),
-                result: false
-            }
+            InsertAlias::new(String::new(), None),
+            InsertAlias::new(String::new(), None)
         );
     }
 }

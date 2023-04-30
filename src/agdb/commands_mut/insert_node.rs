@@ -1,5 +1,3 @@
-use super::remove_node::RemoveNode;
-use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
 use crate::Db;
@@ -11,20 +9,8 @@ pub struct InsertNode {
 }
 
 impl InsertNode {
-    pub(crate) fn process(
-        &self,
-        db: &mut Db,
-        context: &mut Context,
-    ) -> Result<CommandsMut, QueryError> {
-        context.graph_index = db.graph.insert_node()?;
-
-        Ok(CommandsMut::RemoveNode(RemoveNode {
-            index: Some(context.graph_index),
-        }))
-    }
-
-    pub(crate) fn new() -> InsertNode {
-        InsertNode {
+    pub(crate) fn new() -> Self {
+        Self {
             graph_index: GraphIndex { index: 0 },
         }
     }

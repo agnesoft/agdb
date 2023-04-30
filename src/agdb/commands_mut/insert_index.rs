@@ -1,5 +1,3 @@
-use super::remove_index::RemoveIndex;
-use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
 use crate::Db;
@@ -10,40 +8,43 @@ use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertIndex {
-    pub(crate) id: Option<DbId>,
-    pub(crate) graph_index: Option<GraphIndex>,
+    id: DbId,
+    graph_index: GraphIndex,
 }
 
 impl InsertIndex {
-    pub(crate) fn process(
-        &self,
+    pub(crate) fn new() -> Self {
+        Self {
+            id: DbId::default(),
+            graph_index: GraphIndex { index: 0 },
+        }
+    }
+
+    pub(crate) fn redo(
+        &mut self,
         db: &mut Db,
         result: &mut QueryResult,
         context: &mut Context,
-    ) -> Result<CommandsMut, QueryError> {
-        let graph_index = self.graph_index.unwrap_or(context.graph_index);
-
-        let id = if let Some(id) = self.id {
-            id
+    ) -> Result<(), QueryError> {
+        self.graph_index = context.graph_index;
+        self.id = if context.graph_index.is_node() {
+            DbId(db.next_index)
         } else {
-            context.id = if graph_index.is_node() {
-                DbId(db.next_index)
-            } else {
-                DbId(-db.next_index)
-            };
-
-            db.next_index += 1;
-            context.id
+            DbId(-db.next_index)
         };
-
-        db.indexes.insert(&id, &graph_index)?;
+        context.id = self.id;
+        db.next_index += 1;
+        db.indexes.insert(&self.id, &self.graph_index)?;
         result.result += 1;
         result.elements.push(DbElement {
             index: context.id,
             values: vec![],
         });
+        Ok(())
+    }
 
-        Ok(CommandsMut::RemoveIndex(RemoveIndex { id: Some(id) }))
+    pub(crate) fn undo(&self, db: &mut Db) -> Result<(), QueryError> {
+        Ok(db.indexes.remove_key(&self.id)?)
     }
 }
 
@@ -53,26 +54,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!(
-            "{:?}",
-            InsertIndex {
-                id: Some(DbId(0)),
-                graph_index: Some(GraphIndex { index: 0 })
-            }
-        );
+        format!("{:?}", InsertIndex::new());
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(
-            InsertIndex {
-                id: Some(DbId(0)),
-                graph_index: Some(GraphIndex { index: 0 })
-            },
-            InsertIndex {
-                id: Some(DbId(0)),
-                graph_index: Some(GraphIndex { index: 0 })
-            }
-        );
+        assert_eq!(InsertIndex::new(), InsertIndex::new());
     }
 }

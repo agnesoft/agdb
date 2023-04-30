@@ -99,23 +99,4 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::None => Ok(CommandsMut::None),
         }
     }
-
-    fn process_command(
-        &mut self,
-        command: CommandsMut,
-        context: &mut Context,
-        result: &mut QueryResult,
-    ) -> Result<CommandsMut, QueryError> {
-        match command {
-            CommandsMut::InsertAlias(data) => data.process(self.db, result, context),
-            CommandsMut::InsertEdge(data) => data.process(self.db, context),
-            CommandsMut::InsertIndex(data) => data.process(self.db, result, context),
-            CommandsMut::InsertNode(data) => data.process(self.db, context),
-            CommandsMut::RemoveAlias(data) => data.process(self.db, result, context),
-            CommandsMut::RemoveEdge(data) => data.process(self.db, context),
-            CommandsMut::RemoveIndex(data) => data.process(self.db, result, context),
-            CommandsMut::RemoveNode(data) => data.process(self.db, context),
-            CommandsMut::None => Ok(CommandsMut::None),
-        }
-    }
 }

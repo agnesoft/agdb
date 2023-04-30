@@ -18,13 +18,12 @@ impl RemoveEdge {
     }
 
     pub(crate) fn redo(&mut self, db: &mut Db, context: &mut Context) -> Result<(), QueryError> {
-        let edge = db
-            .graph
-            .edge(&context.graph_index)
-            .ok_or("Graph index not found")?;
-        self.from = edge.index_from();
-        self.to = edge.index_to();
-        db.graph.remove_edge(&context.graph_index)?;
+        if let Some(edge) = db.graph.edge(&context.graph_index) {
+            self.from = edge.index_from();
+            self.to = edge.index_to();
+            db.graph.remove_edge(&context.graph_index)?;
+        }
+
         Ok(())
     }
 

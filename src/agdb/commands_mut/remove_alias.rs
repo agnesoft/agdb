@@ -8,18 +8,12 @@ use crate::QueryResult;
 pub struct RemoveAlias {
     id: Option<DbId>,
     alias: String,
+    result: bool,
 }
 
 impl RemoveAlias {
-    pub(crate) fn new(alias: String) -> Self {
-        Self { id: None, alias }
-    }
-
-    pub(crate) fn new_id(id: DbId) -> Self {
-        Self {
-            id: Some(id),
-            alias: String::new(),
-        }
+    pub(crate) fn new(alias: String, id: Option<DbId>, result: bool) -> Self {
+        Self { id, alias, result }
     }
 
     pub(crate) fn redo(
@@ -37,7 +31,10 @@ impl RemoveAlias {
             self.id = Some(id);
             context.id = id;
             db.aliases.remove_key(&self.alias)?;
-            result.result -= 1;
+
+            if self.result {
+                result.result -= 1;
+            }
         }
 
         Ok(())
@@ -60,14 +57,14 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", RemoveAlias::new(String::new()));
+        format!("{:?}", RemoveAlias::new(String::new(), None, false));
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            RemoveAlias::new(String::new()),
-            RemoveAlias::new(String::new())
+            RemoveAlias::new(String::new(), None, false),
+            RemoveAlias::new(String::new(), None, false)
         );
     }
 }

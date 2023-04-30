@@ -25,10 +25,14 @@ impl RemoveQuery {
 
         if id.is_node() {
             if let QueryId::Id(id) = id {
-                commands.push(CommandsMut::RemoveAlias(RemoveAlias::new_id(*id)));
+                commands.push(CommandsMut::RemoveAlias(RemoveAlias::new(
+                    String::new(),
+                    Some(*id),
+                    false,
+                )));
             }
 
-            commands.push(CommandsMut::RemoveNode(RemoveNode { index: None }));
+            commands.push(CommandsMut::RemoveNode(RemoveNode::new()));
         } else {
             commands.push(CommandsMut::RemoveEdge(RemoveEdge::new()));
         }
@@ -50,7 +54,7 @@ impl RemoveQuery {
         match id {
             QueryId::Id(id) => vec![CommandsMut::RemoveIndex(RemoveIndex::new(Some(*id)))],
             QueryId::Alias(alias) => vec![
-                CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone())),
+                CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone(), None, false)),
                 CommandsMut::RemoveIndex(RemoveIndex::new(None)),
             ],
         }
@@ -71,8 +75,8 @@ mod tests {
             query.commands(),
             Ok(vec![
                 CommandsMut::RemoveIndex(RemoveIndex::new(Some(DbId(1)))),
-                CommandsMut::RemoveAlias(RemoveAlias::new_id(DbId(1))),
-                CommandsMut::RemoveNode(RemoveNode { index: None })
+                CommandsMut::RemoveAlias(RemoveAlias::new(String::new(), Some(DbId(1)), false)),
+                CommandsMut::RemoveNode(RemoveNode::new())
             ])
         )
     }

@@ -28,6 +28,7 @@ impl QueryMut for InsertNodesQuery {
                 commands.push(CommandsMut::InsertAlias(InsertAlias::new(
                     alias.clone(),
                     None,
+                    false,
                 )));
             }
         }

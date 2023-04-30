@@ -27,12 +27,13 @@ impl InsertAliasesQuery {
                 vec![CommandsMut::InsertAlias(InsertAlias::new(
                     new_alias.to_string(),
                     Some(*id),
+                    true,
                 ))]
             }
             QueryId::Alias(alias) => {
                 vec![
-                    CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone())),
-                    CommandsMut::InsertAlias(InsertAlias::new(new_alias.to_string(), None)),
+                    CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone(), None, false)),
+                    CommandsMut::InsertAlias(InsertAlias::new(new_alias.to_string(), None, true)),
                 ]
             }
         }
@@ -66,7 +67,8 @@ mod tests {
             query.commands(),
             Ok(vec![CommandsMut::InsertAlias(InsertAlias::new(
                 "alias".to_string(),
-                Some(DbId(0))
+                Some(DbId(0)),
+                true
             ))])
         )
     }
@@ -82,7 +84,8 @@ mod tests {
             query.commands(),
             Ok(vec![CommandsMut::InsertAlias(InsertAlias::new(
                 "alias".to_string(),
-                Some(DbId(0))
+                Some(DbId(0)),
+                true
             ))])
         )
     }

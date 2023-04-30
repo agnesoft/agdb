@@ -12,12 +12,8 @@ pub struct InsertAlias {
 }
 
 impl InsertAlias {
-    pub(crate) fn new(alias: String, id: Option<DbId>) -> Self {
-        Self {
-            id,
-            alias,
-            result: id.is_some(),
-        }
+    pub(crate) fn new(alias: String, id: Option<DbId>, result: bool) -> Self {
+        Self { id, alias, result }
     }
 
     pub(crate) fn redo(
@@ -57,14 +53,14 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", InsertAlias::new(String::new(), None));
+        format!("{:?}", InsertAlias::new(String::new(), None, false));
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            InsertAlias::new(String::new(), None),
-            InsertAlias::new(String::new(), None)
+            InsertAlias::new(String::new(), None, false),
+            InsertAlias::new(String::new(), None, false)
         );
     }
 }

@@ -1,4 +1,4 @@
-use super::remove_edge_index::RemoveEdgeIndex;
+use super::remove_edge::RemoveEdge;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
@@ -21,8 +21,8 @@ impl InsertEdge {
         let (from, to) = self.get_from_to(db)?;
         context.graph_index = db.graph.insert_edge(&from, &to)?;
 
-        Ok(CommandsMut::RemoveEdgeIndex(RemoveEdgeIndex {
-            index: context.graph_index,
+        Ok(CommandsMut::RemoveEdge(RemoveEdge {
+            index: Some(context.graph_index),
         }))
     }
 

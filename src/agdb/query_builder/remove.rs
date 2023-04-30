@@ -13,7 +13,7 @@ use crate::DbKey;
 pub struct Remove {}
 
 impl Remove {
-    pub fn alias(self, name: &str) -> RemoveAlias {
+    pub fn alias<T: ToString>(self, name: T) -> RemoveAlias {
         RemoveAlias(RemoveAliasesQuery {
             aliases: vec![name.to_string()],
         })

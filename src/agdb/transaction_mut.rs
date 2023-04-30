@@ -72,7 +72,7 @@ impl<'a> TransactionMut<'a> {
         command: CommandsMut,
         context: &mut Context,
         result: &mut QueryResult,
-    ) -> Result<CommandsMut, QueryError> {
+    ) -> Result<(), QueryError> {
         match command {
             CommandsMut::InsertAlias(data) => data.redo(self.db, result, context),
             CommandsMut::InsertEdge(data) => data.redo(self.db, context),
@@ -82,11 +82,11 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::RemoveEdge(data) => data.redo(self.db, context),
             CommandsMut::RemoveIndex(data) => data.redo(self.db, result, context),
             CommandsMut::RemoveNode(data) => data.redo(self.db, context),
-            CommandsMut::None => Ok(CommandsMut::None),
+            CommandsMut::None => Ok(()),
         }
     }
 
-    fn undo_command(&mut self, command: CommandsMut) -> Result<CommandsMut, QueryError> {
+    fn undo_command(&mut self, command: CommandsMut) -> Result<(), QueryError> {
         match command {
             CommandsMut::InsertAlias(data) => data.undo(self.db),
             CommandsMut::InsertEdge(data) => data.undo(self.db),
@@ -96,7 +96,7 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::RemoveEdge(data) => data.undo(self.db),
             CommandsMut::RemoveIndex(data) => data.undo(self.db),
             CommandsMut::RemoveNode(data) => data.undo(self.db),
-            CommandsMut::None => Ok(CommandsMut::None),
+            CommandsMut::None => Ok(()),
         }
     }
 }

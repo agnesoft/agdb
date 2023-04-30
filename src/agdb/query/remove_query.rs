@@ -30,7 +30,7 @@ impl RemoveQuery {
 
             commands.push(CommandsMut::RemoveNode(RemoveNode { index: None }));
         } else {
-            commands.push(CommandsMut::RemoveEdge(RemoveEdge { index: None }));
+            commands.push(CommandsMut::RemoveEdge(RemoveEdge::new()));
         }
 
         commands
@@ -85,7 +85,7 @@ mod tests {
             query.commands(),
             Ok(vec![
                 CommandsMut::RemoveIndex(RemoveIndex::new(Some(DbId(-3)))),
-                CommandsMut::RemoveEdge(RemoveEdge { index: None })
+                CommandsMut::RemoveEdge(RemoveEdge::new())
             ])
         )
     }

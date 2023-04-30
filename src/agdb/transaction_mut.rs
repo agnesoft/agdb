@@ -83,7 +83,6 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::RemoveIndex(data) => data.process(self.db, result, context),
             CommandsMut::RemoveEdgeIndex(data) => data.process(self.db),
             CommandsMut::RemoveNode(data) => data.process(self.db, context),
-            CommandsMut::RemoveNodeIndex(data) => data.process(self.db),
             CommandsMut::None => Ok(CommandsMut::None),
         }
     }

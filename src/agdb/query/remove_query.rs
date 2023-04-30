@@ -48,10 +48,10 @@ impl RemoveQuery {
 
     fn remove_index(id: &QueryId) -> Vec<CommandsMut> {
         match id {
-            QueryId::Id(id) => vec![CommandsMut::RemoveIndex(RemoveIndex { id: Some(*id) })],
+            QueryId::Id(id) => vec![CommandsMut::RemoveIndex(RemoveIndex::new(Some(*id)))],
             QueryId::Alias(alias) => vec![
                 CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone())),
-                CommandsMut::RemoveIndex(RemoveIndex { id: None }),
+                CommandsMut::RemoveIndex(RemoveIndex::new(None)),
             ],
         }
     }
@@ -70,7 +70,7 @@ mod tests {
         assert_eq!(
             query.commands(),
             Ok(vec![
-                CommandsMut::RemoveIndex(RemoveIndex { id: Some(DbId(1)) }),
+                CommandsMut::RemoveIndex(RemoveIndex::new(Some(DbId(1)))),
                 CommandsMut::RemoveAlias(RemoveAlias::new_id(DbId(1))),
                 CommandsMut::RemoveNode(RemoveNode { index: None })
             ])
@@ -84,7 +84,7 @@ mod tests {
         assert_eq!(
             query.commands(),
             Ok(vec![
-                CommandsMut::RemoveIndex(RemoveIndex { id: Some(DbId(-3)) }),
+                CommandsMut::RemoveIndex(RemoveIndex::new(Some(DbId(-3)))),
                 CommandsMut::RemoveEdge(RemoveEdge { index: None })
             ])
         )

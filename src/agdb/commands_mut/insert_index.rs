@@ -37,7 +37,7 @@ impl InsertIndex {
         db.indexes.insert(&self.id, &self.graph_index)?;
         result.result += 1;
         result.elements.push(DbElement {
-            index: context.id,
+            index: self.id,
             values: vec![],
         });
         Ok(())

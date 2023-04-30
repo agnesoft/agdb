@@ -1,6 +1,5 @@
-use super::insert_index::InsertIndex;
-use super::CommandsMut;
 use crate::db::db_context::Context;
+use crate::graph::graph_index::GraphIndex;
 use crate::Db;
 use crate::DbId;
 use crate::QueryError;
@@ -8,43 +7,47 @@ use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct RemoveIndex {
-    pub(crate) id: Option<DbId>,
+    id: Option<DbId>,
+    graph_index: GraphIndex,
 }
 
 impl RemoveIndex {
+    pub(crate) fn new(id: Option<DbId>) -> Self {
+        Self {
+            id,
+            graph_index: GraphIndex { index: 0 },
+        }
+    }
+
     pub(crate) fn redo(
         &mut self,
         db: &mut Db,
         result: &mut QueryResult,
         context: &mut Context,
     ) -> Result<(), QueryError> {
-        todo!()
+        if let Some(id) = &self.id {
+            context.id = *id;
+        }
+
+        if let Some(graph_index) = db.indexes.value(&context.id)? {
+            self.graph_index = graph_index;
+            context.graph_index = graph_index;
+            db.indexes.remove_key(&context.id)?;
+            result.result -= 1;
+        }
+
+        Ok(())
     }
 
     pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
-        todo!()
+        if let Some(id) = self.id {
+            if self.graph_index.is_valid() {
+                db.indexes.insert(&id, &self.graph_index)?;
+            }
+        }
+
+        Ok(())
     }
-
-    // pub(crate) fn process(
-    //     &self,
-    //     db: &mut Db,
-    //     result: &mut QueryResult,
-    //     context: &mut Context,
-    // ) -> Result<CommandsMut, QueryError> {
-    //     let id = self.id.unwrap_or(context.id);
-
-    //     if let Some(graph_index) = db.indexes.value(&id)? {
-    //         context.graph_index = graph_index;
-    //         db.indexes.remove_key(&id)?;
-    //         result.result -= 1;
-    //         Ok(CommandsMut::InsertIndex(InsertIndex {
-    //             id: Some(id),
-    //             graph_index: Some(graph_index),
-    //         }))
-    //     } else {
-    //         Ok(CommandsMut::None)
-    //     }
-    // }
 }
 
 #[cfg(test)]
@@ -53,11 +56,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", RemoveIndex { id: None });
+        format!("{:?}", RemoveIndex::new(None));
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(RemoveIndex { id: None }, RemoveIndex { id: None });
+        assert_eq!(RemoveIndex::new(None), RemoveIndex::new(None));
     }
 }

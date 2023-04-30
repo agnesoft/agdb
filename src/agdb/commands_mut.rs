@@ -7,7 +7,6 @@ pub mod remove_edge;
 pub mod remove_edge_index;
 pub mod remove_index;
 pub mod remove_node;
-pub mod remove_node_index;
 
 use self::insert_alias::InsertAlias;
 use self::insert_edge::InsertEdge;
@@ -18,7 +17,6 @@ use self::remove_edge::RemoveEdge;
 use self::remove_edge_index::RemoveEdgeIndex;
 use self::remove_index::RemoveIndex;
 use self::remove_node::RemoveNode;
-use self::remove_node_index::RemoveNodeIndex;
 
 #[derive(Debug, PartialEq)]
 pub enum CommandsMut {
@@ -31,7 +29,6 @@ pub enum CommandsMut {
     RemoveEdge(RemoveEdge),
     RemoveEdgeIndex(RemoveEdgeIndex),
     RemoveNode(RemoveNode),
-    RemoveNodeIndex(RemoveNodeIndex),
     RemoveIndex(RemoveIndex),
 }
 

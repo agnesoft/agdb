@@ -32,7 +32,7 @@ impl RemoveQuery {
                 }));
             }
 
-            commands.push(CommandsMut::RemoveNode(RemoveNode {}));
+            commands.push(CommandsMut::RemoveNode(RemoveNode { index: None }));
         } else {
             commands.push(CommandsMut::RemoveEdge(RemoveEdge {}));
         }
@@ -84,7 +84,7 @@ mod tests {
                     alias: String::new(),
                     result: false,
                 }),
-                CommandsMut::RemoveNode(RemoveNode {})
+                CommandsMut::RemoveNode(RemoveNode { index: None })
             ])
         )
     }

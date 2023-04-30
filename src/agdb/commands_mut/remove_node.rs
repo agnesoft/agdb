@@ -1,11 +1,14 @@
 use super::insert_node::InsertNode;
 use super::CommandsMut;
 use crate::db::db_context::Context;
+use crate::graph::graph_index::GraphIndex;
 use crate::Db;
 use crate::QueryError;
 
 #[derive(Debug, PartialEq)]
-pub struct RemoveNode {}
+pub struct RemoveNode {
+    pub(crate) index: Option<GraphIndex>,
+}
 
 impl RemoveNode {
     pub(crate) fn process(
@@ -13,8 +16,8 @@ impl RemoveNode {
         db: &mut Db,
         context: &Context,
     ) -> Result<CommandsMut, QueryError> {
-        db.graph.remove_node(&context.graph_index)?;
-
+        let index = self.index.unwrap_or(context.graph_index);
+        db.graph.remove_node(&index)?;
         Ok(CommandsMut::InsertNode(InsertNode {}))
     }
 }
@@ -25,11 +28,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", RemoveNode {});
+        format!("{:?}", RemoveNode { index: None });
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(RemoveNode {}, RemoveNode {});
+        assert_eq!(RemoveNode { index: None }, RemoveNode { index: None });
     }
 }

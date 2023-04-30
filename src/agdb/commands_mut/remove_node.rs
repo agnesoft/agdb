@@ -18,7 +18,7 @@ impl RemoveNode {
     ) -> Result<CommandsMut, QueryError> {
         let index = self.index.unwrap_or(context.graph_index);
         db.graph.remove_node(&index)?;
-        Ok(CommandsMut::InsertNode(InsertNode {}))
+        Ok(CommandsMut::InsertNode(InsertNode::new()))
     }
 }
 

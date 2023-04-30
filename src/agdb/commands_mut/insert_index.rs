@@ -1,4 +1,4 @@
-use super::remove_index_id::RemoveIndexId;
+use super::remove_index::RemoveIndex;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
@@ -43,7 +43,7 @@ impl InsertIndex {
             values: vec![],
         });
 
-        Ok(CommandsMut::RemoveIndexId(RemoveIndexId { id }))
+        Ok(CommandsMut::RemoveIndex(RemoveIndex { id: Some(id) }))
     }
 }
 

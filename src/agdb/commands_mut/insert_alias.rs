@@ -38,7 +38,9 @@ fn insert_alias(db: &mut Db, id: &DbId, alias: &String) -> Result<CommandsMut, Q
     db.aliases.insert(alias, id)?;
 
     Ok(CommandsMut::RemoveAlias(RemoveAlias {
+        id: Some(*id),
         alias: alias.clone(),
+        result: false,
     }))
 }
 

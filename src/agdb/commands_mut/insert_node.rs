@@ -1,4 +1,4 @@
-use super::remove_node_index::RemoveNodeIndex;
+use super::remove_node::RemoveNode;
 use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
@@ -15,8 +15,8 @@ impl InsertNode {
     ) -> Result<CommandsMut, QueryError> {
         context.graph_index = db.graph.insert_node()?;
 
-        Ok(CommandsMut::RemoveNodeIndex(RemoveNodeIndex {
-            index: context.graph_index,
+        Ok(CommandsMut::RemoveNode(RemoveNode {
+            index: Some(context.graph_index),
         }))
     }
 }

@@ -62,11 +62,14 @@ impl Db {
         result
     }
 
-    pub(crate) fn graph_index_from_id(&self, id: &QueryId) -> Result<GraphIndex, QueryError> {
-        self.index_from_id(id)
+    pub(crate) fn id_from_graph_index(&self, index: &GraphIndex) -> Result<DbId, QueryError> {
+        self.indexes.key(index)?.ok_or(QueryError::from(format!(
+            "Index not found '{}'",
+            index.index
+        )))
     }
 
-    pub(crate) fn index_from_id(&self, id: &QueryId) -> Result<GraphIndex, QueryError> {
+    pub(crate) fn graph_index_from_id(&self, id: &QueryId) -> Result<GraphIndex, QueryError> {
         let db_id = match id {
             QueryId::Id(id) => *id,
             QueryId::Alias(alias) => self

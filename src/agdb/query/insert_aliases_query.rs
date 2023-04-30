@@ -31,11 +31,7 @@ impl InsertAliasesQuery {
             }
             QueryId::Alias(alias) => {
                 vec![
-                    CommandsMut::RemoveAlias(RemoveAlias {
-                        id: None,
-                        alias: alias.clone(),
-                        result: false,
-                    }),
+                    CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone())),
                     CommandsMut::InsertAlias(InsertAlias::new(new_alias.to_string(), None)),
                 ]
             }

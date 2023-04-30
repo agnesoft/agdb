@@ -15,7 +15,7 @@ impl RemoveIndex {
     pub(crate) fn redo(
         &mut self,
         db: &mut Db,
-        result: &QueryResult,
+        result: &mut QueryResult,
         context: &mut Context,
     ) -> Result<(), QueryError> {
         todo!()

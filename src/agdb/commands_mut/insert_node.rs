@@ -1,23 +1,28 @@
-use super::remove_node::RemoveNode;
-use super::CommandsMut;
 use crate::db::db_context::Context;
+use crate::graph::graph_index::GraphIndex;
 use crate::Db;
 use crate::QueryError;
 
 #[derive(Debug, PartialEq)]
-pub struct InsertNode {}
+pub struct InsertNode {
+    graph_index: GraphIndex,
+}
 
 impl InsertNode {
-    pub(crate) fn process(
-        &self,
-        db: &mut Db,
-        context: &mut Context,
-    ) -> Result<CommandsMut, QueryError> {
-        context.graph_index = db.graph.insert_node()?;
+    pub(crate) fn new() -> Self {
+        Self {
+            graph_index: GraphIndex { index: 0 },
+        }
+    }
 
-        Ok(CommandsMut::RemoveNode(RemoveNode {
-            index: Some(context.graph_index),
-        }))
+    pub(crate) fn redo(&mut self, db: &mut Db, context: &mut Context) -> Result<(), QueryError> {
+        self.graph_index = db.graph.insert_node()?;
+        context.graph_index = self.graph_index;
+        Ok(())
+    }
+
+    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+        Ok(db.graph.remove_node(&self.graph_index)?)
     }
 }
 
@@ -27,11 +32,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", InsertNode {});
+        format!("{:?}", InsertNode::new());
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(InsertNode {}, InsertNode {});
+        assert_eq!(InsertNode::new(), InsertNode::new());
     }
 }

@@ -1,5 +1,3 @@
-use super::insert_alias::InsertAlias;
-use super::CommandsMut;
 use crate::db::db_context::Context;
 use crate::Db;
 use crate::DbId;
@@ -8,44 +6,48 @@ use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct RemoveAlias {
-    pub(crate) id: Option<DbId>,
-    pub(crate) alias: String,
-    pub(crate) result: bool,
+    id: Option<DbId>,
+    alias: String,
+    result: bool,
 }
 
 impl RemoveAlias {
-    pub(crate) fn process(
-        &self,
+    pub(crate) fn new(alias: String, id: Option<DbId>, result: bool) -> Self {
+        Self { id, alias, result }
+    }
+
+    pub(crate) fn redo(
+        &mut self,
         db: &mut Db,
         result: &mut QueryResult,
         context: &mut Context,
-    ) -> Result<CommandsMut, QueryError> {
+    ) -> Result<(), QueryError> {
         if let Some(id) = &self.id {
             if let Some(alias) = db.aliases.key(id)? {
+                self.alias = alias;
                 db.aliases.remove_value(id)?;
-
-                return Ok(CommandsMut::InsertAlias(InsertAlias {
-                    id: Some(*id),
-                    alias,
-                    result: false,
-                }));
             }
         } else if let Some(id) = db.aliases.value(&self.alias)? {
+            self.id = Some(id);
             context.id = id;
             db.aliases.remove_key(&self.alias)?;
 
             if self.result {
                 result.result -= 1;
             }
-
-            return Ok(CommandsMut::InsertAlias(InsertAlias {
-                id: Some(context.id),
-                alias: self.alias.clone(),
-                result: false,
-            }));
         }
 
-        Ok(CommandsMut::None)
+        Ok(())
+    }
+
+    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+        if let Some(id) = &self.id {
+            if !self.alias.is_empty() {
+                db.aliases.insert(&self.alias, id)?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -55,29 +57,14 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!(
-            "{:?}",
-            RemoveAlias {
-                id: None,
-                alias: String::new(),
-                result: false,
-            }
-        );
+        format!("{:?}", RemoveAlias::new(String::new(), None, false));
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            RemoveAlias {
-                id: None,
-                alias: String::new(),
-                result: false,
-            },
-            RemoveAlias {
-                id: None,
-                alias: String::new(),
-                result: false,
-            }
+            RemoveAlias::new(String::new(), None, false),
+            RemoveAlias::new(String::new(), None, false)
         );
     }
 }

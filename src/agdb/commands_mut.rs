@@ -18,7 +18,6 @@ use self::remove_node::RemoveNode;
 
 #[derive(Debug, PartialEq)]
 pub enum CommandsMut {
-    None,
     InsertAlias(InsertAlias),
     InsertEdge(InsertEdge),
     InsertIndex(InsertIndex),
@@ -37,27 +36,15 @@ mod tests {
     fn derived_from_debug() {
         format!(
             "{:?}",
-            CommandsMut::InsertAlias(InsertAlias {
-                id: None,
-                alias: String::new(),
-                result: false
-            })
+            CommandsMut::InsertAlias(InsertAlias::new(String::new(), None, false))
         );
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            CommandsMut::InsertAlias(InsertAlias {
-                id: None,
-                alias: String::new(),
-                result: false
-            }),
-            CommandsMut::InsertAlias(InsertAlias {
-                id: None,
-                alias: String::new(),
-                result: false
-            })
+            CommandsMut::InsertAlias(InsertAlias::new(String::new(), None, false)),
+            CommandsMut::InsertAlias(InsertAlias::new(String::new(), None, false))
         );
     }
 }

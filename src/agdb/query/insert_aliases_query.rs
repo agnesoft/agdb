@@ -24,24 +24,16 @@ impl InsertAliasesQuery {
     fn id(&self, id: &QueryId, new_alias: &str) -> Vec<CommandsMut> {
         match id {
             QueryId::Id(id) => {
-                vec![CommandsMut::InsertAlias(InsertAlias {
-                    id: Some(*id),
-                    alias: new_alias.to_string(),
-                    result: true,
-                })]
+                vec![CommandsMut::InsertAlias(InsertAlias::new(
+                    new_alias.to_string(),
+                    Some(*id),
+                    true,
+                ))]
             }
             QueryId::Alias(alias) => {
                 vec![
-                    CommandsMut::RemoveAlias(RemoveAlias {
-                        id: None,
-                        alias: alias.clone(),
-                        result: false,
-                    }),
-                    CommandsMut::InsertAlias(InsertAlias {
-                        id: None,
-                        alias: new_alias.to_string(),
-                        result: true,
-                    }),
+                    CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone(), None, false)),
+                    CommandsMut::InsertAlias(InsertAlias::new(new_alias.to_string(), None, true)),
                 ]
             }
         }
@@ -73,11 +65,11 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::InsertAlias(InsertAlias {
-                id: Some(DbId(0)),
-                alias: "alias".to_string(),
-                result: true,
-            })])
+            Ok(vec![CommandsMut::InsertAlias(InsertAlias::new(
+                "alias".to_string(),
+                Some(DbId(0)),
+                true
+            ))])
         )
     }
 
@@ -90,11 +82,11 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![CommandsMut::InsertAlias(InsertAlias {
-                id: Some(DbId(0)),
-                alias: "alias".to_string(),
-                result: true,
-            })])
+            Ok(vec![CommandsMut::InsertAlias(InsertAlias::new(
+                "alias".to_string(),
+                Some(DbId(0)),
+                true
+            ))])
         )
     }
 

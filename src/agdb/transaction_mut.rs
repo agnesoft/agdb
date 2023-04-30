@@ -11,14 +11,14 @@ use crate::Transaction;
 
 pub struct TransactionMut<'a> {
     db: &'a mut Db,
-    undo_stack: Vec<CommandsMut>,
+    commands: Vec<CommandsMut>,
 }
 
 impl<'a> TransactionMut<'a> {
     pub fn new(data: &'a mut Db) -> Self {
         Self {
             db: data,
-            undo_stack: vec![],
+            commands: vec![],
         }
     }
 
@@ -31,14 +31,16 @@ impl<'a> TransactionMut<'a> {
             id: DbId(0),
             graph_index: GraphIndex { index: 0 },
         };
+
         let mut result = QueryResult {
             result: 0,
             elements: vec![],
         };
 
-        for command in query.commands()? {
-            let undo = self.process_command(command, &mut context, &mut result)?;
-            self.undo_stack.push(undo);
+        self.commands = query.commands()?;
+
+        for command in &mut self.commands {
+            Self::redo_command(command, self.db, &mut context, &mut result)?;
         }
 
         Ok(result)
@@ -49,40 +51,41 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub(crate) fn rollback(mut self) -> Result<(), QueryError> {
-        let mut context = Context {
-            id: DbId(0),
-            graph_index: GraphIndex { index: 0 },
-        };
-        let mut result = QueryResult {
-            result: 0,
-            elements: vec![],
-        };
-        let mut undo_commands = vec![];
-        std::mem::swap(&mut self.undo_stack, &mut undo_commands);
-
-        for command in undo_commands.into_iter().rev() {
-            self.process_command(command, &mut context, &mut result)?;
+        for command in self.commands.iter_mut().rev() {
+            Self::undo_command(command, self.db)?;
         }
 
         Ok(())
     }
 
-    fn process_command(
-        &mut self,
-        command: CommandsMut,
+    fn redo_command(
+        command: &mut CommandsMut,
+        db: &mut Db,
         context: &mut Context,
         result: &mut QueryResult,
-    ) -> Result<CommandsMut, QueryError> {
+    ) -> Result<(), QueryError> {
         match command {
-            CommandsMut::InsertAlias(data) => data.process(self.db, result, context),
-            CommandsMut::InsertEdge(data) => data.process(self.db, context),
-            CommandsMut::InsertIndex(data) => data.process(self.db, result, context),
-            CommandsMut::InsertNode(data) => data.process(self.db, context),
-            CommandsMut::RemoveAlias(data) => data.process(self.db, result, context),
-            CommandsMut::RemoveEdge(data) => data.process(self.db, context),
-            CommandsMut::RemoveIndex(data) => data.process(self.db, result, context),
-            CommandsMut::RemoveNode(data) => data.process(self.db, context),
-            CommandsMut::None => Ok(CommandsMut::None),
+            CommandsMut::InsertAlias(data) => data.redo(db, result, context),
+            CommandsMut::InsertEdge(data) => data.redo(db, context),
+            CommandsMut::InsertIndex(data) => data.redo(db, result, context),
+            CommandsMut::InsertNode(data) => data.redo(db, context),
+            CommandsMut::RemoveAlias(data) => data.redo(db, result, context),
+            CommandsMut::RemoveEdge(data) => data.redo(db, context),
+            CommandsMut::RemoveIndex(data) => data.redo(db, result, context),
+            CommandsMut::RemoveNode(data) => data.redo(db, context),
+        }
+    }
+
+    fn undo_command(command: &mut CommandsMut, db: &mut Db) -> Result<(), QueryError> {
+        match command {
+            CommandsMut::InsertAlias(data) => data.undo(db),
+            CommandsMut::InsertEdge(data) => data.undo(db),
+            CommandsMut::InsertIndex(data) => data.undo(db),
+            CommandsMut::InsertNode(data) => data.undo(db),
+            CommandsMut::RemoveAlias(data) => data.undo(db),
+            CommandsMut::RemoveEdge(data) => data.undo(db),
+            CommandsMut::RemoveIndex(data) => data.undo(db),
+            CommandsMut::RemoveNode(data) => data.undo(db),
         }
     }
 }

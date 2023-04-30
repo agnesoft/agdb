@@ -2,7 +2,6 @@ use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::QueryMut;
 use crate::commands_mut::remove_alias::RemoveAlias;
-use crate::commands_mut::remove_alias_id::RemoveAliasId;
 use crate::commands_mut::remove_edge::RemoveEdge;
 use crate::commands_mut::remove_index::RemoveIndex;
 use crate::commands_mut::remove_index_id::RemoveIndexId;
@@ -27,7 +26,11 @@ impl RemoveQuery {
 
         if id.is_node() {
             if let QueryId::Id(id) = id {
-                commands.push(CommandsMut::RemoveAliasId(RemoveAliasId { id: *id }));
+                commands.push(CommandsMut::RemoveAlias(RemoveAlias {
+                    id: Some(*id),
+                    alias: String::new(),
+                    result: false,
+                }));
             }
 
             commands.push(CommandsMut::RemoveNode(RemoveNode {}));
@@ -53,7 +56,9 @@ impl RemoveQuery {
             QueryId::Id(id) => vec![CommandsMut::RemoveIndexId(RemoveIndexId { id: *id })],
             QueryId::Alias(alias) => vec![
                 CommandsMut::RemoveAlias(RemoveAlias {
+                    id: None,
                     alias: alias.clone(),
+                    result: false,
                 }),
                 CommandsMut::RemoveIndex(RemoveIndex {}),
             ],
@@ -75,7 +80,11 @@ mod tests {
             query.commands(),
             Ok(vec![
                 CommandsMut::RemoveIndexId(RemoveIndexId { id: DbId(1) }),
-                CommandsMut::RemoveAliasId(RemoveAliasId { id: DbId(1) }),
+                CommandsMut::RemoveAlias(RemoveAlias {
+                    id: Some(DbId(1)),
+                    alias: String::new(),
+                    result: false,
+                }),
                 CommandsMut::RemoveNode(RemoveNode {})
             ])
         )

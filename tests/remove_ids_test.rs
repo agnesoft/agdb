@@ -2,7 +2,10 @@
 mod test_file;
 
 use agdb::Db;
+use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
+use agdb::QueryError;
 use test_file::TestFile;
 
 #[test]
@@ -12,7 +15,7 @@ pub fn remove_node() {
     let mut db = Db::new(test_file.file_name()).unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
 
-    let query = QueryBuilder::remove().id(1.into()).query();
+    let query = QueryBuilder::remove().id(1).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, -1);
@@ -29,7 +32,7 @@ pub fn remove_node_rollback() {
 
     let error = db
         .transaction_mut(|transaction| {
-            let query = QueryBuilder::remove().id(1.into()).query();
+            let query = QueryBuilder::remove().id("alias").query();
             let result = transaction.exec_mut(&query).unwrap();
 
             assert_eq!(result.result, -1);
@@ -81,7 +84,7 @@ pub fn remove_edge() {
     db.exec_mut(&QueryBuilder::insert().edge().from("alias1").to(2).query())
         .unwrap();
 
-    let query = QueryBuilder::remove().id((-3).into()).query();
+    let query = QueryBuilder::remove().id(-3).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, -1);
@@ -101,7 +104,7 @@ pub fn remove_edge_rollback() {
 
     let error = db
         .transaction_mut(|transaction| {
-            let query = QueryBuilder::remove().id((-3).into()).query();
+            let query = QueryBuilder::remove().id(-3).query();
             let result = transaction.exec_mut(&query).unwrap();
 
             assert_eq!(result.result, -1);
@@ -152,7 +155,7 @@ pub fn remove_missing_edge() {
 
     let mut db = Db::new(test_file.file_name()).unwrap();
 
-    let query = QueryBuilder::remove().id((-3).into()).query();
+    let query = QueryBuilder::remove().id(-3).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 0);
@@ -164,7 +167,7 @@ pub fn remove_missing_node() {
 
     let mut db = Db::new(test_file.file_name()).unwrap();
 
-    let query = QueryBuilder::remove().id(1.into()).query();
+    let query = QueryBuilder::remove().id(1).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 0);
@@ -176,7 +179,7 @@ pub fn remove_missing_node_alias() {
 
     let mut db = Db::new(test_file.file_name()).unwrap();
 
-    let query = QueryBuilder::remove().id("alias".into()).query();
+    let query = QueryBuilder::remove().id("alias").query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 0);
@@ -190,9 +193,7 @@ pub fn remove_node_with_alias() {
     db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
         .unwrap();
 
-    let result = db
-        .exec_mut(&QueryBuilder::remove().id(1.into()).query())
-        .unwrap();
+    let result = db.exec_mut(&QueryBuilder::remove().id(1).query()).unwrap();
 
     assert_eq!(result.result, -1);
     assert_eq!(result.elements, vec![]);
@@ -202,6 +203,68 @@ pub fn remove_node_with_alias() {
         .unwrap_err();
 
     assert_eq!(error.description, "Alias 'alias' not found");
+}
+
+#[test]
+pub fn remove_node_no_alias_rollback() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<(), QueryError> {
+            transaction.exec_mut(&QueryBuilder::remove().id(1).query())?;
+            Err("error".into())
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "error");
+
+    let result = db
+        .exec(&QueryBuilder::select().id(1.into()).query())
+        .unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(
+        result.elements,
+        vec![DbElement {
+            index: DbId(1),
+            values: vec![]
+        }]
+    );
+}
+
+#[test]
+pub fn remove_missing_node_rollback() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<(), QueryError> {
+            transaction.exec_mut(&QueryBuilder::remove().id(1).query())?;
+            Err("error".into())
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "error");
+}
+
+#[test]
+pub fn remove_missing_node_alias_rollback() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<(), QueryError> {
+            transaction.exec_mut(&QueryBuilder::remove().id("alias").query())?;
+            Err("error".into())
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "error");
 }
 
 #[test]

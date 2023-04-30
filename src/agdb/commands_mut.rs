@@ -18,7 +18,6 @@ use self::remove_node::RemoveNode;
 
 #[derive(Debug, PartialEq)]
 pub enum CommandsMut {
-    None,
     InsertAlias(InsertAlias),
     InsertEdge(InsertEdge),
     InsertIndex(InsertIndex),

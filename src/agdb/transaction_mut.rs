@@ -40,7 +40,7 @@ impl<'a> TransactionMut<'a> {
         self.commands = query.commands()?;
 
         for command in &mut self.commands {
-            Self::redo_command(command, &mut self.db, &mut context, &mut result)?;
+            Self::redo_command(command, self.db, &mut context, &mut result)?;
         }
 
         Ok(result)
@@ -51,8 +51,8 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub(crate) fn rollback(mut self) -> Result<(), QueryError> {
-        for command in &mut self.commands {
-            Self::undo_command(command, &mut self.db)?;
+        for command in self.commands.iter_mut().rev() {
+            Self::undo_command(command, self.db)?;
         }
 
         Ok(())
@@ -73,7 +73,6 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::RemoveEdge(data) => data.redo(db, context),
             CommandsMut::RemoveIndex(data) => data.redo(db, result, context),
             CommandsMut::RemoveNode(data) => data.redo(db, context),
-            CommandsMut::None => Ok(()),
         }
     }
 
@@ -87,7 +86,6 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::RemoveEdge(data) => data.undo(db),
             CommandsMut::RemoveIndex(data) => data.undo(db),
             CommandsMut::RemoveNode(data) => data.undo(db),
-            CommandsMut::None => Ok(()),
         }
     }
 }

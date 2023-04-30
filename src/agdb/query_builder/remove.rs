@@ -25,8 +25,8 @@ impl Remove {
         })
     }
 
-    pub fn id(self, id: QueryId) -> RemoveIds {
-        RemoveIds(RemoveQuery(QueryIds::Ids(vec![id])))
+    pub fn id<T: Into<QueryId>>(self, id: T) -> RemoveIds {
+        RemoveIds(RemoveQuery(QueryIds::Ids(vec![id.into()])))
     }
 
     pub fn ids(self, ids: &[QueryId]) -> RemoveIds {

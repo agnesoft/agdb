@@ -30,6 +30,7 @@ impl RemoveIndex {
         }
 
         if let Some(graph_index) = db.indexes.value(&context.id)? {
+            self.id = Some(context.id);
             self.graph_index = graph_index;
             context.graph_index = graph_index;
             db.indexes.remove_key(&context.id)?;

@@ -28,10 +28,7 @@ impl RemoveEdge {
     }
 
     pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
-        if self.from.is_node() && self.to.is_node() {
-            db.graph.insert_edge(&self.from, &self.to)?;
-        }
-
+        db.graph.insert_edge(&self.from, &self.to)?;
         Ok(())
     }
 }

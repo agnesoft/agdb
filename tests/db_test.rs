@@ -1,5 +1,4 @@
 use agdb::Db;
-use agdb::DbError;
 use agdb::DbKey;
 use agdb::DbValue;
 use agdb::QueryBuilder;
@@ -11,7 +10,6 @@ fn public_types() {
     let _db = Db::new("").unwrap();
     let _query_error = QueryError::default();
     let _result = QueryResult::default();
-    let _db_error = DbError::from("");
     let _db_value = DbValue::from("");
     let _db_key = DbKey::from("");
 }

@@ -1,8 +1,8 @@
 use crate::collections::map::map_data::MapData;
 use crate::collections::map::map_impl::MapImpl;
 use crate::collections::map::map_iterator::MapIterator;
+use crate::db::db_error::DbError;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
 use std::hash::Hash;
 
 pub struct IndexedMapImpl<K, T, DataKT, DataTK>

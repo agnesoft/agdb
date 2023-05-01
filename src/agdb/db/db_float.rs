@@ -1,3 +1,4 @@
+use super::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize_static::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
@@ -53,7 +54,7 @@ impl From<f64> for DbFloat {
 }
 
 impl Serialize for DbFloat {
-    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(DbFloat::from(f64::deserialize(bytes)?))
     }
 

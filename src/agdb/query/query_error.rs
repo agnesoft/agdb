@@ -1,4 +1,4 @@
-use crate::DbError;
+use crate::db::db_error::DbError;
 use std::sync::PoisonError;
 
 #[derive(Default, Debug, PartialEq)]

@@ -7,6 +7,7 @@ pub mod db_value;
 
 mod db_float;
 
+use self::db_error::DbError;
 use crate::collections::indexed_map::IndexedMap;
 use crate::graph::graph_index::GraphIndex;
 use crate::graph::Graph;
@@ -14,7 +15,6 @@ use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
 use crate::transaction_mut::TransactionMut;
-use crate::DbError;
 use crate::DbId;
 use crate::QueryError;
 use crate::QueryResult;

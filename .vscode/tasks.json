@@ -1,0 +1,64 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cargo",
+			"command": "test",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "Test"
+		},
+		{
+			"type": "cargo",
+			"command": "clippy",
+			"args": [
+				"--workspace",
+				"--all-targets",
+				"--",
+				"-D",
+				"warnings"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "Clippy"
+		},
+		{
+			"type": "cargo",
+			"command": "llvm-cov",
+			"args": [
+				"--workspace",
+				"--fail-uncovered-functions",
+				"0",
+				"--fail-uncovered-lines",
+				"0"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "Coverage"
+		},
+		{
+			"type": "cargo",
+			"command": "llvm-cov",
+			"args": [
+				"--workspace",
+				"--fail-uncovered-functions",
+				"0",
+				"--fail-uncovered-lines",
+				"0",
+				"--html",
+				"--open"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "Coverage HTML"
+		},
+	]
+}

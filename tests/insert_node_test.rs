@@ -43,6 +43,24 @@ fn insert_node_existing_alias() {
 }
 
 #[test]
+fn insert_nodes_aliases() {
+    let mut db = TestDb::new();
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".to_string(), "alias2".to_string()])
+            .query(),
+        &[1, 2],
+    );
+}
+
+#[test]
+fn insert_nodes_count() {
+    let mut db = TestDb::new();
+    db.exec_mut_ids(QueryBuilder::insert().nodes().count(2).query(), &[1, 2]);
+}
+
+#[test]
 fn insert_node_values() {
     let _query = QueryBuilder::insert()
         .node()
@@ -70,14 +88,6 @@ fn insert_node_alias_values_id() {
         .node()
         .alias("alias1")
         .values_id("alias2")
-        .query();
-}
-
-#[test]
-fn insert_nodes_aliases() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .aliases(&["alias1".to_string(), "alias2".to_string()])
         .query();
 }
 
@@ -118,11 +128,6 @@ fn insert_nodes_aliases_values_uniform() {
         .aliases(&["alias1".to_string(), "alias2".to_string()])
         .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
         .query();
-}
-
-#[test]
-fn insert_nodes_count() {
-    let _query = QueryBuilder::insert().nodes().count(2).query();
 }
 
 #[test]

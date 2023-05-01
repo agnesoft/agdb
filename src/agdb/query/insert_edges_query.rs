@@ -3,7 +3,6 @@ use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
 use super::QueryMut;
 use crate::commands_mut::insert_edge::InsertEdge;
-use crate::commands_mut::insert_index::InsertIndex;
 use crate::commands_mut::CommandsMut;
 use crate::QueryError;
 
@@ -30,20 +29,16 @@ impl QueryMut for InsertEdgesQuery {
 }
 
 impl InsertEdgesQuery {
-    fn insert_edge(from: &QueryId, to: &QueryId) -> Vec<CommandsMut> {
-        vec![
-            CommandsMut::InsertEdge(InsertEdge::new(from.clone(), to.clone())),
-            CommandsMut::InsertIndex(InsertIndex::new()),
-        ]
-    }
-
     fn many_to_many(&self, from: &[QueryId]) -> Result<Vec<CommandsMut>, QueryError> {
         let mut commands = Vec::<CommandsMut>::new();
 
         match &self.to {
             QueryIds::Ids(ids) => {
                 for (from, to) in from.iter().zip(ids.iter()) {
-                    commands.extend(Self::insert_edge(from, to));
+                    commands.push(CommandsMut::InsertEdge(InsertEdge::new(
+                        from.clone(),
+                        to.clone(),
+                    )));
                 }
             }
             QueryIds::Search(_) => return Err(QueryError::from("Invalid insert edges query")),
@@ -59,7 +54,10 @@ impl InsertEdgesQuery {
             QueryIds::Ids(ids) => {
                 for from in from {
                     for to in ids {
-                        commands.extend(Self::insert_edge(from, to));
+                        commands.push(CommandsMut::InsertEdge(InsertEdge::new(
+                            from.clone(),
+                            to.clone(),
+                        )));
                     }
                 }
             }
@@ -86,10 +84,10 @@ mod tests {
 
         assert_eq!(
             query.commands().unwrap(),
-            vec![
-                CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(2))),
-                CommandsMut::InsertIndex(InsertIndex::new())
-            ]
+            vec![CommandsMut::InsertEdge(InsertEdge::new(
+                QueryId::from(1),
+                QueryId::from(2)
+            )),]
         );
     }
 
@@ -104,13 +102,10 @@ mod tests {
 
         assert_eq!(
             query.commands().unwrap(),
-            vec![
-                CommandsMut::InsertEdge(InsertEdge::new(
-                    QueryId::Alias("alias".to_string()),
-                    QueryId::Alias("alias2".to_string()),
-                )),
-                CommandsMut::InsertIndex(InsertIndex::new())
-            ]
+            vec![CommandsMut::InsertEdge(InsertEdge::new(
+                QueryId::Alias("alias".to_string()),
+                QueryId::Alias("alias2".to_string()),
+            )),]
         );
     }
 
@@ -127,9 +122,7 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(2))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
     }
@@ -147,9 +140,7 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
     }
@@ -167,9 +158,7 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
     }
@@ -187,9 +176,7 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(4))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
     }
@@ -207,13 +194,9 @@ mod tests {
             query.commands().unwrap(),
             vec![
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(1), QueryId::from(4))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(3))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
                 CommandsMut::InsertEdge(InsertEdge::new(QueryId::from(2), QueryId::from(4))),
-                CommandsMut::InsertIndex(InsertIndex::new()),
             ]
         );
     }

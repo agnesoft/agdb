@@ -23,8 +23,8 @@ impl InsertNode {
 
     pub(crate) fn redo(&mut self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
         self.graph_index = db.graph.insert_node()?;
-        self.id = DbId(db.next_index);
-        db.next_index += 1;
+        self.id = DbId(db.next_id);
+        db.next_id += 1;
         db.indexes.insert(&self.id, &self.graph_index)?;
 
         if !self.alias.is_empty() {
@@ -44,7 +44,7 @@ impl InsertNode {
         db.graph.remove_node(&self.graph_index)?;
         db.indexes.remove_key(&self.id)?;
         db.aliases.remove_key(&self.alias)?;
-        db.next_index -= 1;
+        db.next_id -= 1;
 
         Ok(())
     }

@@ -25,7 +25,7 @@ pub struct Db {
     pub(crate) graph: Graph,
     pub(crate) aliases: IndexedMap<String, DbId>,
     pub(crate) indexes: IndexedMap<DbId, GraphIndex>,
-    pub(crate) next_index: i64,
+    pub(crate) next_id: i64,
 }
 
 impl Db {
@@ -34,7 +34,7 @@ impl Db {
             graph: Graph::new(),
             aliases: IndexedMap::<String, DbId>::new(),
             indexes: IndexedMap::<DbId, GraphIndex>::new(),
-            next_index: 1,
+            next_id: 1,
         })
     }
 

@@ -30,25 +30,9 @@ impl From<DbId> for QueryId {
     }
 }
 
-impl QueryId {
-    pub fn is_node(&self) -> bool {
-        match self {
-            QueryId::Id(id) => 0 < id.0,
-            QueryId::Alias(_) => true,
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn is_node() {
-        assert!(QueryId::from(1).is_node());
-        assert!(!QueryId::from(0).is_node());
-        assert!(!QueryId::from(-1).is_node());
-    }
 
     #[test]
     fn from_db_id() {

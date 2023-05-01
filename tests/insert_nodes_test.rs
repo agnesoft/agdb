@@ -1,28 +1,44 @@
-#[path = "../src/agdb/test_utilities/test_file.rs"]
-mod test_file;
+mod framework;
 
-use agdb::Db;
-use agdb::DbElement;
-use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
-use test_file::TestFile;
+use framework::TestDb;
 
 #[test]
 fn insert_node() {
-    let test_file = TestFile::new();
+    let mut db = TestDb::new();
+    db.exec_mut_ids(QueryBuilder::insert().node().query(), &[1]);
+}
 
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::insert().node().query();
-    let result = db.exec_mut(&query).unwrap();
+#[test]
+fn insert_node_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut_ids(QueryBuilder::insert().node().alias("alias").query(), &[1]);
+}
 
-    assert_eq!(result.result, 1);
-    assert_eq!(
-        result.elements,
-        vec![DbElement {
-            index: DbId(1),
-            values: vec![]
-        }]
+#[test]
+fn insert_node_alias_rollback() {
+    let mut db = TestDb::new();
+    db.transaction_mut_error(
+        |transaction| -> Result<(), QueryError> {
+            transaction.exec_mut(&QueryBuilder::insert().node().alias("alias").query())?;
+            Err("error".into())
+        },
+        "error".into(),
+    );
+    db.exec_error(
+        QueryBuilder::select().id("alias").query(),
+        "Alias 'alias' not found",
+    );
+}
+
+#[test]
+fn insert_node_existing_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut_ids(QueryBuilder::insert().node().alias("alias").query(), &[1]);
+    db.exec_mut_error(
+        QueryBuilder::insert().node().alias("alias").query(),
+        "Alias 'alias' already exists",
     )
 }
 
@@ -37,79 +53,6 @@ fn insert_node_values() {
 #[test]
 fn insert_node_values_id() {
     let _query = QueryBuilder::insert().node().values_id("alias").query();
-}
-
-#[test]
-fn insert_node_alias() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::insert().node().alias("alias").query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 1);
-    assert_eq!(
-        result.elements,
-        vec![DbElement {
-            index: DbId(1),
-            values: vec![]
-        }]
-    );
-}
-
-#[test]
-fn insert_node_alias_rollback() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-
-    let error = db
-        .transaction_mut(|transaction| -> Result<(), QueryError> {
-            let result = transaction
-                .exec_mut(&QueryBuilder::insert().node().alias("alias").query())
-                .unwrap();
-
-            assert_eq!(result.result, 1);
-            assert_eq!(
-                result.elements,
-                vec![DbElement {
-                    index: DbId(1),
-                    values: vec![]
-                }]
-            );
-
-            Err(QueryError::from("error"))
-        })
-        .unwrap_err();
-
-    assert_eq!(error.description, "error");
-
-    let error2 = db
-        .exec(&QueryBuilder::select().id("alias").query())
-        .unwrap_err();
-
-    assert_eq!(error2.description, "Alias 'alias' not found");
-}
-
-#[test]
-fn insert_node_existing_alias() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::insert().node().alias("alias").query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 1);
-    assert_eq!(
-        result.elements,
-        vec![DbElement {
-            index: DbId(1),
-            values: vec![]
-        }]
-    );
-
-    let err = db.exec_mut(&query).unwrap_err();
-    assert_eq!(err.description, "Alias 'alias' already exists");
 }
 
 #[test]

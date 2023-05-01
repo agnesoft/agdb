@@ -293,6 +293,8 @@ fn remove_node_with_edges() {
         .unwrap();
     db.exec_mut(&QueryBuilder::insert().edge().from(1).to(2).query())
         .unwrap();
+    db.exec_mut(&QueryBuilder::insert().edge().from(2).to(1).query())
+        .unwrap();
 
     let result = db.exec_mut(&QueryBuilder::remove().id(1).query()).unwrap();
 

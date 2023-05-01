@@ -9,7 +9,7 @@ use agdb::QueryError;
 use test_file::TestFile;
 
 #[test]
-pub fn remove_node() {
+fn remove_node() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -23,7 +23,7 @@ pub fn remove_node() {
 }
 
 #[test]
-pub fn remove_node_rollback() {
+fn remove_node_rollback() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -52,7 +52,7 @@ pub fn remove_node_rollback() {
 }
 
 #[test]
-pub fn remove_nodes() {
+fn remove_nodes() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -74,7 +74,7 @@ pub fn remove_nodes() {
 }
 
 #[test]
-pub fn remove_edge() {
+fn remove_edge() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -92,7 +92,7 @@ pub fn remove_edge() {
 }
 
 #[test]
-pub fn remove_edge_rollback() {
+fn remove_edge_rollback() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -124,7 +124,7 @@ pub fn remove_edge_rollback() {
 }
 
 #[test]
-pub fn remove_edges() {
+fn remove_edges() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -150,7 +150,7 @@ pub fn remove_edges() {
 }
 
 #[test]
-pub fn remove_missing_edge() {
+fn remove_missing_edge() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -162,7 +162,7 @@ pub fn remove_missing_edge() {
 }
 
 #[test]
-pub fn remove_missing_edge_rollback() {
+fn remove_missing_edge_rollback() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -179,7 +179,7 @@ pub fn remove_missing_edge_rollback() {
 }
 
 #[test]
-pub fn remove_missing_node() {
+fn remove_missing_node() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -191,7 +191,7 @@ pub fn remove_missing_node() {
 }
 
 #[test]
-pub fn remove_missing_node_alias() {
+fn remove_missing_node_alias() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -203,7 +203,7 @@ pub fn remove_missing_node_alias() {
 }
 
 #[test]
-pub fn remove_node_with_alias() {
+fn remove_node_with_alias() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -223,7 +223,7 @@ pub fn remove_node_with_alias() {
 }
 
 #[test]
-pub fn remove_node_no_alias_rollback() {
+fn remove_node_no_alias_rollback() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -253,7 +253,7 @@ pub fn remove_node_no_alias_rollback() {
 }
 
 #[test]
-pub fn remove_missing_node_rollback() {
+fn remove_missing_node_rollback() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -269,7 +269,7 @@ pub fn remove_missing_node_rollback() {
 }
 
 #[test]
-pub fn remove_missing_node_alias_rollback() {
+fn remove_missing_node_alias_rollback() {
     let test_file = TestFile::new();
 
     let mut db = Db::new(test_file.file_name()).unwrap();
@@ -285,7 +285,59 @@ pub fn remove_missing_node_alias_rollback() {
 }
 
 #[test]
-pub fn remove_search() {
+fn remove_node_with_edges() {
+    let test_file = TestFile::new();
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    db.exec_mut(&QueryBuilder::insert().nodes().count(2).query())
+        .unwrap();
+    db.exec_mut(&QueryBuilder::insert().edge().from(1).to(2).query())
+        .unwrap();
+
+    let result = db.exec_mut(&QueryBuilder::remove().id(1).query()).unwrap();
+
+    assert_eq!(result.result, -1);
+
+    let error = db
+        .exec(&QueryBuilder::select().id((-3).into()).query())
+        .unwrap_err();
+    assert_eq!(error.description, "Id '-3' not found");
+}
+
+#[test]
+fn remove_node_with_edges_rollback() {
+    let test_file = TestFile::new();
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().edge().from(1).to(1).query())
+        .unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<(), QueryError> {
+            transaction.exec_mut(&QueryBuilder::remove().id(1).query())?;
+            Err("error".into())
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "error");
+
+    let result = db
+        .exec(&QueryBuilder::select().id((-2).into()).query())
+        .unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(
+        result.elements,
+        vec![DbElement {
+            index: DbId(-2),
+            values: vec![]
+        }]
+    );
+}
+
+#[test]
+fn remove_search() {
     let _query = QueryBuilder::remove()
         .search(QueryBuilder::search().from("origin".into()).query())
         .query();

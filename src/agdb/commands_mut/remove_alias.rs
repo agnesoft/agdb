@@ -40,7 +40,7 @@ impl RemoveAlias {
         Ok(())
     }
 
-    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+    pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
         if let Some(id) = &self.id {
             if !self.alias.is_empty() {
                 db.aliases.insert(&self.alias, id)?;

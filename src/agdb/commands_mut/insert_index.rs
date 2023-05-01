@@ -27,11 +27,7 @@ impl InsertIndex {
         context: &mut Context,
     ) -> Result<(), QueryError> {
         self.graph_index = context.graph_index;
-        self.id = if context.graph_index.is_node() {
-            DbId(db.next_index)
-        } else {
-            DbId(-db.next_index)
-        };
+        self.id = DbId(-db.next_index);
         context.id = self.id;
         db.next_index += 1;
         db.indexes.insert(&self.id, &self.graph_index)?;
@@ -43,7 +39,7 @@ impl InsertIndex {
         Ok(())
     }
 
-    pub(crate) fn undo(&self, db: &mut Db) -> Result<(), QueryError> {
+    pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
         Ok(db.indexes.remove_key(&self.id)?)
     }
 }

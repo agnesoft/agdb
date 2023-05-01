@@ -40,7 +40,7 @@ impl RemoveIndex {
         Ok(())
     }
 
-    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+    pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
         if let Some(id) = self.id {
             if self.graph_index.is_valid() {
                 db.indexes.insert(&id, &self.graph_index)?;

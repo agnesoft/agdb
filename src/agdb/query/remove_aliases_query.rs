@@ -12,7 +12,7 @@ impl QueryMut for RemoveAliasesQuery {
         Ok(self
             .aliases
             .iter()
-            .map(|alias| CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone(), None, true)))
+            .map(|alias| CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone())))
             .collect())
     }
 }

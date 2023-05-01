@@ -67,6 +67,21 @@ fn insert_edge_from_to_rollback() {
 }
 
 #[test]
+fn insert_edge_missing_from() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
+        .unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
+
+    let query = QueryBuilder::insert().edge().from("alias").to(2).query();
+    let error = db.exec_mut(&query).unwrap_err();
+
+    assert_eq!(error.description, "Alias 'alias' not found");
+}
+
+#[test]
 fn insert_edge_from_to_values() {
     let _query = QueryBuilder::insert()
         .edge()

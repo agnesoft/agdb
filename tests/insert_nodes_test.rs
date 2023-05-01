@@ -92,6 +92,27 @@ fn insert_node_alias_rollback() {
 }
 
 #[test]
+fn insert_node_existing_alias() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    let query = QueryBuilder::insert().node().alias("alias").query();
+    let result = db.exec_mut(&query).unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(
+        result.elements,
+        vec![DbElement {
+            index: DbId(1),
+            values: vec![]
+        }]
+    );
+
+    let err = db.exec_mut(&query).unwrap_err();
+    assert_eq!(err.description, "Alias 'alias' already exists");
+}
+
+#[test]
 fn insert_node_alias_values() {
     let _query = QueryBuilder::insert()
         .node()

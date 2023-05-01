@@ -1,9 +1,7 @@
 use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::QueryMut;
-use crate::commands_mut::remove_alias::RemoveAlias;
 use crate::commands_mut::remove_edge::RemoveEdge;
-use crate::commands_mut::remove_index::RemoveIndex;
 use crate::commands_mut::remove_node::RemoveNode;
 use crate::commands_mut::CommandsMut;
 use crate::QueryError;
@@ -20,44 +18,24 @@ impl QueryMut for RemoveQuery {
 }
 
 impl RemoveQuery {
-    fn id(id: &QueryId) -> Vec<CommandsMut> {
-        let mut commands = Self::remove_index(id);
-
-        if id.is_node() {
-            if let QueryId::Id(id) = id {
-                commands.push(CommandsMut::RemoveAlias(RemoveAlias::new(
-                    String::new(),
-                    Some(*id),
-                    false,
-                )));
+    fn id(id: &QueryId) -> CommandsMut {
+        match id {
+            QueryId::Id(db_id) if db_id.0.is_positive() => {
+                CommandsMut::RemoveNode(RemoveNode::new(id.clone()))
             }
-
-            commands.push(CommandsMut::RemoveNode(RemoveNode::new()));
-        } else {
-            commands.push(CommandsMut::RemoveEdge(RemoveEdge::new()));
+            QueryId::Id(db_id) => CommandsMut::RemoveEdge(RemoveEdge::new(*db_id)),
+            QueryId::Alias(_) => CommandsMut::RemoveNode(RemoveNode::new(id.clone())),
         }
-
-        commands
     }
 
     fn ids(ids: &Vec<QueryId>) -> Vec<CommandsMut> {
         let mut commands = Vec::<CommandsMut>::new();
 
         for id in ids {
-            commands.extend(Self::id(id));
+            commands.push(Self::id(id));
         }
 
         commands
-    }
-
-    fn remove_index(id: &QueryId) -> Vec<CommandsMut> {
-        match id {
-            QueryId::Id(id) => vec![CommandsMut::RemoveIndex(RemoveIndex::new(Some(*id)))],
-            QueryId::Alias(alias) => vec![
-                CommandsMut::RemoveAlias(RemoveAlias::new(alias.clone(), None, false)),
-                CommandsMut::RemoveIndex(RemoveIndex::new(None)),
-            ],
-        }
     }
 }
 
@@ -73,11 +51,9 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![
-                CommandsMut::RemoveIndex(RemoveIndex::new(Some(DbId(1)))),
-                CommandsMut::RemoveAlias(RemoveAlias::new(String::new(), Some(DbId(1)), false)),
-                CommandsMut::RemoveNode(RemoveNode::new())
-            ])
+            Ok(vec![CommandsMut::RemoveNode(RemoveNode::new(
+                QueryId::from(1)
+            ))])
         )
     }
 
@@ -87,10 +63,7 @@ mod tests {
 
         assert_eq!(
             query.commands(),
-            Ok(vec![
-                CommandsMut::RemoveIndex(RemoveIndex::new(Some(DbId(-3)))),
-                CommandsMut::RemoveEdge(RemoveEdge::new())
-            ])
+            Ok(vec![CommandsMut::RemoveEdge(RemoveEdge::new(DbId(-3)))])
         )
     }
 

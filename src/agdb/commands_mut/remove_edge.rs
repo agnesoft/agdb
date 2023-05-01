@@ -1,34 +1,50 @@
-use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
 use crate::Db;
+use crate::DbId;
 use crate::QueryError;
+use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct RemoveEdge {
+    id: DbId,
+    graph_index: GraphIndex,
     from: GraphIndex,
     to: GraphIndex,
 }
 
 impl RemoveEdge {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(id: DbId) -> Self {
         Self {
+            id,
+            graph_index: GraphIndex { index: 0 },
             from: GraphIndex { index: 0 },
             to: GraphIndex { index: 0 },
         }
     }
 
-    pub(crate) fn redo(&mut self, db: &mut Db, context: &mut Context) -> Result<(), QueryError> {
-        if let Some(edge) = db.graph.edge(&context.graph_index) {
+    pub(crate) fn redo(&mut self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
+        if let Some(graph_index) = db.indexes.value(&self.id)? {
+            let edge = db
+                .graph
+                .edge(&graph_index)
+                .ok_or(QueryError::from("Invalid graph id"))?;
             self.from = edge.index_from();
             self.to = edge.index_to();
-            db.graph.remove_edge(&context.graph_index)?;
+            db.graph.remove_edge(&graph_index)?;
+            self.graph_index = graph_index;
+            db.indexes.remove_key(&self.id)?;
+            result.result -= 1;
         }
 
         Ok(())
     }
 
     pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
-        db.graph.insert_edge(&self.from, &self.to)?;
+        if self.graph_index.is_valid() {
+            let graph_index = db.graph.insert_edge(&self.from, &self.to)?;
+            db.indexes.insert(&self.id, &graph_index)?;
+        }
+
         Ok(())
     }
 }
@@ -39,11 +55,11 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", RemoveEdge::new());
+        format!("{:?}", RemoveEdge::new(DbId(0)));
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(RemoveEdge::new(), RemoveEdge::new());
+        assert_eq!(RemoveEdge::new(DbId(0)), RemoveEdge::new(DbId(0)));
     }
 }

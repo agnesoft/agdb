@@ -139,6 +139,7 @@ where
         } else {
             let next = self.data.from_meta(&GraphIndex::from(-index))?;
             self.data.set_from_meta(&GraphIndex::default(), next)?;
+            self.data.set_from_meta(&GraphIndex::from(-index), 0)?;
 
             Ok(-index)
         }

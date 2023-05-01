@@ -1,123 +1,90 @@
-#[path = "../src/agdb/test_utilities/test_file.rs"]
-mod test_file;
+mod framework;
 
-use agdb::Db;
-use agdb::DbElement;
-use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
-use test_file::TestFile;
+use framework::TestDb;
 
 #[test]
 fn insert_edge_from_to() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
-        .unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-
-    let query = QueryBuilder::insert().edge().from("alias1").to(2).query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 1);
-    assert_eq!(
-        result.elements,
-        vec![DbElement {
-            index: DbId(-3),
-            values: vec![]
-        }]
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
+    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut_ids(
+        QueryBuilder::insert().edge().from("alias1").to(2).query(),
+        &[-3],
     );
 }
 
 #[test]
 fn insert_edge_from_to_rollback() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
-        .unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-
-    let error = db
-        .transaction_mut(|transaction| -> Result<(), QueryError> {
-            let query = QueryBuilder::insert().edge().from("alias1").to(2).query();
-            let result = transaction.exec_mut(&query).unwrap();
-
-            assert_eq!(result.result, 1);
-            assert_eq!(
-                result.elements,
-                vec![DbElement {
-                    index: DbId(-3),
-                    values: vec![]
-                }]
-            );
-
-            Err(QueryError::from("error"))
-        })
-        .unwrap_err();
-
-    assert_eq!(error.description, "error");
-
-    let error2 = db
-        .exec(&QueryBuilder::select().id((-3).into()).query())
-        .unwrap_err();
-
-    assert_eq!(error2.description, "Id '-3' not found");
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
+    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.transaction_mut_error(
+        |t| -> Result<(), QueryError> {
+            t.exec_mut(&QueryBuilder::insert().edge().from("alias1").to(2).query())?;
+            Err("error".into())
+        },
+        "error".into(),
+    );
+    db.exec_error(QueryBuilder::select().id(-3).query(), "Id '-3' not found");
 }
 
 #[test]
 fn insert_edge_missing_from() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().alias("alias1").query())
-        .unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-
-    let query = QueryBuilder::insert().edge().from("alias").to(2).query();
-    let error = db.exec_mut(&query).unwrap_err();
-
-    assert_eq!(error.description, "Alias 'alias' not found");
-}
-
-#[test]
-fn insert_edge_from_to_values() {
-    let _query = QueryBuilder::insert()
-        .edge()
-        .from("alias1")
-        .to("alias2")
-        .values(&[("key", "value").into()])
-        .query();
-}
-
-#[test]
-fn insert_edge_from_to_values_id() {
-    let _query = QueryBuilder::insert()
-        .edge()
-        .from("alias1")
-        .to("alias2")
-        .values_id("alias")
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
+    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut_error(
+        QueryBuilder::insert().edge().from("alias").to(2).query(),
+        "Alias 'alias' not found",
+    );
 }
 
 #[test]
 fn insert_edges_from_to() {
-    let _query = QueryBuilder::insert()
-        .edges()
-        .from(&["alias1".into(), "alias2".into()])
-        .to(&["alias3".into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&[
+                "alias1".into(),
+                "alias2".into(),
+                "alias3".into(),
+                "alias4".into(),
+            ])
+            .query(),
+        4,
+    );
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into(), "alias2".into()])
+            .to(&["alias3".into(), "alias4".into()])
+            .each()
+            .query(),
+        &[-5, -6, -7, -8],
+    );
 }
 
 #[test]
 fn insert_edges_from_to_each() {
-    let _query = QueryBuilder::insert()
-        .edges()
-        .from(&["alias1".into(), "alias2".into()])
-        .to(&["alias3".into(), "alias4".into()])
-        .each()
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".into(), "alias2".into(), "alias3".into()])
+            .query(),
+        3,
+    );
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into(), "alias2".into()])
+            .to(&["alias3".into()])
+            .query(),
+        &[-4, -5],
+    );
 }
 
 #[test]
@@ -210,6 +177,26 @@ fn insert_edges_from_query_to() {
         .edges()
         .from_search(QueryBuilder::search().from(1.into()).query())
         .to(&["alias".into()])
+        .query();
+}
+
+#[test]
+fn insert_edge_from_to_values() {
+    let _query = QueryBuilder::insert()
+        .edge()
+        .from("alias1")
+        .to("alias2")
+        .values(&[("key", "value").into()])
+        .query();
+}
+
+#[test]
+fn insert_edge_from_to_values_id() {
+    let _query = QueryBuilder::insert()
+        .edge()
+        .from("alias1")
+        .to("alias2")
+        .values_id("alias")
         .query();
 }
 

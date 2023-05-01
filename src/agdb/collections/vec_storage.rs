@@ -1,13 +1,13 @@
 pub mod vec_storage_iterator;
 
 use self::vec_storage_iterator::VecStorageIterator;
+use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize_static::SerializeStatic;
-use crate::DbError;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::marker::PhantomData;

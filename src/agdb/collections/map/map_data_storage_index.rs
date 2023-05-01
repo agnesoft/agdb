@@ -1,7 +1,7 @@
+use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize_static::SerializeStatic;
-use crate::DbError;
 
 pub struct MapDataStorageIndex {
     pub len: u64,
@@ -22,7 +22,7 @@ impl Serialize for MapDataStorageIndex {
         bytes
     }
 
-    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.len() < Self::static_serialized_size() as usize {
             return Err(DbError::from(
                 "MapDataStorageIndex deserialization error: not enough data",

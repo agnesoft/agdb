@@ -1,5 +1,5 @@
 use super::file_record::FileRecord;
-use crate::DbError;
+use crate::db::db_error::DbError;
 
 pub struct FileRecords {
     records: Vec<FileRecord>,

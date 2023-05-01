@@ -29,8 +29,8 @@ impl Select {
         })
     }
 
-    pub fn id(self, id: QueryId) -> SelectIds {
-        SelectIds(SelectQuery(QueryIds::Ids(vec![id])))
+    pub fn id<T: Into<QueryId>>(self, id: T) -> SelectIds {
+        SelectIds(SelectQuery(QueryIds::Ids(vec![id.into()])))
     }
 
     pub fn ids(self, ids: &[QueryId]) -> SelectIds {

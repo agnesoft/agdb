@@ -7,8 +7,8 @@ mod file_records;
 mod write_ahead_log;
 
 use self::storage_index::StorageIndex;
+use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
-use crate::DbError;
 
 pub trait Storage {
     fn commit(&mut self) -> Result<(), DbError>;

@@ -185,7 +185,7 @@ impl Serialize for DictionaryDataStorageIndexes {
         bytes
     }
 
-    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.len() < Self::static_serialized_size() as usize {
             return Err(DbError::from(
                 "DictionaryDataStorageIndexes deserialization error: not enough data",

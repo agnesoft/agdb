@@ -1,8 +1,8 @@
 use super::storage_index::StorageIndex;
 use super::Storage;
+use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize_static::SerializeStatic;
-use crate::DbError;
 
 pub trait StorageValue: Serialize {
     fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError>;

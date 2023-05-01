@@ -1,7 +1,7 @@
+use super::db_error::DbError;
 use super::db_float::DbFloat;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::stable_hash::StableHash;
-use crate::DbError;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DbValue {
@@ -141,7 +141,7 @@ impl From<Vec<u8>> for DbValue {
 }
 
 impl Serialize for DbValue {
-    fn deserialize(bytes: &[u8]) -> Result<Self, crate::DbError> {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         if bytes.is_empty() {
             return Err(DbError::from("DbValue deserialization error: no data"));
         }

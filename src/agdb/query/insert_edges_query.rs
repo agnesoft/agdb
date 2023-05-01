@@ -16,56 +16,47 @@ pub struct InsertEdgesQuery {
 impl QueryMut for InsertEdgesQuery {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         match &self.from {
-            QueryIds::Ids(ids) => {
-                if self.each {
-                    self.many_to_many_each(ids)
-                } else {
-                    self.many_to_many(ids)
+            QueryIds::Ids(from) => match &self.to {
+                QueryIds::Ids(to) => {
+                    if self.each || from.len() != to.len() {
+                        many_to_many_each(from, to)
+                    } else {
+                        many_to_many(from, to)
+                    }
                 }
-            }
+                QueryIds::Search(_) => Err(QueryError::from("Invalid insert edges query")),
+            },
             QueryIds::Search(_) => Err(QueryError::from("Invalid insert edges query")),
         }
     }
 }
 
-impl InsertEdgesQuery {
-    fn many_to_many(&self, from: &[QueryId]) -> Result<Vec<CommandsMut>, QueryError> {
-        let mut commands = Vec::<CommandsMut>::new();
+fn many_to_many(from: &[QueryId], to: &[QueryId]) -> Result<Vec<CommandsMut>, QueryError> {
+    let mut commands = Vec::<CommandsMut>::new();
 
-        match &self.to {
-            QueryIds::Ids(ids) => {
-                for (from, to) in from.iter().zip(ids.iter()) {
-                    commands.push(CommandsMut::InsertEdge(InsertEdge::new(
-                        from.clone(),
-                        to.clone(),
-                    )));
-                }
-            }
-            QueryIds::Search(_) => return Err(QueryError::from("Invalid insert edges query")),
-        }
-
-        Ok(commands)
+    for (from, to) in from.iter().zip(to.iter()) {
+        commands.push(CommandsMut::InsertEdge(InsertEdge::new(
+            from.clone(),
+            to.clone(),
+        )));
     }
 
-    fn many_to_many_each(&self, from: &Vec<QueryId>) -> Result<Vec<CommandsMut>, QueryError> {
-        let mut commands = Vec::<CommandsMut>::new();
+    Ok(commands)
+}
 
-        match &self.to {
-            QueryIds::Ids(ids) => {
-                for from in from {
-                    for to in ids {
-                        commands.push(CommandsMut::InsertEdge(InsertEdge::new(
-                            from.clone(),
-                            to.clone(),
-                        )));
-                    }
-                }
-            }
-            QueryIds::Search(_) => return Err(QueryError::from("Invalid insert edges query")),
+fn many_to_many_each(from: &[QueryId], to: &[QueryId]) -> Result<Vec<CommandsMut>, QueryError> {
+    let mut commands = Vec::<CommandsMut>::new();
+
+    for from in from {
+        for to in to {
+            commands.push(CommandsMut::InsertEdge(InsertEdge::new(
+                from.clone(),
+                to.clone(),
+            )));
         }
-
-        Ok(commands)
     }
+
+    Ok(commands)
 }
 
 #[cfg(test)]

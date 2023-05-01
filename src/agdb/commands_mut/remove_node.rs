@@ -134,6 +134,16 @@ mod tests {
     #[test]
     fn derived_from_debug() {
         format!("{:?}", RemoveNode::new("alias".into()));
+
+        format!(
+            "{:?}",
+            Edge {
+                id: DbId(0),
+                index: GraphIndex { index: 0 },
+                from: GraphIndex { index: 0 },
+                to: GraphIndex { index: 0 }
+            }
+        );
     }
 
     #[test]
@@ -141,6 +151,21 @@ mod tests {
         assert_eq!(
             RemoveNode::new("alias".into()),
             RemoveNode::new("alias".into())
+        );
+
+        assert_eq!(
+            Edge {
+                id: DbId(0),
+                index: GraphIndex { index: 0 },
+                from: GraphIndex { index: 0 },
+                to: GraphIndex { index: 0 }
+            },
+            Edge {
+                id: DbId(0),
+                index: GraphIndex { index: 0 },
+                from: GraphIndex { index: 0 },
+                to: GraphIndex { index: 0 }
+            }
         );
     }
 }

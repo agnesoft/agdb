@@ -404,4 +404,15 @@ mod tests {
         assert!(graph.edge(&edge6).is_some());
         assert!(graph.edge(&edge7).is_some());
     }
+
+    #[test]
+    fn reinsert_node_with_edge() {
+        let mut graph = Graph::new();
+        let index = graph.insert_node().unwrap();
+        graph.insert_edge(&index, &index).unwrap();
+        graph.remove_node(&index).unwrap();
+        let new_index = graph.insert_node().unwrap();
+        assert_eq!(index, new_index);
+        graph.insert_edge(&new_index, &new_index).unwrap();
+    }
 }

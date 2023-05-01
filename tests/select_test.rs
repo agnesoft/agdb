@@ -1,85 +1,46 @@
-#[path = "../src/agdb/test_utilities/test_file.rs"]
-mod test_file;
+mod framework;
 
-use agdb::Db;
-use agdb::DbElement;
-use agdb::DbId;
 use agdb::QueryBuilder;
-use test_file::TestFile;
+use framework::TestDb;
 
 #[test]
 fn select_id_alias() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
-        .unwrap();
-    let query = QueryBuilder::select().id("alias").query();
-    let result = db.exec(&query).unwrap();
-
-    assert_eq!(result.result, 1);
-    assert_eq!(
-        result.elements,
-        vec![DbElement {
-            index: DbId(1),
-            values: vec![]
-        }]
-    );
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
+    db.exec_ids(QueryBuilder::select().id("alias").query(), &[1]);
 }
 
 #[test]
 fn select_from_ids() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let mut db = TestDb::new();
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(&["alias".into(), "alias2".into()])
             .query(),
-    )
-    .unwrap();
-    let query = QueryBuilder::select()
-        .ids(&["alias".into(), "alias2".into()])
-        .query();
-    let result = db.exec(&query).unwrap();
-
-    assert_eq!(result.result, 2);
-    assert_eq!(
-        result.elements,
-        vec![
-            DbElement {
-                index: DbId(1),
-                values: vec![]
-            },
-            DbElement {
-                index: DbId(2),
-                values: vec![]
-            }
-        ]
+        2,
+    );
+    db.exec_ids(
+        QueryBuilder::select()
+            .ids(&["alias".into(), "alias2".into()])
+            .query(),
+        &[1, 2],
     );
 }
 
 #[test]
 fn select_missing_alias() {
-    let test_file = TestFile::new();
-
-    let db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::select().id("alias").query();
-    let query_error = db.exec(&query).unwrap_err();
-
-    assert_eq!(query_error.description, "Alias 'alias' not found");
+    let db = TestDb::new();
+    db.exec_error(
+        QueryBuilder::select().id("alias").query(),
+        "Alias 'alias' not found",
+    );
 }
 
 #[test]
 fn select_missing_id() {
-    let test_file = TestFile::new();
-
-    let db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::select().id(1).query();
-    let query_error = db.exec(&query).unwrap_err();
-
-    assert_eq!(query_error.description, "Id '1' not found");
+    let db = TestDb::new();
+    db.exec_error(QueryBuilder::select().id(1).query(), "Id '1' not found");
 }
 
 #[test]

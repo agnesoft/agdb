@@ -1,11 +1,14 @@
-use crate::db::db_context::Context;
 use crate::graph::graph_index::GraphIndex;
 use crate::query::query_id::QueryId;
 use crate::Db;
+use crate::DbElement;
+use crate::DbId;
 use crate::QueryError;
+use crate::QueryResult;
 
 #[derive(Debug, PartialEq)]
 pub struct InsertEdge {
+    id: DbId,
     graph_index: GraphIndex,
     from: QueryId,
     to: QueryId,
@@ -14,22 +17,35 @@ pub struct InsertEdge {
 impl InsertEdge {
     pub(crate) fn new(from: QueryId, to: QueryId) -> Self {
         Self {
+            id: DbId(0),
             graph_index: GraphIndex { index: 0 },
             from,
             to,
         }
     }
 
-    pub(crate) fn redo(&mut self, db: &mut Db, context: &mut Context) -> Result<(), QueryError> {
+    pub(crate) fn redo(&mut self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
         let from = db.graph_index_from_id(&self.from)?;
         let to = db.graph_index_from_id(&self.to)?;
         self.graph_index = db.graph.insert_edge(&from, &to)?;
-        context.graph_index = self.graph_index;
+        self.id = DbId(-db.next_id);
+        db.next_id += 1;
+        db.indexes.insert(&self.id, &self.graph_index)?;
+        result.result += 1;
+        result.elements.push(DbElement {
+            index: self.id,
+            values: vec![],
+        });
+
         Ok(())
     }
 
     pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
-        Ok(db.graph.remove_edge(&self.graph_index)?)
+        db.graph.remove_edge(&self.graph_index)?;
+        db.indexes.remove_key(&self.id)?;
+        db.next_id -= 1;
+
+        Ok(())
     }
 }
 

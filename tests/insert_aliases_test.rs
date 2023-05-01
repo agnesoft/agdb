@@ -6,52 +6,41 @@ use agdb::QueryBuilder;
 use agdb::QueryError;
 use test_file::TestFile;
 
+mod framework;
+use framework::TestDb;
+
 #[test]
 fn insert_alias_of() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    let query = QueryBuilder::insert().alias("alias").of(1).query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 1);
-    assert_eq!(result.elements, vec![]);
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(QueryBuilder::insert().alias("alias").of(1).query(), 1);
 }
 
 #[test]
 fn insert_aliases_of() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().nodes().count(2).query())
-        .unwrap();
-    let query = QueryBuilder::insert()
-        .aliases(&["alias".into(), "alias2".into()])
-        .of(&[1.into(), 2.into()])
-        .query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 2);
-    assert_eq!(result.elements, vec![]);
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .aliases(&["alias".into(), "alias2".into()])
+            .of(&[1.into(), 2.into()])
+            .query(),
+        2,
+    );
 }
 
 #[test]
 fn insert_aliases_alias() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
-        .unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    let query = QueryBuilder::insert()
-        .aliases(&["alias1".into(), "alias2".into()])
-        .of(&["alias".into(), 2.into()])
-        .query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 2);
-    assert_eq!(result.elements, vec![]);
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
+    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .aliases(&["alias1".into(), "alias2".into()])
+            .of(&["alias".into(), 2.into()])
+            .query(),
+        2,
+    );
 }
 
 #[test]
@@ -94,26 +83,16 @@ fn insert_aliases_rollback() {
 
 #[test]
 fn insert_alias_empty() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    let query = QueryBuilder::insert().alias(String::new()).of(1).query();
-    let error = db.exec_mut(&query).unwrap_err();
-
-    assert_eq!(error.description, "Empty alias is not allowed");
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert().alias(String::new()).of(1).query(),
+        "Empty alias is not allowed",
+    );
 }
 
 #[test]
-fn insert_alias_old_alias_by_id() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().alias("old_alias").query())
-        .unwrap();
-    let query = QueryBuilder::insert().alias("alias").of(1).query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 1);
-    assert_eq!(result.elements, vec![]);
+fn insert_alias_by_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().alias("old_alias").query(), 1);
+    db.exec_mut(QueryBuilder::insert().alias("alias").of(1).query(), 1);
 }

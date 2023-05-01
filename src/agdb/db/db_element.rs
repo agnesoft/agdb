@@ -21,4 +21,18 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            DbElement {
+                index: DbId(0),
+                values: vec![]
+            },
+            DbElement {
+                index: DbId(0),
+                values: vec![]
+            }
+        );
+    }
 }

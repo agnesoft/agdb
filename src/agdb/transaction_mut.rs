@@ -1,10 +1,7 @@
 use crate::commands_mut::CommandsMut;
-use crate::db::db_context::Context;
-use crate::graph::graph_index::GraphIndex;
 use crate::query::Query;
 use crate::query::QueryMut;
 use crate::Db;
-use crate::DbId;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::Transaction;
@@ -27,11 +24,6 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
-        let mut context = Context {
-            id: DbId(0),
-            graph_index: GraphIndex { index: 0 },
-        };
-
         let mut result = QueryResult {
             result: 0,
             elements: vec![],
@@ -40,7 +32,7 @@ impl<'a> TransactionMut<'a> {
         self.commands = query.commands()?;
 
         for command in &mut self.commands {
-            Self::redo_command(command, self.db, &mut context, &mut result)?;
+            Self::redo_command(command, self.db, &mut result)?;
         }
 
         Ok(result)
@@ -61,7 +53,6 @@ impl<'a> TransactionMut<'a> {
     fn redo_command(
         command: &mut CommandsMut,
         db: &mut Db,
-        context: &mut Context,
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
         match command {
@@ -69,9 +60,8 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::InsertEdge(data) => data.redo(db, result),
             CommandsMut::InsertNode(data) => data.redo(db, result),
             CommandsMut::RemoveAlias(data) => data.redo(db, result),
-            CommandsMut::RemoveEdge(data) => data.redo(db, context),
-            CommandsMut::RemoveIndex(data) => data.redo(db, result, context),
-            CommandsMut::RemoveNode(data) => data.redo(db, context),
+            CommandsMut::RemoveEdge(data) => data.redo(db, result),
+            CommandsMut::RemoveNode(data) => data.redo(db, result),
         }
     }
 
@@ -82,7 +72,6 @@ impl<'a> TransactionMut<'a> {
             CommandsMut::InsertNode(data) => data.undo(db),
             CommandsMut::RemoveAlias(data) => data.undo(db),
             CommandsMut::RemoveEdge(data) => data.undo(db),
-            CommandsMut::RemoveIndex(data) => data.undo(db),
             CommandsMut::RemoveNode(data) => data.undo(db),
         }
     }

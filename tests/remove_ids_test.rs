@@ -162,6 +162,23 @@ pub fn remove_missing_edge() {
 }
 
 #[test]
+pub fn remove_missing_edge_rollback() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+
+    let error = db
+        .transaction_mut(|transaction| -> Result<(), QueryError> {
+            let query = QueryBuilder::remove().id(-3).query();
+            transaction.exec_mut(&query).unwrap();
+            Err(QueryError::from("error"))
+        })
+        .unwrap_err();
+
+    assert_eq!(error.description, "error");
+}
+
+#[test]
 pub fn remove_missing_node() {
     let test_file = TestFile::new();
 

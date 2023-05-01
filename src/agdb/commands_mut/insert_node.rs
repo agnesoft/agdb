@@ -28,6 +28,13 @@ impl InsertNode {
         db.indexes.insert(&self.id, &self.graph_index)?;
 
         if !self.alias.is_empty() {
+            if db.aliases.value(&self.alias)?.is_some() {
+                return Err(QueryError::from(format!(
+                    "Alias '{}' already exists",
+                    self.alias
+                )));
+            }
+
             db.aliases.insert(&self.alias, &self.id)?;
         }
 

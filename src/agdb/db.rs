@@ -1,4 +1,3 @@
-pub mod db_context;
 pub mod db_element;
 pub mod db_error;
 pub mod db_id;

@@ -65,7 +65,7 @@ impl<'a> TransactionMut<'a> {
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
         match command {
-            CommandsMut::InsertAlias(data) => data.redo(db, result, context),
+            CommandsMut::InsertAlias(data) => data.redo(db, result),
             CommandsMut::InsertEdge(data) => data.redo(db, result),
             CommandsMut::InsertNode(data) => data.redo(db, result),
             CommandsMut::RemoveAlias(data) => data.redo(db, result, context),

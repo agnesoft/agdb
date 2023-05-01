@@ -49,4 +49,9 @@ mod test {
         assert!(!QueryId::from(0).is_node());
         assert!(!QueryId::from(-1).is_node());
     }
+
+    #[test]
+    fn from_db_id() {
+        let _ = QueryId::from(DbId(0));
+    }
 }

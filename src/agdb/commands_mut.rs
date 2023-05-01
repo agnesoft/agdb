@@ -28,20 +28,22 @@ pub enum CommandsMut {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::query_id::QueryId;
+    use crate::DbId;
 
     #[test]
     fn derived_from_debug() {
         format!(
             "{:?}",
-            CommandsMut::InsertAlias(InsertAlias::new(String::new(), None, false))
+            CommandsMut::InsertAlias(InsertAlias::new(QueryId::Id(DbId(0)), String::new()))
         );
     }
 
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            CommandsMut::InsertAlias(InsertAlias::new(String::new(), None, false)),
-            CommandsMut::InsertAlias(InsertAlias::new(String::new(), None, false))
+            CommandsMut::InsertAlias(InsertAlias::new(QueryId::Id(DbId(0)), String::new())),
+            CommandsMut::InsertAlias(InsertAlias::new(QueryId::Id(DbId(0)), String::new()))
         );
     }
 }

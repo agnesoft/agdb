@@ -2,7 +2,6 @@
 mod test_file;
 
 use agdb::Db;
-use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use test_file::TestFile;
@@ -13,7 +12,7 @@ fn insert_alias_of() {
 
     let mut db = Db::new(test_file.file_name()).unwrap();
     db.exec_mut(&QueryBuilder::insert().node().query()).unwrap();
-    let query = QueryBuilder::insert().alias("alias").of(DbId(1)).query();
+    let query = QueryBuilder::insert().alias("alias").of(1).query();
     let result = db.exec_mut(&query).unwrap();
 
     assert_eq!(result.result, 1);
@@ -103,4 +102,18 @@ fn insert_alias_empty() {
     let error = db.exec_mut(&query).unwrap_err();
 
     assert_eq!(error.description, "Empty alias is not allowed");
+}
+
+#[test]
+fn insert_alias_old_alias_by_id() {
+    let test_file = TestFile::new();
+
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().node().alias("old_alias").query())
+        .unwrap();
+    let query = QueryBuilder::insert().alias("alias").of(1).query();
+    let result = db.exec_mut(&query).unwrap();
+
+    assert_eq!(result.result, 1);
+    assert_eq!(result.elements, vec![]);
 }

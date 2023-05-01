@@ -2,12 +2,15 @@
 mod test_file;
 
 use agdb::Db;
+use agdb::Query;
+use agdb::QueryError;
 use agdb::QueryMut;
+use agdb::TransactionMut;
 use test_file::TestFile;
 
 pub struct TestDb {
     _test_file: TestFile,
-    db: Db,
+    pub db: Db,
 }
 
 #[allow(dead_code)]
@@ -24,6 +27,16 @@ impl TestDb {
     }
 
     #[track_caller]
+    pub fn exec<T: Query>(&self, query: T, result: i64) {
+        assert_eq!(self.db.exec(&query).unwrap().result, result);
+    }
+
+    #[track_caller]
+    pub fn exec_error<T: Query>(&self, query: T, error: &str) {
+        assert_eq!(self.db.exec(&query).unwrap_err().description, error);
+    }
+
+    #[track_caller]
     pub fn exec_mut<T: QueryMut>(&mut self, query: T, result: i64) {
         assert_eq!(self.db.exec_mut(&query).unwrap().result, result);
     }
@@ -31,5 +44,22 @@ impl TestDb {
     #[track_caller]
     pub fn exec_mut_error<T: QueryMut>(&mut self, query: T, error: &str) {
         assert_eq!(self.db.exec_mut(&query).unwrap_err().description, error);
+    }
+
+    #[track_caller]
+    pub fn transaction_mut<E: From<QueryError> + std::fmt::Debug>(
+        &mut self,
+        f: impl Fn(&mut TransactionMut) -> Result<(), E>,
+    ) {
+        self.db.transaction_mut(f).unwrap()
+    }
+
+    #[track_caller]
+    pub fn transaction_mut_error<E: From<QueryError> + std::fmt::Debug + PartialEq>(
+        &mut self,
+        f: impl Fn(&mut TransactionMut) -> Result<(), E>,
+        error: E,
+    ) {
+        assert_eq!(self.db.transaction_mut(f).unwrap_err(), error);
     }
 }

@@ -27,3 +27,4 @@ pub use query::Query;
 pub use query::QueryMut;
 pub use query_builder::QueryBuilder;
 pub use transaction::Transaction;
+pub use transaction_mut::TransactionMut;

@@ -28,7 +28,7 @@ impl InsertEdge {
         Ok(())
     }
 
-    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+    pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
         Ok(db.graph.remove_edge(&self.graph_index)?)
     }
 }

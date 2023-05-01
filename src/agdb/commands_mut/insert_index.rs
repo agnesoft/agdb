@@ -43,7 +43,7 @@ impl InsertIndex {
         Ok(())
     }
 
-    pub(crate) fn undo(&self, db: &mut Db) -> Result<(), QueryError> {
+    pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
         Ok(db.indexes.remove_key(&self.id)?)
     }
 }

@@ -14,7 +14,7 @@ impl RemoveNode {
         Ok(db.graph.remove_node(&context.graph_index)?)
     }
 
-    pub(crate) fn undo(&mut self, db: &mut Db) -> Result<(), QueryError> {
+    pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
         db.graph.insert_node()?;
         Ok(())
     }

@@ -42,42 +42,49 @@ fn insert_edge_missing_from() {
 }
 
 #[test]
-fn insert_edge_from_to_values() {
-    let _query = QueryBuilder::insert()
-        .edge()
-        .from("alias1")
-        .to("alias2")
-        .values(&[("key", "value").into()])
-        .query();
-}
-
-#[test]
-fn insert_edge_from_to_values_id() {
-    let _query = QueryBuilder::insert()
-        .edge()
-        .from("alias1")
-        .to("alias2")
-        .values_id("alias")
-        .query();
-}
-
-#[test]
 fn insert_edges_from_to() {
-    let _query = QueryBuilder::insert()
-        .edges()
-        .from(&["alias1".into(), "alias2".into()])
-        .to(&["alias3".into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&[
+                "alias1".into(),
+                "alias2".into(),
+                "alias3".into(),
+                "alias4".into(),
+            ])
+            .query(),
+        4,
+    );
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into(), "alias2".into()])
+            .to(&["alias3".into(), "alias4".into()])
+            .each()
+            .query(),
+        &[-5, -6, -7, -8],
+    );
 }
 
 #[test]
 fn insert_edges_from_to_each() {
-    let _query = QueryBuilder::insert()
-        .edges()
-        .from(&["alias1".into(), "alias2".into()])
-        .to(&["alias3".into(), "alias4".into()])
-        .each()
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".into(), "alias2".into(), "alias3".into()])
+            .query(),
+        3,
+    );
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into(), "alias2".into()])
+            .to(&["alias3".into()])
+            .query(),
+        &[-4, -5],
+    );
 }
 
 #[test]
@@ -170,6 +177,26 @@ fn insert_edges_from_query_to() {
         .edges()
         .from_search(QueryBuilder::search().from(1.into()).query())
         .to(&["alias".into()])
+        .query();
+}
+
+#[test]
+fn insert_edge_from_to_values() {
+    let _query = QueryBuilder::insert()
+        .edge()
+        .from("alias1")
+        .to("alias2")
+        .values(&[("key", "value").into()])
+        .query();
+}
+
+#[test]
+fn insert_edge_from_to_values_id() {
+    let _query = QueryBuilder::insert()
+        .edge()
+        .from("alias1")
+        .to("alias2")
+        .values_id("alias")
         .query();
 }
 

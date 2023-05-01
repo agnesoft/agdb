@@ -1,5 +1,6 @@
 use crate::graph::graph_index::GraphIndex;
 use crate::Db;
+use crate::DbElement;
 use crate::DbId;
 use crate::QueryError;
 use crate::QueryResult;
@@ -31,6 +32,10 @@ impl InsertNode {
         }
 
         result.result += 1;
+        result.elements.push(DbElement {
+            index: self.id,
+            values: vec![],
+        });
 
         Ok(())
     }
@@ -38,11 +43,7 @@ impl InsertNode {
     pub(crate) fn undo(self, db: &mut Db) -> Result<(), QueryError> {
         db.graph.remove_node(&self.graph_index)?;
         db.indexes.remove_key(&self.id)?;
-
-        if !self.alias.is_empty() {
-            db.aliases.remove_key(&self.alias)?;
-        }
-
+        db.aliases.remove_key(&self.alias)?;
         db.next_index -= 1;
 
         Ok(())

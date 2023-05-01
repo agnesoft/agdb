@@ -42,6 +42,20 @@ impl TestDb {
     }
 
     #[track_caller]
+    pub fn exec_mut_ids<T: QueryMut>(&mut self, query: T, ids: &[i64]) {
+        assert_eq!(
+            self.db
+                .exec_mut(&query)
+                .unwrap()
+                .elements
+                .into_iter()
+                .map(|e| e.index.0)
+                .collect::<Vec<i64>>(),
+            ids
+        );
+    }
+
+    #[track_caller]
     pub fn exec_mut_error<T: QueryMut>(&mut self, query: T, error: &str) {
         assert_eq!(self.db.exec_mut(&query).unwrap_err().description, error);
     }

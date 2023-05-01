@@ -14,7 +14,7 @@ fn select_id_alias() {
     let mut db = Db::new(test_file.file_name()).unwrap();
     db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
         .unwrap();
-    let query = QueryBuilder::select().id("alias".into()).query();
+    let query = QueryBuilder::select().id("alias").query();
     let result = db.exec(&query).unwrap();
 
     assert_eq!(result.result, 1);
@@ -65,7 +65,7 @@ fn select_missing_alias() {
     let test_file = TestFile::new();
 
     let db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::select().id("alias".into()).query();
+    let query = QueryBuilder::select().id("alias").query();
     let query_error = db.exec(&query).unwrap_err();
 
     assert_eq!(query_error.description, "Alias 'alias' not found");
@@ -76,7 +76,7 @@ fn select_missing_id() {
     let test_file = TestFile::new();
 
     let db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::select().id(1.into()).query();
+    let query = QueryBuilder::select().id(1).query();
     let query_error = db.exec(&query).unwrap_err();
 
     assert_eq!(query_error.description, "Id '1' not found");

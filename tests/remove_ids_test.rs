@@ -38,14 +38,14 @@ fn remove_node_rollback() {
             assert_eq!(result.result, -1);
             assert_eq!(result.elements, vec![]);
 
-            transaction.exec(&QueryBuilder::select().id(1.into()).query())
+            transaction.exec(&QueryBuilder::select().id(1).query())
         })
         .unwrap_err();
 
     assert_eq!(error.description, "Id '1' not found");
 
     let result = db
-        .exec(&QueryBuilder::select().id("alias".into()).query())
+        .exec(&QueryBuilder::select().id("alias").query())
         .unwrap();
 
     assert_eq!(result.result, 1);
@@ -110,15 +110,13 @@ fn remove_edge_rollback() {
             assert_eq!(result.result, -1);
             assert_eq!(result.elements, vec![]);
 
-            transaction.exec(&QueryBuilder::select().id((-3).into()).query())
+            transaction.exec(&QueryBuilder::select().id(-3).query())
         })
         .unwrap_err();
 
     assert_eq!(error.description, "Id '-3' not found");
 
-    let result = db
-        .exec(&QueryBuilder::select().id((-3).into()).query())
-        .unwrap();
+    let result = db.exec(&QueryBuilder::select().id(-3).query()).unwrap();
 
     assert_eq!(result.result, 1);
 }
@@ -216,7 +214,7 @@ fn remove_node_with_alias() {
     assert_eq!(result.elements, vec![]);
 
     let error = db
-        .exec(&QueryBuilder::select().id("alias".into()).query())
+        .exec(&QueryBuilder::select().id("alias").query())
         .unwrap_err();
 
     assert_eq!(error.description, "Alias 'alias' not found");
@@ -238,9 +236,7 @@ fn remove_node_no_alias_rollback() {
 
     assert_eq!(error.description, "error");
 
-    let result = db
-        .exec(&QueryBuilder::select().id(1.into()).query())
-        .unwrap();
+    let result = db.exec(&QueryBuilder::select().id(1).query()).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(
@@ -300,9 +296,7 @@ fn remove_node_with_edges() {
 
     assert_eq!(result.result, -1);
 
-    let error = db
-        .exec(&QueryBuilder::select().id((-3).into()).query())
-        .unwrap_err();
+    let error = db.exec(&QueryBuilder::select().id(-3).query()).unwrap_err();
     assert_eq!(error.description, "Id '-3' not found");
 }
 
@@ -324,9 +318,7 @@ fn remove_node_with_edges_rollback() {
 
     assert_eq!(error.description, "error");
 
-    let result = db
-        .exec(&QueryBuilder::select().id((-2).into()).query())
-        .unwrap();
+    let result = db.exec(&QueryBuilder::select().id(-2).query()).unwrap();
 
     assert_eq!(result.result, 1);
     assert_eq!(

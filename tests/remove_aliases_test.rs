@@ -65,14 +65,14 @@ fn remove_aliases_rollback() {
             assert_eq!(result.result, -2);
             assert_eq!(result.elements, vec![]);
 
-            transaction.exec(&QueryBuilder::select().id("alias2".into()).query())
+            transaction.exec(&QueryBuilder::select().id("alias2").query())
         })
         .unwrap_err();
 
     assert_eq!(error.description, "Alias 'alias2' not found");
 
     let result = db
-        .exec(&QueryBuilder::select().id("alias2".into()).query())
+        .exec(&QueryBuilder::select().id("alias2").query())
         .unwrap();
 
     assert_eq!(result.result, 1);

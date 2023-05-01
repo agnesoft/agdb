@@ -85,7 +85,7 @@ fn insert_node_alias_rollback() {
     assert_eq!(error.description, "error");
 
     let error2 = db
-        .exec(&QueryBuilder::select().id("alias".into()).query())
+        .exec(&QueryBuilder::select().id("alias").query())
         .unwrap_err();
 
     assert_eq!(error2.description, "Alias 'alias' not found");

@@ -55,13 +55,13 @@ fn insert_aliases_rollback() {
             // This fails and causes a rollback
             // since the alias was overwritten
             // in the transaction.
-            t.exec(&QueryBuilder::select().id("alias".into()).query())?;
+            t.exec(&QueryBuilder::select().id("alias").query())?;
             Ok(())
         },
-        QueryError::from("Alias 'alias' not found"),
+        "Alias 'alias' not found".into(),
     );
 
-    db.exec(QueryBuilder::select().id("alias".into()).query(), 1);
+    db.exec(QueryBuilder::select().id("alias").query(), 1);
 }
 
 #[test]

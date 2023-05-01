@@ -32,6 +32,20 @@ impl TestDb {
     }
 
     #[track_caller]
+    pub fn exec_ids<T: Query>(&mut self, query: T, ids: &[i64]) {
+        assert_eq!(
+            self.db
+                .exec(&query)
+                .unwrap()
+                .elements
+                .into_iter()
+                .map(|e| e.index.0)
+                .collect::<Vec<i64>>(),
+            ids
+        );
+    }
+
+    #[track_caller]
     pub fn exec_error<T: Query>(&self, query: T, error: &str) {
         assert_eq!(self.db.exec(&query).unwrap_err().description, error);
     }

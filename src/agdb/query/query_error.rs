@@ -39,25 +39,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn derived_from_debug() {
-        format!(
-            "{:?}",
-            QueryError {
-                description: String::new()
-            }
-        );
+    fn derived_from_debug_and_default() {
+        format!("{:?}", QueryError::default());
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(
-            QueryError {
-                description: String::new()
-            },
-            QueryError {
-                description: String::new()
-            }
-        );
+        assert_eq!(QueryError::default(), QueryError::default());
     }
 
     #[test]

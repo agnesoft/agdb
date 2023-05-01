@@ -1,111 +1,79 @@
-#[path = "../src/agdb/test_utilities/test_file.rs"]
-mod test_file;
+mod framework;
 
-use agdb::Db;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryResult;
-use test_file::TestFile;
+use framework::TestDb;
 
 #[test]
 fn remove_alias() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().node().alias("alias").query())
-        .unwrap();
-    let query = QueryBuilder::remove().alias("alias").query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, -1);
-    assert_eq!(result.elements, vec![]);
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
+    db.exec_mut(QueryBuilder::remove().alias("alias").query(), -1);
+    db.exec_error(
+        QueryBuilder::select().id("alias").query(),
+        "Alias 'alias' not found",
+    );
 }
 
 #[test]
 fn remove_aliases() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let mut db = TestDb::new();
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(&["alias".into(), "alias2".into()])
             .query(),
-    )
-    .unwrap();
-    let query = QueryBuilder::remove()
-        .aliases(&["alias".into(), "alias2".into()])
-        .query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, -2);
-    assert_eq!(result.elements, vec![]);
+        2,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .aliases(&["alias".into(), "alias2".into()])
+            .query(),
+        -2,
+    );
 }
 
 #[test]
 fn remove_aliases_rollback() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let mut db = TestDb::new();
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(&["alias".into(), "alias2".into()])
             .query(),
-    )
-    .unwrap();
+        2,
+    );
 
-    let error = db
-        .transaction_mut(|transaction| -> Result<QueryResult, QueryError> {
-            let query = QueryBuilder::remove()
-                .aliases(&["alias".into(), "alias2".into()])
-                .query();
-            let result = transaction.exec_mut(&query).unwrap();
+    db.transaction_mut_error(
+        |t| -> Result<QueryResult, QueryError> {
+            t.exec_mut(
+                &QueryBuilder::remove()
+                    .aliases(&["alias".into(), "alias2".into()])
+                    .query(),
+            )?;
+            t.exec(&QueryBuilder::select().id("alias2").query())
+        },
+        "Alias 'alias2' not found".into(),
+    );
 
-            assert_eq!(result.result, -2);
-            assert_eq!(result.elements, vec![]);
-
-            transaction.exec(&QueryBuilder::select().id("alias2").query())
-        })
-        .unwrap_err();
-
-    assert_eq!(error.description, "Alias 'alias2' not found");
-
-    let result = db
-        .exec(&QueryBuilder::select().id("alias2").query())
-        .unwrap();
-
-    assert_eq!(result.result, 1);
+    db.exec(QueryBuilder::select().id("alias2").query(), 1);
 }
 
 #[test]
 fn remove_missing_alias() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-    let query = QueryBuilder::remove().alias("alias").query();
-    let result = db.exec_mut(&query).unwrap();
-
-    assert_eq!(result.result, 0);
-    assert_eq!(result.elements, vec![]);
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::remove().alias("alias").query(), 0);
 }
 
 #[test]
 fn remove_missing_alias_rollback() {
-    let test_file = TestFile::new();
-
-    let mut db = Db::new(test_file.file_name()).unwrap();
-
-    let error = db
-        .transaction_mut(|transaction| -> Result<(), QueryError> {
-            let query = QueryBuilder::remove().alias("alias").query();
-            let result = transaction.exec_mut(&query).unwrap();
-
-            assert_eq!(result.result, 0);
-
+    let mut db = TestDb::new();
+    db.transaction_mut_error(
+        |t| -> Result<(), QueryError> {
+            t.exec_mut(&QueryBuilder::remove().alias("alias").query())?;
             Err("error".into())
-        })
-        .unwrap_err();
-
-    assert_eq!(error.description, "error");
+        },
+        "error".into(),
+    );
 }

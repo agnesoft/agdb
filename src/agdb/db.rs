@@ -6,6 +6,7 @@ pub mod db_key_value;
 pub mod db_value;
 
 mod db_float;
+mod db_key_value_index;
 mod db_value_index;
 
 use self::db_error::DbError;

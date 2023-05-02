@@ -16,7 +16,7 @@ impl InsertNode {
     pub(crate) fn new(alias: String) -> Self {
         Self {
             id: DbId(0),
-            graph_index: GraphIndex { index: 0 },
+            graph_index: GraphIndex::new(),
             alias,
         }
     }

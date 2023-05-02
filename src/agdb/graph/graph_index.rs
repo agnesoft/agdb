@@ -6,6 +6,10 @@ pub struct GraphIndex {
 }
 
 impl GraphIndex {
+    pub fn new() -> Self {
+        GraphIndex::default()
+    }
+
     pub fn is_edge(&self) -> bool {
         self.index < 0
     }

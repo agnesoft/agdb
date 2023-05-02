@@ -16,9 +16,9 @@ impl RemoveEdge {
     pub(crate) fn new(id: DbId) -> Self {
         Self {
             id,
-            graph_index: GraphIndex { index: 0 },
-            from: GraphIndex { index: 0 },
-            to: GraphIndex { index: 0 },
+            graph_index: GraphIndex::new(),
+            from: GraphIndex::new(),
+            to: GraphIndex::new(),
         }
     }
 

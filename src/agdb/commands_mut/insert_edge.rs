@@ -18,7 +18,7 @@ impl InsertEdge {
     pub(crate) fn new(from: QueryId, to: QueryId) -> Self {
         Self {
             id: DbId(0),
-            graph_index: GraphIndex { index: 0 },
+            graph_index: GraphIndex::new(),
             from,
             to,
         }

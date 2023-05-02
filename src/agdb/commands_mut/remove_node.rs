@@ -27,13 +27,13 @@ impl RemoveNode {
             QueryId::Id(id) => Self {
                 id,
                 alias: String::new(),
-                graph_index: GraphIndex { index: 0 },
+                graph_index: GraphIndex::new(),
                 edges: vec![],
             },
             QueryId::Alias(alias) => Self {
                 id: DbId(0),
                 alias,
-                graph_index: GraphIndex { index: 0 },
+                graph_index: GraphIndex::new(),
                 edges: vec![],
             },
         }
@@ -139,9 +139,9 @@ mod tests {
             "{:?}",
             Edge {
                 id: DbId(0),
-                index: GraphIndex { index: 0 },
-                from: GraphIndex { index: 0 },
-                to: GraphIndex { index: 0 }
+                index: GraphIndex::new(),
+                from: GraphIndex::new(),
+                to: GraphIndex::new()
             }
         );
     }
@@ -156,15 +156,15 @@ mod tests {
         assert_eq!(
             Edge {
                 id: DbId(0),
-                index: GraphIndex { index: 0 },
-                from: GraphIndex { index: 0 },
-                to: GraphIndex { index: 0 }
+                index: GraphIndex::new(),
+                from: GraphIndex::new(),
+                to: GraphIndex::new()
             },
             Edge {
                 id: DbId(0),
-                index: GraphIndex { index: 0 },
-                from: GraphIndex { index: 0 },
-                to: GraphIndex { index: 0 }
+                index: GraphIndex::new(),
+                from: GraphIndex::new(),
+                to: GraphIndex::new()
             }
         );
     }

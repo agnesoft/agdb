@@ -1,11 +1,28 @@
+mod framework;
+
+use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
+use framework::TestDb;
 
 #[test]
 fn insert_values_id() {
-    let _query = QueryBuilder::insert()
-        .values(&[("key", "value").into()])
-        .id("alias".into())
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_ids(QueryBuilder::insert().node().alias("alias").query(), &[1]);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values(&[("key", "value").into()])
+            .id("alias")
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().id("alias").query(),
+        &[DbElement {
+            index: DbId(1),
+            values: vec![("key", "value").into()],
+        }],
+    );
 }
 
 #[test]

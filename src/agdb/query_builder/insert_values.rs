@@ -7,8 +7,8 @@ use crate::query::search_query::SearchQuery;
 pub struct InsertValues(pub InsertValuesQuery);
 
 impl InsertValues {
-    pub fn id(mut self, id: QueryId) -> InsertValuesIds {
-        self.0.ids = QueryIds::Ids(vec![id]);
+    pub fn id<T: Into<QueryId>>(mut self, id: T) -> InsertValuesIds {
+        self.0.ids = QueryIds::Ids(vec![id.into()]);
 
         InsertValuesIds(self.0)
     }

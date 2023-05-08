@@ -59,7 +59,7 @@ impl DbValueIndex {
     }
 
     fn set_size(&mut self, size: u8) {
-        let v = (size & 0b00001111) | (self.value[0] & 0b11110000);
+        let v = (size & 0b00001111) | (self.value[15] & 0b11110000);
         self.value[15] = v;
     }
 }
@@ -127,6 +127,20 @@ mod tests {
         assert!(index.set_value(&value));
         assert_eq!(index.value(), value);
         assert_eq!(index.size(), 3);
+        assert!(index.is_value());
+    }
+
+    #[test]
+    fn value_type_size() {
+        let mut index = DbValueIndex::default();
+        let value = vec![1_u8, 2_u8, 3_u8];
+
+        index.set_type(5);
+
+        assert!(index.set_value(&value));
+        assert_eq!(index.value(), value);
+        assert_eq!(index.size(), 3);
+        assert_eq!(index.get_type(), 5);
         assert!(index.is_value());
     }
 

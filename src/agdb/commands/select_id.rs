@@ -16,7 +16,7 @@ impl SelectId {
             QueryId::Id(id) => {
                 let _ = db
                     .indexes
-                    .value(&id)?
+                    .value(id)?
                     .ok_or(QueryError::from(format!("Id '{}' not found", id.0)))?;
                 *id
             }

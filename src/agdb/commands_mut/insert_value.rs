@@ -36,7 +36,7 @@ impl InsertValue {
             }
             QueryId::Alias(alias) => db
                 .aliases
-                .value(&alias)?
+                .value(alias)?
                 .ok_or(QueryError::from(format!("Alias '{}' not found", alias)))?,
         };
 
@@ -66,5 +66,23 @@ impl InsertValue {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            InsertValue::new(QueryId::Id(DbId(0)), vec![]),
+            InsertValue::new(QueryId::Id(DbId(0)), vec![])
+        );
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", InsertValue::new(QueryId::Id(DbId(0)), vec![]));
     }
 }

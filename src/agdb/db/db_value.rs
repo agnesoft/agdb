@@ -277,8 +277,13 @@ impl StorageValue for DbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::vec_storage::VecStorage;
+    use crate::storage::file_storage::FileStorage;
+    use crate::test_utilities::test_file::TestFile;
+    use std::cell::RefCell;
     use std::cmp::Ordering;
     use std::collections::HashSet;
+    use std::rc::Rc;
 
     #[test]
     fn derived_from_eq() {
@@ -565,5 +570,32 @@ mod tests {
         assert_ne!(DbValue::from(vec![1_u64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![1.0_f64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![""]).stable_hash(), 0);
+    }
+
+    #[test]
+    fn storage_value() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let mut values: Vec<DbValue> = vec![
+            1.1.into(),
+            "Hello, World! Not a short string".into(),
+            vec!["Hello", ",", "World", "!"].into(),
+        ];
+
+        let mut vec = VecStorage::<DbValue>::new(storage).unwrap();
+
+        for value in &values {
+            vec.push(value).unwrap();
+        }
+
+        values.remove(1);
+        vec.remove(1).unwrap();
+
+        let actual: Vec<DbValue> = vec.iter().collect();
+
+        assert_eq!(values, actual);
     }
 }

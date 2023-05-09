@@ -32,7 +32,7 @@ impl<'a> Transaction<'a> {
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
         match command {
-            Commands::SelectId(data) => data.redo(&self.db, result),
+            Commands::SelectId(data) => data.redo(self.db, result),
         }
     }
 }

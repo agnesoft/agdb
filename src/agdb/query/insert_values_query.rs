@@ -46,3 +46,53 @@ impl QueryMut for InsertValuesQuery {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::query_id::QueryId;
+    use crate::query::search_query::SearchQuery;
+
+    #[test]
+    fn values_by_id() {
+        let query = InsertValuesQuery {
+            ids: QueryIds::Ids(vec![1.into()]),
+            values: QueryValues::Ids(QueryIds::Ids(vec![1.into()])),
+        };
+
+        assert_eq!(
+            query.commands(),
+            Err(QueryError::from("Invalid insert aliases query"))
+        );
+    }
+
+    #[test]
+    fn values_by_search() {
+        let query = InsertValuesQuery {
+            ids: QueryIds::Search(SearchQuery {
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
+            values: QueryValues::Single(vec![]),
+        };
+
+        assert_eq!(
+            query.commands(),
+            Err(QueryError::from("Invalid insert aliases query"))
+        );
+    }
+
+    #[test]
+    fn values_none() {
+        let query = InsertValuesQuery {
+            ids: QueryIds::Ids(vec![1.into()]),
+            values: QueryValues::None,
+        };
+
+        assert_eq!(query.commands(), Ok(vec![]));
+    }
+}

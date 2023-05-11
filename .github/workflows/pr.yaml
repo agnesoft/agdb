@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
       - id: diff
         shell: bash
-        run: if [[ "$(git diff origin/main --name-only -- *.rs Cargo.toml .github/workflows/pr.yaml)" != "" ]]; then (echo "::set-output name=diff::true") fi
+        run: if [[ "$(git diff origin/main --name-only -- *.rs Cargo.toml .github/workflows/pr.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
 
   analyse:
     runs-on: ubuntu-latest
@@ -44,7 +44,13 @@ jobs:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --workspace --fail-uncovered-functions 0 --fail-uncovered-lines 0
+      - run: cargo llvm-cov --workspace --fail-uncovered-functions 0
+      - run: |
+          REPORT=$(cargo llvm-cov report --show-missing-lines)
+          if [[ "$REPORT" =~ "Uncovered Lines:" ]]; then
+              echo "$REPORT"
+              exit 1;
+          fi
 
   format:
     runs-on: ubuntu-latest

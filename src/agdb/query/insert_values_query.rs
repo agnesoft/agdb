@@ -14,36 +14,32 @@ impl QueryMut for InsertValuesQuery {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
         let mut commands = vec![];
 
-        match &self.ids {
-            QueryIds::Ids(ids) => match &self.values {
-                QueryValues::None => Ok(commands),
-                QueryValues::Ids(_) => Err(QueryError::from("Invalid insert aliases query")),
-                QueryValues::Single(values) => {
-                    for id in ids {
-                        commands.push(CommandsMut::InsertValue(InsertValue::new(
-                            id.clone(),
-                            values.clone(),
-                        )));
-                    }
-                    Ok(commands)
+        if let QueryIds::Ids(ids) = &self.ids {
+            if let QueryValues::Single(values) = &self.values {
+                for id in ids {
+                    commands.push(CommandsMut::InsertValue(InsertValue::new(
+                        id.clone(),
+                        values.clone(),
+                    )));
                 }
-                QueryValues::Multi(values) => {
-                    if ids.len() != values.len() {
-                        return Err(QueryError::from("Ids and values length do not match"));
-                    }
-
-                    for (id, values) in ids.iter().zip(values) {
-                        commands.push(CommandsMut::InsertValue(InsertValue::new(
-                            id.clone(),
-                            values.clone(),
-                        )));
-                    }
-
-                    Ok(commands)
+                return Ok(commands);
+            } else if let QueryValues::Multi(values) = &self.values {
+                if ids.len() != values.len() {
+                    return Err(QueryError::from("Ids and values length do not match"));
                 }
-            },
-            QueryIds::Search(_) => Err(QueryError::from("Invalid insert aliases query")),
+
+                for (id, values) in ids.iter().zip(values) {
+                    commands.push(CommandsMut::InsertValue(InsertValue::new(
+                        id.clone(),
+                        values.clone(),
+                    )));
+                }
+
+                return Ok(commands);
+            }
         }
+
+        return Err(QueryError::from("Invalid insert aliases query"));
     }
 }
 
@@ -93,6 +89,9 @@ mod tests {
             values: QueryValues::None,
         };
 
-        assert_eq!(query.commands(), Ok(vec![]));
+        assert_eq!(
+            query.commands(),
+            Err(QueryError::from("Invalid insert aliases query"))
+        );
     }
 }

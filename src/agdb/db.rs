@@ -170,9 +170,7 @@ impl Db {
                         String::from_utf8_lossy(index.value()).to_string(),
                     ))
                 }
-                _ => {
-                    panic!()
-                }
+                _ => panic!(),
             }
         }
 
@@ -193,5 +191,24 @@ impl Db {
         } else {
             transaction.rollback()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utilities::test_file::TestFile;
+
+    #[test]
+    #[should_panic]
+    fn invalid_value_type() {
+        let test_file = TestFile::new();
+        let db = Db::new(&test_file.file_name()).unwrap();
+
+        let mut index = DbValueIndex::new();
+        index.set_type(15_u8);
+        index.set_value(&1_u64.to_le_bytes());
+
+        db.value(&index).unwrap();
     }
 }

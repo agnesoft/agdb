@@ -37,10 +37,6 @@ impl InsertEdge {
             values: vec![],
         });
 
-        if false {
-            format!("{}", true);
-        }
-
         Ok(())
     }
 

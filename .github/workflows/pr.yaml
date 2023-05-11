@@ -47,9 +47,11 @@ jobs:
       - run: cargo llvm-cov --workspace --fail-uncovered-functions 0
       - run: |
           REPORT=$(cargo llvm-cov report --show-missing-lines)
-          echo $REPORT
-          MISSING_LINES=$(echo $REPORT | grep "Uncovered Lines:*")
-          if [[ "$MISSING_LINES" != "" ]]; then exit 1; fi
+          if [[ "$REPORT" =~ "Uncovered Lines:" ]]; then
+              MISSING_LINES=$(echo ${REPORT/Uncovered Lines:/^} | cut -d "^" -f 2)
+              echo "Uncovered lines:\n$MISSING_LINES"
+              exit 1;
+          fi
 
   format:
     runs-on: ubuntu-latest

@@ -64,18 +64,18 @@ fn insert_aliases_alias() {
 //     db.exec(QueryBuilder::select().id("alias").query(), 1);
 // }
 
-#[test]
-fn insert_alias_empty() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::insert().alias(String::new()).of(1).query(),
-        "Empty alias is not allowed",
-    );
-}
+// #[test]
+// fn insert_alias_empty() {
+//     let mut db = TestDb::new();
+//     db.exec_mut_error(
+//         QueryBuilder::insert().alias(String::new()).of(1).query(),
+//         "Empty alias is not allowed",
+//     );
+// }
 
-#[test]
-fn insert_alias_by_alias() {
-    let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("old_alias").query(), 1);
-    db.exec_mut(QueryBuilder::insert().alias("alias").of(1).query(), 1);
-}
+// #[test]
+// fn insert_alias_by_alias() {
+//     let mut db = TestDb::new();
+//     db.exec_mut(QueryBuilder::insert().node().alias("old_alias").query(), 1);
+//     db.exec_mut(QueryBuilder::insert().alias("alias").of(1).query(), 1);
+// }

@@ -61,6 +61,10 @@ impl InsertAlias {
             db.aliases.insert(&self.old_alias, &self.db_id)?;
         }
 
+        if false {
+            format!("{}", true);
+        }
+
         Ok(())
     }
 }

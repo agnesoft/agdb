@@ -39,7 +39,7 @@ impl QueryMut for InsertValuesQuery {
             }
         }
 
-        return Err(QueryError::from("Invalid insert aliases query"));
+        Err(QueryError::from("Invalid insert aliases query"))
     }
 }
 

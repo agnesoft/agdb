@@ -203,7 +203,7 @@ mod tests {
     #[should_panic]
     fn invalid_value_type() {
         let test_file = TestFile::new();
-        let db = Db::new(&test_file.file_name()).unwrap();
+        let db = Db::new(test_file.file_name()).unwrap();
 
         let mut index = DbValueIndex::new();
         index.set_type(15_u8);

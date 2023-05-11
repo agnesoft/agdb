@@ -1,9 +1,6 @@
-use crate::commands::select_id::SelectId;
 use crate::commands::Commands;
-use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::Db;
-use crate::DbElement;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -35,32 +32,7 @@ impl<'a> Transaction<'a> {
         result: &mut QueryResult,
     ) -> Result<(), QueryError> {
         match command {
-            Commands::SelectId(data) => self.select_id(data, result),
+            Commands::SelectId(data) => data.redo(self.db, result),
         }
-    }
-
-    fn select_id(&self, data: SelectId, result: &mut QueryResult) -> Result<(), QueryError> {
-        let db_id = match data.id {
-            QueryId::Id(id) => id,
-            QueryId::Alias(alias) => self
-                .db
-                .aliases
-                .value(&alias)?
-                .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?,
-        };
-
-        let _ = self
-            .db
-            .indexes
-            .value(&db_id)?
-            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.0)))?;
-
-        result.result += 1;
-        result.elements.push(DbElement {
-            index: db_id,
-            values: vec![],
-        });
-
-        Ok(())
     }
 }

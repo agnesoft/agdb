@@ -1,6 +1,10 @@
 use super::db_error::DbError;
 use super::db_float::DbFloat;
+use crate::storage::storage_index::StorageIndex;
+use crate::storage::storage_value::StorageValue;
+use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -16,15 +20,21 @@ pub enum DbValue {
     VecString(Vec<String>),
 }
 
-const BYTES_META_VALUE: u8 = 0_u8;
-const INT_META_VALUE: u8 = 1_u8;
-const UINT_META_VALUE: u8 = 2_u8;
-const FLOAT_META_VALUE: u8 = 3_u8;
-const STRING_META_VALUE: u8 = 4_u8;
-const VEC_INT_META_VALUE: u8 = 5_u8;
-const VEC_UINT_META_VALUE: u8 = 6_u8;
-const VEC_FLOAT_META_VALUE: u8 = 7_u8;
-const VEC_STRING_META_VALUE: u8 = 8_u8;
+pub(crate) const BYTES_META_VALUE: u8 = 1_u8;
+pub(crate) const INT_META_VALUE: u8 = 2_u8;
+pub(crate) const UINT_META_VALUE: u8 = 3_u8;
+pub(crate) const FLOAT_META_VALUE: u8 = 4_u8;
+pub(crate) const STRING_META_VALUE: u8 = 5_u8;
+pub(crate) const VEC_INT_META_VALUE: u8 = 6_u8;
+pub(crate) const VEC_UINT_META_VALUE: u8 = 7_u8;
+pub(crate) const VEC_FLOAT_META_VALUE: u8 = 8_u8;
+pub(crate) const VEC_STRING_META_VALUE: u8 = 9_u8;
+
+impl Default for DbValue {
+    fn default() -> Self {
+        Self::Int(0)
+    }
+}
 
 impl From<f32> for DbValue {
     fn from(value: f32) -> Self {
@@ -243,11 +253,37 @@ impl StableHash for DbValue {
     }
 }
 
+impl StorageValue for DbValue {
+    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
+        let index = storage.insert(self)?;
+        Ok(index.serialize())
+    }
+
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+        let index = StorageIndex::deserialize(bytes)?;
+        storage.value::<DbValue>(&index)
+    }
+
+    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
+        let index = StorageIndex::deserialize(bytes)?;
+        storage.remove(&index)
+    }
+
+    fn storage_len() -> u64 {
+        StorageIndex::static_serialized_size()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::vec_storage::VecStorage;
+    use crate::storage::file_storage::FileStorage;
+    use crate::test_utilities::test_file::TestFile;
+    use std::cell::RefCell;
     use std::cmp::Ordering;
     use std::collections::HashSet;
+    use std::rc::Rc;
 
     #[test]
     fn derived_from_eq() {
@@ -534,5 +570,32 @@ mod tests {
         assert_ne!(DbValue::from(vec![1_u64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![1.0_f64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![""]).stable_hash(), 0);
+    }
+
+    #[test]
+    fn storage_value() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let mut values: Vec<DbValue> = vec![
+            1.1.into(),
+            "Hello, World! Not a short string".into(),
+            vec!["Hello", ",", "World", "!"].into(),
+        ];
+
+        let mut vec = VecStorage::<DbValue>::new(storage).unwrap();
+
+        for value in &values {
+            vec.push(value).unwrap();
+        }
+
+        values.remove(1);
+        vec.remove(1).unwrap();
+
+        let actual: Vec<DbValue> = vec.iter().collect();
+
+        assert_eq!(values, actual);
     }
 }

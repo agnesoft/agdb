@@ -2,6 +2,7 @@
 mod test_file;
 
 use agdb::Db;
+use agdb::DbElement;
 use agdb::Query;
 use agdb::QueryError;
 use agdb::QueryMut;
@@ -43,6 +44,11 @@ impl TestDb {
                 .collect::<Vec<i64>>(),
             ids
         );
+    }
+
+    #[track_caller]
+    pub fn exec_elements<T: Query>(&mut self, query: T, elements: &[DbElement]) {
+        assert_eq!(self.db.exec(&query).unwrap().elements, elements)
     }
 
     #[track_caller]

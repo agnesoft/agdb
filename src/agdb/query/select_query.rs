@@ -1,4 +1,3 @@
-use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::Query;
 use crate::commands::select_id::SelectId;
@@ -10,23 +9,19 @@ pub struct SelectQuery(pub QueryIds);
 impl Query for SelectQuery {
     fn commands(&self) -> Result<Vec<Commands>, QueryError> {
         match &self.0 {
-            QueryIds::Ids(ids) => Ok(Self::ids(ids)),
+            QueryIds::Ids(ids) => Ok(ids
+                .iter()
+                .map(|id| Commands::SelectId(SelectId { id: id.clone() }))
+                .collect()),
             QueryIds::Search(_) => Err(QueryError::from("Invalid select query")),
         }
-    }
-}
-
-impl SelectQuery {
-    fn ids(ids: &[QueryId]) -> Vec<Commands> {
-        ids.iter()
-            .map(|id| Commands::SelectId(SelectId { id: id.clone() }))
-            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::query_id::QueryId;
     use crate::query::search_query::SearchQuery;
 
     #[test]

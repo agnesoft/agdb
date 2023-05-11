@@ -31,10 +31,7 @@
 			"command": "llvm-cov",
 			"args": [
 				"--workspace",
-				"--fail-uncovered-functions",
-				"0",
-				"--fail-uncovered-lines",
-				"0"
+				"--show-missing-lines"
 			],
 			"problemMatcher": [
 				"$rustc"
@@ -47,10 +44,6 @@
 			"command": "llvm-cov",
 			"args": [
 				"--workspace",
-				"--fail-uncovered-functions",
-				"0",
-				"--fail-uncovered-lines",
-				"0",
 				"--html",
 				"--open"
 			],

@@ -11,7 +11,7 @@ use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 
 pub trait Storage {
-    fn commit(&mut self) -> Result<(), DbError>;
+    fn commit(&mut self, id: u64) -> Result<(), DbError>;
     fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError>;
     fn insert_at<T: Serialize>(
         &mut self,
@@ -39,7 +39,7 @@ pub trait Storage {
     fn replace_with_bytes(&mut self, index: &StorageIndex, bytes: &[u8]) -> Result<(), DbError>;
     fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<(), DbError>;
     fn shrink_to_fit(&mut self) -> Result<(), DbError>;
-    fn transaction(&mut self);
+    fn transaction(&mut self) -> u64;
     fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError>;
     fn value_as_bytes(&self, index: &StorageIndex) -> Result<Vec<u8>, DbError>;
     fn value_as_bytes_at(&self, index: &StorageIndex, offset: u64) -> Result<Vec<u8>, DbError>;

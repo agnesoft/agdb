@@ -67,11 +67,19 @@ impl FileStorage {
         }
     }
 
-    fn begin_transaction(&mut self) {
+    fn begin_transaction(&mut self) -> u64 {
         self.transactions += 1;
+        self.transactions
     }
 
-    fn end_transaction(&mut self) -> Result<(), DbError> {
+    fn end_transaction(&mut self, id: u64) -> Result<(), DbError> {
+        if self.transactions != id {
+            return Err(DbError::from(format!(
+                "Cannot end transaction '{id}'. Transaction '{}' in progress.",
+                self.transactions
+            )));
+        }
+
         if self.transactions != 0 {
             self.transactions -= 1;
 
@@ -347,8 +355,8 @@ impl FileStorage {
 }
 
 impl Storage for FileStorage {
-    fn commit(&mut self) -> Result<(), DbError> {
-        self.end_transaction()
+    fn commit(&mut self, id: u64) -> Result<(), DbError> {
+        self.end_transaction(id)
     }
 
     fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError> {
@@ -368,10 +376,10 @@ impl Storage for FileStorage {
         let len = self.len()?;
         let record = self.new_record(len, bytes.len() as u64);
 
-        self.transaction();
+        let id = self.transaction();
         self.write_record(&record)?;
         self.append(bytes)?;
-        self.commit()?;
+        self.commit(id)?;
 
         Ok(StorageIndex::from(record.index))
     }
@@ -384,11 +392,11 @@ impl Storage for FileStorage {
     ) -> Result<(), DbError> {
         let mut record = self.record(index.value)?;
 
-        self.transaction();
+        let id = self.transaction();
         self.ensure_size(&mut record, offset, bytes.len() as u64)?;
         let pos = record.value_start() + offset;
         self.write(pos, bytes)?;
-        self.commit()
+        self.commit(id)
     }
 
     fn len(&self) -> Result<u64, DbError> {
@@ -404,20 +412,20 @@ impl Storage for FileStorage {
     ) -> Result<(), DbError> {
         let bytes = self.value_as_bytes_at_size(index, offset_from, size)?;
 
-        self.transaction();
+        let id = self.transaction();
         self.insert_bytes_at(index, offset_to, &bytes)?;
         let record = self.record(index.value)?;
         self.erase_bytes(record.value_start(), offset_from, offset_to, size)?;
-        self.commit()
+        self.commit(id)
     }
 
     fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError> {
         let record = self.record(index.value)?;
 
-        self.transaction();
+        let id = self.transaction();
         self.remove_index(index.value);
         self.invalidate_record(record.pos)?;
-        self.commit()
+        self.commit(id)
     }
 
     fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<(), DbError> {
@@ -425,17 +433,17 @@ impl Storage for FileStorage {
     }
 
     fn replace_with_bytes(&mut self, index: &StorageIndex, bytes: &[u8]) -> Result<(), DbError> {
-        self.transaction();
+        let id = self.transaction();
         self.insert_bytes_at(index, 0, bytes)?;
         self.resize_value(index, bytes.len() as u64)?;
-        self.commit()
+        self.commit(id)
     }
 
     #[allow(clippy::comparison_chain)]
     fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<(), DbError> {
         let mut record = self.record(index.value)?;
 
-        self.transaction();
+        let id = self.transaction();
 
         if new_size > record.size {
             self.enlarge_value(&mut record, new_size)?;
@@ -443,20 +451,20 @@ impl Storage for FileStorage {
             self.shrink_value(&mut record, new_size)?;
         }
 
-        self.commit()
+        self.commit(id)
     }
 
     fn shrink_to_fit(&mut self) -> Result<(), DbError> {
-        self.transaction();
+        let id = self.transaction();
         let records = self.records();
         let size = self.shrink_records(records)?;
         self.truncate(size)?;
 
-        self.commit()
+        self.commit(id)
     }
 
-    fn transaction(&mut self) {
-        self.begin_transaction();
+    fn transaction(&mut self) -> u64 {
+        self.begin_transaction()
     }
 
     fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError> {
@@ -1295,9 +1303,9 @@ mod tests {
 
         {
             let mut storage = FileStorage::new(test_file.file_name()).unwrap();
-            storage.transaction();
+            let id = storage.transaction();
             index = storage.insert(&1_i64).unwrap();
-            storage.commit().unwrap();
+            storage.commit(id).unwrap();
             assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
         }
 
@@ -1309,7 +1317,7 @@ mod tests {
     fn transaction_commit_no_transaction() {
         let test_file = TestFile::new();
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.commit(), Ok(()));
+        assert_eq!(storage.commit(0), Ok(()));
     }
 
     #[test]
@@ -1341,11 +1349,11 @@ mod tests {
 
         {
             let mut storage = FileStorage::new(test_file.file_name()).unwrap();
-            storage.transaction();
-            storage.transaction();
+            let _ = storage.transaction();
+            let id2 = storage.transaction();
             index = storage.insert(&1_i64).unwrap();
             assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
-            storage.commit().unwrap();
+            storage.commit(id2).unwrap();
         }
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
@@ -1354,6 +1362,23 @@ mod tests {
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index.value
+            )))
+        );
+    }
+
+    #[test]
+    fn transaction_commit_mismatch() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let id1 = storage.transaction();
+        let id2 = storage.transaction();
+        let index = storage.insert(&1_i64).unwrap();
+        assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
+
+        assert_eq!(
+            storage.commit(id1),
+            Err(DbError::from(format!(
+                "Cannot end transaction '{id1}'. Transaction '{id2}' in progress."
             )))
         );
     }

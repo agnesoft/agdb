@@ -44,7 +44,7 @@ where
         let mut hashes = VecStorage::<u64, Data>::new(storage.clone())?;
         let mut values = VecStorage::<T, Data>::new(storage.clone())?;
 
-        storage.borrow_mut().transaction();
+        let id = storage.borrow_mut().transaction();
 
         counts.push(&0)?;
         hashes.push(&0)?;
@@ -59,7 +59,7 @@ where
 
         let storage_index = storage.borrow_mut().insert(&data_index)?;
 
-        storage.borrow_mut().commit()?;
+        storage.borrow_mut().commit(id)?;
 
         Ok(Self {
             storage,
@@ -122,8 +122,8 @@ where
         self.counts.len()
     }
 
-    fn commit(&mut self) -> Result<(), DbError> {
-        self.storage.borrow_mut().commit()
+    fn commit(&mut self, id: u64) -> Result<(), DbError> {
+        self.storage.borrow_mut().commit(id)
     }
 
     fn count(&self, index: u64) -> Result<u64, DbError> {
@@ -164,7 +164,7 @@ where
         self.values.set_value(index, value)
     }
 
-    fn transaction(&mut self) {
+    fn transaction(&mut self) -> u64 {
         self.storage.borrow_mut().transaction()
     }
 

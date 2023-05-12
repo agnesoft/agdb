@@ -40,7 +40,7 @@ where
         self.states.len() as u64
     }
 
-    fn commit(&mut self) -> Result<(), DbError> {
+    fn commit(&mut self, _id: u64) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -92,7 +92,9 @@ where
         Ok(())
     }
 
-    fn transaction(&mut self) {}
+    fn transaction(&mut self) -> u64 {
+        0
+    }
 
     fn value(&self, index: u64) -> Result<T, DbError> {
         Ok(self.values[index as usize].clone())

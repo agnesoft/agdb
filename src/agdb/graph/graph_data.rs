@@ -3,7 +3,7 @@ use crate::db::db_error::DbError;
 
 pub trait GraphData {
     fn capacity(&self) -> Result<u64, DbError>;
-    fn commit(&mut self) -> Result<(), DbError>;
+    fn commit(&mut self, id: u64) -> Result<(), DbError>;
     fn free_index(&self) -> Result<i64, DbError>;
     fn from(&self, index: &GraphIndex) -> Result<i64, DbError>;
     #[allow(clippy::wrong_self_convention)]
@@ -17,5 +17,5 @@ pub trait GraphData {
     fn set_to_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError>;
     fn to(&self, index: &GraphIndex) -> Result<i64, DbError>;
     fn to_meta(&self, index: &GraphIndex) -> Result<i64, DbError>;
-    fn transaction(&mut self);
+    fn transaction(&mut self) -> u64;
 }

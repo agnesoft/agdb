@@ -9,7 +9,7 @@ where
     T: Default + Eq + PartialEq,
 {
     fn capacity(&self) -> u64;
-    fn commit(&mut self) -> Result<(), DbError>;
+    fn commit(&mut self, id: u64) -> Result<(), DbError>;
     fn len(&self) -> u64;
     fn key(&self, index: u64) -> Result<K, DbError>;
     fn resize(&mut self, capacity: u64) -> Result<(), DbError>;
@@ -19,6 +19,6 @@ where
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError>;
     fn state(&self, index: u64) -> Result<MapValueState, DbError>;
     fn swap(&mut self, index: u64, other: u64) -> Result<(), DbError>;
-    fn transaction(&mut self);
+    fn transaction(&mut self) -> u64;
     fn value(&self, index: u64) -> Result<T, DbError>;
 }

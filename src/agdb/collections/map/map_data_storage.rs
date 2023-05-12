@@ -102,8 +102,8 @@ where
         self.states.len()
     }
 
-    fn commit(&mut self) -> Result<(), DbError> {
-        self.storage.borrow_mut().commit()
+    fn commit(&mut self, id: u64) -> Result<(), DbError> {
+        self.storage.borrow_mut().commit(id)
     }
 
     fn len(&self) -> u64 {
@@ -149,7 +149,7 @@ where
         self.values.swap(index, other)
     }
 
-    fn transaction(&mut self) {
+    fn transaction(&mut self) -> u64 {
         self.storage.borrow_mut().transaction()
     }
 

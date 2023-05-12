@@ -78,7 +78,7 @@ where
     }
 
     pub fn push(&mut self, value: &T) -> Result<(), DbError> {
-        self.storage.borrow_mut().transaction();
+        let id = self.storage.borrow_mut().transaction();
 
         if self.len() == self.capacity() {
             self.reallocate(max(64, self.capacity * 2))?;
@@ -86,17 +86,17 @@ where
 
         self.set_value_bytes(self.len(), value)?;
         self.set_len(self.len() + 1)?;
-        self.storage.borrow_mut().commit()
+        self.storage.borrow_mut().commit(id)
     }
 
     pub fn remove(&mut self, index: u64) -> Result<(), DbError> {
         self.validate_index(index)?;
 
-        self.storage.borrow_mut().transaction();
+        let id = self.storage.borrow_mut().transaction();
         self.remove_value_bytes(index)?;
         self.move_left(index)?;
         self.set_len(self.len() - 1)?;
-        self.storage.borrow_mut().commit()
+        self.storage.borrow_mut().commit(id)
     }
 
     pub fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
@@ -108,7 +108,7 @@ where
     }
 
     pub fn resize(&mut self, size: u64, value: &T) -> Result<(), DbError> {
-        self.storage.borrow_mut().transaction();
+        let id = self.storage.borrow_mut().transaction();
 
         match size.cmp(&self.len()) {
             std::cmp::Ordering::Less => self.shrink(size)?,
@@ -116,16 +116,16 @@ where
             std::cmp::Ordering::Greater => self.grow(size, value)?,
         }
 
-        self.storage.borrow_mut().commit()
+        self.storage.borrow_mut().commit(id)
     }
 
     pub fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
         self.validate_index(index)?;
 
-        self.storage.borrow_mut().transaction();
+        let id = self.storage.borrow_mut().transaction();
         self.remove_value_bytes(index)?;
         self.set_value_bytes(index, value)?;
-        self.storage.borrow_mut().commit()
+        self.storage.borrow_mut().commit(id)
     }
 
     pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
@@ -149,7 +149,7 @@ where
         let offset_to = Self::offset(index);
         let size = T::storage_len();
 
-        self.storage.borrow_mut().transaction();
+        let id = self.storage.borrow_mut().transaction();
         self.storage
             .borrow_mut()
             .move_at(&self.storage_index, offset_from, offset_to, size)?;
@@ -158,7 +158,7 @@ where
             Self::offset(other),
             &bytes,
         )?;
-        self.storage.borrow_mut().commit()
+        self.storage.borrow_mut().commit(id)
     }
 
     pub fn to_vec(&self) -> Result<Vec<T>, DbError> {

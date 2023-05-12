@@ -67,13 +67,13 @@ where
     }
 
     pub fn insert(&mut self, key: &K, value: &T) -> Result<(), DbError> {
-        self.data.transaction();
+        let id = self.data.transaction();
         let index = self.free_index(key)?;
         self.data.set_state(index, MapValueState::Valid)?;
         self.data.set_key(index, key)?;
         self.data.set_value(index, value)?;
         self.data.set_len(self.len() + 1)?;
-        self.data.commit()
+        self.data.commit(id)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -101,7 +101,7 @@ where
         let mut pos = hash % self.capacity();
         let mut len = self.len();
 
-        self.data.transaction();
+        let id = self.data.transaction();
 
         loop {
             match self.data.state(pos)? {
@@ -124,7 +124,7 @@ where
             }
         }
 
-        self.data.commit()
+        self.data.commit(id)
     }
 
     pub fn remove_value(&mut self, key: &K, value: &T) -> Result<(), DbError> {
@@ -135,7 +135,7 @@ where
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
 
-        self.data.transaction();
+        let id = self.data.transaction();
 
         loop {
             match self.data.state(pos)? {
@@ -151,7 +151,7 @@ where
             }
         }
 
-        self.data.commit()
+        self.data.commit(id)
     }
 
     pub fn replace(&mut self, key: &K, value: &T, new_value: &T) -> Result<(), DbError> {
@@ -162,7 +162,7 @@ where
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
 
-        self.data.transaction();
+        let id = self.data.transaction();
 
         loop {
             match self.data.state(pos)? {
@@ -177,7 +177,7 @@ where
             }
         }
 
-        self.data.commit()
+        self.data.commit(id)
     }
 
     pub fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {

@@ -29,7 +29,7 @@ where
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
-        storage.borrow_mut().transaction();
+        let id = storage.borrow_mut().transaction();
 
         let mut from = VecStorage::<i64, Data>::new(storage.clone())?;
         from.push(&0)?;
@@ -49,7 +49,7 @@ where
 
         let index = storage.borrow_mut().insert(&indexes)?;
 
-        storage.borrow_mut().commit()?;
+        storage.borrow_mut().commit(id)?;
 
         Ok(GraphDataStorage::<Data> {
             storage,
@@ -92,8 +92,8 @@ where
         Ok(self.from.len())
     }
 
-    fn commit(&mut self) -> Result<(), DbError> {
-        self.storage.borrow_mut().commit()
+    fn commit(&mut self, id: u64) -> Result<(), DbError> {
+        self.storage.borrow_mut().commit(id)
     }
 
     fn free_index(&self) -> Result<i64, DbError> {
@@ -147,7 +147,7 @@ where
         self.to_meta.value(index.as_u64())
     }
 
-    fn transaction(&mut self) {
+    fn transaction(&mut self) -> u64 {
         self.storage.borrow_mut().transaction()
     }
 }

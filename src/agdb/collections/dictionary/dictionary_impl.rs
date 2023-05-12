@@ -44,7 +44,7 @@ where
         let hash = value.stable_hash();
         let index;
 
-        self.data.transaction();
+        let id = self.data.transaction();
 
         if let Some(i) = self.find_value(hash, value)? {
             index = i;
@@ -54,7 +54,7 @@ where
             index = DictionaryIndex(self.insert_new(hash, value)?);
         }
 
-        self.data.commit()?;
+        self.data.commit(id)?;
 
         Ok(index)
     }
@@ -64,7 +64,7 @@ where
             let count = self.data.count(index.0)?;
 
             if count != 0 {
-                self.data.transaction();
+                let id = self.data.transaction();
 
                 if count == 1 {
                     self.remove_value(index.0)?
@@ -72,7 +72,7 @@ where
                     self.data.set_count(index.0, count - 1)?
                 }
 
-                self.data.commit()?;
+                self.data.commit(id)?;
                 return Ok(true);
             }
         }

@@ -7,7 +7,7 @@ where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
 {
     fn capacity(&self) -> u64;
-    fn commit(&mut self) -> Result<(), DbError>;
+    fn commit(&mut self, id: u64) -> Result<(), DbError>;
     fn count(&self, index: u64) -> Result<u64, DbError>;
     fn hash(&self, index: u64) -> Result<u64, DbError>;
     fn indexes(&self, hash: u64) -> Result<Vec<u64>, DbError>;
@@ -17,6 +17,6 @@ where
     fn set_count(&mut self, index: u64, count: u64) -> Result<(), DbError>;
     fn set_hash(&mut self, index: u64, hash: u64) -> Result<(), DbError>;
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError>;
-    fn transaction(&mut self);
+    fn transaction(&mut self) -> u64;
     fn value(&self, index: u64) -> Result<T, DbError>;
 }

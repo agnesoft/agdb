@@ -40,20 +40,20 @@ where
         self.validate_node(from)?;
         self.validate_node(to)?;
 
-        self.data.transaction();
+        let id = self.data.transaction();
         let index = GraphIndex::from(-self.get_free_index()?);
         self.set_edge(&index, from, to)?;
-        self.data.commit()?;
+        self.data.commit(id)?;
 
         Ok(index)
     }
 
     pub fn insert_node(&mut self) -> Result<GraphIndex, DbError> {
-        self.data.transaction();
+        let id = self.data.transaction();
         let index = GraphIndex::from(self.get_free_index()?);
         let count = self.data.node_count()?;
         self.data.set_node_count(count + 1)?;
-        self.data.commit()?;
+        self.data.commit(id)?;
 
         Ok(index)
     }
@@ -81,12 +81,12 @@ where
             return Ok(());
         }
 
-        self.data.transaction();
+        let id = self.data.transaction();
         self.remove_from_edge(index)?;
         self.remove_to_edge(index)?;
         self.free_index(&GraphIndex::from(-index.index))?;
 
-        self.data.commit()
+        self.data.commit(id)
     }
 
     pub fn remove_node(&mut self, index: &GraphIndex) -> Result<(), DbError> {
@@ -94,7 +94,7 @@ where
             return Ok(());
         }
 
-        self.data.transaction();
+        let id = self.data.transaction();
         self.remove_from_edges(index)?;
         self.remove_to_edges(index)?;
         self.free_index(index)?;
@@ -102,7 +102,7 @@ where
         let count = self.data.node_count()?;
         self.data.set_node_count(count - 1)?;
 
-        self.data.commit()
+        self.data.commit(id)
     }
 
     pub fn first_edge_from(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {

@@ -4,12 +4,14 @@ use std::sync::PoisonError;
 #[derive(Default, Debug, PartialEq)]
 pub struct QueryError {
     pub description: String,
+    pub cause: Option<DbError>,
 }
 
 impl From<DbError> for QueryError {
     fn from(value: DbError) -> Self {
         Self {
             description: format!("{value}"),
+            cause: Some(value),
         }
     }
 }
@@ -18,13 +20,17 @@ impl<T> From<PoisonError<T>> for QueryError {
     fn from(value: PoisonError<T>) -> Self {
         Self {
             description: value.to_string(),
+            cause: None,
         }
     }
 }
 
 impl From<String> for QueryError {
     fn from(value: String) -> Self {
-        Self { description: value }
+        Self {
+            description: value,
+            cause: None,
+        }
     }
 }
 

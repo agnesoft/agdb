@@ -10,7 +10,7 @@ use crate::QueryResult;
 pub struct SelectQuery(pub QueryIds);
 
 impl Query for SelectQuery {
-    fn redo(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
         match &self.0 {
             QueryIds::Ids(ids) => {
                 for id in ids {

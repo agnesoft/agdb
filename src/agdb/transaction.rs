@@ -18,7 +18,7 @@ impl<'a> Transaction<'a> {
             elements: vec![],
         };
 
-        query.redo(self.db, &mut result)?;
+        query.process(self.db, &mut result)?;
 
         Ok(result)
     }

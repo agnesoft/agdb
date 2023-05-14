@@ -31,6 +31,7 @@ use crate::query::Query;
 use crate::query::QueryMut;
 use crate::transaction_mut::TransactionMut;
 use crate::DbId;
+use crate::DbKey;
 use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
@@ -87,6 +88,68 @@ impl Db {
         }
 
         result
+    }
+
+    pub(crate) fn commit(&mut self) -> Result<(), QueryError> {
+        self.undo_stack.clear();
+        Ok(())
+    }
+
+    pub(crate) fn rollback(&mut self) -> Result<(), QueryError> {
+        let mut undo_stack = vec![];
+        std::mem::swap(&mut undo_stack, &mut self.undo_stack);
+
+        for command in &undo_stack {
+            match command {
+                Command::InsertAlias { id, alias } => {
+                    self.aliases.insert(alias, id)?;
+                    return Ok(());
+                }
+                Command::InsertEdge { from, to } => {
+                    self.graph.insert_edge(from, to)?;
+                    return Ok(());
+                }
+                Command::InsertId { id, graph_index } => self.indexes.insert(id, graph_index)?,
+                Command::InsertNode => {
+                    self.graph.insert_node()?;
+                    return Ok(());
+                }
+                Command::InsertValue { value } => {
+                    self.insert_value(value)?;
+                    return Ok(());
+                }
+                Command::NextId { id } => {
+                    self.next_id = *id;
+                    return Ok(());
+                }
+                Command::RemoveAlias { alias } => {
+                    self.aliases.remove_key(alias)?;
+                    return Ok(());
+                }
+                Command::RemoveId { id } => {
+                    self.indexes.remove_key(&id)?;
+                    return Ok(());
+                }
+                Command::RemoveEdge { index } => {
+                    self.graph.remove_edge(index)?;
+                    return Ok(());
+                }
+                Command::RemoveKeyValue { id, key_value } => {
+                    self.values.remove_value(&id, &key_value)?;
+                    return Ok(());
+                }
+                Command::RemoveNode { index } => {
+                    self.graph.remove_node(&index)?;
+                    return Ok(());
+                }
+                Command::RemoveValue { index } => {
+                    self.dictionary.remove(*index)?;
+                    return Ok(());
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, QueryError> {
@@ -183,7 +246,108 @@ impl Db {
         Ok(db_id)
     }
 
-    pub(crate) fn insert_value(&mut self, value: &DbValue) -> Result<DbValueIndex, QueryError> {
+    pub(crate) fn insert_key_value(
+        &mut self,
+        db_id: &DbId,
+        key: &DbKey,
+        value: &DbValue,
+    ) -> Result<(), QueryError> {
+        let key = self.insert_value(key)?;
+        let value = self.insert_value(value)?;
+        let key_value = DbKeyValueIndex { key, value };
+        self.values.insert(db_id, &key_value)?;
+        self.undo_stack.push(Command::RemoveKeyValue {
+            id: *db_id,
+            key_value,
+        });
+
+        Ok(())
+    }
+
+    pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, DbError> {
+        match query_id {
+            QueryId::Id(db_id) => {
+                if let Some(graph_index) = self.indexes.value(db_id)? {
+                    if graph_index.is_node() {
+                        self.remove_node(*db_id, graph_index, self.aliases.key(db_id)?)?;
+                        return Ok(true);
+                    } else if graph_index.is_edge() {
+                        self.remove_edge(*db_id, graph_index)?;
+                        return Ok(true);
+                    }
+                }
+            }
+            QueryId::Alias(alias) => {
+                if let Some(db_id) = self.aliases.value(alias)? {
+                    let graph_index = self
+                        .indexes
+                        .value(&db_id)?
+                        .ok_or(DbError::from("Data integrity corrupted"))?;
+                    self.remove_node(db_id, graph_index, Some(alias.clone()))?;
+                    return Ok(true);
+                }
+            }
+        }
+
+        Ok(false)
+    }
+
+    pub(crate) fn remove_alias(&mut self, alias: &String) -> Result<bool, DbError> {
+        if let Some(id) = self.aliases.value(alias)? {
+            self.aliases.remove_key(alias)?;
+            self.undo_stack.push(Command::InsertAlias {
+                id,
+                alias: alias.clone(),
+            });
+
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    pub(crate) fn value(&self, index: &DbValueIndex) -> Result<DbValue, QueryError> {
+        if index.is_value() {
+            match index.get_type() {
+                BYTES_META_VALUE => {
+                    return Ok(DbValue::Bytes(index.value().to_vec()));
+                }
+                INT_META_VALUE => {
+                    let mut bytes = [0_u8; 8];
+                    bytes.copy_from_slice(index.value());
+                    return Ok(DbValue::Int(i64::from_le_bytes(bytes)));
+                }
+                UINT_META_VALUE => {
+                    let mut bytes = [0_u8; 8];
+                    bytes.copy_from_slice(index.value());
+                    return Ok(DbValue::Uint(u64::from_le_bytes(bytes)));
+                }
+                FLOAT_META_VALUE => {
+                    let mut bytes = [0_u8; 8];
+                    bytes.copy_from_slice(index.value());
+                    return Ok(DbValue::Float(DbFloat::from(f64::from_le_bytes(bytes))));
+                }
+                STRING_META_VALUE => {
+                    return Ok(DbValue::String(
+                        String::from_utf8_lossy(index.value()).to_string(),
+                    ))
+                }
+                _ => panic!(),
+            }
+        }
+
+        let dictionary_index = DictionaryIndex(index.index());
+        let value = self
+            .dictionary
+            .value(dictionary_index)?
+            .ok_or(QueryError::from(format!(
+                "Value not found (index: '{}')",
+                dictionary_index.0
+            )))?;
+        Ok(value)
+    }
+
+    fn insert_value(&mut self, value: &DbValue) -> Result<DbValueIndex, QueryError> {
         let mut index = DbValueIndex::new();
 
         match value {
@@ -235,89 +399,6 @@ impl Db {
             index: dictionary_index,
         });
         Ok(index)
-    }
-
-    pub(crate) fn remove_alias(&mut self, alias: &String) -> Result<bool, DbError> {
-        if let Some(id) = self.aliases.value(alias)? {
-            self.undo_stack.push(Command::InsertAlias {
-                id,
-                alias: alias.clone(),
-            });
-
-            self.aliases.remove_key(alias)?;
-            return Ok(true);
-        }
-
-        Ok(false)
-    }
-
-    pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, DbError> {
-        match query_id {
-            QueryId::Id(db_id) => {
-                if let Some(graph_index) = self.indexes.value(db_id)? {
-                    if graph_index.is_node() {
-                        self.remove_node(*db_id, graph_index, self.aliases.key(db_id)?)?;
-                        return Ok(true);
-                    } else if graph_index.is_edge() {
-                        self.remove_edge(*db_id, graph_index)?;
-                        return Ok(true);
-                    }
-                }
-            }
-            QueryId::Alias(alias) => {
-                if let Some(db_id) = self.aliases.value(alias)? {
-                    let graph_index = self
-                        .indexes
-                        .value(&db_id)?
-                        .ok_or(DbError::from("Data integrity corrupted"))?;
-                    self.remove_node(db_id, graph_index, Some(alias.clone()))?;
-                    return Ok(true);
-                }
-            }
-        }
-
-        Ok(false)
-    }
-
-    pub(crate) fn value(&self, index: &DbValueIndex) -> Result<DbValue, QueryError> {
-        if index.is_value() {
-            match index.get_type() {
-                BYTES_META_VALUE => {
-                    return Ok(DbValue::Bytes(index.value().to_vec()));
-                }
-                INT_META_VALUE => {
-                    let mut bytes = [0_u8; 8];
-                    bytes.copy_from_slice(index.value());
-                    return Ok(DbValue::Int(i64::from_le_bytes(bytes)));
-                }
-                UINT_META_VALUE => {
-                    let mut bytes = [0_u8; 8];
-                    bytes.copy_from_slice(index.value());
-                    return Ok(DbValue::Uint(u64::from_le_bytes(bytes)));
-                }
-                FLOAT_META_VALUE => {
-                    let mut bytes = [0_u8; 8];
-                    bytes.copy_from_slice(index.value());
-                    return Ok(DbValue::Float(DbFloat::from(f64::from_le_bytes(bytes))));
-                }
-                STRING_META_VALUE => {
-                    return Ok(DbValue::String(
-                        String::from_utf8_lossy(index.value()).to_string(),
-                    ))
-                }
-                _ => panic!(),
-            }
-        }
-
-        let dictionary_index = DictionaryIndex(index.index());
-        let value = self
-            .dictionary
-            .value(dictionary_index)?
-            .ok_or(QueryError::from(format!(
-                "Value not found (index: '{}')",
-                dictionary_index.0
-            )))?;
-        Ok(value)
     }
 
     fn remove_edge(&mut self, db_id: DbId, graph_index: GraphIndex) -> Result<(), DbError> {

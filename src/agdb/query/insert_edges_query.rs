@@ -2,7 +2,6 @@ use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
 use super::QueryMut;
-use crate::commands_mut::CommandsMut;
 use crate::Db;
 use crate::DbElement;
 use crate::DbId;
@@ -17,10 +16,6 @@ pub struct InsertEdgesQuery {
 }
 
 impl QueryMut for InsertEdgesQuery {
-    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
-        todo!()
-    }
-
     fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
         match &self.from {
             QueryIds::Ids(from) => match &self.to {

@@ -1,7 +1,5 @@
 use super::query_values::QueryValues;
 use super::QueryMut;
-use crate::commands_mut::insert_node::InsertNode;
-use crate::commands_mut::CommandsMut;
 use crate::Db;
 use crate::DbElement;
 use crate::QueryError;
@@ -14,22 +12,6 @@ pub struct InsertNodesQuery {
 }
 
 impl QueryMut for InsertNodesQuery {
-    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError> {
-        let mut commands = Vec::<CommandsMut>::new();
-
-        if self.aliases.is_empty() {
-            for _i in 0..self.count {
-                commands.push(CommandsMut::InsertNode(InsertNode::new(String::new())));
-            }
-        } else {
-            for alias in &self.aliases {
-                commands.push(CommandsMut::InsertNode(InsertNode::new(alias.clone())));
-            }
-        }
-
-        Ok(commands)
-    }
-
     fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
         let mut ids = vec![];
 

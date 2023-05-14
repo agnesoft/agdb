@@ -34,4 +34,5 @@ pub trait Query {
 
 pub trait QueryMut {
     fn commands(&self) -> Result<Vec<CommandsMut>, QueryError>;
+    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError>;
 }

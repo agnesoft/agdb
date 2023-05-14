@@ -2,8 +2,10 @@ use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
 use crate::commands_mut::insert_value::InsertValue;
 use crate::commands_mut::CommandsMut;
+use crate::Db;
 use crate::QueryError;
 use crate::QueryMut;
+use crate::QueryResult;
 
 pub struct InsertValuesQuery {
     pub ids: QueryIds,
@@ -40,6 +42,10 @@ impl QueryMut for InsertValuesQuery {
         }
 
         Err(QueryError::from("Invalid insert aliases query"))
+    }
+
+    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
+        todo!()
     }
 }
 

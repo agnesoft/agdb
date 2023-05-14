@@ -45,7 +45,11 @@ fn select_missing_id() {
 
 #[test]
 fn select_from_search() {
-    let _query = QueryBuilder::select()
-        .search(QueryBuilder::search().from("alias".into()).query())
-        .query();
+    let db = TestDb::new();
+    db.exec_error(
+        QueryBuilder::select()
+            .search(QueryBuilder::search().from("alias".into()).query())
+            .query(),
+        "Invalid select query",
+    );
 }

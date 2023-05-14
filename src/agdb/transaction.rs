@@ -1,4 +1,3 @@
-use crate::commands::Commands;
 use crate::query::Query;
 use crate::Db;
 use crate::QueryError;
@@ -19,20 +18,8 @@ impl<'a> Transaction<'a> {
             elements: vec![],
         };
 
-        for command in query.commands()? {
-            self.process_command(command, &mut result)?;
-        }
+        query.redo(self.db, &mut result)?;
 
         Ok(result)
-    }
-
-    fn process_command(
-        &self,
-        command: Commands,
-        result: &mut QueryResult,
-    ) -> Result<(), QueryError> {
-        match command {
-            Commands::SelectId(data) => data.redo(self.db, result),
-        }
     }
 }

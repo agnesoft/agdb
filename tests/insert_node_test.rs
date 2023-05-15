@@ -38,7 +38,7 @@ fn insert_node_existing_alias() {
     db.exec_mut_ids(QueryBuilder::insert().node().alias("alias").query(), &[1]);
     db.exec_mut_error(
         QueryBuilder::insert().node().alias("alias").query(),
-        "Alias 'alias' already exists",
+        "Alias 'alias' already exists (1)",
     )
 }
 

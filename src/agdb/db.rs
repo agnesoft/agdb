@@ -99,52 +99,29 @@ impl Db {
         let mut undo_stack = vec![];
         std::mem::swap(&mut undo_stack, &mut self.undo_stack);
 
-        for command in &undo_stack {
+        for command in undo_stack.iter().rev() {
             match command {
-                Command::InsertAlias { id, alias } => {
-                    self.aliases.insert(alias, id)?;
-                    return Ok(());
-                }
+                Command::InsertAlias { id, alias } => self.aliases.insert(alias, id)?,
                 Command::InsertEdge { from, to } => {
                     self.graph.insert_edge(from, to)?;
-                    return Ok(());
                 }
                 Command::InsertId { id, graph_index } => self.indexes.insert(id, graph_index)?,
                 Command::InsertNode => {
                     self.graph.insert_node()?;
-                    return Ok(());
                 }
                 Command::InsertValue { value } => {
                     self.insert_value(value)?;
-                    return Ok(());
                 }
-                Command::NextId { id } => {
-                    self.next_id = *id;
-                    return Ok(());
-                }
-                Command::RemoveAlias { alias } => {
-                    self.aliases.remove_key(alias)?;
-                    return Ok(());
-                }
-                Command::RemoveId { id } => {
-                    self.indexes.remove_key(&id)?;
-                    return Ok(());
-                }
-                Command::RemoveEdge { index } => {
-                    self.graph.remove_edge(index)?;
-                    return Ok(());
-                }
+                Command::NextId { id } => self.next_id = *id,
+                Command::RemoveAlias { alias } => self.aliases.remove_key(alias)?,
+                Command::RemoveId { id } => self.indexes.remove_key(&id)?,
+                Command::RemoveEdge { index } => self.graph.remove_edge(index)?,
                 Command::RemoveKeyValue { id, key_value } => {
-                    self.values.remove_value(&id, &key_value)?;
-                    return Ok(());
+                    self.values.remove_value(&id, &key_value)?
                 }
-                Command::RemoveNode { index } => {
-                    self.graph.remove_node(&index)?;
-                    return Ok(());
-                }
+                Command::RemoveNode { index } => self.graph.remove_node(&index)?,
                 Command::RemoveValue { index } => {
                     self.dictionary.remove(*index)?;
-                    return Ok(());
                 }
             }
         }

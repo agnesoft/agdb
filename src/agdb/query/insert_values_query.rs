@@ -21,6 +21,8 @@ impl QueryMut for InsertValuesQuery {
                         result.result += 1;
                     }
                 }
+
+                return Ok(());
             } else if let QueryValues::Multi(values) = &self.values {
                 if ids.len() != values.len() {
                     return Err(QueryError::from("Ids and values length do not match"));
@@ -33,6 +35,8 @@ impl QueryMut for InsertValuesQuery {
                         result.result += 1;
                     }
                 }
+
+                return Ok(());
             }
         }
 

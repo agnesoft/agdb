@@ -111,12 +111,12 @@ impl Db {
                 }
                 Command::NextId { id } => self.next_id = *id,
                 Command::RemoveAlias { alias } => self.aliases.remove_key(alias)?,
-                Command::RemoveId { id } => self.indexes.remove_key(&id)?,
+                Command::RemoveId { id } => self.indexes.remove_key(id)?,
                 Command::RemoveEdge { index } => self.graph.remove_edge(index)?,
                 Command::RemoveKeyValue { id, key_value } => {
-                    self.values.remove_value(&id, &key_value)?
+                    self.values.remove_value(id, key_value)?
                 }
-                Command::RemoveNode { index } => self.graph.remove_node(&index)?,
+                Command::RemoveNode { index } => self.graph.remove_node(index)?,
                 Command::RemoveValue { index } => {
                     self.dictionary.remove(*index)?;
                 }

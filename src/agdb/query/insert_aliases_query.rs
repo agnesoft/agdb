@@ -44,7 +44,7 @@ mod tests {
     #[test]
     fn invalid_query() {
         let test_file = TestFile::new();
-        let mut db = Db::new(&test_file.file_name()).unwrap();
+        let mut db = Db::new(test_file.file_name()).unwrap();
         let mut result = QueryResult::default();
         let query = InsertAliasesQuery {
             ids: QueryIds::Search(SearchQuery {

@@ -23,15 +23,14 @@ pub mod select_keys_query;
 pub mod select_query;
 pub mod select_values_query;
 
-use crate::commands_mut::CommandsMut;
 use crate::Db;
 use crate::QueryError;
 use crate::QueryResult;
 
 pub trait Query {
-    fn redo(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError>;
+    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError>;
 }
 
 pub trait QueryMut {
-    fn commands(&self) -> Result<Vec<CommandsMut>, QueryError>;
+    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError>;
 }

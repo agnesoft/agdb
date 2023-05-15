@@ -1,5 +1,5 @@
 mod collections;
-mod commands_mut;
+mod command;
 mod db;
 mod graph;
 mod graph_search;

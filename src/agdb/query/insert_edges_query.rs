@@ -17,29 +17,27 @@ pub struct InsertEdgesQuery {
 
 impl QueryMut for InsertEdgesQuery {
     fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
-        match &self.from {
-            QueryIds::Ids(from) => match &self.to {
-                QueryIds::Ids(to) => {
-                    let ids = if self.each || from.len() != to.len() {
-                        many_to_many_each(db, from, to)?
-                    } else {
-                        many_to_many(db, from, to)?
-                    };
-                    result.result = ids.len() as i64;
-                    result.elements = ids
-                        .into_iter()
-                        .map(|id| DbElement {
-                            index: id,
-                            values: vec![],
-                        })
-                        .collect();
+        if let QueryIds::Ids(from) = &self.from {
+            if let QueryIds::Ids(to) = &self.to {
+                let ids = if self.each || from.len() != to.len() {
+                    many_to_many_each(db, from, to)?
+                } else {
+                    many_to_many(db, from, to)?
+                };
+                result.result = ids.len() as i64;
+                result.elements = ids
+                    .into_iter()
+                    .map(|id| DbElement {
+                        index: id,
+                        values: vec![],
+                    })
+                    .collect();
 
-                    Ok(())
-                }
-                QueryIds::Search(_) => Err(QueryError::from("Invalid insert edges query")),
-            },
-            QueryIds::Search(_) => Err(QueryError::from("Invalid insert edges query")),
+                return Ok(());
+            }
         }
+
+        Err(QueryError::from("Invalid insert edges query"))
     }
 }
 

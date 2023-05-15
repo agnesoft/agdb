@@ -35,7 +35,7 @@ impl Insert {
         InsertEdge(InsertEdgesQuery {
             from: QueryIds::Ids(vec![0.into()]),
             to: QueryIds::Ids(vec![0.into()]),
-            values: QueryValues::None,
+            values: QueryValues::Single(vec![]),
             each: false,
         })
     }
@@ -44,7 +44,7 @@ impl Insert {
         InsertEdges(InsertEdgesQuery {
             from: QueryIds::Ids(vec![]),
             to: QueryIds::Ids(vec![]),
-            values: QueryValues::None,
+            values: QueryValues::Single(vec![]),
             each: false,
         })
     }
@@ -52,7 +52,7 @@ impl Insert {
     pub fn node(self) -> InsertNode {
         InsertNode(InsertNodesQuery {
             count: 1,
-            values: QueryValues::None,
+            values: QueryValues::Single(vec![]),
             aliases: vec![],
         })
     }
@@ -60,7 +60,7 @@ impl Insert {
     pub fn nodes(self) -> InsertNodes {
         InsertNodes(InsertNodesQuery {
             count: 0,
-            values: QueryValues::None,
+            values: QueryValues::Single(vec![]),
             aliases: vec![],
         })
     }

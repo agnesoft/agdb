@@ -21,8 +21,6 @@ impl QueryMut for InsertValuesQuery {
                         result.result += 1;
                     }
                 }
-
-                return Ok(());
             } else if let QueryValues::Multi(values) = &self.values {
                 if ids.len() != values.len() {
                     return Err(QueryError::from("Ids and values length do not match"));
@@ -35,11 +33,29 @@ impl QueryMut for InsertValuesQuery {
                         result.result += 1;
                     }
                 }
-
-                return Ok(());
             }
+
+            return Ok(());
         }
 
-        Err(QueryError::from("Invalid insert aliases query"))
+        Err(QueryError::from("Invalid insert values query"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utilities::test_file::TestFile;
+
+    #[test]
+    fn invalid_query() {
+        let test_file = TestFile::new();
+        let mut db = Db::new(test_file.file_name()).unwrap();
+        let mut result = QueryResult::default();
+        let query = InsertValuesQuery {
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Ids(QueryIds::Ids(vec![])),
+        };
+        assert_eq!(query.process(&mut db, &mut result), Ok(()));
     }
 }

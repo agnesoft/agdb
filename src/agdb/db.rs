@@ -109,9 +109,6 @@ impl Db {
                 Command::InsertNode => {
                     self.graph.insert_node()?;
                 }
-                Command::InsertValue { value } => {
-                    self.insert_value(value)?;
-                }
                 Command::NextId { id } => self.next_id = *id,
                 Command::RemoveAlias { alias } => self.aliases.remove_key(alias)?,
                 Command::RemoveId { id } => self.indexes.remove_key(&id)?,
@@ -247,11 +244,11 @@ impl Db {
                 if let Some(graph_index) = self.indexes.value(db_id)? {
                     if graph_index.is_node() {
                         self.remove_node(*db_id, graph_index, self.aliases.key(db_id)?)?;
-                        return Ok(true);
-                    } else if graph_index.is_edge() {
+                    } else {
                         self.remove_edge(*db_id, graph_index)?;
-                        return Ok(true);
                     }
+
+                    return Ok(true);
                 }
             }
             QueryId::Alias(alias) => {

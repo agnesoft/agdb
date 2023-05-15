@@ -173,11 +173,15 @@ fn insert_edges_from_to_values_uniform() {
 
 #[test]
 fn insert_edges_from_query_to() {
-    let _query = QueryBuilder::insert()
-        .edges()
-        .from_search(QueryBuilder::search().from(1.into()).query())
-        .to(&["alias".into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .edges()
+            .from_search(QueryBuilder::search().from(1.into()).query())
+            .to(&["alias".into()])
+            .query(),
+        "Invalid insert edges query",
+    );
 }
 
 #[test]
@@ -202,9 +206,13 @@ fn insert_edge_from_to_values_id() {
 
 #[test]
 fn insert_edges_from_to_search() {
-    let _query = QueryBuilder::insert()
-        .edges()
-        .from(&["alias".into()])
-        .to_search(QueryBuilder::search().from(2.into()).query())
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias".into()])
+            .to_search(QueryBuilder::search().from(2.into()).query())
+            .query(),
+        "Invalid insert edges query",
+    );
 }

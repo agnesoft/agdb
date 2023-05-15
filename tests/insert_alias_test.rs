@@ -79,3 +79,15 @@ fn insert_alias_by_alias() {
     db.exec_mut(QueryBuilder::insert().node().alias("old_alias").query(), 1);
     db.exec_mut(QueryBuilder::insert().alias("alias").of(1).query(), 1);
 }
+
+#[test]
+fn insert_aliases_ids_mismatched_length() {
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .aliases(&[String::new()])
+            .of(&[1.into(), 2.into()])
+            .query(),
+        "Ids and aliases must have the same length",
+    );
+}

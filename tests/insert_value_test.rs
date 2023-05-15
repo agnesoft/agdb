@@ -153,10 +153,14 @@ fn insert_values_invalid_length() {
 
 #[test]
 fn insert_values_search() {
-    let _query = QueryBuilder::insert()
-        .values(&[("key", "value").into()])
-        .search(QueryBuilder::search().from(1.into()).query())
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .values(&[("key", "value").into()])
+            .search(QueryBuilder::search().from(1.into()).query())
+            .query(),
+        "Invalid insert values query",
+    );
 }
 
 #[test]

@@ -11,27 +11,52 @@ pub struct InsertAliasesQuery {
 
 impl QueryMut for InsertAliasesQuery {
     fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
-        match &self.ids {
-            QueryIds::Ids(ids) => {
-                if ids.len() != self.aliases.len() {
-                    return Err(QueryError::from(
-                        "Ids and aliases must have the same length",
-                    ));
-                }
-
-                for (id, alias) in ids.iter().zip(&self.aliases) {
-                    if alias.is_empty() {
-                        return Err(QueryError::from("Empty alias is not allowed"));
-                    }
-
-                    let db_id = db.db_id(id)?;
-                    db.insert_alias(db_id, alias)?;
-                    result.result += 1;
-                }
-
-                Ok(())
+        if let QueryIds::Ids(ids) = &self.ids {
+            if ids.len() != self.aliases.len() {
+                return Err(QueryError::from(
+                    "Ids and aliases must have the same length",
+                ));
             }
-            QueryIds::Search(_) => Err(QueryError::from("Invalid insert aliases query")),
+
+            for (id, alias) in ids.iter().zip(&self.aliases) {
+                if alias.is_empty() {
+                    return Err(QueryError::from("Empty alias is not allowed"));
+                }
+
+                let db_id = db.db_id(id)?;
+                db.insert_alias(db_id, alias)?;
+                result.result += 1;
+            }
         }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::query_id::QueryId;
+    use crate::query::search_query::SearchQuery;
+    use crate::test_utilities::test_file::TestFile;
+    use crate::DbId;
+
+    #[test]
+    fn invalid_query() {
+        let test_file = TestFile::new();
+        let mut db = Db::new(&test_file.file_name()).unwrap();
+        let mut result = QueryResult::default();
+        let query = InsertAliasesQuery {
+            ids: QueryIds::Search(SearchQuery {
+                origin: QueryId::Id(DbId(0)),
+                destination: QueryId::Id(DbId(0)),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            }),
+            aliases: vec![],
+        };
+        assert_eq!(query.process(&mut db, &mut result), Ok(()));
     }
 }

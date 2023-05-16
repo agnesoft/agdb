@@ -32,6 +32,7 @@ use crate::query::QueryMut;
 use crate::transaction_mut::TransactionMut;
 use crate::DbId;
 use crate::DbKey;
+use crate::DbKeyValue;
 use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
@@ -106,6 +107,11 @@ impl Db {
                     self.graph.insert_edge(from, to)?;
                 }
                 Command::InsertId { id, graph_index } => self.indexes.insert(id, graph_index)?,
+                Command::InsertKeyValue { id, key_value } => {
+                    let key = self.insert_value(&key_value.key)?;
+                    let value = self.insert_value(&key_value.value)?;
+                    self.values.insert(id, &DbKeyValueIndex { key, value })?;
+                }
                 Command::InsertNode => {
                     self.graph.insert_node()?;
                 }
@@ -227,7 +233,21 @@ impl Db {
         value: &DbValue,
     ) -> Result<(), QueryError> {
         let key = self.insert_value(key)?;
+
+        if !key.is_value() {
+            self.undo_stack.push(Command::RemoveValue {
+                index: DictionaryIndex(key.index()),
+            });
+        }
+
         let value = self.insert_value(value)?;
+
+        if !key.is_value() {
+            self.undo_stack.push(Command::RemoveValue {
+                index: DictionaryIndex(value.index()),
+            });
+        }
+
         let key_value = DbKeyValueIndex { key, value };
         self.values.insert(&db_id, &key_value)?;
         self.undo_stack.push(Command::RemoveKeyValue {
@@ -238,7 +258,7 @@ impl Db {
         Ok(())
     }
 
-    pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, DbError> {
+    pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, QueryError> {
         match query_id {
             QueryId::Id(db_id) => {
                 if let Some(graph_index) = self.indexes.value(db_id)? {
@@ -247,7 +267,7 @@ impl Db {
                     } else {
                         self.remove_edge(*db_id, graph_index)?;
                     }
-
+                    self.remove_all_values(*db_id)?;
                     return Ok(true);
                 }
             }
@@ -258,6 +278,7 @@ impl Db {
                         .value(&db_id)?
                         .ok_or(DbError::from("Data integrity corrupted"))?;
                     self.remove_node(db_id, graph_index, Some(alias.clone()))?;
+                    self.remove_all_values(db_id)?;
                     return Ok(true);
                 }
             }
@@ -369,10 +390,31 @@ impl Db {
 
         let dictionary_index = self.dictionary.insert(value)?;
         index.set_index(dictionary_index.0);
-        self.undo_stack.push(Command::RemoveValue {
-            index: dictionary_index,
-        });
         Ok(index)
+    }
+
+    fn node_edges(
+        &self,
+        graph_index: GraphIndex,
+    ) -> Result<Vec<(GraphIndex, GraphIndex, GraphIndex)>, DbError> {
+        let mut edges = vec![];
+        let node = self
+            .graph
+            .node(&graph_index)
+            .ok_or(DbError::from("Data integrity corrupted"))?;
+
+        for edge in node.edge_iter_from() {
+            edges.push((edge.index, edge.index_from(), edge.index_to()));
+        }
+
+        for edge in node.edge_iter_to() {
+            let from = edge.index_from();
+            if from != graph_index {
+                edges.push((edge.index, from, edge.index_to()));
+            }
+        }
+
+        Ok(edges)
     }
 
     fn remove_edge(&mut self, db_id: DbId, graph_index: GraphIndex) -> Result<(), DbError> {
@@ -424,30 +466,6 @@ impl Db {
         Ok(())
     }
 
-    fn node_edges(
-        &self,
-        graph_index: GraphIndex,
-    ) -> Result<Vec<(GraphIndex, GraphIndex, GraphIndex)>, DbError> {
-        let mut edges = vec![];
-        let node = self
-            .graph
-            .node(&graph_index)
-            .ok_or(DbError::from("Data integrity corrupted"))?;
-
-        for edge in node.edge_iter_from() {
-            edges.push((edge.index, edge.index_from(), edge.index_to()));
-        }
-
-        for edge in node.edge_iter_to() {
-            let from = edge.index_from();
-            if from != graph_index {
-                edges.push((edge.index, from, edge.index_to()));
-            }
-        }
-
-        Ok(edges)
-    }
-
     fn remove_node_edge(
         &mut self,
         graph_index: GraphIndex,
@@ -465,6 +483,32 @@ impl Db {
         });
         self.graph.remove_edge(&graph_index)?;
         self.undo_stack.push(Command::InsertEdge { from, to });
+        Ok(())
+    }
+
+    fn remove_value(&mut self, value_index: DbValueIndex) -> Result<(), DbError> {
+        if !value_index.is_value() {
+            self.dictionary
+                .remove(DictionaryIndex(value_index.index()))?;
+        }
+
+        Ok(())
+    }
+
+    fn remove_all_values(&mut self, db_id: DbId) -> Result<(), QueryError> {
+        for key_value_index in self.values.values(&db_id)? {
+            let key = self.value(&key_value_index.key)?;
+            let value = self.value(&key_value_index.value)?;
+            self.undo_stack.push(Command::InsertKeyValue {
+                id: db_id,
+                key_value: DbKeyValue { key, value },
+            });
+            self.remove_value(key_value_index.key)?;
+            self.remove_value(key_value_index.value)?;
+        }
+
+        self.values.remove_key(&db_id)?;
+
         Ok(())
     }
 }

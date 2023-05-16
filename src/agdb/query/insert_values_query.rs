@@ -17,7 +17,7 @@ impl QueryMut for InsertValuesQuery {
                 for id in ids {
                     let db_id = db.db_id(id)?;
                     for key_value in values {
-                        db.insert_key_value(&db_id, &key_value.key, &key_value.value)?;
+                        db.insert_key_value(db_id, &key_value.key, &key_value.value)?;
                         result.result += 1;
                     }
                 }
@@ -29,7 +29,7 @@ impl QueryMut for InsertValuesQuery {
                 for (id, values) in ids.iter().zip(values) {
                     let db_id = db.db_id(id)?;
                     for key_value in values {
-                        db.insert_key_value(&db_id, &key_value.key, &key_value.value)?;
+                        db.insert_key_value(db_id, &key_value.key, &key_value.value)?;
                         result.result += 1;
                     }
                 }

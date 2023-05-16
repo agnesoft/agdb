@@ -1,5 +1,7 @@
 mod framework;
 
+use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use framework::TestDb;
@@ -62,120 +64,253 @@ fn insert_nodes_count() {
 
 #[test]
 fn insert_node_values() {
-    let _query = QueryBuilder::insert()
-        .node()
-        .values(&[("key", "value").into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .node()
+            .values(&[("key", "value").into()])
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().id(1).query(),
+        &[DbElement {
+            index: DbId(1),
+            values: vec![("key", "value").into()],
+        }],
+    );
 }
 
 #[test]
 fn insert_node_values_id() {
-    let _query = QueryBuilder::insert().node().values_id("alias").query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert().node().values_id("alias").query(),
+        "Invalid insert query",
+    );
 }
 
 #[test]
 fn insert_node_alias_values() {
-    let _query = QueryBuilder::insert()
-        .node()
-        .alias("alias")
-        .values(&[("key", "value").into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .node()
+            .alias("alias")
+            .values(&[("key", "value").into()])
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().id("alias").query(),
+        &[DbElement {
+            index: DbId(1),
+            values: vec![("key", "value").into()],
+        }],
+    );
 }
 
 #[test]
 fn insert_node_alias_values_id() {
-    let _query = QueryBuilder::insert()
-        .node()
-        .alias("alias1")
-        .values_id("alias2")
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .node()
+            .alias("alias1")
+            .values_id("alias2")
+            .query(),
+        "Invalid insert query",
+    );
 }
 
 #[test]
 fn insert_nodes_aliases_values() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .aliases(&["alias1".to_string(), "alias2".to_string()])
-        .values(&[
-            &[("key", "value").into(), ("key2", "value2").into()],
-            &[("key", "value3").into()],
-        ])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".to_string(), "alias2".to_string()])
+            .values(&[
+                &[("key", "value").into(), ("key2", "value2").into()],
+                &[("key", "value3").into()],
+            ])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select()
+            .ids(&["alias1".into(), "alias2".into()])
+            .query(),
+        &[
+            DbElement {
+                index: DbId(1),
+                values: vec![("key", "value").into(), ("key2", "value2").into()],
+            },
+            DbElement {
+                index: DbId(2),
+                values: vec![("key", "value3").into()],
+            },
+        ],
+    );
 }
 
 #[test]
 fn insert_nodes_aliases_values_id() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .aliases(&["alias1".to_string(), "alias2".to_string()])
-        .values_id("alias3")
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".to_string(), "alias2".to_string()])
+            .values_id("alias3")
+            .query(),
+        "Invalid insert query",
+    );
 }
 
 #[test]
 fn insert_nodes_aliases_values_ids() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .aliases(&["alias1".to_string(), "alias2".to_string()])
-        .values_ids(&["alias3".into(), 4.into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".to_string(), "alias2".to_string()])
+            .values_ids(&["alias3".into(), 4.into()])
+            .query(),
+        "Invalid insert query",
+    );
 }
 
 #[test]
 fn insert_nodes_aliases_values_uniform() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .aliases(&["alias1".to_string(), "alias2".to_string()])
-        .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".to_string(), "alias2".to_string()])
+            .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select()
+            .ids(&["alias1".into(), "alias2".into()])
+            .query(),
+        &[
+            DbElement {
+                index: DbId(1),
+                values: vec![("key", "value").into(), ("key2", "value2").into()],
+            },
+            DbElement {
+                index: DbId(2),
+                values: vec![("key", "value").into(), ("key2", "value2").into()],
+            },
+        ],
+    );
 }
 
 #[test]
 fn insert_nodes_count_values_id() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .count(2)
-        .values_id("alias3")
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .count(2)
+            .values_id("alias3")
+            .query(),
+        "Invalid insert query",
+    );
 }
 
 #[test]
 fn insert_nodes_count_values_uniform() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .count(2)
-        .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(2)
+            .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
+        &[
+            DbElement {
+                index: DbId(1),
+                values: vec![("key", "value").into(), ("key2", "value2").into()],
+            },
+            DbElement {
+                index: DbId(2),
+                values: vec![("key", "value").into(), ("key2", "value2").into()],
+            },
+        ],
+    );
 }
 
 #[test]
 fn insert_nodes_values() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .values(&[
-            &[("key", "value").into(), ("key2", "value2").into()],
-            &[("key", "value3").into()],
-        ])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values(&[
+                &[("key", "value").into(), ("key2", "value2").into()],
+                &[("key", "value3").into()],
+            ])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
+        &[
+            DbElement {
+                index: DbId(1),
+                values: vec![("key", "value").into(), ("key2", "value2").into()],
+            },
+            DbElement {
+                index: DbId(2),
+                values: vec![("key", "value3").into()],
+            },
+        ],
+    );
 }
 
 #[test]
 fn insert_nodes_values_id() {
-    let _query = QueryBuilder::insert().nodes().values_id("alias3").query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert().nodes().values_id("alias3").query(),
+        "Invalid insert query",
+    );
 }
 
 #[test]
 fn insert_nodes_values_ids() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .values_ids(&["alias3".into(), 4.into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .values_ids(&["alias3".into(), 4.into()])
+            .query(),
+        "Invalid insert query",
+    );
 }
 
 #[test]
 fn insert_nodes_values_uniform() {
-    let _query = QueryBuilder::insert()
-        .nodes()
-        .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().id(1).query(),
+        &[DbElement {
+            index: DbId(1),
+            values: vec![("key", "value").into(), ("key2", "value2").into()],
+        }],
+    );
 }

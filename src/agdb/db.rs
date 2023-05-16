@@ -222,16 +222,16 @@ impl Db {
 
     pub(crate) fn insert_key_value(
         &mut self,
-        db_id: &DbId,
+        db_id: DbId,
         key: &DbKey,
         value: &DbValue,
     ) -> Result<(), QueryError> {
         let key = self.insert_value(key)?;
         let value = self.insert_value(value)?;
         let key_value = DbKeyValueIndex { key, value };
-        self.values.insert(db_id, &key_value)?;
+        self.values.insert(&db_id, &key_value)?;
         self.undo_stack.push(Command::RemoveKeyValue {
-            id: *db_id,
+            id: db_id,
             key_value,
         });
 

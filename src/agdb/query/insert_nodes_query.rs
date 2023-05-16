@@ -14,16 +14,23 @@ pub struct InsertNodesQuery {
 impl QueryMut for InsertNodesQuery {
     fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
         let mut ids = vec![];
+        let count = std::cmp::max(self.count, self.aliases.len() as u64);
+        let values = match &self.values {
+            QueryValues::Ids(_) => return Err(QueryError::from("Invalid insert query")),
+            QueryValues::Single(v) => vec![v; std::cmp::max(1, count as usize)],
+            QueryValues::Multi(v) => v.iter().map(|x| x).collect(),
+        };
 
-        if self.aliases.is_empty() {
-            for _i in 0..self.count {
-                ids.push(db.insert_node()?);
-            }
-        } else {
-            for alias in &self.aliases {
-                let db_id: crate::DbId = db.insert_node()?;
+        for (index, key_values) in values.iter().enumerate() {
+            let db_id = db.insert_node()?;
+            ids.push(db_id);
+
+            if let Some(alias) = self.aliases.get(index) {
                 db.insert_new_alias(db_id, alias)?;
-                ids.push(db_id);
+            }
+
+            for key_value in *key_values {
+                db.insert_key_value(db_id, &key_value.key, &key_value.value)?;
             }
         }
 

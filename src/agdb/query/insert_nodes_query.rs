@@ -18,7 +18,7 @@ impl QueryMut for InsertNodesQuery {
         let values = match &self.values {
             QueryValues::Ids(_) => return Err(QueryError::from("Invalid insert query")),
             QueryValues::Single(v) => vec![v; std::cmp::max(1, count as usize)],
-            QueryValues::Multi(v) => v.iter().map(|x| x).collect(),
+            QueryValues::Multi(v) => v.iter().collect(),
         };
 
         for (index, key_values) in values.iter().enumerate() {

@@ -2,6 +2,7 @@ use crate::collections::dictionary::dictionary_index::DictionaryIndex;
 use crate::db::db_key_value_index::DbKeyValueIndex;
 use crate::graph::graph_index::GraphIndex;
 use crate::DbId;
+use crate::DbKeyValue;
 
 pub(crate) enum Command {
     InsertAlias {
@@ -17,6 +18,10 @@ pub(crate) enum Command {
         graph_index: GraphIndex,
     },
     InsertNode,
+    InsertKeyValue {
+        id: DbId,
+        key_value: DbKeyValue,
+    },
     NextId {
         id: i64,
     },

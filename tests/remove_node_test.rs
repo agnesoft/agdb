@@ -1,7 +1,10 @@
 mod framework;
 
+use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
+use agdb::QueryResult;
 use framework::TestDb;
 
 #[test]
@@ -138,5 +141,61 @@ fn remove_search() {
             .search(QueryBuilder::search().from("origin".into()).query())
             .query(),
         "Invalid remove query",
+    );
+}
+
+#[test]
+fn remove_node_with_values() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .node()
+            .values(&[("key", "value").into()])
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().id(1).query(),
+        &[DbElement {
+            index: DbId(1),
+            values: vec![("key", "value").into()],
+        }],
+    );
+    db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
+    db.exec_error(QueryBuilder::select().id(1).query(), "Id '1' not found");
+}
+
+#[test]
+fn remove_node_with_values_rollback() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .node()
+            .values(&[("key", vec![1, 2, 3]).into()])
+            .query(),
+        1,
+    );
+    db.exec_elements(
+        QueryBuilder::select().id(1).query(),
+        &[DbElement {
+            index: DbId(1),
+            values: vec![("key", vec![1, 2, 3]).into()],
+        }],
+    );
+
+    db.transaction_mut_error(
+        |t| -> Result<QueryResult, QueryError> {
+            t.exec_mut(&QueryBuilder::remove().id(1).query()).unwrap();
+            t.exec(&QueryBuilder::select().id(1).query())
+        },
+        QueryError::from("Id '1' not found"),
+    );
+
+    db.exec_elements(
+        QueryBuilder::select().id(1).query(),
+        &[DbElement {
+            index: DbId(1),
+            values: vec![("key", vec![1, 2, 3]).into()],
+        }],
     );
 }

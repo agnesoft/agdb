@@ -165,8 +165,12 @@ fn insert_values_search() {
 
 #[test]
 fn insert_values_multi_search() {
-    let _query = QueryBuilder::insert()
-        .values_multi(&[&[("key", "value").into()]])
-        .search(QueryBuilder::search().from(1.into()).query())
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .values_multi(&[&[("key", "value").into()]])
+            .search(QueryBuilder::search().from(1.into()).query())
+            .query(),
+        "Invalid insert values query",
+    );
 }

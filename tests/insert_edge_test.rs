@@ -1,5 +1,7 @@
 mod framework;
 
+use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use framework::TestDb;
@@ -88,14 +90,44 @@ fn insert_edges_from_to_each() {
 }
 
 #[test]
-fn insert_edges_from_to_each_values() {
-    let _query = QueryBuilder::insert()
-        .edges()
-        .from(&["alias1".into(), "alias2".into()])
-        .to(&["alias3".into(), "alias4".into()])
-        .each()
-        .values(&[&[("key", "value").into()], &[("key", "value2").into()]])
-        .query();
+fn insert_edges_from_to_values() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&[
+                "alias1".into(),
+                "alias2".into(),
+                "alias3".into(),
+                "alias4".into(),
+            ])
+            .query(),
+        4,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into(), "alias2".into()])
+            .to(&["alias3".into(), "alias4".into()])
+            .values(&[&[("key", "value").into()], &[("key", "value2").into()]])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select()
+            .ids(&[(-5).into(), (-6).into()])
+            .query(),
+        &[
+            DbElement {
+                index: DbId(-5),
+                values: vec![("key", "value").into()],
+            },
+            DbElement {
+                index: DbId(-6),
+                values: vec![("key", "value2").into()],
+            },
+        ],
+    );
 }
 
 #[test]
@@ -132,7 +164,7 @@ fn insert_edges_from_to_each_values_uniform() {
 }
 
 #[test]
-fn insert_edges_from_to_values() {
+fn insert_edges_from_to_values_asymmetric() {
     let _query = QueryBuilder::insert()
         .edges()
         .from(&["alias1".into(), "alias2".into()])

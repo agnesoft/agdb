@@ -5,6 +5,7 @@ use super::QueryMut;
 use crate::Db;
 use crate::DbElement;
 use crate::DbId;
+use crate::DbKeyValue;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -50,20 +51,7 @@ impl InsertEdgesQuery {
     ) -> Result<Vec<DbId>, QueryError> {
         let mut ids = vec![];
         ids.reserve(from.len());
-
-        let values = match &self.values {
-            QueryValues::Ids(_) => return Err(QueryError::from("Invalid insert query")),
-            QueryValues::Single(v) => vec![v; std::cmp::max(1, from.len())],
-            QueryValues::Multi(v) => v.iter().collect(),
-        };
-
-        if values.len() != from.len() {
-            return Err(QueryError::from(format!(
-                "Values len '{}' do not match the insert count '{}'",
-                values.len(),
-                from.len()
-            )));
-        }
+        let values = self.values(from.len())?;
 
         for ((from, to), key_values) in from.iter().zip(to).zip(values) {
             let db_id = db.insert_edge(from, to)?;
@@ -83,23 +71,10 @@ impl InsertEdgesQuery {
         from: &[QueryId],
         to: &[QueryId],
     ) -> Result<Vec<DbId>, QueryError> {
+        let count = from.len() * to.len();
         let mut ids = vec![];
-        ids.reserve(from.len() + to.len());
-
-        let values = match &self.values {
-            QueryValues::Ids(_) => return Err(QueryError::from("Invalid insert query")),
-            QueryValues::Single(v) => vec![v; std::cmp::max(1, from.len() + to.len())],
-            QueryValues::Multi(v) => v.iter().collect(),
-        };
-
-        if values.len() != (from.len() + to.len()) {
-            return Err(QueryError::from(format!(
-                "Values len '{}' do not match the insert count '{}'",
-                values.len(),
-                from.len() + to.len()
-            )));
-        }
-
+        ids.reserve(count);
+        let values = self.values(count)?;
         let mut index = 0;
 
         for from in from {
@@ -116,5 +91,22 @@ impl InsertEdgesQuery {
         }
 
         Ok(ids)
+    }
+
+    fn values(&self, count: usize) -> Result<Vec<&Vec<DbKeyValue>>, QueryError> {
+        let values = match &self.values {
+            QueryValues::Ids(_) => return Err(QueryError::from("Invalid insert query")),
+            QueryValues::Single(v) => vec![v; std::cmp::max(1, count)],
+            QueryValues::Multi(v) => v.iter().collect(),
+        };
+
+        if values.len() != count {
+            return Err(QueryError::from(format!(
+                "Values len '{}' do not match the insert count '{count}'",
+                values.len()
+            )));
+        }
+
+        Ok(values)
     }
 }

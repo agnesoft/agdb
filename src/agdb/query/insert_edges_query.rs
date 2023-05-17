@@ -5,6 +5,7 @@ use super::QueryMut;
 use crate::Db;
 use crate::DbElement;
 use crate::DbId;
+use crate::DbKeyValue;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -20,9 +21,9 @@ impl QueryMut for InsertEdgesQuery {
         if let QueryIds::Ids(from) = &self.from {
             if let QueryIds::Ids(to) = &self.to {
                 let ids = if self.each || from.len() != to.len() {
-                    many_to_many_each(db, from, to)?
+                    self.many_to_many_each(db, from, to)?
                 } else {
-                    many_to_many(db, from, to)?
+                    self.many_to_many(db, from, to)?
                 };
                 result.result = ids.len() as i64;
                 result.elements = ids
@@ -41,28 +42,71 @@ impl QueryMut for InsertEdgesQuery {
     }
 }
 
-fn many_to_many(db: &mut Db, from: &[QueryId], to: &[QueryId]) -> Result<Vec<DbId>, QueryError> {
-    let mut ids = vec![];
+impl InsertEdgesQuery {
+    fn many_to_many(
+        &self,
+        db: &mut Db,
+        from: &[QueryId],
+        to: &[QueryId],
+    ) -> Result<Vec<DbId>, QueryError> {
+        let mut ids = vec![];
+        ids.reserve(from.len());
+        let values = self.values(from.len())?;
 
-    for (from, to) in from.iter().zip(to.iter()) {
-        ids.push(db.insert_edge(from, to)?);
-    }
+        for ((from, to), key_values) in from.iter().zip(to).zip(values) {
+            let db_id = db.insert_edge(from, to)?;
+            ids.push(db_id);
 
-    Ok(ids)
-}
-
-fn many_to_many_each(
-    db: &mut Db,
-    from: &[QueryId],
-    to: &[QueryId],
-) -> Result<Vec<DbId>, QueryError> {
-    let mut ids = vec![];
-
-    for from in from {
-        for to in to {
-            ids.push(db.insert_edge(from, to)?);
+            for key_value in key_values {
+                db.insert_key_value(db_id, &key_value.key, &key_value.value)?;
+            }
         }
+
+        Ok(ids)
     }
 
-    Ok(ids)
+    fn many_to_many_each(
+        &self,
+        db: &mut Db,
+        from: &[QueryId],
+        to: &[QueryId],
+    ) -> Result<Vec<DbId>, QueryError> {
+        let count = from.len() * to.len();
+        let mut ids = vec![];
+        ids.reserve(count);
+        let values = self.values(count)?;
+        let mut index = 0;
+
+        for from in from {
+            for to in to {
+                let db_id = db.insert_edge(from, to)?;
+                ids.push(db_id);
+
+                for key_value in values[index] {
+                    db.insert_key_value(db_id, &key_value.key, &key_value.value)?;
+                }
+
+                index += 1;
+            }
+        }
+
+        Ok(ids)
+    }
+
+    fn values(&self, count: usize) -> Result<Vec<&Vec<DbKeyValue>>, QueryError> {
+        let values = match &self.values {
+            QueryValues::Ids(_) => return Err(QueryError::from("Invalid insert query")),
+            QueryValues::Single(v) => vec![v; std::cmp::max(1, count)],
+            QueryValues::Multi(v) => v.iter().collect(),
+        };
+
+        if values.len() != count {
+            return Err(QueryError::from(format!(
+                "Values len '{}' do not match the insert count '{count}'",
+                values.len()
+            )));
+        }
+
+        Ok(values)
+    }
 }

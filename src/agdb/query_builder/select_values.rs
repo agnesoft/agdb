@@ -1,10 +1,11 @@
-use super::select_values_ids::SelectValuesIds;
 use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
 use crate::query::select_values_query::SelectValuesQuery;
 
 pub struct SelectValues(pub SelectValuesQuery);
+
+pub struct SelectValuesIds(pub SelectValuesQuery);
 
 impl SelectValues {
     pub fn id(mut self, id: QueryId) -> SelectValuesIds {
@@ -23,5 +24,11 @@ impl SelectValues {
         self.0.ids = QueryIds::Search(query);
 
         SelectValuesIds(self.0)
+    }
+}
+
+impl SelectValuesIds {
+    pub fn query(self) -> SelectValuesQuery {
+        self.0
     }
 }

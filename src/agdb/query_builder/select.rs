@@ -1,5 +1,5 @@
 use super::select_alias::SelectAlias;
-use super::select_aliases::SelectAliases;
+use super::select_alias::SelectAliases;
 use super::select_ids::SelectIds;
 use super::select_key_count::SelectKeyCount;
 use super::select_keys::SelectKeys;

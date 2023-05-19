@@ -49,12 +49,6 @@ impl InsertEdgeFromTo {
 
         InsertEdgeValues(self.0)
     }
-
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertEdgeValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
-
-        InsertEdgeValues(self.0)
-    }
 }
 
 impl InsertEdgeValues {
@@ -70,18 +64,6 @@ impl InsertEdgesEach {
 
     pub fn values(mut self, key_values: &[&[DbKeyValue]]) -> InsertEdgesValues {
         self.0.values = QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect());
-
-        InsertEdgesValues(self.0)
-    }
-
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertEdgesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
-
-        InsertEdgesValues(self.0)
-    }
-
-    pub fn values_ids(mut self, ids: &[QueryId]) -> InsertEdgesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(ids.to_vec()));
 
         InsertEdgesValues(self.0)
     }
@@ -136,18 +118,6 @@ impl InsertEdgesFromTo {
 
     pub fn values(mut self, key_values: &[&[DbKeyValue]]) -> InsertEdgesValues {
         self.0.values = QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect());
-
-        InsertEdgesValues(self.0)
-    }
-
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertEdgesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
-
-        InsertEdgesValues(self.0)
-    }
-
-    pub fn values_ids(mut self, ids: &[QueryId]) -> InsertEdgesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(ids.to_vec()));
 
         InsertEdgesValues(self.0)
     }

@@ -95,7 +95,6 @@ impl InsertEdgesQuery {
 
     fn values(&self, count: usize) -> Result<Vec<&Vec<DbKeyValue>>, QueryError> {
         let values = match &self.values {
-            QueryValues::Ids(_) => return Err(QueryError::from("Invalid insert query")),
             QueryValues::Single(v) => vec![v; std::cmp::max(1, count)],
             QueryValues::Multi(v) => v.iter().collect(),
         };

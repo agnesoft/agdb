@@ -1,12 +1,8 @@
-pub mod comparison;
-pub mod condition;
-pub mod direction;
-pub mod edge_count_condition;
 pub mod insert_aliases_query;
 pub mod insert_edges_query;
 pub mod insert_nodes_query;
 pub mod insert_values_query;
-pub mod key_value_condition;
+pub mod query_condition;
 pub mod query_error;
 pub mod query_id;
 pub mod query_ids;

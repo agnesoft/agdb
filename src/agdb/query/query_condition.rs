@@ -1,12 +1,17 @@
-use super::edge_count_condition::EdgeCountCondition;
-use super::key_value_condition::KeyValueCondition;
+pub(crate) mod comparison;
+pub(crate) mod direction;
+pub(crate) mod edge_count_condition;
+pub(crate) mod key_value_condition;
+
 use super::query_ids::QueryIds;
 use crate::Comparison;
 use crate::DbKey;
+use edge_count_condition::EdgeCountCondition;
+use key_value_condition::KeyValueCondition;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
-pub enum Condition {
+pub enum QueryCondition {
     And,
     Distance(Comparison),
     Edge,
@@ -28,12 +33,12 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", Condition::Where);
+        format!("{:?}", QueryCondition::Where);
     }
 
     #[test]
     fn derived_from_clone() {
-        let left = Condition::Where;
+        let left = QueryCondition::Where;
         let right = left.clone();
 
         assert_eq!(left, right);
@@ -41,6 +46,6 @@ mod tests {
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(Condition::Where, Condition::Where);
+        assert_eq!(QueryCondition::Where, QueryCondition::Where);
     }
 }

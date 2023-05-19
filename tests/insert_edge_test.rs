@@ -131,36 +131,6 @@ fn insert_edges_from_to_values() {
 }
 
 #[test]
-fn insert_edges_from_to_each_values_id() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::insert()
-            .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into(), "alias4".into()])
-            .each()
-            .values_id("alias")
-            .query(),
-        "Invalid insert query",
-    );
-}
-
-#[test]
-fn insert_edges_from_to_each_values_ids() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::insert()
-            .edges()
-            .from(&["alias1".into()])
-            .to(&["alias2".into()])
-            .each()
-            .values_ids(&["alias".into(), "alias3".into()])
-            .query(),
-        "Invalid insert query",
-    );
-}
-
-#[test]
 fn insert_edges_from_to_each_values() {
     let mut db = TestDb::new();
     db.exec_mut(
@@ -331,34 +301,6 @@ fn insert_edges_from_to_values_asymmetric() {
 }
 
 #[test]
-fn insert_edges_from_to_values_id() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::insert()
-            .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias2".into()])
-            .values_id("alias")
-            .query(),
-        "Invalid insert query",
-    );
-}
-
-#[test]
-fn insert_edges_from_to_values_ids() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::insert()
-            .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias2".into()])
-            .values_ids(&["alias".into(), "alias2".into()])
-            .query(),
-        "Invalid insert query",
-    );
-}
-
-#[test]
 fn insert_edges_from_to_values_uniform() {
     let mut db = TestDb::new();
     db.exec_mut(
@@ -432,20 +374,6 @@ fn insert_edge_from_to_values() {
             index: DbId(-3),
             values: vec![("key", "value").into()],
         }],
-    );
-}
-
-#[test]
-fn insert_edge_from_to_values_id() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::insert()
-            .edge()
-            .from("alias1")
-            .to("alias2")
-            .values_id("alias")
-            .query(),
-        "Invalid insert query",
     );
 }
 

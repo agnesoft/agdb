@@ -1,4 +1,4 @@
-use super::condition::Condition;
+use super::query_condition::QueryCondition;
 use super::query_id::QueryId;
 use crate::DbKey;
 
@@ -10,7 +10,7 @@ pub struct SearchQuery {
     pub limit: u64,
     pub offset: u64,
     pub order_by: Vec<DbKey>,
-    pub conditions: Vec<Condition>,
+    pub conditions: Vec<QueryCondition>,
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ use super::insert_edge::InsertEdges;
 use super::insert_node::InsertNode;
 use super::insert_node::InsertNodes;
 use super::insert_values::InsertValues;
-use super::insert_values_multi::InsertValuesMulti;
+use super::insert_values::InsertValuesMulti;
 use crate::query::insert_aliases_query::InsertAliasesQuery;
 use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;

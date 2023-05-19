@@ -1,7 +1,5 @@
 use crate::db::db_key_value::DbKeyValue;
 use crate::query::insert_nodes_query::InsertNodesQuery;
-use crate::query::query_id::QueryId;
-use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryValues;
 
 pub struct InsertNode(pub InsertNodesQuery);
@@ -31,12 +29,6 @@ impl InsertNode {
         InsertNodeValues(self.0)
     }
 
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertNodeValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
-
-        InsertNodeValues(self.0)
-    }
-
     pub fn query(self) -> InsertNodesQuery {
         self.0
     }
@@ -49,12 +41,6 @@ impl InsertNodeAlias {
 
     pub fn values(mut self, key_values: &[DbKeyValue]) -> InsertNodeValues {
         self.0.values = QueryValues::Single(key_values.to_vec());
-
-        InsertNodeValues(self.0)
-    }
-
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertNodeValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
 
         InsertNodeValues(self.0)
     }
@@ -77,18 +63,6 @@ impl InsertNodesAliases {
         InsertNodesValues(self.0)
     }
 
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertNodesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
-
-        InsertNodesValues(self.0)
-    }
-
-    pub fn values_ids(mut self, ids: &[QueryId]) -> InsertNodesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(ids.to_vec()));
-
-        InsertNodesValues(self.0)
-    }
-
     pub fn values_uniform(mut self, key_values: &[DbKeyValue]) -> InsertNodesValues {
         self.0.values = QueryValues::Single(key_values.to_vec());
 
@@ -99,12 +73,6 @@ impl InsertNodesAliases {
 impl InsertNodesCount {
     pub fn query(self) -> InsertNodesQuery {
         self.0
-    }
-
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertNodesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
-
-        InsertNodesValues(self.0)
     }
 
     pub fn values_uniform(mut self, key_values: &[DbKeyValue]) -> InsertNodesValues {
@@ -135,18 +103,6 @@ impl InsertNodes {
 
     pub fn values(mut self, key_values: &[&[DbKeyValue]]) -> InsertNodesValues {
         self.0.values = QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect());
-
-        InsertNodesValues(self.0)
-    }
-
-    pub fn values_id<T: Into<QueryId>>(mut self, id: T) -> InsertNodesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(vec![id.into()]));
-
-        InsertNodesValues(self.0)
-    }
-
-    pub fn values_ids(mut self, ids: &[QueryId]) -> InsertNodesValues {
-        self.0.values = QueryValues::Ids(QueryIds::Ids(ids.to_vec()));
 
         InsertNodesValues(self.0)
     }

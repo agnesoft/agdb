@@ -495,16 +495,38 @@ impl Db {
         Ok(())
     }
 
+    pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbKey]) -> Result<i64, QueryError> {
+        let mut result = 0;
+
+        for key_value_index in self.values.values(&db_id)? {
+            let key = self.value(&key_value_index.key)?;
+
+            if keys.contains(&key) {
+                let value = self.value(&key_value_index.value)?;
+                self.remove_value(key_value_index.key)?;
+                self.remove_value(key_value_index.value)?;
+                self.values.remove_value(&db_id, &key_value_index)?;
+                self.undo_stack.push(Command::InsertKeyValue {
+                    id: db_id,
+                    key_value: DbKeyValue { key, value },
+                });
+                result += 1;
+            }
+        }
+
+        Ok(result)
+    }
+
     fn remove_all_values(&mut self, db_id: DbId) -> Result<(), QueryError> {
         for key_value_index in self.values.values(&db_id)? {
             let key = self.value(&key_value_index.key)?;
             let value = self.value(&key_value_index.value)?;
+            self.remove_value(key_value_index.key)?;
+            self.remove_value(key_value_index.value)?;
             self.undo_stack.push(Command::InsertKeyValue {
                 id: db_id,
                 key_value: DbKeyValue { key, value },
             });
-            self.remove_value(key_value_index.key)?;
-            self.remove_value(key_value_index.value)?;
         }
 
         self.values.remove_key(&db_id)?;

@@ -39,12 +39,12 @@ use crate::QueryResult;
 use crate::Transaction;
 
 pub struct Db {
-    pub(crate) graph: Graph,
-    pub(crate) aliases: IndexedMap<String, DbId>,
-    pub(crate) indexes: IndexedMap<DbId, GraphIndex>,
-    pub(crate) dictionary: Dictionary<DbValue>,
-    pub(crate) values: MultiMap<DbId, DbKeyValueIndex>,
-    pub(crate) next_id: i64,
+    graph: Graph,
+    aliases: IndexedMap<String, DbId>,
+    indexes: IndexedMap<DbId, GraphIndex>,
+    dictionary: Dictionary<DbValue>,
+    values: MultiMap<DbId, DbKeyValueIndex>,
+    next_id: i64,
     undo_stack: Vec<Command>,
 }
 
@@ -340,6 +340,10 @@ impl Db {
                 dictionary_index.0
             )))?;
         Ok(value)
+    }
+
+    pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValueIndex>, DbError> {
+        self.values.values(&db_id)
     }
 
     fn insert_value(&mut self, value: &DbValue) -> Result<DbValueIndex, QueryError> {

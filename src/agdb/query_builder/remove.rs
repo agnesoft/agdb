@@ -37,9 +37,9 @@ impl Remove {
         RemoveIds(RemoveQuery(QueryIds::Search(query)))
     }
 
-    pub fn value(self, key: DbKey) -> RemoveValues {
+    pub fn value<T: Into<DbKey>>(self, key: T) -> RemoveValues {
         RemoveValues(RemoveValuesQuery(SelectValuesQuery {
-            keys: vec![key],
+            keys: vec![key.into()],
             ids: QueryIds::Ids(vec![0.into()]),
         }))
     }

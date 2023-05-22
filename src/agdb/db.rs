@@ -21,15 +21,23 @@ use self::db_value::UINT_META_VALUE;
 use self::db_value_index::DbValueIndex;
 use crate::collections::dictionary::dictionary_index::DictionaryIndex;
 use crate::collections::dictionary::Dictionary;
+use crate::collections::dictionary_storage::DictionaryStorage;
 use crate::collections::indexed_map::IndexedMap;
+use crate::collections::indexed_map_storage::IndexedMapStorage;
 use crate::collections::multi_map::MultiMap;
+use crate::collections::multi_map_storage::MultiMapStorage;
 use crate::command::Command;
 use crate::graph::graph_index::GraphIndex;
+use crate::graph::graph_storage::GraphStorage;
 use crate::graph::Graph;
 use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
+use crate::storage::file_storage::FileStorage;
+use crate::storage::storage_index::StorageIndex;
+use crate::storage::Storage;
 use crate::transaction_mut::TransactionMut;
+use crate::utilities::serialize::Serialize;
 use crate::DbId;
 use crate::DbKey;
 use crate::DbKeyValue;
@@ -37,8 +45,45 @@ use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::Transaction;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+#[derive(Default)]
+struct DbStorageIndex {
+    next_id: i64,
+    graph: StorageIndex,
+    aliases: (StorageIndex, StorageIndex),
+    indexes: (StorageIndex, StorageIndex),
+    dictionary: StorageIndex,
+    values: StorageIndex,
+}
+
+impl Serialize for DbStorageIndex {
+    fn serialize(&self) -> Vec<u8> {
+        todo!()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        todo!()
+    }
+
+    fn serialized_size(&self) -> u64 {
+        todo!()
+    }
+}
+
+struct DbStorage {
+    storage: Rc<RefCell<FileStorage>>,
+    storage_index: DbStorageIndex,
+    graph: GraphStorage,
+    aliases: IndexedMapStorage<String, DbId>,
+    indexes: IndexedMapStorage<DbId, GraphIndex>,
+    dictionary: DictionaryStorage<DbValue>,
+    values: MultiMapStorage<DbId, DbKeyValueIndex>,
+}
 
 pub struct Db {
+    storage: DbStorage,
     graph: Graph,
     aliases: IndexedMap<String, DbId>,
     indexes: IndexedMap<DbId, GraphIndex>,
@@ -49,13 +94,56 @@ pub struct Db {
 }
 
 impl Db {
-    pub fn new(_filename: &str) -> Result<Db, DbError> {
+    pub fn new(filename: &str) -> Result<Db, DbError> {
+        let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
+        let graph_storage;
+        let aliases_storage;
+        let indexes_storage;
+        let dictionary_storage;
+        let values_storage;
+
+        if let Ok(index) = storage
+            .borrow_mut()
+            .value::<DbStorageIndex>(&StorageIndex::default())
+        {
+            todo!()
+        } else if storage.borrow_mut().len()? == 0 {
+            let index = storage.borrow_mut().insert(&DbStorageIndex::default())?;
+            graph_storage = GraphStorage::new(storage.clone())?;
+            aliases_storage = IndexedMapStorage::new(storage.clone())?;
+            indexes_storage = IndexedMapStorage::new(storage.clone())?;
+            dictionary_storage = DictionaryStorage::new(storage.clone())?;
+            values_storage = MultiMapStorage::new(storage.clone())?;
+            let storage_index = DbStorageIndex {
+                next_id: 1,
+                graph: graph_storage.storage_index(),
+                aliases: aliases_storage.storage_index(),
+                indexes: indexes_storage.storage_index(),
+                dictionary: dictionary_storage.storage_index(),
+                values: values_storage.storage_index(),
+            };
+            storage.borrow_mut().insert_at(&index, 0, &storage_index)?;
+        } else {
+            return Err(DbError::from(format!(
+                "File '{filename}' is not a valid database file and is not empty."
+            )));
+        }
+
         Ok(Self {
+            storage: DbStorage {
+                storage,
+                storage_index,
+                graph: graph_storage,
+                aliases: aliases_storage,
+                indexes: indexes_storage,
+                dictionary: dictionary_storage,
+                values: values_storage,
+            },
             graph: Graph::new(),
-            aliases: IndexedMap::<String, DbId>::new(),
-            indexes: IndexedMap::<DbId, GraphIndex>::new(),
-            dictionary: Dictionary::<DbValue>::new(),
-            values: MultiMap::<DbId, DbKeyValueIndex>::new(),
+            aliases: IndexedMap::new(),
+            indexes: IndexedMap::new(),
+            dictionary: Dictionary::new(),
+            values: MultiMap::new(),
             next_id: 1,
             undo_stack: vec![],
         })

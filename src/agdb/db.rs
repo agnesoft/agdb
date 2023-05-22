@@ -38,6 +38,7 @@ use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
 use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize_static::SerializeStatic;
 use crate::DbId;
 use crate::DbKey;
 use crate::DbKeyValue;
@@ -60,21 +61,49 @@ struct DbStorageIndex {
 
 impl Serialize for DbStorageIndex {
     fn serialize(&self) -> Vec<u8> {
-        todo!()
+        [
+            self.next_id.serialize(),
+            self.graph.serialize(),
+            self.aliases.0.serialize(),
+            self.aliases.1.serialize(),
+            self.indexes.0.serialize(),
+            self.indexes.1.serialize(),
+            self.dictionary.serialize(),
+            self.values.serialize(),
+        ]
+        .concat()
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        todo!()
+        let size = i64::static_serialized_size() as usize;
+
+        let next_id = i64::deserialize(bytes)?;
+        let graph = StorageIndex::deserialize(&bytes[size..])?;
+        let aliases_1 = StorageIndex::deserialize(&bytes[size * 2..])?;
+        let aliases_2 = StorageIndex::deserialize(&bytes[size * 3..])?;
+        let indexes_1 = StorageIndex::deserialize(&bytes[size * 4..])?;
+        let indexes_2 = StorageIndex::deserialize(&bytes[size * 5..])?;
+        let dictionary = StorageIndex::deserialize(&bytes[size * 6..])?;
+        let values = StorageIndex::deserialize(&bytes[size * 7..])?;
+
+        Ok(Self {
+            next_id,
+            graph,
+            aliases: (aliases_1, aliases_2),
+            indexes: (indexes_1, indexes_2),
+            dictionary,
+            values,
+        })
     }
 
     fn serialized_size(&self) -> u64 {
-        todo!()
+        i64::static_serialized_size() * 8
     }
 }
 
 struct DbStorage {
     storage: Rc<RefCell<FileStorage>>,
-    storage_index: DbStorageIndex,
+    storage_index: StorageIndex,
     graph: GraphStorage,
     aliases: IndexedMapStorage<String, DbId>,
     indexes: IndexedMapStorage<DbId, GraphIndex>,
@@ -102,19 +131,27 @@ impl Db {
         let dictionary_storage;
         let values_storage;
 
-        if let Ok(index) = storage
+        let len = storage.borrow_mut().len()?;
+        let storage_index = StorageIndex { value: 1 };
+        let index = storage
             .borrow_mut()
-            .value::<DbStorageIndex>(&StorageIndex::default())
-        {
-            todo!()
-        } else if storage.borrow_mut().len()? == 0 {
-            let index = storage.borrow_mut().insert(&DbStorageIndex::default())?;
+            .value::<DbStorageIndex>(&StorageIndex { value: 1 });
+
+        if let Ok(index) = index {
+            graph_storage = GraphStorage::from_storage(storage.clone(), &index.graph)?;
+            aliases_storage = IndexedMapStorage::from_storage(storage.clone(), &index.aliases)?;
+            indexes_storage = IndexedMapStorage::from_storage(storage.clone(), &index.indexes)?;
+            dictionary_storage =
+                DictionaryStorage::from_storage(storage.clone(), &index.dictionary)?;
+            values_storage = MultiMapStorage::from_storage(storage.clone(), &index.values)?;
+        } else if len == 0 {
+            storage.borrow_mut().insert(&DbStorageIndex::default())?;
             graph_storage = GraphStorage::new(storage.clone())?;
             aliases_storage = IndexedMapStorage::new(storage.clone())?;
             indexes_storage = IndexedMapStorage::new(storage.clone())?;
             dictionary_storage = DictionaryStorage::new(storage.clone())?;
             values_storage = MultiMapStorage::new(storage.clone())?;
-            let storage_index = DbStorageIndex {
+            let db_storage_index = DbStorageIndex {
                 next_id: 1,
                 graph: graph_storage.storage_index(),
                 aliases: aliases_storage.storage_index(),
@@ -122,7 +159,9 @@ impl Db {
                 dictionary: dictionary_storage.storage_index(),
                 values: values_storage.storage_index(),
             };
-            storage.borrow_mut().insert_at(&index, 0, &storage_index)?;
+            storage
+                .borrow_mut()
+                .insert_at(&storage_index, 0, &db_storage_index)?;
         } else {
             return Err(DbError::from(format!(
                 "File '{filename}' is not a valid database file and is not empty."
@@ -190,29 +229,61 @@ impl Db {
 
         for command in undo_stack.iter().rev() {
             match command {
-                Command::InsertAlias { id, alias } => self.aliases.insert(alias, id)?,
+                Command::InsertAlias { id, alias } => {
+                    self.aliases.insert(alias, id)?;
+                    self.storage.aliases.insert(alias, id)?;
+                }
                 Command::InsertEdge { from, to } => {
                     self.graph.insert_edge(from, to)?;
+                    self.storage.graph.insert_edge(from, to)?;
                 }
-                Command::InsertId { id, graph_index } => self.indexes.insert(id, graph_index)?,
+                Command::InsertId { id, graph_index } => {
+                    self.indexes.insert(id, graph_index)?;
+                    self.storage.indexes.insert(id, graph_index)?;
+                }
                 Command::InsertKeyValue { id, key_value } => {
                     let key = self.insert_value(&key_value.key)?;
                     let value = self.insert_value(&key_value.value)?;
                     self.values.insert(id, &DbKeyValueIndex { key, value })?;
+                    self.storage
+                        .values
+                        .insert(id, &DbKeyValueIndex { key, value })?;
                 }
                 Command::InsertNode => {
                     self.graph.insert_node()?;
+                    self.storage.graph.insert_node()?;
                 }
-                Command::NextId { id } => self.next_id = *id,
-                Command::RemoveAlias { alias } => self.aliases.remove_key(alias)?,
-                Command::RemoveId { id } => self.indexes.remove_key(id)?,
-                Command::RemoveEdge { index } => self.graph.remove_edge(index)?,
+                Command::NextId { id } => {
+                    self.next_id = *id;
+                    self.storage.storage.borrow_mut().insert_at(
+                        &self.storage.storage_index,
+                        0,
+                        id,
+                    )?;
+                }
+                Command::RemoveAlias { alias } => {
+                    self.aliases.remove_key(alias)?;
+                    self.storage.aliases.remove_key(alias)?;
+                }
+                Command::RemoveId { id } => {
+                    self.indexes.remove_key(id)?;
+                    self.storage.indexes.remove_key(id)?;
+                }
+                Command::RemoveEdge { index } => {
+                    self.graph.remove_edge(index)?;
+                    self.storage.graph.remove_edge(index)?;
+                }
                 Command::RemoveKeyValue { id, key_value } => {
-                    self.values.remove_value(id, key_value)?
+                    self.values.remove_value(id, key_value)?;
+                    self.storage.values.remove_value(id, key_value)?;
                 }
-                Command::RemoveNode { index } => self.graph.remove_node(index)?,
+                Command::RemoveNode { index } => {
+                    self.graph.remove_node(index)?;
+                    self.storage.graph.remove_node(index)?;
+                }
                 Command::RemoveValue { index } => {
                     self.dictionary.remove(*index)?;
+                    self.storage.dictionary.remove(*index)?;
                 }
             }
         }
@@ -256,29 +327,40 @@ impl Db {
                 id: db_id,
                 alias: old_alias.clone(),
             });
-
             self.aliases.remove_key(&old_alias)?;
+            self.storage.aliases.remove_key(&old_alias)?;
         }
 
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
         self.aliases.insert(alias, &db_id)?;
-
-        Ok(())
+        self.storage.aliases.insert(alias, &db_id)
     }
 
     pub(crate) fn insert_edge(&mut self, from: &QueryId, to: &QueryId) -> Result<DbId, QueryError> {
         let from = self.graph_index_from_id(from)?;
         let to = self.graph_index_from_id(to)?;
+
         let graph_index = self.graph.insert_edge(&from, &to)?;
         self.undo_stack
             .push(Command::RemoveEdge { index: graph_index });
+        let _ = self.storage.graph.insert_edge(&from, &to)?;
+
         let db_id = DbId(-self.next_id);
+
         self.undo_stack.push(Command::NextId { id: self.next_id });
         self.next_id += 1;
+        self.storage.storage.borrow_mut().insert_at(
+            &self.storage.storage_index,
+            0,
+            &self.next_id,
+        )?;
+
         self.undo_stack.push(Command::RemoveId { id: db_id });
         self.indexes.insert(&db_id, &graph_index)?;
+        self.storage.indexes.insert(&db_id, &graph_index)?;
+
         Ok(db_id)
     }
 
@@ -298,6 +380,7 @@ impl Db {
             alias: alias.clone(),
         });
         self.aliases.insert(alias, &db_id)?;
+        self.storage.aliases.insert(alias, &db_id)?;
 
         Ok(())
     }
@@ -306,11 +389,22 @@ impl Db {
         let graph_index = self.graph.insert_node()?;
         self.undo_stack
             .push(Command::RemoveNode { index: graph_index });
+        let _ = self.storage.graph.insert_node()?;
+
         let db_id = DbId(self.next_id);
+
         self.undo_stack.push(Command::NextId { id: self.next_id });
         self.next_id += 1;
+        self.storage.storage.borrow_mut().insert_at(
+            &self.storage.storage_index,
+            0,
+            &self.next_id,
+        )?;
+
         self.undo_stack.push(Command::RemoveId { id: db_id });
         self.indexes.insert(&db_id, &graph_index)?;
+        self.storage.indexes.insert(&db_id, &graph_index)?;
+
         Ok(db_id)
     }
 
@@ -337,11 +431,13 @@ impl Db {
         }
 
         let key_value = DbKeyValueIndex { key, value };
-        self.values.insert(&db_id, &key_value)?;
+
         self.undo_stack.push(Command::RemoveKeyValue {
             id: db_id,
             key_value,
         });
+        self.values.insert(&db_id, &key_value)?;
+        self.storage.values.insert(&db_id, &key_value)?;
 
         Ok(())
     }
@@ -377,11 +473,12 @@ impl Db {
 
     pub(crate) fn remove_alias(&mut self, alias: &String) -> Result<bool, DbError> {
         if let Some(id) = self.aliases.value(alias)? {
-            self.aliases.remove_key(alias)?;
             self.undo_stack.push(Command::InsertAlias {
                 id,
                 alias: alias.clone(),
             });
+            self.aliases.remove_key(alias)?;
+            self.storage.aliases.remove_key(alias)?;
 
             return Ok(true);
         }
@@ -481,6 +578,7 @@ impl Db {
         }
 
         let dictionary_index = self.dictionary.insert(value)?;
+        let _ = self.storage.dictionary.insert(value)?;
         index.set_index(dictionary_index.0);
         Ok(index)
     }
@@ -517,15 +615,17 @@ impl Db {
                 .ok_or(DbError::from("Data integrity corrupted"))?;
             (edge.index_from(), edge.index_to())
         };
-        self.indexes.remove_key(&db_id)?;
+
         self.undo_stack.push(Command::InsertId {
             id: db_id,
             graph_index,
         });
-        self.graph.remove_edge(&graph_index)?;
-        self.undo_stack.push(Command::InsertEdge { from, to });
+        self.indexes.remove_key(&db_id)?;
+        self.storage.indexes.remove_key(&db_id)?;
 
-        Ok(())
+        self.undo_stack.push(Command::InsertEdge { from, to });
+        self.graph.remove_edge(&graph_index)?;
+        self.storage.graph.remove_edge(&graph_index)
     }
 
     fn remove_node(
@@ -535,27 +635,28 @@ impl Db {
         alias: Option<String>,
     ) -> Result<(), DbError> {
         if let Some(alias) = alias {
-            self.aliases.remove_key(&alias)?;
             self.undo_stack.push(Command::InsertAlias {
                 id: db_id,
                 alias: alias.clone(),
             });
+            self.aliases.remove_key(&alias)?;
+            self.storage.aliases.remove_key(&alias)?;
         }
 
-        self.indexes.remove_key(&db_id)?;
         self.undo_stack.push(Command::InsertId {
             id: db_id,
             graph_index,
         });
+        self.indexes.remove_key(&db_id)?;
+        self.storage.indexes.remove_key(&db_id)?;
 
         for edge in self.node_edges(graph_index)? {
             self.remove_node_edge(edge.0, edge.1, edge.2)?;
         }
 
-        self.graph.remove_node(&graph_index)?;
         self.undo_stack.push(Command::InsertNode);
-
-        Ok(())
+        self.graph.remove_node(&graph_index)?;
+        self.storage.graph.remove_node(&graph_index)
     }
 
     fn remove_node_edge(
@@ -568,19 +669,25 @@ impl Db {
             .indexes
             .key(&graph_index)?
             .ok_or(DbError::from("Data integrity corrupted"))?;
-        self.indexes.remove_key(&db_id)?;
+
         self.undo_stack.push(Command::InsertId {
             id: db_id,
             graph_index,
         });
-        self.graph.remove_edge(&graph_index)?;
+        self.indexes.remove_key(&db_id)?;
+        self.storage.indexes.remove_key(&db_id)?;
+
         self.undo_stack.push(Command::InsertEdge { from, to });
-        Ok(())
+        self.graph.remove_edge(&graph_index)?;
+        self.storage.graph.remove_edge(&graph_index)
     }
 
     fn remove_value(&mut self, value_index: DbValueIndex) -> Result<(), DbError> {
         if !value_index.is_value() {
             self.dictionary
+                .remove(DictionaryIndex(value_index.index()))?;
+            self.storage
+                .dictionary
                 .remove(DictionaryIndex(value_index.index()))?;
         }
 
@@ -597,11 +704,14 @@ impl Db {
                 let value = self.value(&key_value_index.value)?;
                 self.remove_value(key_value_index.key)?;
                 self.remove_value(key_value_index.value)?;
-                self.values.remove_value(&db_id, &key_value_index)?;
+
                 self.undo_stack.push(Command::InsertKeyValue {
                     id: db_id,
                     key_value: DbKeyValue { key, value },
                 });
+                self.values.remove_value(&db_id, &key_value_index)?;
+                self.storage.values.remove_value(&db_id, &key_value_index)?;
+
                 result += 1;
             }
         }

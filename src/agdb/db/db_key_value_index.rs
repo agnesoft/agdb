@@ -51,7 +51,7 @@ impl StorageValue for DbKeyValueIndex {
     }
 
     fn storage_len() -> u64 {
-        DbValueIndex::static_serialized_size()
+        DbValueIndex::static_serialized_size() * 2
     }
 }
 

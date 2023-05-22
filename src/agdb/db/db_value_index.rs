@@ -70,14 +70,14 @@ impl Serialize for DbValueIndex {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        if bytes.len() != 16 {
+        if bytes.len() < 16 {
             return Err(DbError::from(
                 "DbValueIndex deserialization error: out of bounds",
             ));
         }
 
         let mut index = Self::default();
-        index.value.copy_from_slice(bytes);
+        index.value.copy_from_slice(&bytes[0..16]);
         Ok(index)
     }
 

@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn bad_file() {
-        assert!(FileStorage::new(&"/a/".to_string()).is_err());
+        assert!(FileStorage::new("/a/").is_err());
     }
 
     #[test]

@@ -14,7 +14,6 @@ use std::rc::Rc;
 pub type DictionaryStorage<T, Data = FileStorage> =
     DictionaryImpl<T, DictionaryDataStorage<T, Data>>;
 
-#[allow(dead_code)]
 impl<T, Data> DictionaryStorage<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,

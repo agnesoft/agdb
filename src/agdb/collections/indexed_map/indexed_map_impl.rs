@@ -16,7 +16,6 @@ where
     pub(crate) values_to_keys: MapImpl<T, K, DataTK>,
 }
 
-#[allow(dead_code)]
 impl<K, T, DataKT, DataTK> IndexedMapImpl<K, T, DataKT, DataTK>
 where
     K: Default + Eq + Hash + PartialEq + StableHash,
@@ -36,6 +35,7 @@ where
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn iter(&self) -> MapIterator<K, T, DataKT> {
         self.keys_to_values.iter()
     }
@@ -52,6 +52,7 @@ where
         self.keys_to_values.remove(key)
     }
 
+    #[allow(dead_code)]
     pub fn remove_value(&mut self, value: &T) -> Result<(), DbError> {
         if let Some(key) = self.values_to_keys.value(value)? {
             self.keys_to_values.remove(&key)?;

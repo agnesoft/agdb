@@ -16,10 +16,9 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-type IndexedMapStorage<K, T, Data = FileStorage> =
+pub type IndexedMapStorage<K, T, Data = FileStorage> =
     IndexedMapImpl<K, T, MapDataStorage<K, T, Data>, MapDataStorage<T, K, Data>>;
 
-#[allow(dead_code)]
 impl<K, T, Data> IndexedMapStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,

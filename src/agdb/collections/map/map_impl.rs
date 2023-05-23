@@ -14,21 +14,23 @@ where
     pub(crate) multi_map: MultiMapImpl<K, T, Data>,
 }
 
-#[allow(dead_code)]
 impl<K, T, Data> MapImpl<K, T, Data>
 where
     K: Default + Eq + Hash + PartialEq + StableHash,
     T: Default + Eq + PartialEq,
     Data: MapData<K, T>,
 {
+    #[allow(dead_code)]
     pub fn capacity(&self) -> u64 {
         self.multi_map.capacity()
     }
 
+    #[allow(dead_code)]
     pub fn contains(&self, key: &K) -> Result<bool, DbError> {
         self.multi_map.contains(key)
     }
 
+    #[allow(dead_code)]
     pub fn contains_value(&self, key: &K, value: &T) -> Result<bool, DbError> {
         self.multi_map.contains_value(key, value)
     }
@@ -45,6 +47,7 @@ where
         Ok(old_value)
     }
 
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.multi_map.is_empty()
     }
@@ -61,6 +64,7 @@ where
         self.multi_map.remove_key(key)
     }
 
+    #[allow(dead_code)]
     pub fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
         self.multi_map.reserve(capacity)
     }

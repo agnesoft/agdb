@@ -10,7 +10,6 @@ use std::marker::PhantomData;
 
 pub type IndexedMap<K, T> = IndexedMapImpl<K, T, MapDataMemory<K, T>, MapDataMemory<T, K>>;
 
-#[allow(dead_code)]
 impl<K, T> IndexedMap<K, T>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash,

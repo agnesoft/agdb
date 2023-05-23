@@ -1,3 +1,7 @@
+use crate::db::db_error::DbError;
+use crate::storage::storage_value::StorageValue;
+use crate::storage::Storage;
+use crate::utilities::serialize::Serialize;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
@@ -44,6 +48,42 @@ impl From<i64> for GraphIndex {
 impl StableHash for GraphIndex {
     fn stable_hash(&self) -> u64 {
         self.index.stable_hash()
+    }
+}
+
+impl Serialize for GraphIndex {
+    fn serialize(&self) -> Vec<u8> {
+        self.index.serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self {
+            index: i64::deserialize(bytes)?,
+        })
+    }
+
+    fn serialized_size(&self) -> u64 {
+        self.index.serialized_size()
+    }
+}
+
+impl StorageValue for GraphIndex {
+    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
+        self.index.store(storage)
+    }
+
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self {
+            index: i64::load(storage, bytes)?,
+        })
+    }
+
+    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
+        i64::remove(storage, bytes)
+    }
+
+    fn storage_len() -> u64 {
+        i64::storage_len()
     }
 }
 
@@ -109,5 +149,14 @@ mod tests {
                 GraphIndex::from(100_i64),
             ]
         )
+    }
+
+    #[test]
+    fn serialize() {
+        let index = GraphIndex { index: 1 };
+        assert_eq!(index.serialized_size(), 8);
+        let bytes = index.serialize();
+        let other = GraphIndex::deserialize(&bytes).unwrap();
+        assert_eq!(index, other);
     }
 }

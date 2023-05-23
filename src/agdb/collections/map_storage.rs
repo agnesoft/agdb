@@ -15,7 +15,6 @@ use std::rc::Rc;
 
 pub type MapStorage<K, T, Data = FileStorage> = MapImpl<K, T, MapDataStorage<K, T, Data>>;
 
-#[allow(dead_code)]
 impl<K, T, Data> MapStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
@@ -44,6 +43,7 @@ where
         self.multi_map.data.storage_index()
     }
 
+    #[allow(dead_code)]
     pub fn to_hash_map(&self) -> HashMap<K, T> {
         let mut map = HashMap::<K, T>::new();
         map.reserve(self.len() as usize);

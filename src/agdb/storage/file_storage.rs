@@ -26,7 +26,7 @@ pub struct FileStorage {
 
 impl FileStorage {
     #[allow(dead_code)]
-    pub fn new(filename: &String) -> Result<Self, DbError> {
+    pub fn new(filename: &str) -> Result<Self, DbError> {
         let mut data = FileStorage {
             file: RefCell::new(
                 OpenOptions::new()
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn bad_file() {
-        assert!(FileStorage::new(&"/a/".to_string()).is_err());
+        assert!(FileStorage::new("/a/").is_err());
     }
 
     #[test]

@@ -12,11 +12,11 @@ where
     pub(crate) index: GraphIndex,
 }
 
-#[allow(dead_code)]
 impl<'a, Data> GraphNode<'a, Data>
 where
     Data: GraphData,
 {
+    #[allow(dead_code)]
     pub fn index(&self) -> GraphIndex {
         self.index
     }

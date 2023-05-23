@@ -32,7 +32,7 @@ impl SelectQuery {
             values: vec![],
         };
 
-        for key_value_index in db.values.values(&db_id)? {
+        for key_value_index in db.values(db_id)? {
             let key = db.value(&key_value_index.key)?;
             let value = db.value(&key_value_index.value)?;
 

@@ -33,7 +33,7 @@ impl Serialize for DbKeyValueIndex {
     }
 
     fn serialized_size(&self) -> u64 {
-        DbValueIndex::static_serialized_size()
+        DbValueIndex::static_serialized_size() * 2
     }
 }
 
@@ -72,5 +72,10 @@ mod tests {
         DbKeyValueIndex::default().hash(&mut hasher);
 
         index.stable_hash();
+    }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(DbKeyValueIndex::default().serialized_size(), 32);
     }
 }

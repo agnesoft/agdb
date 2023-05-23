@@ -1,4 +1,5 @@
 use super::graph_data::GraphData;
+use super::graph_data_memory::GraphDataMemory;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_index::GraphIndex;
 use crate::collections::vec_storage::VecStorage;
@@ -14,7 +15,6 @@ where
     Data: Storage,
 {
     pub(crate) storage: Rc<RefCell<Data>>,
-    #[allow(dead_code)]
     pub(crate) storage_index: StorageIndex,
     #[allow(dead_code)]
     pub(crate) indexes: GraphDataStorageIndexes,
@@ -80,6 +80,15 @@ where
             to,
             from_meta,
             to_meta,
+        })
+    }
+
+    pub fn to_graph_data_memory(&self) -> Result<GraphDataMemory, DbError> {
+        Ok(GraphDataMemory {
+            from: self.from.to_vec()?,
+            to: self.to.to_vec()?,
+            from_meta: self.from_meta.to_vec()?,
+            to_meta: self.to_meta.to_vec()?,
         })
     }
 }

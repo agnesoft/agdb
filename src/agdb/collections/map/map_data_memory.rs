@@ -15,7 +15,6 @@ where
     pub(super) values: Vec<T>,
 }
 
-#[allow(dead_code)]
 impl<K, T> MapDataMemory<K, T>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash,

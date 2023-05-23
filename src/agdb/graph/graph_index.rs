@@ -150,4 +150,13 @@ mod tests {
             ]
         )
     }
+
+    #[test]
+    fn serialize() {
+        let index = GraphIndex { index: 1 };
+        assert_eq!(index.serialized_size(), 8);
+        let bytes = index.serialize();
+        let other = GraphIndex::deserialize(&bytes).unwrap();
+        assert_eq!(index, other);
+    }
 }

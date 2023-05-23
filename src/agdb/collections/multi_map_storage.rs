@@ -14,7 +14,6 @@ use std::rc::Rc;
 
 pub type MultiMapStorage<K, T, Data = FileStorage> = MultiMapImpl<K, T, MapDataStorage<K, T, Data>>;
 
-#[allow(dead_code)]
 impl<K, T, Data> MultiMapStorage<K, T, Data>
 where
     K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,

@@ -25,7 +25,6 @@ where
     capacity: u64,
 }
 
-#[allow(dead_code)]
 impl<T, Data> VecStorage<T, Data>
 where
     T: StorageValue,
@@ -53,10 +52,12 @@ where
         self.len
     }
 
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    #[allow(dead_code)]
     pub fn iter(&self) -> VecStorageIterator<T, Data> {
         VecStorageIterator::<T, Data> {
             index: 0,
@@ -89,6 +90,7 @@ where
         self.storage.borrow_mut().commit(id)
     }
 
+    #[allow(dead_code)]
     pub fn remove(&mut self, index: u64) -> Result<(), DbError> {
         self.validate_index(index)?;
 
@@ -99,6 +101,7 @@ where
         self.storage.borrow_mut().commit(id)
     }
 
+    #[allow(dead_code)]
     pub fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
         if capacity <= self.capacity() {
             return Ok(());
@@ -128,6 +131,7 @@ where
         self.storage.borrow_mut().commit(id)
     }
 
+    #[allow(dead_code)]
     pub fn shrink_to_fit(&mut self) -> Result<(), DbError> {
         self.reallocate(self.len())
     }

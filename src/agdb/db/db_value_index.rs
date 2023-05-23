@@ -8,7 +8,6 @@ pub(crate) struct DbValueIndex {
     pub(crate) value: [u8; 16],
 }
 
-#[allow(dead_code)]
 impl DbValueIndex {
     pub(crate) fn new() -> Self {
         Self { value: [0_u8; 16] }

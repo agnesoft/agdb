@@ -14,12 +14,12 @@ where
     pub phantom_data: PhantomData<T>,
 }
 
-#[allow(dead_code)]
 impl<T, Data> DictionaryImpl<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
     Data: DictionaryData<T>,
 {
+    #[allow(dead_code)]
     pub fn count(&self, index: DictionaryIndex) -> Result<Option<u64>, DbError> {
         if self.is_valid_index(index.0) {
             let count = self.data.count(index.0)?;
@@ -36,6 +36,7 @@ where
         self.data.count(0)
     }
 
+    #[allow(dead_code)]
     pub fn index(&self, value: &T) -> Result<Option<DictionaryIndex>, DbError> {
         self.find_value(value.stable_hash(), value)
     }

@@ -72,4 +72,13 @@ mod tests {
 
         assert_eq!(ids, vec![DbId(-1), DbId(0), DbId(3)]);
     }
+
+    #[test]
+    fn serialize() {
+        let id = DbId(1);
+        assert_eq!(id.serialized_size(), 8);
+        let bytes = id.serialize();
+        let other = DbId::deserialize(&bytes).unwrap();
+        assert_eq!(id, other);
+    }
 }

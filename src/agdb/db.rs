@@ -122,70 +122,22 @@ pub struct Db {
     undo_stack: Vec<Command>,
 }
 
+impl std::fmt::Debug for Db {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Db").finish_non_exhaustive()
+    }
+}
+
 impl Db {
     pub fn new(filename: &str) -> Result<Db, DbError> {
-        let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
-        let graph_storage;
-        let aliases_storage;
-        let indexes_storage;
-        let dictionary_storage;
-        let values_storage;
-
-        let len = storage.borrow_mut().len()?;
-        let storage_index = StorageIndex { value: 1 };
-        let index = storage
-            .borrow_mut()
-            .value::<DbStorageIndex>(&StorageIndex { value: 1 });
-
-        if let Ok(index) = index {
-            graph_storage = GraphStorage::from_storage(storage.clone(), &index.graph)?;
-            aliases_storage = IndexedMapStorage::from_storage(storage.clone(), &index.aliases)?;
-            indexes_storage = IndexedMapStorage::from_storage(storage.clone(), &index.indexes)?;
-            dictionary_storage =
-                DictionaryStorage::from_storage(storage.clone(), &index.dictionary)?;
-            values_storage = MultiMapStorage::from_storage(storage.clone(), &index.values)?;
-        } else if len == 0 {
-            storage.borrow_mut().insert(&DbStorageIndex::default())?;
-            graph_storage = GraphStorage::new(storage.clone())?;
-            aliases_storage = IndexedMapStorage::new(storage.clone())?;
-            indexes_storage = IndexedMapStorage::new(storage.clone())?;
-            dictionary_storage = DictionaryStorage::new(storage.clone())?;
-            values_storage = MultiMapStorage::new(storage.clone())?;
-            let db_storage_index = DbStorageIndex {
-                next_id: 1,
-                graph: graph_storage.storage_index(),
-                aliases: aliases_storage.storage_index(),
-                indexes: indexes_storage.storage_index(),
-                dictionary: dictionary_storage.storage_index(),
-                values: values_storage.storage_index(),
-            };
-            storage
-                .borrow_mut()
-                .insert_at(&storage_index, 0, &db_storage_index)?;
-        } else {
-            return Err(DbError::from(format!(
-                "File '{filename}' is not a valid database file and is not empty."
-            )));
+        match Self::try_new(filename) {
+            Ok(db) => Ok(db),
+            Err(error) => {
+                let mut db_error = DbError::from("Failed to create database");
+                db_error.cause = Some(Box::new(error));
+                Err(db_error)
+            }
         }
-
-        Ok(Self {
-            storage: DbStorage {
-                storage,
-                storage_index,
-                graph: graph_storage,
-                aliases: aliases_storage,
-                indexes: indexes_storage,
-                dictionary: dictionary_storage,
-                values: values_storage,
-            },
-            graph: Graph::new(),
-            aliases: IndexedMap::new(),
-            indexes: IndexedMap::new(),
-            dictionary: Dictionary::new(),
-            values: MultiMap::new(),
-            next_id: 1,
-            undo_stack: vec![],
-        })
     }
 
     pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
@@ -735,6 +687,88 @@ impl Db {
 
         Ok(())
     }
+
+    fn try_new(filename: &str) -> Result<Db, DbError> {
+        let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
+        let graph;
+        let graph_storage;
+        let aliases;
+        let aliases_storage;
+        let indexes;
+        let indexes_storage;
+        let dictionary;
+        let dictionary_storage;
+        let values;
+        let values_storage;
+        let next_id;
+        let len = storage.borrow_mut().len()?;
+        let storage_index = StorageIndex { value: 1 };
+        let index = storage
+            .borrow_mut()
+            .value::<DbStorageIndex>(&StorageIndex { value: 1 });
+
+        if let Ok(index) = index {
+            graph_storage = GraphStorage::from_storage(storage.clone(), &index.graph)?;
+            graph = graph_storage.to_graph()?;
+            aliases_storage = IndexedMapStorage::from_storage(storage.clone(), &index.aliases)?;
+            aliases = aliases_storage.to_indexed_map()?;
+            indexes_storage = IndexedMapStorage::from_storage(storage.clone(), &index.indexes)?;
+            indexes = indexes_storage.to_indexed_map()?;
+            dictionary_storage =
+                DictionaryStorage::from_storage(storage.clone(), &index.dictionary)?;
+            dictionary = dictionary_storage.to_dictionary()?;
+            values_storage = MultiMapStorage::from_storage(storage.clone(), &index.values)?;
+            values = values_storage.to_multi_map()?;
+            next_id = index.next_id;
+        } else if len == 0 {
+            storage.borrow_mut().insert(&DbStorageIndex::default())?;
+            graph = Graph::new();
+            graph_storage = GraphStorage::new(storage.clone())?;
+            aliases = IndexedMap::new();
+            aliases_storage = IndexedMapStorage::new(storage.clone())?;
+            indexes = IndexedMap::new();
+            indexes_storage = IndexedMapStorage::new(storage.clone())?;
+            dictionary = Dictionary::new();
+            dictionary_storage = DictionaryStorage::new(storage.clone())?;
+            values = MultiMap::new();
+            values_storage = MultiMapStorage::new(storage.clone())?;
+            next_id = 1;
+            let db_storage_index = DbStorageIndex {
+                next_id: 1,
+                graph: graph_storage.storage_index(),
+                aliases: aliases_storage.storage_index(),
+                indexes: indexes_storage.storage_index(),
+                dictionary: dictionary_storage.storage_index(),
+                values: values_storage.storage_index(),
+            };
+            storage
+                .borrow_mut()
+                .insert_at(&storage_index, 0, &db_storage_index)?;
+        } else {
+            return Err(DbError::from(format!(
+                "File '{filename}' is not a valid database file and is not empty."
+            )));
+        }
+
+        Ok(Self {
+            storage: DbStorage {
+                storage,
+                storage_index,
+                graph: graph_storage,
+                aliases: aliases_storage,
+                indexes: indexes_storage,
+                dictionary: dictionary_storage,
+                values: values_storage,
+            },
+            graph,
+            aliases,
+            indexes,
+            dictionary,
+            values,
+            next_id,
+            undo_stack: vec![],
+        })
+    }
 }
 
 #[cfg(test)]
@@ -753,5 +787,17 @@ mod tests {
         index.set_value(&1_u64.to_le_bytes());
 
         db.value(&index).unwrap();
+    }
+
+    #[test]
+    fn db_storage_index_serialized_size() {
+        assert_eq!(DbStorageIndex::default().serialized_size(), 64);
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        let test_file = TestFile::new();
+        let db = Db::new(test_file.file_name()).unwrap();
+        format!("{:?}", db);
     }
 }

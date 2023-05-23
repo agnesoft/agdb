@@ -1,5 +1,6 @@
 use super::graph_data_storage::GraphDataStorage;
 use super::graph_impl::GraphImpl;
+use super::Graph;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
@@ -9,7 +10,6 @@ use std::rc::Rc;
 
 pub type GraphStorage<Data = FileStorage> = GraphImpl<GraphDataStorage<Data>>;
 
-#[allow(dead_code)]
 impl<Data> GraphStorage<Data>
 where
     Data: Storage,
@@ -27,6 +27,12 @@ where
     pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
         Ok(GraphStorage {
             data: GraphDataStorage::<Data>::from_storage(storage, index)?,
+        })
+    }
+
+    pub fn to_graph(&self) -> Result<Graph, DbError> {
+        Ok(Graph {
+            data: self.data.to_graph_data_memory()?,
         })
     }
 }

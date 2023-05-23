@@ -12,7 +12,6 @@ where
     pub(crate) data: Data,
 }
 
-#[allow(dead_code)]
 impl<Data> GraphImpl<Data>
 where
     Data: GraphData,
@@ -28,6 +27,7 @@ where
         })
     }
 
+    #[allow(dead_code)]
     pub fn node_count(&self) -> Result<u64, DbError> {
         self.data.node_count()
     }
@@ -69,6 +69,7 @@ where
         })
     }
 
+    #[allow(dead_code)]
     pub fn node_iter(&self) -> GraphNodeIterator<Data> {
         GraphNodeIterator {
             graph: self,

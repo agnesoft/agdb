@@ -1,6 +1,5 @@
 use super::db_error::DbError;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -66,8 +65,6 @@ impl Serialize for DbFloat {
         self.0.serialized_size()
     }
 }
-
-impl SerializeStatic for DbFloat {}
 
 impl StableHash for DbFloat {
     fn stable_hash(&self) -> u64 {

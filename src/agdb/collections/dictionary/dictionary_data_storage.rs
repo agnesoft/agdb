@@ -1,14 +1,14 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_data_memory::DictionaryDataMemory;
+use crate::collections::db_vec::DbVec;
 use crate::collections::multi_map_storage::MultiMapStorage;
-use crate::collections::vec_storage::VecStorage;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,9 +21,9 @@ where
     storage: Rc<RefCell<Data>>,
     storage_index: StorageIndex,
     index: MultiMapStorage<u64, u64, Data>,
-    counts: VecStorage<u64, Data>,
-    hashes: VecStorage<u64, Data>,
-    values: VecStorage<T, Data>,
+    counts: DbVec<u64, Data>,
+    hashes: DbVec<u64, Data>,
+    values: DbVec<T, Data>,
 }
 
 struct DictionaryDataStorageIndexes {
@@ -33,6 +33,12 @@ struct DictionaryDataStorageIndexes {
     values_index: StorageIndex,
 }
 
+impl SerializeStatic for DictionaryDataStorageIndexes {
+    fn serialized_size_static() -> u64 {
+        StorageIndex::serialized_size_static() * 4
+    }
+}
+
 impl<T, Data> DictionaryDataStorage<T, Data>
 where
     T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
@@ -40,9 +46,9 @@ where
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
         let index = MultiMapStorage::<u64, u64, Data>::new(storage.clone())?;
-        let mut counts = VecStorage::<u64, Data>::new(storage.clone())?;
-        let mut hashes = VecStorage::<u64, Data>::new(storage.clone())?;
-        let mut values = VecStorage::<T, Data>::new(storage.clone())?;
+        let mut counts = DbVec::<u64, Data>::new(storage.clone())?;
+        let mut hashes = DbVec::<u64, Data>::new(storage.clone())?;
+        let mut values = DbVec::<T, Data>::new(storage.clone())?;
 
         let id = storage.borrow_mut().transaction();
 
@@ -73,25 +79,22 @@ where
 
     pub fn from_storage(
         storage: Rc<RefCell<Data>>,
-        storage_index: &StorageIndex,
+        storage_index: StorageIndex,
     ) -> Result<Self, DbError> {
         let data_index = storage
             .borrow_mut()
             .value::<DictionaryDataStorageIndexes>(storage_index)?;
         let index = MultiMapStorage::<u64, u64, Data>::from_storage(
             storage.clone(),
-            &data_index.index_index,
+            data_index.index_index,
         )?;
-        let counts =
-            VecStorage::<u64, Data>::from_storage(storage.clone(), &data_index.counts_index)?;
-        let hashes =
-            VecStorage::<u64, Data>::from_storage(storage.clone(), &data_index.hashes_index)?;
-        let values =
-            VecStorage::<T, Data>::from_storage(storage.clone(), &data_index.values_index)?;
+        let counts = DbVec::<u64, Data>::from_storage(storage.clone(), data_index.counts_index)?;
+        let hashes = DbVec::<u64, Data>::from_storage(storage.clone(), data_index.hashes_index)?;
+        let values = DbVec::<T, Data>::from_storage(storage.clone(), data_index.values_index)?;
 
         Ok(Self {
             storage,
-            storage_index: *storage_index,
+            storage_index,
             index,
             counts,
             hashes,
@@ -153,15 +156,18 @@ where
     }
 
     fn set_count(&mut self, index: u64, count: u64) -> Result<(), DbError> {
-        self.counts.set_value(index, &count)
+        self.counts.replace(index, &count)?;
+        Ok(())
     }
 
     fn set_hash(&mut self, index: u64, hash: u64) -> Result<(), DbError> {
-        self.hashes.set_value(index, &hash)
+        self.hashes.replace(index, &hash)?;
+        Ok(())
     }
 
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
-        self.values.set_value(index, value)
+        self.values.replace(index, value)?;
+        Ok(())
     }
 
     fn transaction(&mut self) -> u64 {
@@ -186,7 +192,7 @@ impl Serialize for DictionaryDataStorageIndexes {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        if bytes.len() < Self::static_serialized_size() as usize {
+        if bytes.len() < Self::serialized_size_static() as usize {
             return Err(DbError::from(
                 "DictionaryDataStorageIndexes deserialization error: not enough data",
             ));
@@ -195,23 +201,21 @@ impl Serialize for DictionaryDataStorageIndexes {
         Ok(DictionaryDataStorageIndexes {
             index_index: StorageIndex::deserialize(bytes)?,
             counts_index: StorageIndex::deserialize(
-                &bytes[StorageIndex::static_serialized_size() as usize..],
+                &bytes[StorageIndex::serialized_size_static() as usize..],
             )?,
             hashes_index: StorageIndex::deserialize(
-                &bytes[(StorageIndex::static_serialized_size() * 2) as usize..],
+                &bytes[(StorageIndex::serialized_size_static() * 2) as usize..],
             )?,
             values_index: StorageIndex::deserialize(
-                &bytes[(StorageIndex::static_serialized_size() * 3) as usize..],
+                &bytes[(StorageIndex::serialized_size_static() * 3) as usize..],
             )?,
         })
     }
 
     fn serialized_size(&self) -> u64 {
-        Self::static_serialized_size()
+        Self::serialized_size_static()
     }
 }
-
-impl SerializeStatic for DictionaryDataStorageIndexes {}
 
 #[cfg(test)]
 mod tests {

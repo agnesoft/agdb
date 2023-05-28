@@ -6,7 +6,7 @@ use super::write_ahead_log::WriteAheadLogRecord;
 use super::Storage;
 use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::cmp::min;
@@ -224,7 +224,7 @@ impl FileStorage {
     }
 
     fn record_serialized_size() -> u64 {
-        u64::static_serialized_size() * 2
+        u64::serialized_size_static() * 2
     }
 
     fn record_wal(&mut self, pos: u64, size: u64) -> Result<(), DbError> {
@@ -365,7 +365,7 @@ impl Storage for FileStorage {
 
     fn insert_at<T: Serialize>(
         &mut self,
-        index: &StorageIndex,
+        index: StorageIndex,
         offset: u64,
         value: &T,
     ) -> Result<(), DbError> {
@@ -386,7 +386,7 @@ impl Storage for FileStorage {
 
     fn insert_bytes_at(
         &mut self,
-        index: &StorageIndex,
+        index: StorageIndex,
         offset: u64,
         bytes: &[u8],
     ) -> Result<(), DbError> {
@@ -405,7 +405,7 @@ impl Storage for FileStorage {
 
     fn move_at(
         &mut self,
-        index: &StorageIndex,
+        index: StorageIndex,
         offset_from: u64,
         offset_to: u64,
         size: u64,
@@ -419,7 +419,7 @@ impl Storage for FileStorage {
         self.commit(id)
     }
 
-    fn remove(&mut self, index: &StorageIndex) -> Result<(), DbError> {
+    fn remove(&mut self, index: StorageIndex) -> Result<(), DbError> {
         let record = self.record(index.value)?;
 
         let id = self.transaction();
@@ -428,11 +428,11 @@ impl Storage for FileStorage {
         self.commit(id)
     }
 
-    fn replace<T: Serialize>(&mut self, index: &StorageIndex, value: &T) -> Result<(), DbError> {
+    fn replace<T: Serialize>(&mut self, index: StorageIndex, value: &T) -> Result<(), DbError> {
         self.replace_with_bytes(index, &value.serialize())
     }
 
-    fn replace_with_bytes(&mut self, index: &StorageIndex, bytes: &[u8]) -> Result<(), DbError> {
+    fn replace_with_bytes(&mut self, index: StorageIndex, bytes: &[u8]) -> Result<(), DbError> {
         let id = self.transaction();
         self.insert_bytes_at(index, 0, bytes)?;
         self.resize_value(index, bytes.len() as u64)?;
@@ -440,7 +440,7 @@ impl Storage for FileStorage {
     }
 
     #[allow(clippy::comparison_chain)]
-    fn resize_value(&mut self, index: &StorageIndex, new_size: u64) -> Result<(), DbError> {
+    fn resize_value(&mut self, index: StorageIndex, new_size: u64) -> Result<(), DbError> {
         let mut record = self.record(index.value)?;
 
         let id = self.transaction();
@@ -467,22 +467,22 @@ impl Storage for FileStorage {
         self.begin_transaction()
     }
 
-    fn value<T: Serialize>(&self, index: &StorageIndex) -> Result<T, DbError> {
+    fn value<T: Serialize>(&self, index: StorageIndex) -> Result<T, DbError> {
         T::deserialize(&self.value_as_bytes(index)?)
     }
 
-    fn value_as_bytes(&self, index: &StorageIndex) -> Result<Vec<u8>, DbError> {
+    fn value_as_bytes(&self, index: StorageIndex) -> Result<Vec<u8>, DbError> {
         self.value_as_bytes_at(index, 0)
     }
 
-    fn value_as_bytes_at(&self, index: &StorageIndex, offset: u64) -> Result<Vec<u8>, DbError> {
+    fn value_as_bytes_at(&self, index: StorageIndex, offset: u64) -> Result<Vec<u8>, DbError> {
         let size = self.value_size(index)?;
         self.value_as_bytes_at_size(index, offset, size - min(size, offset))
     }
 
     fn value_as_bytes_at_size(
         &self,
-        index: &StorageIndex,
+        index: StorageIndex,
         offset: u64,
         size: u64,
     ) -> Result<Vec<u8>, DbError> {
@@ -493,11 +493,11 @@ impl Storage for FileStorage {
         self.read_exact(pos, size)
     }
 
-    fn value_at<T: Serialize>(&self, index: &StorageIndex, offset: u64) -> Result<T, DbError> {
+    fn value_at<T: Serialize>(&self, index: StorageIndex, offset: u64) -> Result<T, DbError> {
         T::deserialize(&self.value_as_bytes_at(index, offset)?)
     }
 
-    fn value_size(&self, index: &StorageIndex) -> Result<u64, DbError> {
+    fn value_size(&self, index: StorageIndex) -> Result<u64, DbError> {
         Ok(self.record(index.value)?.size)
     }
 }
@@ -530,7 +530,7 @@ mod tests {
         let index2 = storage.insert(&10_i64).unwrap();
         let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
 
-        storage.remove(&index2).unwrap();
+        storage.remove(index2).unwrap();
 
         let index4 = storage
             .insert(&vec!["Hello".to_string(), "World".to_string()])
@@ -552,7 +552,7 @@ mod tests {
             index2 = storage.insert(&10_i64).unwrap();
             let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
 
-            storage.remove(&index2).unwrap();
+            storage.remove(index2).unwrap();
         }
 
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
@@ -578,8 +578,8 @@ mod tests {
             index2 = storage.insert(&10_i64).unwrap();
             let _index3 = storage.insert(&vec![1_u64, 2_u64, 3_u64]).unwrap();
 
-            storage.remove(&index1).unwrap();
-            storage.remove(&index2).unwrap();
+            storage.remove(index1).unwrap();
+            storage.remove(index2).unwrap();
         }
 
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
@@ -602,33 +602,33 @@ mod tests {
 
         let value1 = "Hello, World!".to_string();
         let index1 = storage.insert(&value1).unwrap();
-        assert_eq!(storage.value_size(&index1), Ok(value1.serialized_size()));
-        assert_eq!(storage.value_size(&index1), Ok(value1.serialized_size()));
-        assert_eq!(storage.value(&index1), Ok(value1));
+        assert_eq!(storage.value_size(index1), Ok(value1.serialized_size()));
+        assert_eq!(storage.value_size(index1), Ok(value1.serialized_size()));
+        assert_eq!(storage.value(index1), Ok(value1));
 
         let value2 = 10_i64;
         let index2 = storage.insert(&value2).unwrap();
         assert_eq!(
-            storage.value_size(&index2),
-            Ok(i64::static_serialized_size())
+            storage.value_size(index2),
+            Ok(i64::serialized_size_static())
         );
         assert_eq!(
-            storage.value_size(&index2),
-            Ok(i64::static_serialized_size())
+            storage.value_size(index2),
+            Ok(i64::serialized_size_static())
         );
-        assert_eq!(storage.value(&index2), Ok(value2));
+        assert_eq!(storage.value(index2), Ok(value2));
 
         let value3 = vec![1_u64, 2_u64, 3_u64];
         let index3 = storage.insert(&value3).unwrap();
-        assert_eq!(storage.value_size(&index3), Ok(value3.serialized_size()));
-        assert_eq!(storage.value_size(&index3), Ok(value3.serialized_size()));
-        assert_eq!(storage.value(&index3), Ok(value3));
+        assert_eq!(storage.value_size(index3), Ok(value3.serialized_size()));
+        assert_eq!(storage.value_size(index3), Ok(value3.serialized_size()));
+        assert_eq!(storage.value(index3), Ok(value3));
 
         let value4 = vec!["Hello".to_string(), "World".to_string()];
         let index4 = storage.insert(&value4).unwrap();
-        assert_eq!(storage.value_size(&index4), Ok(value4.serialized_size()));
-        assert_eq!(storage.value_size(&index4), Ok(value4.serialized_size()));
-        assert_eq!(storage.value(&index4), Ok(value4));
+        assert_eq!(storage.value_size(index4), Ok(value4.serialized_size()));
+        assert_eq!(storage.value_size(index4), Ok(value4.serialized_size()));
+        assert_eq!(storage.value(index4), Ok(value4));
     }
 
     #[test]
@@ -637,12 +637,12 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size();
+        let offset = u64::serialized_size_static() + i64::serialized_size_static();
 
-        storage.insert_at(&index, offset, &10_i64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 10_i64, 3_i64]
         );
     }
@@ -653,13 +653,13 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size() * 3;
+        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
 
-        storage.insert_at(&index, 0, &4_u64).unwrap();
-        storage.insert_at(&index, offset, &10_i64).unwrap();
+        storage.insert_at(index, 0, &4_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 2_i64, 3_i64, 10_i64]
         );
     }
@@ -671,13 +671,13 @@ mod tests {
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         storage.insert(&"Hello, World!".to_string()).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size() * 3;
+        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
 
-        storage.insert_at(&index, 0, &4_u64).unwrap();
-        storage.insert_at(&index, offset, &10_i64).unwrap();
+        storage.insert_at(index, 0, &4_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 2_i64, 3_i64, 10_i64]
         );
     }
@@ -688,13 +688,13 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size() * 4;
+        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 4;
 
-        storage.insert_at(&index, 0, &5_u64).unwrap();
-        storage.insert_at(&index, offset, &10_i64).unwrap();
+        storage.insert_at(index, 0, &5_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
         );
     }
@@ -706,13 +706,13 @@ mod tests {
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         storage.insert(&"Hello, World!".to_string()).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size() * 4;
+        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 4;
 
-        storage.insert_at(&index, 0, &5_u64).unwrap();
-        storage.insert_at(&index, offset, &10_i64).unwrap();
+        storage.insert_at(index, 0, &5_u64).unwrap();
+        storage.insert_at(index, offset, &10_i64).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 2_i64, 3_i64, 0_i64, 10_i64]
         );
     }
@@ -723,7 +723,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.insert_at(&StorageIndex::from(1_u64), 8, &1_i64),
+            storage.insert_at(StorageIndex::from(1_u64), 8, &1_i64),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -734,16 +734,16 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::static_serialized_size() + i64::static_serialized_size() * 2;
-        let offset_to = u64::static_serialized_size() + i64::static_serialized_size();
-        let size = i64::static_serialized_size();
+        let offset_from = u64::serialized_size_static() + i64::serialized_size_static() * 2;
+        let offset_to = u64::serialized_size_static() + i64::serialized_size_static();
+        let size = i64::serialized_size_static();
 
         storage
-            .move_at(&index, offset_from, offset_to, size)
+            .move_at(index, offset_from, offset_to, size)
             .unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 3_i64, 0_i64]
         )
     }
@@ -754,16 +754,16 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::static_serialized_size() + i64::static_serialized_size();
-        let offset_to = u64::static_serialized_size();
-        let size = u64::static_serialized_size() * 2;
+        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
+        let offset_to = u64::serialized_size_static();
+        let size = u64::serialized_size_static() * 2;
 
         storage
-            .move_at(&index, offset_from, offset_to, size)
+            .move_at(index, offset_from, offset_to, size)
             .unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![2_i64, 3_i64, 0_i64]
         )
     }
@@ -774,16 +774,16 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::static_serialized_size() + i64::static_serialized_size();
-        let offset_to = u64::static_serialized_size() + i64::static_serialized_size() * 2;
-        let size = u64::static_serialized_size();
+        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
+        let offset_to = u64::serialized_size_static() + i64::serialized_size_static() * 2;
+        let size = u64::serialized_size_static();
 
         storage
-            .move_at(&index, offset_from, offset_to, size)
+            .move_at(index, offset_from, offset_to, size)
             .unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 0_i64, 2_i64]
         )
     }
@@ -794,16 +794,16 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::static_serialized_size();
-        let offset_to = u64::static_serialized_size() + i64::static_serialized_size();
-        let size = u64::static_serialized_size() * 2;
+        let offset_from = u64::serialized_size_static();
+        let offset_to = u64::serialized_size_static() + i64::serialized_size_static();
+        let size = u64::serialized_size_static() * 2;
 
         storage
-            .move_at(&index, offset_from, offset_to, size)
+            .move_at(index, offset_from, offset_to, size)
             .unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![0_i64, 1_i64, 2_i64]
         )
     }
@@ -814,18 +814,18 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::static_serialized_size() + i64::static_serialized_size();
-        let offset_to = u64::static_serialized_size() + i64::static_serialized_size() * 4;
-        let size = u64::static_serialized_size();
+        let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
+        let offset_to = u64::serialized_size_static() + i64::serialized_size_static() * 4;
+        let size = u64::serialized_size_static();
 
         storage
-            .move_at(&index, offset_from, offset_to, size)
+            .move_at(index, offset_from, offset_to, size)
             .unwrap();
 
-        storage.insert_at(&index, 0, &5_u64).unwrap();
+        storage.insert_at(index, 0, &5_u64).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 0_i64, 3_i64, 0_i64, 2_i64]
         )
     }
@@ -838,7 +838,7 @@ mod tests {
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
 
         assert_eq!(
-            storage.move_at(&index, 8, 16, 1000),
+            storage.move_at(index, 8, 16, 1000),
             Err(DbError::from(
                 "FileStorage error: value size (1008) out of bounds (32)"
             ))
@@ -851,16 +851,16 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
-        let offset_from = u64::static_serialized_size();
-        let offset_to = u64::static_serialized_size();
-        let size = u64::static_serialized_size();
+        let offset_from = u64::serialized_size_static();
+        let offset_to = u64::serialized_size_static();
+        let size = u64::serialized_size_static();
 
         storage
-            .move_at(&index, offset_from, offset_to, size)
+            .move_at(index, offset_from, offset_to, size)
             .unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 2_i64, 3_i64]
         )
     }
@@ -873,10 +873,10 @@ mod tests {
         let value = vec![1_i64, 2_i64, 3_i64];
         let index = storage.insert(&value).unwrap();
 
-        storage.move_at(&index, 0, 1, 0).unwrap();
+        storage.move_at(index, 0, 1, 0).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index).unwrap(),
+            storage.value::<Vec<i64>>(index).unwrap(),
             vec![1_i64, 2_i64, 3_i64]
         );
     }
@@ -888,12 +888,12 @@ mod tests {
 
         let index = storage.insert(&1_i64).unwrap();
 
-        assert_eq!(storage.value::<i64>(&index).unwrap(), 1_i64);
+        assert_eq!(storage.value::<i64>(index).unwrap(), 1_i64);
 
-        storage.remove(&index).unwrap();
+        storage.remove(index).unwrap();
 
         assert_eq!(
-            storage.value::<i64>(&index),
+            storage.value::<i64>(index),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -904,7 +904,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.remove(&StorageIndex::from(1_u64)),
+            storage.remove(StorageIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -918,9 +918,9 @@ mod tests {
         let value = "Hello, World!".to_string();
         let expected_size = value.serialized_size();
 
-        storage.replace(&index, &value).unwrap();
+        storage.replace(index, &value).unwrap();
 
-        assert_eq!(storage.value_size(&index).unwrap(), expected_size);
+        assert_eq!(storage.value_size(index).unwrap(), expected_size);
     }
 
     #[test]
@@ -929,7 +929,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.replace(&StorageIndex::from(1_u64), &10_i64),
+            storage.replace(StorageIndex::from(1_u64), &10_i64),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -940,11 +940,11 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&1_i64).unwrap();
-        let size = storage.value_size(&index).unwrap();
+        let size = storage.value_size(index).unwrap();
 
-        storage.replace(&index, &10_i64).unwrap();
+        storage.replace(index, &10_i64).unwrap();
 
-        assert_eq!(storage.value_size(&index).unwrap(), size);
+        assert_eq!(storage.value_size(index).unwrap(), size);
     }
 
     #[test]
@@ -954,11 +954,11 @@ mod tests {
 
         let index = storage.insert(&"Hello, World!".to_string()).unwrap();
         let value = 1_i64;
-        let expected_size = i64::static_serialized_size();
+        let expected_size = i64::serialized_size_static();
 
-        storage.replace(&index, &value).unwrap();
+        storage.replace(index, &value).unwrap();
 
-        assert_eq!(storage.value_size(&index).unwrap(), expected_size);
+        assert_eq!(storage.value_size(index).unwrap(), expected_size);
     }
 
     #[test]
@@ -968,9 +968,9 @@ mod tests {
 
         let index = storage.insert(&1_i64).unwrap();
         let size = storage.len().unwrap();
-        let value_size = storage.value_size(&index).unwrap();
+        let value_size = storage.value_size(index).unwrap();
 
-        storage.resize_value(&index, value_size + 8).unwrap();
+        storage.resize_value(index, value_size + 8).unwrap();
 
         assert_eq!(storage.len(), Ok(size + 8));
     }
@@ -981,13 +981,13 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::static_serialized_size();
+        let expected_size = i64::serialized_size_static();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size));
+        assert_eq!(storage.value_size(index), Ok(expected_size));
 
-        storage.resize_value(&index, expected_size * 2).unwrap();
+        storage.resize_value(index, expected_size * 2).unwrap();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size * 2));
+        assert_eq!(storage.value_size(index), Ok(expected_size * 2));
     }
 
     #[test]
@@ -996,7 +996,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.resize_value(&StorageIndex::from(1_u64), 1),
+            storage.resize_value(StorageIndex::from(1_u64), 1),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1007,13 +1007,13 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::static_serialized_size();
+        let expected_size = i64::serialized_size_static();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size));
+        assert_eq!(storage.value_size(index), Ok(expected_size));
 
-        storage.resize_value(&index, expected_size).unwrap();
+        storage.resize_value(index, expected_size).unwrap();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size));
+        assert_eq!(storage.value_size(index), Ok(expected_size));
     }
 
     #[test]
@@ -1022,13 +1022,13 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::static_serialized_size();
+        let expected_size = i64::serialized_size_static();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size));
+        assert_eq!(storage.value_size(index), Ok(expected_size));
 
-        storage.resize_value(&index, expected_size / 2).unwrap();
+        storage.resize_value(index, expected_size / 2).unwrap();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size / 2));
+        assert_eq!(storage.value_size(index), Ok(expected_size / 2));
     }
 
     #[test]
@@ -1037,13 +1037,13 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::static_serialized_size();
+        let expected_size = i64::serialized_size_static();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size));
+        assert_eq!(storage.value_size(index), Ok(expected_size));
 
-        storage.resize_value(&index, 0).unwrap();
+        storage.resize_value(index, 0).unwrap();
 
-        assert_eq!(storage.value_size(&index), Ok(0));
+        assert_eq!(storage.value_size(index), Ok(0));
     }
 
     #[test]
@@ -1053,12 +1053,12 @@ mod tests {
 
         let index = storage.insert(&3_i64).unwrap();
         let len = storage.len().unwrap();
-        let size = u64::static_serialized_size() + i64::static_serialized_size() * 3;
-        let expected_len = len + i64::static_serialized_size() * 3;
+        let size = u64::serialized_size_static() + i64::serialized_size_static() * 3;
+        let expected_len = len + i64::serialized_size_static() * 3;
 
-        storage.resize_value(&index, size).unwrap();
+        storage.resize_value(index, size).unwrap();
 
-        assert_eq!(storage.value::<Vec<i64>>(&index).unwrap(), vec![0_i64; 3]);
+        assert_eq!(storage.value::<Vec<i64>>(index).unwrap(), vec![0_i64; 3]);
         assert_eq!(storage.len().unwrap(), expected_len);
     }
 
@@ -1072,14 +1072,14 @@ mod tests {
             let mut storage = FileStorage::new(test_file.file_name()).unwrap();
             index = storage.insert(&10_i64).unwrap();
             storage.insert(&5_i64).unwrap();
-            storage.resize_value(&index, 1).unwrap();
-            storage.remove(&index).unwrap();
+            storage.resize_value(index, 1).unwrap();
+            storage.remove(index).unwrap();
         }
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value::<i64>(&index),
+            storage.value::<i64>(index),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1103,9 +1103,9 @@ mod tests {
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        assert_eq!(storage.value::<Vec<i64>>(&index1), Ok(value1));
-        assert_eq!(storage.value::<u64>(&index2), Ok(value2));
-        assert_eq!(storage.value::<Vec<i64>>(&index3), Ok(value3));
+        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
+        assert_eq!(storage.value::<u64>(index2), Ok(value2));
+        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
     }
 
     #[test]
@@ -1123,24 +1123,24 @@ mod tests {
             index1 = storage.insert(&value1).unwrap();
             index2 = storage.insert(&value2).unwrap();
             index3 = storage.insert(&value3).unwrap();
-            storage.remove(&index2).unwrap();
+            storage.remove(index2).unwrap();
         }
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        assert_eq!(storage.value::<Vec<i64>>(&index1), Ok(value1));
+        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(
-            storage.value::<u64>(&StorageIndex::default()),
+            storage.value::<u64>(StorageIndex::default()),
             Err(DbError::from("FileStorage error: index (0) not found"))
         );
         assert_eq!(
-            storage.value::<u64>(&index2),
+            storage.value::<u64>(index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index2.value
             )))
         );
-        assert_eq!(storage.value::<Vec<i64>>(&index3), Ok(value3));
+        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
     }
 
     #[test]
@@ -1158,33 +1158,33 @@ mod tests {
             index1 = storage.insert(&value1).unwrap();
             index2 = storage.insert(&value2).unwrap();
             index3 = storage.insert(&value3).unwrap();
-            storage.remove(&index1).unwrap();
-            storage.remove(&index2).unwrap();
-            storage.remove(&index3).unwrap();
+            storage.remove(index1).unwrap();
+            storage.remove(index2).unwrap();
+            storage.remove(index3).unwrap();
         }
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value::<u64>(&StorageIndex::default()),
+            storage.value::<u64>(StorageIndex::default()),
             Err(DbError::from("FileStorage error: index (0) not found"))
         );
         assert_eq!(
-            storage.value::<Vec<i64>>(&index1),
+            storage.value::<Vec<i64>>(index1),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index1.value
             )))
         );
         assert_eq!(
-            storage.value::<u64>(&index2),
+            storage.value::<u64>(index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index2.value
             )))
         );
         assert_eq!(
-            storage.value::<Vec<i64>>(&index3),
+            storage.value::<Vec<i64>>(index3),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index3.value
@@ -1210,14 +1210,14 @@ mod tests {
         }
 
         let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(u64::static_serialized_size() * 2, 2_u64.serialize())
+        wal.insert(u64::serialized_size_static() * 2, 2_u64.serialize())
             .unwrap();
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        assert_eq!(storage.value::<Vec<i64>>(&index1), Ok(vec![1_i64, 2_i64]));
-        assert_eq!(storage.value::<u64>(&index2), Ok(value2));
-        assert_eq!(storage.value::<Vec<i64>>(&index3), Ok(value3));
+        assert_eq!(storage.value::<Vec<i64>>(index1), Ok(vec![1_i64, 2_i64]));
+        assert_eq!(storage.value::<u64>(index2), Ok(value2));
+        assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
     }
 
     #[test]
@@ -1228,16 +1228,16 @@ mod tests {
         let index1 = storage.insert(&1_i64).unwrap();
         let index2 = storage.insert(&2_i64).unwrap();
         let index3 = storage.insert(&3_i64).unwrap();
-        storage.remove(&index2).unwrap();
+        storage.remove(index2).unwrap();
         storage.shrink_to_fit().unwrap();
 
         let actual_size = metadata(test_file.file_name()).unwrap().len();
         let expected_size =
-            (u64::static_serialized_size() * 2) * 2 + i64::static_serialized_size() * 2;
+            (u64::serialized_size_static() * 2) * 2 + i64::serialized_size_static() * 2;
 
         assert_eq!(actual_size, expected_size);
-        assert_eq!(storage.value(&index1), Ok(1_i64));
-        assert_eq!(storage.value(&index3), Ok(3_i64));
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
     }
 
     #[test]
@@ -1254,9 +1254,9 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         assert_eq!(actual_size, metadata(test_file.file_name()).unwrap().len());
-        assert_eq!(storage.value(&index1), Ok(1_i64));
-        assert_eq!(storage.value(&index2), Ok(2_i64));
-        assert_eq!(storage.value(&index3), Ok(3_i64));
+        assert_eq!(storage.value(index1), Ok(1_i64));
+        assert_eq!(storage.value(index2), Ok(2_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
     }
 
     #[test]
@@ -1273,7 +1273,7 @@ mod tests {
             index1 = storage.insert(&1_i64).unwrap();
             index2 = storage.insert(&2_i64).unwrap();
             index3 = storage.insert(&3_i64).unwrap();
-            storage.remove(&index2).unwrap();
+            storage.remove(index2).unwrap();
 
             expected_size = metadata(test_file.file_name()).unwrap().len();
 
@@ -1285,15 +1285,15 @@ mod tests {
         assert_eq!(actual_size, expected_size);
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value(&index1), Ok(1_i64));
+        assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(
-            storage.value::<i64>(&index2),
+            storage.value::<i64>(index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index2.value
             )))
         );
-        assert_eq!(storage.value(&index3), Ok(3_i64));
+        assert_eq!(storage.value(index3), Ok(3_i64));
     }
 
     #[test]
@@ -1306,11 +1306,11 @@ mod tests {
             let id = storage.transaction();
             index = storage.insert(&1_i64).unwrap();
             storage.commit(id).unwrap();
-            assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
+            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
         }
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
-        assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
+        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
     }
 
     #[test]
@@ -1329,12 +1329,12 @@ mod tests {
             let mut storage = FileStorage::new(test_file.file_name()).unwrap();
             storage.transaction();
             index = storage.insert(&1_i64).unwrap();
-            assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
+            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
         }
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(
-            storage.value::<i64>(&index),
+            storage.value::<i64>(index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index.value
@@ -1352,13 +1352,13 @@ mod tests {
             let _ = storage.transaction();
             let id2 = storage.transaction();
             index = storage.insert(&1_i64).unwrap();
-            assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
+            assert_eq!(storage.value::<i64>(index), Ok(1_i64));
             storage.commit(id2).unwrap();
         }
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(
-            storage.value::<i64>(&index),
+            storage.value::<i64>(index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
                 index.value
@@ -1373,7 +1373,7 @@ mod tests {
         let id1 = storage.transaction();
         let id2 = storage.transaction();
         let index = storage.insert(&1_i64).unwrap();
-        assert_eq!(storage.value::<i64>(&index), Ok(1_i64));
+        assert_eq!(storage.value::<i64>(index), Ok(1_i64));
 
         assert_eq!(
             storage.commit(id1),
@@ -1389,7 +1389,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let index = storage.insert(&10_i64).unwrap();
 
-        assert_eq!(storage.value::<i64>(&index), Ok(10_i64));
+        assert_eq!(storage.value::<i64>(index), Ok(10_i64));
     }
 
     #[test]
@@ -1400,9 +1400,9 @@ mod tests {
         let data = vec![1_i64, 2_i64, 3_i64];
 
         let index = storage.insert(&data).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size();
+        let offset = u64::serialized_size_static() + i64::serialized_size_static();
 
-        assert_eq!(storage.value_at::<i64>(&index, offset), Ok(2_i64));
+        assert_eq!(storage.value_at::<i64>(index, offset), Ok(2_i64));
     }
 
     #[test]
@@ -1413,10 +1413,10 @@ mod tests {
         let data = vec![2_i64, 1_i64, 2_i64];
 
         let index = storage.insert(&data).unwrap();
-        let offset = u64::static_serialized_size();
+        let offset = u64::serialized_size_static();
 
         assert_eq!(
-            storage.value_at::<Vec<i64>>(&index, offset),
+            storage.value_at::<Vec<i64>>(index, offset),
             Ok(vec![1_i64, 2_i64])
         );
     }
@@ -1427,7 +1427,7 @@ mod tests {
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value_at::<i64>(&StorageIndex::from(1_u64), 8),
+            storage.value_at::<i64>(StorageIndex::from(1_u64), 8),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1439,10 +1439,10 @@ mod tests {
 
         let data = vec![1_i64, 2_i64];
         let index = storage.insert(&data).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size() * 2;
+        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 2;
 
         assert_eq!(
-            storage.value_at::<i64>(&index, offset),
+            storage.value_at::<i64>(index, offset),
             Err(DbError::from("i64 deserialization error: out of bounds"))
         );
     }
@@ -1454,10 +1454,10 @@ mod tests {
 
         let data = vec![1_i64, 2_i64];
         let index = storage.insert(&data).unwrap();
-        let offset = u64::static_serialized_size() + i64::static_serialized_size() * 3;
+        let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
 
         assert_eq!(
-            storage.value_at::<i64>(&index, offset),
+            storage.value_at::<i64>(index, offset),
             Err(DbError::from(
                 "FileStorage error: offset (32) out of bounds (24)"
             ))
@@ -1470,7 +1470,7 @@ mod tests {
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value::<i64>(&StorageIndex::from(1_u64)),
+            storage.value::<i64>(StorageIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }
@@ -1483,7 +1483,7 @@ mod tests {
         let index = storage.insert(&10_i64).unwrap();
 
         assert_eq!(
-            storage.value::<Vec<i64>>(&index),
+            storage.value::<Vec<i64>>(index),
             Err(DbError::from(
                 "Vec<i64> deserialization error: out of bounds"
             ))
@@ -1496,9 +1496,9 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
-        let expected_size = i64::static_serialized_size();
+        let expected_size = i64::serialized_size_static();
 
-        assert_eq!(storage.value_size(&index), Ok(expected_size));
+        assert_eq!(storage.value_size(index), Ok(expected_size));
     }
 
     #[test]
@@ -1507,7 +1507,7 @@ mod tests {
         let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            storage.value_size(&StorageIndex::from(1_u64)),
+            storage.value_size(StorageIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
     }

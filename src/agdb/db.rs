@@ -38,7 +38,7 @@ use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
 use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
 use crate::DbKey;
 use crate::DbKeyValue;
@@ -75,7 +75,7 @@ impl Serialize for DbStorageIndex {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        let size = i64::static_serialized_size() as usize;
+        let size = i64::serialized_size_static() as usize;
 
         let next_id = i64::deserialize(bytes)?;
         let graph = StorageIndex::deserialize(&bytes[size..])?;
@@ -97,7 +97,7 @@ impl Serialize for DbStorageIndex {
     }
 
     fn serialized_size(&self) -> u64 {
-        i64::static_serialized_size() * 8
+        i64::serialized_size_static() * 8
     }
 }
 
@@ -208,7 +208,7 @@ impl Db {
                 Command::NextId { id } => {
                     self.next_id = *id;
                     self.storage.storage.borrow_mut().insert_at(
-                        &self.storage.storage_index,
+                        self.storage.storage_index,
                         0,
                         id,
                     )?;
@@ -304,7 +304,7 @@ impl Db {
         self.undo_stack.push(Command::NextId { id: self.next_id });
         self.next_id += 1;
         self.storage.storage.borrow_mut().insert_at(
-            &self.storage.storage_index,
+            self.storage.storage_index,
             0,
             &self.next_id,
         )?;
@@ -348,7 +348,7 @@ impl Db {
         self.undo_stack.push(Command::NextId { id: self.next_id });
         self.next_id += 1;
         self.storage.storage.borrow_mut().insert_at(
-            &self.storage.storage_index,
+            self.storage.storage_index,
             0,
             &self.next_id,
         )?;
@@ -705,19 +705,19 @@ impl Db {
         let storage_index = StorageIndex { value: 1 };
         let index = storage
             .borrow_mut()
-            .value::<DbStorageIndex>(&StorageIndex { value: 1 });
+            .value::<DbStorageIndex>(StorageIndex { value: 1 });
 
         if let Ok(index) = index {
-            graph_storage = GraphStorage::from_storage(storage.clone(), &index.graph)?;
+            graph_storage = GraphStorage::from_storage(storage.clone(), index.graph)?;
             graph = graph_storage.to_graph()?;
-            aliases_storage = IndexedMapStorage::from_storage(storage.clone(), &index.aliases)?;
+            aliases_storage = IndexedMapStorage::from_storage(storage.clone(), index.aliases)?;
             aliases = aliases_storage.to_indexed_map()?;
-            indexes_storage = IndexedMapStorage::from_storage(storage.clone(), &index.indexes)?;
+            indexes_storage = IndexedMapStorage::from_storage(storage.clone(), index.indexes)?;
             indexes = indexes_storage.to_indexed_map()?;
             dictionary_storage =
-                DictionaryStorage::from_storage(storage.clone(), &index.dictionary)?;
+                DictionaryStorage::from_storage(storage.clone(), index.dictionary)?;
             dictionary = dictionary_storage.to_dictionary()?;
-            values_storage = MultiMapStorage::from_storage(storage.clone(), &index.values)?;
+            values_storage = MultiMapStorage::from_storage(storage.clone(), index.values)?;
             values = values_storage.to_multi_map()?;
             next_id = index.next_id;
         } else if len == 0 {
@@ -743,7 +743,7 @@ impl Db {
             };
             storage
                 .borrow_mut()
-                .insert_at(&storage_index, 0, &db_storage_index)?;
+                .insert_at(storage_index, 0, &db_storage_index)?;
         } else {
             return Err(DbError::from(format!(
                 "File '{filename}' is not a valid database file and is not empty."

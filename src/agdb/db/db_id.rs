@@ -1,8 +1,7 @@
 use super::db_error::DbError;
-use crate::{
-    storage::{storage_value::StorageValue, Storage},
-    utilities::{serialize::Serialize, stable_hash::StableHash},
-};
+use crate::storage::storage_value::StorageValue;
+use crate::utilities::serialize::{Serialize, SerializeStatic};
+use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbId(pub i64);
@@ -27,21 +26,11 @@ impl Serialize for DbId {
     }
 }
 
+impl SerializeStatic for DbId {}
+
 impl StorageValue for DbId {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
-        self.0.store(storage)
-    }
-
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        Ok(Self(i64::load(storage, bytes)?))
-    }
-
-    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
-        i64::remove(storage, bytes)
-    }
-
     fn storage_len() -> u64 {
-        i64::storage_len()
+        Self::serialized_size_static()
     }
 }
 

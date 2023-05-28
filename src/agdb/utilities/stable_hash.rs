@@ -1,4 +1,3 @@
-use std::mem::size_of;
 use std::ops::BitXor;
 
 const HASH_CONSTANT: u64 = 0x517cc1b727220a95;
@@ -34,7 +33,7 @@ impl StableHash for String {
 
 impl StableHash for &[u8] {
     fn stable_hash(&self) -> u64 {
-        const CHUNK_SIZE: usize = size_of::<u64>();
+        const CHUNK_SIZE: usize = std::mem::size_of::<u64>();
         let chunks = self.len() / CHUNK_SIZE;
         let remainder = self.len() % CHUNK_SIZE;
         let mut hash = 0_u64;

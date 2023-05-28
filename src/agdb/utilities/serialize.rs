@@ -1,12 +1,21 @@
 use crate::db::db_error::DbError;
 use std::any::type_name;
-use std::mem::size_of;
 
 pub trait Serialize: Sized {
     fn serialize(&self) -> Vec<u8>;
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError>;
     fn serialized_size(&self) -> u64;
 }
+
+pub trait SerializeStatic: Serialize {
+    fn serialized_size_static() -> u64 {
+        std::mem::size_of::<Self>() as u64
+    }
+}
+
+impl SerializeStatic for i64 {}
+impl SerializeStatic for u64 {}
+impl SerializeStatic for f64 {}
 
 impl Serialize for i64 {
     fn serialize(&self) -> Vec<u8> {
@@ -16,14 +25,14 @@ impl Serialize for i64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self::from_le_bytes(
             bytes
-                .get(0..size_of::<Self>())
+                .get(0..std::mem::size_of::<Self>())
                 .ok_or_else(|| DbError::from("i64 deserialization error: out of bounds"))?
                 .try_into()?,
         ))
     }
 
     fn serialized_size(&self) -> u64 {
-        size_of::<Self>() as u64
+        Self::serialized_size_static()
     }
 }
 
@@ -35,14 +44,14 @@ impl Serialize for u64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self::from_le_bytes(
             bytes
-                .get(0..size_of::<Self>())
+                .get(0..std::mem::size_of::<Self>())
                 .ok_or_else(|| DbError::from("u64 deserialization error: out of bounds"))?
                 .try_into()?,
         ))
     }
 
     fn serialized_size(&self) -> u64 {
-        size_of::<Self>() as u64
+        Self::serialized_size_static()
     }
 }
 
@@ -54,14 +63,14 @@ impl Serialize for f64 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self::from_le_bytes(
             bytes
-                .get(0..size_of::<Self>())
+                .get(0..std::mem::size_of::<Self>())
                 .ok_or_else(|| DbError::from("f64 deserialization error: out of bounds"))?
                 .try_into()?,
         ))
     }
 
     fn serialized_size(&self) -> u64 {
-        size_of::<Self>() as u64
+        Self::serialized_size_static()
     }
 }
 
@@ -76,7 +85,7 @@ impl Serialize for usize {
     }
 
     fn serialized_size(&self) -> u64 {
-        size_of::<u64>() as u64
+        u64::serialized_size_static()
     }
 }
 

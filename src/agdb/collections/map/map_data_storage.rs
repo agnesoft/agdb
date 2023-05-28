@@ -2,7 +2,7 @@ use super::map_data::MapData;
 use super::map_data_memory::MapDataMemory;
 use super::map_data_storage_index::MapDataStorageIndex;
 use super::map_value_state::MapValueState;
-use crate::collections::vec_storage::VecStorage;
+use crate::collections::db_vec::DbVec;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
@@ -15,16 +15,16 @@ use std::rc::Rc;
 
 pub struct MapDataStorage<K, T, Data = FileStorage>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StorageValue,
     Data: Storage,
 {
     storage: Rc<RefCell<Data>>,
     storage_index: StorageIndex,
     data_index: MapDataStorageIndex,
-    states: VecStorage<MapValueState, Data>,
-    keys: VecStorage<K, Data>,
-    values: VecStorage<T, Data>,
+    states: DbVec<MapValueState, Data>,
+    keys: DbVec<K, Data>,
+    values: DbVec<T, Data>,
 }
 
 impl<K, T, Data> MapDataStorage<K, T, Data>
@@ -34,9 +34,9 @@ where
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
-        let states = VecStorage::<MapValueState, Data>::new(storage.clone())?;
-        let keys = VecStorage::<K, Data>::new(storage.clone())?;
-        let values = VecStorage::<T, Data>::new(storage.clone())?;
+        let states = DbVec::<MapValueState, Data>::new(storage.clone())?;
+        let keys = DbVec::<K, Data>::new(storage.clone())?;
+        let values = DbVec::<T, Data>::new(storage.clone())?;
 
         let data_index = MapDataStorageIndex {
             len: 0,
@@ -57,19 +57,21 @@ where
         })
     }
 
-    pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
-        let data_index = storage.borrow_mut().value::<MapDataStorageIndex>(index)?;
-        let states = VecStorage::<MapValueState, Data>::from_storage(
-            storage.clone(),
-            &data_index.states_index,
-        )?;
-        let keys = VecStorage::<K, Data>::from_storage(storage.clone(), &data_index.keys_index)?;
-        let values =
-            VecStorage::<T, Data>::from_storage(storage.clone(), &data_index.values_index)?;
+    pub fn from_storage(
+        storage: Rc<RefCell<Data>>,
+        storage_index: StorageIndex,
+    ) -> Result<Self, DbError> {
+        let data_index = storage
+            .borrow_mut()
+            .value::<MapDataStorageIndex>(storage_index)?;
+        let states =
+            DbVec::<MapValueState, Data>::from_storage(storage.clone(), data_index.states_index)?;
+        let keys = DbVec::<K, Data>::from_storage(storage.clone(), data_index.keys_index)?;
+        let values = DbVec::<T, Data>::from_storage(storage.clone(), data_index.values_index)?;
 
         Ok(Self {
             storage,
-            storage_index: *index,
+            storage_index,
             data_index,
             states,
             keys,
@@ -93,8 +95,8 @@ where
 
 impl<K, T, Data> MapData<K, T> for MapDataStorage<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StorageValue,
     Data: Storage,
 {
     fn capacity(&self) -> u64 {
@@ -123,19 +125,22 @@ where
         self.data_index.len = len;
         self.storage
             .borrow_mut()
-            .insert_at(&self.storage_index, 0, &self.len())
+            .insert_at(self.storage_index, 0, &self.len())
     }
 
     fn set_state(&mut self, index: u64, state: MapValueState) -> Result<(), DbError> {
-        self.states.set_value(index, &state)
+        self.states.replace(index, &state)?;
+        Ok(())
     }
 
     fn set_key(&mut self, index: u64, key: &K) -> Result<(), DbError> {
-        self.keys.set_value(index, key)
+        self.keys.replace(index, key)?;
+        Ok(())
     }
 
     fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
-        self.values.set_value(index, value)
+        self.values.replace(index, value)?;
+        Ok(())
     }
 
     fn state(&self, index: u64) -> Result<MapValueState, DbError> {

@@ -37,10 +37,10 @@ where
 
     pub fn from_storage(
         storage: Rc<RefCell<Data>>,
-        index: &(StorageIndex, StorageIndex),
+        index: (StorageIndex, StorageIndex),
     ) -> Result<Self, DbError> {
-        let keys_to_values = MapStorage::<K, T, Data>::from_storage(storage.clone(), &index.0)?;
-        let values_to_keys = MapStorage::<T, K, Data>::from_storage(storage, &index.1)?;
+        let keys_to_values = MapStorage::<K, T, Data>::from_storage(storage.clone(), index.0)?;
+        let values_to_keys = MapStorage::<T, K, Data>::from_storage(storage, index.1)?;
 
         Ok(Self {
             keys_to_values,
@@ -97,17 +97,17 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
 
-        let index;
+        let storage_index;
 
         {
             let mut map = IndexedMapStorage::<String, u64>::new(storage.clone()).unwrap();
             let key = "alias".to_string();
             let value = 1_u64;
             map.insert(&key, &value).unwrap();
-            index = map.storage_index();
+            storage_index = map.storage_index();
         }
 
-        let map = IndexedMapStorage::<String, u64>::from_storage(storage, &index).unwrap();
+        let map = IndexedMapStorage::<String, u64>::from_storage(storage, storage_index).unwrap();
         assert_eq!(map.value(&"alias".to_string()).unwrap(), Some(1_u64));
     }
 

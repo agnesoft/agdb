@@ -24,7 +24,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: Rc<RefCell<Data>>, index: StorageIndex) -> Result<Self, DbError> {
         Ok(GraphStorage {
             data: GraphDataStorage::<Data>::from_storage(storage, index)?,
         })
@@ -473,7 +473,7 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
 
-        let index;
+        let storage_index;
 
         let node1;
         let node2;
@@ -486,7 +486,7 @@ mod tests {
         {
             let mut graph = GraphStorage::new(storage.clone()).unwrap();
 
-            index = graph.storage_index();
+            storage_index = graph.storage_index();
 
             node1 = graph.insert_node().unwrap();
             node2 = graph.insert_node().unwrap();
@@ -497,7 +497,7 @@ mod tests {
             edge3 = graph.insert_edge(&node3, &node1).unwrap();
         }
 
-        let graph = GraphStorage::from_storage(storage, &index).unwrap();
+        let graph = GraphStorage::from_storage(storage, storage_index).unwrap();
 
         assert!(graph.node(&node1).is_some());
         assert!(graph.node(&node2).is_some());

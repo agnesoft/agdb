@@ -30,7 +30,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: Rc<RefCell<Data>>, index: StorageIndex) -> Result<Self, DbError> {
         Ok(Self {
             multi_map: MultiMapImpl::<K, T, MapDataStorage<K, T, Data>> {
                 data: MapDataStorage::<K, T, Data>::from_storage(storage, index)?,
@@ -159,7 +159,7 @@ mod tests {
             index = map.storage_index();
         }
 
-        let map = MapStorage::<u64, u64>::from_storage(storage, &index).unwrap();
+        let map = MapStorage::<u64, u64>::from_storage(storage, index).unwrap();
 
         let mut expected = HashMap::<u64, u64>::new();
         expected.insert(1, 1);
@@ -176,7 +176,7 @@ mod tests {
         ));
 
         assert_eq!(
-            MapStorage::<u64, u64>::from_storage(storage, &StorageIndex::from(1_u64))
+            MapStorage::<u64, u64>::from_storage(storage, StorageIndex::from(1_u64))
                 .err()
                 .unwrap(),
             DbError::from("FileStorage error: index (1) not found")

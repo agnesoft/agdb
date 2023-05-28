@@ -1,6 +1,6 @@
 use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Read;
@@ -60,8 +60,8 @@ impl WriteAheadLog {
     }
 
     fn read_record(file: &mut File) -> Result<WriteAheadLogRecord, DbError> {
-        let pos = u64::deserialize(&Self::read_exact(file, u64::static_serialized_size())?)?;
-        let size = u64::deserialize(&Self::read_exact(file, u64::static_serialized_size())?)?;
+        let pos = u64::deserialize(&Self::read_exact(file, u64::serialized_size_static())?)?;
+        let size = u64::deserialize(&Self::read_exact(file, u64::serialized_size_static())?)?;
 
         Ok(WriteAheadLogRecord {
             pos,

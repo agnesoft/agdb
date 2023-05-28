@@ -1,7 +1,7 @@
 use crate::db::db_error::DbError;
 use crate::storage::storage_value::StorageValue;
-use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
@@ -67,23 +67,11 @@ impl Serialize for GraphIndex {
     }
 }
 
+impl SerializeStatic for GraphIndex {}
+
 impl StorageValue for GraphIndex {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
-        self.index.store(storage)
-    }
-
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        Ok(Self {
-            index: i64::load(storage, bytes)?,
-        })
-    }
-
-    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
-        i64::remove(storage, bytes)
-    }
-
     fn storage_len() -> u64 {
-        i64::storage_len()
+        Self::serialized_size_static()
     }
 }
 

@@ -10,6 +10,65 @@ use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[derive(Clone, Copy, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
+pub struct GraphIndex(pub i64);
+
+impl GraphIndex {
+    pub fn is_edge(&self) -> bool {
+        self.0 < 0
+    }
+
+    pub fn is_node(&self) -> bool {
+        0 < self.0
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.0 != 0
+    }
+
+    pub(crate) fn as_u64(&self) -> u64 {
+        if self.is_edge() {
+            (-self.0) as u64
+        } else {
+            self.0 as u64
+        }
+    }
+}
+
+impl From<i64> for GraphIndex {
+    fn from(index: i64) -> Self {
+        Self(index)
+    }
+}
+
+impl StableHash for GraphIndex {
+    fn stable_hash(&self) -> u64 {
+        self.0.stable_hash()
+    }
+}
+
+impl Serialize for GraphIndex {
+    fn serialize(&self) -> Vec<u8> {
+        self.0.serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self(i64::deserialize(bytes)?))
+    }
+
+    fn serialized_size(&self) -> u64 {
+        self.0.serialized_size()
+    }
+}
+
+impl SerializeStatic for GraphIndex {}
+
+impl VecValue for GraphIndex {
+    fn storage_len() -> u64 {
+        Self::serialized_size_static()
+    }
+}
+
 pub trait GraphData {
     fn capacity(&self) -> Result<u64, DbError>;
     fn commit(&mut self, id: u64) -> Result<(), DbError>;
@@ -214,69 +273,6 @@ where
 
     fn transaction(&mut self) -> u64 {
         self.storage.borrow_mut().transaction()
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
-pub struct GraphIndex {
-    pub index: i64,
-}
-
-impl GraphIndex {
-    pub fn is_edge(&self) -> bool {
-        self.index < 0
-    }
-
-    pub fn is_node(&self) -> bool {
-        0 < self.index
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.index != 0
-    }
-
-    pub(crate) fn as_u64(&self) -> u64 {
-        if self.is_edge() {
-            (-self.index) as u64
-        } else {
-            self.index as u64
-        }
-    }
-}
-
-impl From<i64> for GraphIndex {
-    fn from(index: i64) -> Self {
-        Self { index }
-    }
-}
-
-impl StableHash for GraphIndex {
-    fn stable_hash(&self) -> u64 {
-        self.index.stable_hash()
-    }
-}
-
-impl Serialize for GraphIndex {
-    fn serialize(&self) -> Vec<u8> {
-        self.index.serialize()
-    }
-
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        Ok(Self {
-            index: i64::deserialize(bytes)?,
-        })
-    }
-
-    fn serialized_size(&self) -> u64 {
-        self.index.serialized_size()
-    }
-}
-
-impl SerializeStatic for GraphIndex {}
-
-impl VecValue for GraphIndex {
-    fn storage_len() -> u64 {
-        Self::serialized_size_static()
     }
 }
 
@@ -504,7 +500,7 @@ where
         let id = self.data.transaction();
         self.remove_from_edge(index)?;
         self.remove_to_edge(index)?;
-        self.free_index(&GraphIndex::from(-index.index))?;
+        self.free_index(&GraphIndex::from(-index.0))?;
 
         self.data.commit(id)
     }
@@ -544,8 +540,7 @@ where
     fn free_index(&mut self, index: &GraphIndex) -> Result<(), DbError> {
         let next_free = self.data.from_meta(&GraphIndex::default())?;
         self.data.set_from_meta(index, next_free)?;
-        self.data
-            .set_from_meta(&GraphIndex::default(), -index.index)
+        self.data.set_from_meta(&GraphIndex::default(), -index.0)
     }
 
     fn get_free_index(&mut self) -> Result<i64, DbError> {
@@ -566,7 +561,7 @@ where
     }
 
     fn invalid_index(index: &GraphIndex) -> DbError {
-        DbError::from(format!("'{}' is invalid index", index.index))
+        DbError::from(format!("'{}' is invalid index", index.0))
     }
 
     fn is_removed_index(&self, index: &GraphIndex) -> Result<bool, DbError> {
@@ -596,7 +591,7 @@ where
     }
 
     pub(crate) fn next_node(&self, index: &GraphIndex) -> Result<Option<GraphIndex>, DbError> {
-        for i in (index.index + 1)..(self.data.capacity()? as i64) {
+        for i in (index.0 + 1)..(self.data.capacity()? as i64) {
             let next = GraphIndex::from(i);
             if self.is_valid_node(&next)? && !self.is_removed_index(&next)? {
                 return Ok(Some(next));
@@ -616,7 +611,7 @@ where
         } else {
             let mut previous = first;
 
-            while self.data.from_meta(&previous)? != -index.index {
+            while self.data.from_meta(&previous)? != -index.0 {
                 previous = GraphIndex::from(self.data.from_meta(&previous)?);
             }
 
@@ -632,7 +627,7 @@ where
 
         while edge.is_valid() {
             self.remove_to_edge(&edge)?;
-            let current_index = -edge.index;
+            let current_index = -edge.0;
             edge = GraphIndex::from(-self.data.from_meta(&edge)?);
             self.free_index(&GraphIndex::from(current_index))?;
         }
@@ -650,7 +645,7 @@ where
         } else {
             let mut previous = first;
 
-            while self.data.to_meta(&previous)? != -index.index {
+            while self.data.to_meta(&previous)? != -index.0 {
                 previous = GraphIndex::from(self.data.to_meta(&previous)?);
             }
 
@@ -666,7 +661,7 @@ where
 
         while edge.is_valid() {
             self.remove_from_edge(&edge)?;
-            let current_index = -edge.index;
+            let current_index = -edge.0;
             edge = GraphIndex::from(-self.data.to_meta(&edge)?);
             self.free_index(&GraphIndex::from(current_index))?;
         }
@@ -680,8 +675,8 @@ where
         from: &GraphIndex,
         to: &GraphIndex,
     ) -> Result<(), DbError> {
-        self.data.set_from(index, -from.index)?;
-        self.data.set_to(index, -to.index)?;
+        self.data.set_from(index, -from.0)?;
+        self.data.set_to(index, -to.0)?;
         self.update_from_edge(from, index)?;
         self.update_to_edge(to, index)
     }
@@ -689,7 +684,7 @@ where
     fn update_from_edge(&mut self, node: &GraphIndex, edge: &GraphIndex) -> Result<(), DbError> {
         let next = self.data.from(node)?;
         self.data.set_from_meta(edge, next)?;
-        self.data.set_from(node, -edge.index)?;
+        self.data.set_from(node, -edge.0)?;
 
         let count = self.data.from_meta(node)?;
         self.data.set_from_meta(node, count + 1)
@@ -698,7 +693,7 @@ where
     fn update_to_edge(&mut self, node: &GraphIndex, edge: &GraphIndex) -> Result<(), DbError> {
         let next = self.data.to(node)?;
         self.data.set_to_meta(edge, next)?;
-        self.data.set_to(node, -edge.index)?;
+        self.data.set_to(node, -edge.0)?;
 
         let count = self.data.to_meta(node)?;
         self.data.set_to_meta(node, count + 1)
@@ -748,6 +743,68 @@ where
 mod tests {
     use super::*;
     use crate::test_utilities::test_file::TestFile;
+    use std::cmp::Ordering;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::Hash;
+    use std::hash::Hasher;
+
+    #[test]
+    fn derived_from_debug() {
+        let index = GraphIndex::default();
+        format!("{index:?}");
+    }
+
+    #[test]
+    fn derived_from_hash() {
+        let mut hasher = DefaultHasher::new();
+        GraphIndex(1).hash(&mut hasher);
+        assert_ne!(hasher.finish(), 0);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        let index = GraphIndex::default();
+        assert_eq!(index.cmp(&index), Ordering::Equal);
+    }
+
+    #[test]
+    fn ordering() {
+        let mut indexes = vec![
+            GraphIndex::default(),
+            GraphIndex::from(100_i64),
+            GraphIndex::from(-1_i64),
+            GraphIndex::from(1_i64),
+        ];
+        indexes.sort();
+        assert_eq!(
+            indexes,
+            vec![
+                GraphIndex::from(-1_i64),
+                GraphIndex::default(),
+                GraphIndex::from(1_i64),
+                GraphIndex::from(100_i64),
+            ]
+        )
+    }
+
+    #[test]
+    fn serialized_size() {
+        assert_eq!(
+            GraphDataStorageIndexes {
+                from: StorageIndex::default(),
+                to: StorageIndex::default(),
+                from_meta: StorageIndex::default(),
+                to_meta: StorageIndex::default()
+            }
+            .serialized_size(),
+            StorageIndex::default().serialized_size() * 4
+        );
+
+        assert_eq!(
+            GraphIndex::default().serialized_size(),
+            i64::serialized_size_static()
+        );
+    }
 
     #[test]
     fn edge_from_index() {

@@ -195,7 +195,7 @@ mod tests {
             &node1,
             &Handler {
                 processor: |index: &GraphIndex, _distance: &u64| {
-                    if index.index == 2 {
+                    if index.0 == 2 {
                         SearchControl::Finish(true)
                     } else {
                         SearchControl::Continue(false)

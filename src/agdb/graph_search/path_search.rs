@@ -108,7 +108,7 @@ where
 
     fn process_index(&mut self, index: &GraphIndex) {
         if !self.visited.value(index.as_u64()) {
-            if index.index == self.destination.index {
+            if index.0 == self.destination.0 {
                 swap(&mut self.result, &mut self.current_path.elements);
             } else {
                 self.visited.insert(index.as_u64());
@@ -297,7 +297,7 @@ mod tests {
             &node3,
             &Handler {
                 processor: |index: &GraphIndex, _distance: &u64| {
-                    if index.index == -4 {
+                    if index.0 == -4 {
                         return 0;
                     }
 

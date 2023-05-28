@@ -1,6 +1,5 @@
 use crate::db::db_error::DbError;
-use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::{Serialize, SerializeStatic};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct StorageIndex {

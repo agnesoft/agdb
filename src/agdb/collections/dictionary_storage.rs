@@ -26,7 +26,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: Rc<RefCell<Data>>, index: StorageIndex) -> Result<Self, DbError> {
         Ok(Self {
             data: DictionaryDataStorage::from_storage(storage, index)?,
             phantom_data: PhantomData,
@@ -296,7 +296,7 @@ mod tests {
             dictionary.remove(index2).unwrap();
         }
 
-        let dictionary = DictionaryStorage::<i64>::from_storage(storage, &storage_index).unwrap();
+        let dictionary = DictionaryStorage::<i64>::from_storage(storage, storage_index).unwrap();
 
         assert_eq!(dictionary.len(), Ok(3));
         assert_eq!(dictionary.count(index1), Ok(Some(2)));

@@ -1,7 +1,5 @@
 use super::db_error::DbError;
-use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
-use std::mem::size_of;
+use crate::utilities::serialize::{Serialize, SerializeStatic};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub(crate) struct DbValueIndex {
@@ -19,7 +17,7 @@ impl DbValueIndex {
 
     pub(crate) fn index(&self) -> u64 {
         let mut bytes = [0_u8; 8];
-        bytes.copy_from_slice(&self.value[0..size_of::<u64>()]);
+        bytes.copy_from_slice(&self.value[0..std::mem::size_of::<u64>()]);
         u64::from_le_bytes(bytes)
     }
 
@@ -34,7 +32,7 @@ impl DbValueIndex {
 
     pub(crate) fn set_index(&mut self, index: u64) {
         self.set_size(0);
-        self.value[0..size_of::<u64>()].copy_from_slice(&index.to_le_bytes());
+        self.value[0..std::mem::size_of::<u64>()].copy_from_slice(&index.to_le_bytes());
     }
 
     pub(crate) fn set_value(&mut self, value: &[u8]) -> bool {
@@ -81,11 +79,15 @@ impl Serialize for DbValueIndex {
     }
 
     fn serialized_size(&self) -> u64 {
-        16
+        Self::serialized_size_static()
     }
 }
 
-impl SerializeStatic for DbValueIndex {}
+impl SerializeStatic for DbValueIndex {
+    fn serialized_size_static() -> u64 {
+        16
+    }
+}
 
 #[cfg(test)]
 mod tests {

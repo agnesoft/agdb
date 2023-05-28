@@ -1,9 +1,8 @@
 use super::db_error::DbError;
 use super::db_value_index::DbValueIndex;
 use crate::storage::storage_value::StorageValue;
-use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
@@ -27,31 +26,19 @@ impl Serialize for DbKeyValueIndex {
         Ok(Self {
             key: DbValueIndex::deserialize(bytes)?,
             value: DbValueIndex::deserialize(
-                &bytes[DbValueIndex::static_serialized_size() as usize..],
+                &bytes[DbValueIndex::serialized_size_static() as usize..],
             )?,
         })
     }
 
     fn serialized_size(&self) -> u64 {
-        DbValueIndex::static_serialized_size() * 2
+        DbValueIndex::serialized_size_static() * 2
     }
 }
 
 impl StorageValue for DbKeyValueIndex {
-    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
-        Ok(self.serialize())
-    }
-
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        Self::deserialize(bytes)
-    }
-
-    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
-        Ok(())
-    }
-
     fn storage_len() -> u64 {
-        DbValueIndex::static_serialized_size() * 2
+        DbValueIndex::serialized_size_static() * 2
     }
 }
 

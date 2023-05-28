@@ -1,13 +1,19 @@
 use crate::db::db_error::DbError;
 use crate::storage::storage_index::StorageIndex;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 
 pub struct MapDataStorageIndex {
     pub len: u64,
     pub states_index: StorageIndex,
     pub keys_index: StorageIndex,
     pub values_index: StorageIndex,
+}
+
+impl SerializeStatic for MapDataStorageIndex {
+    fn serialized_size_static() -> u64 {
+        u64::serialized_size_static() + StorageIndex::serialized_size_static() * 3
+    }
 }
 
 impl Serialize for MapDataStorageIndex {
@@ -23,7 +29,7 @@ impl Serialize for MapDataStorageIndex {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        if bytes.len() < Self::static_serialized_size() as usize {
+        if bytes.len() < Self::serialized_size_static() as usize {
             return Err(DbError::from(
                 "MapDataStorageIndex deserialization error: not enough data",
             ));
@@ -32,25 +38,23 @@ impl Serialize for MapDataStorageIndex {
         Ok(MapDataStorageIndex {
             len: u64::deserialize(bytes)?,
             states_index: StorageIndex::deserialize(
-                &bytes[u64::static_serialized_size() as usize..],
+                &bytes[u64::serialized_size_static() as usize..],
             )?,
             keys_index: StorageIndex::deserialize(
-                &bytes[(u64::static_serialized_size() + StorageIndex::static_serialized_size())
+                &bytes[(u64::serialized_size_static() + StorageIndex::serialized_size_static())
                     as usize..],
             )?,
             values_index: StorageIndex::deserialize(
-                &bytes[(u64::static_serialized_size() + StorageIndex::static_serialized_size() * 2)
+                &bytes[(u64::serialized_size_static() + StorageIndex::serialized_size_static() * 2)
                     as usize..],
             )?,
         })
     }
 
     fn serialized_size(&self) -> u64 {
-        Self::static_serialized_size()
+        Self::serialized_size_static()
     }
 }
-
-impl SerializeStatic for MapDataStorageIndex {}
 
 #[cfg(test)]
 mod tests {

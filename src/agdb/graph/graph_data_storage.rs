@@ -2,7 +2,7 @@ use super::graph_data::GraphData;
 use super::graph_data_memory::GraphDataMemory;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_index::GraphIndex;
-use crate::collections::vec_storage::VecStorage;
+use crate::collections::db_vec::DbVec;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
@@ -18,10 +18,10 @@ where
     pub(crate) storage_index: StorageIndex,
     #[allow(dead_code)]
     pub(crate) indexes: GraphDataStorageIndexes,
-    pub(crate) from: VecStorage<i64, Data>,
-    pub(crate) to: VecStorage<i64, Data>,
-    pub(crate) from_meta: VecStorage<i64, Data>,
-    pub(crate) to_meta: VecStorage<i64, Data>,
+    pub(crate) from: DbVec<i64, Data>,
+    pub(crate) to: DbVec<i64, Data>,
+    pub(crate) from_meta: DbVec<i64, Data>,
+    pub(crate) to_meta: DbVec<i64, Data>,
 }
 
 impl<Data> GraphDataStorage<Data>
@@ -31,13 +31,13 @@ where
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
         let id = storage.borrow_mut().transaction();
 
-        let mut from = VecStorage::<i64, Data>::new(storage.clone())?;
+        let mut from = DbVec::<i64, Data>::new(storage.clone())?;
         from.push(&0)?;
-        let mut to = VecStorage::<i64, Data>::new(storage.clone())?;
+        let mut to = DbVec::<i64, Data>::new(storage.clone())?;
         to.push(&0)?;
-        let mut from_meta = VecStorage::<i64, Data>::new(storage.clone())?;
+        let mut from_meta = DbVec::<i64, Data>::new(storage.clone())?;
         from_meta.push(&i64::MIN)?;
-        let mut to_meta = VecStorage::<i64, Data>::new(storage.clone())?;
+        let mut to_meta = DbVec::<i64, Data>::new(storage.clone())?;
         to_meta.push(&0)?;
 
         let indexes = GraphDataStorageIndexes {
@@ -62,19 +62,22 @@ where
         })
     }
 
-    pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(
+        storage: Rc<RefCell<Data>>,
+        storage_index: StorageIndex,
+    ) -> Result<Self, DbError> {
         let indexes = storage
             .borrow_mut()
-            .value::<GraphDataStorageIndexes>(index)?;
+            .value::<GraphDataStorageIndexes>(storage_index)?;
 
-        let from = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.from)?;
-        let to = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.to)?;
-        let from_meta = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.from_meta)?;
-        let to_meta = VecStorage::<i64, Data>::from_storage(storage.clone(), &indexes.to_meta)?;
+        let from = DbVec::<i64, Data>::from_storage(storage.clone(), indexes.from)?;
+        let to = DbVec::<i64, Data>::from_storage(storage.clone(), indexes.to)?;
+        let from_meta = DbVec::<i64, Data>::from_storage(storage.clone(), indexes.from_meta)?;
+        let to_meta = DbVec::<i64, Data>::from_storage(storage.clone(), indexes.to_meta)?;
 
         Ok(GraphDataStorage::<Data> {
             storage,
-            storage_index: *index,
+            storage_index,
             indexes,
             from,
             to,
@@ -129,23 +132,28 @@ where
     }
 
     fn set_from(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
-        self.from.set_value(index.as_u64(), &value)
+        self.from.replace(index.as_u64(), &value)?;
+        Ok(())
     }
 
     fn set_from_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
-        self.from_meta.set_value(index.as_u64(), &value)
+        self.from_meta.replace(index.as_u64(), &value)?;
+        Ok(())
     }
 
     fn set_node_count(&mut self, count: u64) -> Result<(), DbError> {
-        self.to_meta.set_value(0, &(count as i64))
+        self.to_meta.replace(0, &(count as i64))?;
+        Ok(())
     }
 
     fn set_to(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
-        self.to.set_value(index.as_u64(), &value)
+        self.to.replace(index.as_u64(), &value)?;
+        Ok(())
     }
 
     fn set_to_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
-        self.to_meta.set_value(index.as_u64(), &value)
+        self.to_meta.replace(index.as_u64(), &value)?;
+        Ok(())
     }
 
     fn to(&self, index: &GraphIndex) -> Result<i64, DbError> {

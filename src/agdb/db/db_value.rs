@@ -4,7 +4,7 @@ use crate::storage::storage_index::StorageIndex;
 use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -260,24 +260,24 @@ impl StorageValue for DbValue {
     }
 
     fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        let index = StorageIndex::deserialize(bytes)?;
-        storage.value::<DbValue>(&index)
+        let storage_index = StorageIndex::deserialize(bytes)?;
+        storage.value::<DbValue>(storage_index)
     }
 
     fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
-        let index = StorageIndex::deserialize(bytes)?;
-        storage.remove(&index)
+        let storage_index = StorageIndex::deserialize(bytes)?;
+        storage.remove(storage_index)
     }
 
     fn storage_len() -> u64 {
-        StorageIndex::static_serialized_size()
+        StorageIndex::serialized_size_static()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::vec_storage::VecStorage;
+    use crate::collections::db_vec::DbVec;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
     use std::cell::RefCell;
@@ -585,7 +585,7 @@ mod tests {
             vec!["Hello", ",", "World", "!"].into(),
         ];
 
-        let mut vec = VecStorage::<DbValue>::new(storage).unwrap();
+        let mut vec = DbVec::<DbValue>::new(storage).unwrap();
 
         for value in &values {
             vec.push(value).unwrap();

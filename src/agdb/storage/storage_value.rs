@@ -2,48 +2,33 @@ use super::storage_index::StorageIndex;
 use super::Storage;
 use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 
 pub trait StorageValue: Serialize {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError>;
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError>;
-    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError>;
+    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+        Ok(self.serialize())
+    }
+
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+        Self::deserialize(bytes)
+    }
+
+    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+        Ok(())
+    }
+
     fn storage_len() -> u64;
 }
 
 impl StorageValue for u64 {
-    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
-        Ok(self.serialize())
-    }
-
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        u64::deserialize(bytes)
-    }
-
-    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
-        Ok(())
-    }
-
     fn storage_len() -> u64 {
-        u64::static_serialized_size()
+        Self::serialized_size_static()
     }
 }
 
 impl StorageValue for i64 {
-    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
-        Ok(self.serialize())
-    }
-
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        i64::deserialize(bytes)
-    }
-
-    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
-        Ok(())
-    }
-
     fn storage_len() -> u64 {
-        i64::static_serialized_size()
+        Self::serialized_size_static()
     }
 }
 
@@ -55,15 +40,15 @@ impl StorageValue for String {
 
     fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         let index = StorageIndex::deserialize(bytes)?;
-        storage.value(&index)
+        storage.value(index)
     }
 
     fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
         let index = StorageIndex::deserialize(bytes)?;
-        storage.remove(&index)
+        storage.remove(index)
     }
 
     fn storage_len() -> u64 {
-        StorageIndex::static_serialized_size()
+        StorageIndex::serialized_size_static()
     }
 }

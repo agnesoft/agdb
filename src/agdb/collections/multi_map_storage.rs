@@ -27,7 +27,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: Rc<RefCell<Data>>, index: &StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: Rc<RefCell<Data>>, index: StorageIndex) -> Result<Self, DbError> {
         Ok(Self {
             data: MapDataStorage::<K, T, Data>::from_storage(storage, index)?,
             phantom_marker: PhantomData,
@@ -88,17 +88,17 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
 
-        let index;
+        let storage_index;
 
         {
             let mut map = MultiMapStorage::<u64, String>::new(storage.clone()).unwrap();
             map.insert(&1, &"Hello".to_string()).unwrap();
             map.insert(&1, &"World".to_string()).unwrap();
             map.insert(&1, &"!".to_string()).unwrap();
-            index = map.storage_index();
+            storage_index = map.storage_index();
         }
 
-        let map = MultiMapStorage::<u64, String>::from_storage(storage, &index).unwrap();
+        let map = MultiMapStorage::<u64, String>::from_storage(storage, storage_index).unwrap();
 
         let mut values = Vec::<(u64, String)>::new();
         values.reserve(3);

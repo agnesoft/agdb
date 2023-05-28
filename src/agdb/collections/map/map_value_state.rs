@@ -1,8 +1,6 @@
 use crate::db::db_error::DbError;
 use crate::storage::storage_value::StorageValue;
-use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
-use std::mem::size_of;
+use crate::utilities::serialize::{Serialize, SerializeStatic};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum MapValueState {
@@ -33,31 +31,19 @@ impl Serialize for MapValueState {
     }
 
     fn serialized_size(&self) -> u64 {
-        size_of::<u8>() as u64
+        Self::serialized_size_static()
     }
 }
 
 impl SerializeStatic for MapValueState {
-    fn static_serialized_size() -> u64 {
-        size_of::<u8>() as u64
+    fn serialized_size_static() -> u64 {
+        1
     }
 }
 
 impl StorageValue for MapValueState {
-    fn store<S: crate::storage::Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
-        Ok(self.serialize())
-    }
-
-    fn load<S: crate::storage::Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        Self::deserialize(bytes)
-    }
-
-    fn remove<S: crate::storage::Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
-        Ok(())
-    }
-
     fn storage_len() -> u64 {
-        Self::static_serialized_size()
+        Self::serialized_size_static()
     }
 }
 

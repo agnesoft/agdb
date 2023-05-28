@@ -2,7 +2,7 @@ use crate::db::db_error::DbError;
 use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize_static::SerializeStatic;
+use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

@@ -45,16 +45,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn derived_from_debug_and_default() {
-        format!("{:?}", QueryError::default());
-    }
-
-    #[test]
-    fn derived_from_partial_eq() {
-        assert_eq!(QueryError::default(), QueryError::default());
-    }
-
-    #[test]
     fn from_db_error() {
         let _ = QueryError::from(DbError::from(""));
     }

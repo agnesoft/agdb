@@ -34,8 +34,8 @@ use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
 use crate::storage::file_storage::FileStorage;
-use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
+use crate::storage::StorageIndex;
 use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -702,10 +702,10 @@ impl Db {
         let values_storage;
         let next_id;
         let len = storage.borrow_mut().len()?;
-        let storage_index = StorageIndex { value: 1 };
+        let storage_index = StorageIndex(1);
         let index = storage
             .borrow_mut()
-            .value::<DbStorageIndex>(StorageIndex { value: 1 });
+            .value::<DbStorageIndex>(StorageIndex(1));
 
         if let Ok(index) = index {
             graph_storage = GraphStorage::from_storage(storage.clone(), index.graph)?;

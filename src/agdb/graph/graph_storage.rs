@@ -3,8 +3,8 @@ use super::graph_impl::GraphImpl;
 use super::Graph;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
-use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
+use crate::storage::StorageIndex;
 use std::cell::RefCell;
 use std::rc::Rc;
 

@@ -25,22 +25,11 @@ impl Graph {
     }
 }
 
-impl Default for Graph {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::db_error::DbError;
     use crate::graph::graph_index::GraphIndex;
-
-    #[test]
-    fn derived_from_default() {
-        let _graph = Graph::default();
-    }
 
     #[test]
     fn edge_from_index() {

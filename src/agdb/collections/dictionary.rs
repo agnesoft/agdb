@@ -39,11 +39,6 @@ mod tests {
     }
 
     #[test]
-    fn derived_from_default() {
-        let _dictionary = Dictionary::<i64>::new();
-    }
-
-    #[test]
     fn index() {
         let mut dictionary = Dictionary::<i64>::new();
 

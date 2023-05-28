@@ -60,17 +60,6 @@ mod tests {
     }
 
     #[test]
-    fn derived_from_debug() {
-        let value = MapValueState::Deleted;
-        format!("{value:?}");
-    }
-
-    #[test]
-    fn derived_from_default() {
-        assert_eq!(MapValueState::default(), MapValueState::Empty);
-    }
-
-    #[test]
     fn serialized_size() {
         assert_eq!(MapValueState::default().serialized_size(), 1);
     }

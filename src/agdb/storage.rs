@@ -1,13 +1,37 @@
 pub mod file_storage;
-pub mod storage_index;
 
 mod file_record;
 mod file_records;
 mod write_ahead_log;
 
-use self::storage_index::StorageIndex;
 use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeStatic;
+
+#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+pub struct StorageIndex(pub u64);
+
+impl From<u64> for StorageIndex {
+    fn from(index: u64) -> Self {
+        Self(index)
+    }
+}
+
+impl Serialize for StorageIndex {
+    fn serialize(&self) -> Vec<u8> {
+        self.0.serialize()
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        Ok(Self(u64::deserialize(bytes)?))
+    }
+
+    fn serialized_size(&self) -> u64 {
+        self.0.serialized_size()
+    }
+}
+
+impl SerializeStatic for StorageIndex {}
 
 pub trait Storage {
     fn commit(&mut self, id: u64) -> Result<(), DbError>;

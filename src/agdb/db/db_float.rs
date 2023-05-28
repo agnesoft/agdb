@@ -79,18 +79,6 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn derived_from_clone() {
-        let float = DbFloat::from(1.0_f64);
-        let _other = float.clone();
-        let _other2 = float;
-    }
-
-    #[test]
-    fn derived_from_debug() {
-        format!("{:?}", DbFloat::from(1.0_f64));
-    }
-
-    #[test]
     fn eq() {
         let float = DbFloat::from(1.0_f64);
         let other = DbFloat::from(1.0_f64);

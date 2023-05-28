@@ -23,29 +23,4 @@ mod tests {
             }
         );
     }
-
-    #[test]
-    fn derived_from_clone() {
-        let left = KeyValueCondition {
-            comparison: Comparison::Equal(DbValue::Int(0)),
-            key: DbValue::Int(0),
-        };
-        let right = left.clone();
-
-        assert_eq!(left, right);
-    }
-
-    #[test]
-    fn derived_from_partial_eq() {
-        assert_eq!(
-            KeyValueCondition {
-                comparison: Comparison::Equal(DbValue::Int(0)),
-                key: DbValue::Int(0)
-            },
-            KeyValueCondition {
-                comparison: Comparison::Equal(DbValue::Int(0)),
-                key: DbValue::Int(0)
-            }
-        );
-    }
 }

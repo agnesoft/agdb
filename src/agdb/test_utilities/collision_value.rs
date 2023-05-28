@@ -73,21 +73,6 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    fn derived_from_clone() {
-        let value = CollisionValue::new(1_i64);
-        let other = value.clone();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn derived_from_debug() {
-        let value = CollisionValue::new(1_i64);
-
-        format!("{value:?}");
-    }
-
-    #[test]
     fn serialize() {
         let value = CollisionValue::new(1_i64);
         let bytes = value.serialize();

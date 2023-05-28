@@ -11,36 +11,11 @@ pub struct EdgeCountCondition {
 mod tests {
     use super::*;
     use crate::DbValue;
-
     #[test]
+
     fn derived_from_debug() {
         format!(
             "{:?}",
-            EdgeCountCondition {
-                comparison: Comparison::Equal(DbValue::Int(0)),
-                direction: Direction::From
-            }
-        );
-    }
-
-    #[test]
-    fn derived_from_clone() {
-        let left = EdgeCountCondition {
-            comparison: Comparison::Equal(DbValue::Int(0)),
-            direction: Direction::From,
-        };
-        let right = left.clone();
-
-        assert_eq!(left, right);
-    }
-
-    #[test]
-    fn derived_from_partial_eq() {
-        assert_eq!(
-            EdgeCountCondition {
-                comparison: Comparison::Equal(DbValue::Int(0)),
-                direction: Direction::From
-            },
             EdgeCountCondition {
                 comparison: Comparison::Equal(DbValue::Int(0)),
                 direction: Direction::From

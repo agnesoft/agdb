@@ -1,7 +1,7 @@
 use super::db_error::DbError;
 use super::db_float::DbFloat;
+use crate::collections::vec::VecValue;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -253,7 +253,7 @@ impl StableHash for DbValue {
     }
 }
 
-impl StorageValue for DbValue {
+impl VecValue for DbValue {
     fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
         let index = storage.insert(self)?;
         Ok(index.serialize())
@@ -277,7 +277,7 @@ impl StorageValue for DbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::db_vec::DbVec;
+    use crate::collections::vec::DbVec;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
     use std::cell::RefCell;

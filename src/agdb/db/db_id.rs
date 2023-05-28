@@ -1,5 +1,5 @@
 use super::db_error::DbError;
-use crate::storage::storage_value::StorageValue;
+use crate::collections::vec::VecValue;
 use crate::utilities::serialize::{Serialize, SerializeStatic};
 use crate::utilities::stable_hash::StableHash;
 
@@ -28,7 +28,7 @@ impl Serialize for DbId {
 
 impl SerializeStatic for DbId {}
 
-impl StorageValue for DbId {
+impl VecValue for DbId {
     fn storage_len() -> u64 {
         Self::serialized_size_static()
     }

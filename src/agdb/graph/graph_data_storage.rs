@@ -2,7 +2,7 @@ use super::graph_data::GraphData;
 use super::graph_data_memory::GraphDataMemory;
 use super::graph_data_storage_indexes::GraphDataStorageIndexes;
 use super::graph_index::GraphIndex;
-use crate::collections::db_vec::DbVec;
+use crate::collections::vec::DbVec;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;

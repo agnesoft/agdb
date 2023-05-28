@@ -5,10 +5,10 @@ use super::map::map_data_storage::MapDataStorage;
 use super::map::map_impl::MapImpl;
 use super::map::multi_map_impl::MultiMapImpl;
 use super::map_storage::MapStorage;
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
@@ -21,8 +21,8 @@ pub type IndexedMapStorage<K, T, Data = FileStorage> =
 
 impl<K, T, Data> IndexedMapStorage<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
+    T: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {

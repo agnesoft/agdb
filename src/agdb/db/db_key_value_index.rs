@@ -1,6 +1,6 @@
 use super::db_error::DbError;
 use super::db_value_index::DbValueIndex;
-use crate::storage::storage_value::StorageValue;
+use crate::collections::vec::VecValue;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
@@ -36,7 +36,7 @@ impl Serialize for DbKeyValueIndex {
     }
 }
 
-impl StorageValue for DbKeyValueIndex {
+impl VecValue for DbKeyValueIndex {
     fn storage_len() -> u64 {
         DbValueIndex::serialized_size_static() * 2
     }

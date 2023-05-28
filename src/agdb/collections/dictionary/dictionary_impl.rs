@@ -1,13 +1,13 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_index::DictionaryIndex;
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::storage_value::StorageValue;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 
 pub struct DictionaryImpl<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
     Data: DictionaryData<T>,
 {
     pub data: Data,
@@ -16,7 +16,7 @@ where
 
 impl<T, Data> DictionaryImpl<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
     Data: DictionaryData<T>,
 {
     #[allow(dead_code)]

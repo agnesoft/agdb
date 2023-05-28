@@ -1,5 +1,5 @@
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::storage_value::StorageValue;
 use crate::utilities::serialize::{Serialize, SerializeStatic};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -41,7 +41,7 @@ impl SerializeStatic for MapValueState {
     }
 }
 
-impl StorageValue for MapValueState {
+impl VecValue for MapValueState {
     fn storage_len() -> u64 {
         Self::serialized_size_static()
     }

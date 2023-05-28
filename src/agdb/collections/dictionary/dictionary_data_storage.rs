@@ -1,11 +1,11 @@
 use super::dictionary_data::DictionaryData;
 use super::dictionary_data_memory::DictionaryDataMemory;
-use crate::collections::db_vec::DbVec;
 use crate::collections::multi_map_storage::MultiMapStorage;
+use crate::collections::vec::DbVec;
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -15,7 +15,7 @@ use std::rc::Rc;
 
 pub struct DictionaryDataStorage<T, Data = FileStorage>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
     Data: Storage,
 {
     storage: Rc<RefCell<Data>>,
@@ -41,7 +41,7 @@ impl SerializeStatic for DictionaryDataStorageIndexes {
 
 impl<T, Data> DictionaryDataStorage<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
@@ -118,7 +118,7 @@ where
 
 impl<T, Data> DictionaryData<T> for DictionaryDataStorage<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
     Data: Storage,
 {
     fn capacity(&self) -> u64 {

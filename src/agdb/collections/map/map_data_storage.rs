@@ -2,11 +2,11 @@ use super::map_data::MapData;
 use super::map_data_memory::MapDataMemory;
 use super::map_data_storage_index::MapDataStorageIndex;
 use super::map_value_state::MapValueState;
-use crate::collections::db_vec::DbVec;
+use crate::collections::vec::DbVec;
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
@@ -15,8 +15,8 @@ use std::rc::Rc;
 
 pub struct MapDataStorage<K, T, Data = FileStorage>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Clone + Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
+    T: Clone + Default + Eq + PartialEq + VecValue,
     Data: Storage,
 {
     storage: Rc<RefCell<Data>>,
@@ -29,8 +29,8 @@ where
 
 impl<K, T, Data> MapDataStorage<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Clone + Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
+    T: Clone + Default + Eq + PartialEq + VecValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
@@ -95,8 +95,8 @@ where
 
 impl<K, T, Data> MapData<K, T> for MapDataStorage<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + StorageValue,
-    T: Clone + Default + Eq + PartialEq + StorageValue,
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
+    T: Clone + Default + Eq + PartialEq + VecValue,
     Data: Storage,
 {
     fn capacity(&self) -> u64 {

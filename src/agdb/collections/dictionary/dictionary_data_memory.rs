@@ -1,12 +1,12 @@
 use super::dictionary_data::DictionaryData;
 use crate::collections::multi_map::MultiMap;
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::storage_value::StorageValue;
 use crate::utilities::stable_hash::StableHash;
 
 pub struct DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
 {
     pub(super) index: MultiMap<u64, u64>,
     pub(super) counts: Vec<u64>,
@@ -16,7 +16,7 @@ where
 
 impl<T> DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
 {
     pub fn new() -> Self {
         Self {
@@ -30,7 +30,7 @@ where
 
 impl<T> DictionaryData<T> for DictionaryDataMemory<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
 {
     fn capacity(&self) -> u64 {
         self.counts.len() as u64

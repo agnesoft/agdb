@@ -1,10 +1,10 @@
 use super::dictionary::dictionary_data_storage::DictionaryDataStorage;
 use super::dictionary::dictionary_impl::DictionaryImpl;
 use super::dictionary::Dictionary;
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
@@ -16,7 +16,7 @@ pub type DictionaryStorage<T, Data = FileStorage> =
 
 impl<T, Data> DictionaryStorage<T, Data>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {

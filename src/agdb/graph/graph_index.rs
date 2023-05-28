@@ -1,5 +1,5 @@
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::storage_value::StorageValue;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
@@ -69,7 +69,7 @@ impl Serialize for GraphIndex {
 
 impl SerializeStatic for GraphIndex {}
 
-impl StorageValue for GraphIndex {
+impl VecValue for GraphIndex {
     fn storage_len() -> u64 {
         Self::serialized_size_static()
     }

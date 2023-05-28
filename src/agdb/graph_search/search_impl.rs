@@ -3,9 +3,9 @@ use super::search_handler::SearchHandler;
 use super::search_index::SearchIndex;
 use super::search_iterator::SearchIterator;
 use crate::collections::bit_set::BitSet;
-use crate::graph::graph_data::GraphData;
-use crate::graph::graph_impl::GraphImpl;
-use crate::graph::graph_index::GraphIndex;
+use crate::graph::GraphData;
+use crate::graph::GraphImpl;
+use crate::graph::GraphIndex;
 use std::marker::PhantomData;
 use std::mem::swap;
 

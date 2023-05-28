@@ -1,4 +1,4 @@
-use crate::graph::graph_index::GraphIndex;
+use crate::graph::GraphIndex;
 
 pub(crate) struct SearchIndex {
     pub(crate) index: GraphIndex,

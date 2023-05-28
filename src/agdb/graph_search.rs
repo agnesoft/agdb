@@ -20,9 +20,9 @@ use self::path_search::PathSearch;
 use self::path_search_handler::PathSearchHandler;
 use self::search_handler::SearchHandler;
 use self::search_impl::SearchImpl;
-use crate::graph::graph_data::GraphData;
-use crate::graph::graph_impl::GraphImpl;
-use crate::graph::graph_index::GraphIndex;
+use crate::graph::GraphData;
+use crate::graph::GraphImpl;
+use crate::graph::GraphIndex;
 
 pub struct GraphSearch<'a, Data>
 where

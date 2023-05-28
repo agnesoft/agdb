@@ -1,9 +1,9 @@
 use super::path::Path;
 use super::path_search_handler::PathSearchHandler;
 use crate::collections::bit_set::BitSet;
-use crate::graph::graph_data::GraphData;
-use crate::graph::graph_impl::GraphImpl;
-use crate::graph::graph_index::GraphIndex;
+use crate::graph::GraphData;
+use crate::graph::GraphImpl;
+use crate::graph::GraphIndex;
 use std::cmp::Ordering;
 use std::mem::swap;
 use std::mem::take;
@@ -108,7 +108,7 @@ where
 
     fn process_index(&mut self, index: &GraphIndex) {
         if !self.visited.value(index.as_u64()) {
-            if index.index == self.destination.index {
+            if index.0 == self.destination.0 {
                 swap(&mut self.result, &mut self.current_path.elements);
             } else {
                 self.visited.insert(index.as_u64());
@@ -141,8 +141,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::Graph;
+    use crate::graph::DbGraph;
     use crate::graph_search::GraphSearch;
+    use crate::storage::file_storage::FileStorage;
+    use crate::test_utilities::test_file::TestFile;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     struct Handler {
         pub processor: fn(&GraphIndex, &u64) -> u64,
@@ -164,7 +168,11 @@ mod tests {
 
     #[test]
     fn circular_path() {
-        let mut graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
         let node = graph.insert_node().unwrap();
         let _edge = graph.insert_edge(&node, &node).unwrap();
 
@@ -175,7 +183,11 @@ mod tests {
 
     #[test]
     fn empty_graph() {
-        let graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let graph = DbGraph::new(storage).unwrap();
 
         let result = GraphSearch::from(&graph).path(
             &GraphIndex::default(),
@@ -188,7 +200,11 @@ mod tests {
 
     #[test]
     fn multi_edge_path() {
-        let mut graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
 
         let node1 = graph.insert_node().unwrap();
         let node2 = graph.insert_node().unwrap();
@@ -207,7 +223,11 @@ mod tests {
 
     #[test]
     fn origin_is_destination() {
-        let mut graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
         let node = graph.insert_node().unwrap();
 
         let result = GraphSearch::from(&graph).path(&node, &node, &Handler::default());
@@ -217,7 +237,11 @@ mod tests {
 
     #[test]
     fn short_circuit_path() {
-        let mut graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
 
         let node1 = graph.insert_node().unwrap();
         let node2 = graph.insert_node().unwrap();
@@ -234,7 +258,11 @@ mod tests {
 
     #[test]
     fn single_path() {
-        let mut graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
 
         let node1 = graph.insert_node().unwrap();
         let node2 = graph.insert_node().unwrap();
@@ -250,7 +278,11 @@ mod tests {
 
     #[test]
     fn skip_short_circuit_path() {
-        let mut graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
 
         let node1 = graph.insert_node().unwrap();
         let node2 = graph.insert_node().unwrap();
@@ -265,7 +297,7 @@ mod tests {
             &node3,
             &Handler {
                 processor: |index: &GraphIndex, _distance: &u64| {
-                    if index.index == -4 {
+                    if index.0 == -4 {
                         return 0;
                     }
 
@@ -279,7 +311,11 @@ mod tests {
 
     #[test]
     fn unconnected() {
-        let mut graph = Graph::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
 
         let node1 = graph.insert_node().unwrap();
         let node2 = graph.insert_node().unwrap();

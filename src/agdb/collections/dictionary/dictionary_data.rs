@@ -1,10 +1,10 @@
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::storage_value::StorageValue;
 use crate::utilities::stable_hash::StableHash;
 
 pub trait DictionaryData<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
 {
     fn capacity(&self) -> u64;
     fn commit(&mut self, id: u64) -> Result<(), DbError>;

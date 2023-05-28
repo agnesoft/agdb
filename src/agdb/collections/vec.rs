@@ -1,7 +1,6 @@
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::storage_index::StorageIndex;
-use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -20,9 +19,58 @@ pub trait VecData<T, E> {
     fn value(&self, index: u64) -> Result<T, E>;
 }
 
+pub trait VecValue: Serialize {
+    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+        Ok(self.serialize())
+    }
+
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+        Self::deserialize(bytes)
+    }
+
+    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+        Ok(())
+    }
+
+    fn storage_len() -> u64;
+}
+
+impl VecValue for u64 {
+    fn storage_len() -> u64 {
+        Self::serialized_size_static()
+    }
+}
+
+impl VecValue for i64 {
+    fn storage_len() -> u64 {
+        Self::serialized_size_static()
+    }
+}
+
+impl VecValue for String {
+    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
+        let index = storage.insert(self)?;
+        Ok(index.serialize())
+    }
+
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+        let index = StorageIndex::deserialize(bytes)?;
+        storage.value(index)
+    }
+
+    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
+        let index = StorageIndex::deserialize(bytes)?;
+        storage.remove(index)
+    }
+
+    fn storage_len() -> u64 {
+        StorageIndex::serialized_size_static()
+    }
+}
+
 pub struct DbVecData<T, S, E>
 where
-    T: Clone + StorageValue,
+    T: Clone + VecValue,
     S: Storage,
     E: From<DbError>,
 {
@@ -35,7 +83,7 @@ where
 
 impl<T, S, E> DbVecData<T, S, E>
 where
-    T: Clone + StorageValue,
+    T: Clone + VecValue,
     S: Storage,
     E: From<DbError>,
 {
@@ -53,7 +101,7 @@ where
 
 impl<T, S, E> VecData<T, E> for DbVecData<T, S, E>
 where
-    T: Clone + StorageValue,
+    T: Clone + VecValue,
     S: Storage,
     E: From<DbError>,
 {
@@ -145,7 +193,7 @@ where
 
 pub struct VecImpl<T, D, E>
 where
-    T: StorageValue,
+    T: VecValue,
     D: VecData<T, E>,
     E: From<DbError> + From<String>,
 {
@@ -155,7 +203,7 @@ where
 
 pub struct VecIterator<'a, T, D, E>
 where
-    T: StorageValue,
+    T: VecValue,
     D: VecData<T, E>,
     E: From<DbError> + From<String>,
 {
@@ -167,7 +215,7 @@ pub type DbVec<T, S = FileStorage> = VecImpl<T, DbVecData<T, S, DbError>, DbErro
 
 impl<'a, T, D, E> Iterator for VecIterator<'a, T, D, E>
 where
-    T: StorageValue,
+    T: VecValue,
     D: VecData<T, E>,
     E: From<DbError> + From<String>,
 {
@@ -183,7 +231,7 @@ where
 
 impl<T, D, E> VecImpl<T, D, E>
 where
-    T: StorageValue,
+    T: VecValue,
     D: VecData<T, E>,
     E: From<DbError> + From<String>,
 {
@@ -278,7 +326,7 @@ where
 
 impl<T, S> DbVec<T, S>
 where
-    T: Clone + StorageValue,
+    T: Clone + VecValue,
     S: Storage,
 {
     pub fn new(storage: Rc<RefCell<S>>) -> Result<Self, DbError> {

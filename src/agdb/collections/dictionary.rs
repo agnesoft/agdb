@@ -6,7 +6,7 @@ pub mod dictionary_index;
 
 use self::dictionary_data_memory::DictionaryDataMemory;
 use self::dictionary_impl::DictionaryImpl;
-use crate::storage::storage_value::StorageValue;
+use crate::collections::vec::VecValue;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 
@@ -14,7 +14,7 @@ pub type Dictionary<T> = DictionaryImpl<T, DictionaryDataMemory<T>>;
 
 impl<T> Dictionary<T>
 where
-    T: Clone + Default + Eq + PartialEq + StableHash + StorageValue,
+    T: Clone + Default + Eq + PartialEq + StableHash + VecValue,
 {
     pub fn new() -> Dictionary<T> {
         Dictionary {

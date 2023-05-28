@@ -1,5 +1,5 @@
+use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::storage_value::StorageValue;
 use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -43,9 +43,9 @@ where
 
 impl<T> SerializeStatic for CollisionValue<T> where T: SerializeStatic {}
 
-impl<T> StorageValue for CollisionValue<T>
+impl<T> VecValue for CollisionValue<T>
 where
-    T: StorageValue,
+    T: VecValue,
 {
     fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
         self.value.store(storage)

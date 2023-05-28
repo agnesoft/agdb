@@ -44,6 +44,12 @@ fn select_missing_id() {
 }
 
 #[test]
+fn select_invalid_id() {
+    let db = TestDb::new();
+    db.exec_error(QueryBuilder::select().id(0).query(), "Id '0' not found");
+}
+
+#[test]
 fn select_from_search() {
     let db = TestDb::new();
     db.exec_error(

@@ -212,7 +212,7 @@ impl Db {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),
             QueryId::Alias(alias) => Ok(self
                 .aliases
-                .value(&alias)?
+                .value(alias)?
                 .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?),
         }
     }

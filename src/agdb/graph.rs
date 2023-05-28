@@ -739,6 +739,15 @@ mod tests {
     use std::hash::Hasher;
 
     #[test]
+    #[allow(clippy::clone_on_copy)]
+    fn derived_from_clone() {
+        let index = GraphIndex(1);
+        let other = index.clone();
+
+        assert_eq!(index, other);
+    }
+
+    #[test]
     fn derived_from_debug() {
         let index = GraphIndex::default();
         format!("{index:?}");
@@ -755,6 +764,24 @@ mod tests {
     fn derived_from_ord() {
         let index = GraphIndex::default();
         assert_eq!(index.cmp(&index), Ordering::Equal);
+    }
+
+    #[test]
+    fn index_hashing() {
+        let _ = GraphIndex(10).stable_hash();
+    }
+
+    #[test]
+    fn index_serialization() {
+        let index = GraphIndex(10);
+        let bytes = index.serialize();
+        let other = GraphIndex::deserialize(&bytes).unwrap();
+
+        assert_eq!(index, other);
+        assert_eq!(
+            GraphIndex::storage_len(),
+            GraphIndex::serialized_size_static()
+        );
     }
 
     #[test]

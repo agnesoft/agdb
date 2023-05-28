@@ -69,6 +69,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::file_storage::FileStorage;
+    use crate::test_utilities::test_file::TestFile;
 
     #[test]
     fn derived_from_clone() {
@@ -102,5 +104,22 @@ mod tests {
         let value = CollisionValue::new(1_i64);
 
         assert_eq!(value.stable_hash(), 1_u64);
+    }
+
+    #[test]
+    fn storage_value() {
+        let test_file = TestFile::new();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let value = CollisionValue::<i64>::default();
+        let bytes = value.store(&mut storage).unwrap();
+        CollisionValue::<i64>::remove(&mut storage, &bytes).unwrap();
+        let other = CollisionValue::<i64>::load(&storage, &bytes).unwrap();
+
+        assert_eq!(value, other);
+
+        assert_eq!(
+            CollisionValue::<i64>::storage_len(),
+            i64::serialized_size_static()
+        );
     }
 }

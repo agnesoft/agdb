@@ -188,7 +188,7 @@ where
     E: From<DbError> + From<String>,
 {
     pub fn capacity(&self) -> u64 {
-        self.data.capacity() as u64
+        self.data.capacity()
     }
 
     pub fn len(&self) -> u64 {

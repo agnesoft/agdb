@@ -24,7 +24,6 @@ mod tests {
     fn derived_from_clone() {
         let left = Comparison::Equal(DbValue::Int(0));
         let right = left.clone();
-
         assert_eq!(left, right);
     }
 

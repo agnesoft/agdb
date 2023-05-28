@@ -76,14 +76,12 @@ mod tests {
     fn derived_from_clone() {
         let value = CollisionValue::new(1_i64);
         let other = value.clone();
-
         assert_eq!(value, other);
     }
 
     #[test]
     fn derived_from_debug() {
         let value = CollisionValue::new(1_i64);
-
         format!("{value:?}");
     }
 
@@ -110,7 +108,7 @@ mod tests {
     fn storage_value() {
         let test_file = TestFile::new();
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
-        let value = CollisionValue::<i64>::default();
+        let value = CollisionValue::<i64>::new(1);
         let bytes = value.store(&mut storage).unwrap();
         CollisionValue::<i64>::remove(&mut storage, &bytes).unwrap();
         let other = CollisionValue::<i64>::load(&storage, &bytes).unwrap();

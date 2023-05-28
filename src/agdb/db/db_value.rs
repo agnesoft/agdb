@@ -1,8 +1,8 @@
 use super::db_error::DbError;
 use super::db_float::DbFloat;
 use crate::collections::vec::VecValue;
-use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
+use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
@@ -315,7 +315,6 @@ mod tests {
             DbValue::from(-3.333_f64),
         ];
         vec.sort();
-
         assert_eq!(
             vec,
             vec![
@@ -325,7 +324,6 @@ mod tests {
             ]
         );
     }
-
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(DbValue::from(vec![1_u8]), DbValue::from(vec![1_u8]));

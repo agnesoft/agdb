@@ -31,16 +31,16 @@ mod tests {
     use crate::test_utilities::collision_value::CollisionValue;
 
     #[test]
+    fn derived_from_default() {
+        let _dictionary = Dictionary::<i64>::new();
+    }
+
+    #[test]
     fn count_invalid_index() {
         let dictionary = Dictionary::<i64>::new();
 
         assert_eq!(dictionary.count(DictionaryIndex(0)), Ok(None));
         assert_eq!(dictionary.count(DictionaryIndex(u64::MAX)), Ok(None));
-    }
-
-    #[test]
-    fn derived_from_default() {
-        let _dictionary = Dictionary::<i64>::new();
     }
 
     #[test]

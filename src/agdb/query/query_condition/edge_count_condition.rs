@@ -30,7 +30,6 @@ mod tests {
             direction: Direction::From,
         };
         let right = left.clone();
-
         assert_eq!(left, right);
     }
 

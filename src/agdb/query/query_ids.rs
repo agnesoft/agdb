@@ -12,15 +12,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn derived_from_debug() {
-        format!("{:?}", QueryIds::Ids(vec![QueryId::from(0)]));
-    }
-
-    #[test]
     fn derived_from_clone() {
         let left = QueryIds::Ids(vec![QueryId::from(0)]);
         let right = left.clone();
-
         assert_eq!(left, right);
     }
 
@@ -30,5 +24,10 @@ mod tests {
             QueryIds::Ids(vec![QueryId::from(0)]),
             QueryIds::Ids(vec![QueryId::from(0)])
         );
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", QueryIds::Ids(vec![QueryId::from(0)]));
     }
 }

@@ -1,9 +1,9 @@
 use super::file_record::FileRecord;
 use super::file_records::FileRecords;
-use super::storage_index::StorageIndex;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
 use super::Storage;
+use super::StorageIndex;
 use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -390,7 +390,7 @@ impl Storage for FileStorage {
         offset: u64,
         bytes: &[u8],
     ) -> Result<(), DbError> {
-        let mut record = self.record(index.value)?;
+        let mut record = self.record(index.0)?;
 
         let id = self.transaction();
         self.ensure_size(&mut record, offset, bytes.len() as u64)?;
@@ -414,16 +414,16 @@ impl Storage for FileStorage {
 
         let id = self.transaction();
         self.insert_bytes_at(index, offset_to, &bytes)?;
-        let record = self.record(index.value)?;
+        let record = self.record(index.0)?;
         self.erase_bytes(record.value_start(), offset_from, offset_to, size)?;
         self.commit(id)
     }
 
     fn remove(&mut self, index: StorageIndex) -> Result<(), DbError> {
-        let record = self.record(index.value)?;
+        let record = self.record(index.0)?;
 
         let id = self.transaction();
-        self.remove_index(index.value);
+        self.remove_index(index.0);
         self.invalidate_record(record.pos)?;
         self.commit(id)
     }
@@ -441,7 +441,7 @@ impl Storage for FileStorage {
 
     #[allow(clippy::comparison_chain)]
     fn resize_value(&mut self, index: StorageIndex, new_size: u64) -> Result<(), DbError> {
-        let mut record = self.record(index.value)?;
+        let mut record = self.record(index.0)?;
 
         let id = self.transaction();
 
@@ -486,7 +486,7 @@ impl Storage for FileStorage {
         offset: u64,
         size: u64,
     ) -> Result<Vec<u8>, DbError> {
-        let record = self.record(index.value)?;
+        let record = self.record(index.0)?;
         Self::validate_read_size(offset, size, record.size)?;
         let pos = record.value_start() + offset;
 
@@ -498,7 +498,7 @@ impl Storage for FileStorage {
     }
 
     fn value_size(&self, index: StorageIndex) -> Result<u64, DbError> {
-        Ok(self.record(index.value)?.size)
+        Ok(self.record(index.0)?.size)
     }
 }
 
@@ -592,7 +592,7 @@ mod tests {
 
         assert_eq!(index2, index4);
         assert_eq!(index1, index5);
-        assert_eq!(index6.value, 4);
+        assert_eq!(index6.0, 4);
     }
 
     #[test]
@@ -1137,7 +1137,7 @@ mod tests {
             storage.value::<u64>(index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value
+                index2.0
             )))
         );
         assert_eq!(storage.value::<Vec<i64>>(index3), Ok(value3));
@@ -1173,21 +1173,21 @@ mod tests {
             storage.value::<Vec<i64>>(index1),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index1.value
+                index1.0
             )))
         );
         assert_eq!(
             storage.value::<u64>(index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value
+                index2.0
             )))
         );
         assert_eq!(
             storage.value::<Vec<i64>>(index3),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index3.value
+                index3.0
             )))
         );
     }
@@ -1290,7 +1290,7 @@ mod tests {
             storage.value::<i64>(index2),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index2.value
+                index2.0
             )))
         );
         assert_eq!(storage.value(index3), Ok(3_i64));
@@ -1337,7 +1337,7 @@ mod tests {
             storage.value::<i64>(index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index.value
+                index.0
             )))
         );
     }
@@ -1361,7 +1361,7 @@ mod tests {
             storage.value::<i64>(index),
             Err(DbError::from(format!(
                 "FileStorage error: index ({}) not found",
-                index.value
+                index.0
             )))
         );
     }

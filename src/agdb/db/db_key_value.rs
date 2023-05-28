@@ -23,7 +23,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn derived_from_debug() {
         format!(
@@ -34,7 +33,6 @@ mod tests {
             }
         );
     }
-
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(

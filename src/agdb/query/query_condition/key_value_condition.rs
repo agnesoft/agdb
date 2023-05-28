@@ -31,7 +31,6 @@ mod tests {
             key: DbValue::Int(0),
         };
         let right = left.clone();
-
         assert_eq!(left, right);
     }
 

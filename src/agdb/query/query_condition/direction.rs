@@ -19,7 +19,6 @@ mod tests {
     fn derived_from_clone() {
         let left = Direction::From;
         let right = left.clone();
-
         assert_eq!(left, right);
     }
 

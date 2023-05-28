@@ -58,7 +58,6 @@ mod tests {
     fn derived_from_partial_ord() {
         let mut ids = vec![DbId(3), DbId(0), DbId(-1)];
         ids.sort();
-
         assert_eq!(ids, vec![DbId(-1), DbId(0), DbId(3)]);
     }
 

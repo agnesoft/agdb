@@ -50,6 +50,11 @@ mod tests {
     }
 
     #[test]
+    fn derived_from_default() {
+        let _ = QueryError::default();
+    }
+
+    #[test]
     fn derived_from_partial_eq() {
         assert_eq!(QueryError::default(), QueryError::default());
     }

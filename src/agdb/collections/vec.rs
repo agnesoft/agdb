@@ -1,7 +1,7 @@
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
-use crate::storage::storage_index::StorageIndex;
 use crate::storage::Storage;
+use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use std::cell::RefCell;
@@ -315,7 +315,7 @@ where
     fn validate_index(&self, index: u64) -> Result<(), E> {
         if self.len() <= index {
             return Err(E::from(format!(
-                "Index '{index}' out of bounds ({})",
+                "Index ({index}) out of bounds ({})",
                 self.len()
             )));
         }
@@ -603,7 +603,7 @@ mod tests {
 
         assert_eq!(
             vec.remove(0),
-            Err(DbError::from("Index '0' out of bounds (0)"))
+            Err(DbError::from("Index (0) out of bounds (0)"))
         );
     }
 
@@ -771,7 +771,7 @@ mod tests {
 
         assert_eq!(
             vec.replace(0, &"".to_string()),
-            Err(DbError::from("Index '0' out of bounds (0)"))
+            Err(DbError::from("Index (0) out of bounds (0)"))
         );
     }
 
@@ -872,11 +872,11 @@ mod tests {
         vec.push(&"!".to_string()).unwrap();
         assert_eq!(
             vec.swap(1, 10),
-            Err(DbError::from("Index '10' out of bounds (4)"))
+            Err(DbError::from("Index (10) out of bounds (4)"))
         );
         assert_eq!(
             vec.swap(10, 1),
-            Err(DbError::from("Index '10' out of bounds (4)"))
+            Err(DbError::from("Index (10) out of bounds (4)"))
         );
     }
 
@@ -910,7 +910,7 @@ mod tests {
 
         assert_eq!(
             vec.value(0),
-            Err(DbError::from("Index '0' out of bounds (0)"))
+            Err(DbError::from("Index (0) out of bounds (0)"))
         );
     }
 }

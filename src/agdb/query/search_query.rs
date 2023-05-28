@@ -43,7 +43,6 @@ mod tests {
             conditions: vec![],
         };
         let right = left.clone();
-
         assert_eq!(left, right);
     }
 

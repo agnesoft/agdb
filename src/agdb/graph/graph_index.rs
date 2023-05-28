@@ -86,7 +86,6 @@ mod tests {
     #[test]
     fn derived_from_debug() {
         let index = GraphIndex::default();
-
         format!("{index:?}");
     }
 
@@ -104,6 +103,26 @@ mod tests {
     }
 
     #[test]
+    fn ordering() {
+        let mut indexes = vec![
+            GraphIndex::default(),
+            GraphIndex::from(100_i64),
+            GraphIndex::from(-1_i64),
+            GraphIndex::from(1_i64),
+        ];
+        indexes.sort();
+        assert_eq!(
+            indexes,
+            vec![
+                GraphIndex::from(-1_i64),
+                GraphIndex::default(),
+                GraphIndex::from(1_i64),
+                GraphIndex::from(100_i64),
+            ]
+        )
+    }
+
+    #[test]
     fn is_edge() {
         assert!(!GraphIndex::from(1).is_edge());
         assert!(!GraphIndex::default().is_edge());
@@ -115,28 +134,6 @@ mod tests {
         assert!(GraphIndex::from(1).is_node());
         assert!(!GraphIndex::default().is_node());
         assert!(!GraphIndex::from(-1).is_node());
-    }
-
-    #[test]
-    fn ordering() {
-        let mut indexes = vec![
-            GraphIndex::default(),
-            GraphIndex::from(100_i64),
-            GraphIndex::from(-1_i64),
-            GraphIndex::from(1_i64),
-        ];
-
-        indexes.sort();
-
-        assert_eq!(
-            indexes,
-            vec![
-                GraphIndex::from(-1_i64),
-                GraphIndex::default(),
-                GraphIndex::from(1_i64),
-                GraphIndex::from(100_i64),
-            ]
-        )
     }
 
     #[test]

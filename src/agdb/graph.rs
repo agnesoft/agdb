@@ -73,18 +73,18 @@ pub trait GraphData {
     fn capacity(&self) -> Result<u64, DbError>;
     fn commit(&mut self, id: u64) -> Result<(), DbError>;
     fn free_index(&self) -> Result<i64, DbError>;
-    fn from(&self, index: &GraphIndex) -> Result<i64, DbError>;
+    fn from(&self, index: GraphIndex) -> Result<i64, DbError>;
     #[allow(clippy::wrong_self_convention)]
-    fn from_meta(&self, index: &GraphIndex) -> Result<i64, DbError>;
+    fn from_meta(&self, index: GraphIndex) -> Result<i64, DbError>;
     fn grow(&mut self) -> Result<(), DbError>;
     fn node_count(&self) -> Result<u64, DbError>;
-    fn set_from(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError>;
-    fn set_from_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError>;
+    fn set_from(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError>;
+    fn set_from_meta(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError>;
     fn set_node_count(&mut self, count: u64) -> Result<(), DbError>;
-    fn set_to(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError>;
-    fn set_to_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError>;
-    fn to(&self, index: &GraphIndex) -> Result<i64, DbError>;
-    fn to_meta(&self, index: &GraphIndex) -> Result<i64, DbError>;
+    fn set_to(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError>;
+    fn set_to_meta(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError>;
+    fn to(&self, index: GraphIndex) -> Result<i64, DbError>;
+    fn to_meta(&self, index: GraphIndex) -> Result<i64, DbError>;
     fn transaction(&mut self) -> u64;
 }
 
@@ -219,11 +219,11 @@ where
         self.from_meta.value(0)
     }
 
-    fn from(&self, index: &GraphIndex) -> Result<i64, DbError> {
+    fn from(&self, index: GraphIndex) -> Result<i64, DbError> {
         self.from.value(index.as_u64())
     }
 
-    fn from_meta(&self, index: &GraphIndex) -> Result<i64, DbError> {
+    fn from_meta(&self, index: GraphIndex) -> Result<i64, DbError> {
         self.from_meta.value(index.as_u64())
     }
 
@@ -238,12 +238,12 @@ where
         Ok(self.to_meta.value(0)? as u64)
     }
 
-    fn set_from(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+    fn set_from(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError> {
         self.from.replace(index.as_u64(), &value)?;
         Ok(())
     }
 
-    fn set_from_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+    fn set_from_meta(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError> {
         self.from_meta.replace(index.as_u64(), &value)?;
         Ok(())
     }
@@ -253,21 +253,21 @@ where
         Ok(())
     }
 
-    fn set_to(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+    fn set_to(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError> {
         self.to.replace(index.as_u64(), &value)?;
         Ok(())
     }
 
-    fn set_to_meta(&mut self, index: &GraphIndex, value: i64) -> Result<(), DbError> {
+    fn set_to_meta(&mut self, index: GraphIndex, value: i64) -> Result<(), DbError> {
         self.to_meta.replace(index.as_u64(), &value)?;
         Ok(())
     }
 
-    fn to(&self, index: &GraphIndex) -> Result<i64, DbError> {
+    fn to(&self, index: GraphIndex) -> Result<i64, DbError> {
         self.to.value(index.as_u64())
     }
 
-    fn to_meta(&self, index: &GraphIndex) -> Result<i64, DbError> {
+    fn to_meta(&self, index: GraphIndex) -> Result<i64, DbError> {
         self.to_meta.value(index.as_u64())
     }
 
@@ -296,14 +296,14 @@ where
     pub fn edge_iter_from(&self) -> GraphEdgeIterator<Data> {
         GraphEdgeIterator {
             graph: self.graph,
-            index: self.graph.first_edge_from(&self.index).unwrap_or_default(),
+            index: self.graph.first_edge_from(self.index).unwrap_or_default(),
         }
     }
 
     pub fn edge_iter_to(&self) -> GraphEdgeReverseIterator<Data> {
         GraphEdgeReverseIterator {
             graph: self.graph,
-            index: self.graph.first_edge_to(&self.index).unwrap_or_default(),
+            index: self.graph.first_edge_to(self.index).unwrap_or_default(),
         }
     }
 }
@@ -323,7 +323,7 @@ where
     type Item = GraphNode<'a, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.graph.next_node(&self.index).unwrap_or(None) {
+        if let Some(next) = self.graph.next_node(self.index).unwrap_or(None) {
             self.index = next;
             return Some(GraphNode {
                 graph: self.graph,
@@ -352,11 +352,11 @@ where
     }
 
     pub fn index_from(&self) -> GraphIndex {
-        self.graph.edge_from(&self.index)
+        self.graph.edge_from(self.index)
     }
 
     pub fn index_to(&self) -> GraphIndex {
-        self.graph.edge_to(&self.index)
+        self.graph.edge_to(self.index)
     }
 }
 
@@ -381,7 +381,7 @@ where
 
         let current_index = self.index;
 
-        self.index = self.graph.next_edge_from(&self.index).unwrap_or_default();
+        self.index = self.graph.next_edge_from(self.index).unwrap_or_default();
 
         Some(GraphEdge {
             graph: self.graph,
@@ -411,7 +411,7 @@ where
 
         let current_index = self.index;
 
-        self.index = self.graph.next_edge_to(&self.index).unwrap_or_default();
+        self.index = self.graph.next_edge_to(self.index).unwrap_or_default();
 
         Some(GraphEdge {
             graph: self.graph,
@@ -431,15 +431,12 @@ impl<Data> GraphImpl<Data>
 where
     Data: GraphData,
 {
-    pub fn edge(&self, index: &GraphIndex) -> Option<GraphEdge<Data>> {
+    pub fn edge(&self, index: GraphIndex) -> Option<GraphEdge<Data>> {
         if self.validate_edge(index).is_err() {
             return None;
         }
 
-        Some(GraphEdge {
-            graph: self,
-            index: *index,
-        })
+        Some(GraphEdge { graph: self, index })
     }
 
     #[allow(dead_code)]
@@ -447,17 +444,13 @@ where
         self.data.node_count()
     }
 
-    pub fn insert_edge(
-        &mut self,
-        from: &GraphIndex,
-        to: &GraphIndex,
-    ) -> Result<GraphIndex, DbError> {
+    pub fn insert_edge(&mut self, from: GraphIndex, to: GraphIndex) -> Result<GraphIndex, DbError> {
         self.validate_node(from)?;
         self.validate_node(to)?;
 
         let id = self.data.transaction();
         let index = GraphIndex::from(-self.get_free_index()?);
-        self.set_edge(&index, from, to)?;
+        self.set_edge(index, from, to)?;
         self.data.commit(id)?;
 
         Ok(index)
@@ -473,15 +466,12 @@ where
         Ok(index)
     }
 
-    pub fn node(&self, index: &GraphIndex) -> Option<GraphNode<Data>> {
+    pub fn node(&self, index: GraphIndex) -> Option<GraphNode<Data>> {
         if self.validate_node(index).is_err() {
             return None;
         }
 
-        Some(GraphNode {
-            graph: self,
-            index: *index,
-        })
+        Some(GraphNode { graph: self, index })
     }
 
     #[allow(dead_code)]
@@ -492,7 +482,7 @@ where
         }
     }
 
-    pub fn remove_edge(&mut self, index: &GraphIndex) -> Result<(), DbError> {
+    pub fn remove_edge(&mut self, index: GraphIndex) -> Result<(), DbError> {
         if self.validate_edge(index).is_err() {
             return Ok(());
         }
@@ -500,12 +490,12 @@ where
         let id = self.data.transaction();
         self.remove_from_edge(index)?;
         self.remove_to_edge(index)?;
-        self.free_index(&GraphIndex::from(-index.0))?;
+        self.free_index(GraphIndex::from(-index.0))?;
 
         self.data.commit(id)
     }
 
-    pub fn remove_node(&mut self, index: &GraphIndex) -> Result<(), DbError> {
+    pub fn remove_node(&mut self, index: GraphIndex) -> Result<(), DbError> {
         if self.validate_node(index).is_err() {
             return Ok(());
         }
@@ -521,26 +511,26 @@ where
         self.data.commit(id)
     }
 
-    pub fn first_edge_from(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {
+    pub fn first_edge_from(&self, index: GraphIndex) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.from(index)?))
     }
 
-    pub fn first_edge_to(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {
+    pub fn first_edge_to(&self, index: GraphIndex) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.to(index)?))
     }
 
-    pub(crate) fn edge_from(&self, index: &GraphIndex) -> GraphIndex {
+    pub(crate) fn edge_from(&self, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.from(index).unwrap_or_default())
     }
 
-    pub(crate) fn edge_to(&self, index: &GraphIndex) -> GraphIndex {
+    pub(crate) fn edge_to(&self, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.to(index).unwrap_or_default())
     }
 
-    fn free_index(&mut self, index: &GraphIndex) -> Result<(), DbError> {
-        let next_free = self.data.from_meta(&GraphIndex::default())?;
+    fn free_index(&mut self, index: GraphIndex) -> Result<(), DbError> {
+        let next_free = self.data.from_meta(GraphIndex::default())?;
         self.data.set_from_meta(index, next_free)?;
-        self.data.set_from_meta(&GraphIndex::default(), -index.0)
+        self.data.set_from_meta(GraphIndex::default(), -index.0)
     }
 
     fn get_free_index(&mut self) -> Result<i64, DbError> {
@@ -552,48 +542,48 @@ where
 
             Ok(index)
         } else {
-            let next = self.data.from_meta(&GraphIndex::from(-index))?;
-            self.data.set_from_meta(&GraphIndex::default(), next)?;
-            self.data.set_from_meta(&GraphIndex::from(-index), 0)?;
+            let next = self.data.from_meta(GraphIndex::from(-index))?;
+            self.data.set_from_meta(GraphIndex::default(), next)?;
+            self.data.set_from_meta(GraphIndex::from(-index), 0)?;
 
             Ok(-index)
         }
     }
 
-    fn invalid_index(index: &GraphIndex) -> DbError {
+    fn invalid_index(index: GraphIndex) -> DbError {
         DbError::from(format!("'{}' is invalid index", index.0))
     }
 
-    fn is_removed_index(&self, index: &GraphIndex) -> Result<bool, DbError> {
+    fn is_removed_index(&self, index: GraphIndex) -> Result<bool, DbError> {
         Ok(self.data.from_meta(index)? < 0)
     }
 
-    fn is_valid_edge(&self, index: &GraphIndex) -> Result<bool, DbError> {
+    fn is_valid_edge(&self, index: GraphIndex) -> Result<bool, DbError> {
         Ok(self.data.from(index)? < 0)
     }
 
-    fn is_valid_index(&self, index: &GraphIndex) -> Result<bool, DbError> {
+    fn is_valid_index(&self, index: GraphIndex) -> Result<bool, DbError> {
         Ok(index.is_valid()
             && index.as_u64() < self.data.capacity()?
             && !self.is_removed_index(index)?)
     }
 
-    fn is_valid_node(&self, index: &GraphIndex) -> Result<bool, DbError> {
+    fn is_valid_node(&self, index: GraphIndex) -> Result<bool, DbError> {
         Ok(0 <= self.data.from(index)?)
     }
 
-    pub(crate) fn next_edge_from(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {
+    pub(crate) fn next_edge_from(&self, index: GraphIndex) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.from_meta(index)?))
     }
 
-    pub(crate) fn next_edge_to(&self, index: &GraphIndex) -> Result<GraphIndex, DbError> {
+    pub(crate) fn next_edge_to(&self, index: GraphIndex) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.to_meta(index)?))
     }
 
-    pub(crate) fn next_node(&self, index: &GraphIndex) -> Result<Option<GraphIndex>, DbError> {
+    pub(crate) fn next_node(&self, index: GraphIndex) -> Result<Option<GraphIndex>, DbError> {
         for i in (index.0 + 1)..(self.data.capacity()? as i64) {
             let next = GraphIndex::from(i);
-            if self.is_valid_node(&next)? && !self.is_removed_index(&next)? {
+            if self.is_valid_node(next)? && !self.is_removed_index(next)? {
                 return Ok(Some(next));
             }
         }
@@ -601,69 +591,69 @@ where
         Ok(None)
     }
 
-    fn remove_from_edge(&mut self, index: &GraphIndex) -> Result<(), DbError> {
-        let node = GraphIndex::from(-self.data.from(index)?);
-        let first = GraphIndex::from(-self.data.from(&node)?);
+    fn remove_from_edge(&mut self, index: GraphIndex) -> Result<(), DbError> {
+        let node_index = GraphIndex::from(-self.data.from(index)?);
+        let first_index = GraphIndex::from(-self.data.from(node_index)?);
         let next = self.data.from_meta(index)?;
 
-        if first == *index {
-            self.data.set_from(&node, next)?;
+        if first_index == index {
+            self.data.set_from(node_index, next)?;
         } else {
-            let mut previous = first;
+            let mut previous = first_index;
 
-            while self.data.from_meta(&previous)? != -index.0 {
-                previous = GraphIndex::from(self.data.from_meta(&previous)?);
+            while self.data.from_meta(previous)? != -index.0 {
+                previous = GraphIndex::from(self.data.from_meta(previous)?);
             }
 
-            self.data.set_from_meta(&previous, next)?;
+            self.data.set_from_meta(previous, next)?;
         }
 
-        let count = self.data.from_meta(&node)?;
-        self.data.set_from_meta(&node, count - 1)
+        let count = self.data.from_meta(node_index)?;
+        self.data.set_from_meta(node_index, count - 1)
     }
 
-    fn remove_from_edges(&mut self, index: &GraphIndex) -> Result<(), DbError> {
+    fn remove_from_edges(&mut self, index: GraphIndex) -> Result<(), DbError> {
         let mut edge = GraphIndex::from(-self.data.from(index)?);
 
         while edge.is_valid() {
-            self.remove_to_edge(&edge)?;
+            self.remove_to_edge(edge)?;
             let current_index = -edge.0;
-            edge = GraphIndex::from(-self.data.from_meta(&edge)?);
-            self.free_index(&GraphIndex::from(current_index))?;
+            edge = GraphIndex::from(-self.data.from_meta(edge)?);
+            self.free_index(GraphIndex::from(current_index))?;
         }
 
         Ok(())
     }
 
-    fn remove_to_edge(&mut self, index: &GraphIndex) -> Result<(), DbError> {
-        let node = GraphIndex::from(-self.data.to(index)?);
-        let first = GraphIndex::from(-self.data.to(&node)?);
+    fn remove_to_edge(&mut self, index: GraphIndex) -> Result<(), DbError> {
+        let node_index = GraphIndex::from(-self.data.to(index)?);
+        let first_index = GraphIndex::from(-self.data.to(node_index)?);
         let next = self.data.to_meta(index)?;
 
-        if first == *index {
-            self.data.set_to(&node, next)?;
+        if first_index == index {
+            self.data.set_to(node_index, next)?;
         } else {
-            let mut previous = first;
+            let mut previous = first_index;
 
-            while self.data.to_meta(&previous)? != -index.0 {
-                previous = GraphIndex::from(self.data.to_meta(&previous)?);
+            while self.data.to_meta(previous)? != -index.0 {
+                previous = GraphIndex::from(self.data.to_meta(previous)?);
             }
 
-            self.data.set_to_meta(&previous, next)?;
+            self.data.set_to_meta(previous, next)?;
         }
 
-        let count = self.data.to_meta(&node)?;
-        self.data.set_to_meta(&node, count - 1)
+        let count = self.data.to_meta(node_index)?;
+        self.data.set_to_meta(node_index, count - 1)
     }
 
-    fn remove_to_edges(&mut self, index: &GraphIndex) -> Result<(), DbError> {
-        let mut edge = GraphIndex::from(-self.data.to(index)?);
+    fn remove_to_edges(&mut self, index: GraphIndex) -> Result<(), DbError> {
+        let mut edge_index = GraphIndex::from(-self.data.to(index)?);
 
-        while edge.is_valid() {
-            self.remove_from_edge(&edge)?;
-            let current_index = -edge.0;
-            edge = GraphIndex::from(-self.data.to_meta(&edge)?);
-            self.free_index(&GraphIndex::from(current_index))?;
+        while edge_index.is_valid() {
+            self.remove_from_edge(edge_index)?;
+            let current_index = -edge_index.0;
+            edge_index = GraphIndex::from(-self.data.to_meta(edge_index)?);
+            self.free_index(GraphIndex::from(current_index))?;
         }
 
         Ok(())
@@ -671,9 +661,9 @@ where
 
     fn set_edge(
         &mut self,
-        index: &GraphIndex,
-        from: &GraphIndex,
-        to: &GraphIndex,
+        index: GraphIndex,
+        from: GraphIndex,
+        to: GraphIndex,
     ) -> Result<(), DbError> {
         self.data.set_from(index, -from.0)?;
         self.data.set_to(index, -to.0)?;
@@ -681,7 +671,7 @@ where
         self.update_to_edge(to, index)
     }
 
-    fn update_from_edge(&mut self, node: &GraphIndex, edge: &GraphIndex) -> Result<(), DbError> {
+    fn update_from_edge(&mut self, node: GraphIndex, edge: GraphIndex) -> Result<(), DbError> {
         let next = self.data.from(node)?;
         self.data.set_from_meta(edge, next)?;
         self.data.set_from(node, -edge.0)?;
@@ -690,7 +680,7 @@ where
         self.data.set_from_meta(node, count + 1)
     }
 
-    fn update_to_edge(&mut self, node: &GraphIndex, edge: &GraphIndex) -> Result<(), DbError> {
+    fn update_to_edge(&mut self, node: GraphIndex, edge: GraphIndex) -> Result<(), DbError> {
         let next = self.data.to(node)?;
         self.data.set_to_meta(edge, next)?;
         self.data.set_to(node, -edge.0)?;
@@ -699,7 +689,7 @@ where
         self.data.set_to_meta(node, count + 1)
     }
 
-    fn validate_edge(&self, index: &GraphIndex) -> Result<(), DbError> {
+    fn validate_edge(&self, index: GraphIndex) -> Result<(), DbError> {
         if !self.is_valid_index(index)? || !self.is_valid_edge(index)? {
             return Err(Self::invalid_index(index));
         }
@@ -707,7 +697,7 @@ where
         Ok(())
     }
 
-    fn validate_node(&self, index: &GraphIndex) -> Result<(), DbError> {
+    fn validate_node(&self, index: GraphIndex) -> Result<(), DbError> {
         if !self.is_valid_index(index)? || !self.is_valid_node(index)? {
             return Err(Self::invalid_index(index));
         }
@@ -749,6 +739,15 @@ mod tests {
     use std::hash::Hasher;
 
     #[test]
+    #[allow(clippy::clone_on_copy)]
+    fn derived_from_clone() {
+        let index = GraphIndex(1);
+        let other = index.clone();
+
+        assert_eq!(index, other);
+    }
+
+    #[test]
     fn derived_from_debug() {
         let index = GraphIndex::default();
         format!("{index:?}");
@@ -765,6 +764,24 @@ mod tests {
     fn derived_from_ord() {
         let index = GraphIndex::default();
         assert_eq!(index.cmp(&index), Ordering::Equal);
+    }
+
+    #[test]
+    fn index_hashing() {
+        let _ = GraphIndex(10).stable_hash();
+    }
+
+    #[test]
+    fn index_serialization() {
+        let index = GraphIndex(10);
+        let bytes = index.serialize();
+        let other = GraphIndex::deserialize(&bytes).unwrap();
+
+        assert_eq!(index, other);
+        assert_eq!(
+            GraphIndex::storage_len(),
+            GraphIndex::serialized_size_static()
+        );
     }
 
     #[test]
@@ -816,9 +833,9 @@ mod tests {
 
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
-        let index = graph.insert_edge(&from, &to).unwrap();
+        let index = graph.insert_edge(from, to).unwrap();
 
-        assert_eq!(graph.edge(&index).unwrap().index(), index);
+        assert_eq!(graph.edge(index).unwrap().index(), index);
     }
 
     #[test]
@@ -829,7 +846,7 @@ mod tests {
         ));
         let graph = DbGraph::new(storage).unwrap();
 
-        assert!(graph.edge(&GraphIndex::from(-3)).is_none());
+        assert!(graph.edge(GraphIndex::from(-3)).is_none());
     }
 
     #[test]
@@ -842,13 +859,13 @@ mod tests {
         let node1 = graph.insert_node().unwrap();
         let node2 = graph.insert_node().unwrap();
 
-        let edge1 = graph.insert_edge(&node1, &node2).unwrap();
-        let edge2 = graph.insert_edge(&node1, &node2).unwrap();
-        let edge3 = graph.insert_edge(&node1, &node2).unwrap();
+        let edge1 = graph.insert_edge(node1, node2).unwrap();
+        let edge2 = graph.insert_edge(node1, node2).unwrap();
+        let edge3 = graph.insert_edge(node1, node2).unwrap();
 
         let mut actual = Vec::<GraphIndex>::new();
 
-        for edge in graph.node(&node1).unwrap().edge_iter_from() {
+        for edge in graph.node(node1).unwrap().edge_iter_from() {
             actual.push(edge.index());
         }
 
@@ -865,7 +882,7 @@ mod tests {
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
 
-        assert_eq!(graph.insert_edge(&from, &to), Ok(GraphIndex::from(-3_i64)));
+        assert_eq!(graph.insert_edge(from, to), Ok(GraphIndex::from(-3_i64)));
     }
 
     #[test]
@@ -877,11 +894,11 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
-        let index = graph.insert_edge(&from, &to).unwrap();
+        let index = graph.insert_edge(from, to).unwrap();
 
-        graph.remove_edge(&index).unwrap();
+        graph.remove_edge(index).unwrap();
 
-        assert_eq!(graph.insert_edge(&from, &to), Ok(index));
+        assert_eq!(graph.insert_edge(from, to), Ok(index));
     }
 
     #[test]
@@ -893,14 +910,14 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
-        let index1 = graph.insert_edge(&from, &to).unwrap();
-        let index2 = graph.insert_edge(&from, &to).unwrap();
-        graph.insert_edge(&from, &to).unwrap();
+        let index1 = graph.insert_edge(from, to).unwrap();
+        let index2 = graph.insert_edge(from, to).unwrap();
+        graph.insert_edge(from, to).unwrap();
 
-        graph.remove_edge(&index1).unwrap();
-        graph.remove_edge(&index2).unwrap();
+        graph.remove_edge(index1).unwrap();
+        graph.remove_edge(index2).unwrap();
 
-        assert_eq!(graph.insert_edge(&from, &to), Ok(index2));
+        assert_eq!(graph.insert_edge(from, to), Ok(index2));
     }
 
     #[test]
@@ -912,7 +929,7 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
 
         assert_eq!(
-            graph.insert_edge(&GraphIndex::from(1), &GraphIndex::from(2)),
+            graph.insert_edge(GraphIndex::from(1), GraphIndex::from(2)),
             Err(DbError::from("'1' is invalid index"))
         );
     }
@@ -927,7 +944,7 @@ mod tests {
         let from = graph.insert_node().unwrap();
 
         assert_eq!(
-            graph.insert_edge(&from, &GraphIndex::from(2)),
+            graph.insert_edge(from, GraphIndex::from(2)),
             Err(DbError::from("'2' is invalid index"))
         );
     }
@@ -954,7 +971,7 @@ mod tests {
         let index = graph.insert_node().unwrap();
         graph.insert_node().unwrap();
 
-        graph.remove_node(&index).unwrap();
+        graph.remove_node(index).unwrap();
 
         assert_eq!(graph.insert_node().unwrap(), index);
     }
@@ -975,7 +992,7 @@ mod tests {
 
         assert_eq!(graph.node_count().unwrap(), 3);
 
-        graph.remove_node(&index).unwrap();
+        graph.remove_node(index).unwrap();
 
         assert_eq!(graph.node_count().unwrap(), 2);
     }
@@ -989,7 +1006,7 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let index = graph.insert_node().unwrap();
 
-        assert_eq!(graph.node(&index).unwrap().index(), index);
+        assert_eq!(graph.node(index).unwrap().index(), index);
     }
 
     #[test]
@@ -1000,7 +1017,7 @@ mod tests {
         ));
         let graph = DbGraph::new(storage).unwrap();
 
-        let node = graph.node(&GraphIndex::from(1));
+        let node = graph.node(GraphIndex::from(1));
 
         assert!(node.is_none());
     }
@@ -1039,8 +1056,8 @@ mod tests {
         let node4 = graph.insert_node().unwrap();
         let node5 = graph.insert_node().unwrap();
 
-        graph.remove_node(&node2).unwrap();
-        graph.remove_node(&node5).unwrap();
+        graph.remove_node(node2).unwrap();
+        graph.remove_node(node5).unwrap();
 
         let expected = vec![node1, node3, node4];
         let mut nodes = Vec::<GraphIndex>::new();
@@ -1060,11 +1077,11 @@ mod tests {
         ));
         let mut graph = DbGraph::new(storage).unwrap();
         let node = graph.insert_node().unwrap();
-        let index = graph.insert_edge(&node, &node).unwrap();
+        let index = graph.insert_edge(node, node).unwrap();
 
-        graph.remove_edge(&index).unwrap();
+        graph.remove_edge(index).unwrap();
 
-        assert!(graph.edge(&index).is_none());
+        assert!(graph.edge(index).is_none());
     }
 
     #[test]
@@ -1076,15 +1093,15 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
-        let index1 = graph.insert_edge(&from, &to).unwrap();
-        let index2 = graph.insert_edge(&from, &to).unwrap();
-        let index3 = graph.insert_edge(&from, &to).unwrap();
+        let index1 = graph.insert_edge(from, to).unwrap();
+        let index2 = graph.insert_edge(from, to).unwrap();
+        let index3 = graph.insert_edge(from, to).unwrap();
 
-        graph.remove_edge(&index3).unwrap();
+        graph.remove_edge(index3).unwrap();
 
-        assert!(graph.edge(&index1).is_some());
-        assert!(graph.edge(&index2).is_some());
-        assert!(graph.edge(&index3).is_none());
+        assert!(graph.edge(index1).is_some());
+        assert!(graph.edge(index2).is_some());
+        assert!(graph.edge(index3).is_none());
     }
 
     #[test]
@@ -1096,15 +1113,15 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
-        let index1 = graph.insert_edge(&from, &to).unwrap();
-        let index2 = graph.insert_edge(&from, &to).unwrap();
-        let index3 = graph.insert_edge(&from, &to).unwrap();
+        let index1 = graph.insert_edge(from, to).unwrap();
+        let index2 = graph.insert_edge(from, to).unwrap();
+        let index3 = graph.insert_edge(from, to).unwrap();
 
-        graph.remove_edge(&index1).unwrap();
+        graph.remove_edge(index1).unwrap();
 
-        assert!(graph.edge(&index1).is_none());
-        assert!(graph.edge(&index2).is_some());
-        assert!(graph.edge(&index3).is_some());
+        assert!(graph.edge(index1).is_none());
+        assert!(graph.edge(index2).is_some());
+        assert!(graph.edge(index3).is_some());
     }
 
     #[test]
@@ -1116,15 +1133,15 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
-        let index1 = graph.insert_edge(&from, &to).unwrap();
-        let index2 = graph.insert_edge(&from, &to).unwrap();
-        let index3 = graph.insert_edge(&from, &to).unwrap();
+        let index1 = graph.insert_edge(from, to).unwrap();
+        let index2 = graph.insert_edge(from, to).unwrap();
+        let index3 = graph.insert_edge(from, to).unwrap();
 
-        graph.remove_edge(&index2).unwrap();
+        graph.remove_edge(index2).unwrap();
 
-        assert!(graph.edge(&index1).is_some());
-        assert!(graph.edge(&index2).is_none());
-        assert!(graph.edge(&index3).is_some());
+        assert!(graph.edge(index1).is_some());
+        assert!(graph.edge(index2).is_none());
+        assert!(graph.edge(index3).is_some());
     }
 
     #[test]
@@ -1134,7 +1151,7 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
         let mut graph = DbGraph::new(storage).unwrap();
-        graph.remove_edge(&GraphIndex::from(-3)).unwrap();
+        graph.remove_edge(GraphIndex::from(-3)).unwrap();
     }
 
     #[test]
@@ -1146,11 +1163,11 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let from = graph.insert_node().unwrap();
         let to = graph.insert_node().unwrap();
-        let index = graph.insert_edge(&from, &to).unwrap();
+        let index = graph.insert_edge(from, to).unwrap();
 
-        graph.remove_edge(&index).unwrap();
+        graph.remove_edge(index).unwrap();
 
-        assert!(graph.edge(&index).is_none());
+        assert!(graph.edge(index).is_none());
     }
 
     #[test]
@@ -1161,12 +1178,12 @@ mod tests {
         ));
         let mut graph = DbGraph::new(storage).unwrap();
         let index = graph.insert_node().unwrap();
-        let edge = graph.insert_edge(&index, &index).unwrap();
+        let edge = graph.insert_edge(index, index).unwrap();
 
-        graph.remove_node(&index).unwrap();
+        graph.remove_node(index).unwrap();
 
-        assert!(graph.node(&index).is_none());
-        assert!(graph.edge(&edge).is_none());
+        assert!(graph.node(index).is_none());
+        assert!(graph.edge(edge).is_none());
     }
 
     #[test]
@@ -1178,9 +1195,9 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let index = graph.insert_node().unwrap();
 
-        graph.remove_node(&index).unwrap();
+        graph.remove_node(index).unwrap();
 
-        assert!(graph.node(&index).is_none());
+        assert!(graph.node(index).is_none());
     }
 
     #[test]
@@ -1190,7 +1207,7 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
         let mut graph = DbGraph::new(storage).unwrap();
-        graph.remove_node(&GraphIndex::from(1)).unwrap();
+        graph.remove_node(GraphIndex::from(1)).unwrap();
     }
 
     #[test]
@@ -1205,28 +1222,27 @@ mod tests {
         let node2 = graph.insert_node().unwrap();
         let node3 = graph.insert_node().unwrap();
 
-        let edge1 = graph.insert_edge(&node1, &node2).unwrap();
-        let edge2 = graph.insert_edge(&node1, &node1).unwrap();
-        let edge3 = graph.insert_edge(&node1, &node3).unwrap();
-        let edge4 = graph.insert_edge(&node2, &node1).unwrap();
-        let edge5 = graph.insert_edge(&node3, &node1).unwrap();
+        let edge1 = graph.insert_edge(node1, node2).unwrap();
+        let edge2 = graph.insert_edge(node1, node1).unwrap();
+        let edge3 = graph.insert_edge(node1, node3).unwrap();
+        let edge4 = graph.insert_edge(node2, node1).unwrap();
+        let edge5 = graph.insert_edge(node3, node1).unwrap();
+        let edge6 = graph.insert_edge(node3, node2).unwrap();
+        let edge7 = graph.insert_edge(node2, node3).unwrap();
 
-        let edge6 = graph.insert_edge(&node3, &node2).unwrap();
-        let edge7 = graph.insert_edge(&node2, &node3).unwrap();
+        graph.remove_node(node1).unwrap();
 
-        graph.remove_node(&node1).unwrap();
+        assert!(graph.node(node1).is_none());
+        assert!(graph.edge(edge1).is_none());
+        assert!(graph.edge(edge2).is_none());
+        assert!(graph.edge(edge3).is_none());
+        assert!(graph.edge(edge4).is_none());
+        assert!(graph.edge(edge5).is_none());
 
-        assert!(graph.node(&node1).is_none());
-        assert!(graph.edge(&edge1).is_none());
-        assert!(graph.edge(&edge2).is_none());
-        assert!(graph.edge(&edge3).is_none());
-        assert!(graph.edge(&edge4).is_none());
-        assert!(graph.edge(&edge5).is_none());
-
-        assert!(graph.node(&node2).is_some());
-        assert!(graph.node(&node3).is_some());
-        assert!(graph.edge(&edge6).is_some());
-        assert!(graph.edge(&edge7).is_some());
+        assert!(graph.node(node2).is_some());
+        assert!(graph.node(node3).is_some());
+        assert!(graph.edge(edge6).is_some());
+        assert!(graph.edge(edge7).is_some());
     }
 
     #[test]
@@ -1255,18 +1271,18 @@ mod tests {
             node2 = graph.insert_node().unwrap();
             node3 = graph.insert_node().unwrap();
 
-            edge1 = graph.insert_edge(&node1, &node2).unwrap();
-            edge2 = graph.insert_edge(&node2, &node3).unwrap();
-            edge3 = graph.insert_edge(&node3, &node1).unwrap();
+            edge1 = graph.insert_edge(node1, node2).unwrap();
+            edge2 = graph.insert_edge(node2, node3).unwrap();
+            edge3 = graph.insert_edge(node3, node1).unwrap();
         }
 
         let graph = DbGraph::from_storage(storage, storage_index).unwrap();
 
-        assert!(graph.node(&node1).is_some());
-        assert!(graph.node(&node2).is_some());
-        assert!(graph.node(&node3).is_some());
-        assert!(graph.edge(&edge1).is_some());
-        assert!(graph.edge(&edge2).is_some());
-        assert!(graph.edge(&edge3).is_some());
+        assert!(graph.node(node1).is_some());
+        assert!(graph.node(node2).is_some());
+        assert!(graph.node(node3).is_some());
+        assert!(graph.edge(edge1).is_some());
+        assert!(graph.edge(edge2).is_some());
+        assert!(graph.edge(edge3).is_some());
     }
 }

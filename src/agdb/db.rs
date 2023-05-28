@@ -27,9 +27,8 @@ use crate::collections::indexed_map_storage::IndexedMapStorage;
 use crate::collections::multi_map::MultiMap;
 use crate::collections::multi_map_storage::MultiMapStorage;
 use crate::command::Command;
-use crate::graph::graph_index::GraphIndex;
-use crate::graph::graph_storage::GraphStorage;
-use crate::graph::Graph;
+use crate::graph::DbGraph;
+use crate::graph::GraphIndex;
 use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
@@ -104,7 +103,7 @@ impl Serialize for DbStorageIndex {
 struct DbStorage {
     storage: Rc<RefCell<FileStorage>>,
     storage_index: StorageIndex,
-    graph: GraphStorage,
+    graph: DbGraph,
     aliases: IndexedMapStorage<String, DbId>,
     indexes: IndexedMapStorage<DbId, GraphIndex>,
     dictionary: DictionaryStorage<DbValue>,
@@ -113,7 +112,6 @@ struct DbStorage {
 
 pub struct Db {
     storage: DbStorage,
-    graph: Graph,
     aliases: IndexedMap<String, DbId>,
     indexes: IndexedMap<DbId, GraphIndex>,
     dictionary: Dictionary<DbValue>,
@@ -186,7 +184,6 @@ impl Db {
                     self.storage.aliases.insert(alias, id)?;
                 }
                 Command::InsertEdge { from, to } => {
-                    self.graph.insert_edge(from, to)?;
                     self.storage.graph.insert_edge(from, to)?;
                 }
                 Command::InsertId { id, graph_index } => {
@@ -202,7 +199,6 @@ impl Db {
                         .insert(id, &DbKeyValueIndex { key, value })?;
                 }
                 Command::InsertNode => {
-                    self.graph.insert_node()?;
                     self.storage.graph.insert_node()?;
                 }
                 Command::NextId { id } => {
@@ -222,7 +218,6 @@ impl Db {
                     self.storage.indexes.remove_key(id)?;
                 }
                 Command::RemoveEdge { index } => {
-                    self.graph.remove_edge(index)?;
                     self.storage.graph.remove_edge(index)?;
                 }
                 Command::RemoveKeyValue { id, key_value } => {
@@ -230,7 +225,6 @@ impl Db {
                     self.storage.values.remove_value(id, key_value)?;
                 }
                 Command::RemoveNode { index } => {
-                    self.graph.remove_node(index)?;
                     self.storage.graph.remove_node(index)?;
                 }
                 Command::RemoveValue { index } => {
@@ -294,10 +288,9 @@ impl Db {
         let from = self.graph_index_from_id(from)?;
         let to = self.graph_index_from_id(to)?;
 
-        let graph_index = self.graph.insert_edge(&from, &to)?;
+        let graph_index = self.storage.graph.insert_edge(&from, &to)?;
         self.undo_stack
             .push(Command::RemoveEdge { index: graph_index });
-        let _ = self.storage.graph.insert_edge(&from, &to)?;
 
         let db_id = DbId(-self.next_id);
 
@@ -338,10 +331,9 @@ impl Db {
     }
 
     pub(crate) fn insert_node(&mut self) -> Result<DbId, DbError> {
-        let graph_index = self.graph.insert_node()?;
+        let graph_index = self.storage.graph.insert_node()?;
         self.undo_stack
             .push(Command::RemoveNode { index: graph_index });
-        let _ = self.storage.graph.insert_node()?;
 
         let db_id = DbId(self.next_id);
 
@@ -541,6 +533,7 @@ impl Db {
     ) -> Result<Vec<(GraphIndex, GraphIndex, GraphIndex)>, DbError> {
         let mut edges = vec![];
         let node = self
+            .storage
             .graph
             .node(&graph_index)
             .ok_or(DbError::from("Data integrity corrupted"))?;
@@ -562,6 +555,7 @@ impl Db {
     fn remove_edge(&mut self, db_id: DbId, graph_index: GraphIndex) -> Result<(), DbError> {
         let (from, to) = {
             let edge = self
+                .storage
                 .graph
                 .edge(&graph_index)
                 .ok_or(DbError::from("Data integrity corrupted"))?;
@@ -576,7 +570,6 @@ impl Db {
         self.storage.indexes.remove_key(&db_id)?;
 
         self.undo_stack.push(Command::InsertEdge { from, to });
-        self.graph.remove_edge(&graph_index)?;
         self.storage.graph.remove_edge(&graph_index)
     }
 
@@ -607,7 +600,6 @@ impl Db {
         }
 
         self.undo_stack.push(Command::InsertNode);
-        self.graph.remove_node(&graph_index)?;
         self.storage.graph.remove_node(&graph_index)
     }
 
@@ -630,7 +622,6 @@ impl Db {
         self.storage.indexes.remove_key(&db_id)?;
 
         self.undo_stack.push(Command::InsertEdge { from, to });
-        self.graph.remove_edge(&graph_index)?;
         self.storage.graph.remove_edge(&graph_index)
     }
 
@@ -690,7 +681,6 @@ impl Db {
 
     fn try_new(filename: &str) -> Result<Db, DbError> {
         let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
-        let graph;
         let graph_storage;
         let aliases;
         let aliases_storage;
@@ -708,8 +698,7 @@ impl Db {
             .value::<DbStorageIndex>(StorageIndex(1));
 
         if let Ok(index) = index {
-            graph_storage = GraphStorage::from_storage(storage.clone(), index.graph)?;
-            graph = graph_storage.to_graph()?;
+            graph_storage = DbGraph::from_storage(storage.clone(), index.graph)?;
             aliases_storage = IndexedMapStorage::from_storage(storage.clone(), index.aliases)?;
             aliases = aliases_storage.to_indexed_map()?;
             indexes_storage = IndexedMapStorage::from_storage(storage.clone(), index.indexes)?;
@@ -722,8 +711,7 @@ impl Db {
             next_id = index.next_id;
         } else if len == 0 {
             storage.borrow_mut().insert(&DbStorageIndex::default())?;
-            graph = Graph::new();
-            graph_storage = GraphStorage::new(storage.clone())?;
+            graph_storage = DbGraph::new(storage.clone())?;
             aliases = IndexedMap::new();
             aliases_storage = IndexedMapStorage::new(storage.clone())?;
             indexes = IndexedMap::new();
@@ -760,7 +748,6 @@ impl Db {
                 dictionary: dictionary_storage,
                 values: values_storage,
             },
-            graph,
             aliases,
             indexes,
             dictionary,

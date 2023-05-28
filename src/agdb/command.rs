@@ -1,6 +1,6 @@
 use crate::collections::dictionary::dictionary_index::DictionaryIndex;
 use crate::db::db_key_value_index::DbKeyValueIndex;
-use crate::graph::graph_index::GraphIndex;
+use crate::graph::GraphIndex;
 use crate::DbId;
 use crate::DbKeyValue;
 

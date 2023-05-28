@@ -52,15 +52,15 @@ where
         self.stack.push(SearchIndex { index, distance });
     }
 
-    fn expand_index(&mut self, index: &SearchIndex) {
+    fn expand_index(&mut self, index: SearchIndex) {
         if index.index.is_node() {
             self.add_edges_to_stack(
-                SearchIt::expand_node(&index.index, self.graph),
+                SearchIt::expand_node(index.index, self.graph),
                 index.distance + 1,
             );
         } else {
             self.add_index_to_stack(
-                SearchIt::expand_edge(&index.index, self.graph),
+                SearchIt::expand_edge(index.index, self.graph),
                 index.distance + 1,
             );
         }
@@ -100,7 +100,7 @@ where
 
         match handler.process(&index.index, &index.distance) {
             SearchControl::Continue(add) => {
-                self.expand_index(&index);
+                self.expand_index(index);
                 add_index = add;
                 result = true;
             }

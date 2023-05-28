@@ -59,37 +59,37 @@ where
         take(&mut self.result)
     }
 
-    fn expand_edge(&mut self, mut path: Path, index: &GraphIndex, node_index: &GraphIndex) {
+    fn expand_edge(&mut self, mut path: Path, index: GraphIndex, node_index: GraphIndex) {
         let cost = self
             .handler
-            .process(index, &(self.current_path.elements.len() as u64 + 1));
+            .process(index, self.current_path.elements.len() as u64 + 1);
 
         if cost != 0 && !self.visited.value(node_index.as_u64()) {
-            path.elements.push(*index);
+            path.elements.push(index);
             path.cost += cost;
             self.expand_node(path, node_index);
         }
     }
 
-    fn expand_node(&mut self, mut path: Path, index: &GraphIndex) {
+    fn expand_node(&mut self, mut path: Path, index: GraphIndex) {
         let cost = self
             .handler
-            .process(index, &(self.current_path.elements.len() as u64 + 1));
+            .process(index, self.current_path.elements.len() as u64 + 1);
 
         if cost != 0 {
-            path.elements.push(*index);
+            path.elements.push(index);
             path.cost += cost;
             self.paths.push(path);
         }
     }
 
-    fn expand(&mut self, index: &GraphIndex) {
+    fn expand(&mut self, index: GraphIndex) {
         let node = self
             .graph
             .node(index)
             .expect("unexpected invalid node index");
         for edge in node.edge_iter_from() {
-            self.expand_edge(self.current_path.clone(), &edge.index(), &edge.index_to());
+            self.expand_edge(self.current_path.clone(), edge.index(), edge.index_to());
         }
     }
 
@@ -103,10 +103,10 @@ where
             .elements
             .last()
             .map_or(GraphIndex::default(), |index| *index);
-        self.process_index(&index);
+        self.process_index(index);
     }
 
-    fn process_index(&mut self, index: &GraphIndex) {
+    fn process_index(&mut self, index: GraphIndex) {
         if !self.visited.value(index.as_u64()) {
             if index.0 == self.destination.0 {
                 swap(&mut self.result, &mut self.current_path.elements);
@@ -149,19 +149,19 @@ mod tests {
     use std::rc::Rc;
 
     struct Handler {
-        pub processor: fn(&GraphIndex, &u64) -> u64,
+        pub processor: fn(GraphIndex, u64) -> u64,
     }
 
     impl Default for Handler {
         fn default() -> Self {
             Self {
-                processor: |_index: &GraphIndex, _distance: &u64| 1_u64,
+                processor: |_index: GraphIndex, _distance: u64| 1_u64,
             }
         }
     }
 
     impl PathSearchHandler for Handler {
-        fn process(&self, index: &GraphIndex, distance: &u64) -> u64 {
+        fn process(&self, index: GraphIndex, distance: u64) -> u64 {
             (self.processor)(index, distance)
         }
     }
@@ -174,9 +174,9 @@ mod tests {
         ));
         let mut graph = DbGraph::new(storage).unwrap();
         let node = graph.insert_node().unwrap();
-        let _edge = graph.insert_edge(&node, &node).unwrap();
+        let _edge = graph.insert_edge(node, node).unwrap();
 
-        let result = GraphSearch::from(&graph).path(&node, &node, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node, node, &Handler::default());
 
         assert_eq!(result, vec![]);
     }
@@ -190,8 +190,8 @@ mod tests {
         let graph = DbGraph::new(storage).unwrap();
 
         let result = GraphSearch::from(&graph).path(
-            &GraphIndex::default(),
-            &GraphIndex::default(),
+            GraphIndex::default(),
+            GraphIndex::default(),
             &Handler::default(),
         );
 
@@ -210,13 +210,13 @@ mod tests {
         let node2 = graph.insert_node().unwrap();
         let node3 = graph.insert_node().unwrap();
 
-        let edge1 = graph.insert_edge(&node1, &node2).unwrap();
-        let _edge2 = graph.insert_edge(&node1, &node2).unwrap();
+        let edge1 = graph.insert_edge(node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(node1, node2).unwrap();
 
-        let edge3 = graph.insert_edge(&node2, &node3).unwrap();
-        let _edge4 = graph.insert_edge(&node2, &node3).unwrap();
+        let edge3 = graph.insert_edge(node2, node3).unwrap();
+        let _edge4 = graph.insert_edge(node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(&node1, &node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
 
         assert_eq!(result, vec![node1, edge1, node2, edge3, node3]);
     }
@@ -230,7 +230,7 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let node = graph.insert_node().unwrap();
 
-        let result = GraphSearch::from(&graph).path(&node, &node, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node, node, &Handler::default());
 
         assert_eq!(result, vec![]);
     }
@@ -247,11 +247,11 @@ mod tests {
         let node2 = graph.insert_node().unwrap();
         let node3 = graph.insert_node().unwrap();
 
-        let edge1 = graph.insert_edge(&node1, &node3).unwrap();
-        let _edge2 = graph.insert_edge(&node1, &node2).unwrap();
-        let _edge3 = graph.insert_edge(&node2, &node3).unwrap();
+        let edge1 = graph.insert_edge(node1, node3).unwrap();
+        let _edge2 = graph.insert_edge(node1, node2).unwrap();
+        let _edge3 = graph.insert_edge(node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(&node1, &node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
 
         assert_eq!(result, vec![node1, edge1, node3]);
     }
@@ -268,10 +268,10 @@ mod tests {
         let node2 = graph.insert_node().unwrap();
         let node3 = graph.insert_node().unwrap();
 
-        let edge1 = graph.insert_edge(&node1, &node2).unwrap();
-        let edge2 = graph.insert_edge(&node2, &node3).unwrap();
+        let edge1 = graph.insert_edge(node1, node2).unwrap();
+        let edge2 = graph.insert_edge(node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(&node1, &node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
 
         assert_eq!(result, vec![node1, edge1, node2, edge2, node3]);
     }
@@ -288,15 +288,15 @@ mod tests {
         let node2 = graph.insert_node().unwrap();
         let node3 = graph.insert_node().unwrap();
 
-        let _edge1 = graph.insert_edge(&node1, &node3).unwrap();
-        let edge2 = graph.insert_edge(&node1, &node2).unwrap();
-        let edge3 = graph.insert_edge(&node2, &node3).unwrap();
+        let _edge1 = graph.insert_edge(node1, node3).unwrap();
+        let edge2 = graph.insert_edge(node1, node2).unwrap();
+        let edge3 = graph.insert_edge(node2, node3).unwrap();
 
         let result = GraphSearch::from(&graph).path(
-            &node1,
-            &node3,
+            node1,
+            node3,
             &Handler {
-                processor: |index: &GraphIndex, _distance: &u64| {
+                processor: |index: GraphIndex, _distance: u64| {
                     if index.0 == -4 {
                         return 0;
                     }
@@ -321,9 +321,9 @@ mod tests {
         let node2 = graph.insert_node().unwrap();
         let node3 = graph.insert_node().unwrap();
 
-        let _edge1 = graph.insert_edge(&node1, &node2).unwrap();
+        let _edge1 = graph.insert_edge(node1, node2).unwrap();
 
-        let result = GraphSearch::from(&graph).path(&node1, &node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
 
         assert_eq!(result, vec![]);
     }

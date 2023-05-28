@@ -38,11 +38,11 @@ where
 {
     pub fn breadth_first_search<Handler: SearchHandler>(
         &self,
-        index: &GraphIndex,
+        index: GraphIndex,
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, *index).search(handler)
+            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index).search(handler)
         } else {
             vec![]
         }
@@ -50,11 +50,11 @@ where
 
     pub fn breadth_first_search_reverse<Handler: SearchHandler>(
         &self,
-        index: &GraphIndex,
+        index: GraphIndex,
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearchReverse>::new(self.graph, *index)
+            SearchImpl::<'a, Data, BreadthFirstSearchReverse>::new(self.graph, index)
                 .search(handler)
         } else {
             vec![]
@@ -63,11 +63,11 @@ where
 
     pub fn depth_first_search<Handler: SearchHandler>(
         &self,
-        index: &GraphIndex,
+        index: GraphIndex,
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, *index).search(handler)
+            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index).search(handler)
         } else {
             vec![]
         }
@@ -75,11 +75,11 @@ where
 
     pub fn depth_first_search_reverse<Handler: SearchHandler>(
         &self,
-        index: &GraphIndex,
+        index: GraphIndex,
         handler: &Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearchReverse>::new(self.graph, *index).search(handler)
+            SearchImpl::<'a, Data, DepthFirstSearchReverse>::new(self.graph, index).search(handler)
         } else {
             vec![]
         }
@@ -87,22 +87,22 @@ where
 
     pub fn path<Handler: PathSearchHandler>(
         &self,
-        from: &GraphIndex,
-        to: &GraphIndex,
+        from: GraphIndex,
+        to: GraphIndex,
         handler: &'a Handler,
     ) -> Vec<GraphIndex> {
         if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<'a, Data, Handler>::new(self.graph, *from, *to, handler).search()
+            PathSearch::<'a, Data, Handler>::new(self.graph, from, to, handler).search()
         } else {
             vec![]
         }
     }
 
-    fn is_valid_index(&self, index: &GraphIndex) -> bool {
+    fn is_valid_index(&self, index: GraphIndex) -> bool {
         self.is_valid_node(index) || self.graph.edge(index).is_some()
     }
 
-    fn is_valid_node(&self, index: &GraphIndex) -> bool {
+    fn is_valid_node(&self, index: GraphIndex) -> bool {
         self.graph.node(index).is_some()
     }
 }

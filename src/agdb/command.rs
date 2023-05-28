@@ -6,30 +6,20 @@ use crate::DbKeyValue;
 
 pub(crate) enum Command {
     InsertAlias {
-        id: DbId,
         alias: String,
+        id: DbId,
     },
     InsertEdge {
         from: GraphIndex,
         to: GraphIndex,
-    },
-    InsertId {
-        id: DbId,
-        graph_index: GraphIndex,
     },
     InsertNode,
     InsertKeyValue {
         id: DbId,
         key_value: DbKeyValue,
     },
-    NextId {
-        id: i64,
-    },
     RemoveAlias {
         alias: String,
-    },
-    RemoveId {
-        id: DbId,
     },
     RemoveEdge {
         index: GraphIndex,

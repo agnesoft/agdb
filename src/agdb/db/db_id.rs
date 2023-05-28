@@ -1,6 +1,7 @@
 use super::db_error::DbError;
 use crate::collections::vec::VecValue;
-use crate::utilities::serialize::{Serialize, SerializeStatic};
+use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]

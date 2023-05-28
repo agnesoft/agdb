@@ -9,17 +9,14 @@ pub(crate) struct DepthFirstSearchReverse {
 }
 
 impl SearchIterator for DepthFirstSearchReverse {
-    fn expand_edge<Data: GraphData>(index: &GraphIndex, graph: &GraphImpl<Data>) -> GraphIndex {
+    fn expand_edge<Data: GraphData>(index: GraphIndex, graph: &GraphImpl<Data>) -> GraphIndex {
         graph
             .edge(index)
             .expect("invalid index, expected a valid edge index")
             .index_from()
     }
 
-    fn expand_node<Data: GraphData>(
-        index: &GraphIndex,
-        graph: &GraphImpl<Data>,
-    ) -> Vec<GraphIndex> {
+    fn expand_node<Data: GraphData>(index: GraphIndex, graph: &GraphImpl<Data>) -> Vec<GraphIndex> {
         graph
             .node(index)
             .expect("invalid index, expected a valid node index")
@@ -76,7 +73,7 @@ mod tests {
         let graph = DbGraph::new(storage).unwrap();
 
         let result = GraphSearch::from(&graph)
-            .depth_first_search_reverse(&GraphIndex::default(), &Handler::default());
+            .depth_first_search_reverse(GraphIndex::default(), &Handler::default());
 
         assert_eq!(result, vec![]);
     }
@@ -94,12 +91,12 @@ mod tests {
         let node3 = graph.insert_node().unwrap();
         let node4 = graph.insert_node().unwrap();
 
-        let edge1 = graph.insert_edge(&node1, &node2).unwrap();
-        let edge2 = graph.insert_edge(&node2, &node3).unwrap();
-        let edge3 = graph.insert_edge(&node3, &node4).unwrap();
+        let edge1 = graph.insert_edge(node1, node2).unwrap();
+        let edge2 = graph.insert_edge(node2, node3).unwrap();
+        let edge3 = graph.insert_edge(node3, node4).unwrap();
 
         let result =
-            GraphSearch::from(&graph).depth_first_search_reverse(&node4, &Handler::default());
+            GraphSearch::from(&graph).depth_first_search_reverse(node4, &Handler::default());
         let expected = vec![node4, edge3, node3, edge2, node2, edge1, node1];
 
         assert_eq!(result, expected);

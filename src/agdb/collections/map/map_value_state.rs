@@ -52,6 +52,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn derived_from_debug() {
+        let value = MapValueState::Deleted;
+        format!("{value:?}");
+    }
+    #[test]
+    fn derived_from_default() {
+        assert_eq!(MapValueState::default(), MapValueState::Empty);
+    }
+
+    #[test]
     fn bad_deserialize() {
         assert_eq!(
             MapValueState::deserialize(&Vec::<u8>::new()).err().unwrap(),

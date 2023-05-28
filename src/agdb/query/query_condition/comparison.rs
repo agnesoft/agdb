@@ -19,4 +19,19 @@ mod tests {
     fn derived_from_debug() {
         format!("{:?}", Comparison::Equal(DbValue::Int(0)));
     }
+
+    #[test]
+    fn derived_from_clone() {
+        let left = Comparison::Equal(DbValue::Int(0));
+        let right = left.clone();
+        assert_eq!(left, right);
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            Comparison::Equal(DbValue::Int(0)),
+            Comparison::Equal(DbValue::Int(0))
+        );
+    }
 }

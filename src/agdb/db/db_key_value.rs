@@ -19,3 +19,31 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn derived_from_debug() {
+        format!(
+            "{:?}",
+            DbKeyValue {
+                key: DbKey::Int(0),
+                value: DbKey::Int(0)
+            }
+        );
+    }
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            DbKeyValue {
+                key: DbKey::Int(0),
+                value: DbKey::Int(0)
+            },
+            DbKeyValue {
+                key: DbKey::Int(0),
+                value: DbKey::Int(0)
+            }
+        );
+    }
+}

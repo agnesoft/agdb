@@ -78,6 +78,49 @@ impl VecValue for GraphIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cmp::Ordering;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::Hash;
+    use std::hash::Hasher;
+
+    #[test]
+    fn derived_from_debug() {
+        let index = GraphIndex::default();
+        format!("{index:?}");
+    }
+
+    #[test]
+    fn derived_from_hash() {
+        let mut hasher = DefaultHasher::new();
+        GraphIndex { index: 1 }.hash(&mut hasher);
+        assert_ne!(hasher.finish(), 0);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        let index = GraphIndex::default();
+        assert_eq!(index.cmp(&index), Ordering::Equal);
+    }
+
+    #[test]
+    fn ordering() {
+        let mut indexes = vec![
+            GraphIndex::default(),
+            GraphIndex::from(100_i64),
+            GraphIndex::from(-1_i64),
+            GraphIndex::from(1_i64),
+        ];
+        indexes.sort();
+        assert_eq!(
+            indexes,
+            vec![
+                GraphIndex::from(-1_i64),
+                GraphIndex::default(),
+                GraphIndex::from(1_i64),
+                GraphIndex::from(100_i64),
+            ]
+        )
+    }
 
     #[test]
     fn is_edge() {

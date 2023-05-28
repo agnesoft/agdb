@@ -30,6 +30,19 @@ pub enum QueryCondition {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn derived_from_clone() {
+        let left = QueryCondition::Where;
+        let right = left.clone();
+        assert_eq!(left, right);
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(QueryCondition::Where, QueryCondition::Where);
+    }
+
     #[test]
     fn derived_from_debug() {
         format!("{:?}", QueryCondition::Where);

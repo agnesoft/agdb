@@ -75,3 +75,58 @@ pub trait Storage {
     fn value_at<T: Serialize>(&self, index: StorageIndex, offset: u64) -> Result<T, DbError>;
     fn value_size(&self, index: StorageIndex) -> Result<u64, DbError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cmp::Ordering;
+
+    #[test]
+    #[allow(clippy::clone_on_copy)]
+    fn derived_from_clone() {
+        let index = StorageIndex::default();
+        let other = index.clone();
+        assert_eq!(index, other);
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", StorageIndex::default());
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        assert_eq!(
+            StorageIndex::default().cmp(&StorageIndex::default()),
+            Ordering::Equal
+        );
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
+        let mut indexes = vec![
+            StorageIndex::default(),
+            StorageIndex::from(100_u64),
+            StorageIndex::from(u64::MAX),
+            StorageIndex::from(1_u64),
+        ];
+        indexes.sort();
+        assert_eq!(
+            indexes,
+            vec![
+                StorageIndex::default(),
+                StorageIndex::from(1_u64),
+                StorageIndex::from(100_u64),
+                StorageIndex::from(u64::MAX),
+            ]
+        )
+    }
+
+    #[test]
+    fn serialize() {
+        let index = StorageIndex::from(1_u64);
+        let bytes = index.serialize();
+        let other = StorageIndex::deserialize(&bytes).unwrap();
+        assert_eq!(index, other);
+    }
+}

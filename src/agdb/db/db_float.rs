@@ -79,7 +79,18 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn eq() {
+    fn derived_from_clone() {
+        let float = DbFloat::from(1.0_f64);
+        let _other = float.clone();
+        let _other2 = float;
+    }
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", DbFloat::from(1.0_f64));
+    }
+
+    #[test]
+    fn derived_from_eq() {
         let float = DbFloat::from(1.0_f64);
         let other = DbFloat::from(1.0_f64);
 
@@ -87,24 +98,18 @@ mod tests {
     }
 
     #[test]
-    fn from() {
-        let _from_f32 = DbFloat::from(1.0_f32);
-        let _from_f64 = DbFloat::from(1.0_f64);
-    }
-
-    #[test]
-    fn hash() {
+    fn derived_from_hash() {
         let mut set = HashSet::<DbFloat>::new();
         set.insert(DbFloat::from(1.0_f64));
     }
 
     #[test]
-    fn ord() {
+    fn derived_from_ord() {
         assert_eq!(DbFloat::from(1.0).cmp(&DbFloat::from(1.0)), Ordering::Equal);
     }
 
     #[test]
-    fn partial_ord() {
+    fn derived_from_partial_ord() {
         let mut vec = vec![
             DbFloat::from(1.1_f64),
             DbFloat::from(1.3_f64),
@@ -120,6 +125,16 @@ mod tests {
                 DbFloat::from(1.3_f64)
             ]
         );
+    }
+
+    #[test]
+    fn from_f32() {
+        let _ = DbFloat::from(1.0_f32);
+    }
+
+    #[test]
+    fn from_f64() {
+        let _ = DbFloat::from(1.0_f64);
     }
 
     #[test]

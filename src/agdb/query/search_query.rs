@@ -16,10 +16,47 @@ pub struct SearchQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn derived_from_debug() {
         format!(
             "{:?}",
+            SearchQuery {
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![]
+            }
+        );
+    }
+
+    #[test]
+    fn derived_from_clone() {
+        let left = SearchQuery {
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        };
+        let right = left.clone();
+        assert_eq!(left, right);
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(
+            SearchQuery {
+                origin: QueryId::from(0),
+                destination: QueryId::from(0),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![]
+            },
             SearchQuery {
                 origin: QueryId::from(0),
                 destination: QueryId::from(0),

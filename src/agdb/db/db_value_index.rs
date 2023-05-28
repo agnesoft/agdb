@@ -92,6 +92,25 @@ impl SerializeStatic for DbValueIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::Hash;
+
+    #[test]
+    fn derived_from_hash() {
+        let mut hasher = DefaultHasher::new();
+        DbValueIndex::new().hash(&mut hasher);
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", DbValueIndex::new());
+    }
+
+    #[test]
+    fn derived_from_clone_partial_eq() {
+        let index = DbValueIndex::new();
+        assert_eq!(index, index.clone());
+    }
 
     #[test]
     fn value_type() {

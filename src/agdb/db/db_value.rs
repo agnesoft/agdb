@@ -281,7 +281,67 @@ mod tests {
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
     use std::cell::RefCell;
+    use std::cmp::Ordering;
+    use std::collections::HashSet;
     use std::rc::Rc;
+
+    #[test]
+    fn derived_from_eq() {
+        let mut map = HashSet::<DbValue>::new();
+        map.insert(DbValue::from(1));
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", DbValue::from(""));
+    }
+
+    #[test]
+    fn derived_from_hash() {
+        let mut map = HashSet::<DbValue>::new();
+        map.insert(DbValue::from(1.0_f64));
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        assert_eq!(DbValue::from("").cmp(&DbValue::from("")), Ordering::Equal);
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
+        let mut vec = vec![
+            DbValue::from(1.1_f64),
+            DbValue::from(1.3_f64),
+            DbValue::from(-3.333_f64),
+        ];
+        vec.sort();
+        assert_eq!(
+            vec,
+            vec![
+                DbValue::from(-3.333_f64),
+                DbValue::from(1.1_f64),
+                DbValue::from(1.3_f64)
+            ]
+        );
+    }
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(DbValue::from(vec![1_u8]), DbValue::from(vec![1_u8]));
+        assert_eq!(DbValue::from(1.0_f64), DbValue::from(1.0_f64));
+        assert_eq!(DbValue::from(1_i64), DbValue::from(1_i64));
+        assert_eq!(DbValue::from(1_u64), DbValue::from(1_u64));
+        assert_eq!(
+            DbValue::from("Hello".to_string()),
+            DbValue::from("Hello".to_string())
+        );
+        assert_eq!(DbValue::from(vec![1.0_f64]), DbValue::from(vec![1.0_f64]));
+        assert_eq!(DbValue::from(vec![1_i64]), DbValue::from(vec![1_i64]));
+        assert_eq!(DbValue::from(vec![1_u64]), DbValue::from(vec![1_u64]));
+        assert_eq!(
+            DbValue::from(vec!["Hello".to_string()]),
+            DbValue::from(vec!["Hello".to_string()])
+        );
+    }
 
     #[test]
     fn from() {

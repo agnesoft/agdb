@@ -1,45 +1,152 @@
-pub mod indexed_map_impl;
-
-use self::indexed_map_impl::IndexedMapImpl;
-use super::map::map_data_memory::MapDataMemory;
+use super::map::map_data::MapData;
+use super::map::map_data_storage::MapDataStorage;
 use super::map::map_impl::MapImpl;
-use super::map::multi_map_impl::MultiMapImpl;
+use super::map::map_iterator::MapIterator;
+use super::map_storage::MapStorage;
+use super::vec::VecValue;
+use crate::db::db_error::DbError;
+use crate::storage::file_storage::FileStorage;
+use crate::storage::Storage;
+use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
+use std::cell::RefCell;
 use std::hash::Hash;
-use std::marker::PhantomData;
+use std::rc::Rc;
 
-pub type IndexedMap<K, T> = IndexedMapImpl<K, T, MapDataMemory<K, T>, MapDataMemory<T, K>>;
-
-impl<K, T> IndexedMap<K, T>
+pub struct IndexedMapImpl<K, T, DataKT, DataTK>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash,
-    T: Clone + Default + Eq + Hash + PartialEq + StableHash,
+    K: Default + Eq + Hash + PartialEq + StableHash,
+    T: Default + Eq + Hash + PartialEq + StableHash,
+    DataKT: MapData<K, T>,
+    DataTK: MapData<T, K>,
 {
-    pub fn new() -> Self {
-        Self {
-            keys_to_values: MapImpl {
-                multi_map: MultiMapImpl {
-                    data: MapDataMemory::<K, T>::new(),
-                    phantom_marker: PhantomData,
-                },
-            },
-            values_to_keys: MapImpl {
-                multi_map: MultiMapImpl {
-                    data: MapDataMemory::<T, K>::new(),
-                    phantom_marker: PhantomData,
-                },
-            },
+    pub(crate) keys_to_values: MapImpl<K, T, DataKT>,
+    pub(crate) values_to_keys: MapImpl<T, K, DataTK>,
+}
+
+impl<K, T, DataKT, DataTK> IndexedMapImpl<K, T, DataKT, DataTK>
+where
+    K: Default + Eq + Hash + PartialEq + StableHash,
+    T: Default + Eq + Hash + PartialEq + StableHash,
+    DataKT: MapData<K, T>,
+    DataTK: MapData<T, K>,
+{
+    pub fn insert(&mut self, key: &K, value: &T) -> Result<(), DbError> {
+        if let Some(v) = self.keys_to_values.insert(key, value)? {
+            self.values_to_keys.remove(&v)?;
         }
+
+        if let Some(k) = self.values_to_keys.insert(value, key)? {
+            self.keys_to_values.remove(&k)?;
+        }
+
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn iter(&self) -> MapIterator<K, T, DataKT> {
+        self.keys_to_values.iter()
+    }
+
+    pub fn key(&self, value: &T) -> Result<Option<K>, DbError> {
+        self.values_to_keys.value(value)
+    }
+
+    pub fn remove_key(&mut self, key: &K) -> Result<(), DbError> {
+        if let Some(value) = self.keys_to_values.value(key)? {
+            self.values_to_keys.remove(&value)?;
+        }
+
+        self.keys_to_values.remove(key)
+    }
+
+    #[allow(dead_code)]
+    pub fn remove_value(&mut self, value: &T) -> Result<(), DbError> {
+        if let Some(key) = self.values_to_keys.value(value)? {
+            self.keys_to_values.remove(&key)?;
+        }
+
+        self.values_to_keys.remove(value)
+    }
+
+    pub fn value(&self, key: &K) -> Result<Option<T>, DbError> {
+        self.keys_to_values.value(key)
+    }
+}
+
+pub type DbIndexedMap<K, T, Data = FileStorage> =
+    IndexedMapImpl<K, T, MapDataStorage<K, T, Data>, MapDataStorage<T, K, Data>>;
+
+impl<K, T, Data> DbIndexedMap<K, T, Data>
+where
+    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
+    T: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
+    Data: Storage,
+{
+    pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
+        let keys_to_values = MapStorage::<K, T, Data>::new(storage.clone())?;
+        let values_to_keys = MapStorage::<T, K, Data>::new(storage)?;
+
+        Ok(Self {
+            keys_to_values,
+            values_to_keys,
+        })
+    }
+
+    pub fn from_storage(
+        storage: Rc<RefCell<Data>>,
+        index: (StorageIndex, StorageIndex),
+    ) -> Result<Self, DbError> {
+        let keys_to_values = MapStorage::<K, T, Data>::from_storage(storage.clone(), index.0)?;
+        let values_to_keys = MapStorage::<T, K, Data>::from_storage(storage, index.1)?;
+
+        Ok(Self {
+            keys_to_values,
+            values_to_keys,
+        })
+    }
+
+    pub fn storage_index(&self) -> (StorageIndex, StorageIndex) {
+        (
+            self.keys_to_values.storage_index(),
+            self.values_to_keys.storage_index(),
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utilities::test_file::TestFile;
+
+    #[test]
+    fn from_storage() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let storage_index;
+
+        {
+            let mut map = DbIndexedMap::<String, u64>::new(storage.clone()).unwrap();
+            let key = "alias".to_string();
+            let value = 1_u64;
+            map.insert(&key, &value).unwrap();
+            storage_index = map.storage_index();
+        }
+
+        let map = DbIndexedMap::<String, u64>::from_storage(storage, storage_index).unwrap();
+        assert_eq!(map.value(&"alias".to_string()).unwrap(), Some(1_u64));
+    }
 
     #[test]
     fn insert() {
-        let mut map = IndexedMap::<String, u64>::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = DbIndexedMap::<String, u64>::new(storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;
 
@@ -51,7 +158,11 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut map = IndexedMap::<String, u64>::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = DbIndexedMap::<String, u64>::new(storage).unwrap();
         assert_eq!(map.insert(&"alias1".to_string(), &1_u64), Ok(()));
         assert_eq!(map.insert(&"alias2".to_string(), &2_u64), Ok(()));
         assert_eq!(map.insert(&"alias3".to_string(), &3_u64), Ok(()));
@@ -76,7 +187,11 @@ mod tests {
 
     #[test]
     fn replace_by_key() {
-        let mut map = IndexedMap::<String, u64>::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = DbIndexedMap::<String, u64>::new(storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;
         let new_value = 2_u64;
@@ -91,7 +206,11 @@ mod tests {
 
     #[test]
     fn replace_by_value() {
-        let mut map = IndexedMap::<String, u64>::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = DbIndexedMap::<String, u64>::new(storage).unwrap();
         let key = "alias".to_string();
         let new_key = "new_alias".to_string();
         let value = 1_u64;
@@ -106,7 +225,11 @@ mod tests {
 
     #[test]
     fn remove_key() {
-        let mut map = IndexedMap::<String, u64>::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = DbIndexedMap::<String, u64>::new(storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;
 
@@ -124,7 +247,11 @@ mod tests {
 
     #[test]
     fn remove_value() {
-        let mut map = IndexedMap::<String, u64>::new();
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = DbIndexedMap::<String, u64>::new(storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;
 
@@ -138,15 +265,5 @@ mod tests {
 
         assert_eq!(map.value(&key), Ok(None));
         assert_eq!(map.key(&value), Ok(None));
-    }
-
-    #[test]
-    fn value() {
-        let mut map = IndexedMap::<i64, i64>::new();
-        map.insert(&1, &1).unwrap();
-        map.insert(&2, &2).unwrap();
-        map.insert(&-1, &-3).unwrap();
-
-        assert_eq!(map.value(&-1), Ok(Some(-3)));
     }
 }

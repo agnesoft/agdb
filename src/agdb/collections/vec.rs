@@ -248,6 +248,7 @@ where
         self.len() == 0
     }
 
+    #[allow(dead_code)]
     pub fn iter(&self) -> VecIterator<T, D, E> {
         VecIterator {
             index: 0,
@@ -383,10 +384,6 @@ where
 
     pub fn storage_index(&self) -> StorageIndex {
         self.data.storage_index
-    }
-
-    pub fn to_vec(&self) -> Result<Vec<T>, DbError> {
-        Ok(self.iter().collect())
     }
 }
 

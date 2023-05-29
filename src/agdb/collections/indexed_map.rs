@@ -1,8 +1,8 @@
-use super::map::map_data::MapData;
-use super::map::map_data_storage::MapDataStorage;
-use super::map::map_impl::MapImpl;
-use super::map::map_iterator::MapIterator;
-use super::map_storage::MapStorage;
+use super::map::DbMap;
+use super::map::DbMapData;
+use super::map::MapData;
+use super::map::MapImpl;
+use super::map::MapIterator;
 use super::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
@@ -75,7 +75,7 @@ where
 }
 
 pub type DbIndexedMap<K, T, Data = FileStorage> =
-    IndexedMapImpl<K, T, MapDataStorage<K, T, Data>, MapDataStorage<T, K, Data>>;
+    IndexedMapImpl<K, T, DbMapData<K, T, Data>, DbMapData<T, K, Data>>;
 
 impl<K, T, Data> DbIndexedMap<K, T, Data>
 where
@@ -84,8 +84,8 @@ where
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {
-        let keys_to_values = MapStorage::<K, T, Data>::new(storage.clone())?;
-        let values_to_keys = MapStorage::<T, K, Data>::new(storage)?;
+        let keys_to_values = DbMap::<K, T, Data>::new(storage.clone())?;
+        let values_to_keys = DbMap::<T, K, Data>::new(storage)?;
 
         Ok(Self {
             keys_to_values,
@@ -97,8 +97,8 @@ where
         storage: Rc<RefCell<Data>>,
         index: (StorageIndex, StorageIndex),
     ) -> Result<Self, DbError> {
-        let keys_to_values = MapStorage::<K, T, Data>::from_storage(storage.clone(), index.0)?;
-        let values_to_keys = MapStorage::<T, K, Data>::from_storage(storage, index.1)?;
+        let keys_to_values = DbMap::<K, T, Data>::from_storage(storage.clone(), index.0)?;
+        let values_to_keys = DbMap::<T, K, Data>::from_storage(storage, index.1)?;
 
         Ok(Self {
             keys_to_values,

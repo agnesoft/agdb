@@ -19,12 +19,10 @@ use self::db_value::INT_META_VALUE;
 use self::db_value::STRING_META_VALUE;
 use self::db_value::UINT_META_VALUE;
 use self::db_value_index::DbValueIndex;
-use crate::collections::dictionary::dictionary_index::DictionaryIndex;
-use crate::collections::dictionary::Dictionary;
-use crate::collections::dictionary_storage::DictionaryStorage;
+use crate::collections::dictionary::DictionaryIndex;
+use crate::collections::dictionary::DictionaryStorage;
 use crate::collections::indexed_map::DbIndexedMap;
-use crate::collections::multi_map::MultiMap;
-use crate::collections::multi_map_storage::MultiMapStorage;
+use crate::collections::multi_map::MultiMapStorage;
 use crate::command::Command;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
@@ -99,8 +97,6 @@ struct DbStorage {
 
 pub struct Db {
     storage: DbStorage,
-    dictionary: Dictionary<DbValue>,
-    values: MultiMap<DbId, DbKeyValueIndex>,
     undo_stack: Vec<Command>,
 }
 
@@ -172,7 +168,6 @@ impl Db {
                 Command::InsertKeyValue { id, key_value } => {
                     let key = self.insert_value(&key_value.key)?;
                     let value = self.insert_value(&key_value.value)?;
-                    self.values.insert(id, &DbKeyValueIndex { key, value })?;
                     self.storage
                         .values
                         .insert(id, &DbKeyValueIndex { key, value })?;
@@ -187,14 +182,12 @@ impl Db {
                     self.storage.graph.remove_edge(*index)?;
                 }
                 Command::RemoveKeyValue { id, key_value } => {
-                    self.values.remove_value(id, key_value)?;
                     self.storage.values.remove_value(id, key_value)?;
                 }
                 Command::RemoveNode { index } => {
                     self.storage.graph.remove_node(*index)?;
                 }
                 Command::RemoveValue { index } => {
-                    self.dictionary.remove(*index)?;
                     self.storage.dictionary.remove(*index)?;
                 }
             }
@@ -298,7 +291,6 @@ impl Db {
             id: db_id,
             key_value,
         });
-        self.values.insert(&db_id, &key_value)?;
         self.storage.values.insert(&db_id, &key_value)?;
 
         Ok(())
@@ -376,6 +368,7 @@ impl Db {
 
         let dictionary_index = DictionaryIndex(index.index());
         let value = self
+            .storage
             .dictionary
             .value(dictionary_index)?
             .ok_or(QueryError::from(format!(
@@ -386,7 +379,7 @@ impl Db {
     }
 
     pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValueIndex>, DbError> {
-        self.values.values(&db_id)
+        self.storage.values.values(&db_id)
     }
 
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
@@ -453,8 +446,7 @@ impl Db {
             }
         }
 
-        let dictionary_index = self.dictionary.insert(value)?;
-        let _ = self.storage.dictionary.insert(value)?;
+        let dictionary_index = self.storage.dictionary.insert(value)?;
         index.set_index(dictionary_index.0);
         Ok(index)
     }
@@ -529,8 +521,6 @@ impl Db {
 
     fn remove_value(&mut self, value_index: DbValueIndex) -> Result<(), DbError> {
         if !value_index.is_value() {
-            self.dictionary
-                .remove(DictionaryIndex(value_index.index()))?;
             self.storage
                 .dictionary
                 .remove(DictionaryIndex(value_index.index()))?;
@@ -542,7 +532,7 @@ impl Db {
     pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbKey]) -> Result<i64, QueryError> {
         let mut result = 0;
 
-        for key_value_index in self.values.values(&db_id)? {
+        for key_value_index in self.storage.values.values(&db_id)? {
             let key = self.value(&key_value_index.key)?;
 
             if keys.contains(&key) {
@@ -554,7 +544,6 @@ impl Db {
                     id: db_id,
                     key_value: DbKeyValue { key, value },
                 });
-                self.values.remove_value(&db_id, &key_value_index)?;
                 self.storage.values.remove_value(&db_id, &key_value_index)?;
 
                 result += 1;
@@ -565,7 +554,7 @@ impl Db {
     }
 
     fn remove_all_values(&mut self, db_id: DbId) -> Result<(), QueryError> {
-        for key_value_index in self.values.values(&db_id)? {
+        for key_value_index in self.storage.values.values(&db_id)? {
             let key = self.value(&key_value_index.key)?;
             let value = self.value(&key_value_index.value)?;
             self.remove_value(key_value_index.key)?;
@@ -576,7 +565,7 @@ impl Db {
             });
         }
 
-        self.values.remove_key(&db_id)?;
+        self.storage.values.remove_key(&db_id)?;
 
         Ok(())
     }
@@ -585,9 +574,7 @@ impl Db {
         let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
         let graph_storage;
         let aliases_storage;
-        let dictionary;
         let dictionary_storage;
-        let values;
         let values_storage;
         let len = storage.borrow_mut().len()?;
         let index = storage
@@ -599,16 +586,12 @@ impl Db {
             aliases_storage = DbIndexedMap::from_storage(storage.clone(), index.aliases)?;
             dictionary_storage =
                 DictionaryStorage::from_storage(storage.clone(), index.dictionary)?;
-            dictionary = dictionary_storage.to_dictionary()?;
             values_storage = MultiMapStorage::from_storage(storage.clone(), index.values)?;
-            values = values_storage.to_multi_map()?;
         } else if len == 0 {
             storage.borrow_mut().insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(storage.clone())?;
             aliases_storage = DbIndexedMap::new(storage.clone())?;
-            dictionary = Dictionary::new();
             dictionary_storage = DictionaryStorage::new(storage.clone())?;
-            values = MultiMap::new();
             values_storage = MultiMapStorage::new(storage.clone())?;
             let db_storage_index = DbStorageIndex {
                 graph: graph_storage.storage_index(),
@@ -633,8 +616,6 @@ impl Db {
                 dictionary: dictionary_storage,
                 values: values_storage,
             },
-            dictionary,
-            values,
             undo_stack: vec![],
         })
     }

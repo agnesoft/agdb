@@ -22,8 +22,7 @@ use self::db_value_index::DbValueIndex;
 use crate::collections::dictionary::dictionary_index::DictionaryIndex;
 use crate::collections::dictionary::Dictionary;
 use crate::collections::dictionary_storage::DictionaryStorage;
-use crate::collections::indexed_map::IndexedMap;
-use crate::collections::indexed_map_storage::IndexedMapStorage;
+use crate::collections::indexed_map::DbIndexedMap;
 use crate::collections::multi_map::MultiMap;
 use crate::collections::multi_map_storage::MultiMapStorage;
 use crate::command::Command;
@@ -93,14 +92,13 @@ impl Serialize for DbStorageIndex {
 struct DbStorage {
     _storage: Rc<RefCell<FileStorage>>,
     graph: DbGraph,
-    aliases: IndexedMapStorage<String, DbId>,
+    aliases: DbIndexedMap<String, DbId>,
     dictionary: DictionaryStorage<DbValue>,
     values: MultiMapStorage<DbId, DbKeyValueIndex>,
 }
 
 pub struct Db {
     storage: DbStorage,
-    aliases: IndexedMap<String, DbId>,
     dictionary: Dictionary<DbValue>,
     values: MultiMap<DbId, DbKeyValueIndex>,
     undo_stack: Vec<Command>,
@@ -166,7 +164,6 @@ impl Db {
         for command in undo_stack.iter().rev() {
             match command {
                 Command::InsertAlias { id, alias } => {
-                    self.aliases.insert(alias, id)?;
                     self.storage.aliases.insert(alias, id)?;
                 }
                 Command::InsertEdge { from, to } => {
@@ -184,7 +181,6 @@ impl Db {
                     self.storage.graph.insert_node()?;
                 }
                 Command::RemoveAlias { alias } => {
-                    self.aliases.remove_key(alias)?;
                     self.storage.aliases.remove_key(alias)?;
                 }
                 Command::RemoveEdge { index } => {
@@ -211,6 +207,7 @@ impl Db {
         match query_id {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),
             QueryId::Alias(alias) => Ok(self
+                .storage
                 .aliases
                 .value(alias)?
                 .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?),
@@ -218,19 +215,18 @@ impl Db {
     }
 
     pub(crate) fn insert_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
-        if let Some(old_alias) = self.aliases.key(&db_id)? {
+        if let Some(old_alias) = self.storage.aliases.key(&db_id)? {
             self.undo_stack.push(Command::InsertAlias {
                 id: db_id,
                 alias: old_alias.clone(),
             });
-            self.aliases.remove_key(&old_alias)?;
+            self.storage.aliases.remove_key(&old_alias)?;
             self.storage.aliases.remove_key(&old_alias)?;
         }
 
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
-        self.aliases.insert(alias, &db_id)?;
         self.storage.aliases.insert(alias, &db_id)
     }
 
@@ -252,7 +248,7 @@ impl Db {
         db_id: DbId,
         alias: &String,
     ) -> Result<(), QueryError> {
-        if let Some(id) = self.aliases.value(alias)? {
+        if let Some(id) = self.storage.aliases.value(alias)? {
             return Err(QueryError::from(format!(
                 "Alias '{alias}' already exists ({})",
                 id.0
@@ -262,7 +258,6 @@ impl Db {
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
-        self.aliases.insert(alias, &db_id)?;
         self.storage.aliases.insert(alias, &db_id)?;
 
         Ok(())
@@ -314,7 +309,7 @@ impl Db {
             QueryId::Id(db_id) => {
                 if let Ok(graph_index) = self.graph_index(db_id.0) {
                     if graph_index.is_node() {
-                        self.remove_node(*db_id, graph_index, self.aliases.key(db_id)?)?;
+                        self.remove_node(*db_id, graph_index, self.storage.aliases.key(db_id)?)?;
                     } else {
                         self.remove_edge(graph_index)?;
                     }
@@ -323,7 +318,7 @@ impl Db {
                 }
             }
             QueryId::Alias(alias) => {
-                if let Some(db_id) = self.aliases.value(alias)? {
+                if let Some(db_id) = self.storage.aliases.value(alias)? {
                     self.remove_node(db_id, GraphIndex(db_id.0), Some(alias.clone()))?;
                     self.remove_all_values(db_id)?;
                     return Ok(true);
@@ -335,12 +330,12 @@ impl Db {
     }
 
     pub(crate) fn remove_alias(&mut self, alias: &String) -> Result<bool, DbError> {
-        if let Some(id) = self.aliases.value(alias)? {
+        if let Some(id) = self.storage.aliases.value(alias)? {
             self.undo_stack.push(Command::InsertAlias {
                 id,
                 alias: alias.clone(),
             });
-            self.aliases.remove_key(alias)?;
+            self.storage.aliases.remove_key(alias)?;
             self.storage.aliases.remove_key(alias)?;
 
             return Ok(true);
@@ -515,7 +510,7 @@ impl Db {
                 alias: alias.clone(),
                 id: db_id,
             });
-            self.aliases.remove_key(&alias)?;
+            self.storage.aliases.remove_key(&alias)?;
             self.storage.aliases.remove_key(&alias)?;
         }
 
@@ -589,7 +584,6 @@ impl Db {
     fn try_new(filename: &str) -> Result<Db, DbError> {
         let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
         let graph_storage;
-        let aliases;
         let aliases_storage;
         let dictionary;
         let dictionary_storage;
@@ -602,8 +596,7 @@ impl Db {
 
         if let Ok(index) = index {
             graph_storage = DbGraph::from_storage(storage.clone(), index.graph)?;
-            aliases_storage = IndexedMapStorage::from_storage(storage.clone(), index.aliases)?;
-            aliases = aliases_storage.to_indexed_map()?;
+            aliases_storage = DbIndexedMap::from_storage(storage.clone(), index.aliases)?;
             dictionary_storage =
                 DictionaryStorage::from_storage(storage.clone(), index.dictionary)?;
             dictionary = dictionary_storage.to_dictionary()?;
@@ -612,8 +605,7 @@ impl Db {
         } else if len == 0 {
             storage.borrow_mut().insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(storage.clone())?;
-            aliases = IndexedMap::new();
-            aliases_storage = IndexedMapStorage::new(storage.clone())?;
+            aliases_storage = DbIndexedMap::new(storage.clone())?;
             dictionary = Dictionary::new();
             dictionary_storage = DictionaryStorage::new(storage.clone())?;
             values = MultiMap::new();
@@ -641,7 +633,6 @@ impl Db {
                 dictionary: dictionary_storage,
                 values: values_storage,
             },
-            aliases,
             dictionary,
             values,
             undo_stack: vec![],

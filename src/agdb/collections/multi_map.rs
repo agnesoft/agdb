@@ -112,7 +112,7 @@ where
             match self.data.state(pos)? {
                 MapValueState::Empty => break,
                 MapValueState::Valid if self.data.key(pos)? == *key => {
-                    self.data.set_state(pos, MapValueState::Deleted)?;
+                    self.drop_value(pos)?;
                     len -= 1;
                 }
                 MapValueState::Valid | MapValueState::Deleted => {}
@@ -149,7 +149,6 @@ where
                     if self.data.key(pos)? == *key && self.data.value(pos)? == *value =>
                 {
                     self.remove_index(pos)?;
-
                     break;
                 }
                 MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
@@ -236,6 +235,12 @@ where
         }
 
         Ok(values)
+    }
+
+    fn drop_value(&mut self, pos: u64) -> Result<(), DbError> {
+        self.data.set_state(pos, MapValueState::Deleted)?;
+        self.data.set_key(pos, &K::default())?;
+        self.data.set_value(pos, &T::default())
     }
 
     fn free_index(&mut self, key: &K) -> Result<u64, DbError> {
@@ -359,7 +364,7 @@ where
     }
 
     fn remove_index(&mut self, index: u64) -> Result<(), DbError> {
-        self.data.set_state(index, MapValueState::Deleted)?;
+        self.drop_value(index)?;
         self.data.set_len(self.len() - 1)?;
 
         if self.len() <= self.min_len() {

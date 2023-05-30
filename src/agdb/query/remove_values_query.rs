@@ -13,7 +13,7 @@ impl QueryMut for RemoveValuesQuery {
             QueryIds::Ids(ids) => {
                 for id in ids {
                     let db_id = db.db_id(id)?;
-                    result.result -= db.remove_keys(db_id, &self.0.keys)?;
+                    result.result += db.remove_keys(db_id, &self.0.keys)?;
                 }
                 Ok(())
             }

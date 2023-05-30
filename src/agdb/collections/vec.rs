@@ -90,13 +90,6 @@ where
     fn offset(index: u64) -> u64 {
         u64::serialized_size_static() + T::storage_len() * index
     }
-
-    fn store_value(&mut self, index: u64, value: &T) -> Result<(), E> {
-        let storage = &mut *self.storage.borrow_mut();
-        let bytes = value.store(storage)?;
-        storage.insert_bytes_at(self.storage_index, Self::offset(index), &bytes)?;
-        Ok(())
-    }
 }
 
 impl<T, S, E> VecData<T, E> for DbVecData<T, S, E>
@@ -122,6 +115,7 @@ where
         )?;
 
         let current_capacity = self.data.capacity();
+
         if capacity < current_capacity as u64 {
             self.data.shrink_to(capacity as usize);
         } else {
@@ -141,8 +135,8 @@ where
             Self::offset(index),
             T::storage_len(),
         )?;
-        T::remove(storage, &bytes)?;
         let id = storage.transaction();
+        T::remove(storage, &bytes)?;
         storage.move_at(self.storage_index, offset_from, offset_to, move_len)?;
         storage.insert_at(self.storage_index, 0, &(self.len() - 1))?;
         storage.commit(id)?;
@@ -150,20 +144,43 @@ where
     }
 
     fn replace(&mut self, index: u64, value: &T) -> Result<T, E> {
-        self.store_value(index, value)?;
+        let storage = &mut *self.storage.borrow_mut();
+        let old_bytes = storage.value_as_bytes_at_size(
+            self.storage_index,
+            Self::offset(index),
+            T::storage_len(),
+        )?;
+        let id = storage.transaction();
+        T::remove(storage, &old_bytes)?;
+        let bytes = value.store(storage)?;
+        storage.insert_bytes_at(self.storage_index, Self::offset(index), &bytes)?;
+        storage.commit(id)?;
         let old_value = self.data[index as usize].clone();
         self.data[index as usize] = value.clone();
+
         Ok(old_value)
     }
 
     fn resize(&mut self, new_len: u64, value: &T) -> Result<(), E> {
+        let storage = &mut *self.storage.borrow_mut();
+        let id = storage.transaction();
+
         for index in self.len()..new_len {
-            self.store_value(index, value)?;
+            let bytes = value.store(storage)?;
+            storage.insert_bytes_at(self.storage_index, Self::offset(index), &bytes)?;
         }
 
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, 0, &new_len)?;
+        for index in new_len..self.len() {
+            let old_bytes = storage.value_as_bytes_at_size(
+                self.storage_index,
+                Self::offset(index),
+                T::storage_len(),
+            )?;
+            T::remove(storage, &old_bytes)?;
+        }
+
+        storage.insert_at(self.storage_index, 0, &new_len)?;
+        storage.commit(id)?;
         self.data.resize_with(new_len as usize, || value.clone());
         Ok(())
     }

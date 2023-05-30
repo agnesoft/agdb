@@ -5,22 +5,11 @@ pub mod db_key;
 pub mod db_key_value;
 pub mod db_value;
 
-pub(crate) mod db_key_value_index;
 pub(crate) mod db_value_index;
 
 mod db_float;
 
 use self::db_error::DbError;
-use self::db_float::DbFloat;
-use self::db_key_value_index::DbKeyValueIndex;
-use self::db_value::BYTES_META_VALUE;
-use self::db_value::FLOAT_META_VALUE;
-use self::db_value::INT_META_VALUE;
-use self::db_value::STRING_META_VALUE;
-use self::db_value::UINT_META_VALUE;
-use self::db_value_index::DbValueIndex;
-use crate::collections::dictionary::DictionaryIndex;
-use crate::collections::dictionary::DictionaryStorage;
 use crate::collections::indexed_map::DbIndexedMap;
 use crate::collections::multi_map::MultiMapStorage;
 use crate::command::Command;
@@ -38,7 +27,6 @@ use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
 use crate::DbKey;
 use crate::DbKeyValue;
-use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::Transaction;
@@ -49,7 +37,6 @@ use std::rc::Rc;
 struct DbStorageIndex {
     graph: StorageIndex,
     aliases: (StorageIndex, StorageIndex),
-    dictionary: StorageIndex,
     values: StorageIndex,
 }
 
@@ -59,7 +46,6 @@ impl Serialize for DbStorageIndex {
             self.graph.serialize(),
             self.aliases.0.serialize(),
             self.aliases.1.serialize(),
-            self.dictionary.serialize(),
             self.values.serialize(),
         ]
         .concat()
@@ -71,32 +57,25 @@ impl Serialize for DbStorageIndex {
         let graph = StorageIndex::deserialize(bytes)?;
         let aliases_1 = StorageIndex::deserialize(&bytes[size..])?;
         let aliases_2 = StorageIndex::deserialize(&bytes[size * 2..])?;
-        let dictionary = StorageIndex::deserialize(&bytes[size * 3..])?;
-        let values = StorageIndex::deserialize(&bytes[size * 4..])?;
+        let values = StorageIndex::deserialize(&bytes[size * 3..])?;
 
         Ok(Self {
             graph,
             aliases: (aliases_1, aliases_2),
-            dictionary,
             values,
         })
     }
 
     fn serialized_size(&self) -> u64 {
-        i64::serialized_size_static() * 5
+        i64::serialized_size_static() * 4
     }
 }
 
-struct DbStorage {
+pub struct Db {
     _storage: Rc<RefCell<FileStorage>>,
     graph: DbGraph,
     aliases: DbIndexedMap<String, DbId>,
-    dictionary: DictionaryStorage<DbValue>,
-    values: MultiMapStorage<DbId, DbKeyValueIndex>,
-}
-
-pub struct Db {
-    storage: DbStorage,
+    values: MultiMapStorage<DbId, DbKeyValue>,
     undo_stack: Vec<Command>,
 }
 
@@ -159,37 +138,18 @@ impl Db {
 
         for command in undo_stack.iter().rev() {
             match command {
-                Command::InsertAlias { id, alias } => {
-                    self.storage.aliases.insert(alias, id)?;
-                }
+                Command::InsertAlias { id, alias } => self.aliases.insert(alias, id)?,
                 Command::InsertEdge { from, to } => {
-                    self.storage.graph.insert_edge(*from, *to)?;
+                    self.graph.insert_edge(*from, *to).map(|_| ())?
                 }
-                Command::InsertKeyValue { id, key_value } => {
-                    let key = self.insert_value(&key_value.key)?;
-                    let value = self.insert_value(&key_value.value)?;
-                    self.storage
-                        .values
-                        .insert(id, &DbKeyValueIndex { key, value })?;
-                }
-                Command::InsertNode => {
-                    self.storage.graph.insert_node()?;
-                }
-                Command::RemoveAlias { alias } => {
-                    self.storage.aliases.remove_key(alias)?;
-                }
-                Command::RemoveEdge { index } => {
-                    self.storage.graph.remove_edge(*index)?;
-                }
+                Command::InsertKeyValue { id, key_value } => self.values.insert(id, key_value)?,
+                Command::InsertNode => self.graph.insert_node().map(|_| ())?,
+                Command::RemoveAlias { alias } => self.aliases.remove_key(alias)?,
+                Command::RemoveEdge { index } => self.graph.remove_edge(*index)?,
                 Command::RemoveKeyValue { id, key_value } => {
-                    self.storage.values.remove_value(id, key_value)?;
+                    self.values.remove_value(id, key_value)?
                 }
-                Command::RemoveNode { index } => {
-                    self.storage.graph.remove_node(*index)?;
-                }
-                Command::RemoveValue { index } => {
-                    self.storage.dictionary.remove(*index)?;
-                }
+                Command::RemoveNode { index } => self.graph.remove_node(*index)?,
             }
         }
 
@@ -200,7 +160,6 @@ impl Db {
         match query_id {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),
             QueryId::Alias(alias) => Ok(self
-                .storage
                 .aliases
                 .value(alias)?
                 .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?),
@@ -208,19 +167,19 @@ impl Db {
     }
 
     pub(crate) fn insert_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
-        if let Some(old_alias) = self.storage.aliases.key(&db_id)? {
+        if let Some(old_alias) = self.aliases.key(&db_id)? {
             self.undo_stack.push(Command::InsertAlias {
                 id: db_id,
                 alias: old_alias.clone(),
             });
-            self.storage.aliases.remove_key(&old_alias)?;
-            self.storage.aliases.remove_key(&old_alias)?;
+            self.aliases.remove_key(&old_alias)?;
+            self.aliases.remove_key(&old_alias)?;
         }
 
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
-        self.storage.aliases.insert(alias, &db_id)
+        self.aliases.insert(alias, &db_id)
     }
 
     pub(crate) fn insert_edge(&mut self, from: &QueryId, to: &QueryId) -> Result<DbId, QueryError> {
@@ -228,7 +187,6 @@ impl Db {
         let to = self.db_id(to)?;
 
         let index = self
-            .storage
             .graph
             .insert_edge(GraphIndex(from.0), GraphIndex(to.0))?;
         self.undo_stack.push(Command::RemoveEdge { index });
@@ -241,7 +199,7 @@ impl Db {
         db_id: DbId,
         alias: &String,
     ) -> Result<(), QueryError> {
-        if let Some(id) = self.storage.aliases.value(alias)? {
+        if let Some(id) = self.aliases.value(alias)? {
             return Err(QueryError::from(format!(
                 "Alias '{alias}' already exists ({})",
                 id.0
@@ -251,13 +209,13 @@ impl Db {
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
-        self.storage.aliases.insert(alias, &db_id)?;
+        self.aliases.insert(alias, &db_id)?;
 
         Ok(())
     }
 
     pub(crate) fn insert_node(&mut self) -> Result<DbId, DbError> {
-        let index = self.storage.graph.insert_node()?;
+        let index = self.graph.insert_node()?;
         self.undo_stack.push(Command::RemoveNode { index });
 
         Ok(DbId(index.0))
@@ -266,33 +224,13 @@ impl Db {
     pub(crate) fn insert_key_value(
         &mut self,
         db_id: DbId,
-        key: &DbKey,
-        value: &DbValue,
+        key_value: &DbKeyValue,
     ) -> Result<(), QueryError> {
-        let key = self.insert_value(key)?;
-
-        if !key.is_value() {
-            self.undo_stack.push(Command::RemoveValue {
-                index: DictionaryIndex(key.index()),
-            });
-        }
-
-        let value = self.insert_value(value)?;
-
-        if !key.is_value() {
-            self.undo_stack.push(Command::RemoveValue {
-                index: DictionaryIndex(value.index()),
-            });
-        }
-
-        let key_value = DbKeyValueIndex { key, value };
-
         self.undo_stack.push(Command::RemoveKeyValue {
             id: db_id,
-            key_value,
+            key_value: key_value.clone(),
         });
-        self.storage.values.insert(&db_id, &key_value)?;
-
+        self.values.insert(&db_id, key_value)?;
         Ok(())
     }
 
@@ -301,7 +239,7 @@ impl Db {
             QueryId::Id(db_id) => {
                 if let Ok(graph_index) = self.graph_index(db_id.0) {
                     if graph_index.is_node() {
-                        self.remove_node(*db_id, graph_index, self.storage.aliases.key(db_id)?)?;
+                        self.remove_node(*db_id, graph_index, self.aliases.key(db_id)?)?;
                     } else {
                         self.remove_edge(graph_index)?;
                     }
@@ -310,7 +248,7 @@ impl Db {
                 }
             }
             QueryId::Alias(alias) => {
-                if let Some(db_id) = self.storage.aliases.value(alias)? {
+                if let Some(db_id) = self.aliases.value(alias)? {
                     self.remove_node(db_id, GraphIndex(db_id.0), Some(alias.clone()))?;
                     self.remove_all_values(db_id)?;
                     return Ok(true);
@@ -322,13 +260,13 @@ impl Db {
     }
 
     pub(crate) fn remove_alias(&mut self, alias: &String) -> Result<bool, DbError> {
-        if let Some(id) = self.storage.aliases.value(alias)? {
+        if let Some(id) = self.aliases.value(alias)? {
             self.undo_stack.push(Command::InsertAlias {
                 id,
                 alias: alias.clone(),
             });
-            self.storage.aliases.remove_key(alias)?;
-            self.storage.aliases.remove_key(alias)?;
+            self.aliases.remove_key(alias)?;
+            self.aliases.remove_key(alias)?;
 
             return Ok(true);
         }
@@ -336,62 +274,20 @@ impl Db {
         Ok(false)
     }
 
-    pub(crate) fn value(&self, index: &DbValueIndex) -> Result<DbValue, QueryError> {
-        if index.is_value() {
-            match index.get_type() {
-                BYTES_META_VALUE => {
-                    return Ok(DbValue::Bytes(index.value().to_vec()));
-                }
-                INT_META_VALUE => {
-                    let mut bytes = [0_u8; 8];
-                    bytes.copy_from_slice(index.value());
-                    return Ok(DbValue::Int(i64::from_le_bytes(bytes)));
-                }
-                UINT_META_VALUE => {
-                    let mut bytes = [0_u8; 8];
-                    bytes.copy_from_slice(index.value());
-                    return Ok(DbValue::Uint(u64::from_le_bytes(bytes)));
-                }
-                FLOAT_META_VALUE => {
-                    let mut bytes = [0_u8; 8];
-                    bytes.copy_from_slice(index.value());
-                    return Ok(DbValue::Float(DbFloat::from(f64::from_le_bytes(bytes))));
-                }
-                STRING_META_VALUE => {
-                    return Ok(DbValue::String(
-                        String::from_utf8_lossy(index.value()).to_string(),
-                    ))
-                }
-                _ => panic!(),
-            }
-        }
-
-        let dictionary_index = DictionaryIndex(index.index());
-        let value = self
-            .storage
-            .dictionary
-            .value(dictionary_index)?
-            .ok_or(QueryError::from(format!(
-                "Value not found (index: '{}')",
-                dictionary_index.0
-            )))?;
-        Ok(value)
-    }
-
-    pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValueIndex>, DbError> {
-        self.storage.values.values(&db_id)
+    pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
+        self.values.values(&db_id)
     }
 
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
         match id.cmp(&0) {
             std::cmp::Ordering::Less => {
-                if self.storage.graph.edge(GraphIndex(id)).is_some() {
+                if self.graph.edge(GraphIndex(id)).is_some() {
                     return Ok(GraphIndex(id));
                 }
             }
             std::cmp::Ordering::Equal => {}
             std::cmp::Ordering::Greater => {
-                if self.storage.graph.node(GraphIndex(id)).is_some() {
+                if self.graph.node(GraphIndex(id)).is_some() {
                     return Ok(GraphIndex(id));
                 }
             }
@@ -400,64 +296,12 @@ impl Db {
         Err(QueryError::from(format!("Id '{id}' not found")))
     }
 
-    fn insert_value(&mut self, value: &DbValue) -> Result<DbValueIndex, QueryError> {
-        let mut index = DbValueIndex::new();
-
-        match value {
-            DbValue::Bytes(v) => {
-                index.set_type(db_value::BYTES_META_VALUE);
-                if index.set_value(v) {
-                    return Ok(index);
-                }
-            }
-            DbValue::Int(v) => {
-                index.set_type(db_value::INT_META_VALUE);
-                index.set_value(&v.to_le_bytes());
-                return Ok(index);
-            }
-            DbValue::Uint(v) => {
-                index.set_type(db_value::UINT_META_VALUE);
-                index.set_value(&v.to_le_bytes());
-                return Ok(index);
-            }
-            DbValue::Float(v) => {
-                index.set_type(db_value::FLOAT_META_VALUE);
-                index.set_value(&v.to_f64().to_le_bytes());
-                return Ok(index);
-            }
-            DbValue::String(v) => {
-                index.set_type(db_value::STRING_META_VALUE);
-                let bytes = v.as_bytes();
-                if index.set_value(bytes) {
-                    return Ok(index);
-                }
-            }
-            DbValue::VecInt(_) => {
-                index.set_type(db_value::VEC_INT_META_VALUE);
-            }
-            DbValue::VecUint(_) => {
-                index.set_type(db_value::VEC_UINT_META_VALUE);
-            }
-            DbValue::VecFloat(_) => {
-                index.set_type(db_value::VEC_FLOAT_META_VALUE);
-            }
-            DbValue::VecString(_) => {
-                index.set_type(db_value::VEC_STRING_META_VALUE);
-            }
-        }
-
-        let dictionary_index = self.storage.dictionary.insert(value)?;
-        index.set_index(dictionary_index.0);
-        Ok(index)
-    }
-
     fn node_edges(
         &self,
         graph_index: GraphIndex,
     ) -> Result<Vec<(GraphIndex, GraphIndex, GraphIndex)>, DbError> {
         let mut edges = vec![];
         let node = self
-            .storage
             .graph
             .node(graph_index)
             .ok_or(DbError::from("Data integrity corrupted"))?;
@@ -479,14 +323,13 @@ impl Db {
     fn remove_edge(&mut self, graph_index: GraphIndex) -> Result<(), DbError> {
         let (from, to) = {
             let edge = self
-                .storage
                 .graph
                 .edge(graph_index)
                 .ok_or(DbError::from("Graph integrity corrupted"))?;
             (edge.index_from(), edge.index_to())
         };
 
-        self.storage.graph.remove_edge(graph_index)?;
+        self.graph.remove_edge(graph_index)?;
         self.undo_stack.push(Command::InsertEdge { from, to });
         Ok(())
     }
@@ -502,51 +345,34 @@ impl Db {
                 alias: alias.clone(),
                 id: db_id,
             });
-            self.storage.aliases.remove_key(&alias)?;
-            self.storage.aliases.remove_key(&alias)?;
+            self.aliases.remove_key(&alias)?;
+            self.aliases.remove_key(&alias)?;
         }
 
         for edge in self.node_edges(graph_index)? {
-            self.storage.graph.remove_edge(edge.0)?;
+            self.graph.remove_edge(edge.0)?;
             self.undo_stack.push(Command::InsertEdge {
                 from: edge.1,
                 to: edge.2,
             });
         }
 
-        self.storage.graph.remove_node(graph_index)?;
+        self.graph.remove_node(graph_index)?;
         self.undo_stack.push(Command::InsertNode);
-        Ok(())
-    }
-
-    fn remove_value(&mut self, value_index: DbValueIndex) -> Result<(), DbError> {
-        if !value_index.is_value() {
-            self.storage
-                .dictionary
-                .remove(DictionaryIndex(value_index.index()))?;
-        }
-
         Ok(())
     }
 
     pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbKey]) -> Result<i64, QueryError> {
         let mut result = 0;
 
-        for key_value_index in self.storage.values.values(&db_id)? {
-            let key = self.value(&key_value_index.key)?;
-
-            if keys.contains(&key) {
-                let value = self.value(&key_value_index.value)?;
-                self.remove_value(key_value_index.key)?;
-                self.remove_value(key_value_index.value)?;
-
+        for key_value in self.values.values(&db_id)? {
+            if keys.contains(&key_value.key) {
                 self.undo_stack.push(Command::InsertKeyValue {
                     id: db_id,
-                    key_value: DbKeyValue { key, value },
+                    key_value: key_value.clone(),
                 });
-                self.storage.values.remove_value(&db_id, &key_value_index)?;
-
-                result += 1;
+                self.values.remove_value(&db_id, &key_value)?;
+                result -= 1;
             }
         }
 
@@ -554,18 +380,14 @@ impl Db {
     }
 
     fn remove_all_values(&mut self, db_id: DbId) -> Result<(), QueryError> {
-        for key_value_index in self.storage.values.values(&db_id)? {
-            let key = self.value(&key_value_index.key)?;
-            let value = self.value(&key_value_index.value)?;
-            self.remove_value(key_value_index.key)?;
-            self.remove_value(key_value_index.value)?;
+        for key_value in self.values.values(&db_id)? {
             self.undo_stack.push(Command::InsertKeyValue {
                 id: db_id,
-                key_value: DbKeyValue { key, value },
+                key_value,
             });
         }
 
-        self.storage.values.remove_key(&db_id)?;
+        self.values.remove_key(&db_id)?;
 
         Ok(())
     }
@@ -574,7 +396,6 @@ impl Db {
         let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
         let graph_storage;
         let aliases_storage;
-        let dictionary_storage;
         let values_storage;
         let len = storage.borrow_mut().len()?;
         let index = storage
@@ -584,19 +405,15 @@ impl Db {
         if let Ok(index) = index {
             graph_storage = DbGraph::from_storage(storage.clone(), index.graph)?;
             aliases_storage = DbIndexedMap::from_storage(storage.clone(), index.aliases)?;
-            dictionary_storage =
-                DictionaryStorage::from_storage(storage.clone(), index.dictionary)?;
             values_storage = MultiMapStorage::from_storage(storage.clone(), index.values)?;
         } else if len == 0 {
             storage.borrow_mut().insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(storage.clone())?;
             aliases_storage = DbIndexedMap::new(storage.clone())?;
-            dictionary_storage = DictionaryStorage::new(storage.clone())?;
             values_storage = MultiMapStorage::new(storage.clone())?;
             let db_storage_index = DbStorageIndex {
                 graph: graph_storage.storage_index(),
                 aliases: aliases_storage.storage_index(),
-                dictionary: dictionary_storage.storage_index(),
                 values: values_storage.storage_index(),
             };
             storage
@@ -609,13 +426,10 @@ impl Db {
         }
 
         Ok(Self {
-            storage: DbStorage {
-                _storage: storage,
-                graph: graph_storage,
-                aliases: aliases_storage,
-                dictionary: dictionary_storage,
-                values: values_storage,
-            },
+            _storage: storage,
+            graph: graph_storage,
+            aliases: aliases_storage,
+            values: values_storage,
             undo_stack: vec![],
         })
     }
@@ -627,21 +441,8 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
-    #[should_panic]
-    fn invalid_value_type() {
-        let test_file = TestFile::new();
-        let db = Db::new(test_file.file_name()).unwrap();
-
-        let mut index = DbValueIndex::new();
-        index.set_type(15_u8);
-        index.set_value(&1_u64.to_le_bytes());
-
-        db.value(&index).unwrap();
-    }
-
-    #[test]
     fn db_storage_index_serialized_size() {
-        assert_eq!(DbStorageIndex::default().serialized_size(), 40);
+        assert_eq!(DbStorageIndex::default().serialized_size(), 32);
     }
 
     #[test]

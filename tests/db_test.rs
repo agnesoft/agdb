@@ -10,6 +10,18 @@ use test_file::TestFile;
 #[test]
 fn data_persistence() {
     let test_file = TestFile::new();
+    let values = vec![
+        ("key", "String that is much longer than 15 characters").into(),
+        (-10_i64, 2000000000000_i64).into(),
+        (10_u64, 1.1_f64).into(),
+        (vec!["Some", "List"], vec![1_u64, 2_u64]).into(),
+        (
+            vec![-1_i64, -2_i64, -3_i64],
+            vec![-3.3_f64, -3.4_f64, -720.984_f64],
+        )
+            .into(),
+        (vec![3_u8; 5], vec![15_u8; 20]).into(),
+    ];
 
     {
         let mut db = Db::new(test_file.file_name()).unwrap();
@@ -17,7 +29,7 @@ fn data_persistence() {
             &QueryBuilder::insert()
                 .nodes()
                 .aliases(&["alias".into(), "alias2".into()])
-                .values_uniform(&[("key", 100).into()])
+                .values_uniform(&values)
                 .query(),
         )
         .unwrap();
@@ -36,11 +48,11 @@ fn data_persistence() {
             &[
                 DbElement {
                     index: DbId(1),
-                    values: vec![("key", 100).into()],
+                    values: values.clone(),
                 },
                 DbElement {
                     index: DbId(2),
-                    values: vec![("key", 100).into()],
+                    values: values.clone(),
                 },
                 DbElement {
                     index: DbId(-3),
@@ -64,11 +76,11 @@ fn data_persistence() {
         &[
             DbElement {
                 index: DbId(1),
-                values: vec![("key", 100).into()],
+                values: values.clone(),
             },
             DbElement {
                 index: DbId(2),
-                values: vec![("key", 100).into()],
+                values: values.clone(),
             },
             DbElement {
                 index: DbId(-3),

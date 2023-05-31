@@ -272,6 +272,8 @@ impl StableHash for DbValue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::file_storage::FileStorage;
+    use crate::test_utilities::test_file::TestFile;
     use std::cmp::Ordering;
     use std::collections::HashSet;
 
@@ -394,5 +396,14 @@ mod tests {
         assert_ne!(DbValue::from(vec![1_u64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![1.0_f64]).stable_hash(), 0);
         assert_ne!(DbValue::from(vec![""]).stable_hash(), 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bad_deserialization() {
+        let test_file = TestFile::new();
+        let storage = FileStorage::new(&test_file.filename).unwrap();
+
+        let _ = DbValue::load_db_value(DbValueIndex::new(), &storage);
     }
 }

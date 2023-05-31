@@ -27,20 +27,6 @@ where
     }
 }
 
-impl Serialize for DbKeyValue {
-    fn serialize(&self) -> Vec<u8> {
-        todo!()
-    }
-
-    fn deserialize(_bytes: &[u8]) -> Result<Self, DbError> {
-        todo!()
-    }
-
-    fn serialized_size(&self) -> u64 {
-        todo!()
-    }
-}
-
 impl VecValue for DbKeyValue {
     fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
         let key_index = self.key.store_db_value(storage)?;
@@ -66,7 +52,7 @@ impl VecValue for DbKeyValue {
             storage.remove(StorageIndex(key_index.index()))?;
         }
 
-        if value_index.is_value() {
+        if !value_index.is_value() {
             storage.remove(StorageIndex(value_index.index()))?;
         }
 

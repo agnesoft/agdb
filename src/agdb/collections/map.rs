@@ -54,16 +54,24 @@ impl SerializeStatic for MapValueState {
 }
 
 impl VecValue for MapValueState {
+    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+        Ok(self.serialize())
+    }
+
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+        Self::deserialize(bytes)
+    }
+
+    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+        Ok(())
+    }
+
     fn storage_len() -> u64 {
         Self::serialized_size_static()
     }
 }
 
-pub trait MapData<K, T>
-where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + PartialEq,
-{
+pub trait MapData<K, T> {
     fn capacity(&self) -> u64;
     fn commit(&mut self, id: u64) -> Result<(), DbError>;
     fn len(&self) -> u64;

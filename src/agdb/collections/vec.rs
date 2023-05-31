@@ -19,7 +19,14 @@ pub trait VecData<T, E> {
     fn value(&self, index: u64) -> Result<T, E>;
 }
 
-pub trait VecValue: Serialize {
+pub trait VecValue: Sized {
+    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError>;
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError>;
+    fn remove<S: Storage>(storage: &mut S, _bytes: &[u8]) -> Result<(), DbError>;
+    fn storage_len() -> u64;
+}
+
+impl VecValue for u64 {
     fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
         Ok(self.serialize())
     }
@@ -32,16 +39,24 @@ pub trait VecValue: Serialize {
         Ok(())
     }
 
-    fn storage_len() -> u64;
-}
-
-impl VecValue for u64 {
     fn storage_len() -> u64 {
         Self::serialized_size_static()
     }
 }
 
 impl VecValue for i64 {
+    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+        Ok(self.serialize())
+    }
+
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+        Self::deserialize(bytes)
+    }
+
+    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+        Ok(())
+    }
+
     fn storage_len() -> u64 {
         Self::serialized_size_static()
     }

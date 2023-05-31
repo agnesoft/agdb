@@ -1,5 +1,6 @@
 use super::db_error::DbError;
 use crate::collections::vec::VecValue;
+use crate::storage::Storage;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
@@ -13,25 +14,21 @@ impl StableHash for DbId {
     }
 }
 
-impl Serialize for DbId {
-    fn serialize(&self) -> Vec<u8> {
-        self.0.serialize()
+impl VecValue for DbId {
+    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+        Ok(self.0.serialize())
     }
 
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self(i64::deserialize(bytes)?))
     }
 
-    fn serialized_size(&self) -> u64 {
-        self.0.serialized_size()
+    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+        Ok(())
     }
-}
 
-impl SerializeStatic for DbId {}
-
-impl VecValue for DbId {
     fn storage_len() -> u64 {
-        Self::serialized_size_static()
+        i64::serialized_size_static()
     }
 }
 
@@ -60,14 +57,5 @@ mod tests {
         let mut ids = vec![DbId(3), DbId(0), DbId(-1)];
         ids.sort();
         assert_eq!(ids, vec![DbId(-1), DbId(0), DbId(3)]);
-    }
-
-    #[test]
-    fn serialize() {
-        let id = DbId(1);
-        assert_eq!(id.serialized_size(), 8);
-        let bytes = id.serialize();
-        let other = DbId::deserialize(&bytes).unwrap();
-        assert_eq!(id, other);
     }
 }

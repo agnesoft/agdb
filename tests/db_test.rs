@@ -80,7 +80,7 @@ fn data_persistence() {
             },
             DbElement {
                 index: DbId(2),
-                values: values.clone(),
+                values,
             },
             DbElement {
                 index: DbId(-3),

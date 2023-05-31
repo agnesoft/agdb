@@ -29,7 +29,7 @@ impl QueryMut for InsertNodesQuery {
             }
 
             for key_value in *key_values {
-                db.insert_key_value(db_id, &key_value.key, &key_value.value)?;
+                db.insert_key_value(db_id, key_value)?;
             }
         }
 

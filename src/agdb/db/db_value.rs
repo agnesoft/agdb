@@ -1,10 +1,8 @@
 use super::db_error::DbError;
 use super::db_float::DbFloat;
-use crate::collections::vec::VecValue;
+use super::db_value_index::DbValueIndex;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
-use crate::utilities::serialize::Serialize;
-use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -29,6 +27,111 @@ pub(crate) const VEC_INT_META_VALUE: u8 = 6_u8;
 pub(crate) const VEC_UINT_META_VALUE: u8 = 7_u8;
 pub(crate) const VEC_FLOAT_META_VALUE: u8 = 8_u8;
 pub(crate) const VEC_STRING_META_VALUE: u8 = 9_u8;
+
+impl DbValue {
+    pub(crate) fn load_db_value<S: Storage>(
+        value_index: DbValueIndex,
+        storage: &S,
+    ) -> Result<DbValue, DbError> {
+        Ok(match value_index.get_type() {
+            BYTES_META_VALUE => {
+                if value_index.is_value() {
+                    DbValue::Bytes(value_index.value().to_vec())
+                } else {
+                    DbValue::Bytes(storage.value_as_bytes(StorageIndex(value_index.index()))?)
+                }
+            }
+            INT_META_VALUE => {
+                let mut bytes = [0_u8; 8];
+                bytes.copy_from_slice(value_index.value());
+                DbValue::Int(i64::from_le_bytes(bytes))
+            }
+            UINT_META_VALUE => {
+                let mut bytes = [0_u8; 8];
+                bytes.copy_from_slice(value_index.value());
+                DbValue::Uint(u64::from_le_bytes(bytes))
+            }
+            FLOAT_META_VALUE => {
+                let mut bytes = [0_u8; 8];
+                bytes.copy_from_slice(value_index.value());
+                DbValue::Float(DbFloat::from(f64::from_le_bytes(bytes)))
+            }
+            STRING_META_VALUE => {
+                if value_index.is_value() {
+                    DbValue::String(String::from_utf8_lossy(value_index.value()).to_string())
+                } else {
+                    DbValue::String(storage.value::<String>(StorageIndex(value_index.index()))?)
+                }
+            }
+            VEC_INT_META_VALUE => {
+                DbValue::VecInt(storage.value::<Vec<i64>>(StorageIndex(value_index.index()))?)
+            }
+            VEC_UINT_META_VALUE => {
+                DbValue::VecUint(storage.value::<Vec<u64>>(StorageIndex(value_index.index()))?)
+            }
+            VEC_FLOAT_META_VALUE => {
+                DbValue::VecFloat(storage.value::<Vec<DbFloat>>(StorageIndex(value_index.index()))?)
+            }
+            VEC_STRING_META_VALUE => {
+                DbValue::VecString(storage.value::<Vec<String>>(StorageIndex(value_index.index()))?)
+            }
+            _ => panic!(),
+        })
+    }
+
+    pub(crate) fn store_db_value<S: Storage>(
+        &self,
+        storage: &mut S,
+    ) -> Result<DbValueIndex, DbError> {
+        let mut index = DbValueIndex::new();
+
+        match self {
+            DbValue::Bytes(v) => {
+                index.set_type(BYTES_META_VALUE);
+                if !index.set_value(v) {
+                    index.set_index(storage.insert_bytes(v)?.0);
+                }
+            }
+            DbValue::Int(v) => {
+                index.set_type(INT_META_VALUE);
+                index.set_value(&v.to_le_bytes());
+            }
+            DbValue::Uint(v) => {
+                index.set_type(UINT_META_VALUE);
+                index.set_value(&v.to_le_bytes());
+            }
+            DbValue::Float(v) => {
+                index.set_type(FLOAT_META_VALUE);
+                index.set_value(&v.to_f64().to_le_bytes());
+            }
+            DbValue::String(v) => {
+                index.set_type(STRING_META_VALUE);
+                let bytes = v.as_bytes();
+                if !index.set_value(bytes) {
+                    index.set_index(storage.insert(v)?.0);
+                }
+            }
+            DbValue::VecInt(v) => {
+                index.set_type(VEC_INT_META_VALUE);
+                index.set_index(storage.insert(v)?.0);
+            }
+            DbValue::VecUint(v) => {
+                index.set_type(VEC_UINT_META_VALUE);
+                index.set_index(storage.insert(v)?.0);
+            }
+            DbValue::VecFloat(v) => {
+                index.set_type(VEC_FLOAT_META_VALUE);
+                index.set_index(storage.insert(v)?.0);
+            }
+            DbValue::VecString(v) => {
+                index.set_type(VEC_STRING_META_VALUE);
+                index.set_index(storage.insert(v)?.0);
+            }
+        }
+
+        Ok(index)
+    }
+}
 
 impl Default for DbValue {
     fn default() -> Self {
@@ -150,93 +253,6 @@ impl From<Vec<u8>> for DbValue {
     }
 }
 
-impl Serialize for DbValue {
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        if bytes.is_empty() {
-            return Err(DbError::from("DbValue deserialization error: no data"));
-        }
-
-        match bytes[0] {
-            BYTES_META_VALUE => Ok(DbValue::from(Vec::<u8>::deserialize(&bytes[1..])?)),
-            INT_META_VALUE => Ok(DbValue::from(i64::deserialize(&bytes[8..])?)),
-            UINT_META_VALUE => Ok(DbValue::from(u64::deserialize(&bytes[8..])?)),
-            FLOAT_META_VALUE => Ok(DbValue::from(DbFloat::deserialize(&bytes[8..])?)),
-            STRING_META_VALUE => Ok(DbValue::from(String::deserialize(&bytes[1..])?)),
-            VEC_INT_META_VALUE => Ok(DbValue::from(Vec::<i64>::deserialize(&bytes[1..])?)),
-            VEC_UINT_META_VALUE => Ok(DbValue::from(Vec::<u64>::deserialize(&bytes[1..])?)),
-            VEC_FLOAT_META_VALUE => Ok(DbValue::from(Vec::<DbFloat>::deserialize(&bytes[1..])?)),
-            VEC_STRING_META_VALUE => Ok(DbValue::from(Vec::<String>::deserialize(&bytes[1..])?)),
-            _ => Err(DbError::from("DbValue deserialization error: invalid data")),
-        }
-    }
-
-    fn serialize(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        match self {
-            DbValue::Bytes(value) => {
-                bytes.reserve(1 + value.serialized_size() as usize);
-                bytes.push(BYTES_META_VALUE);
-                bytes.extend(value.serialize());
-            }
-            DbValue::Int(value) => {
-                bytes.resize(16, 0_u8);
-                bytes[0] = INT_META_VALUE;
-                bytes[8..].copy_from_slice(&value.serialize());
-            }
-            DbValue::Uint(value) => {
-                bytes.resize(16, 0_u8);
-                bytes[0] = UINT_META_VALUE;
-                bytes[8..].copy_from_slice(&value.serialize());
-            }
-            DbValue::Float(value) => {
-                bytes.resize(16, 0_u8);
-                bytes[0] = FLOAT_META_VALUE;
-                bytes[8..].copy_from_slice(&value.serialize());
-            }
-            DbValue::String(value) => {
-                bytes.reserve(1 + value.serialized_size() as usize);
-                bytes.push(STRING_META_VALUE);
-                bytes.extend(&value.serialize());
-            }
-            DbValue::VecInt(value) => {
-                bytes.reserve(1 + value.serialized_size() as usize);
-                bytes.push(VEC_INT_META_VALUE);
-                bytes.extend(&value.serialize());
-            }
-            DbValue::VecUint(value) => {
-                bytes.reserve(1 + value.serialized_size() as usize);
-                bytes.push(VEC_UINT_META_VALUE);
-                bytes.extend(&value.serialize());
-            }
-            DbValue::VecFloat(value) => {
-                bytes.reserve(1 + value.serialized_size() as usize);
-                bytes.push(VEC_FLOAT_META_VALUE);
-                bytes.extend(&value.serialize());
-            }
-            DbValue::VecString(value) => {
-                bytes.push(VEC_STRING_META_VALUE);
-                bytes.extend(&value.serialize());
-            }
-        }
-
-        bytes
-    }
-
-    fn serialized_size(&self) -> u64 {
-        match self {
-            DbValue::Bytes(value) => 1 + value.serialized_size(),
-            DbValue::Int(value) => 8 + value.serialized_size(),
-            DbValue::Uint(value) => 8 + value.serialized_size(),
-            DbValue::Float(value) => 8 + value.serialized_size(),
-            DbValue::String(value) => 1 + value.serialized_size(),
-            DbValue::VecInt(value) => 1 + value.serialized_size(),
-            DbValue::VecUint(value) => 1 + value.serialized_size(),
-            DbValue::VecFloat(value) => 1 + value.serialized_size(),
-            DbValue::VecString(value) => 1 + value.serialized_size(),
-        }
-    }
-}
-
 impl StableHash for DbValue {
     fn stable_hash(&self) -> u64 {
         match self {
@@ -253,37 +269,13 @@ impl StableHash for DbValue {
     }
 }
 
-impl VecValue for DbValue {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
-        let index = storage.insert(self)?;
-        Ok(index.serialize())
-    }
-
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
-        let storage_index = StorageIndex::deserialize(bytes)?;
-        storage.value::<DbValue>(storage_index)
-    }
-
-    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
-        let storage_index = StorageIndex::deserialize(bytes)?;
-        storage.remove(storage_index)
-    }
-
-    fn storage_len() -> u64 {
-        StorageIndex::serialized_size_static()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::vec::DbVec;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
-    use std::cell::RefCell;
     use std::cmp::Ordering;
     use std::collections::HashSet;
-    use std::rc::Rc;
 
     #[test]
     fn derived_from_eq() {
@@ -394,170 +386,6 @@ mod tests {
     }
 
     #[test]
-    fn serialize_bytes() {
-        let value = DbValue::from(vec![0_u8, 1_u8, 2_u8, 3_u8, 4_u8]);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_i64() {
-        let value = DbValue::from(1_i64);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_i64_max() {
-        let value = DbValue::from(i64::MAX);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_i64_min() {
-        let value = DbValue::from(i64::MIN);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_i64_negative() {
-        let value = DbValue::from(-1_i64);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_u64() {
-        let value = DbValue::from(u64::MAX / 2);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_db_float() {
-        let value = DbValue::from(0.1_f64 + 0.2_f64);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_string() {
-        let value = DbValue::from("Hello, World!");
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let other = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, other);
-    }
-
-    #[test]
-    fn serialize_vec_int() {
-        let value = DbValue::from(vec![i64::MAX, 0_i64, i64::MIN]);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let actual = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, actual);
-    }
-
-    #[test]
-    fn serialize_vec_uint() {
-        let value = DbValue::from(vec![u64::MAX, 0_u64, u64::MIN]);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let actual = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, actual);
-    }
-
-    #[test]
-    fn serialize_vec_float() {
-        let value = DbValue::from(vec![0.1_f64 + 0.2_f64, -0.0_f64, std::f64::consts::PI]);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let actual = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, actual);
-    }
-
-    #[test]
-    fn serialize_vec_string() {
-        let value = DbValue::from(vec!["Hello", ", ", "World", "!"]);
-        let bytes = value.serialize();
-
-        assert_eq!(bytes.len() as u64, value.serialized_size());
-
-        let actual = DbValue::deserialize(&bytes).unwrap();
-
-        assert_eq!(value, actual);
-    }
-
-    #[test]
-    fn serialize_no_data() {
-        let bytes = Vec::<u8>::new();
-
-        assert_eq!(
-            DbValue::deserialize(&bytes),
-            Err(DbError::from("DbValue deserialization error: no data"))
-        );
-    }
-
-    #[test]
-    fn serialize_invalid_data() {
-        let bytes = vec![255_u8];
-
-        assert_eq!(
-            DbValue::deserialize(&bytes),
-            Err(DbError::from("DbValue deserialization error: invalid data"))
-        );
-    }
-
-    #[test]
     fn stable_hash() {
         assert_ne!(DbValue::from(vec![1_u8]).stable_hash(), 0);
         assert_ne!(DbValue::from(1.0_f64).stable_hash(), 0);
@@ -571,29 +399,11 @@ mod tests {
     }
 
     #[test]
-    fn storage_value() {
+    #[should_panic]
+    fn bad_deserialization() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let storage = FileStorage::new(&test_file.filename).unwrap();
 
-        let mut values: Vec<DbValue> = vec![
-            1.1.into(),
-            "Hello, World! Not a short string".into(),
-            vec!["Hello", ",", "World", "!"].into(),
-        ];
-
-        let mut vec = DbVec::<DbValue>::new(storage).unwrap();
-
-        for value in &values {
-            vec.push(value).unwrap();
-        }
-
-        values.remove(1);
-        vec.remove(1).unwrap();
-
-        let actual: Vec<DbValue> = vec.iter().collect();
-
-        assert_eq!(values, actual);
+        let _ = DbValue::load_db_value(DbValueIndex::new(), &storage);
     }
 }

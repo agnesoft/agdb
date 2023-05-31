@@ -1,5 +1,4 @@
 use crate::collections::vec::DbVec;
-use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
@@ -44,28 +43,6 @@ impl From<i64> for GraphIndex {
 impl StableHash for GraphIndex {
     fn stable_hash(&self) -> u64 {
         self.0.stable_hash()
-    }
-}
-
-impl Serialize for GraphIndex {
-    fn serialize(&self) -> Vec<u8> {
-        self.0.serialize()
-    }
-
-    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
-        Ok(Self(i64::deserialize(bytes)?))
-    }
-
-    fn serialized_size(&self) -> u64 {
-        self.0.serialized_size()
-    }
-}
-
-impl SerializeStatic for GraphIndex {}
-
-impl VecValue for GraphIndex {
-    fn storage_len() -> u64 {
-        Self::serialized_size_static()
     }
 }
 
@@ -772,19 +749,6 @@ mod tests {
     }
 
     #[test]
-    fn index_serialization() {
-        let index = GraphIndex(10);
-        let bytes = index.serialize();
-        let other = GraphIndex::deserialize(&bytes).unwrap();
-
-        assert_eq!(index, other);
-        assert_eq!(
-            GraphIndex::storage_len(),
-            GraphIndex::serialized_size_static()
-        );
-    }
-
-    #[test]
     fn ordering() {
         let mut indexes = vec![
             GraphIndex::default(),
@@ -815,11 +779,6 @@ mod tests {
             }
             .serialized_size(),
             StorageIndex::default().serialized_size() * 4
-        );
-
-        assert_eq!(
-            GraphIndex::default().serialized_size(),
-            i64::serialized_size_static()
         );
     }
 

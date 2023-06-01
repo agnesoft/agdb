@@ -9,14 +9,11 @@ use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
-use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
 pub struct MultiMapImpl<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + PartialEq,
     Data: MapData<K, T>,
 {
     pub(crate) data: Data,
@@ -25,8 +22,8 @@ where
 
 impl<K, T, Data> MultiMapImpl<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + PartialEq,
+    K: Default + PartialEq + StableHash,
+    T: Default + PartialEq,
     Data: MapData<K, T>,
 {
     pub fn capacity(&self) -> u64 {
@@ -384,8 +381,8 @@ pub type MultiMapStorage<K, T, Data = FileStorage> = MultiMapImpl<K, T, DbMapDat
 
 impl<K, T, Data> MultiMapStorage<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
-    T: Clone + Default + Eq + PartialEq + VecValue,
+    K: Clone + Default + PartialEq + VecValue,
+    T: Clone + Default + PartialEq + VecValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {

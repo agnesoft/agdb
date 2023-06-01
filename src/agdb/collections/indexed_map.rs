@@ -10,13 +10,10 @@ use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
-use std::hash::Hash;
 use std::rc::Rc;
 
 pub struct IndexedMapImpl<K, T, DataKT, DataTK>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + Hash + PartialEq + StableHash,
     DataKT: MapData<K, T>,
     DataTK: MapData<T, K>,
 {
@@ -26,8 +23,8 @@ where
 
 impl<K, T, DataKT, DataTK> IndexedMapImpl<K, T, DataKT, DataTK>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + Hash + PartialEq + StableHash,
+    K: Default + PartialEq + StableHash,
+    T: Default + PartialEq + StableHash,
     DataKT: MapData<K, T>,
     DataTK: MapData<T, K>,
 {
@@ -79,8 +76,8 @@ pub type DbIndexedMap<K, T, Data = FileStorage> =
 
 impl<K, T, Data> DbIndexedMap<K, T, Data>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
-    T: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
+    K: Default + Clone + VecValue,
+    T: Default + Clone + VecValue,
     Data: Storage,
 {
     pub fn new(storage: Rc<RefCell<Data>>) -> Result<Self, DbError> {

@@ -1,7 +1,8 @@
 use super::db_error::DbError;
-use crate::utilities::serialize::{Serialize, SerializeStatic};
+use crate::utilities::serialize::Serialize;
+use crate::utilities::serialize::SerializeStatic;
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct DbValueIndex {
     pub(crate) value: [u8; 16],
 }
@@ -92,14 +93,6 @@ impl SerializeStatic for DbValueIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::Hash;
-
-    #[test]
-    fn derived_from_hash() {
-        let mut hasher = DefaultHasher::new();
-        DbValueIndex::new().hash(&mut hasher);
-    }
 
     #[test]
     fn derived_from_debug() {

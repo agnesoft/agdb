@@ -9,8 +9,6 @@ use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::hash::Hash;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
@@ -142,8 +140,8 @@ impl Serialize for MapDataIndex {
 
 pub struct DbMapData<K, T, S = FileStorage>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
-    T: Clone + Default + Eq + PartialEq + VecValue,
+    K: Clone + VecValue,
+    T: Clone + VecValue,
     S: Storage,
 {
     storage: Rc<RefCell<S>>,
@@ -156,8 +154,8 @@ where
 
 impl<K, T, S> DbMapData<K, T, S>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
-    T: Clone + Default + Eq + PartialEq + VecValue,
+    K: Clone + VecValue,
+    T: Clone + VecValue,
     S: Storage,
 {
     pub fn new(storage: Rc<RefCell<S>>) -> Result<Self, DbError> {
@@ -211,8 +209,8 @@ where
 
 impl<K, T, S> MapData<K, T> for DbMapData<K, T, S>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
-    T: Clone + Default + Eq + PartialEq + VecValue,
+    K: Default + Clone + VecValue,
+    T: Default + Clone + VecValue,
     S: Storage,
 {
     fn capacity(&self) -> u64 {
@@ -280,8 +278,6 @@ where
 
 pub struct MapIterator<'a, K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + PartialEq,
     Data: MapData<K, T>,
 {
     pub pos: u64,
@@ -291,8 +287,8 @@ where
 
 impl<'a, K, T, Data> Iterator for MapIterator<'a, K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + PartialEq,
+    K: Default,
+    T: Default,
     Data: MapData<K, T>,
 {
     type Item = (K, T);
@@ -316,8 +312,6 @@ where
 
 pub struct MapImpl<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + PartialEq,
     Data: MapData<K, T>,
 {
     pub(crate) multi_map: MultiMapImpl<K, T, Data>,
@@ -325,8 +319,8 @@ where
 
 impl<K, T, Data> MapImpl<K, T, Data>
 where
-    K: Default + Eq + Hash + PartialEq + StableHash,
-    T: Default + Eq + PartialEq,
+    K: Default + PartialEq + StableHash,
+    T: Default + PartialEq,
     Data: MapData<K, T>,
 {
     #[allow(dead_code)]
@@ -365,6 +359,7 @@ where
         self.multi_map.iter()
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> u64 {
         self.multi_map.len()
     }
@@ -387,8 +382,8 @@ pub type DbMap<K, T, S = FileStorage> = MapImpl<K, T, DbMapData<K, T, S>>;
 
 impl<K, T, S> DbMap<K, T, S>
 where
-    K: Clone + Default + Eq + Hash + PartialEq + StableHash + VecValue,
-    T: Clone + Default + Eq + PartialEq + VecValue,
+    K: Default + Clone + VecValue,
+    T: Default + Clone + VecValue,
     S: Storage,
 {
     pub fn new(storage: Rc<RefCell<S>>) -> Result<Self, DbError> {
@@ -412,25 +407,12 @@ where
     pub fn storage_index(&self) -> StorageIndex {
         self.multi_map.data.storage_index()
     }
-
-    #[allow(dead_code)]
-    pub fn to_hash_map(&self) -> HashMap<K, T> {
-        let mut map = HashMap::<K, T>::new();
-        map.reserve(self.len() as usize);
-
-        for (key, value) in self.iter() {
-            map.insert(key, value);
-        }
-
-        map
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_utilities::test_file::TestFile;
-    use std::collections::HashMap;
 
     #[test]
     fn contains_key() {
@@ -530,12 +512,9 @@ mod tests {
         }
 
         let map = DbMap::<u64, u64>::from_storage(storage, index).unwrap();
+        let expected = vec![(1_u64, 1_u64), (5_u64, 3_u64)];
 
-        let mut expected = HashMap::<u64, u64>::new();
-        expected.insert(1, 1);
-        expected.insert(5, 3);
-
-        assert_eq!(map.to_hash_map(), expected);
+        assert_eq!(map.iter().collect::<Vec<(u64, u64)>>(), expected);
     }
 
     #[test]
@@ -820,40 +799,6 @@ mod tests {
 
         assert_eq!(map.capacity(), current_capacity);
         assert_eq!(map.len(), size);
-    }
-
-    #[test]
-    fn to_hash_map() {
-        let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &10).unwrap();
-        map.insert(&5, &15).unwrap();
-        map.insert(&7, &20).unwrap();
-        map.remove(&5).unwrap();
-
-        let other = map.to_hash_map();
-
-        assert_eq!(other.len(), 2);
-        assert_eq!(other.get(&1), Some(&10));
-        assert_eq!(other.get(&5), None);
-        assert_eq!(other.get(&7), Some(&20));
-    }
-
-    #[test]
-    fn to_hash_map_empty() {
-        let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-
-        let map = DbMap::<u64, u64>::new(storage).unwrap();
-        let other = map.to_hash_map();
-
-        assert_eq!(other.len(), 0);
     }
 
     #[test]

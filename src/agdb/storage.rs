@@ -8,7 +8,7 @@ use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 
-#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StorageIndex(pub u64);
 
 impl From<u64> for StorageIndex {

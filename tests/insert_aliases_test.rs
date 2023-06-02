@@ -5,13 +5,6 @@ use agdb::QueryError;
 use framework::TestDb;
 
 #[test]
-fn insert_alias_of() {
-    let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
-    db.exec_mut(QueryBuilder::insert().alias("alias").of(1).query(), 1);
-}
-
-#[test]
 fn insert_aliases_of() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
@@ -25,7 +18,7 @@ fn insert_aliases_of() {
 }
 
 #[test]
-fn insert_aliases_alias() {
+fn insert_aliases_of_alias() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
     db.exec_mut(QueryBuilder::insert().node().query(), 1);
@@ -65,19 +58,15 @@ fn insert_aliases_rollback() {
 }
 
 #[test]
-fn insert_alias_empty() {
+fn insert_aliases_empty_alias() {
     let mut db = TestDb::new();
     db.exec_mut_error(
-        QueryBuilder::insert().alias(String::new()).of(1).query(),
+        QueryBuilder::insert()
+            .aliases(&[String::new()])
+            .of(&[1.into()])
+            .query(),
         "Empty alias is not allowed",
     );
-}
-
-#[test]
-fn insert_alias_by_alias() {
-    let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("old_alias").query(), 1);
-    db.exec_mut(QueryBuilder::insert().alias("alias").of(1).query(), 1);
 }
 
 #[test]

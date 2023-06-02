@@ -1,5 +1,5 @@
 mod insert;
-mod insert_alias;
+mod insert_aliases;
 mod insert_edge;
 mod insert_node;
 mod insert_values;

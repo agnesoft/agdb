@@ -1,5 +1,4 @@
-use super::insert_alias::InsertAlias;
-use super::insert_alias::InsertAliases;
+use super::insert_aliases::InsertAliases;
 use super::insert_edge::InsertEdge;
 use super::insert_edge::InsertEdges;
 use super::insert_node::InsertNode;
@@ -17,13 +16,6 @@ use crate::DbKeyValue;
 pub struct Insert {}
 
 impl Insert {
-    pub fn alias<T: ToString>(self, name: T) -> InsertAlias {
-        InsertAlias(InsertAliasesQuery {
-            ids: QueryIds::Ids(vec![0.into()]),
-            aliases: vec![name.to_string()],
-        })
-    }
-
     pub fn aliases(self, names: &[String]) -> InsertAliases {
         InsertAliases(InsertAliasesQuery {
             ids: QueryIds::Ids(vec![]),

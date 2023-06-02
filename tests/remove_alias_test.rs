@@ -6,23 +6,6 @@ use agdb::QueryResult;
 use framework::TestDb;
 
 #[test]
-fn remove_alias() {
-    let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias".into()])
-            .query(),
-        1,
-    );
-    db.exec_mut(QueryBuilder::remove().alias("alias").query(), -1);
-    db.exec_error(
-        QueryBuilder::select().id("alias").query(),
-        "Alias 'alias' not found",
-    );
-}
-
-#[test]
 fn remove_aliases() {
     let mut db = TestDb::new();
     db.exec_mut(
@@ -67,9 +50,9 @@ fn remove_aliases_rollback() {
 }
 
 #[test]
-fn remove_missing_alias() {
+fn remove_missing_aliases() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::remove().alias("alias").query(), 0);
+    db.exec_mut(QueryBuilder::remove().aliases(&["alias".into()]).query(), 0);
 }
 
 #[test]
@@ -77,7 +60,7 @@ fn remove_missing_alias_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().alias("alias").query())?;
+            t.exec_mut(&QueryBuilder::remove().aliases(&["alias".into()]).query())?;
             Err("error".into())
         },
         "error".into(),

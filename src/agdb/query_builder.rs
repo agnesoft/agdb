@@ -4,7 +4,7 @@ mod insert_edge;
 mod insert_nodes;
 mod insert_values;
 mod remove;
-mod remove_alias;
+mod remove_aliases;
 mod remove_ids;
 mod remove_values;
 mod search;

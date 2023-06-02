@@ -10,14 +10,20 @@ use framework::TestDb;
 #[test]
 fn remove_node() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
 }
 
 #[test]
 fn remove_node_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        1,
+    );
     db.transaction_mut_error(
         |t| {
             t.exec_mut(&QueryBuilder::remove().id("alias").query())
@@ -62,7 +68,13 @@ fn remove_missing_node_alias() {
 #[test]
 fn remove_node_with_alias() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        1,
+    );
     db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
     db.exec_error(
         QueryBuilder::select().id("alias").query(),
@@ -73,7 +85,7 @@ fn remove_node_with_alias() {
 #[test]
 fn remove_node_no_alias_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             t.exec_mut(&QueryBuilder::remove().id(1).query())?;
@@ -127,7 +139,7 @@ fn remove_node_with_edges() {
 #[test]
 fn remove_node_with_edges_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -162,8 +174,8 @@ fn remove_node_with_values() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
-            .node()
-            .values(&[("key", "value").into()])
+            .nodes()
+            .values(&[&[("key", "value").into()]])
             .query(),
         1,
     );
@@ -183,8 +195,8 @@ fn remove_node_with_values_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
-            .node()
-            .values(&[("key", vec![1, 2, 3]).into()])
+            .nodes()
+            .values(&[&[("key", vec![1, 2, 3]).into()]])
             .query(),
         1,
     );

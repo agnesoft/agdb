@@ -20,8 +20,14 @@ fn insert_aliases_of() {
 #[test]
 fn insert_aliases_of_alias() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
             .aliases(&["alias1".into(), "alias2".into()])
@@ -34,8 +40,14 @@ fn insert_aliases_of_alias() {
 #[test]
 fn insert_aliases_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             t.exec_mut(

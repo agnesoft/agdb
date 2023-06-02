@@ -10,9 +10,9 @@ fn remove_value_id() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
-            .node()
-            .alias("alias")
-            .values(&[("key1", "value1").into()])
+            .nodes()
+            .aliases(&["alias".into()])
+            .values(&[&[("key1", "value1").into()]])
             .query(),
         1,
     );
@@ -100,9 +100,9 @@ fn remove_values_id() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
-            .node()
-            .alias("alias")
-            .values(&[("key1", "value1").into(), ("key2", 100).into()])
+            .nodes()
+            .aliases(&["alias".into()])
+            .values(&[&[("key1", "value1").into(), ("key2", 100).into()]])
             .query(),
         1,
     );

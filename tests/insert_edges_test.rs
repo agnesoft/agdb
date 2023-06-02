@@ -9,8 +9,14 @@ use framework::TestDb;
 #[test]
 fn insert_edges_from_to_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".into()])
+            .query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             t.exec_mut(
@@ -30,8 +36,14 @@ fn insert_edges_from_to_rollback() {
 #[test]
 fn insert_edges_missing_from() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".into()])
+            .query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut_error(
         QueryBuilder::insert()
             .edges()

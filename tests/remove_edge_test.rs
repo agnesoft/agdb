@@ -7,8 +7,14 @@ use framework::TestDb;
 #[test]
 fn remove_edges_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".into()])
+            .query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
@@ -30,8 +36,14 @@ fn remove_edges_rollback() {
 #[test]
 fn remove_edges() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".into()])
+            .query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
             .edges()

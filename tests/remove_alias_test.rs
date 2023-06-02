@@ -8,7 +8,13 @@ use framework::TestDb;
 #[test]
 fn remove_alias() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        1,
+    );
     db.exec_mut(QueryBuilder::remove().alias("alias").query(), -1);
     db.exec_error(
         QueryBuilder::select().id("alias").query(),

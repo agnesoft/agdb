@@ -9,7 +9,13 @@ use framework::TestDb;
 #[test]
 fn insert_values_id() {
     let mut db = TestDb::new();
-    db.exec_mut_ids(QueryBuilder::insert().node().alias("alias").query(), &[1]);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        &[1],
+    );
     db.exec_mut(
         QueryBuilder::insert()
             .values(&[("key", "value").into()])
@@ -29,7 +35,7 @@ fn insert_values_id() {
 #[test]
 fn insert_values_id_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut_ids(QueryBuilder::insert().node().query(), &[1]);
+    db.exec_mut_ids(QueryBuilder::insert().nodes().count(1).query(), &[1]);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             assert_eq!(

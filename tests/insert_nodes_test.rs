@@ -7,23 +7,16 @@ use agdb::QueryError;
 use framework::TestDb;
 
 #[test]
-fn insert_node() {
-    let mut db = TestDb::new();
-    db.exec_mut_ids(QueryBuilder::insert().node().query(), &[1]);
-}
-
-#[test]
-fn insert_node_alias() {
-    let mut db = TestDb::new();
-    db.exec_mut_ids(QueryBuilder::insert().node().alias("alias").query(), &[1]);
-}
-
-#[test]
-fn insert_node_alias_rollback() {
+fn insert_nodes_aliases_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |transaction| -> Result<(), QueryError> {
-            transaction.exec_mut(&QueryBuilder::insert().node().alias("alias").query())?;
+            transaction.exec_mut(
+                &QueryBuilder::insert()
+                    .nodes()
+                    .aliases(&["alias".into()])
+                    .query(),
+            )?;
             Err("error".into())
         },
         "error".into(),
@@ -37,9 +30,18 @@ fn insert_node_alias_rollback() {
 #[test]
 fn insert_node_existing_alias() {
     let mut db = TestDb::new();
-    db.exec_mut_ids(QueryBuilder::insert().node().alias("alias").query(), &[1]);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        &[1],
+    );
     db.exec_mut_error(
-        QueryBuilder::insert().node().alias("alias").query(),
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
         "Alias 'alias' already exists (1)",
     )
 }
@@ -60,45 +62,6 @@ fn insert_nodes_aliases() {
 fn insert_nodes_count() {
     let mut db = TestDb::new();
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(2).query(), &[1, 2]);
-}
-
-#[test]
-fn insert_node_values() {
-    let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .node()
-            .values(&[("key", "value").into()])
-            .query(),
-        1,
-    );
-    db.exec_elements(
-        QueryBuilder::select().id(1).query(),
-        &[DbElement {
-            index: DbId(1),
-            values: vec![("key", "value").into()],
-        }],
-    );
-}
-
-#[test]
-fn insert_node_alias_values() {
-    let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .node()
-            .alias("alias")
-            .values(&[("key", "value").into()])
-            .query(),
-        1,
-    );
-    db.exec_elements(
-        QueryBuilder::select().id("alias").query(),
-        &[DbElement {
-            index: DbId(1),
-            values: vec![("key", "value").into()],
-        }],
-    );
 }
 
 #[test]

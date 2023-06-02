@@ -1,7 +1,6 @@
 use super::insert_aliases::InsertAliases;
 use super::insert_edge::InsertEdges;
-use super::insert_node::InsertNode;
-use super::insert_node::InsertNodes;
+use super::insert_nodes::InsertNodes;
 use super::insert_values::InsertValues;
 use super::insert_values::InsertValuesMulti;
 use crate::query::insert_aliases_query::InsertAliasesQuery;
@@ -28,14 +27,6 @@ impl Insert {
             to: QueryIds::Ids(vec![]),
             values: QueryValues::Single(vec![]),
             each: false,
-        })
-    }
-
-    pub fn node(self) -> InsertNode {
-        InsertNode(InsertNodesQuery {
-            count: 1,
-            values: QueryValues::Single(vec![]),
-            aliases: vec![],
         })
     }
 

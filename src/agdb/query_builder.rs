@@ -1,7 +1,7 @@
 mod insert;
 mod insert_aliases;
 mod insert_edge;
-mod insert_node;
+mod insert_nodes;
 mod insert_values;
 mod remove;
 mod remove_alias;

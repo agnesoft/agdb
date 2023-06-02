@@ -2,7 +2,7 @@ use super::insert_aliases::InsertAliases;
 use super::insert_edge::InsertEdges;
 use super::insert_nodes::InsertNodes;
 use super::insert_values::InsertValues;
-use super::insert_values::InsertValuesMulti;
+use super::insert_values::InsertValuesUniform;
 use crate::query::insert_aliases_query::InsertAliasesQuery;
 use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;
@@ -38,17 +38,17 @@ impl Insert {
         })
     }
 
-    pub fn values(self, key_values: &[DbKeyValue]) -> InsertValues {
+    pub fn values(self, key_values: &[&[DbKeyValue]]) -> InsertValues {
         InsertValues(InsertValuesQuery {
-            ids: QueryIds::Ids(vec![0.into()]),
-            values: QueryValues::Single(key_values.to_vec()),
+            ids: QueryIds::Ids(vec![]),
+            values: QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect()),
         })
     }
 
-    pub fn values_multi(self, key_values: &[&[DbKeyValue]]) -> InsertValuesMulti {
-        InsertValuesMulti(InsertValuesQuery {
-            ids: QueryIds::Ids(vec![]),
-            values: QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect()),
+    pub fn values_uniform(self, key_values: &[DbKeyValue]) -> InsertValuesUniform {
+        InsertValuesUniform(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![0.into()]),
+            values: QueryValues::Single(key_values.to_vec()),
         })
     }
 }

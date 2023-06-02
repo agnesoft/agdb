@@ -1,7 +1,6 @@
-use super::where_key::WhereKey;
-use super::where_logic_operator::WhereLogicOperator;
-use crate::query::query_condition::direction::Direction;
-use crate::query::query_condition::edge_count_condition::EdgeCountCondition;
+use crate::query::query_condition::Direction;
+use crate::query::query_condition::EdgeCountCondition;
+use crate::query::query_condition::KeyValueCondition;
 use crate::query::query_condition::QueryCondition;
 use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
@@ -10,6 +9,13 @@ use crate::Comparison;
 use crate::DbKey;
 
 pub struct Where(pub SearchQuery);
+
+pub struct WhereKey {
+    pub key: DbKey,
+    pub search: SearchQuery,
+}
+
+pub struct WhereLogicOperator(pub SearchQuery);
 
 impl Where {
     pub fn distance(mut self, comparison: Comparison) -> WhereLogicOperator {
@@ -57,10 +63,6 @@ impl Where {
         WhereLogicOperator(self.0)
     }
 
-    pub fn id(self, id: QueryId) -> WhereLogicOperator {
-        self.ids(&[id])
-    }
-
     pub fn ids(mut self, ids: &[QueryId]) -> WhereLogicOperator {
         self.0
             .conditions
@@ -104,5 +106,42 @@ impl Where {
         self.0.conditions.push(QueryCondition::Where);
 
         self
+    }
+}
+
+impl WhereKey {
+    pub fn value(mut self, comparison: Comparison) -> WhereLogicOperator {
+        self.search
+            .conditions
+            .push(QueryCondition::KeyValue(KeyValueCondition {
+                key: self.key,
+                comparison,
+            }));
+
+        WhereLogicOperator(self.search)
+    }
+}
+
+impl WhereLogicOperator {
+    pub fn and(mut self) -> Where {
+        self.0.conditions.push(QueryCondition::And);
+
+        Where(self.0)
+    }
+
+    pub fn end_where(mut self) -> WhereLogicOperator {
+        self.0.conditions.push(QueryCondition::EndWhere);
+
+        WhereLogicOperator(self.0)
+    }
+
+    pub fn or(mut self) -> Where {
+        self.0.conditions.push(QueryCondition::Or);
+
+        Where(self.0)
+    }
+
+    pub fn query(self) -> SearchQuery {
+        self.0
     }
 }

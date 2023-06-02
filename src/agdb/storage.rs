@@ -1,6 +1,5 @@
 pub mod file_storage;
 
-mod file_record;
 mod file_records;
 mod write_ahead_log;
 

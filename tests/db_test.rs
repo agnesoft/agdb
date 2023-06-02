@@ -33,8 +33,14 @@ fn data_persistence() {
                 .query(),
         )
         .unwrap();
-        db.exec_mut(&QueryBuilder::insert().edge().from(1).to(2).query())
-            .unwrap();
+        db.exec_mut(
+            &QueryBuilder::insert()
+                .edges()
+                .from(&[1.into()])
+                .to(&[2.into()])
+                .query(),
+        )
+        .unwrap();
         let result = db
             .exec(
                 &QueryBuilder::select()
@@ -104,8 +110,14 @@ fn data_remove_persistence() {
                 .query(),
         )
         .unwrap();
-        db.exec_mut(&QueryBuilder::insert().edge().from(1).to(2).query())
-            .unwrap();
+        db.exec_mut(
+            &QueryBuilder::insert()
+                .edges()
+                .from(&[1.into()])
+                .to(&[2.into()])
+                .query(),
+        )
+        .unwrap();
         let result = db
             .exec(
                 &QueryBuilder::select()
@@ -132,9 +144,15 @@ fn data_remove_persistence() {
             ]
         );
 
-        db.exec_mut(&QueryBuilder::remove().id(-3).query()).unwrap();
-        db.exec_mut(&QueryBuilder::remove().value("key").id(1).query())
+        db.exec_mut(&QueryBuilder::remove().ids(&[(-3).into()]).query())
             .unwrap();
+        db.exec_mut(
+            &QueryBuilder::remove()
+                .values(&["key".into()])
+                .ids(&[1.into()])
+                .query(),
+        )
+        .unwrap();
     }
 
     let db = Db::new(test_file.file_name()).unwrap();
@@ -160,7 +178,9 @@ fn data_remove_persistence() {
         ]
     );
 
-    let error = db.exec(&QueryBuilder::select().id(-3).query()).unwrap_err();
+    let error = db
+        .exec(&QueryBuilder::select().ids(&[(-3).into()]).query())
+        .unwrap_err();
     assert_eq!(error.description, "Id '-3' not found");
 }
 

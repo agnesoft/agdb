@@ -1,10 +1,10 @@
 mod insert;
-mod insert_alias;
+mod insert_aliases;
 mod insert_edge;
-mod insert_node;
+mod insert_nodes;
 mod insert_values;
 mod remove;
-mod remove_alias;
+mod remove_aliases;
 mod remove_ids;
 mod remove_values;
 mod search;
@@ -15,8 +15,6 @@ mod select_key_count;
 mod select_keys;
 mod select_values;
 mod where_;
-mod where_key;
-mod where_logic_operator;
 
 use self::insert::Insert;
 use self::remove::Remove;

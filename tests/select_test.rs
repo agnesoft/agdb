@@ -4,10 +4,16 @@ use agdb::QueryBuilder;
 use framework::TestDb;
 
 #[test]
-fn select_id_alias() {
+fn select_ids_aliases() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias").query(), 1);
-    db.exec_ids(QueryBuilder::select().id("alias").query(), &[1]);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias".into()])
+            .query(),
+        1,
+    );
+    db.exec_ids(QueryBuilder::select().ids(&["alias".into()]).query(), &[1]);
 }
 
 #[test]
@@ -29,24 +35,30 @@ fn select_from_ids() {
 }
 
 #[test]
-fn select_missing_alias() {
+fn select_missing_aliases() {
     let db = TestDb::new();
     db.exec_error(
-        QueryBuilder::select().id("alias").query(),
+        QueryBuilder::select().ids(&["alias".into()]).query(),
         "Alias 'alias' not found",
     );
 }
 
 #[test]
-fn select_missing_id() {
+fn select_missing_ids() {
     let db = TestDb::new();
-    db.exec_error(QueryBuilder::select().id(1).query(), "Id '1' not found");
+    db.exec_error(
+        QueryBuilder::select().ids(&[1.into()]).query(),
+        "Id '1' not found",
+    );
 }
 
 #[test]
-fn select_invalid_id() {
+fn select_invalid_ids() {
     let db = TestDb::new();
-    db.exec_error(QueryBuilder::select().id(0).query(), "Id '0' not found");
+    db.exec_error(
+        QueryBuilder::select().ids(&[0.into()]).query(),
+        "Id '0' not found",
+    );
 }
 
 #[test]

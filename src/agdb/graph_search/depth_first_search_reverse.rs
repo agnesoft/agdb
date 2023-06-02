@@ -1,5 +1,5 @@
-use super::search_index::SearchIndex;
-use super::search_iterator::SearchIterator;
+use super::search_impl::SearchIndex;
+use super::search_impl::SearchIterator;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
@@ -36,8 +36,8 @@ impl SearchIterator for DepthFirstSearchReverse {
 
 #[cfg(test)]
 mod tests {
-    use super::super::search_control::SearchControl;
-    use super::super::search_handler::SearchHandler;
+    use super::super::SearchControl;
+    use super::super::SearchHandler;
     use super::*;
     use crate::graph::DbGraph;
     use crate::graph_search::GraphSearch;

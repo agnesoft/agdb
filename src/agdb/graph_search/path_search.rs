@@ -1,5 +1,3 @@
-use super::path::Path;
-use super::path_search_handler::PathSearchHandler;
 use crate::collections::bit_set::BitSet;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
@@ -7,6 +5,16 @@ use crate::graph::GraphIndex;
 use std::cmp::Ordering;
 use std::mem::swap;
 use std::mem::take;
+
+pub trait PathSearchHandler {
+    fn process(&self, index: GraphIndex, distance: u64) -> u64;
+}
+
+#[derive(Clone)]
+pub(crate) struct Path {
+    pub(crate) elements: Vec<GraphIndex>,
+    pub(crate) cost: u64,
+}
 
 pub(crate) struct PathSearch<'a, Data, Handler>
 where

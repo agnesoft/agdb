@@ -1,4 +1,4 @@
-use super::remove_alias::RemoveAlias;
+use super::remove_aliases::RemoveAliases;
 use super::remove_ids::RemoveIds;
 use super::remove_values::RemoveValues;
 use crate::query::query_id::QueryId;
@@ -13,20 +13,10 @@ use crate::DbKey;
 pub struct Remove {}
 
 impl Remove {
-    pub fn alias<T: ToString>(self, name: T) -> RemoveAlias {
-        RemoveAlias(RemoveAliasesQuery {
-            aliases: vec![name.to_string()],
-        })
-    }
-
-    pub fn aliases(self, names: &[String]) -> RemoveAlias {
-        RemoveAlias(RemoveAliasesQuery {
+    pub fn aliases(self, names: &[String]) -> RemoveAliases {
+        RemoveAliases(RemoveAliasesQuery {
             aliases: names.to_vec(),
         })
-    }
-
-    pub fn id<T: Into<QueryId>>(self, id: T) -> RemoveIds {
-        RemoveIds(RemoveQuery(QueryIds::Ids(vec![id.into()])))
     }
 
     pub fn ids(self, ids: &[QueryId]) -> RemoveIds {
@@ -35,13 +25,6 @@ impl Remove {
 
     pub fn search(self, query: SearchQuery) -> RemoveIds {
         RemoveIds(RemoveQuery(QueryIds::Search(query)))
-    }
-
-    pub fn value<T: Into<DbKey>>(self, key: T) -> RemoveValues {
-        RemoveValues(RemoveValuesQuery(SelectValuesQuery {
-            keys: vec![key.into()],
-            ids: QueryIds::Ids(vec![0.into()]),
-        }))
     }
 
     pub fn values(self, keys: &[DbKey]) -> RemoveValues {

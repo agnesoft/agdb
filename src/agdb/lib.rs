@@ -19,7 +19,7 @@ pub use db::db_key::DbKey;
 pub use db::db_key_value::DbKeyValue;
 pub use db::db_value::DbValue;
 pub use db::Db;
-pub use query::query_condition::comparison::Comparison;
+pub use query::query_condition::Comparison;
 pub use query::query_error::QueryError;
 pub use query::query_result::QueryResult;
 pub use query::Query;

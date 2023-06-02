@@ -1,11 +1,6 @@
 use agdb::QueryBuilder;
 
 #[test]
-fn select_alias_id() {
-    let _query = QueryBuilder::select().alias().id(1).query();
-}
-
-#[test]
 fn select_aliases() {
     let _query = QueryBuilder::select().aliases().query();
 }

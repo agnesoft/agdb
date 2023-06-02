@@ -1,4 +1,4 @@
-use super::file_record::FileRecord;
+use super::file_records::FileRecord;
 use super::file_records::FileRecords;
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;

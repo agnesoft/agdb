@@ -8,12 +8,6 @@ pub struct SelectValues(pub SelectValuesQuery);
 pub struct SelectValuesIds(pub SelectValuesQuery);
 
 impl SelectValues {
-    pub fn id(mut self, id: QueryId) -> SelectValuesIds {
-        self.0.ids = QueryIds::Ids(vec![id]);
-
-        SelectValuesIds(self.0)
-    }
-
     pub fn ids(mut self, ids: &[QueryId]) -> SelectValuesIds {
         self.0.ids = QueryIds::Ids(ids.to_vec());
 

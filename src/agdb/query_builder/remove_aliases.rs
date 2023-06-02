@@ -1,8 +1,8 @@
 use crate::query::remove_aliases_query::RemoveAliasesQuery;
 
-pub struct RemoveAlias(pub RemoveAliasesQuery);
+pub struct RemoveAliases(pub RemoveAliasesQuery);
 
-impl RemoveAlias {
+impl RemoveAliases {
     pub fn query(self) -> RemoveAliasesQuery {
         self.0
     }

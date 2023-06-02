@@ -1,28 +1,31 @@
-pub mod path_search_handler;
-pub mod search_control;
-pub mod search_handler;
-
 mod breadth_first_search;
 mod breadth_first_search_reverse;
 mod depth_first_search;
 mod depth_first_search_reverse;
-mod path;
 mod path_search;
 mod search_impl;
-mod search_index;
-mod search_iterator;
 
 use self::breadth_first_search::BreadthFirstSearch;
 use self::breadth_first_search_reverse::BreadthFirstSearchReverse;
 use self::depth_first_search::DepthFirstSearch;
 use self::depth_first_search_reverse::DepthFirstSearchReverse;
 use self::path_search::PathSearch;
-use self::path_search_handler::PathSearchHandler;
-use self::search_handler::SearchHandler;
+use self::path_search::PathSearchHandler;
 use self::search_impl::SearchImpl;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
+
+#[allow(dead_code)]
+pub enum SearchControl {
+    Continue(bool),
+    Finish(bool),
+    Stop(bool),
+}
+
+pub trait SearchHandler {
+    fn process(&self, index: &GraphIndex, distance: &u64) -> SearchControl;
+}
 
 pub struct GraphSearch<'a, Data>
 where

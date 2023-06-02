@@ -144,9 +144,15 @@ fn data_remove_persistence() {
             ]
         );
 
-        db.exec_mut(&QueryBuilder::remove().id(-3).query()).unwrap();
-        db.exec_mut(&QueryBuilder::remove().value("key").id(1).query())
+        db.exec_mut(&QueryBuilder::remove().ids(&[(-3).into()]).query())
             .unwrap();
+        db.exec_mut(
+            &QueryBuilder::remove()
+                .values(&["key".into()])
+                .ids(&[1.into()])
+                .query(),
+        )
+        .unwrap();
     }
 
     let db = Db::new(test_file.file_name()).unwrap();

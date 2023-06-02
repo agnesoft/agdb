@@ -25,7 +25,7 @@ fn remove_edges_rollback() {
     );
     db.transaction_mut_error(
         |t| {
-            t.exec_mut(&QueryBuilder::remove().id(-3).query())?;
+            t.exec_mut(&QueryBuilder::remove().ids(&[(-3).into()]).query())?;
             t.exec(&QueryBuilder::select().id(-3).query())
         },
         "Id '-3' not found".into(),
@@ -61,17 +61,17 @@ fn remove_edges() {
 }
 
 #[test]
-fn remove_missing_edge() {
+fn remove_missing_edges() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::remove().id(-3).query(), 0);
+    db.exec_mut(QueryBuilder::remove().ids(&[(-3).into()]).query(), 0);
 }
 
 #[test]
-fn remove_missing_edge_rollback() {
+fn remove_missing_edges_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |transaction| -> Result<(), QueryError> {
-            let query = QueryBuilder::remove().id(-3).query();
+            let query = QueryBuilder::remove().ids(&[(-3).into()]).query();
             transaction.exec_mut(&query).unwrap();
             Err("error".into())
         },

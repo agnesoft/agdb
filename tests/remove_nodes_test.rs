@@ -8,14 +8,7 @@ use agdb::QueryResult;
 use framework::TestDb;
 
 #[test]
-fn remove_node() {
-    let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
-    db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
-}
-
-#[test]
-fn remove_node_rollback() {
+fn remove_nodes_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
@@ -26,7 +19,7 @@ fn remove_node_rollback() {
     );
     db.transaction_mut_error(
         |t| {
-            t.exec_mut(&QueryBuilder::remove().id("alias").query())
+            t.exec_mut(&QueryBuilder::remove().ids(&["alias".into()]).query())
                 .unwrap();
             t.exec(&QueryBuilder::select().id(1).query())
         },
@@ -54,19 +47,19 @@ fn remove_nodes() {
 }
 
 #[test]
-fn remove_missing_node() {
+fn remove_missing_nodes() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::remove().id(1).query(), 0);
+    db.exec_mut(QueryBuilder::remove().ids(&[1.into()]).query(), 0);
 }
 
 #[test]
-fn remove_missing_node_alias() {
+fn remove_missing_nodes_aliases() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::remove().id("alias").query(), 0);
+    db.exec_mut(QueryBuilder::remove().ids(&["alias".into()]).query(), 0);
 }
 
 #[test]
-fn remove_node_with_alias() {
+fn remove_nodes_with_alias() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
@@ -75,7 +68,7 @@ fn remove_node_with_alias() {
             .query(),
         1,
     );
-    db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(&[1.into()]).query(), -1);
     db.exec_error(
         QueryBuilder::select().id("alias").query(),
         "Alias 'alias' not found",
@@ -83,12 +76,12 @@ fn remove_node_with_alias() {
 }
 
 #[test]
-fn remove_node_no_alias_rollback() {
+fn remove_nodes_no_alias_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().id(1).query())?;
+            t.exec_mut(&QueryBuilder::remove().ids(&[1.into()]).query())?;
             Err("error".into())
         },
         "error".into(),
@@ -97,11 +90,11 @@ fn remove_node_no_alias_rollback() {
 }
 
 #[test]
-fn remove_missing_node_rollback() {
+fn remove_missing_nodes_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().id(1).query())?;
+            t.exec_mut(&QueryBuilder::remove().ids(&[1.into()]).query())?;
             Err("error".into())
         },
         "error".into(),
@@ -109,11 +102,11 @@ fn remove_missing_node_rollback() {
 }
 
 #[test]
-fn remove_missing_node_alias_rollback() {
+fn remove_missing_nodes_alias_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().id("alias").query())?;
+            t.exec_mut(&QueryBuilder::remove().ids(&["alias".into()]).query())?;
             Err("error".into())
         },
         "error".into(),
@@ -121,7 +114,7 @@ fn remove_missing_node_alias_rollback() {
 }
 
 #[test]
-fn remove_node_with_edges() {
+fn remove_nodes_with_edges() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(
@@ -132,12 +125,12 @@ fn remove_node_with_edges() {
             .query(),
         2,
     );
-    db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(&[1.into()]).query(), -1);
     db.exec_error(QueryBuilder::select().id(-3).query(), "Id '-3' not found");
 }
 
 #[test]
-fn remove_node_with_edges_rollback() {
+fn remove_nodes_with_edges_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
@@ -150,7 +143,7 @@ fn remove_node_with_edges_rollback() {
     );
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().id(1).query())?;
+            t.exec_mut(&QueryBuilder::remove().ids(&[1.into()]).query())?;
             Err("error".into())
         },
         "error".into(),
@@ -170,7 +163,7 @@ fn remove_search() {
 }
 
 #[test]
-fn remove_node_with_values() {
+fn remove_nodes_with_values() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
@@ -186,12 +179,12 @@ fn remove_node_with_values() {
             values: vec![("key", "value").into()],
         }],
     );
-    db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
+    db.exec_mut(QueryBuilder::remove().ids(&[1.into()]).query(), -1);
     db.exec_error(QueryBuilder::select().id(1).query(), "Id '1' not found");
 }
 
 #[test]
-fn remove_node_with_values_rollback() {
+fn remove_nodes_with_values_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
@@ -210,7 +203,8 @@ fn remove_node_with_values_rollback() {
 
     db.transaction_mut_error(
         |t| -> Result<QueryResult, QueryError> {
-            t.exec_mut(&QueryBuilder::remove().id(1).query()).unwrap();
+            t.exec_mut(&QueryBuilder::remove().ids(&[1.into()]).query())
+                .unwrap();
             t.exec(&QueryBuilder::select().id(1).query())
         },
         QueryError::from("Id '1' not found"),

@@ -15,8 +15,6 @@ mod select_key_count;
 mod select_keys;
 mod select_values;
 mod where_;
-mod where_key;
-mod where_logic_operator;
 
 use self::insert::Insert;
 use self::remove::Remove;

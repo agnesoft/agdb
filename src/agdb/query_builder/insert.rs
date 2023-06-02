@@ -1,5 +1,4 @@
 use super::insert_aliases::InsertAliases;
-use super::insert_edge::InsertEdge;
 use super::insert_edge::InsertEdges;
 use super::insert_node::InsertNode;
 use super::insert_node::InsertNodes;
@@ -20,15 +19,6 @@ impl Insert {
         InsertAliases(InsertAliasesQuery {
             ids: QueryIds::Ids(vec![]),
             aliases: names.to_vec(),
-        })
-    }
-
-    pub fn edge(self) -> InsertEdge {
-        InsertEdge(InsertEdgesQuery {
-            from: QueryIds::Ids(vec![0.into()]),
-            to: QueryIds::Ids(vec![0.into()]),
-            values: QueryValues::Single(vec![]),
-            each: false,
         })
     }
 

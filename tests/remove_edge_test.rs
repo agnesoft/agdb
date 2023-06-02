@@ -5,25 +5,16 @@ use agdb::QueryError;
 use framework::TestDb;
 
 #[test]
-fn remove_edge() {
+fn remove_edges_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().node().query(), 1);
     db.exec_mut(
-        QueryBuilder::insert().edge().from("alias1").to(2).query(),
-        1,
-    );
-    db.exec_mut(QueryBuilder::remove().id(-3).query(), -1);
-    db.exec_error(QueryBuilder::select().id(-3).query(), "Id '-3' not found");
-}
-
-#[test]
-fn remove_edge_rollback() {
-    let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
-    db.exec_mut(
-        QueryBuilder::insert().edge().from("alias1").to(2).query(),
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into()])
+            .to(&[2.into()])
+            .query(),
         1,
     );
     db.transaction_mut_error(

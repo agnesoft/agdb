@@ -7,24 +7,19 @@ use agdb::QueryError;
 use framework::TestDb;
 
 #[test]
-fn insert_edge_from_to() {
-    let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
-    db.exec_mut(QueryBuilder::insert().node().query(), 1);
-    db.exec_mut_ids(
-        QueryBuilder::insert().edge().from("alias1").to(2).query(),
-        &[-3],
-    );
-}
-
-#[test]
-fn insert_edge_from_to_rollback() {
+fn insert_edges_from_to_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().node().query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::insert().edge().from("alias1").to(2).query())?;
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(&["alias1".into()])
+                    .to(&[2.into()])
+                    .query(),
+            )?;
             Err("error".into())
         },
         "error".into(),
@@ -33,12 +28,16 @@ fn insert_edge_from_to_rollback() {
 }
 
 #[test]
-fn insert_edge_missing_from() {
+fn insert_edges_missing_from() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().node().alias("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().node().query(), 1);
     db.exec_mut_error(
-        QueryBuilder::insert().edge().from("alias").to(2).query(),
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias".into()])
+            .to(&[2.into()])
+            .query(),
         "Alias 'alias' not found",
     );
 }
@@ -346,34 +345,6 @@ fn insert_edges_from_query_to() {
             .to(&["alias".into()])
             .query(),
         "Invalid insert edges query",
-    );
-}
-
-#[test]
-fn insert_edge_from_to_values() {
-    let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias1".into(), "alias2".into()])
-            .query(),
-        2,
-    );
-    db.exec_mut(
-        QueryBuilder::insert()
-            .edge()
-            .from("alias1")
-            .to("alias2")
-            .values(&[("key", "value").into()])
-            .query(),
-        1,
-    );
-    db.exec_elements(
-        QueryBuilder::select().id(-3).query(),
-        &[DbElement {
-            index: DbId(-3),
-            values: vec![("key", "value").into()],
-        }],
     );
 }
 

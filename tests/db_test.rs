@@ -33,8 +33,14 @@ fn data_persistence() {
                 .query(),
         )
         .unwrap();
-        db.exec_mut(&QueryBuilder::insert().edge().from(1).to(2).query())
-            .unwrap();
+        db.exec_mut(
+            &QueryBuilder::insert()
+                .edges()
+                .from(&[1.into()])
+                .to(&[2.into()])
+                .query(),
+        )
+        .unwrap();
         let result = db
             .exec(
                 &QueryBuilder::select()
@@ -104,8 +110,14 @@ fn data_remove_persistence() {
                 .query(),
         )
         .unwrap();
-        db.exec_mut(&QueryBuilder::insert().edge().from(1).to(2).query())
-            .unwrap();
+        db.exec_mut(
+            &QueryBuilder::insert()
+                .edges()
+                .from(&[1.into()])
+                .to(&[2.into()])
+                .query(),
+        )
+        .unwrap();
         let result = db
             .exec(
                 &QueryBuilder::select()

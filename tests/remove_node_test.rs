@@ -112,8 +112,14 @@ fn remove_missing_node_alias_rollback() {
 fn remove_node_with_edges() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
-    db.exec_mut(QueryBuilder::insert().edge().from(1).to(2).query(), 1);
-    db.exec_mut(QueryBuilder::insert().edge().from(2).to(1).query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 2.into()])
+            .to(&[2.into(), 1.into()])
+            .query(),
+        2,
+    );
     db.exec_mut(QueryBuilder::remove().id(1).query(), -1);
     db.exec_error(QueryBuilder::select().id(-3).query(), "Id '-3' not found");
 }
@@ -122,7 +128,14 @@ fn remove_node_with_edges() {
 fn remove_node_with_edges_rollback() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().node().query(), 1);
-    db.exec_mut(QueryBuilder::insert().edge().from(1).to(1).query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into()])
+            .to(&[1.into()])
+            .query(),
+        1,
+    );
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             t.exec_mut(&QueryBuilder::remove().id(1).query())?;

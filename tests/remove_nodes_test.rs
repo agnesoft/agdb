@@ -21,11 +21,11 @@ fn remove_nodes_rollback() {
         |t| {
             t.exec_mut(&QueryBuilder::remove().ids(&["alias".into()]).query())
                 .unwrap();
-            t.exec(&QueryBuilder::select().id(1).query())
+            t.exec(&QueryBuilder::select().ids(&[1.into()]).query())
         },
         "Id '1' not found".into(),
     );
-    db.exec(QueryBuilder::select().id("alias").query(), 1);
+    db.exec(QueryBuilder::select().ids(&["alias".into()]).query(), 1);
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn remove_nodes_with_alias() {
     );
     db.exec_mut(QueryBuilder::remove().ids(&[1.into()]).query(), -1);
     db.exec_error(
-        QueryBuilder::select().id("alias").query(),
+        QueryBuilder::select().ids(&["alias".into()]).query(),
         "Alias 'alias' not found",
     );
 }
@@ -86,7 +86,7 @@ fn remove_nodes_no_alias_rollback() {
         },
         "error".into(),
     );
-    db.exec_ids(QueryBuilder::select().id(1).query(), &[1]);
+    db.exec_ids(QueryBuilder::select().ids(&[1.into()]).query(), &[1]);
 }
 
 #[test]
@@ -126,7 +126,10 @@ fn remove_nodes_with_edges() {
         2,
     );
     db.exec_mut(QueryBuilder::remove().ids(&[1.into()]).query(), -1);
-    db.exec_error(QueryBuilder::select().id(-3).query(), "Id '-3' not found");
+    db.exec_error(
+        QueryBuilder::select().ids(&[(-3).into()]).query(),
+        "Id '-3' not found",
+    );
 }
 
 #[test]
@@ -148,7 +151,7 @@ fn remove_nodes_with_edges_rollback() {
         },
         "error".into(),
     );
-    db.exec_ids(QueryBuilder::select().id(-2).query(), &[-2]);
+    db.exec_ids(QueryBuilder::select().ids(&[(-2).into()]).query(), &[-2]);
 }
 
 #[test]
@@ -173,14 +176,17 @@ fn remove_nodes_with_values() {
         1,
     );
     db.exec_elements(
-        QueryBuilder::select().id(1).query(),
+        QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
             index: DbId(1),
             values: vec![("key", "value").into()],
         }],
     );
     db.exec_mut(QueryBuilder::remove().ids(&[1.into()]).query(), -1);
-    db.exec_error(QueryBuilder::select().id(1).query(), "Id '1' not found");
+    db.exec_error(
+        QueryBuilder::select().ids(&[1.into()]).query(),
+        "Id '1' not found",
+    );
 }
 
 #[test]
@@ -194,7 +200,7 @@ fn remove_nodes_with_values_rollback() {
         1,
     );
     db.exec_elements(
-        QueryBuilder::select().id(1).query(),
+        QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
             index: DbId(1),
             values: vec![("key", vec![1, 2, 3]).into()],
@@ -205,13 +211,13 @@ fn remove_nodes_with_values_rollback() {
         |t| -> Result<QueryResult, QueryError> {
             t.exec_mut(&QueryBuilder::remove().ids(&[1.into()]).query())
                 .unwrap();
-            t.exec(&QueryBuilder::select().id(1).query())
+            t.exec(&QueryBuilder::select().ids(&[1.into()]).query())
         },
         QueryError::from("Id '1' not found"),
     );
 
     db.exec_elements(
-        QueryBuilder::select().id(1).query(),
+        QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
             index: DbId(1),
             values: vec![("key", vec![1, 2, 3]).into()],

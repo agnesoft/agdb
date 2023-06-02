@@ -30,7 +30,10 @@ fn insert_edges_from_to_rollback() {
         },
         "error".into(),
     );
-    db.exec_error(QueryBuilder::select().id(-3).query(), "Id '-3' not found");
+    db.exec_error(
+        QueryBuilder::select().ids(&[(-3).into()]).query(),
+        "Id '-3' not found",
+    );
 }
 
 #[test]

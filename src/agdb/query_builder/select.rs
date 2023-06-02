@@ -1,4 +1,3 @@
-use super::select_alias::SelectAlias;
 use super::select_alias::SelectAliases;
 use super::select_ids::SelectIds;
 use super::select_key_count::SelectKeyCount;
@@ -17,20 +16,10 @@ use crate::DbKey;
 pub struct Select {}
 
 impl Select {
-    pub fn alias(self) -> SelectAlias {
-        SelectAlias(SelectAliasesQuery {
-            ids: QueryIds::Ids(vec![0.into()]),
-        })
-    }
-
     pub fn aliases(self) -> SelectAliases {
         SelectAliases(SelectAliasesQuery {
             ids: QueryIds::Ids(vec![]),
         })
-    }
-
-    pub fn id<T: Into<QueryId>>(self, id: T) -> SelectIds {
-        SelectIds(SelectQuery(QueryIds::Ids(vec![id.into()])))
     }
 
     pub fn ids(self, ids: &[QueryId]) -> SelectIds {

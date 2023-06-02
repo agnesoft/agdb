@@ -41,12 +41,12 @@ fn remove_aliases_rollback() {
                     .aliases(&["alias".into(), "alias2".into()])
                     .query(),
             )?;
-            t.exec(&QueryBuilder::select().id("alias2").query())
+            t.exec(&QueryBuilder::select().ids(&["alias2".into()]).query())
         },
         "Alias 'alias2' not found".into(),
     );
 
-    db.exec(QueryBuilder::select().id("alias2").query(), 1);
+    db.exec(QueryBuilder::select().ids(&["alias2".into()]).query(), 1);
 }
 
 #[test]

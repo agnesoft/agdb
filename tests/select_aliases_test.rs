@@ -2,7 +2,7 @@ use agdb::QueryBuilder;
 
 #[test]
 fn select_alias_id() {
-    let _query = QueryBuilder::select().alias().id(1).query();
+    let _query = QueryBuilder::select().aliases().ids(&[1.into()]).query();
 }
 
 #[test]

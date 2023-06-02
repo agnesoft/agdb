@@ -26,11 +26,11 @@ fn remove_edges_rollback() {
     db.transaction_mut_error(
         |t| {
             t.exec_mut(&QueryBuilder::remove().ids(&[(-3).into()]).query())?;
-            t.exec(&QueryBuilder::select().id(-3).query())
+            t.exec(&QueryBuilder::select().ids(&[(-3).into()]).query())
         },
         "Id '-3' not found".into(),
     );
-    db.exec(QueryBuilder::select().id(-3).query(), 1);
+    db.exec(QueryBuilder::select().ids(&[(-3).into()]).query(), 1);
 }
 
 #[test]

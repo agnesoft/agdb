@@ -4,19 +4,9 @@ use crate::query::search_query::SearchQuery;
 use crate::query::select_aliases_query::SelectAliasesQuery;
 use crate::query::select_all_aliases_query::SelectAllAliases;
 
-pub struct SelectAlias(pub SelectAliasesQuery);
-
 pub struct SelectAliases(pub SelectAliasesQuery);
 
 pub struct SelectAliasesIds(pub SelectAliasesQuery);
-
-impl SelectAlias {
-    pub fn id(mut self, id: i64) -> SelectAliasesIds {
-        self.0.ids = QueryIds::Ids(vec![id.into()]);
-
-        SelectAliasesIds(self.0)
-    }
-}
 
 impl SelectAliasesIds {
     pub fn query(self) -> SelectAliasesQuery {

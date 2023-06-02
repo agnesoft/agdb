@@ -178,7 +178,9 @@ fn data_remove_persistence() {
         ]
     );
 
-    let error = db.exec(&QueryBuilder::select().id(-3).query()).unwrap_err();
+    let error = db
+        .exec(&QueryBuilder::select().ids(&[(-3).into()]).query())
+        .unwrap_err();
     assert_eq!(error.description, "Id '-3' not found");
 }
 

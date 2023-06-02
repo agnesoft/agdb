@@ -30,7 +30,8 @@ fn insert_values_ids_rollback() {
                 6
             );
             assert_eq!(
-                t.exec(&QueryBuilder::select().id(1).query())?.elements,
+                t.exec(&QueryBuilder::select().ids(&[1.into()]).query())?
+                    .elements,
                 vec![DbElement {
                     index: DbId(1),
                     values: vec![
@@ -48,7 +49,7 @@ fn insert_values_ids_rollback() {
         QueryError::from("error"),
     );
     db.exec_elements(
-        QueryBuilder::select().id(1).query(),
+        QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
             index: DbId(1),
             values: vec![],

@@ -22,7 +22,7 @@ fn insert_nodes_aliases_rollback() {
         "error".into(),
     );
     db.exec_error(
-        QueryBuilder::select().id("alias").query(),
+        QueryBuilder::select().ids(&["alias".into()]).query(),
         "Alias 'alias' not found",
     );
 }
@@ -137,11 +137,11 @@ fn insert_nodes_aliases_values_rollback() {
         "error".into(),
     );
     db.exec_error(
-        QueryBuilder::select().id("alias1").query(),
+        QueryBuilder::select().ids(&["alias1".into()]).query(),
         "Alias 'alias1' not found",
     );
     db.exec_error(
-        QueryBuilder::select().id("alias2").query(),
+        QueryBuilder::select().ids(&["alias2".into()]).query(),
         "Alias 'alias2' not found",
     );
 }
@@ -239,7 +239,7 @@ fn insert_nodes_values_uniform() {
         1,
     );
     db.exec_elements(
-        QueryBuilder::select().id(1).query(),
+        QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
             index: DbId(1),
             values: vec![("key", "value").into(), ("key2", "value2").into()],

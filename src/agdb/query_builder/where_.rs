@@ -57,10 +57,6 @@ impl Where {
         WhereLogicOperator(self.0)
     }
 
-    pub fn id(self, id: QueryId) -> WhereLogicOperator {
-        self.ids(&[id])
-    }
-
     pub fn ids(mut self, ids: &[QueryId]) -> WhereLogicOperator {
         self.0
             .conditions

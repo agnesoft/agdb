@@ -4,7 +4,7 @@ use agdb::QueryBuilder;
 use framework::TestDb;
 
 #[test]
-fn select_id_alias() {
+fn select_ids_aliases() {
     let mut db = TestDb::new();
     db.exec_mut(
         QueryBuilder::insert()
@@ -35,7 +35,7 @@ fn select_from_ids() {
 }
 
 #[test]
-fn select_missing_alias() {
+fn select_missing_aliases() {
     let db = TestDb::new();
     db.exec_error(
         QueryBuilder::select().ids(&["alias".into()]).query(),
@@ -44,7 +44,7 @@ fn select_missing_alias() {
 }
 
 #[test]
-fn select_missing_id() {
+fn select_missing_ids() {
     let db = TestDb::new();
     db.exec_error(
         QueryBuilder::select().ids(&[1.into()]).query(),
@@ -53,7 +53,7 @@ fn select_missing_id() {
 }
 
 #[test]
-fn select_invalid_id() {
+fn select_invalid_ids() {
     let db = TestDb::new();
     db.exec_error(
         QueryBuilder::select().ids(&[0.into()]).query(),

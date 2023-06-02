@@ -1,14 +1,6 @@
 use agdb::QueryBuilder;
 
 #[test]
-fn select_values_id() {
-    let _query = QueryBuilder::select()
-        .values(&["key1".into(), "key2".into()])
-        .id("alias".into())
-        .query();
-}
-
-#[test]
 fn select_values_ids() {
     let _query = QueryBuilder::select()
         .values(&["key1".into(), "key2".into()])

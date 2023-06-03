@@ -1,7 +1,7 @@
-mod framework;
+mod test_db;
 
 use agdb::QueryBuilder;
-use framework::TestDb;
+use test_db::TestDb;
 
 #[test]
 fn select_ids_aliases() {

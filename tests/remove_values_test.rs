@@ -1,9 +1,9 @@
-mod framework;
+mod test_db;
 
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
-use framework::TestDb;
+use test_db::TestDb;
 
 #[test]
 fn remove_values_ids() {

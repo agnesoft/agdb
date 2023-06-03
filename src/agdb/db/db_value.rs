@@ -187,6 +187,12 @@ impl From<String> for DbValue {
     }
 }
 
+impl From<&String> for DbValue {
+    fn from(value: &String) -> Self {
+        DbValue::String(value.clone())
+    }
+}
+
 impl From<&str> for DbValue {
     fn from(value: &str) -> Self {
         DbValue::String(value.to_string())

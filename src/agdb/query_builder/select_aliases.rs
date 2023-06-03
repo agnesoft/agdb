@@ -15,8 +15,8 @@ impl SelectAliasesIds {
 }
 
 impl SelectAliases {
-    pub fn ids(mut self, ids: &[i64]) -> SelectAliasesIds {
-        self.0.ids = QueryIds::Ids(ids.iter().map(|id| QueryId::from(*id)).collect());
+    pub fn ids(mut self, ids: &[QueryId]) -> SelectAliasesIds {
+        self.0.ids = QueryIds::Ids(ids.to_vec());
 
         SelectAliasesIds(self.0)
     }

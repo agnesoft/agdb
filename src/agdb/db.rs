@@ -156,6 +156,12 @@ impl Db {
         Ok(())
     }
 
+    pub(crate) fn alias(&self, db_id: DbId) -> Result<String, QueryError> {
+        self.aliases
+            .key(&db_id)?
+            .ok_or(QueryError::from(format!("Id '{}' not found", db_id.0)))
+    }
+
     pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, QueryError> {
         match query_id {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),

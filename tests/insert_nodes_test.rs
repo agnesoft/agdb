@@ -1,10 +1,10 @@
-mod framework;
+mod test_db;
 
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryError;
-use framework::TestDb;
+use test_db::TestDb;
 
 #[test]
 fn insert_nodes_aliases_rollback() {

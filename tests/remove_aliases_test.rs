@@ -1,9 +1,9 @@
-mod framework;
+mod test_db;
 
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryResult;
-use framework::TestDb;
+use test_db::TestDb;
 
 #[test]
 fn remove_aliases() {

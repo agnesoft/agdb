@@ -162,6 +162,10 @@ impl Db {
             .ok_or(QueryError::from(format!("Id '{}' not found", db_id.0)))
     }
 
+    pub(crate) fn aliases(&self) -> Vec<(String, DbId)> {
+        self.aliases.iter().collect()
+    }
+
     pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, QueryError> {
         match query_id {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),

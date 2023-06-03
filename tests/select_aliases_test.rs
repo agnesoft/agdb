@@ -95,6 +95,36 @@ fn select_aliases_search() {
 }
 
 #[test]
+fn select_all_aliases_empty() {
+    let db = TestDb::new();
+    db.exec(QueryBuilder::select().aliases().query(), 0);
+}
+
+#[test]
 fn select_all_aliases() {
-    let _ = QueryBuilder::select().aliases().query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["alias1".into(), "alias2".into(), "alias3".into()])
+            .query(),
+        3,
+    );
+    db.exec_elements(
+        QueryBuilder::select().aliases().query(),
+        &[
+            DbElement {
+                index: DbId(1),
+                values: vec![("alias", "alias1").into()],
+            },
+            DbElement {
+                index: DbId(2),
+                values: vec![("alias", "alias2").into()],
+            },
+            DbElement {
+                index: DbId(3),
+                values: vec![("alias", "alias3").into()],
+            },
+        ],
+    );
 }

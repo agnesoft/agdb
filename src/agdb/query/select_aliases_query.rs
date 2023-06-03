@@ -14,6 +14,9 @@ impl Query for SelectAliasesQuery {
     fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
         match &self.ids {
             QueryIds::Ids(ids) => {
+                result.elements.reserve(ids.len());
+                result.result += ids.len() as i64;
+
                 for id in ids {
                     match id {
                         QueryId::Id(db_id) => result.elements.push(DbElement {
@@ -25,7 +28,6 @@ impl Query for SelectAliasesQuery {
                             values: vec![("alias", alias).into()],
                         }),
                     }
-                    result.result += 1;
                 }
                 Ok(())
             }

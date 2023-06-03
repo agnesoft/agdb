@@ -48,7 +48,10 @@ impl TestDb {
 
     #[track_caller]
     pub fn exec_elements<T: Query>(&mut self, query: T, elements: &[DbElement]) {
-        assert_eq!(self.db.exec(&query).unwrap().elements, elements)
+        let res = self.db.exec(&query).unwrap();
+        println!("RESULT: {}", res.result);
+        assert_eq!(res.result, elements.len() as i64);
+        assert_eq!(res.elements, elements);
     }
 
     #[track_caller]

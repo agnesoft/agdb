@@ -257,6 +257,10 @@ impl Db {
             .collect())
     }
 
+    pub(crate) fn key_count(&self, db_id: DbId) -> Result<u64, DbError> {
+        self.values.values_count(&db_id)
+    }
+
     pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, QueryError> {
         match query_id {
             QueryId::Id(db_id) => {

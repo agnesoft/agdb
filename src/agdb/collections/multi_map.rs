@@ -234,6 +234,30 @@ where
         Ok(values)
     }
 
+    pub fn values_count(&self, key: &K) -> Result<u64, DbError> {
+        if self.capacity() == 0 {
+            return Ok(0);
+        }
+
+        let hash = key.stable_hash();
+        let mut pos = hash % self.capacity();
+        let mut result = 0;
+
+        loop {
+            match self.data.state(pos)? {
+                MapValueState::Empty => break,
+                MapValueState::Valid if self.data.key(pos)? == *key => {
+                    result += 1;
+                }
+                MapValueState::Valid | MapValueState::Deleted => {}
+            }
+
+            pos = self.next_pos(pos)
+        }
+
+        Ok(result)
+    }
+
     fn drop_value(&mut self, pos: u64) -> Result<(), DbError> {
         self.data.set_state(pos, MapValueState::Deleted)?;
         self.data.set_key(pos, &K::default())?;
@@ -525,6 +549,30 @@ mod tests {
         assert!(map
             .replace(&10, &"Hello".to_string(), &"World".to_string())
             .is_ok());
+    }
+
+    #[test]
+    fn values_count() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+
+        let mut map = MultiMapStorage::<u64, String>::new(storage).unwrap();
+
+        assert_eq!(map.values_count(&4), Ok(0));
+
+        map.insert(&1, &"Hello".to_string()).unwrap();
+        map.insert(&1, &"World".to_string()).unwrap();
+        map.insert(&1, &"!".to_string()).unwrap();
+        map.insert(&2, &"a".to_string()).unwrap();
+        map.insert(&3, &"b".to_string()).unwrap();
+        map.remove_value(&1, &"World".to_string()).unwrap();
+
+        assert_eq!(map.values_count(&1), Ok(2));
+        assert_eq!(map.values_count(&2), Ok(1));
+        assert_eq!(map.values_count(&3), Ok(1));
+        assert_eq!(map.values_count(&4), Ok(0));
     }
 
     #[test]

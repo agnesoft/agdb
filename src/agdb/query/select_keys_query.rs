@@ -17,7 +17,7 @@ impl Query for SelectKeysQuery {
                 for id in ids {
                     let db_id = db.db_id(id)?;
                     result.elements.push(DbElement {
-                        index: db_id,
+                        id: db_id,
                         values: db.keys(db_id)?,
                     });
                 }

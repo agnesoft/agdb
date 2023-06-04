@@ -40,7 +40,7 @@ impl TestDb {
                 .unwrap()
                 .elements
                 .into_iter()
-                .map(|e| e.index.0)
+                .map(|e| e.id.0)
                 .collect::<Vec<i64>>(),
             ids
         );
@@ -49,7 +49,6 @@ impl TestDb {
     #[track_caller]
     pub fn exec_elements<T: Query>(&mut self, query: T, elements: &[DbElement]) {
         let res = self.db.exec(&query).unwrap();
-        println!("RESULT: {}", res.result);
         assert_eq!(res.result, elements.len() as i64);
         assert_eq!(res.elements, elements);
     }
@@ -72,7 +71,7 @@ impl TestDb {
                 .unwrap()
                 .elements
                 .into_iter()
-                .map(|e| e.index.0)
+                .map(|e| e.id.0)
                 .collect::<Vec<i64>>(),
             ids
         );

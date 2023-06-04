@@ -305,6 +305,24 @@ impl Db {
         self.values.values(&db_id)
     }
 
+    pub(crate) fn values_by_keys(
+        &self,
+        db_id: DbId,
+        keys: &[DbKey],
+    ) -> Result<Vec<DbKeyValue>, DbError> {
+        let values = self.values(db_id)?;
+        let mut result = vec![];
+        result.reserve(keys.len());
+
+        for key_value in values {
+            if keys.contains(&key_value.key) {
+                result.push(key_value);
+            }
+        }
+
+        Ok(result)
+    }
+
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
         match id.cmp(&0) {
             std::cmp::Ordering::Less => {

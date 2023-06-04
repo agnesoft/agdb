@@ -22,11 +22,11 @@ fn remove_values_ids() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("key1", "value1").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key1", "value1").into()],
             },
         ],
@@ -44,11 +44,11 @@ fn remove_values_ids() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![],
             },
         ],
@@ -91,11 +91,11 @@ fn remove_missing_key() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("key1", "value1").into(), ("key2", 100).into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key1", "value1").into(), ("key2", 100).into()],
             },
         ],

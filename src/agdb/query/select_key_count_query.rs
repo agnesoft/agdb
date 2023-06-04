@@ -17,7 +17,7 @@ impl Query for SelectKeyCountQuery {
                 for id in ids {
                     let db_id = db.db_id(id)?;
                     result.elements.push(DbElement {
-                        index: db_id,
+                        id: db_id,
                         values: vec![("key_count", db.key_count(db_id)?).into()],
                     });
                 }

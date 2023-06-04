@@ -26,7 +26,7 @@ fn select_key_count_ids() {
             .ids(&["alias".into()])
             .query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![("key_count", 3_u64).into()],
         }],
     );
@@ -48,7 +48,7 @@ fn select_keys_count_no_keys() {
             .ids(&["alias".into()])
             .query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![("key_count", 0_u64).into()],
         }],
     );

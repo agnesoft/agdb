@@ -4,6 +4,9 @@ use super::db_value_index::DbValueIndex;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Result as DisplayResult;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DbValue {
@@ -259,6 +262,43 @@ impl From<Vec<u8>> for DbValue {
     }
 }
 
+impl Display for DbValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> DisplayResult {
+        match self {
+            DbValue::Bytes(v) => write!(f, "{}", String::from_utf8_lossy(v)),
+            DbValue::Int(v) => write!(f, "{}", v),
+            DbValue::Uint(v) => write!(f, "{}", v),
+            DbValue::Float(v) => write!(f, "{}", v.to_f64()),
+            DbValue::String(v) => write!(f, "{}", v),
+            DbValue::VecInt(v) => write!(
+                f,
+                "[{}]",
+                v.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            DbValue::VecUint(v) => write!(
+                f,
+                "[{}]",
+                v.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            DbValue::VecFloat(v) => write!(
+                f,
+                "[{}]",
+                v.iter()
+                    .map(|x| x.to_f64().to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            DbValue::VecString(v) => write!(f, "[{}]", v.join(", ")),
+        }
+    }
+}
+
 impl StableHash for DbValue {
     fn stable_hash(&self) -> u64 {
         match self {
@@ -338,6 +378,28 @@ mod tests {
         assert_eq!(
             DbValue::from(vec!["Hello".to_string()]),
             DbValue::from(vec!["Hello".to_string()])
+        );
+    }
+
+    #[test]
+    fn derived_from_display() {
+        assert_eq!(format!("{}", DbValue::from(vec![65_u8])), "A");
+        assert_eq!(format!("{}", DbValue::from(1.1_f64)), "1.1");
+        assert_eq!(format!("{}", DbValue::from(-1_i64)), "-1");
+        assert_eq!(format!("{}", DbValue::from(1_u64)), "1");
+        assert_eq!(format!("{}", DbValue::from("Hello".to_string())), "Hello");
+        assert_eq!(
+            format!("{}", DbValue::from(vec![1.1_f64, -0.9_f64])),
+            "[1.1, -0.9]"
+        );
+        assert_eq!(format!("{}", DbValue::from(vec![-1_i64])), "[-1]");
+        assert_eq!(format!("{}", DbValue::from(vec![1_u64, 3_u64])), "[1, 3]");
+        assert_eq!(
+            format!(
+                "{}",
+                DbValue::from(vec!["Hello".to_string(), "World".to_string()])
+            ),
+            "[Hello, World]"
         );
     }
 

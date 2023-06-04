@@ -33,7 +33,7 @@ fn insert_values_ids_rollback() {
                 t.exec(&QueryBuilder::select().ids(&[1.into()]).query())?
                     .elements,
                 vec![DbElement {
-                    index: DbId(1),
+                    id: DbId(1),
                     values: vec![
                         ("key", vec![1.1, 2.1]).into(),
                         (vec!["a".to_string(), "b".to_string()], vec![1, 2]).into(),
@@ -51,7 +51,7 @@ fn insert_values_ids_rollback() {
     db.exec_elements(
         QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![],
         }],
     );
@@ -75,11 +75,11 @@ fn insert_values_ids() {
         QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("some really long key", 1000).into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![(10, 1.1).into()],
             },
         ],
@@ -133,11 +133,11 @@ fn insert_values_uniform_ids() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("key", "value").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key", "value").into()],
             },
         ],

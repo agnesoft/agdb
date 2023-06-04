@@ -178,7 +178,7 @@ fn remove_nodes_with_values() {
     db.exec_elements(
         QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![("key", "value").into()],
         }],
     );
@@ -202,7 +202,7 @@ fn remove_nodes_with_values_rollback() {
     db.exec_elements(
         QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![("key", vec![1, 2, 3]).into()],
         }],
     );
@@ -219,7 +219,7 @@ fn remove_nodes_with_values_rollback() {
     db.exec_elements(
         QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![("key", vec![1, 2, 3]).into()],
         }],
     );

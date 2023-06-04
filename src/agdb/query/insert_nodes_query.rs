@@ -36,10 +36,7 @@ impl QueryMut for InsertNodesQuery {
         result.result = ids.len() as i64;
         result.elements = ids
             .into_iter()
-            .map(|id| DbElement {
-                index: id,
-                values: vec![],
-            })
+            .map(|id| DbElement { id, values: vec![] })
             .collect();
 
         Ok(())

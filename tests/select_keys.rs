@@ -24,7 +24,7 @@ fn select_keys_ids() {
     db.exec_elements(
         QueryBuilder::select().keys().ids(&["alias".into()]).query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![
                 ("key", DbValue::default()).into(),
                 (1, DbValue::default()).into(),
@@ -47,7 +47,7 @@ fn select_keys_no_keys() {
     db.exec_elements(
         QueryBuilder::select().keys().ids(&["alias".into()]).query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![],
         }],
     );

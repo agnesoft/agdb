@@ -3,7 +3,7 @@ use crate::DbId;
 
 #[derive(Debug, PartialEq)]
 pub struct DbElement {
-    pub index: DbId,
+    pub id: DbId,
     pub values: Vec<DbKeyValue>,
 }
 
@@ -15,7 +15,7 @@ mod tests {
         format!(
             "{:?}",
             DbElement {
-                index: DbId(0),
+                id: DbId(0),
                 values: vec![]
             }
         );
@@ -24,11 +24,11 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             DbElement {
-                index: DbId(0),
+                id: DbId(0),
                 values: vec![]
             },
             DbElement {
-                index: DbId(0),
+                id: DbId(0),
                 values: vec![]
             }
         );

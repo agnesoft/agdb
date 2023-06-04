@@ -84,11 +84,11 @@ fn insert_nodes_aliases_values() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key", "value3").into()],
             },
         ],
@@ -123,11 +123,11 @@ fn insert_nodes_aliases_values_rollback() {
                     .elements,
                 &[
                     DbElement {
-                        index: DbId(1),
+                        id: DbId(1),
                         values: vec![("key", "value").into(), ("key2", "value2").into()],
                     },
                     DbElement {
-                        index: DbId(2),
+                        id: DbId(2),
                         values: vec![("key", "value3").into()],
                     },
                 ],
@@ -163,11 +163,11 @@ fn insert_nodes_aliases_values_uniform() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
         ],
@@ -189,11 +189,11 @@ fn insert_nodes_count_values_uniform() {
         QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
         ],
@@ -217,11 +217,11 @@ fn insert_nodes_values() {
         QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key", "value3").into()],
             },
         ],
@@ -241,7 +241,7 @@ fn insert_nodes_values_uniform() {
     db.exec_elements(
         QueryBuilder::select().ids(&[1.into()]).query(),
         &[DbElement {
-            index: DbId(1),
+            id: DbId(1),
             values: vec![("key", "value").into(), ("key2", "value2").into()],
         }],
     );

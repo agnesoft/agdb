@@ -133,11 +133,11 @@ fn insert_edges_from_to_values() {
             .query(),
         &[
             DbElement {
-                index: DbId(-5),
+                id: DbId(-5),
                 values: vec![("key", "value").into()],
             },
             DbElement {
-                index: DbId(-6),
+                id: DbId(-6),
                 values: vec![("key", "value2").into()],
             },
         ],
@@ -180,19 +180,19 @@ fn insert_edges_from_to_each_values() {
             .query(),
         &[
             DbElement {
-                index: DbId(-5),
+                id: DbId(-5),
                 values: vec![("key", "value1").into()],
             },
             DbElement {
-                index: DbId(-6),
+                id: DbId(-6),
                 values: vec![("key", "value2").into()],
             },
             DbElement {
-                index: DbId(-7),
+                id: DbId(-7),
                 values: vec![("key", "value3").into()],
             },
             DbElement {
-                index: DbId(-8),
+                id: DbId(-8),
                 values: vec![("key", "value4").into()],
             },
         ],
@@ -230,19 +230,19 @@ fn insert_edges_from_to_each_values_uniform() {
             .query(),
         &[
             DbElement {
-                index: DbId(-5),
+                id: DbId(-5),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                index: DbId(-6),
+                id: DbId(-6),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                index: DbId(-7),
+                id: DbId(-7),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                index: DbId(-8),
+                id: DbId(-8),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
         ],
@@ -303,11 +303,11 @@ fn insert_edges_from_to_values_asymmetric() {
             .query(),
         &[
             DbElement {
-                index: DbId(-4),
+                id: DbId(-4),
                 values: vec![("key", "value").into()],
             },
             DbElement {
-                index: DbId(-5),
+                id: DbId(-5),
                 values: vec![("key", "value2").into()],
             },
         ],
@@ -339,11 +339,11 @@ fn insert_edges_from_to_values_uniform() {
             .query(),
         &[
             DbElement {
-                index: DbId(-4),
+                id: DbId(-4),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
             DbElement {
-                index: DbId(-5),
+                id: DbId(-5),
                 values: vec![("key", "value").into(), ("key", "value2").into()],
             },
         ],

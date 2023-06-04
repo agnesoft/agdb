@@ -53,15 +53,15 @@ fn data_persistence() {
             result.elements,
             &[
                 DbElement {
-                    index: DbId(1),
+                    id: DbId(1),
                     values: values.clone(),
                 },
                 DbElement {
-                    index: DbId(2),
+                    id: DbId(2),
                     values: values.clone(),
                 },
                 DbElement {
-                    index: DbId(-3),
+                    id: DbId(-3),
                     values: vec![],
                 }
             ]
@@ -81,15 +81,15 @@ fn data_persistence() {
         result.elements,
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: values.clone(),
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values,
             },
             DbElement {
-                index: DbId(-3),
+                id: DbId(-3),
                 values: vec![],
             }
         ]
@@ -130,15 +130,15 @@ fn data_remove_persistence() {
             result.elements,
             &[
                 DbElement {
-                    index: DbId(1),
+                    id: DbId(1),
                     values: vec![("key", 100).into()],
                 },
                 DbElement {
-                    index: DbId(2),
+                    id: DbId(2),
                     values: vec![("key", 100).into()],
                 },
                 DbElement {
-                    index: DbId(-3),
+                    id: DbId(-3),
                     values: vec![],
                 }
             ]
@@ -168,11 +168,11 @@ fn data_remove_persistence() {
         result.elements,
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("key", 100).into()],
             }
         ]

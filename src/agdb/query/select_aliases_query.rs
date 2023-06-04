@@ -20,11 +20,11 @@ impl Query for SelectAliasesQuery {
                 for id in ids {
                     match id {
                         QueryId::Id(db_id) => result.elements.push(DbElement {
-                            index: *db_id,
+                            id: *db_id,
                             values: vec![("alias", db.alias(*db_id)?).into()],
                         }),
                         QueryId::Alias(alias) => result.elements.push(DbElement {
-                            index: db.db_id(id)?,
+                            id: db.db_id(id)?,
                             values: vec![("alias", alias).into()],
                         }),
                     }

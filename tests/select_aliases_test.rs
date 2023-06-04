@@ -43,11 +43,11 @@ fn select_aliases_ids() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("alias", "alias1").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("alias", "alias2").into()],
             },
         ],
@@ -71,11 +71,11 @@ fn select_aliases_aliases() {
             .query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("alias", "alias1").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("alias", "alias2").into()],
             },
         ],
@@ -114,15 +114,15 @@ fn select_all_aliases() {
         QueryBuilder::select().aliases().query(),
         &[
             DbElement {
-                index: DbId(1),
+                id: DbId(1),
                 values: vec![("alias", "alias1").into()],
             },
             DbElement {
-                index: DbId(2),
+                id: DbId(2),
                 values: vec![("alias", "alias2").into()],
             },
             DbElement {
-                index: DbId(3),
+                id: DbId(3),
                 values: vec![("alias", "alias3").into()],
             },
         ],

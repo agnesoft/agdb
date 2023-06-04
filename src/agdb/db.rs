@@ -27,6 +27,7 @@ use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
 use crate::DbKey;
 use crate::DbKeyValue;
+use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::Transaction;
@@ -242,6 +243,18 @@ impl Db {
         });
         self.values.insert(&db_id, key_value)?;
         Ok(())
+    }
+
+    pub(crate) fn keys(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
+        Ok(self
+            .values
+            .values(&db_id)?
+            .iter()
+            .map(|key_value| DbKeyValue {
+                key: key_value.key.clone(),
+                value: DbValue::default(),
+            })
+            .collect())
     }
 
     pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, QueryError> {

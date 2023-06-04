@@ -558,7 +558,7 @@ mod tests {
             FileStorage::new(test_file.file_name()).unwrap(),
         ));
 
-        let mut map = MultiMapStorage::<u64, String>::new(storage.clone()).unwrap();
+        let mut map = MultiMapStorage::<u64, String>::new(storage).unwrap();
 
         assert_eq!(map.values_count(&4), Ok(0));
 

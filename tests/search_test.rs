@@ -1,8 +1,63 @@
+mod test_db;
+
+use agdb::DbElement;
+use agdb::DbId;
 use agdb::QueryBuilder;
+use test_db::TestDb;
 
 #[test]
 fn search_from() {
-    let _query = QueryBuilder::search().from(1.into()).query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into(), 5.into(), 7.into()])
+            .to(&[3.into(), 5.into(), 7.into(), 9.into()])
+            .query(),
+        4,
+    );
+    db.exec_elements(
+        QueryBuilder::search().from(1.into()).query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(-11),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(3),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(-12),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(5),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(-13),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(7),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(-14),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(9),
+                values: vec![],
+            },
+        ],
+    );
 }
 
 #[test]

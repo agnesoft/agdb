@@ -320,7 +320,19 @@ impl Db {
     }
 
     pub(crate) fn search_to(&self, to: DbId) -> Result<Vec<DbId>, QueryError> {
-        todo!()
+        struct Handler {}
+
+        impl SearchHandler for Handler {
+            fn process(&self, _index: &GraphIndex, _distance: &u64) -> SearchControl {
+                SearchControl::Continue(true)
+            }
+        }
+
+        Ok(GraphSearch::from(&self.graph)
+            .breadth_first_search_reverse(GraphIndex(to.0), &Handler {})
+            .iter()
+            .map(|index| DbId(index.0))
+            .collect())
     }
 
     pub(crate) fn search_from_to(&self, from: DbId, to: DbId) -> Result<Vec<DbId>, QueryError> {

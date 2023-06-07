@@ -15,6 +15,7 @@ use crate::command::Command;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::GraphSearch;
+use crate::graph_search::PathSearchHandler;
 use crate::graph_search::SearchControl;
 use crate::graph_search::SearchHandler;
 use crate::query::query_id::QueryId;
@@ -307,7 +308,7 @@ impl Db {
         struct Handler {}
 
         impl SearchHandler for Handler {
-            fn process(&self, _index: &GraphIndex, _distance: &u64) -> SearchControl {
+            fn process(&self, _index: GraphIndex, _distance: u64) -> SearchControl {
                 SearchControl::Continue(true)
             }
         }
@@ -323,7 +324,7 @@ impl Db {
         struct Handler {}
 
         impl SearchHandler for Handler {
-            fn process(&self, _index: &GraphIndex, _distance: &u64) -> SearchControl {
+            fn process(&self, _index: GraphIndex, _distance: u64) -> SearchControl {
                 SearchControl::Continue(true)
             }
         }
@@ -336,7 +337,19 @@ impl Db {
     }
 
     pub(crate) fn search_from_to(&self, from: DbId, to: DbId) -> Result<Vec<DbId>, QueryError> {
-        todo!()
+        struct Handler {}
+
+        impl PathSearchHandler for Handler {
+            fn process(&self, _index: GraphIndex, _distance: u64) -> u64 {
+                1
+            }
+        }
+
+        Ok(GraphSearch::from(&self.graph)
+            .path(GraphIndex(from.0), GraphIndex(to.0), &Handler {})
+            .iter()
+            .map(|index| DbId(index.0))
+            .collect())
     }
 
     pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {

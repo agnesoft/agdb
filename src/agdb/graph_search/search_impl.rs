@@ -109,7 +109,7 @@ where
         let add_index;
         let result;
 
-        match handler.process(&index.index, &index.distance) {
+        match handler.process(index.index, index.distance) {
             SearchControl::Continue(add) => {
                 self.expand_index(index);
                 add_index = add;

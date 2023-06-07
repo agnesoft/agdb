@@ -5,12 +5,13 @@ mod depth_first_search_reverse;
 mod path_search;
 mod search_impl;
 
+pub use self::path_search::PathSearchHandler;
+
 use self::breadth_first_search::BreadthFirstSearch;
 use self::breadth_first_search_reverse::BreadthFirstSearchReverse;
 use self::depth_first_search::DepthFirstSearch;
 use self::depth_first_search_reverse::DepthFirstSearchReverse;
 use self::path_search::PathSearch;
-use self::path_search::PathSearchHandler;
 use self::search_impl::SearchImpl;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
@@ -24,7 +25,7 @@ pub enum SearchControl {
 }
 
 pub trait SearchHandler {
-    fn process(&self, index: &GraphIndex, distance: &u64) -> SearchControl;
+    fn process(&self, index: GraphIndex, distance: u64) -> SearchControl;
 }
 
 pub struct GraphSearch<'a, Data>

@@ -23,20 +23,24 @@ impl Query for SearchQuery {
     fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
         let ids = if self.destination == QueryId::Id(DbId(0)) {
             let origin = db.db_id(&self.origin)?;
-            db.search_from(origin, self.limit)?
+            db.search_from(origin, self.limit, self.offset)?
         } else if self.origin == QueryId::Id(DbId(0)) {
             let destination = db.db_id(&self.destination)?;
-            db.search_to(destination, self.limit)?
+            db.search_to(destination, self.limit, self.offset)?
         } else {
             let origin = db.db_id(&self.origin)?;
             let destination = db.db_id(&self.destination)?;
             let mut path = db.search_from_to(origin, destination)?;
 
-            if self.limit != 0 {
-                path.truncate(self.limit as usize);
+            match (self.limit, self.offset) {
+                (0, 0) => path,
+                (0, _) => path[self.offset as usize..].to_vec(),
+                (_, 0) => {
+                    path.truncate(self.limit as usize);
+                    path
+                }
+                (_, _) => path[self.offset as usize..(self.offset + self.limit) as usize].to_vec(),
             }
-
-            path
         };
 
         //order result by self.order_by

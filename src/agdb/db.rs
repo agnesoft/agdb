@@ -12,6 +12,8 @@ mod db_value_index;
 use self::db_error::DbError;
 use self::db_search_handlers::DefaultHandler;
 use self::db_search_handlers::LimitHandler;
+use self::db_search_handlers::LimitOffsetHandler;
+use self::db_search_handlers::OffsetHandler;
 use self::db_search_handlers::PathHandler;
 use crate::collections::indexed_map::DbIndexedMap;
 use crate::collections::multi_map::MultiMapStorage;
@@ -305,36 +307,48 @@ impl Db {
         Ok(false)
     }
 
-    pub(crate) fn search_from(&self, from: DbId, limit: u64) -> Result<Vec<DbId>, QueryError> {
-        if limit == 0 {
-            Ok(GraphSearch::from(&self.graph)
-                .breadth_first_search(GraphIndex(from.0), DefaultHandler {})
-                .iter()
-                .map(|index| DbId(index.0))
-                .collect())
-        } else {
-            Ok(GraphSearch::from(&self.graph)
-                .breadth_first_search(GraphIndex(from.0), LimitHandler::new(limit))
-                .iter()
-                .map(|index| DbId(index.0))
-                .collect())
-        }
+    pub(crate) fn search_from(
+        &self,
+        from: DbId,
+        limit: u64,
+        offset: u64,
+    ) -> Result<Vec<DbId>, QueryError> {
+        let search = GraphSearch::from(&self.graph);
+
+        let indexes = match (limit, offset) {
+            (0, 0) => search.breadth_first_search(GraphIndex(from.0), DefaultHandler {}),
+            (_, 0) => search.breadth_first_search(GraphIndex(from.0), LimitHandler::new(limit)),
+            (0, _) => search.breadth_first_search(GraphIndex(from.0), OffsetHandler::new(offset)),
+            (_, _) => search
+                .breadth_first_search(GraphIndex(from.0), LimitOffsetHandler::new(limit, offset)),
+        };
+
+        Ok(indexes.iter().map(|index| DbId(index.0)).collect())
     }
 
-    pub(crate) fn search_to(&self, to: DbId, limit: u64) -> Result<Vec<DbId>, QueryError> {
-        if limit == 0 {
-            Ok(GraphSearch::from(&self.graph)
-                .breadth_first_search_reverse(GraphIndex(to.0), DefaultHandler {})
-                .iter()
-                .map(|index| DbId(index.0))
-                .collect())
-        } else {
-            Ok(GraphSearch::from(&self.graph)
-                .breadth_first_search_reverse(GraphIndex(to.0), LimitHandler::new(limit))
-                .iter()
-                .map(|index| DbId(index.0))
-                .collect())
-        }
+    pub(crate) fn search_to(
+        &self,
+        to: DbId,
+        limit: u64,
+        offset: u64,
+    ) -> Result<Vec<DbId>, QueryError> {
+        let search = GraphSearch::from(&self.graph);
+
+        let indexes = match (limit, offset) {
+            (0, 0) => search.breadth_first_search_reverse(GraphIndex(to.0), DefaultHandler {}),
+            (_, 0) => {
+                search.breadth_first_search_reverse(GraphIndex(to.0), LimitHandler::new(limit))
+            }
+            (0, _) => {
+                search.breadth_first_search_reverse(GraphIndex(to.0), OffsetHandler::new(offset))
+            }
+            (_, _) => search.breadth_first_search_reverse(
+                GraphIndex(to.0),
+                LimitOffsetHandler::new(limit, offset),
+            ),
+        };
+
+        Ok(indexes.iter().map(|index| DbId(index.0)).collect())
     }
 
     pub(crate) fn search_from_to(&self, from: DbId, to: DbId) -> Result<Vec<DbId>, QueryError> {

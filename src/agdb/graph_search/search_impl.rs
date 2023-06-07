@@ -47,8 +47,11 @@ where
         }
     }
 
-    pub(crate) fn search<Handler: SearchHandler>(&mut self, handler: &Handler) -> Vec<GraphIndex> {
-        while !self.stack.is_empty() && self.process_stack(handler) {}
+    pub(crate) fn search<Handler: SearchHandler>(
+        &mut self,
+        mut handler: Handler,
+    ) -> Vec<GraphIndex> {
+        while !self.stack.is_empty() && self.process_stack(&mut handler) {}
 
         self.take_result()
     }
@@ -80,7 +83,7 @@ where
     fn process_index<Handler: SearchHandler>(
         &mut self,
         index: SearchIndex,
-        handler: &Handler,
+        handler: &mut Handler,
     ) -> bool {
         if !self.visit_index(&index) {
             self.process_unvisited_index(index, handler)
@@ -89,7 +92,7 @@ where
         }
     }
 
-    fn process_stack<Handler: SearchHandler>(&mut self, handler: &Handler) -> bool {
+    fn process_stack<Handler: SearchHandler>(&mut self, handler: &mut Handler) -> bool {
         let mut it = SearchIt::new(&mut self.stack);
 
         while let Some(i) = it.next() {
@@ -104,7 +107,7 @@ where
     fn process_unvisited_index<Handler: SearchHandler>(
         &mut self,
         index: SearchIndex,
-        handler: &Handler,
+        handler: &mut Handler,
     ) -> bool {
         let add_index;
         let result;

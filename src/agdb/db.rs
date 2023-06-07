@@ -6,18 +6,19 @@ pub mod db_key_value;
 pub mod db_value;
 
 mod db_float;
+mod db_search_handlers;
 mod db_value_index;
 
 use self::db_error::DbError;
+use self::db_search_handlers::DefaultHandler;
+use self::db_search_handlers::LimitHandler;
+use self::db_search_handlers::PathHandler;
 use crate::collections::indexed_map::DbIndexedMap;
 use crate::collections::multi_map::MultiMapStorage;
 use crate::command::Command;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::GraphSearch;
-use crate::graph_search::PathSearchHandler;
-use crate::graph_search::SearchControl;
-use crate::graph_search::SearchHandler;
 use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
@@ -304,49 +305,41 @@ impl Db {
         Ok(false)
     }
 
-    pub(crate) fn search_from(&self, from: DbId) -> Result<Vec<DbId>, QueryError> {
-        struct Handler {}
-
-        impl SearchHandler for Handler {
-            fn process(&self, _index: GraphIndex, _distance: u64) -> SearchControl {
-                SearchControl::Continue(true)
-            }
+    pub(crate) fn search_from(&self, from: DbId, limit: u64) -> Result<Vec<DbId>, QueryError> {
+        if limit == 0 {
+            Ok(GraphSearch::from(&self.graph)
+                .breadth_first_search(GraphIndex(from.0), DefaultHandler {})
+                .iter()
+                .map(|index| DbId(index.0))
+                .collect())
+        } else {
+            Ok(GraphSearch::from(&self.graph)
+                .breadth_first_search(GraphIndex(from.0), LimitHandler::new(limit))
+                .iter()
+                .map(|index| DbId(index.0))
+                .collect())
         }
-
-        Ok(GraphSearch::from(&self.graph)
-            .breadth_first_search(GraphIndex(from.0), &Handler {})
-            .iter()
-            .map(|index| DbId(index.0))
-            .collect())
     }
 
-    pub(crate) fn search_to(&self, to: DbId) -> Result<Vec<DbId>, QueryError> {
-        struct Handler {}
-
-        impl SearchHandler for Handler {
-            fn process(&self, _index: GraphIndex, _distance: u64) -> SearchControl {
-                SearchControl::Continue(true)
-            }
+    pub(crate) fn search_to(&self, to: DbId, limit: u64) -> Result<Vec<DbId>, QueryError> {
+        if limit == 0 {
+            Ok(GraphSearch::from(&self.graph)
+                .breadth_first_search_reverse(GraphIndex(to.0), DefaultHandler {})
+                .iter()
+                .map(|index| DbId(index.0))
+                .collect())
+        } else {
+            Ok(GraphSearch::from(&self.graph)
+                .breadth_first_search_reverse(GraphIndex(to.0), LimitHandler::new(limit))
+                .iter()
+                .map(|index| DbId(index.0))
+                .collect())
         }
-
-        Ok(GraphSearch::from(&self.graph)
-            .breadth_first_search_reverse(GraphIndex(to.0), &Handler {})
-            .iter()
-            .map(|index| DbId(index.0))
-            .collect())
     }
 
     pub(crate) fn search_from_to(&self, from: DbId, to: DbId) -> Result<Vec<DbId>, QueryError> {
-        struct Handler {}
-
-        impl PathSearchHandler for Handler {
-            fn process(&self, _index: GraphIndex, _distance: u64) -> u64 {
-                1
-            }
-        }
-
         Ok(GraphSearch::from(&self.graph)
-            .path(GraphIndex(from.0), GraphIndex(to.0), &Handler {})
+            .path(GraphIndex(from.0), GraphIndex(to.0), PathHandler {})
             .iter()
             .map(|index| DbId(index.0))
             .collect())

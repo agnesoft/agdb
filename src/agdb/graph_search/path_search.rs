@@ -24,7 +24,7 @@ where
     pub(crate) current_path: Path,
     pub(crate) destination: GraphIndex,
     pub(crate) graph: &'a GraphImpl<Data>,
-    pub(crate) handler: &'a Handler,
+    pub(crate) handler: Handler,
     pub(crate) paths: Vec<Path>,
     pub(crate) result: Vec<GraphIndex>,
     pub(crate) visited: BitSet,
@@ -39,7 +39,7 @@ where
         graph: &'a GraphImpl<Data>,
         from: GraphIndex,
         to: GraphIndex,
-        handler: &'a Handler,
+        handler: Handler,
     ) -> Self {
         Self {
             current_path: Path {
@@ -184,7 +184,7 @@ mod tests {
         let node = graph.insert_node().unwrap();
         let _edge = graph.insert_edge(node, node).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node, node, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node, node, Handler::default());
 
         assert_eq!(result, vec![]);
     }
@@ -200,7 +200,7 @@ mod tests {
         let result = GraphSearch::from(&graph).path(
             GraphIndex::default(),
             GraphIndex::default(),
-            &Handler::default(),
+            Handler::default(),
         );
 
         assert_eq!(result, vec![]);
@@ -224,7 +224,7 @@ mod tests {
         let edge3 = graph.insert_edge(node2, node3).unwrap();
         let _edge4 = graph.insert_edge(node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
         assert_eq!(result, vec![node1, edge1, node2, edge3, node3]);
     }
@@ -238,7 +238,7 @@ mod tests {
         let mut graph = DbGraph::new(storage).unwrap();
         let node = graph.insert_node().unwrap();
 
-        let result = GraphSearch::from(&graph).path(node, node, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node, node, Handler::default());
 
         assert_eq!(result, vec![]);
     }
@@ -259,7 +259,7 @@ mod tests {
         let _edge2 = graph.insert_edge(node1, node2).unwrap();
         let _edge3 = graph.insert_edge(node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
         assert_eq!(result, vec![node1, edge1, node3]);
     }
@@ -279,7 +279,7 @@ mod tests {
         let edge1 = graph.insert_edge(node1, node2).unwrap();
         let edge2 = graph.insert_edge(node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
         assert_eq!(result, vec![node1, edge1, node2, edge2, node3]);
     }
@@ -303,7 +303,7 @@ mod tests {
         let result = GraphSearch::from(&graph).path(
             node1,
             node3,
-            &Handler {
+            Handler {
                 processor: |index: GraphIndex, _distance: u64| {
                     if index.0 == -4 {
                         return 0;
@@ -331,7 +331,7 @@ mod tests {
 
         let _edge1 = graph.insert_edge(node1, node2).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, &Handler::default());
+        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
         assert_eq!(result, vec![]);
     }

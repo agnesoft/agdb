@@ -25,7 +25,7 @@ pub enum SearchControl {
 }
 
 pub trait SearchHandler {
-    fn process(&self, index: GraphIndex, distance: u64) -> SearchControl;
+    fn process(&mut self, index: GraphIndex, distance: u64) -> SearchControl;
 }
 
 pub struct GraphSearch<'a, Data>
@@ -43,7 +43,7 @@ where
     pub fn breadth_first_search<Handler: SearchHandler>(
         &self,
         index: GraphIndex,
-        handler: &Handler,
+        handler: Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
             SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index).search(handler)
@@ -55,7 +55,7 @@ where
     pub fn breadth_first_search_reverse<Handler: SearchHandler>(
         &self,
         index: GraphIndex,
-        handler: &Handler,
+        handler: Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
             SearchImpl::<'a, Data, BreadthFirstSearchReverse>::new(self.graph, index)
@@ -68,7 +68,7 @@ where
     pub fn depth_first_search<Handler: SearchHandler>(
         &self,
         index: GraphIndex,
-        handler: &Handler,
+        handler: Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
             SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index).search(handler)
@@ -80,7 +80,7 @@ where
     pub fn depth_first_search_reverse<Handler: SearchHandler>(
         &self,
         index: GraphIndex,
-        handler: &Handler,
+        handler: Handler,
     ) -> Vec<GraphIndex> {
         if self.is_valid_index(index) {
             SearchImpl::<'a, Data, DepthFirstSearchReverse>::new(self.graph, index).search(handler)
@@ -93,10 +93,10 @@ where
         &self,
         from: GraphIndex,
         to: GraphIndex,
-        handler: &'a Handler,
+        handler: Handler,
     ) -> Vec<GraphIndex> {
         if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<'a, Data, Handler>::new(self.graph, from, to, handler).search()
+            PathSearch::<Data, Handler>::new(self.graph, from, to, handler).search()
         } else {
             vec![]
         }

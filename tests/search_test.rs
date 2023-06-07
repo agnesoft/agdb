@@ -92,7 +92,20 @@ fn search_from_self_referential() {
 
 #[test]
 fn search_from_limit() {
-    let _query = QueryBuilder::search().from(1.into()).limit(10).query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into(), 5.into(), 7.into()])
+            .to(&[3.into(), 5.into(), 7.into(), 9.into()])
+            .query(),
+        4,
+    );
+    db.exec_ids(
+        QueryBuilder::search().from(1.into()).limit(5).query(),
+        &[1, -11, 3, -12, 5],
+    );
 }
 
 #[test]
@@ -165,11 +178,42 @@ fn search_from_to_shortcut() {
 
 #[test]
 fn search_from_to_limit() {
-    let _query = QueryBuilder::search()
-        .from(1.into())
-        .to(2.into())
-        .limit(10)
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+            ])
+            .to(&[
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+            ])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1.into())
+            .to(4.into())
+            .limit(4)
+            .query(),
+        &[1, -6, 2, -7],
+    );
 }
 
 #[test]
@@ -211,7 +255,20 @@ fn search_to() {
 
 #[test]
 fn search_to_limit() {
-    let _query = QueryBuilder::search().to(1.into()).limit(10).query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into(), 5.into(), 7.into()])
+            .to(&[3.into(), 5.into(), 7.into(), 9.into()])
+            .query(),
+        4,
+    );
+    db.exec_ids(
+        QueryBuilder::search().to(9.into()).limit(3).query(),
+        &[9, -14, 7],
+    );
 }
 
 #[test]

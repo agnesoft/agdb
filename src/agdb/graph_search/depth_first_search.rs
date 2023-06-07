@@ -47,19 +47,19 @@ mod tests {
     use std::rc::Rc;
 
     struct Handler {
-        pub processor: fn(&GraphIndex, &u64) -> SearchControl,
+        pub processor: fn(GraphIndex, u64) -> SearchControl,
     }
 
     impl Default for Handler {
         fn default() -> Self {
             Self {
-                processor: |_index: &GraphIndex, _distance: &u64| SearchControl::Continue(true),
+                processor: |_index: GraphIndex, _distance: u64| SearchControl::Continue(true),
             }
         }
     }
 
     impl SearchHandler for Handler {
-        fn process(&self, index: &GraphIndex, distance: &u64) -> SearchControl {
+        fn process(&self, index: GraphIndex, distance: u64) -> SearchControl {
             (self.processor)(index, distance)
         }
     }
@@ -150,7 +150,7 @@ mod tests {
         let result = GraphSearch::from(&graph).depth_first_search(
             node1,
             &Handler {
-                processor: |index: &GraphIndex, _distance: &u64| {
+                processor: |index: GraphIndex, _distance: u64| {
                     SearchControl::Continue(index.is_node())
                 },
             },
@@ -181,7 +181,7 @@ mod tests {
         let result = GraphSearch::from(&graph).depth_first_search(
             node1,
             &Handler {
-                processor: |index: &GraphIndex, _distance: &u64| {
+                processor: |index: GraphIndex, _distance: u64| {
                     if index.0 == 2 {
                         SearchControl::Finish(true)
                     } else {
@@ -241,8 +241,8 @@ mod tests {
         let result = GraphSearch::from(&graph).depth_first_search(
             node1,
             &Handler {
-                processor: |_index: &GraphIndex, distance: &u64| {
-                    if *distance == 2 {
+                processor: |_index: GraphIndex, distance: u64| {
+                    if distance == 2 {
                         SearchControl::Stop(true)
                     } else {
                         SearchControl::Continue(true)

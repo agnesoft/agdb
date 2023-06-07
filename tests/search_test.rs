@@ -110,16 +110,42 @@ fn search_from_limit() {
 
 #[test]
 fn search_from_offset() {
-    let _query = QueryBuilder::search().from(1.into()).offset(10).query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into(), 5.into(), 7.into()])
+            .to(&[3.into(), 5.into(), 7.into(), 9.into()])
+            .query(),
+        4,
+    );
+    db.exec_ids(
+        QueryBuilder::search().from(1.into()).offset(4).query(),
+        &[5, -13, 7, -14, 9],
+    );
 }
 
 #[test]
 fn search_from_offset_limit() {
-    let _query = QueryBuilder::search()
-        .from(1.into())
-        .offset(10)
-        .limit(10)
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into(), 5.into(), 7.into()])
+            .to(&[3.into(), 5.into(), 7.into(), 9.into()])
+            .query(),
+        4,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1.into())
+            .offset(4)
+            .limit(2)
+            .query(),
+        &[5, -13],
+    );
 }
 
 #[test]
@@ -218,21 +244,83 @@ fn search_from_to_limit() {
 
 #[test]
 fn search_from_to_offset() {
-    let _query = QueryBuilder::search()
-        .from(1.into())
-        .to(2.into())
-        .offset(10)
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+            ])
+            .to(&[
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+            ])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1.into())
+            .to(4.into())
+            .offset(3)
+            .query(),
+        &[-7, 3, -8, 4],
+    );
 }
 
 #[test]
 fn search_from_to_offset_limit() {
-    let _query = QueryBuilder::search()
-        .from(1.into())
-        .to(2.into())
-        .offset(10)
-        .limit(10)
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+            ])
+            .to(&[
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+            ])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1.into())
+            .to(4.into())
+            .offset(3)
+            .limit(2)
+            .query(),
+        &[-7, 3],
+    );
 }
 
 #[test]
@@ -273,14 +361,40 @@ fn search_to_limit() {
 
 #[test]
 fn search_to_offset() {
-    let _query = QueryBuilder::search().to(1.into()).offset(10).query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into(), 5.into(), 7.into()])
+            .to(&[3.into(), 5.into(), 7.into(), 9.into()])
+            .query(),
+        4,
+    );
+    db.exec_ids(
+        QueryBuilder::search().to(9.into()).offset(2).query(),
+        &[7, -13, 5, -12, 3, -11, 1],
+    );
 }
 
 #[test]
 fn search_to_offset_limit() {
-    let _query = QueryBuilder::search()
-        .to(1.into())
-        .offset(10)
-        .limit(10)
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into(), 5.into(), 7.into()])
+            .to(&[3.into(), 5.into(), 7.into(), 9.into()])
+            .query(),
+        4,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .to(9.into())
+            .offset(2)
+            .limit(4)
+            .query(),
+        &[7, -13, 5, -12],
+    );
 }

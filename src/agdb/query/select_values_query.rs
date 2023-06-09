@@ -13,32 +13,40 @@ pub struct SelectValuesQuery {
 
 impl Query for SelectValuesQuery {
     fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
-        match &self.ids {
+        let db_ids = match &self.ids {
             QueryIds::Ids(ids) => {
-                result.elements.reserve(ids.len());
-                result.result = ids.len() as i64;
+                let mut db_ids = vec![];
+                db_ids.reserve(ids.len());
 
-                for id in ids {
-                    let db_id = db.db_id(id)?;
-                    let values = db.values_by_keys(db_id, &self.keys)?;
-
-                    if values.len() != self.keys.len() {
-                        for key in &self.keys {
-                            if !values.iter().any(|x| x.key == *key) {
-                                return Err(QueryError::from(format!(
-                                    "Missing key '{}' for id '{}'",
-                                    key, db_id.0
-                                )));
-                            }
-                        }
-                    }
-
-                    result.elements.push(DbElement { id: db_id, values });
+                for query_id in ids {
+                    db_ids.push(db.db_id(query_id)?);
                 }
 
-                Ok(())
+                db_ids
             }
-            QueryIds::Search(_) => Err(QueryError::from("Invalid select values query")),
+            QueryIds::Search(search_query) => search_query.search(db)?,
+        };
+
+        result.elements.reserve(db_ids.len());
+        result.result = db_ids.len() as i64;
+
+        for db_id in db_ids {
+            let values = db.values_by_keys(db_id, &self.keys)?;
+
+            if values.len() != self.keys.len() {
+                for key in &self.keys {
+                    if !values.iter().any(|x| x.key == *key) {
+                        return Err(QueryError::from(format!(
+                            "Missing key '{}' for id '{}'",
+                            key, db_id.0
+                        )));
+                    }
+                }
+            }
+
+            result.elements.push(DbElement { id: db_id, values });
         }
+
+        Ok(())
     }
 }

@@ -1,4 +1,3 @@
-use super::query_id::QueryId;
 use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
 use super::QueryMut;
@@ -18,40 +17,58 @@ pub struct InsertEdgesQuery {
 
 impl QueryMut for InsertEdgesQuery {
     fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
-        if let QueryIds::Ids(from) = &self.from {
-            if let QueryIds::Ids(to) = &self.to {
-                let ids = if self.each || from.len() != to.len() {
-                    self.many_to_many_each(db, from, to)?
-                } else {
-                    self.many_to_many(db, from, to)?
-                };
-                result.result = ids.len() as i64;
-                result.elements = ids
-                    .into_iter()
-                    .map(|id| DbElement { id, values: vec![] })
-                    .collect();
+        let from = Self::db_ids(&self.from, db)?;
+        let to: Vec<DbId> = Self::db_ids(&self.to, db)?;
 
-                return Ok(());
-            }
-        }
+        let ids = if self.each || from.len() != to.len() {
+            self.many_to_many_each(db, &from, &to)?
+        } else {
+            self.many_to_many(db, &from, &to)?
+        };
 
-        Err(QueryError::from("Invalid insert edges query"))
+        result.result = ids.len() as i64;
+        result.elements = ids
+            .into_iter()
+            .map(|id| DbElement { id, values: vec![] })
+            .collect();
+
+        Ok(())
     }
 }
 
 impl InsertEdgesQuery {
+    fn db_ids(query_ids: &QueryIds, db: &Db) -> Result<Vec<DbId>, QueryError> {
+        Ok(match &query_ids {
+            QueryIds::Ids(query_ids) => {
+                let mut ids = vec![];
+                ids.reserve(query_ids.len());
+
+                for query_id in query_ids {
+                    ids.push(db.db_id(query_id)?);
+                }
+
+                ids
+            }
+            QueryIds::Search(search_query) => search_query
+                .search(db)?
+                .into_iter()
+                .filter(|id| id.0 > 0)
+                .collect(),
+        })
+    }
+
     fn many_to_many(
         &self,
         db: &mut Db,
-        from: &[QueryId],
-        to: &[QueryId],
+        from: &[DbId],
+        to: &[DbId],
     ) -> Result<Vec<DbId>, QueryError> {
         let mut ids = vec![];
         ids.reserve(from.len());
         let values = self.values(from.len())?;
 
         for ((from, to), key_values) in from.iter().zip(to).zip(values) {
-            let db_id = db.insert_edge(from, to)?;
+            let db_id = db.insert_edge(*from, *to)?;
             ids.push(db_id);
 
             for key_value in key_values {
@@ -65,8 +82,8 @@ impl InsertEdgesQuery {
     fn many_to_many_each(
         &self,
         db: &mut Db,
-        from: &[QueryId],
-        to: &[QueryId],
+        from: &[DbId],
+        to: &[DbId],
     ) -> Result<Vec<DbId>, QueryError> {
         let count = from.len() * to.len();
         let mut ids = vec![];
@@ -76,7 +93,7 @@ impl InsertEdgesQuery {
 
         for from in from {
             for to in to {
-                let db_id = db.insert_edge(from, to)?;
+                let db_id = db.insert_edge(*from, *to)?;
                 ids.push(db_id);
 
                 for key_value in values[index] {

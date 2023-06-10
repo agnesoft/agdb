@@ -199,10 +199,7 @@ impl Db {
         self.aliases.insert(alias, &db_id)
     }
 
-    pub(crate) fn insert_edge(&mut self, from: &QueryId, to: &QueryId) -> Result<DbId, QueryError> {
-        let from = self.db_id(from)?;
-        let to = self.db_id(to)?;
-
+    pub(crate) fn insert_edge(&mut self, from: DbId, to: DbId) -> Result<DbId, QueryError> {
         let index = self
             .graph
             .insert_edge(GraphIndex(from.0), GraphIndex(to.0))?;

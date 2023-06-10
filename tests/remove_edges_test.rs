@@ -78,3 +78,28 @@ fn remove_missing_edges_rollback() {
         "error".into(),
     );
 }
+
+#[test]
+fn remove_edges_search() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into()])
+            .to(&[2.into()])
+            .query(),
+        &[-3],
+    );
+
+    db.exec_mut(
+        QueryBuilder::remove()
+            .search(QueryBuilder::search().from(1.into()).query())
+            .query(),
+        -2,
+    );
+    db.exec_error(
+        QueryBuilder::select().ids(&[(-3).into()]).query(),
+        "Id '-3' not found",
+    );
+}

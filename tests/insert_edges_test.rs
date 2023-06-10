@@ -252,6 +252,18 @@ fn insert_edges_from_to_each_values_uniform() {
 #[test]
 fn insert_edges_from_to_values_bad_length() {
     let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&[
+                "alias1".into(),
+                "alias2".into(),
+                "alias3".into(),
+                "alias4".into(),
+            ])
+            .query(),
+        4,
+    );
     db.exec_mut_error(
         QueryBuilder::insert()
             .edges()
@@ -266,6 +278,18 @@ fn insert_edges_from_to_values_bad_length() {
 #[test]
 fn insert_edges_from_to_values_each_bad_length() {
     let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&[
+                "alias1".into(),
+                "alias2".into(),
+                "alias3".into(),
+                "alias4".into(),
+            ])
+            .query(),
+        4,
+    );
     db.exec_mut_error(
         QueryBuilder::insert()
             .edges()
@@ -351,27 +375,23 @@ fn insert_edges_from_to_values_uniform() {
 }
 
 #[test]
-fn insert_edges_from_query_to() {
+fn insert_edges_from_to_search() {
     let mut db = TestDb::new();
-    db.exec_mut_error(
+    db.exec_mut(QueryBuilder::insert().nodes().count(4).query(), 4);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 2.into()])
+            .to(&[3.into(), 4.into()])
+            .query(),
+        2,
+    );
+    db.exec_mut_ids(
         QueryBuilder::insert()
             .edges()
             .from_search(QueryBuilder::search().from(1.into()).query())
-            .to(&["alias".into()])
+            .to_search(QueryBuilder::search().from(3.into()).query())
             .query(),
-        "Invalid insert edges query",
-    );
-}
-
-#[test]
-fn insert_edges_from_to_search() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::insert()
-            .edges()
-            .from(&["alias".into()])
-            .to_search(QueryBuilder::search().from(2.into()).query())
-            .query(),
-        "Invalid insert edges query",
+        &[-7, -8],
     );
 }

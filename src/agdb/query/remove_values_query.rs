@@ -15,9 +15,14 @@ impl QueryMut for RemoveValuesQuery {
                     let db_id = db.db_id(id)?;
                     result.result += db.remove_keys(db_id, &self.0.keys)?;
                 }
-                Ok(())
             }
-            QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
+            QueryIds::Search(search_query) => {
+                for db_id in search_query.search(db)? {
+                    result.result += db.remove_keys(db_id, &self.0.keys)?;
+                }
+            }
         }
+
+        Ok(())
     }
 }

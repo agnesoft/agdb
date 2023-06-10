@@ -271,7 +271,7 @@ impl Db {
                 if let Some(db_id) = self.aliases.value(alias)? {
                     self.remove_node(db_id, GraphIndex(db_id.0), Some(alias.clone()))?;
                     self.remove_all_values(db_id)?;
-                    return Ok(true);
+                    Ok(true)
                 } else {
                     Ok(false)
                 }

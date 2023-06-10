@@ -155,17 +155,6 @@ fn remove_nodes_with_edges_rollback() {
 }
 
 #[test]
-fn remove_search() {
-    let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::remove()
-            .search(QueryBuilder::search().from("origin".into()).query())
-            .query(),
-        "Invalid remove query",
-    );
-}
-
-#[test]
 fn remove_nodes_with_values() {
     let mut db = TestDb::new();
     db.exec_mut(

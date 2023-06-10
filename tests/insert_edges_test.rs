@@ -395,3 +395,19 @@ fn insert_edges_from_to_search() {
         &[-7, -8],
     );
 }
+
+#[test]
+fn insert_edges_from_to_inserted_nodes() {
+    let mut db = TestDb::new();
+    let from = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
+    let to = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
+
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .from(&from.ids())
+            .to(&to.ids())
+            .query(),
+        &[-5, -6],
+    );
+}

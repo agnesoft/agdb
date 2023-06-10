@@ -6,6 +6,7 @@ use agdb::DbElement;
 use agdb::Query;
 use agdb::QueryError;
 use agdb::QueryMut;
+use agdb::QueryResult;
 use agdb::TransactionMut;
 use test_file::TestFile;
 
@@ -61,6 +62,11 @@ impl TestDb {
     #[track_caller]
     pub fn exec_mut<T: QueryMut>(&mut self, query: T, result: i64) {
         assert_eq!(self.db.exec_mut(&query).unwrap().result, result);
+    }
+
+    #[track_caller]
+    pub fn exec_mut_result<T: QueryMut>(&mut self, query: T) -> QueryResult {
+        self.db.exec_mut(&query).unwrap()
     }
 
     #[track_caller]

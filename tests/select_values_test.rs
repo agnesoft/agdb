@@ -95,7 +95,6 @@ fn select_values_search() {
             .edges()
             .from(&[1.into(), 3.into()])
             .to(&[3.into(), 5.into()])
-            .values_uniform(&values)
             .query(),
         2,
     );
@@ -112,7 +111,7 @@ fn select_values_search() {
             },
             DbElement {
                 id: DbId(-7),
-                values: vec![("key2", 10).into()],
+                values: vec![],
             },
             DbElement {
                 id: DbId(5),

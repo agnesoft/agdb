@@ -55,12 +55,55 @@ fn select_keys_no_keys() {
 
 #[test]
 fn select_keys_search() {
-    let db = TestDb::new();
-    db.exec_error(
+    let mut db = TestDb::new();
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(5)
+            .values_uniform(&[
+                ("key1", 1).into(),
+                ("key2", 10).into(),
+                ("key3", 100).into(),
+            ])
+            .query(),
+        5,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into()])
+            .to(&[3.into(), 5.into()])
+            .query(),
+        2,
+    );
+
+    db.exec_elements(
         QueryBuilder::select()
             .keys()
-            .search(QueryBuilder::search().from("alias".into()).query())
+            .search(QueryBuilder::search().from(3.into()).query())
             .query(),
-        "Invalid select keys query",
+        &[
+            DbElement {
+                id: DbId(3),
+                values: vec![
+                    ("key1", DbValue::default()).into(),
+                    ("key2", DbValue::default()).into(),
+                    ("key3", DbValue::default()).into(),
+                ],
+            },
+            DbElement {
+                id: DbId(-7),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(5),
+                values: vec![
+                    ("key1", DbValue::default()).into(),
+                    ("key2", DbValue::default()).into(),
+                    ("key3", DbValue::default()).into(),
+                ],
+            },
+        ],
     );
 }

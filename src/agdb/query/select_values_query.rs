@@ -13,7 +13,7 @@ pub struct SelectValuesQuery {
 
 impl Query for SelectValuesQuery {
     fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
-        let db_ids = match &self.ids {
+        let (db_ids, is_search) = match &self.ids {
             QueryIds::Ids(ids) => {
                 let mut db_ids = vec![];
                 db_ids.reserve(ids.len());
@@ -22,9 +22,9 @@ impl Query for SelectValuesQuery {
                     db_ids.push(db.db_id(query_id)?);
                 }
 
-                db_ids
+                (db_ids, false)
             }
-            QueryIds::Search(search_query) => search_query.search(db)?,
+            QueryIds::Search(search_query) => (search_query.search(db)?, true),
         };
 
         result.elements.reserve(db_ids.len());
@@ -33,7 +33,7 @@ impl Query for SelectValuesQuery {
         for db_id in db_ids {
             let values = db.values_by_keys(db_id, &self.keys)?;
 
-            if values.len() != self.keys.len() {
+            if !is_search && values.len() != self.keys.len() {
                 for key in &self.keys {
                     if !values.iter().any(|x| x.key == *key) {
                         return Err(QueryError::from(format!(

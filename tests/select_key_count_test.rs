@@ -56,12 +56,50 @@ fn select_keys_count_no_keys() {
 
 #[test]
 fn select_keys_search() {
-    let db = TestDb::new();
-    db.exec_error(
+    let mut db = TestDb::new();
+
+    let values = [
+        ("key1", 1).into(),
+        ("key2", 10).into(),
+        ("key3", 100).into(),
+    ];
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(5)
+            .values_uniform(&values)
+            .query(),
+        5,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into()])
+            .to(&[3.into(), 5.into()])
+            .values_uniform(&values)
+            .query(),
+        2,
+    );
+
+    db.exec_elements(
         QueryBuilder::select()
             .key_count()
-            .search(QueryBuilder::search().from("alias".into()).query())
+            .search(QueryBuilder::search().from(3.into()).query())
             .query(),
-        "Invalid select key count query",
+        &[
+            DbElement {
+                id: DbId(3),
+                values: vec![("key_count", 3_u64).into()],
+            },
+            DbElement {
+                id: DbId(-7),
+                values: vec![("key_count", 3_u64).into()],
+            },
+            DbElement {
+                id: DbId(5),
+                values: vec![("key_count", 3_u64).into()],
+            },
+        ],
     );
 }

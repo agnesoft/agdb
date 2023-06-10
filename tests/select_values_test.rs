@@ -74,12 +74,49 @@ fn select_values_ids_missing_key() {
 
 #[test]
 fn select_values_search() {
-    let db = TestDb::new();
-    db.exec_error(
-        QueryBuilder::select()
-            .values(&["key1".into(), "key2".into()])
-            .search(QueryBuilder::search().from("alias".into()).query())
+    let mut db = TestDb::new();
+
+    let values = [
+        ("key1", 1).into(),
+        ("key2", 10).into(),
+        ("key3", 100).into(),
+    ];
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(5)
+            .values_uniform(&values)
             .query(),
-        "Invalid select values query",
+        5,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 3.into()])
+            .to(&[3.into(), 5.into()])
+            .query(),
+        2,
+    );
+
+    db.exec_elements(
+        QueryBuilder::select()
+            .values(&["key2".into()])
+            .search(QueryBuilder::search().from(3.into()).query())
+            .query(),
+        &[
+            DbElement {
+                id: DbId(3),
+                values: vec![("key2", 10).into()],
+            },
+            DbElement {
+                id: DbId(-7),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(5),
+                values: vec![("key2", 10).into()],
+            },
+        ],
     );
 }

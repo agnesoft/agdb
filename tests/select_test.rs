@@ -63,11 +63,34 @@ fn select_invalid_ids() {
 
 #[test]
 fn select_from_search() {
-    let db = TestDb::new();
-    db.exec_error(
-        QueryBuilder::select()
-            .search(QueryBuilder::search().from("alias".into()).query())
+    let mut db = TestDb::new();
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&[
+                "alias1".into(),
+                "alias2".into(),
+                "alias3".into(),
+                "alias4".into(),
+                "alias5".into(),
+            ])
             .query(),
-        "Invalid select query",
+        5,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&["alias1".into(), "alias3".into()])
+            .to(&["alias3".into(), "alias5".into()])
+            .query(),
+        2,
+    );
+
+    db.exec_ids(
+        QueryBuilder::select()
+            .search(QueryBuilder::search().from("alias1".into()).query())
+            .query(),
+        &[1, -6, 3, -7, 5],
     );
 }

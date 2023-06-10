@@ -29,9 +29,21 @@ impl Query for SelectAliasesQuery {
                         }),
                     }
                 }
-                Ok(())
             }
-            QueryIds::Search(_) => Err(QueryError::from("Invalid select aliases query")),
+            QueryIds::Search(search_query) => {
+                for db_id in search_query.search(db)? {
+                    if let Ok(alias) = db.alias(db_id) {
+                        result.elements.push(DbElement {
+                            id: db_id,
+                            values: vec![("alias", alias).into()],
+                        });
+                    }
+                }
+
+                result.result = result.elements.len() as i64;
+            }
         }
+
+        Ok(())
     }
 }

@@ -15,10 +15,16 @@ impl QueryMut for RemoveQuery {
                         result.result -= 1;
                     }
                 }
-
-                Ok(())
             }
-            QueryIds::Search(_) => Err(QueryError::from("Invalid remove query")),
+            QueryIds::Search(search_query) => {
+                for db_id in search_query.search(db)? {
+                    if db.remove_id(db_id)? {
+                        result.result -= 1;
+                    }
+                }
+            }
         }
+
+        Ok(())
     }
 }

@@ -266,24 +266,28 @@ impl Db {
 
     pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, QueryError> {
         match query_id {
-            QueryId::Id(db_id) => {
-                if let Ok(graph_index) = self.graph_index(db_id.0) {
-                    if graph_index.is_node() {
-                        self.remove_node(*db_id, graph_index, self.aliases.key(db_id)?)?;
-                    } else {
-                        self.remove_edge(graph_index)?;
-                    }
-                    self.remove_all_values(*db_id)?;
-                    return Ok(true);
-                }
-            }
+            QueryId::Id(db_id) => self.remove_id(*db_id),
             QueryId::Alias(alias) => {
                 if let Some(db_id) = self.aliases.value(alias)? {
                     self.remove_node(db_id, GraphIndex(db_id.0), Some(alias.clone()))?;
                     self.remove_all_values(db_id)?;
                     return Ok(true);
+                } else {
+                    Ok(false)
                 }
             }
+        }
+    }
+
+    pub(crate) fn remove_id(&mut self, db_id: DbId) -> Result<bool, QueryError> {
+        if let Ok(graph_index) = self.graph_index(db_id.0) {
+            if graph_index.is_node() {
+                self.remove_node(db_id, graph_index, self.aliases.key(&db_id)?)?;
+            } else {
+                self.remove_edge(graph_index)?;
+            }
+            self.remove_all_values(db_id)?;
+            return Ok(true);
         }
 
         Ok(false)

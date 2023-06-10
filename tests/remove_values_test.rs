@@ -58,12 +58,40 @@ fn remove_values_ids() {
 #[test]
 fn remove_values_search() {
     let mut db = TestDb::new();
-    db.exec_mut_error(
-        QueryBuilder::remove()
-            .values(&["key1".into(), "key2".into()])
-            .search(QueryBuilder::search().from("alias1".into()).query())
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values(&[&[("key", 1).into()], &[("key", 2).into()]])
             .query(),
-        "Invalid remove query",
+        2,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into()])
+            .to(&[2.into()])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::remove()
+            .values(&["key".into()])
+            .search(QueryBuilder::search().from(1.into()).query())
+            .query(),
+        -2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(2),
+                values: vec![],
+            },
+        ],
     );
 }
 

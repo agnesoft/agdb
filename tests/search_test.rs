@@ -444,3 +444,70 @@ fn search_from_ordered_by() {
         ],
     );
 }
+
+#[test]
+fn search_to_ordered_by() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(&["users".into()])
+            .query(),
+        1,
+    );
+
+    let users = db.exec_mut_result(
+        QueryBuilder::insert()
+            .nodes()
+            .values(&[
+                &[("name", "z").into(), ("age", 31).into(), ("id", 1).into()],
+                &[("name", "x").into(), ("id", 2).into()],
+                &[("name", "y").into(), ("age", 57).into(), ("id", 3).into()],
+                &[("name", "a").into(), ("age", 60).into(), ("id", 4).into()],
+                &[("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
+                &[("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
+                &[("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
+                &[("name", "k").into(), ("id", 8).into()],
+                &[("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
+                &[("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
+            ])
+            .query(),
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&users.ids())
+            .to(&["users".into()])
+            .query(),
+        10,
+    );
+
+    db.exec_elements(
+        QueryBuilder::select()
+            .search(
+                QueryBuilder::search()
+                    .to("users")
+                    .order_by(&[
+                        DbKeyOrder::Asc("age".into()),
+                        DbKeyOrder::Desc("name".into()),
+                    ])
+                    .limit(3)
+                    .query(),
+            )
+            .query(),
+        &[
+            DbElement {
+                id: DbId(6),
+                values: vec![("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
+            },
+            DbElement {
+                id: DbId(11),
+                values: vec![("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
+            },
+            DbElement {
+                id: DbId(10),
+                values: vec![("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
+            },
+        ],
+    );
+}

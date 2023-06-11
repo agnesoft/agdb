@@ -39,32 +39,32 @@ impl SearchQuery {
             let origin = db.db_id(&self.origin)?;
 
             if self.order_by.is_empty() {
-                return db.search_from(origin, self.limit, self.offset);
+                db.search_from(origin, self.limit, self.offset)
             } else {
                 let mut ids = db.search_from(origin, 0, 0)?;
                 self.sort(&mut ids, db)?;
-                return self.slice(ids);
+                self.slice(ids)
             }
         } else if self.origin == QueryId::Id(DbId(0)) {
             let destination = db.db_id(&self.destination)?;
 
             if self.order_by.is_empty() {
-                return db.search_to(destination, self.limit, self.offset);
+                db.search_to(destination, self.limit, self.offset)
             } else {
                 let mut ids = db.search_to(destination, 0, 0)?;
                 self.sort(&mut ids, db)?;
-                return self.slice(ids);
+                self.slice(ids)
             }
         } else {
             let origin = db.db_id(&self.origin)?;
             let destination = db.db_id(&self.destination)?;
             let mut ids = db.search_from_to(origin, destination)?;
             self.sort(&mut ids, db)?;
-            return self.slice(ids);
+            self.slice(ids)
         }
     }
 
-    fn sort(&self, ids: &mut Vec<DbId>, db: &Db) -> Result<(), QueryError> {
+    fn sort(&self, ids: &mut [DbId], db: &Db) -> Result<(), QueryError> {
         let keys = self
             .order_by
             .iter()

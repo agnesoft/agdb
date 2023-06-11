@@ -1,4 +1,5 @@
 use agdb::Comparison;
+use agdb::DbKeyOrder;
 use agdb::QueryBuilder;
 
 #[test]
@@ -129,5 +130,16 @@ fn search_from_where_where_key_and_key_end_where_and_distance() {
         .end_where()
         .and()
         .distance(Comparison::LessThan(2.into()))
+        .query();
+}
+
+#[test]
+fn search_from_ordered_by_where_key_value() {
+    let _query = QueryBuilder::search()
+        .from(1)
+        .order_by(&[DbKeyOrder::Asc("key".into())])
+        .where_()
+        .key("key".into())
+        .value(Comparison::LessThan(10.into()))
         .query();
 }

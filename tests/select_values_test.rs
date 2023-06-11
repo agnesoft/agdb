@@ -102,7 +102,7 @@ fn select_values_search() {
     db.exec_elements(
         QueryBuilder::select()
             .values(&["key2".into()])
-            .search(QueryBuilder::search().from(3.into()).query())
+            .search(QueryBuilder::search().from(3).query())
             .query(),
         &[
             DbElement {

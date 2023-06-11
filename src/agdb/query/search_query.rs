@@ -1,5 +1,6 @@
 use super::query_condition::QueryCondition;
 use super::query_id::QueryId;
+use crate::db::db_key::DbKeyOrder;
 use crate::Db;
 use crate::DbElement;
 use crate::DbId;
@@ -7,6 +8,7 @@ use crate::DbKey;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
+use std::cmp::Ordering;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
@@ -15,7 +17,7 @@ pub struct SearchQuery {
     pub destination: QueryId,
     pub limit: u64,
     pub offset: u64,
-    pub order_by: Vec<DbKey>,
+    pub order_by: Vec<DbKeyOrder>,
     pub conditions: Vec<QueryCondition>,
 }
 
@@ -33,31 +35,83 @@ impl Query for SearchQuery {
 
 impl SearchQuery {
     pub(crate) fn search(&self, db: &Db) -> Result<Vec<DbId>, QueryError> {
-        let ids = if self.destination == QueryId::Id(DbId(0)) {
+        if self.destination == QueryId::Id(DbId(0)) {
             let origin = db.db_id(&self.origin)?;
-            db.search_from(origin, self.limit, self.offset)?
+
+            if self.order_by.is_empty() {
+                return db.search_from(origin, self.limit, self.offset);
+            } else {
+                let mut ids = db.search_from(origin, 0, 0)?;
+                self.sort(&mut ids, db)?;
+                return self.slice(ids);
+            }
         } else if self.origin == QueryId::Id(DbId(0)) {
             let destination = db.db_id(&self.destination)?;
-            db.search_to(destination, self.limit, self.offset)?
+
+            if self.order_by.is_empty() {
+                return db.search_to(destination, self.limit, self.offset);
+            } else {
+                let mut ids = db.search_to(destination, 0, 0)?;
+                self.sort(&mut ids, db)?;
+                return self.slice(ids);
+            }
         } else {
             let origin = db.db_id(&self.origin)?;
             let destination = db.db_id(&self.destination)?;
-            let mut path = db.search_from_to(origin, destination)?;
+            let mut ids = db.search_from_to(origin, destination)?;
+            self.sort(&mut ids, db)?;
+            return self.slice(ids);
+        }
+    }
 
-            match (self.limit, self.offset) {
-                (0, 0) => path,
-                (0, _) => path[self.offset as usize..].to_vec(),
-                (_, 0) => {
-                    path.truncate(self.limit as usize);
-                    path
+    fn sort(&self, ids: &mut Vec<DbId>, db: &Db) -> Result<(), QueryError> {
+        let keys = self
+            .order_by
+            .iter()
+            .map(|key_order| match key_order {
+                DbKeyOrder::Asc(key) | DbKeyOrder::Desc(key) => key.clone(),
+            })
+            .collect::<Vec<DbKey>>();
+
+        ids.sort_by(|left, right| {
+            let left_values = db.values_by_keys(*left, &keys).unwrap_or_default();
+            let right_values = db.values_by_keys(*right, &keys).unwrap_or_default();
+
+            for (key_order, key) in self.order_by.iter().zip(&keys) {
+                let left_kv = left_values.iter().find(|kv| kv.key == *key);
+                let right_kv = right_values.iter().find(|kv| kv.key == *key);
+
+                let ordering = match (left_kv, right_kv) {
+                    (None, None) => Ordering::Equal,
+                    (None, Some(_)) => Ordering::Greater,
+                    (Some(_), None) => Ordering::Less,
+                    (Some(l), Some(r)) => match key_order {
+                        DbKeyOrder::Asc(_) => l.value.cmp(&r.value),
+                        DbKeyOrder::Desc(_) => l.value.cmp(&r.value).reverse(),
+                    },
+                };
+
+                if ordering != Ordering::Equal {
+                    return ordering;
                 }
-                (_, _) => path[self.offset as usize..(self.offset + self.limit) as usize].to_vec(),
             }
-        };
 
-        //order result by self.order_by
+            Ordering::Equal
+        });
 
-        Ok(ids)
+        Ok(())
+    }
+
+    fn slice(&self, mut ids: Vec<DbId>) -> Result<Vec<DbId>, QueryError> {
+        Ok(match (self.limit, self.offset) {
+            (0, 0) => ids,
+            (0, _) => ids[self.offset as usize..].to_vec(),
+            (_, 0) => {
+                ids.truncate(self.limit as usize);
+                ids
+            }
+            (_, _) => ids[self.offset as usize..(self.offset + self.limit) as usize].to_vec(),
+        })
     }
 }
 

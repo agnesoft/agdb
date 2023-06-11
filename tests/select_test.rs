@@ -89,7 +89,7 @@ fn select_from_search() {
 
     db.exec_ids(
         QueryBuilder::select()
-            .search(QueryBuilder::search().from("alias1".into()).query())
+            .search(QueryBuilder::search().from("alias1").query())
             .query(),
         &[1, -6, 3, -7, 5],
     );

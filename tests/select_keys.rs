@@ -81,7 +81,7 @@ fn select_keys_search() {
     db.exec_elements(
         QueryBuilder::select()
             .keys()
-            .search(QueryBuilder::search().from(3.into()).query())
+            .search(QueryBuilder::search().from(3).query())
             .query(),
         &[
             DbElement {

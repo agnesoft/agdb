@@ -389,8 +389,8 @@ fn insert_edges_from_to_search() {
     db.exec_mut_ids(
         QueryBuilder::insert()
             .edges()
-            .from_search(QueryBuilder::search().from(1.into()).query())
-            .to_search(QueryBuilder::search().from(3.into()).query())
+            .from_search(QueryBuilder::search().from(1).query())
+            .to_search(QueryBuilder::search().from(3).query())
             .query(),
         &[-7, -8],
     );

@@ -76,7 +76,7 @@ fn remove_values_search() {
     db.exec_mut(
         QueryBuilder::remove()
             .values(&["key".into()])
-            .search(QueryBuilder::search().from(1.into()).query())
+            .search(QueryBuilder::search().from(1).query())
             .query(),
         -2,
     );

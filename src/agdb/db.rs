@@ -539,6 +539,12 @@ impl Db {
     }
 }
 
+impl Drop for Db {
+    fn drop(&mut self) {
+        let _ = self._storage.borrow_mut().shrink_to_fit();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

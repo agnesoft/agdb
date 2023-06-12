@@ -1,11 +1,10 @@
-#[path = "../src/agdb/test_utilities/test_file.rs"]
-mod test_file;
+mod test_db;
 
 use agdb::Db;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
-use test_file::TestFile;
+use test_db::test_file::TestFile;
 
 #[test]
 fn data_persistence() {
@@ -199,4 +198,38 @@ fn invalid_db_file() {
             test_file.file_name()
         )
     );
+}
+
+#[test]
+fn optimize_on_drop() {
+    let test_file = TestFile::new();
+    let db_file_size;
+
+    {
+        let mut db = Db::new(test_file.file_name()).unwrap();
+        let result = db
+            .exec_mut(
+                &QueryBuilder::insert()
+                    .nodes()
+                    .count(1000)
+                    .values_uniform(&[("key", "value").into()])
+                    .query(),
+            )
+            .unwrap();
+        db.exec_mut(&QueryBuilder::remove().ids(&result.ids()).query())
+            .unwrap();
+        db_file_size = std::fs::File::open(test_file.file_name())
+            .unwrap()
+            .metadata()
+            .unwrap()
+            .len();
+    }
+
+    let optimized_file_size = std::fs::File::open(test_file.file_name())
+        .unwrap()
+        .metadata()
+        .unwrap()
+        .len();
+
+    assert!(optimized_file_size < db_file_size);
 }

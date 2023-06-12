@@ -1,5 +1,5 @@
 #[path = "../../src/agdb/test_utilities/test_file.rs"]
-mod test_file;
+pub mod test_file;
 
 use agdb::Db;
 use agdb::DbElement;

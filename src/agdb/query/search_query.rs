@@ -39,9 +39,9 @@ impl SearchQuery {
             let origin = db.db_id(&self.origin)?;
 
             if self.order_by.is_empty() {
-                db.search_from(origin, self.limit, self.offset)
+                db.search_from(origin, self.limit, self.offset, &self.conditions)
             } else {
-                let mut ids = db.search_from(origin, 0, 0)?;
+                let mut ids = db.search_from(origin, 0, 0, &self.conditions)?;
                 self.sort(&mut ids, db)?;
                 self.slice(ids)
             }
@@ -49,16 +49,16 @@ impl SearchQuery {
             let destination = db.db_id(&self.destination)?;
 
             if self.order_by.is_empty() {
-                db.search_to(destination, self.limit, self.offset)
+                db.search_to(destination, self.limit, self.offset, &self.conditions)
             } else {
-                let mut ids = db.search_to(destination, 0, 0)?;
+                let mut ids = db.search_to(destination, 0, 0, &self.conditions)?;
                 self.sort(&mut ids, db)?;
                 self.slice(ids)
             }
         } else {
             let origin = db.db_id(&self.origin)?;
             let destination = db.db_id(&self.destination)?;
-            let mut ids = db.search_from_to(origin, destination)?;
+            let mut ids = db.search_from_to(origin, destination, &self.conditions)?;
             self.sort(&mut ids, db)?;
             self.slice(ids)
         }

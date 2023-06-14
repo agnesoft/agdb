@@ -1,16 +1,40 @@
+mod test_db;
+
 use agdb::Comparison;
 use agdb::DbKeyOrder;
 use agdb::QueryBuilder;
+use test_db::TestDb;
 
 #[test]
 fn search_from_where_keys_and_distance() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .keys(&["key".into()])
-        .and()
-        .distance(Comparison::LessThan(2.into()))
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(5)
+            .values_uniform(&[("key", "value").into()])
+            .query(),
+        5,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 2.into(), 3.into(), 4.into()])
+            .to(&[2.into(), 3.into(), 4.into(), 5.into()])
+            .query(),
+        4,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1)
+            .where_()
+            .keys(&["key".into()])
+            .and()
+            .distance(Comparison::LessThan(5.into()))
+            .query(),
+        &[1, 2, 3],
+    );
 }
 
 #[test]

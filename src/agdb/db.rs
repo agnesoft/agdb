@@ -21,6 +21,8 @@ use crate::command::Command;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::GraphSearch;
+use crate::graph_search::SearchControl;
+use crate::query::query_condition::QueryCondition;
 use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
@@ -313,15 +315,25 @@ impl Db {
         from: DbId,
         limit: u64,
         offset: u64,
+        conditions: &Vec<QueryCondition>,
     ) -> Result<Vec<DbId>, QueryError> {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search.breadth_first_search(GraphIndex(from.0), DefaultHandler {}),
-            (_, 0) => search.breadth_first_search(GraphIndex(from.0), LimitHandler::new(limit)),
-            (0, _) => search.breadth_first_search(GraphIndex(from.0), OffsetHandler::new(offset)),
-            (_, _) => search
-                .breadth_first_search(GraphIndex(from.0), LimitOffsetHandler::new(limit, offset)),
+            (0, 0) => search
+                .breadth_first_search(GraphIndex(from.0), DefaultHandler::new(self, conditions)),
+            (_, 0) => search.breadth_first_search(
+                GraphIndex(from.0),
+                LimitHandler::new(limit, self, conditions),
+            ),
+            (0, _) => search.breadth_first_search(
+                GraphIndex(from.0),
+                OffsetHandler::new(offset, self, conditions),
+            ),
+            (_, _) => search.breadth_first_search(
+                GraphIndex(from.0),
+                LimitOffsetHandler::new(limit, offset, self, conditions),
+            ),
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
@@ -332,29 +344,44 @@ impl Db {
         to: DbId,
         limit: u64,
         offset: u64,
+        conditions: &Vec<QueryCondition>,
     ) -> Result<Vec<DbId>, QueryError> {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search.breadth_first_search_reverse(GraphIndex(to.0), DefaultHandler {}),
-            (_, 0) => {
-                search.breadth_first_search_reverse(GraphIndex(to.0), LimitHandler::new(limit))
-            }
-            (0, _) => {
-                search.breadth_first_search_reverse(GraphIndex(to.0), OffsetHandler::new(offset))
-            }
+            (0, 0) => search.breadth_first_search_reverse(
+                GraphIndex(to.0),
+                DefaultHandler::new(self, conditions),
+            ),
+            (_, 0) => search.breadth_first_search_reverse(
+                GraphIndex(to.0),
+                LimitHandler::new(limit, self, conditions),
+            ),
+            (0, _) => search.breadth_first_search_reverse(
+                GraphIndex(to.0),
+                OffsetHandler::new(offset, self, conditions),
+            ),
             (_, _) => search.breadth_first_search_reverse(
                 GraphIndex(to.0),
-                LimitOffsetHandler::new(limit, offset),
+                LimitOffsetHandler::new(limit, offset, self, conditions),
             ),
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
     }
 
-    pub(crate) fn search_from_to(&self, from: DbId, to: DbId) -> Result<Vec<DbId>, QueryError> {
+    pub(crate) fn search_from_to(
+        &self,
+        from: DbId,
+        to: DbId,
+        conditions: &Vec<QueryCondition>,
+    ) -> Result<Vec<DbId>, QueryError> {
         Ok(GraphSearch::from(&self.graph)
-            .path(GraphIndex(from.0), GraphIndex(to.0), PathHandler {})
+            .path(
+                GraphIndex(from.0),
+                GraphIndex(to.0),
+                PathHandler::new(self, conditions),
+            )
             .iter()
             .map(|index| DbId(index.0))
             .collect())
@@ -536,6 +563,24 @@ impl Db {
             values: values_storage,
             undo_stack: vec![],
         })
+    }
+
+    pub(crate) fn evaluate_conditions(
+        &self,
+        index: GraphIndex,
+        distance: u64,
+        conditions: &Vec<QueryCondition>,
+    ) -> SearchControl {
+        SearchControl::Continue(true)
+    }
+
+    pub(crate) fn evaluate_path_conditions(
+        &self,
+        index: GraphIndex,
+        distance: u64,
+        conditions: &Vec<QueryCondition>,
+    ) -> u64 {
+        1
     }
 }
 

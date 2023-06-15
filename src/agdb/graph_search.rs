@@ -17,7 +17,7 @@ use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 
-#[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub enum SearchControl {
     Continue(bool),
     Finish(bool),
@@ -35,7 +35,6 @@ where
     pub(crate) graph: &'a GraphImpl<Data>,
 }
 
-#[allow(dead_code)]
 impl<'a, Data> GraphSearch<'a, Data>
 where
     Data: GraphData,
@@ -117,5 +116,122 @@ where
 {
     fn from(graph: &'a GraphImpl<Data>) -> Self {
         GraphSearch { graph }
+    }
+}
+
+impl SearchControl {
+    pub(crate) fn and(self, other: SearchControl) -> SearchControl {
+        use SearchControl::Continue;
+        use SearchControl::Finish;
+        use SearchControl::Stop;
+
+        match (self, other) {
+            (Continue(left), Continue(right)) => Continue(left && right),
+            (Continue(left), Finish(right)) => Finish(left && right),
+            (Continue(left), Stop(right)) => Stop(left && right),
+            (Finish(left), Continue(right)) => Finish(left && right),
+            (Finish(left), Finish(right)) => Finish(left && right),
+            (Finish(left), Stop(right)) => Finish(left && right),
+            (Stop(left), Continue(right)) => Stop(left && right),
+            (Stop(left), Finish(right)) => Finish(left && right),
+            (Stop(left), Stop(right)) => Stop(left && right),
+        }
+    }
+
+    pub(crate) fn or(self, other: SearchControl) -> SearchControl {
+        use SearchControl::Continue;
+        use SearchControl::Finish;
+        use SearchControl::Stop;
+
+        match (self, other) {
+            (Continue(left), Continue(right)) => Continue(left || right),
+            (Continue(left), Finish(right)) => Continue(left || right),
+            (Continue(left), Stop(right)) => Continue(left || right),
+            (Finish(left), Continue(right)) => Continue(left || right),
+            (Finish(left), Finish(right)) => Finish(left || right),
+            (Finish(left), Stop(right)) => Stop(left || right),
+            (Stop(left), Continue(right)) => Continue(left || right),
+            (Stop(left), Finish(right)) => Stop(left || right),
+            (Stop(left), Stop(right)) => Stop(left || right),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_control_and() {
+        use SearchControl::Continue;
+        use SearchControl::Finish;
+        use SearchControl::Stop;
+
+        assert_eq!(Continue(true).and(Continue(true)), Continue(true));
+        assert_eq!(Continue(true).and(Continue(false)), Continue(false));
+        assert_eq!(Continue(false).and(Continue(true)), Continue(false));
+        assert_eq!(Continue(false).and(Continue(false)), Continue(false));
+
+        assert_eq!(Stop(true).and(Stop(true)), Stop(true));
+        assert_eq!(Stop(true).and(Stop(false)), Stop(false));
+        assert_eq!(Stop(false).and(Stop(true)), Stop(false));
+        assert_eq!(Stop(false).and(Stop(false)), Stop(false));
+
+        assert_eq!(Finish(true).and(Finish(true)), Finish(true));
+        assert_eq!(Finish(true).and(Finish(false)), Finish(false));
+        assert_eq!(Finish(false).and(Finish(true)), Finish(false));
+        assert_eq!(Finish(false).and(Finish(false)), Finish(false));
+
+        assert_eq!(Continue(true).and(Stop(true)), Stop(true));
+        assert_eq!(Continue(false).and(Stop(true)), Stop(false));
+        assert_eq!(Continue(true).and(Stop(false)), Stop(false));
+        assert_eq!(Continue(false).and(Stop(false)), Stop(false));
+
+        assert_eq!(Continue(true).and(Finish(true)), Finish(true));
+        assert_eq!(Continue(false).and(Finish(true)), Finish(false));
+        assert_eq!(Continue(true).and(Finish(false)), Finish(false));
+        assert_eq!(Continue(false).and(Finish(false)), Finish(false));
+
+        assert_eq!(Stop(true).and(Finish(true)), Finish(true));
+        assert_eq!(Stop(true).and(Finish(false)), Finish(false));
+        assert_eq!(Stop(false).and(Finish(false)), Finish(false));
+        assert_eq!(Stop(false).and(Finish(true)), Finish(false));
+    }
+
+    #[test]
+    fn search_control_or() {
+        use SearchControl::Continue;
+        use SearchControl::Finish;
+        use SearchControl::Stop;
+
+        assert_eq!(Continue(true).or(Continue(true)), Continue(true));
+        assert_eq!(Continue(true).or(Continue(false)), Continue(true));
+        assert_eq!(Continue(false).or(Continue(true)), Continue(true));
+        assert_eq!(Continue(false).or(Continue(false)), Continue(false));
+
+        assert_eq!(Stop(true).or(Stop(true)), Stop(true));
+        assert_eq!(Stop(true).or(Stop(false)), Stop(true));
+        assert_eq!(Stop(false).or(Stop(true)), Stop(true));
+        assert_eq!(Stop(false).or(Stop(false)), Stop(false));
+
+        assert_eq!(Finish(true).or(Finish(true)), Finish(true));
+        assert_eq!(Finish(true).or(Finish(false)), Finish(true));
+        assert_eq!(Finish(false).or(Finish(true)), Finish(true));
+        assert_eq!(Finish(false).or(Finish(false)), Finish(false));
+
+        assert_eq!(Continue(true).or(Stop(true)), Continue(true));
+        assert_eq!(Continue(false).or(Stop(true)), Continue(true));
+        assert_eq!(Continue(true).or(Stop(false)), Continue(true));
+        assert_eq!(Continue(false).or(Stop(false)), Continue(false));
+
+        assert_eq!(Continue(true).or(Finish(true)), Continue(true));
+        assert_eq!(Continue(false).or(Finish(true)), Continue(true));
+        assert_eq!(Continue(true).or(Finish(false)), Continue(true));
+        assert_eq!(Continue(false).or(Finish(false)), Continue(false));
+
+        assert_eq!(Stop(true).or(Finish(true)), Stop(true));
+        assert_eq!(Stop(true).or(Finish(false)), Stop(true));
+        assert_eq!(Stop(false).or(Finish(true)), Stop(true));
+        assert_eq!(Stop(false).or(Finish(false)), Stop(false));
     }
 }

@@ -32,6 +32,7 @@ use crate::storage::StorageIndex;
 use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::Comparison;
 use crate::DbId;
 use crate::DbKey;
 use crate::DbKeyValue;
@@ -81,7 +82,7 @@ impl Serialize for DbStorageIndex {
 }
 
 pub struct Db {
-    _storage: Rc<RefCell<FileStorage>>,
+    storage: Rc<RefCell<FileStorage>>,
     graph: DbGraph,
     aliases: DbIndexedMap<String, DbId>,
     values: MultiMapStorage<DbId, DbKeyValue>,
@@ -557,12 +558,35 @@ impl Db {
         }
 
         Ok(Self {
-            _storage: storage,
+            storage,
             graph: graph_storage,
             aliases: aliases_storage,
             values: values_storage,
             undo_stack: vec![],
         })
+    }
+
+    fn evaluate_condition(
+        &self,
+        index: GraphIndex,
+        distance: u64,
+        condition: &QueryCondition,
+    ) -> SearchControl {
+        match condition {
+            QueryCondition::And => todo!(),
+            QueryCondition::Distance(d) => d.compare(distance),
+            QueryCondition::Edge => SearchControl::Continue(index.is_edge()),
+            QueryCondition::EdgeCount(count) => todo!(),
+            QueryCondition::EndWhere => todo!(),
+            QueryCondition::Ids(ids) => todo!(),
+            QueryCondition::KeyValue(key_value) => todo!(),
+            QueryCondition::Keys(keys) => todo!(),
+            QueryCondition::Node => SearchControl::Continue(index.is_node()),
+            QueryCondition::Not => todo!(),
+            QueryCondition::NotBeyond => todo!(),
+            QueryCondition::Or => todo!(),
+            QueryCondition::Where => todo!(),
+        }
     }
 
     pub(crate) fn evaluate_conditions(
@@ -571,6 +595,10 @@ impl Db {
         distance: u64,
         conditions: &Vec<QueryCondition>,
     ) -> SearchControl {
+        for condition in conditions {
+            let result = self.evaluate_condition(index, distance, condition);
+        }
+
         SearchControl::Continue(true)
     }
 
@@ -586,7 +614,7 @@ impl Db {
 
 impl Drop for Db {
     fn drop(&mut self) {
-        let _ = self._storage.borrow_mut().shrink_to_fit();
+        let _ = self.storage.borrow_mut().shrink_to_fit();
     }
 }
 

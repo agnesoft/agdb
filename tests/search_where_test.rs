@@ -1,6 +1,7 @@
 mod test_db;
 
 use agdb::Comparison;
+use agdb::CountComparison;
 use agdb::DbKeyOrder;
 use agdb::QueryBuilder;
 use test_db::TestDb;
@@ -31,7 +32,7 @@ fn search_from_where_keys_and_distance() {
             .where_()
             .keys(&["key".into()])
             .and()
-            .distance(Comparison::LessThan(5.into()))
+            .distance(CountComparison::LessThan(5))
             .query(),
         &[1, 2, 3],
     );
@@ -42,7 +43,7 @@ fn search_from_where_distance_less_than() {
     let _query = QueryBuilder::search()
         .from(1)
         .where_()
-        .distance(Comparison::LessThan(2.into()))
+        .distance(CountComparison::LessThan(2))
         .query();
 }
 
@@ -51,7 +52,7 @@ fn search_from_where_edge_count_test() {
     let _query = QueryBuilder::search()
         .from(1)
         .where_()
-        .edge_count(Comparison::GreaterThan(2.into()))
+        .edge_count(CountComparison::GreaterThan(2))
         .query();
 }
 
@@ -60,7 +61,7 @@ fn search_from_where_edge_from_count_test() {
     let _query = QueryBuilder::search()
         .from(1)
         .where_()
-        .edge_count_from(Comparison::GreaterThan(2.into()))
+        .edge_count_from(CountComparison::GreaterThan(2))
         .query();
 }
 
@@ -69,7 +70,7 @@ fn search_from_where_edge_to_count_test() {
     let _query = QueryBuilder::search()
         .from(1)
         .where_()
-        .edge_count_to(Comparison::GreaterThan(2.into()))
+        .edge_count_to(CountComparison::GreaterThan(2))
         .query();
 }
 
@@ -128,7 +129,7 @@ fn search_from_where_keys_or_distance() {
         .where_()
         .keys(&["key".into()])
         .or()
-        .distance(Comparison::LessThan(2.into()))
+        .distance(CountComparison::LessThan(2))
         .query();
 }
 
@@ -153,7 +154,7 @@ fn search_from_where_where_key_and_key_end_where_and_distance() {
         .keys(&["key2".into()])
         .end_where()
         .and()
-        .distance(Comparison::LessThan(2.into()))
+        .distance(CountComparison::LessThan(2))
         .query();
 }
 

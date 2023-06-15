@@ -1,3 +1,4 @@
+use crate::query::query_condition::CountComparison;
 use crate::query::query_condition::Direction;
 use crate::query::query_condition::EdgeCountCondition;
 use crate::query::query_condition::KeyValueCondition;
@@ -18,7 +19,7 @@ pub struct WhereKey {
 pub struct WhereLogicOperator(pub SearchQuery);
 
 impl Where {
-    pub fn distance(mut self, comparison: Comparison) -> WhereLogicOperator {
+    pub fn distance(mut self, comparison: CountComparison) -> WhereLogicOperator {
         self.0.conditions.push(QueryCondition::Distance(comparison));
 
         WhereLogicOperator(self.0)
@@ -30,7 +31,7 @@ impl Where {
         WhereLogicOperator(self.0)
     }
 
-    pub fn edge_count(mut self, comparison: Comparison) -> WhereLogicOperator {
+    pub fn edge_count(mut self, comparison: CountComparison) -> WhereLogicOperator {
         self.0
             .conditions
             .push(QueryCondition::EdgeCount(EdgeCountCondition {
@@ -41,7 +42,7 @@ impl Where {
         WhereLogicOperator(self.0)
     }
 
-    pub fn edge_count_from(mut self, comparison: Comparison) -> WhereLogicOperator {
+    pub fn edge_count_from(mut self, comparison: CountComparison) -> WhereLogicOperator {
         self.0
             .conditions
             .push(QueryCondition::EdgeCount(EdgeCountCondition {
@@ -52,7 +53,7 @@ impl Where {
         WhereLogicOperator(self.0)
     }
 
-    pub fn edge_count_to(mut self, comparison: Comparison) -> WhereLogicOperator {
+    pub fn edge_count_to(mut self, comparison: CountComparison) -> WhereLogicOperator {
         self.0
             .conditions
             .push(QueryCondition::EdgeCount(EdgeCountCondition {

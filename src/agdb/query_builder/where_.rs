@@ -151,6 +151,26 @@ impl Where {
     fn add_condition(&mut self, condition: QueryCondition) {
         self.conditions.last_mut().unwrap().push(condition);
     }
+
+    fn collapse_conditions(&mut self) -> bool {
+        if self.conditions.len() > 1 {
+            if let Some(last_conditions) = self.conditions.pop() {
+                if let Some(current_conditions) = self.conditions.last_mut() {
+                    if let Some(QueryCondition {
+                        logic: _,
+                        modifier: _,
+                        data: QueryConditionData::Where { conditions },
+                    }) = current_conditions.last_mut()
+                    {
+                        *conditions = last_conditions;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
 }
 
 impl WhereKey {
@@ -179,20 +199,7 @@ impl WhereLogicOperator {
     }
 
     pub fn end_where(mut self) -> WhereLogicOperator {
-        if self.0.conditions.len() > 1 {
-            if let Some(last_conditions) = self.0.conditions.pop() {
-                if let Some(current_conditions) = self.0.conditions.last_mut() {
-                    if let Some(QueryCondition {
-                        logic: _,
-                        modifier: _,
-                        data: QueryConditionData::Where { conditions },
-                    }) = current_conditions.last_mut()
-                    {
-                        *conditions = last_conditions
-                    }
-                }
-            }
-        }
+        self.0.collapse_conditions();
 
         WhereLogicOperator(self.0)
     }
@@ -206,7 +213,9 @@ impl WhereLogicOperator {
         }
     }
 
-    pub fn query(self) -> SearchQuery {
+    pub fn query(mut self) -> SearchQuery {
+        while self.0.collapse_conditions() {}
+        std::mem::swap(&mut self.0.query.conditions, &mut self.0.conditions[0]);
         self.0.query
     }
 }

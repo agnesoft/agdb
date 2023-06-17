@@ -40,11 +40,32 @@ fn search_from_where_keys_and_distance() {
 
 #[test]
 fn search_from_where_distance_less_than() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .distance(CountComparison::LessThan(2))
-        .query();
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(5)
+            .values_uniform(&[("key", "value").into()])
+            .query(),
+        5,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(&[1.into(), 2.into(), 3.into(), 4.into()])
+            .to(&[2.into(), 3.into(), 4.into(), 5.into()])
+            .query(),
+        4,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1)
+            .where_()
+            .distance(CountComparison::LessThan(2))
+            .query(),
+        &[1, -6],
+    );
 }
 
 #[test]

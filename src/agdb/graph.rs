@@ -261,6 +261,7 @@ where
     pub(crate) index: GraphIndex,
 }
 
+#[allow(dead_code)]
 impl<'a, Data> GraphNode<'a, Data>
 where
     Data: GraphData,
@@ -282,6 +283,18 @@ where
             graph: self.graph,
             index: self.graph.first_edge_to(self.index).unwrap_or_default(),
         }
+    }
+
+    pub fn edge_count(&self) -> u64 {
+        self.edge_count_from() + self.edge_count_to()
+    }
+
+    pub fn edge_count_from(&self) -> u64 {
+        self.graph.edge_count_from(self.index).unwrap_or_default() as u64
+    }
+
+    pub fn edge_count_to(&self) -> u64 {
+        self.graph.edge_count_to(self.index).unwrap_or_default() as u64
     }
 }
 
@@ -555,6 +568,14 @@ where
 
     pub(crate) fn next_edge_to(&self, index: GraphIndex) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.to_meta(index)?))
+    }
+
+    pub(crate) fn edge_count_from(&self, index: GraphIndex) -> Result<i64, DbError> {
+        self.data.from_meta(index)
+    }
+
+    pub(crate) fn edge_count_to(&self, index: GraphIndex) -> Result<i64, DbError> {
+        self.data.to_meta(index)
     }
 
     pub(crate) fn next_node(&self, index: GraphIndex) -> Result<Option<GraphIndex>, DbError> {
@@ -842,6 +863,18 @@ mod tests {
         let to = graph.insert_node().unwrap();
 
         assert_eq!(graph.insert_edge(from, to), Ok(GraphIndex::from(-3_i64)));
+
+        let from_node = graph.node(from).unwrap();
+
+        assert_eq!(from_node.edge_count(), 1);
+        assert_eq!(from_node.edge_count_from(), 1);
+        assert_eq!(from_node.edge_count_to(), 0);
+
+        let to_node = graph.node(to).unwrap();
+
+        assert_eq!(to_node.edge_count(), 1);
+        assert_eq!(to_node.edge_count_from(), 0);
+        assert_eq!(to_node.edge_count_to(), 1);
     }
 
     #[test]
@@ -1101,6 +1134,8 @@ mod tests {
         assert!(graph.edge(index1).is_some());
         assert!(graph.edge(index2).is_none());
         assert!(graph.edge(index3).is_some());
+
+        assert_eq!(graph.node(from).unwrap().edge_count(), 2);
     }
 
     #[test]

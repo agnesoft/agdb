@@ -135,6 +135,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::redundant_clone)]
     fn derived_from_clone() {
         let left = SearchQuery {
             origin: QueryId::from(0),

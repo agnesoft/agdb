@@ -1,3 +1,4 @@
+use super::db_error::DbError;
 use crate::graph::GraphIndex;
 use crate::graph_search::PathSearchHandler;
 use crate::graph_search::SearchControl;
@@ -24,8 +25,8 @@ pub(crate) struct LimitOffsetHandler {
 pub(crate) struct PathHandler {}
 
 impl SearchHandler for DefaultHandler {
-    fn process(&mut self, _index: GraphIndex, _distance: u64) -> SearchControl {
-        SearchControl::Continue(true)
+    fn process(&mut self, _index: GraphIndex, _distance: u64) -> Result<SearchControl, DbError> {
+        Ok(SearchControl::Continue(true))
     }
 }
 
@@ -52,38 +53,38 @@ impl LimitOffsetHandler {
 }
 
 impl SearchHandler for LimitHandler {
-    fn process(&mut self, _index: GraphIndex, _distance: u64) -> SearchControl {
+    fn process(&mut self, _index: GraphIndex, _distance: u64) -> Result<SearchControl, DbError> {
         self.counter += 1;
 
         if self.counter == self.limit {
-            SearchControl::Finish(true)
+            Ok(SearchControl::Finish(true))
         } else {
-            SearchControl::Continue(true)
+            Ok(SearchControl::Continue(true))
         }
     }
 }
 
 impl SearchHandler for OffsetHandler {
-    fn process(&mut self, _index: GraphIndex, _distance: u64) -> SearchControl {
+    fn process(&mut self, _index: GraphIndex, _distance: u64) -> Result<SearchControl, DbError> {
         self.counter += 1;
-        SearchControl::Continue(self.offset < self.counter)
+        Ok(SearchControl::Continue(self.offset < self.counter))
     }
 }
 
 impl SearchHandler for LimitOffsetHandler {
-    fn process(&mut self, _index: GraphIndex, _distance: u64) -> SearchControl {
+    fn process(&mut self, _index: GraphIndex, _distance: u64) -> Result<SearchControl, DbError> {
         self.counter += 1;
 
         if self.counter == self.limit {
-            SearchControl::Finish(self.offset < self.counter)
+            Ok(SearchControl::Finish(self.offset < self.counter))
         } else {
-            SearchControl::Continue(self.offset < self.counter)
+            Ok(SearchControl::Continue(self.offset < self.counter))
         }
     }
 }
 
 impl PathSearchHandler for PathHandler {
-    fn process(&self, _index: GraphIndex, _distance: u64) -> u64 {
-        1
+    fn process(&self, _index: GraphIndex, _distance: u64) -> Result<u64, DbError> {
+        Ok(1)
     }
 }

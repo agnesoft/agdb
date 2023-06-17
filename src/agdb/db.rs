@@ -317,11 +317,13 @@ impl Db {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search.breadth_first_search(GraphIndex(from.0), DefaultHandler {}),
-            (_, 0) => search.breadth_first_search(GraphIndex(from.0), LimitHandler::new(limit)),
-            (0, _) => search.breadth_first_search(GraphIndex(from.0), OffsetHandler::new(offset)),
+            (0, 0) => search.breadth_first_search(GraphIndex(from.0), DefaultHandler {})?,
+            (_, 0) => search.breadth_first_search(GraphIndex(from.0), LimitHandler::new(limit))?,
+            (0, _) => {
+                search.breadth_first_search(GraphIndex(from.0), OffsetHandler::new(offset))?
+            }
             (_, _) => search
-                .breadth_first_search(GraphIndex(from.0), LimitOffsetHandler::new(limit, offset)),
+                .breadth_first_search(GraphIndex(from.0), LimitOffsetHandler::new(limit, offset))?,
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
@@ -336,17 +338,17 @@ impl Db {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search.breadth_first_search_reverse(GraphIndex(to.0), DefaultHandler {}),
+            (0, 0) => search.breadth_first_search_reverse(GraphIndex(to.0), DefaultHandler {})?,
             (_, 0) => {
-                search.breadth_first_search_reverse(GraphIndex(to.0), LimitHandler::new(limit))
+                search.breadth_first_search_reverse(GraphIndex(to.0), LimitHandler::new(limit))?
             }
             (0, _) => {
-                search.breadth_first_search_reverse(GraphIndex(to.0), OffsetHandler::new(offset))
+                search.breadth_first_search_reverse(GraphIndex(to.0), OffsetHandler::new(offset))?
             }
             (_, _) => search.breadth_first_search_reverse(
                 GraphIndex(to.0),
                 LimitOffsetHandler::new(limit, offset),
-            ),
+            )?,
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
@@ -354,7 +356,7 @@ impl Db {
 
     pub(crate) fn search_from_to(&self, from: DbId, to: DbId) -> Result<Vec<DbId>, QueryError> {
         Ok(GraphSearch::from(&self.graph)
-            .path(GraphIndex(from.0), GraphIndex(to.0), PathHandler {})
+            .path(GraphIndex(from.0), GraphIndex(to.0), PathHandler {})?
             .iter()
             .map(|index| DbId(index.0))
             .collect())

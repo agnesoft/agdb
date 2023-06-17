@@ -1,4 +1,5 @@
 use crate::collections::bit_set::BitSet;
+use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
@@ -7,7 +8,7 @@ use std::mem::swap;
 use std::mem::take;
 
 pub trait PathSearchHandler {
-    fn process(&self, index: GraphIndex, distance: u64) -> u64;
+    fn process(&self, index: GraphIndex, distance: u64) -> Result<u64, DbError>;
 }
 
 #[derive(Clone)]
@@ -58,79 +59,92 @@ where
         }
     }
 
-    pub(crate) fn search(&mut self) -> Vec<GraphIndex> {
+    pub(crate) fn search(&mut self) -> Result<Vec<GraphIndex>, DbError> {
         while !self.is_finished() {
             self.sort_paths();
-            self.process_last_path();
+            self.process_last_path()?;
         }
 
-        take(&mut self.result)
+        Ok(take(&mut self.result))
     }
 
-    fn expand_edge(&mut self, mut path: Path, index: GraphIndex, node_index: GraphIndex) {
+    fn expand_edge(
+        &mut self,
+        mut path: Path,
+        index: GraphIndex,
+        node_index: GraphIndex,
+    ) -> Result<(), DbError> {
         let cost = self
             .handler
-            .process(index, self.current_path.elements.len() as u64 + 1);
+            .process(index, self.current_path.elements.len() as u64 + 1)?;
 
         if cost != 0 && !self.visited.value(node_index.as_u64()) {
             path.elements.push(index);
             path.cost += cost;
-            self.expand_node(path, node_index);
+            self.expand_node(path, node_index)?;
         }
+
+        Ok(())
     }
 
-    fn expand_node(&mut self, mut path: Path, index: GraphIndex) {
+    fn expand_node(&mut self, mut path: Path, index: GraphIndex) -> Result<(), DbError> {
         let cost = self
             .handler
-            .process(index, self.current_path.elements.len() as u64 + 1);
+            .process(index, self.current_path.elements.len() as u64 + 1)?;
 
         if cost != 0 {
             path.elements.push(index);
             path.cost += cost;
             self.paths.push(path);
         }
+
+        Ok(())
     }
 
-    fn expand(&mut self, index: GraphIndex) {
+    fn expand(&mut self, index: GraphIndex) -> Result<(), DbError> {
         let node = self
             .graph
             .node(index)
             .expect("unexpected invalid node index");
         for edge in node.edge_iter_from() {
-            self.expand_edge(self.current_path.clone(), edge.index(), edge.index_to());
+            self.expand_edge(self.current_path.clone(), edge.index(), edge.index_to())?;
         }
+
+        Ok(())
     }
 
     fn is_finished(&self) -> bool {
         self.paths.is_empty() || !self.result.is_empty()
     }
 
-    fn process_path(&mut self) {
+    fn process_path(&mut self) -> Result<(), DbError> {
         let index = self
             .current_path
             .elements
             .last()
             .map_or(GraphIndex::default(), |index| *index);
-        self.process_index(index);
+        self.process_index(index)
     }
 
-    fn process_index(&mut self, index: GraphIndex) {
+    fn process_index(&mut self, index: GraphIndex) -> Result<(), DbError> {
         if !self.visited.value(index.as_u64()) {
             if index.0 == self.destination.0 {
                 swap(&mut self.result, &mut self.current_path.elements);
             } else {
                 self.visited.insert(index.as_u64());
-                self.expand(index);
+                self.expand(index)?;
             }
         }
+
+        Ok(())
     }
 
-    fn process_last_path(&mut self) {
+    fn process_last_path(&mut self) -> Result<(), DbError> {
         self.current_path = self.paths.pop().unwrap_or(Path {
             elements: vec![],
             cost: 0,
         });
-        self.process_path();
+        self.process_path()
     }
 
     fn sort_paths(&mut self) {
@@ -169,8 +183,8 @@ mod tests {
     }
 
     impl PathSearchHandler for Handler {
-        fn process(&self, index: GraphIndex, distance: u64) -> u64 {
-            (self.processor)(index, distance)
+        fn process(&self, index: GraphIndex, distance: u64) -> Result<u64, DbError> {
+            Ok((self.processor)(index, distance))
         }
     }
 
@@ -186,7 +200,7 @@ mod tests {
 
         let result = GraphSearch::from(&graph).path(node, node, Handler::default());
 
-        assert_eq!(result, vec![]);
+        assert_eq!(result, Ok(vec![]));
     }
 
     #[test]
@@ -203,7 +217,7 @@ mod tests {
             Handler::default(),
         );
 
-        assert_eq!(result, vec![]);
+        assert_eq!(result, Ok(vec![]));
     }
 
     #[test]
@@ -226,7 +240,7 @@ mod tests {
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
-        assert_eq!(result, vec![node1, edge1, node2, edge3, node3]);
+        assert_eq!(result, Ok(vec![node1, edge1, node2, edge3, node3]));
     }
 
     #[test]
@@ -240,7 +254,7 @@ mod tests {
 
         let result = GraphSearch::from(&graph).path(node, node, Handler::default());
 
-        assert_eq!(result, vec![]);
+        assert_eq!(result, Ok(vec![]));
     }
 
     #[test]
@@ -261,7 +275,7 @@ mod tests {
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
-        assert_eq!(result, vec![node1, edge1, node3]);
+        assert_eq!(result, Ok(vec![node1, edge1, node3]));
     }
 
     #[test]
@@ -281,7 +295,7 @@ mod tests {
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
-        assert_eq!(result, vec![node1, edge1, node2, edge2, node3]);
+        assert_eq!(result, Ok(vec![node1, edge1, node2, edge2, node3]));
     }
 
     #[test]
@@ -314,7 +328,7 @@ mod tests {
             },
         );
 
-        assert_eq!(result, vec![node1, edge2, node2, edge3, node3]);
+        assert_eq!(result, Ok(vec![node1, edge2, node2, edge3, node3]));
     }
 
     #[test]
@@ -333,6 +347,6 @@ mod tests {
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
-        assert_eq!(result, vec![]);
+        assert_eq!(result, Ok(vec![]));
     }
 }

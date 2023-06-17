@@ -173,6 +173,19 @@ mod tests {
     use super::*;
 
     #[test]
+    fn derived_from_debug() {
+        format!("{:?}", SearchControl::Continue(false));
+    }
+
+    #[test]
+    #[allow(clippy::clone_on_copy)]
+    fn derived_from_clone() {
+        let left = SearchControl::Continue(true);
+        let other = left.clone();
+        assert_eq!(left, other);
+    }
+
+    #[test]
     fn search_control_and() {
         use SearchControl::Continue;
         use SearchControl::Finish;
@@ -207,6 +220,21 @@ mod tests {
         assert_eq!(Stop(true).and(Finish(false)), Finish(false));
         assert_eq!(Stop(false).and(Finish(false)), Finish(false));
         assert_eq!(Stop(false).and(Finish(true)), Finish(false));
+
+        assert_eq!(Stop(true).and(Continue(true)), Stop(true));
+        assert_eq!(Stop(true).and(Continue(false)), Stop(false));
+        assert_eq!(Stop(false).and(Continue(true)), Stop(false));
+        assert_eq!(Stop(false).and(Continue(false)), Stop(false));
+
+        assert_eq!(Finish(true).and(Continue(true)), Finish(true));
+        assert_eq!(Finish(true).and(Continue(false)), Finish(false));
+        assert_eq!(Finish(false).and(Continue(true)), Finish(false));
+        assert_eq!(Finish(false).and(Continue(false)), Finish(false));
+
+        assert_eq!(Finish(true).and(Stop(true)), Finish(true));
+        assert_eq!(Finish(true).and(Stop(false)), Finish(false));
+        assert_eq!(Finish(false).and(Stop(false)), Finish(false));
+        assert_eq!(Finish(false).and(Stop(true)), Finish(false));
     }
 
     #[test]
@@ -244,5 +272,41 @@ mod tests {
         assert_eq!(Stop(true).or(Finish(false)), Stop(true));
         assert_eq!(Stop(false).or(Finish(true)), Stop(true));
         assert_eq!(Stop(false).or(Finish(false)), Stop(false));
+
+        assert_eq!(Stop(true).or(Continue(true)), Continue(true));
+        assert_eq!(Stop(true).or(Continue(false)), Continue(true));
+        assert_eq!(Stop(false).or(Continue(true)), Continue(true));
+        assert_eq!(Stop(false).or(Continue(false)), Continue(false));
+
+        assert_eq!(Finish(true).or(Continue(true)), Continue(true));
+        assert_eq!(Finish(true).or(Continue(false)), Continue(true));
+        assert_eq!(Finish(false).or(Continue(true)), Continue(true));
+        assert_eq!(Finish(false).or(Continue(false)), Continue(false));
+
+        assert_eq!(Finish(true).or(Stop(true)), Stop(true));
+        assert_eq!(Finish(true).or(Stop(false)), Stop(true));
+        assert_eq!(Finish(false).or(Stop(true)), Stop(true));
+        assert_eq!(Finish(false).or(Stop(false)), Stop(false));
+    }
+
+    #[test]
+    fn flip() {
+        let mut control = SearchControl::Continue(true);
+        control.flip();
+        assert_eq!(control, SearchControl::Continue(false));
+        control.flip();
+        assert_eq!(control, SearchControl::Continue(true));
+
+        control = SearchControl::Stop(true);
+        control.flip();
+        assert_eq!(control, SearchControl::Stop(false));
+        control.flip();
+        assert_eq!(control, SearchControl::Stop(true));
+
+        control = SearchControl::Finish(true);
+        control.flip();
+        assert_eq!(control, SearchControl::Finish(false));
+        control.flip();
+        assert_eq!(control, SearchControl::Finish(true));
     }
 }

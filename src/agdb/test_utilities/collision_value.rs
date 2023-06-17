@@ -73,6 +73,7 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    #[allow(clippy::redundant_clone)]
     fn derived_from_clone() {
         let value = CollisionValue::new(1_i64);
         let other = value.clone();

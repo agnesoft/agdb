@@ -39,6 +39,7 @@ mod tests {
     use super::super::SearchControl;
     use super::super::SearchHandler;
     use super::*;
+    use crate::db::db_error::DbError;
     use crate::graph::DbGraph;
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
@@ -59,8 +60,8 @@ mod tests {
     }
 
     impl SearchHandler for Handler {
-        fn process(&mut self, index: GraphIndex, distance: u64) -> SearchControl {
-            (self.processor)(index, distance)
+        fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
+            Ok((self.processor)(index, distance))
         }
     }
 
@@ -75,7 +76,7 @@ mod tests {
         let result =
             GraphSearch::from(&graph).depth_first_search(GraphIndex::default(), Handler::default());
 
-        assert_eq!(result, vec![]);
+        assert_eq!(result, Ok(vec![]));
     }
 
     #[test]
@@ -101,7 +102,9 @@ mod tests {
 
         assert_eq!(
             result,
-            vec![node1, edge1, node2, edge3, node3, edge5, edge6, edge4, edge2]
+            Ok(vec![
+                node1, edge1, node2, edge3, node3, edge5, edge6, edge4, edge2
+            ])
         );
     }
 
@@ -126,7 +129,7 @@ mod tests {
 
         assert_eq!(
             result,
-            vec![node1, edge1, node2, edge2, node3, edge3, node4]
+            Ok(vec![node1, edge1, node2, edge2, node3, edge3, node4])
         );
     }
 
@@ -156,7 +159,7 @@ mod tests {
             },
         );
 
-        assert_eq!(result, vec![node1, node2, node3, node4]);
+        assert_eq!(result, Ok(vec![node1, node2, node3, node4]));
     }
 
     #[test]
@@ -191,7 +194,7 @@ mod tests {
             },
         );
 
-        assert_eq!(result, vec![node2]);
+        assert_eq!(result, Ok(vec![node2]));
     }
 
     #[test]
@@ -212,7 +215,7 @@ mod tests {
         let edge3 = graph.insert_edge(node1, node4).unwrap();
 
         let mut result = GraphSearch::from(&graph).depth_first_search(node1, Handler::default());
-        let expected = vec![node1, edge1, node2, edge2, node3, edge3, node4];
+        let expected = Ok(vec![node1, edge1, node2, edge2, node3, edge3, node4]);
 
         assert_eq!(result, expected);
 
@@ -251,6 +254,6 @@ mod tests {
             },
         );
 
-        assert_eq!(result, vec![node1, edge1, node2, edge2]);
+        assert_eq!(result, Ok(vec![node1, edge1, node2, edge2]));
     }
 }

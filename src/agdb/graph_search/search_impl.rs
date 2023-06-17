@@ -1,6 +1,7 @@
 use super::SearchControl;
 use super::SearchHandler;
 use crate::collections::bit_set::BitSet;
+use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
@@ -50,10 +51,10 @@ where
     pub(crate) fn search<Handler: SearchHandler>(
         &mut self,
         mut handler: Handler,
-    ) -> Vec<GraphIndex> {
-        while !self.stack.is_empty() && self.process_stack(&mut handler) {}
+    ) -> Result<Vec<GraphIndex>, DbError> {
+        while !self.stack.is_empty() && self.process_stack(&mut handler)? {}
 
-        self.take_result()
+        Ok(self.take_result())
     }
 
     fn add_edges_to_stack(&mut self, edge_indexes: Vec<GraphIndex>, distance: u64) {
@@ -84,35 +85,38 @@ where
         &mut self,
         index: SearchIndex,
         handler: &mut Handler,
-    ) -> bool {
+    ) -> Result<bool, DbError> {
         if !self.visit_index(&index) {
             self.process_unvisited_index(index, handler)
         } else {
-            true
+            Ok(true)
         }
     }
 
-    fn process_stack<Handler: SearchHandler>(&mut self, handler: &mut Handler) -> bool {
+    fn process_stack<Handler: SearchHandler>(
+        &mut self,
+        handler: &mut Handler,
+    ) -> Result<bool, DbError> {
         let mut it = SearchIt::new(&mut self.stack);
 
         while let Some(i) = it.next() {
-            if !self.process_index(i, handler) {
-                return false;
+            if !self.process_index(i, handler)? {
+                return Ok(false);
             }
         }
 
-        true
+        Ok(true)
     }
 
     fn process_unvisited_index<Handler: SearchHandler>(
         &mut self,
         index: SearchIndex,
         handler: &mut Handler,
-    ) -> bool {
+    ) -> Result<bool, DbError> {
         let add_index;
         let result;
 
-        match handler.process(index.index, index.distance) {
+        match handler.process(index.index, index.distance)? {
             SearchControl::Continue(add) => {
                 self.expand_index(index);
                 add_index = add;
@@ -132,7 +136,7 @@ where
             self.result.push(index.index);
         }
 
-        result
+        Ok(result)
     }
 
     fn take_result(&mut self) -> Vec<GraphIndex> {

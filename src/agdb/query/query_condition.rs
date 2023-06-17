@@ -4,20 +4,69 @@ use crate::DbKey;
 use crate::DbValue;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum QueryCondition {
+pub enum QueryConditionLogic {
     And,
-    Distance(CountComparison),
-    Edge,
-    EdgeCount(EdgeCountCondition),
-    EndWhere,
-    Ids(QueryIds),
-    KeyValue(KeyValueCondition),
-    Keys(Vec<DbKey>),
-    Node,
+    Or,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryConditionModifier {
+    None,
     Not,
     NotBeyond,
-    Or,
-    Where,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryCondition {
+    Distance {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+        value: CountComparison,
+    },
+    Edge {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+    },
+    EdgeCount {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+        value: CountComparison,
+    },
+    EdgeCountFrom {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+        value: CountComparison,
+    },
+    EdgeCountTo {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+        value: CountComparison,
+    },
+    Ids {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+        values: QueryIds,
+    },
+    KeyValue {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+        key: DbKey,
+        value: Comparison,
+    },
+    Keys {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+        values: Vec<DbKey>,
+    },
+    Node {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+    },
+    Where {
+        logic: QueryConditionLogic,
+        modifier: QueryConditionModifier,
+    },
+    EndWhere,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,25 +87,6 @@ pub enum Comparison {
     LessThan(DbValue),
     LessThanOrEqual(DbValue),
     NotEqual(DbValue),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct EdgeCountCondition {
-    pub comparison: CountComparison,
-    pub direction: Direction,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Direction {
-    Both,
-    From,
-    To,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct KeyValueCondition {
-    pub key: DbKey,
-    pub comparison: Comparison,
 }
 
 impl CountComparison {
@@ -106,85 +136,28 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", QueryCondition::Where);
+        format!("{:?}", QueryCondition::EndWhere);
         format!("{:?}", Comparison::Equal(DbValue::Int(0)));
-        format!("{:?}", Direction::From);
-        format!(
-            "{:?}",
-            EdgeCountCondition {
-                comparison: CountComparison::Equal(0),
-                direction: Direction::From
-            }
-        );
-        format!(
-            "{:?}",
-            KeyValueCondition {
-                comparison: Comparison::Equal(DbValue::Int(0)),
-                key: DbValue::Int(0)
-            }
-        );
     }
 
     #[test]
     fn derived_from_clone() {
-        let left = QueryCondition::Where;
+        let left = QueryCondition::EndWhere;
         let right = left.clone();
         assert_eq!(left, right);
 
         let left = Comparison::Equal(DbValue::Int(0));
         let right = left.clone();
         assert_eq!(left, right);
-
-        let left = Direction::From;
-        let right = left.clone();
-        assert_eq!(left, right);
-
-        let left = EdgeCountCondition {
-            comparison: CountComparison::Equal(0),
-            direction: Direction::From,
-        };
-        let right = left.clone();
-        assert_eq!(left, right);
-
-        let left = KeyValueCondition {
-            comparison: Comparison::Equal(DbValue::Int(0)),
-            key: DbValue::Int(0),
-        };
-        let right = left.clone();
-        assert_eq!(left, right);
     }
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(QueryCondition::Where, QueryCondition::Where);
+        assert_eq!(QueryCondition::EndWhere, QueryCondition::EndWhere);
 
         assert_eq!(
             Comparison::Equal(DbValue::Int(0)),
             Comparison::Equal(DbValue::Int(0))
-        );
-
-        assert_eq!(Direction::From, Direction::From);
-
-        assert_eq!(
-            EdgeCountCondition {
-                comparison: CountComparison::Equal(0),
-                direction: Direction::From
-            },
-            EdgeCountCondition {
-                comparison: CountComparison::Equal(0),
-                direction: Direction::From
-            }
-        );
-
-        assert_eq!(
-            KeyValueCondition {
-                comparison: Comparison::Equal(DbValue::Int(0)),
-                key: DbValue::Int(0)
-            },
-            KeyValueCondition {
-                comparison: Comparison::Equal(DbValue::Int(0)),
-                key: DbValue::Int(0)
-            }
         );
     }
 

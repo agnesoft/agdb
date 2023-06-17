@@ -23,6 +23,8 @@ use crate::graph::GraphIndex;
 use crate::graph_search::GraphSearch;
 use crate::graph_search::SearchControl;
 use crate::query::query_condition::QueryCondition;
+use crate::query::query_condition::QueryConditionLogic;
+use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
@@ -32,7 +34,6 @@ use crate::storage::StorageIndex;
 use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use crate::Comparison;
 use crate::DbId;
 use crate::DbKey;
 use crate::DbKeyValue;
@@ -566,26 +567,109 @@ impl Db {
         })
     }
 
+    fn update_condition_result(
+        mut control: SearchControl,
+        result: SearchControl,
+        logic: &QueryConditionLogic,
+        modifier: &QueryConditionModifier,
+    ) -> SearchControl {
+        match modifier {
+            QueryConditionModifier::None => {}
+            QueryConditionModifier::Not => control.flip(),
+            QueryConditionModifier::NotBeyond => match control {
+                SearchControl::Continue(true) => control = SearchControl::Stop(true),
+                _ => {}
+            },
+        }
+
+        match logic {
+            QueryConditionLogic::And => result.and(control),
+            QueryConditionLogic::Or => result.or(control),
+        }
+    }
+
     fn evaluate_condition(
         &self,
         index: GraphIndex,
         distance: u64,
         condition: &QueryCondition,
+        result: SearchControl,
     ) -> SearchControl {
         match condition {
-            QueryCondition::And => todo!(),
-            QueryCondition::Distance(d) => d.compare(distance),
-            QueryCondition::Edge => SearchControl::Continue(index.is_edge()),
-            QueryCondition::EdgeCount(count) => todo!(),
+            QueryCondition::Distance {
+                logic,
+                modifier,
+                value,
+            } => Self::update_condition_result(value.compare(distance), result, logic, modifier),
+            QueryCondition::Edge { logic, modifier } => Self::update_condition_result(
+                SearchControl::Continue(index.is_edge()),
+                result,
+                logic,
+                modifier,
+            ),
+            QueryCondition::EdgeCount {
+                logic,
+                modifier,
+                value,
+            } => {
+                let control = if let Some(node) = self.graph.node(index) {
+                    value.compare(node.edge_count())
+                } else {
+                    SearchControl::Continue(false)
+                };
+
+                Self::update_condition_result(control, result, logic, modifier)
+            }
+            QueryCondition::EdgeCountFrom {
+                logic,
+                modifier,
+                value,
+            } => {
+                let control = if let Some(node) = self.graph.node(index) {
+                    value.compare(node.edge_count_from())
+                } else {
+                    SearchControl::Continue(false)
+                };
+
+                Self::update_condition_result(control, result, logic, modifier)
+            }
+            QueryCondition::EdgeCountTo {
+                logic,
+                modifier,
+                value,
+            } => {
+                let control = if let Some(node) = self.graph.node(index) {
+                    value.compare(node.edge_count_to())
+                } else {
+                    SearchControl::Continue(false)
+                };
+
+                Self::update_condition_result(control, result, logic, modifier)
+            }
+            QueryCondition::Ids {
+                logic,
+                modifier,
+                values,
+            } => todo!(),
+            QueryCondition::KeyValue {
+                logic,
+                modifier,
+                key,
+                value,
+            } => todo!(),
+            QueryCondition::Keys {
+                logic,
+                modifier,
+                values,
+            } => todo!(),
+            QueryCondition::Node { logic, modifier } => Self::update_condition_result(
+                SearchControl::Continue(index.is_node()),
+                result,
+                logic,
+                modifier,
+            ),
+            QueryCondition::Where { logic, modifier } => todo!(),
             QueryCondition::EndWhere => todo!(),
-            QueryCondition::Ids(ids) => todo!(),
-            QueryCondition::KeyValue(key_value) => todo!(),
-            QueryCondition::Keys(keys) => todo!(),
-            QueryCondition::Node => SearchControl::Continue(index.is_node()),
-            QueryCondition::Not => todo!(),
-            QueryCondition::NotBeyond => todo!(),
-            QueryCondition::Or => todo!(),
-            QueryCondition::Where => todo!(),
         }
     }
 
@@ -595,11 +679,13 @@ impl Db {
         distance: u64,
         conditions: &Vec<QueryCondition>,
     ) -> SearchControl {
+        let mut result = SearchControl::Continue(true);
+
         for condition in conditions {
-            let result = self.evaluate_condition(index, distance, condition);
+            result = self.evaluate_condition(index, distance, condition, result);
         }
 
-        SearchControl::Continue(true)
+        result
     }
 
     pub(crate) fn evaluate_path_conditions(

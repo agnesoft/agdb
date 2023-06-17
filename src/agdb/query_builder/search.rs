@@ -69,7 +69,7 @@ impl SearchFrom {
     }
 
     pub fn where_(self) -> Where {
-        Where(self.0)
+        Where::new(self.0)
     }
 }
 
@@ -91,7 +91,7 @@ impl SearchOrderBy {
     }
 
     pub fn where_(self) -> Where {
-        Where(self.0)
+        Where::new(self.0)
     }
 }
 

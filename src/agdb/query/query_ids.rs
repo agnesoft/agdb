@@ -12,6 +12,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::redundant_clone)]
     fn derived_from_clone() {
         let left = QueryIds::Ids(vec![QueryId::from(0)]);
         let right = left.clone();

@@ -20,6 +20,51 @@ where
     pub(crate) phantom_marker: PhantomData<(K, T)>,
 }
 
+pub struct MultiMapIterator<'a, K, T, Data>
+where
+    Data: MapData<K, T>,
+{
+    pub pos: u64,
+    pub key: &'a K,
+    pub data: &'a Data,
+    pub phantom_data: PhantomData<T>,
+}
+
+impl<'a, K, T, Data> Iterator for MultiMapIterator<'a, K, T, Data>
+where
+    K: Default + PartialEq,
+    T: Default,
+    Data: MapData<K, T>,
+{
+    type Item = (K, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let current_pos = self.pos;
+            self.pos = if self.data.capacity() == 0 || self.pos == self.data.capacity() - 1 {
+                0
+            } else {
+                self.pos + 1
+            };
+
+            match self.data.state(current_pos).unwrap_or_default() {
+                MapValueState::Empty => break,
+                MapValueState::Deleted => {}
+                MapValueState::Valid => {
+                    let key = self.data.key(current_pos).unwrap_or_default();
+
+                    if key == *self.key {
+                        let value = self.data.value(current_pos).unwrap_or_default();
+                        return Some((key, value));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+}
+
 impl<K, T, Data> MultiMapImpl<K, T, Data>
 where
     K: Default + PartialEq + StableHash,
@@ -85,6 +130,22 @@ where
     pub fn iter(&self) -> MapIterator<K, T, Data> {
         MapIterator {
             pos: 0,
+            data: &self.data,
+            phantom_data: PhantomData,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn iter_key<'a>(&'a self, key: &'a K) -> MultiMapIterator<K, T, Data> {
+        let pos = if self.capacity() == 0 {
+            0
+        } else {
+            key.stable_hash() % self.capacity()
+        };
+
+        MultiMapIterator {
+            pos,
+            key,
             data: &self.data,
             phantom_data: PhantomData,
         }
@@ -461,6 +522,38 @@ mod tests {
                 (1, "World".to_string())
             ]
         );
+    }
+
+    #[test]
+    fn iter_key() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut map = MultiMapStorage::<u64, u64>::new(storage).unwrap();
+
+        assert_eq!(map.iter_key(&1).count(), 0);
+
+        map.insert(&3, &30).unwrap();
+        map.insert(&1, &10).unwrap();
+        map.insert(&1, &20).unwrap();
+        map.insert(&1, &30).unwrap();
+        map.insert(&4, &40).unwrap();
+        map.remove_value(&1, &10).unwrap();
+
+        let value = map.iter_key(&1).find(|v| v.1 == 20).unwrap();
+        assert_eq!(value, (1, 20));
+
+        let mut values = Vec::<(u64, u64)>::new();
+        values.reserve(2);
+
+        for (key, value) in map.iter_key(&1) {
+            values.push((key, value));
+        }
+
+        values.sort();
+
+        assert_eq!(values, vec![(1, 20), (1, 30)]);
     }
 
     #[test]

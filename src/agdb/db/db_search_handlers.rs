@@ -1,3 +1,4 @@
+use super::db_error::DbError;
 use crate::graph::GraphIndex;
 use crate::graph_search::PathSearchHandler;
 use crate::graph_search::SearchControl;

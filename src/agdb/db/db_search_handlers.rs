@@ -85,104 +85,109 @@ impl<'a> PathHandler<'a> {
 }
 
 impl<'a> SearchHandler for DefaultHandler<'a> {
-    fn process(&mut self, index: GraphIndex, distance: u64) -> SearchControl {
+    fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
         self.db
             .evaluate_conditions(index, distance, self.conditions)
     }
 }
 
 impl<'a> SearchHandler for LimitHandler<'a> {
-    fn process(&mut self, index: GraphIndex, distance: u64) -> SearchControl {
-        match self
-            .db
-            .evaluate_conditions(index, distance, self.conditions)
-        {
-            SearchControl::Continue(add) => {
-                if add {
-                    self.counter += 1
-                }
+    fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
+        Ok(
+            match self
+                .db
+                .evaluate_conditions(index, distance, self.conditions)?
+            {
+                SearchControl::Continue(add) => {
+                    if add {
+                        self.counter += 1
+                    }
 
-                if self.counter == self.limit {
-                    SearchControl::Finish(add)
-                } else {
-                    SearchControl::Continue(add)
+                    if self.counter == self.limit {
+                        SearchControl::Finish(add)
+                    } else {
+                        SearchControl::Continue(add)
+                    }
                 }
-            }
-            SearchControl::Stop(add) => {
-                if add {
-                    self.counter += 1;
-                }
+                SearchControl::Stop(add) => {
+                    if add {
+                        self.counter += 1;
+                    }
 
-                if self.counter == self.limit {
-                    SearchControl::Finish(add)
-                } else {
-                    SearchControl::Stop(add)
+                    if self.counter == self.limit {
+                        SearchControl::Finish(add)
+                    } else {
+                        SearchControl::Stop(add)
+                    }
                 }
-            }
-            SearchControl::Finish(_) => SearchControl::Finish(false),
-        }
+                SearchControl::Finish(_) => SearchControl::Finish(false),
+            },
+        )
     }
 }
 
 impl<'a> SearchHandler for OffsetHandler<'a> {
-    fn process(&mut self, index: GraphIndex, distance: u64) -> SearchControl {
-        match self
-            .db
-            .evaluate_conditions(index, distance, self.conditions)
-        {
-            SearchControl::Continue(add) => {
-                if add {
-                    self.counter += 1
+    fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
+        Ok(
+            match self
+                .db
+                .evaluate_conditions(index, distance, self.conditions)?
+            {
+                SearchControl::Continue(add) => {
+                    if add {
+                        self.counter += 1
+                    }
+                    SearchControl::Continue(add && self.offset < self.counter)
                 }
-                SearchControl::Continue(add && self.offset < self.counter)
-            }
-            SearchControl::Stop(add) => {
-                if add {
-                    self.counter += 1;
+                SearchControl::Stop(add) => {
+                    if add {
+                        self.counter += 1;
+                    }
+                    SearchControl::Stop(add && self.offset < self.counter)
                 }
-                SearchControl::Stop(add && self.offset < self.counter)
-            }
-            SearchControl::Finish(_) => SearchControl::Finish(false),
-        }
+                SearchControl::Finish(_) => SearchControl::Finish(false),
+            },
+        )
     }
 }
 
 impl<'a> SearchHandler for LimitOffsetHandler<'a> {
-    fn process(&mut self, index: GraphIndex, distance: u64) -> SearchControl {
-        match self
-            .db
-            .evaluate_conditions(index, distance, self.conditions)
-        {
-            SearchControl::Continue(add) => {
-                if add {
-                    self.counter += 1
-                }
+    fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
+        Ok(
+            match self
+                .db
+                .evaluate_conditions(index, distance, self.conditions)?
+            {
+                SearchControl::Continue(add) => {
+                    if add {
+                        self.counter += 1
+                    }
 
-                if self.counter == self.limit {
-                    SearchControl::Finish(add && self.offset < self.counter)
-                } else {
-                    SearchControl::Continue(add && self.offset < self.counter)
+                    if self.counter == self.limit {
+                        SearchControl::Finish(add && self.offset < self.counter)
+                    } else {
+                        SearchControl::Continue(add && self.offset < self.counter)
+                    }
                 }
-            }
-            SearchControl::Stop(add) => {
-                if add {
-                    self.counter += 1;
-                }
+                SearchControl::Stop(add) => {
+                    if add {
+                        self.counter += 1;
+                    }
 
-                if self.counter == self.limit {
-                    SearchControl::Finish(add && self.offset < self.counter)
-                } else {
-                    SearchControl::Stop(add && self.offset < self.counter)
+                    if self.counter == self.limit {
+                        SearchControl::Finish(add && self.offset < self.counter)
+                    } else {
+                        SearchControl::Stop(add && self.offset < self.counter)
+                    }
                 }
-            }
-            SearchControl::Finish(_) => SearchControl::Finish(false),
-        }
+                SearchControl::Finish(_) => SearchControl::Finish(false),
+            },
+        )
     }
 }
 
 impl<'a> PathSearchHandler for PathHandler<'a> {
-    fn process(&self, index: GraphIndex, distance: u64) -> u64 {
-        self.db
-            .evaluate_path_conditions(index, distance, self.conditions)
+    fn process(&self, index: GraphIndex, distance: u64) -> Result<u64, DbError> {
+        Ok(1)
     }
 }

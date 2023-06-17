@@ -23,6 +23,7 @@ use crate::graph::GraphIndex;
 use crate::graph_search::GraphSearch;
 use crate::graph_search::SearchControl;
 use crate::query::query_condition::QueryCondition;
+use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
@@ -255,12 +256,8 @@ impl Db {
     pub(crate) fn keys(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
         Ok(self
             .values
-            .values(&db_id)?
-            .iter()
-            .map(|key_value| DbKeyValue {
-                key: key_value.key.clone(),
-                value: DbValue::default(),
-            })
+            .iter_key(&db_id)
+            .map(|kv| (kv.1.key, DbValue::default()).into())
             .collect())
     }
 
@@ -336,7 +333,7 @@ impl Db {
                 GraphIndex(from.0),
                 LimitOffsetHandler::new(limit, offset, self, conditions),
             ),
-        };
+        }?;
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
     }
@@ -367,7 +364,7 @@ impl Db {
                 GraphIndex(to.0),
                 LimitOffsetHandler::new(limit, offset, self, conditions),
             ),
-        };
+        }?;
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
     }
@@ -383,7 +380,7 @@ impl Db {
                 GraphIndex(from.0),
                 GraphIndex(to.0),
                 PathHandler::new(self, conditions),
-            )
+            )?
             .iter()
             .map(|index| DbId(index.0))
             .collect())
@@ -398,17 +395,12 @@ impl Db {
         db_id: DbId,
         keys: &[DbKey],
     ) -> Result<Vec<DbKeyValue>, DbError> {
-        let values = self.values(db_id)?;
-        let mut result = vec![];
-        result.reserve(keys.len());
-
-        for key_value in values {
-            if keys.contains(&key_value.key) {
-                result.push(key_value);
-            }
-        }
-
-        Ok(result)
+        Ok(self
+            .values
+            .iter_key(&db_id)
+            .filter(|kv| keys.contains(&kv.1.key))
+            .map(|kv| kv.1)
+            .collect())
     }
 
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
@@ -567,109 +559,76 @@ impl Db {
         })
     }
 
-    fn update_condition_result(
-        mut control: SearchControl,
-        result: SearchControl,
-        logic: &QueryConditionLogic,
-        modifier: &QueryConditionModifier,
-    ) -> SearchControl {
-        match modifier {
-            QueryConditionModifier::None => {}
-            QueryConditionModifier::Not => control.flip(),
-            QueryConditionModifier::NotBeyond => match control {
-                SearchControl::Continue(true) => control = SearchControl::Stop(true),
-                _ => {}
-            },
-        }
-
-        match logic {
-            QueryConditionLogic::And => result.and(control),
-            QueryConditionLogic::Or => result.or(control),
-        }
-    }
-
-    fn evaluate_condition(
+    pub(crate) fn evaluate_condition(
         &self,
         index: GraphIndex,
         distance: u64,
-        condition: &QueryCondition,
-        result: SearchControl,
-    ) -> SearchControl {
+        condition: &QueryConditionData,
+    ) -> Result<SearchControl, DbError> {
         match condition {
-            QueryCondition::Distance {
-                logic,
-                modifier,
-                value,
-            } => Self::update_condition_result(value.compare(distance), result, logic, modifier),
-            QueryCondition::Edge { logic, modifier } => Self::update_condition_result(
-                SearchControl::Continue(index.is_edge()),
-                result,
-                logic,
-                modifier,
-            ),
-            QueryCondition::EdgeCount {
-                logic,
-                modifier,
-                value,
-            } => {
-                let control = if let Some(node) = self.graph.node(index) {
+            QueryConditionData::Distance { value } => Ok(value.compare(distance)),
+            QueryConditionData::Edge => Ok(SearchControl::Continue(index.is_edge())),
+            QueryConditionData::EdgeCount { value } => {
+                Ok(if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count())
                 } else {
                     SearchControl::Continue(false)
-                };
-
-                Self::update_condition_result(control, result, logic, modifier)
+                })
             }
-            QueryCondition::EdgeCountFrom {
-                logic,
-                modifier,
-                value,
-            } => {
-                let control = if let Some(node) = self.graph.node(index) {
+            QueryConditionData::EdgeCountFrom { value } => {
+                Ok(if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count_from())
                 } else {
                     SearchControl::Continue(false)
-                };
-
-                Self::update_condition_result(control, result, logic, modifier)
+                })
             }
-            QueryCondition::EdgeCountTo {
-                logic,
-                modifier,
-                value,
-            } => {
-                let control = if let Some(node) = self.graph.node(index) {
+            QueryConditionData::EdgeCountTo { value } => {
+                Ok(if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count_to())
                 } else {
                     SearchControl::Continue(false)
-                };
-
-                Self::update_condition_result(control, result, logic, modifier)
+                })
             }
-            QueryCondition::Ids {
-                logic,
-                modifier,
-                values,
-            } => todo!(),
-            QueryCondition::KeyValue {
-                logic,
-                modifier,
-                key,
-                value,
-            } => todo!(),
-            QueryCondition::Keys {
-                logic,
-                modifier,
-                values,
-            } => todo!(),
-            QueryCondition::Node { logic, modifier } => Self::update_condition_result(
-                SearchControl::Continue(index.is_node()),
-                result,
-                logic,
-                modifier,
-            ),
-            QueryCondition::Where { logic, modifier } => todo!(),
-            QueryCondition::EndWhere => todo!(),
+            QueryConditionData::Ids { values } => {
+                Ok(SearchControl::Continue(values.iter().any(|id| {
+                    index.0
+                        == match id {
+                            QueryId::Id(id) => id.0,
+                            QueryId::Alias(alias) => {
+                                self.aliases
+                                    .value(alias)
+                                    .unwrap_or_default()
+                                    .unwrap_or_default()
+                                    .0
+                            }
+                        }
+                })))
+            }
+            QueryConditionData::KeyValue { key, value } => Ok(SearchControl::Continue(
+                if let Some((_, kv)) = self
+                    .values
+                    .iter_key(&DbId(index.0))
+                    .find(|(_, kv)| &kv.key == key)
+                {
+                    value.compare(&kv.value)
+                } else {
+                    false
+                },
+            )),
+            QueryConditionData::Keys { values } => {
+                let keys = self
+                    .values
+                    .iter_key(&DbId(index.0))
+                    .map(|(_, kv)| kv.key)
+                    .collect::<Vec<DbKey>>();
+                Ok(SearchControl::Continue(
+                    values.iter().all(|k| keys.contains(k)),
+                ))
+            }
+            QueryConditionData::Node => Ok(SearchControl::Continue(index.is_node())),
+            QueryConditionData::Where { conditions } => {
+                self.evaluate_conditions(index, distance, conditions)
+            }
         }
     }
 
@@ -677,24 +636,28 @@ impl Db {
         &self,
         index: GraphIndex,
         distance: u64,
-        conditions: &Vec<QueryCondition>,
-    ) -> SearchControl {
+        conditions: &[QueryCondition],
+    ) -> Result<SearchControl, DbError> {
         let mut result = SearchControl::Continue(true);
 
         for condition in conditions {
-            result = self.evaluate_condition(index, distance, condition, result);
+            let mut control = self.evaluate_condition(index, distance, &condition.data)?;
+
+            match condition.modifier {
+                QueryConditionModifier::None => {}
+                QueryConditionModifier::Not => control.flip(),
+                QueryConditionModifier::NotBeyond => {
+                    control = control.and(SearchControl::Stop(true))
+                }
+            };
+
+            result = match condition.logic {
+                QueryConditionLogic::And => result.and(control),
+                QueryConditionLogic::Or => result.or(control),
+            };
         }
 
-        result
-    }
-
-    pub(crate) fn evaluate_path_conditions(
-        &self,
-        index: GraphIndex,
-        distance: u64,
-        conditions: &Vec<QueryCondition>,
-    ) -> u64 {
-        1
+        Ok(result)
     }
 }
 

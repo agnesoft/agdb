@@ -1,15 +1,15 @@
-use super::query_ids::QueryIds;
+use super::query_id::QueryId;
 use crate::graph_search::SearchControl;
 use crate::DbKey;
 use crate::DbValue;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum QueryConditionLogic {
     And,
     Or,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum QueryConditionModifier {
     None,
     Not,
@@ -17,56 +17,24 @@ pub enum QueryConditionModifier {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum QueryCondition {
-    Distance {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-        value: CountComparison,
-    },
-    Edge {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-    },
-    EdgeCount {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-        value: CountComparison,
-    },
-    EdgeCountFrom {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-        value: CountComparison,
-    },
-    EdgeCountTo {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-        value: CountComparison,
-    },
-    Ids {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-        values: QueryIds,
-    },
-    KeyValue {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-        key: DbKey,
-        value: Comparison,
-    },
-    Keys {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-        values: Vec<DbKey>,
-    },
-    Node {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-    },
-    Where {
-        logic: QueryConditionLogic,
-        modifier: QueryConditionModifier,
-    },
-    EndWhere,
+pub enum QueryConditionData {
+    Distance { value: CountComparison },
+    Edge,
+    EdgeCount { value: CountComparison },
+    EdgeCountFrom { value: CountComparison },
+    EdgeCountTo { value: CountComparison },
+    Ids { values: Vec<QueryId> },
+    KeyValue { key: DbKey, value: Comparison },
+    Keys { values: Vec<DbKey> },
+    Node,
+    Where { conditions: Vec<QueryCondition> },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct QueryCondition {
+    pub logic: QueryConditionLogic,
+    pub modifier: QueryConditionModifier,
+    pub data: QueryConditionData,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -130,20 +98,44 @@ impl CountComparison {
     }
 }
 
+impl Comparison {
+    pub(crate) fn compare(&self, right: &DbValue) -> bool {
+        match self {
+            Comparison::Equal(left) => left == right,
+            Comparison::GreaterThan(left) => left > right,
+            Comparison::GreaterThanOrEqual(left) => left >= right,
+            Comparison::LessThan(left) => left < right,
+            Comparison::LessThanOrEqual(left) => left <= right,
+            Comparison::NotEqual(left) => left != right,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", QueryCondition::EndWhere);
+        format!(
+            "{:?}",
+            QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::Edge,
+            }
+        );
         format!("{:?}", Comparison::Equal(DbValue::Int(0)));
     }
 
     #[test]
     #[allow(clippy::redundant_clone)]
     fn derived_from_clone() {
-        let left = QueryCondition::EndWhere;
+        let left = QueryCondition {
+            logic: QueryConditionLogic::And,
+            modifier: QueryConditionModifier::None,
+            data: QueryConditionData::Edge,
+        };
         let right = left.clone();
         assert_eq!(left, right);
 
@@ -154,7 +146,18 @@ mod tests {
 
     #[test]
     fn derived_from_partial_eq() {
-        assert_eq!(QueryCondition::EndWhere, QueryCondition::EndWhere);
+        assert_eq!(
+            QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::Edge,
+            },
+            QueryCondition {
+                logic: QueryConditionLogic::And,
+                modifier: QueryConditionModifier::None,
+                data: QueryConditionData::Edge,
+            }
+        );
 
         assert_eq!(
             Comparison::Equal(DbValue::Int(0)),

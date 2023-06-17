@@ -135,8 +135,7 @@ where
         }
     }
 
-    #[allow(dead_code)]
-    fn iter_key<'a>(&'a self, key: &'a K) -> MultiMapIterator<K, T, Data> {
+    pub fn iter_key<'a>(&'a self, key: &'a K) -> MultiMapIterator<K, T, Data> {
         let pos = if self.capacity() == 0 {
             0
         } else {

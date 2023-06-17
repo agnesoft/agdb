@@ -66,6 +66,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub fn depth_first_search<Handler: SearchHandler>(
         &self,
         index: GraphIndex,
@@ -78,6 +79,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub fn depth_first_search_reverse<Handler: SearchHandler>(
         &self,
         index: GraphIndex,

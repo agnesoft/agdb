@@ -1,11 +1,10 @@
 #[derive(Default)]
 pub struct BitSet {
-    #[allow(dead_code)]
     data: Vec<u8>,
 }
 
-#[allow(dead_code)]
 impl BitSet {
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.data.clear();
     }
@@ -25,6 +24,7 @@ impl BitSet {
         Self { data: vec![] }
     }
 
+    #[allow(dead_code)]
     pub fn remove(&mut self, value: u64) {
         let byte_index = value as usize / 8;
 

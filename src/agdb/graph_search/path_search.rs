@@ -4,16 +4,14 @@ use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use std::cmp::Ordering;
-use std::mem::swap;
-use std::mem::take;
 
 pub trait PathSearchHandler {
-    fn process(&self, index: GraphIndex, distance: u64) -> Result<u64, DbError>;
+    fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError>;
 }
 
 #[derive(Clone)]
 pub(crate) struct Path {
-    pub(crate) elements: Vec<GraphIndex>,
+    pub(crate) elements: Vec<(GraphIndex, bool)>,
     pub(crate) cost: u64,
 }
 
@@ -27,7 +25,7 @@ where
     pub(crate) graph: &'a GraphImpl<Data>,
     pub(crate) handler: Handler,
     pub(crate) paths: Vec<Path>,
-    pub(crate) result: Vec<GraphIndex>,
+    pub(crate) result: Vec<(GraphIndex, bool)>,
     pub(crate) visited: BitSet,
 }
 
@@ -42,6 +40,8 @@ where
         to: GraphIndex,
         handler: Handler,
     ) -> Self {
+        let add = handler.process(from, 0).unwrap_or_default();
+
         Self {
             current_path: Path {
                 elements: vec![],
@@ -51,7 +51,7 @@ where
             graph,
             handler,
             paths: vec![Path {
-                elements: vec![from],
+                elements: vec![(from, add.1)],
                 cost: 0,
             }],
             result: vec![],
@@ -65,7 +65,7 @@ where
             self.process_last_path()?;
         }
 
-        Ok(take(&mut self.result))
+        Ok(self.result.iter().filter(|e| e.1).map(|e| e.0).collect())
     }
 
     fn expand_edge(
@@ -78,9 +78,9 @@ where
             .handler
             .process(index, self.current_path.elements.len() as u64 + 1)?;
 
-        if cost != 0 && !self.visited.value(node_index.as_u64()) {
-            path.elements.push(index);
-            path.cost += cost;
+        if cost.0 != 0 && !self.visited.value(node_index.as_u64()) {
+            path.elements.push((index, cost.1));
+            path.cost += cost.0;
             self.expand_node(path, node_index)?;
         }
 
@@ -92,9 +92,9 @@ where
             .handler
             .process(index, self.current_path.elements.len() as u64 + 1)?;
 
-        if cost != 0 {
-            path.elements.push(index);
-            path.cost += cost;
+        if cost.0 != 0 {
+            path.elements.push((index, cost.1));
+            path.cost += cost.0;
             self.paths.push(path);
         }
 
@@ -122,14 +122,14 @@ where
             .current_path
             .elements
             .last()
-            .map_or(GraphIndex::default(), |index| *index);
+            .map_or(GraphIndex::default(), |index| index.0);
         self.process_index(index)
     }
 
     fn process_index(&mut self, index: GraphIndex) -> Result<(), DbError> {
         if !self.visited.value(index.as_u64()) {
             if index.0 == self.destination.0 {
-                swap(&mut self.result, &mut self.current_path.elements);
+                std::mem::swap(&mut self.result, &mut self.current_path.elements);
             } else {
                 self.visited.insert(index.as_u64());
                 self.expand(index)?;
@@ -171,19 +171,19 @@ mod tests {
     use std::rc::Rc;
 
     struct Handler {
-        pub processor: fn(GraphIndex, u64) -> u64,
+        pub processor: fn(GraphIndex, u64) -> (u64, bool),
     }
 
     impl Default for Handler {
         fn default() -> Self {
             Self {
-                processor: |_index: GraphIndex, _distance: u64| 1_u64,
+                processor: |_index: GraphIndex, _distance: u64| (1_u64, true),
             }
         }
     }
 
     impl PathSearchHandler for Handler {
-        fn process(&self, index: GraphIndex, distance: u64) -> Result<u64, DbError> {
+        fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError> {
             Ok((self.processor)(index, distance))
         }
     }
@@ -320,10 +320,10 @@ mod tests {
             Handler {
                 processor: |index: GraphIndex, _distance: u64| {
                     if index.0 == -4 {
-                        return 0;
+                        return (0, true);
                     }
 
-                    1
+                    (1, true)
                 },
             },
         );
@@ -348,5 +348,59 @@ mod tests {
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
         assert_eq!(result, Ok(vec![]));
+    }
+
+    #[test]
+    fn filtered_nodes() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
+
+        let node1 = graph.insert_node().unwrap();
+        let node2 = graph.insert_node().unwrap();
+        let node3 = graph.insert_node().unwrap();
+
+        let _edge1 = graph.insert_edge(node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(node2, node2).unwrap();
+        let _edge3 = graph.insert_edge(node2, node3).unwrap();
+
+        let result = GraphSearch::from(&graph).path(
+            node1,
+            node3,
+            Handler {
+                processor: |index: GraphIndex, _distance: u64| (1, index.is_node()),
+            },
+        );
+
+        assert_eq!(result, Ok(vec![node1, node2, node3]));
+    }
+
+    #[test]
+    fn filtered_edges() {
+        let test_file = TestFile::new();
+        let storage = Rc::new(RefCell::new(
+            FileStorage::new(test_file.file_name()).unwrap(),
+        ));
+        let mut graph = DbGraph::new(storage).unwrap();
+
+        let node1 = graph.insert_node().unwrap();
+        let node2 = graph.insert_node().unwrap();
+        let node3 = graph.insert_node().unwrap();
+
+        let edge1 = graph.insert_edge(node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(node2, node2).unwrap();
+        let edge3 = graph.insert_edge(node2, node3).unwrap();
+
+        let result = GraphSearch::from(&graph).path(
+            node1,
+            node3,
+            Handler {
+                processor: |index: GraphIndex, _distance: u64| (1, index.is_edge()),
+            },
+        );
+
+        assert_eq!(result, Ok(vec![edge1, edge3]));
     }
 }

@@ -18,7 +18,6 @@ use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 
-#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SearchControl {
     Continue(bool),

@@ -10,7 +10,6 @@ use crate::QueryError;
 use crate::QueryResult;
 use std::cmp::Ordering;
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct SearchQuery {
     pub origin: QueryId,

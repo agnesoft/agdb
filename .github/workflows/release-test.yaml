@@ -15,7 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: |
-          PUBLISHED_VERSION=$(cargo search ^agdb --limit 1 -q | head -n 1 | cut -d '"' -f 2)
+          PUBLISHED_VERSION=$(cargo search ^flagdb$ --limit 1 -q | head -n 1 | cut -d '"' -f 2)
+          echo $PUBLISHED_VERSION
           CURRENT_VERSION=$(cat Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)
+          echo $CURRENT_VERSION
           if [[ "${PUBLISHED_VERSION}" != "${CURRENT_VERSION}" ]]; then echo "new_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT; fi
           echo $CURRENT_VERSION

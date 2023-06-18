@@ -1,6 +1,6 @@
 # Agnesoft Graph Database
 
-![Crates.io](https://img.shields.io/crates/v/agdb)[![release](https://github.com/agnesoft/agdb/actions/workflows/build.yaml/badge.svg)](https://github.com/agnesoft/agdb/actions/workflows/release.yaml) [![coverage](https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg)](https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml) [![codecov](https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU)](https://codecov.io/gh/agnesoft/agdb)
+![Crates.io](https://img.shields.io/crates/v/agdb) [![release](https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg)](https://github.com/agnesoft/agdb/actions/workflows/release.yaml) [![coverage](https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg)](https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml) [![codecov](https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU)](https://codecov.io/gh/agnesoft/agdb)
 
 The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph database using purely 'no-text' programmatic queries. It can be used as a main persistent storage as well as fast in-memory cache. Its typed but schema-less data store allows for seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern (or directly as objects) with no special language or text parsing.
 

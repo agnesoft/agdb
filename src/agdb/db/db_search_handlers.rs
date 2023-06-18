@@ -93,96 +93,54 @@ impl<'a> SearchHandler for DefaultHandler<'a> {
 
 impl<'a> SearchHandler for LimitHandler<'a> {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
-        Ok(
-            match self
-                .db
-                .evaluate_conditions(index, distance, self.conditions)?
-            {
-                SearchControl::Continue(add) => {
-                    if add {
-                        self.counter += 1
-                    }
+        let control = self
+            .db
+            .evaluate_conditions(index, distance, self.conditions)?;
+        let add = control.is_true();
 
-                    if self.counter == self.limit {
-                        SearchControl::Finish(add)
-                    } else {
-                        SearchControl::Continue(add)
-                    }
-                }
-                SearchControl::Stop(add) => {
-                    if add {
-                        self.counter += 1;
-                    }
+        if add {
+            self.counter += 1;
+        }
 
-                    if self.counter == self.limit {
-                        SearchControl::Finish(add)
-                    } else {
-                        SearchControl::Stop(add)
-                    }
-                }
-                SearchControl::Finish(_) => SearchControl::Finish(false),
-            },
-        )
+        if self.counter == self.limit {
+            Ok(SearchControl::Finish(add))
+        } else {
+            Ok(control)
+        }
     }
 }
 
 impl<'a> SearchHandler for OffsetHandler<'a> {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
-        Ok(
-            match self
-                .db
-                .evaluate_conditions(index, distance, self.conditions)?
-            {
-                SearchControl::Continue(add) => {
-                    if add {
-                        self.counter += 1
-                    }
-                    SearchControl::Continue(add && self.offset < self.counter)
-                }
-                SearchControl::Stop(add) => {
-                    if add {
-                        self.counter += 1;
-                    }
-                    SearchControl::Stop(add && self.offset < self.counter)
-                }
-                SearchControl::Finish(_) => SearchControl::Finish(false),
-            },
-        )
+        let mut control = self
+            .db
+            .evaluate_conditions(index, distance, self.conditions)?;
+
+        if control.is_true() {
+            self.counter += 1;
+            control.set_value(self.offset < self.counter);
+        }
+
+        Ok(control)
     }
 }
 
 impl<'a> SearchHandler for LimitOffsetHandler<'a> {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
-        Ok(
-            match self
-                .db
-                .evaluate_conditions(index, distance, self.conditions)?
-            {
-                SearchControl::Continue(add) => {
-                    if add {
-                        self.counter += 1
-                    }
+        let mut control = self
+            .db
+            .evaluate_conditions(index, distance, self.conditions)?;
 
-                    if self.counter == self.limit {
-                        SearchControl::Finish(add && self.offset < self.counter)
-                    } else {
-                        SearchControl::Continue(add && self.offset < self.counter)
-                    }
-                }
-                SearchControl::Stop(add) => {
-                    if add {
-                        self.counter += 1;
-                    }
+        if control.is_true() {
+            self.counter += 1;
+            control.set_value(self.offset < self.counter);
+        }
 
-                    if self.counter == self.limit {
-                        SearchControl::Finish(add && self.offset < self.counter)
-                    } else {
-                        SearchControl::Stop(add && self.offset < self.counter)
-                    }
-                }
-                SearchControl::Finish(_) => SearchControl::Finish(false),
-            },
-        )
+        if self.counter == self.limit {
+            Ok(SearchControl::Finish(control.is_true()))
+        } else {
+            Ok(control)
+        }
     }
 }
 

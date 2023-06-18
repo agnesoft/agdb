@@ -172,6 +172,14 @@ impl SearchControl {
             SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => *v,
         }
     }
+
+    pub(crate) fn set_value(&mut self, value: bool) {
+        match self {
+            SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => {
+                *v = value;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

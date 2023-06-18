@@ -338,7 +338,7 @@ fn search_from_where_key_value() {
 }
 
 #[test]
-fn search_from_where_where_key_and_key_end_where_and_distance() {
+fn search_from_where_where() {
     let db = create_db();
     db.exec_ids(
         QueryBuilder::search()
@@ -359,5 +359,56 @@ fn search_from_where_where_key_and_key_end_where_and_distance() {
             .value(Comparison::Equal("writes".into()))
             .query(),
         &[16, 15, 14, 13, 12, -22],
+    );
+}
+
+#[test]
+fn search_from_limit_offset_where() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .limit(2)
+            .where_()
+            .node()
+            .and()
+            .not()
+            .ids(&[1.into(), 2.into(), 3.into()])
+            .and()
+            .not_beyond()
+            .ids(&["users".into()])
+            .query(),
+        &[8, 7],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .offset(1)
+            .where_()
+            .node()
+            .and()
+            .not()
+            .ids(&[1.into(), 2.into(), 3.into()])
+            .and()
+            .not_beyond()
+            .ids(&["users".into()])
+            .query(),
+        &[7, 6],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .offset(1)
+            .limit(1)
+            .where_()
+            .node()
+            .and()
+            .not()
+            .ids(&[1.into(), 2.into(), 3.into()])
+            .and()
+            .not_beyond()
+            .ids(&["users".into()])
+            .query(),
+        &[7],
     );
 }

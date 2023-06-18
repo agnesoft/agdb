@@ -123,6 +123,10 @@ impl SelectLimit {
     pub fn query(self) -> SearchQuery {
         self.0
     }
+
+    pub fn where_(self) -> Where {
+        Where::new(self.0)
+    }
 }
 
 impl SelectOffset {
@@ -134,5 +138,9 @@ impl SelectOffset {
 
     pub fn query(self) -> SearchQuery {
         self.0
+    }
+
+    pub fn where_(self) -> Where {
+        Where::new(self.0)
     }
 }

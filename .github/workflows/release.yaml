@@ -1,0 +1,65 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: cargo publish --dry-run
+
+  new_version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.new_version.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v33
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: |
+          PUBLISHED_VERSION=$(cargo search agdb --limit 1 -q | head -n 1 | cut -d '"' -f 2)
+          CURRENT_VERSION=$(cat Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)
+          if [[ "${PUBLISHED_VERSION}" != "${CURRENT_VERSION}" ]]; then echo "new_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT"; fi
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build, new_version]
+    if: needs.new_version.outputs.new_version != ''
+    steps:
+      - uses: actions/checkout@v3
+      - run: actions-ecosystem/action-push-tag@v1
+        with:
+          tag: v${{ needs.new_version.outputs.new_version }}
+      - uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.new_version.outputs.new_version }}
+          generate_release_notes: true
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [release, new_version]
+    if: needs.new_version.outputs.new_version != ''
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: cargo publish --token ${CRATES_IO_TOKEN}
+        env:
+          CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}

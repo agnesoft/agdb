@@ -8,6 +8,8 @@ repository = "https://github.com/agnesoft/agdb"
 documentation = "https://github.com/agnesoft/agdb"
 readme = "README.md"
 description = "Agnesoft Graph Database"
+keywords = ["graph", "database"]
+categories = ["database", "database-implementations"]
 
 [lib]
 name = "agdb"

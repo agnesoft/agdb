@@ -412,3 +412,21 @@ fn search_from_limit_offset_where() {
         &[7],
     );
 }
+
+#[test]
+fn search_from_to_where() {
+    let db = create_db();
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .to(7)
+            .where_()
+            .not_beyond()
+            .ids(&["docs".into()])
+            .and()
+            .keys(&["id".into()])
+            .query(),
+        &[12.into()],
+    )
+}

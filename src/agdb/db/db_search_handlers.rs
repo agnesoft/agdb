@@ -148,7 +148,7 @@ impl<'a> PathSearchHandler for PathHandler<'a> {
     fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError> {
         match self
             .db
-            .evaluate_conditions(index, distance, &self.conditions)?
+            .evaluate_conditions(index, distance, self.conditions)?
         {
             SearchControl::Continue(add) => Ok((1, add)),
             SearchControl::Finish(add) | SearchControl::Stop(add) => Ok((0, add)),

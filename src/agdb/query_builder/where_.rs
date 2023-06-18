@@ -157,18 +157,17 @@ impl Where {
 
     fn collapse_conditions(&mut self) -> bool {
         if self.conditions.len() > 1 {
-            if let Some(last_conditions) = self.conditions.pop() {
-                if let Some(current_conditions) = self.conditions.last_mut() {
-                    if let Some(QueryCondition {
-                        logic: _,
-                        modifier: _,
-                        data: QueryConditionData::Where { conditions },
-                    }) = current_conditions.last_mut()
-                    {
-                        *conditions = last_conditions;
-                        return true;
-                    }
-                }
+            let last_conditions = self.conditions.pop().unwrap_or_default();
+            let current_conditions = self.conditions.last_mut().unwrap();
+
+            if let Some(QueryCondition {
+                logic: _,
+                modifier: _,
+                data: QueryConditionData::Where { conditions },
+            }) = current_conditions.last_mut()
+            {
+                *conditions = last_conditions;
+                return true;
             }
         }
 
@@ -220,5 +219,29 @@ impl WhereLogicOperator {
         while self.0.collapse_conditions() {}
         std::mem::swap(&mut self.0.query.conditions, &mut self.0.conditions[0]);
         self.0.query
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::DbId;
+
+    #[test]
+    fn invalid_collapse() {
+        let mut where_ = Where {
+            logic: QueryConditionLogic::And,
+            modifier: QueryConditionModifier::None,
+            conditions: vec![vec![], vec![]],
+            query: SearchQuery {
+                origin: QueryId::Id(DbId(0)),
+                destination: QueryId::Id(DbId(0)),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            },
+        };
+        assert!(!where_.collapse_conditions());
     }
 }

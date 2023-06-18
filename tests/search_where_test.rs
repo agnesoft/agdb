@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::Comparison;
 use agdb::CountComparison;
+use agdb::DbKeyOrder;
 use agdb::QueryBuilder;
 use test_db::TestDb;
 
@@ -237,12 +238,15 @@ fn search_from_where_node_edge() {
     let db = create_db();
     db.exec_ids(
         QueryBuilder::search()
-            .from("docs")
+            .from("root")
             .where_()
             .node()
             .and()
             .not()
-            .ids(&["docs".into()])
+            .ids(&[1.into(), 2.into(), 3.into()])
+            .and()
+            .not_beyond()
+            .ids(&["users".into()])
             .query(),
         &[8, 7, 6],
     );
@@ -274,11 +278,62 @@ fn search_from_where_key_value() {
     db.exec_ids(
         QueryBuilder::search()
             .from("users")
+            .order_by(&[DbKeyOrder::Asc("id".into())])
             .where_()
             .key("active")
             .value(Comparison::Equal(1.into()))
             .query(),
+        &[12, 14, 15],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by(&[DbKeyOrder::Asc("id".into())])
+            .where_()
+            .key("active")
+            .value(Comparison::NotEqual(1.into()))
+            .query(),
+        &[13, 16],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by(&[DbKeyOrder::Asc("id".into())])
+            .where_()
+            .key("active")
+            .value(Comparison::LessThan(1.into()))
+            .query(),
+        &[13, 16],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by(&[DbKeyOrder::Asc("id".into())])
+            .where_()
+            .key("active")
+            .value(Comparison::LessThanOrEqual(1.into()))
+            .query(),
+        &[12, 13, 14, 15, 16],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by(&[DbKeyOrder::Desc("id".into())])
+            .where_()
+            .key("active")
+            .value(Comparison::GreaterThan(0.into()))
+            .query(),
         &[15, 14, 12],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .order_by(&[DbKeyOrder::Desc("id".into())])
+            .where_()
+            .key("active")
+            .value(Comparison::GreaterThanOrEqual(0.into()))
+            .query(),
+        &[16, 15, 14, 13, 12],
     );
 }
 

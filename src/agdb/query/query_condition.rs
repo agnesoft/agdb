@@ -99,14 +99,14 @@ impl CountComparison {
 }
 
 impl Comparison {
-    pub(crate) fn compare(&self, right: &DbValue) -> bool {
+    pub(crate) fn compare(&self, left: &DbValue) -> bool {
         match self {
-            Comparison::Equal(left) => left == right,
-            Comparison::GreaterThan(left) => left > right,
-            Comparison::GreaterThanOrEqual(left) => left >= right,
-            Comparison::LessThan(left) => left < right,
-            Comparison::LessThanOrEqual(left) => left <= right,
-            Comparison::NotEqual(left) => left != right,
+            Comparison::Equal(right) => left == right,
+            Comparison::GreaterThan(right) => left > right,
+            Comparison::GreaterThanOrEqual(right) => left >= right,
+            Comparison::LessThan(right) => left < right,
+            Comparison::LessThanOrEqual(right) => left <= right,
+            Comparison::NotEqual(right) => left != right,
         }
     }
 }
@@ -125,7 +125,10 @@ mod tests {
                 data: QueryConditionData::Edge,
             }
         );
+
         format!("{:?}", Comparison::Equal(DbValue::Int(0)));
+
+        format!("{:?}", CountComparison::Equal(0));
     }
 
     #[test]
@@ -140,6 +143,10 @@ mod tests {
         assert_eq!(left, right);
 
         let left = Comparison::Equal(DbValue::Int(0));
+        let right = left.clone();
+        assert_eq!(left, right);
+
+        let left = CountComparison::Equal(0);
         let right = left.clone();
         assert_eq!(left, right);
     }
@@ -163,6 +170,8 @@ mod tests {
             Comparison::Equal(DbValue::Int(0)),
             Comparison::Equal(DbValue::Int(0))
         );
+
+        assert_eq!(CountComparison::Equal(0), CountComparison::Equal(0));
     }
 
     #[test]

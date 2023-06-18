@@ -41,7 +41,7 @@ jobs:
     if: needs.new_version.outputs.new_version != ''
     steps:
       - uses: actions/checkout@v3
-      - run: actions-ecosystem/action-push-tag@v1
+      - uses: actions-ecosystem/action-push-tag@v1
         with:
           tag: v${{ needs.new_version.outputs.new_version }}
       - uses: softprops/action-gh-release@v1

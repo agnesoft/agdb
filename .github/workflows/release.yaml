@@ -34,9 +34,11 @@ jobs:
     if: needs.new_version.outputs.new_version != ''
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-ecosystem/action-push-tag@v1
-        with:
-          tag: v${{ needs.new_version.outputs.new_version }}
+      - run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git tag -a "v${{ needs.new_version.outputs.new_version }}"
+          git push origin "v${{ needs.new_version.outputs.new_version }}"
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.new_version.outputs.new_version }}

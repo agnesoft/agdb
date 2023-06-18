@@ -25,7 +25,6 @@ pub struct FileStorage {
 }
 
 impl FileStorage {
-    #[allow(dead_code)]
     pub fn new(filename: &str) -> Result<Self, DbError> {
         let mut data = FileStorage {
             file: RefCell::new(

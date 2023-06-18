@@ -21,6 +21,11 @@ use crate::command::Command;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::GraphSearch;
+use crate::graph_search::SearchControl;
+use crate::query::query_condition::QueryCondition;
+use crate::query::query_condition::QueryConditionData;
+use crate::query::query_condition::QueryConditionLogic;
+use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
@@ -79,7 +84,7 @@ impl Serialize for DbStorageIndex {
 }
 
 pub struct Db {
-    _storage: Rc<RefCell<FileStorage>>,
+    storage: Rc<RefCell<FileStorage>>,
     graph: DbGraph,
     aliases: DbIndexedMap<String, DbId>,
     values: MultiMapStorage<DbId, DbKeyValue>,
@@ -251,12 +256,8 @@ impl Db {
     pub(crate) fn keys(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
         Ok(self
             .values
-            .values(&db_id)?
-            .iter()
-            .map(|key_value| DbKeyValue {
-                key: key_value.key.clone(),
-                value: DbValue::default(),
-            })
+            .iter_key(&db_id)
+            .map(|kv| (kv.1.key, DbValue::default()).into())
             .collect())
     }
 
@@ -313,17 +314,25 @@ impl Db {
         from: DbId,
         limit: u64,
         offset: u64,
+        conditions: &Vec<QueryCondition>,
     ) -> Result<Vec<DbId>, QueryError> {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search.breadth_first_search(GraphIndex(from.0), DefaultHandler {})?,
-            (_, 0) => search.breadth_first_search(GraphIndex(from.0), LimitHandler::new(limit))?,
-            (0, _) => {
-                search.breadth_first_search(GraphIndex(from.0), OffsetHandler::new(offset))?
-            }
-            (_, _) => search
-                .breadth_first_search(GraphIndex(from.0), LimitOffsetHandler::new(limit, offset))?,
+            (0, 0) => search
+                .breadth_first_search(GraphIndex(from.0), DefaultHandler::new(self, conditions))?,
+            (_, 0) => search.breadth_first_search(
+                GraphIndex(from.0),
+                LimitHandler::new(limit, self, conditions),
+            )?,
+            (0, _) => search.breadth_first_search(
+                GraphIndex(from.0),
+                OffsetHandler::new(offset, self, conditions),
+            )?,
+            (_, _) => search.breadth_first_search(
+                GraphIndex(from.0),
+                LimitOffsetHandler::new(limit, offset, self, conditions),
+            )?,
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
@@ -334,29 +343,44 @@ impl Db {
         to: DbId,
         limit: u64,
         offset: u64,
+        conditions: &Vec<QueryCondition>,
     ) -> Result<Vec<DbId>, QueryError> {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search.breadth_first_search_reverse(GraphIndex(to.0), DefaultHandler {})?,
-            (_, 0) => {
-                search.breadth_first_search_reverse(GraphIndex(to.0), LimitHandler::new(limit))?
-            }
-            (0, _) => {
-                search.breadth_first_search_reverse(GraphIndex(to.0), OffsetHandler::new(offset))?
-            }
+            (0, 0) => search.breadth_first_search_reverse(
+                GraphIndex(to.0),
+                DefaultHandler::new(self, conditions),
+            )?,
+            (_, 0) => search.breadth_first_search_reverse(
+                GraphIndex(to.0),
+                LimitHandler::new(limit, self, conditions),
+            )?,
+            (0, _) => search.breadth_first_search_reverse(
+                GraphIndex(to.0),
+                OffsetHandler::new(offset, self, conditions),
+            )?,
             (_, _) => search.breadth_first_search_reverse(
                 GraphIndex(to.0),
-                LimitOffsetHandler::new(limit, offset),
+                LimitOffsetHandler::new(limit, offset, self, conditions),
             )?,
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
     }
 
-    pub(crate) fn search_from_to(&self, from: DbId, to: DbId) -> Result<Vec<DbId>, QueryError> {
+    pub(crate) fn search_from_to(
+        &self,
+        from: DbId,
+        to: DbId,
+        conditions: &Vec<QueryCondition>,
+    ) -> Result<Vec<DbId>, QueryError> {
         Ok(GraphSearch::from(&self.graph)
-            .path(GraphIndex(from.0), GraphIndex(to.0), PathHandler {})?
+            .path(
+                GraphIndex(from.0),
+                GraphIndex(to.0),
+                PathHandler::new(self, conditions),
+            )?
             .iter()
             .map(|index| DbId(index.0))
             .collect())
@@ -371,17 +395,12 @@ impl Db {
         db_id: DbId,
         keys: &[DbKey],
     ) -> Result<Vec<DbKeyValue>, DbError> {
-        let values = self.values(db_id)?;
-        let mut result = vec![];
-        result.reserve(keys.len());
-
-        for key_value in values {
-            if keys.contains(&key_value.key) {
-                result.push(key_value);
-            }
-        }
-
-        Ok(result)
+        Ok(self
+            .values
+            .iter_key(&db_id)
+            .filter(|kv| keys.contains(&kv.1.key))
+            .map(|kv| kv.1)
+            .collect())
     }
 
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
@@ -532,18 +551,123 @@ impl Db {
         }
 
         Ok(Self {
-            _storage: storage,
+            storage,
             graph: graph_storage,
             aliases: aliases_storage,
             values: values_storage,
             undo_stack: vec![],
         })
     }
+
+    pub(crate) fn evaluate_condition(
+        &self,
+        index: GraphIndex,
+        distance: u64,
+        condition: &QueryConditionData,
+    ) -> Result<SearchControl, DbError> {
+        match condition {
+            QueryConditionData::Distance { value } => Ok(value.compare(distance)),
+            QueryConditionData::Edge => Ok(SearchControl::Continue(index.is_edge())),
+            QueryConditionData::EdgeCount { value } => {
+                Ok(if let Some(node) = self.graph.node(index) {
+                    value.compare(node.edge_count())
+                } else {
+                    SearchControl::Continue(false)
+                })
+            }
+            QueryConditionData::EdgeCountFrom { value } => {
+                Ok(if let Some(node) = self.graph.node(index) {
+                    value.compare(node.edge_count_from())
+                } else {
+                    SearchControl::Continue(false)
+                })
+            }
+            QueryConditionData::EdgeCountTo { value } => {
+                Ok(if let Some(node) = self.graph.node(index) {
+                    value.compare(node.edge_count_to())
+                } else {
+                    SearchControl::Continue(false)
+                })
+            }
+            QueryConditionData::Ids { values } => {
+                Ok(SearchControl::Continue(values.iter().any(|id| {
+                    index.0
+                        == match id {
+                            QueryId::Id(id) => id.0,
+                            QueryId::Alias(alias) => {
+                                self.aliases
+                                    .value(alias)
+                                    .unwrap_or_default()
+                                    .unwrap_or_default()
+                                    .0
+                            }
+                        }
+                })))
+            }
+            QueryConditionData::KeyValue { key, value } => Ok(SearchControl::Continue(
+                if let Some((_, kv)) = self
+                    .values
+                    .iter_key(&DbId(index.0))
+                    .find(|(_, kv)| &kv.key == key)
+                {
+                    value.compare(&kv.value)
+                } else {
+                    false
+                },
+            )),
+            QueryConditionData::Keys { values } => {
+                let keys = self
+                    .values
+                    .iter_key(&DbId(index.0))
+                    .map(|(_, kv)| kv.key)
+                    .collect::<Vec<DbKey>>();
+                Ok(SearchControl::Continue(
+                    values.iter().all(|k| keys.contains(k)),
+                ))
+            }
+            QueryConditionData::Node => Ok(SearchControl::Continue(index.is_node())),
+            QueryConditionData::Where { conditions } => {
+                self.evaluate_conditions(index, distance, conditions)
+            }
+        }
+    }
+
+    pub(crate) fn evaluate_conditions(
+        &self,
+        index: GraphIndex,
+        distance: u64,
+        conditions: &[QueryCondition],
+    ) -> Result<SearchControl, DbError> {
+        let mut result = SearchControl::Continue(true);
+
+        for condition in conditions {
+            let mut control = self.evaluate_condition(index, distance, &condition.data)?;
+
+            match condition.modifier {
+                QueryConditionModifier::Not => control.flip(),
+                QueryConditionModifier::NotBeyond => {
+                    if control.is_true() {
+                        control = control.and(SearchControl::Stop(true));
+                    } else {
+                        control = SearchControl::Continue(true);
+                    }
+                }
+                _ => {}
+            };
+
+            result = match condition.logic {
+                QueryConditionLogic::And => result.and(control),
+                QueryConditionLogic::Or => result.or(control),
+            };
+        }
+
+        Ok(result)
+    }
 }
 
 impl Drop for Db {
     fn drop(&mut self) {
-        let _ = self._storage.borrow_mut().shrink_to_fit();
+        let _ = self.storage.borrow_mut().shrink_to_fit();
     }
 }
 

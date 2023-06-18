@@ -18,7 +18,6 @@ use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 
-#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SearchControl {
     Continue(bool),
@@ -37,7 +36,6 @@ where
     pub(crate) graph: &'a GraphImpl<Data>,
 }
 
-#[allow(dead_code)]
 impl<'a, Data> GraphSearch<'a, Data>
 where
     Data: GraphData,
@@ -67,6 +65,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub fn depth_first_search<Handler: SearchHandler>(
         &self,
         index: GraphIndex,
@@ -79,6 +78,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub fn depth_first_search_reverse<Handler: SearchHandler>(
         &self,
         index: GraphIndex,
@@ -122,7 +122,6 @@ where
     }
 }
 
-#[allow(dead_code)]
 impl SearchControl {
     pub(crate) fn and(self, other: SearchControl) -> SearchControl {
         use SearchControl::Continue;
@@ -166,6 +165,20 @@ impl SearchControl {
                 *v = !*v;
             }
         };
+    }
+
+    pub(crate) fn is_true(&self) -> bool {
+        match self {
+            SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => *v,
+        }
+    }
+
+    pub(crate) fn set_value(&mut self, value: bool) {
+        match self {
+            SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => {
+                *v = value;
+            }
+        }
     }
 }
 

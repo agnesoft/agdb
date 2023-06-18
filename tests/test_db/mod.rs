@@ -34,7 +34,7 @@ impl TestDb {
     }
 
     #[track_caller]
-    pub fn exec_ids<T: Query>(&mut self, query: T, ids: &[i64]) {
+    pub fn exec_ids<T: Query>(&self, query: T, ids: &[i64]) {
         assert_eq!(
             self.db
                 .exec(&query)
@@ -48,7 +48,7 @@ impl TestDb {
     }
 
     #[track_caller]
-    pub fn exec_elements<T: Query>(&mut self, query: T, elements: &[DbElement]) {
+    pub fn exec_elements<T: Query>(&self, query: T, elements: &[DbElement]) {
         let res = self.db.exec(&query).unwrap();
         assert_eq!(res.result, elements.len() as i64);
         assert_eq!(res.elements, elements);

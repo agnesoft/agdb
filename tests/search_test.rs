@@ -1,6 +1,9 @@
 mod test_db;
 
-use agdb::{DbElement, DbId, DbKeyOrder, QueryBuilder};
+use agdb::DbElement;
+use agdb::DbId;
+use agdb::DbKeyOrder;
+use agdb::QueryBuilder;
 use test_db::TestDb;
 
 #[test]

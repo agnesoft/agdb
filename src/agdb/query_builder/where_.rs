@@ -1,147 +1,247 @@
-use crate::query::query_condition::Direction;
-use crate::query::query_condition::EdgeCountCondition;
-use crate::query::query_condition::KeyValueCondition;
+use crate::query::query_condition::CountComparison;
 use crate::query::query_condition::QueryCondition;
+use crate::query::query_condition::QueryConditionData;
+use crate::query::query_condition::QueryConditionLogic;
+use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
-use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
 use crate::Comparison;
 use crate::DbKey;
 
-pub struct Where(pub SearchQuery);
-
-pub struct WhereKey {
-    pub key: DbKey,
-    pub search: SearchQuery,
+pub struct Where {
+    logic: QueryConditionLogic,
+    modifier: QueryConditionModifier,
+    conditions: Vec<Vec<QueryCondition>>,
+    query: SearchQuery,
 }
 
-pub struct WhereLogicOperator(pub SearchQuery);
+pub struct WhereKey {
+    key: DbKey,
+    where_: Where,
+}
+
+pub struct WhereLogicOperator(pub Where);
 
 impl Where {
-    pub fn distance(mut self, comparison: Comparison) -> WhereLogicOperator {
-        self.0.conditions.push(QueryCondition::Distance(comparison));
+    pub fn new(query: SearchQuery) -> Self {
+        Self {
+            logic: QueryConditionLogic::And,
+            modifier: QueryConditionModifier::None,
+            conditions: vec![vec![]],
+            query,
+        }
+    }
 
-        WhereLogicOperator(self.0)
+    pub fn distance(mut self, comparison: CountComparison) -> WhereLogicOperator {
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::Distance { value: comparison },
+        });
+
+        WhereLogicOperator(self)
     }
 
     pub fn edge(mut self) -> WhereLogicOperator {
-        self.0.conditions.push(QueryCondition::Edge);
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::Edge,
+        });
 
-        WhereLogicOperator(self.0)
+        WhereLogicOperator(self)
     }
 
-    pub fn edge_count(mut self, comparison: Comparison) -> WhereLogicOperator {
-        self.0
-            .conditions
-            .push(QueryCondition::EdgeCount(EdgeCountCondition {
-                comparison,
-                direction: Direction::Both,
-            }));
+    pub fn edge_count(mut self, comparison: CountComparison) -> WhereLogicOperator {
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::EdgeCount { value: comparison },
+        });
 
-        WhereLogicOperator(self.0)
+        WhereLogicOperator(self)
     }
 
-    pub fn edge_count_from(mut self, comparison: Comparison) -> WhereLogicOperator {
-        self.0
-            .conditions
-            .push(QueryCondition::EdgeCount(EdgeCountCondition {
-                comparison,
-                direction: Direction::From,
-            }));
+    pub fn edge_count_from(mut self, comparison: CountComparison) -> WhereLogicOperator {
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::EdgeCountFrom { value: comparison },
+        });
 
-        WhereLogicOperator(self.0)
+        WhereLogicOperator(self)
     }
 
-    pub fn edge_count_to(mut self, comparison: Comparison) -> WhereLogicOperator {
-        self.0
-            .conditions
-            .push(QueryCondition::EdgeCount(EdgeCountCondition {
-                comparison,
-                direction: Direction::To,
-            }));
+    pub fn edge_count_to(mut self, comparison: CountComparison) -> WhereLogicOperator {
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::EdgeCountTo { value: comparison },
+        });
 
-        WhereLogicOperator(self.0)
+        WhereLogicOperator(self)
     }
 
     pub fn ids(mut self, ids: &[QueryId]) -> WhereLogicOperator {
-        self.0
-            .conditions
-            .push(QueryCondition::Ids(QueryIds::Ids(ids.to_vec())));
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::Ids {
+                values: ids.to_vec(),
+            },
+        });
 
-        WhereLogicOperator(self.0)
+        WhereLogicOperator(self)
     }
 
-    pub fn key(self, key: DbKey) -> WhereKey {
+    pub fn key<T: Into<DbKey>>(self, key: T) -> WhereKey {
         WhereKey {
-            key,
-            search: self.0,
+            key: key.into(),
+            where_: self,
         }
     }
 
     pub fn keys(mut self, names: &[DbKey]) -> WhereLogicOperator {
-        self.0.conditions.push(QueryCondition::Keys(names.to_vec()));
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::Keys {
+                values: names.to_vec(),
+            },
+        });
 
-        WhereLogicOperator(self.0)
+        WhereLogicOperator(self)
     }
 
     pub fn node(mut self) -> WhereLogicOperator {
-        self.0.conditions.push(QueryCondition::Node);
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::Node,
+        });
 
-        WhereLogicOperator(self.0)
+        WhereLogicOperator(self)
     }
 
     pub fn not(mut self) -> Self {
-        self.0.conditions.push(QueryCondition::Not);
+        self.modifier = QueryConditionModifier::Not;
 
         self
     }
 
     pub fn not_beyond(mut self) -> Self {
-        self.0.conditions.push(QueryCondition::NotBeyond);
+        self.modifier = QueryConditionModifier::NotBeyond;
 
         self
     }
 
     pub fn where_(mut self) -> Self {
-        self.0.conditions.push(QueryCondition::Where);
+        self.add_condition(QueryCondition {
+            logic: self.logic,
+            modifier: self.modifier,
+            data: QueryConditionData::Where { conditions: vec![] },
+        });
+        self.conditions.push(vec![]);
 
-        self
+        Self {
+            logic: QueryConditionLogic::And,
+            modifier: QueryConditionModifier::None,
+            conditions: self.conditions,
+            query: self.query,
+        }
+    }
+
+    fn add_condition(&mut self, condition: QueryCondition) {
+        self.conditions.last_mut().unwrap().push(condition);
+    }
+
+    fn collapse_conditions(&mut self) -> bool {
+        if self.conditions.len() > 1 {
+            let last_conditions = self.conditions.pop().unwrap_or_default();
+            let current_conditions = self.conditions.last_mut().unwrap();
+
+            if let Some(QueryCondition {
+                logic: _,
+                modifier: _,
+                data: QueryConditionData::Where { conditions },
+            }) = current_conditions.last_mut()
+            {
+                *conditions = last_conditions;
+                return true;
+            }
+        }
+
+        false
     }
 }
 
 impl WhereKey {
     pub fn value(mut self, comparison: Comparison) -> WhereLogicOperator {
-        self.search
-            .conditions
-            .push(QueryCondition::KeyValue(KeyValueCondition {
+        let condition = QueryCondition {
+            logic: self.where_.logic,
+            modifier: self.where_.modifier,
+            data: QueryConditionData::KeyValue {
                 key: self.key,
-                comparison,
-            }));
-
-        WhereLogicOperator(self.search)
+                value: comparison,
+            },
+        };
+        self.where_.add_condition(condition);
+        WhereLogicOperator(self.where_)
     }
 }
 
 impl WhereLogicOperator {
-    pub fn and(mut self) -> Where {
-        self.0.conditions.push(QueryCondition::And);
-
-        Where(self.0)
+    pub fn and(self) -> Where {
+        Where {
+            logic: QueryConditionLogic::And,
+            modifier: QueryConditionModifier::None,
+            conditions: self.0.conditions,
+            query: self.0.query,
+        }
     }
 
     pub fn end_where(mut self) -> WhereLogicOperator {
-        self.0.conditions.push(QueryCondition::EndWhere);
+        self.0.collapse_conditions();
 
         WhereLogicOperator(self.0)
     }
 
-    pub fn or(mut self) -> Where {
-        self.0.conditions.push(QueryCondition::Or);
-
-        Where(self.0)
+    pub fn or(self) -> Where {
+        Where {
+            logic: QueryConditionLogic::Or,
+            modifier: QueryConditionModifier::None,
+            conditions: self.0.conditions,
+            query: self.0.query,
+        }
     }
 
-    pub fn query(self) -> SearchQuery {
-        self.0
+    pub fn query(mut self) -> SearchQuery {
+        while self.0.collapse_conditions() {}
+        std::mem::swap(&mut self.0.query.conditions, &mut self.0.conditions[0]);
+        self.0.query
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::DbId;
+
+    #[test]
+    fn invalid_collapse() {
+        let mut where_ = Where {
+            logic: QueryConditionLogic::And,
+            modifier: QueryConditionModifier::None,
+            conditions: vec![vec![], vec![]],
+            query: SearchQuery {
+                origin: QueryId::Id(DbId(0)),
+                destination: QueryId::Id(DbId(0)),
+                limit: 0,
+                offset: 0,
+                order_by: vec![],
+                conditions: vec![],
+            },
+        };
+        assert!(!where_.collapse_conditions());
     }
 }

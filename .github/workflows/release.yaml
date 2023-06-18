@@ -20,10 +20,13 @@ jobs:
       new_version: ${{ steps.new_version.outputs.new_version }}
     steps:
       - uses: actions/checkout@v3
-      - run: |
-          PUBLISHED_VERSION=$(cargo search agdb --limit 1 -q | head -n 1 | cut -d '"' -f 2)
+      - id: new_version
+        run: |
+          PUBLISHED_VERSION=$(cargo search ^agdb$ --limit 1 -q | head -n 1 | cut -d '"' -f 2)
           CURRENT_VERSION=$(cat Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          if [[ "${PUBLISHED_VERSION}" != "${CURRENT_VERSION}" ]]; then echo "new_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT"; fi
+          if [[ "${PUBLISHED_VERSION}" != "${CURRENT_VERSION}" ]]; then echo "new_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT; fi
+          echo "Published version: ${PUBLISHED_VERSION}" 
+          echo "Current version: ${CURRENT_VERSION}"
 
   release:
     runs-on: ubuntu-latest

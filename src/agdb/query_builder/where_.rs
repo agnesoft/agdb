@@ -94,8 +94,11 @@ impl Where {
         WhereLogicOperator(self)
     }
 
-    pub fn key(self, key: DbKey) -> WhereKey {
-        WhereKey { key, where_: self }
+    pub fn key<T: Into<DbKey>>(self, key: T) -> WhereKey {
+        WhereKey {
+            key: key.into(),
+            where_: self,
+        }
     }
 
     pub fn keys(mut self, names: &[DbKey]) -> WhereLogicOperator {
@@ -133,7 +136,7 @@ impl Where {
     }
 
     pub fn where_(mut self) -> Self {
-        self.query.conditions.push(QueryCondition {
+        self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
             data: QueryConditionData::Where { conditions: vec![] },

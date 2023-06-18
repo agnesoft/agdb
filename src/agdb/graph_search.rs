@@ -166,6 +166,12 @@ impl SearchControl {
             }
         };
     }
+
+    pub(crate) fn is_true(&self) -> bool {
+        match self {
+            SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => *v,
+        }
+    }
 }
 
 #[cfg(test)]

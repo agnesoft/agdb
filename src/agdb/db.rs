@@ -644,11 +644,11 @@ impl Db {
             let mut control = self.evaluate_condition(index, distance, &condition.data)?;
 
             match condition.modifier {
-                QueryConditionModifier::None => {}
                 QueryConditionModifier::Not => control.flip(),
-                QueryConditionModifier::NotBeyond => {
+                QueryConditionModifier::NotBeyond if control.is_true() => {
                     control = control.and(SearchControl::Stop(true))
                 }
+                _ => {}
             };
 
             result = match condition.logic {

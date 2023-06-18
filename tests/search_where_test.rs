@@ -2,7 +2,6 @@ mod test_db;
 
 use agdb::Comparison;
 use agdb::CountComparison;
-use agdb::DbKeyOrder;
 use agdb::QueryBuilder;
 use test_db::TestDb;
 
@@ -206,113 +205,104 @@ fn search_from_where_distance() {
 
 #[test]
 fn search_from_where_edge_count_test() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .edge_count(CountComparison::GreaterThan(2))
-        .query();
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count(CountComparison::GreaterThan(2))
+            .query(),
+        &[3, 2],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_from(CountComparison::GreaterThan(1))
+            .query(),
+        &[1, 3, 2],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_to(CountComparison::GreaterThan(1))
+            .query(),
+        &[8, 7, 6],
+    );
 }
 
 #[test]
-fn search_from_where_edge_from_count_test() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .edge_count_from(CountComparison::GreaterThan(2))
-        .query();
-}
-
-#[test]
-fn search_from_where_edge_to_count_test() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .edge_count_to(CountComparison::GreaterThan(2))
-        .query();
-}
-
-#[test]
-fn search_from_where_edge() {
-    let _query = QueryBuilder::search().from(1).where_().edge().query();
+fn search_from_where_node_edge() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .node()
+            .and()
+            .not()
+            .ids(&["docs".into()])
+            .query(),
+        &[8, 7, 6],
+    );
+    db.exec_ids(
+        QueryBuilder::search().from("docs").where_().edge().query(),
+        &[-11, -10, -9],
+    );
 }
 
 #[test]
 fn search_from_where_ids() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .ids(&["alias".into(), "alias2".into()])
-        .query();
-}
-
-#[test]
-fn search_from_where_node() {
-    let _query = QueryBuilder::search().from(1).where_().node().query();
-}
-
-#[test]
-fn search_from_where_not_beyond_keys() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .not_beyond()
-        .keys(&["key".into()])
-        .query();
-}
-
-#[test]
-fn search_from_where_not_key() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .not()
-        .keys(&["key".into()])
-        .query();
-}
-
-#[test]
-fn search_from_where_keys_or_distance() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .keys(&["key".into()])
-        .or()
-        .distance(CountComparison::LessThan(2))
-        .query();
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from(1)
+            .where_()
+            .ids(&["docs".into(), "users".into()])
+            .and()
+            .not_beyond()
+            .ids(&["docs".into(), "users".into()])
+            .query(),
+        &[3, 2],
+    );
 }
 
 #[test]
 fn search_from_where_key_value() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .key("key".into())
-        .value(Comparison::LessThan(10.into()))
-        .query();
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .key("active")
+            .value(Comparison::Equal(1.into()))
+            .query(),
+        &[15, 14, 12],
+    );
 }
 
 #[test]
 fn search_from_where_where_key_and_key_end_where_and_distance() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .where_()
-        .where_()
-        .keys(&["key".into()])
-        .or()
-        .keys(&["key2".into()])
-        .end_where()
-        .and()
-        .distance(CountComparison::LessThan(2))
-        .query();
-}
-
-#[test]
-fn search_from_ordered_by_where_key_value() {
-    let _query = QueryBuilder::search()
-        .from(1)
-        .order_by(&[DbKeyOrder::Asc("key".into())])
-        .where_()
-        .key("key".into())
-        .value(Comparison::LessThan(10.into()))
-        .query();
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .where_()
+            .key("active")
+            .value(Comparison::Equal(1.into()))
+            .or()
+            .key("active")
+            .value(Comparison::Equal(0.into()))
+            .end_where()
+            .or()
+            .where_()
+            .edge()
+            .and()
+            .key("type")
+            .value(Comparison::Equal("writes".into()))
+            .query(),
+        &[16, 15, 14, 13, 12, -22],
+    );
 }

@@ -8,7 +8,7 @@ use agdb::QueryError;
 use agdb::QueryMut;
 use agdb::QueryResult;
 use agdb::TransactionMut;
-use test_file::TestFile;
+pub use test_file::TestFile;
 
 pub struct TestDb {
     _test_file: TestFile,

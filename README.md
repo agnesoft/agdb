@@ -22,7 +22,7 @@ cargo add agdb
 
 Basic usage demonstrating creating a database, insert the graph elements with data and querying them back (select and search):
 
-https://github.com/agnesoft/agdb/blob/main/tests/db_test.rs#L242-L271
+https://github.com/agnesoft/agdb/blob/7e1c8c985bcf91da1a51165f37799e5e9891bb56/tests/examples.rs#L9-L37
 
 # Reference
 

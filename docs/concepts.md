@@ -51,3 +51,14 @@ Terminology:
 - Transaction (set of queries to be executed atomically against a database wrapped in a closure)
 - Mutable transaction (set of mutable & immutable queries wrapped in a closure)
 - Immutable transaction (set of immutable queries wrapped in a closure)
+
+## Storage
+
+Every persistent database eventually stores its data somewhere on disk in one or more files. the `agdb` stores its data in a single file (that is being shadowed by another temporary write ahead log file). Its internal structure is very similar to that of a memory which makes it very easy to map between the two. The file format is fully platform agnostic and the file can be safely transferred to another machine and loaded there. Similarly the `agdb` is by default memory mapped database it could just as easily operate purely on the file itself at the cost of read performance.
+
+TBD (durability, defragmentation)
+
+Terminology:
+
+- File storage (underlying single data file)
+- Write ahead log (shadowing file storage to provide durability)

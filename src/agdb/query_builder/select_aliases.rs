@@ -1,4 +1,3 @@
-use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
 use crate::query::select_aliases_query::SelectAliasesQuery;
@@ -15,8 +14,8 @@ impl SelectAliasesIds {
 }
 
 impl SelectAliases {
-    pub fn ids(mut self, ids: &[QueryId]) -> SelectAliasesIds {
-        self.0.ids = QueryIds::Ids(ids.to_vec());
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectAliasesIds {
+        self.0.ids = ids.into();
 
         SelectAliasesIds(self.0)
     }

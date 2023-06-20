@@ -9,7 +9,7 @@ use test_db::TestDb;
 fn select_aliases_missing_id() {
     let db = TestDb::new();
     db.exec_error(
-        QueryBuilder::select().aliases().ids(&[1.into()]).query(),
+        QueryBuilder::select().aliases().ids(1).query(),
         "Id '1' not found",
     );
 }
@@ -18,10 +18,7 @@ fn select_aliases_missing_id() {
 fn select_aliases_missing_alias() {
     let db = TestDb::new();
     db.exec_error(
-        QueryBuilder::select()
-            .aliases()
-            .ids(&["alias".into()])
-            .query(),
+        QueryBuilder::select().aliases().ids("alias").query(),
         "Alias 'alias' not found",
     );
 }
@@ -32,15 +29,12 @@ fn select_aliases_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".into(), "alias2".into()])
+            .aliases(vec!["alias1", "alias2"])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .aliases()
-            .ids(&[1.into(), 2.into()])
-            .query(),
+        QueryBuilder::select().aliases().ids(vec![1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -60,14 +54,14 @@ fn select_aliases_aliases() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".into(), "alias2".into()])
+            .aliases(vec!["alias1", "alias2"])
             .query(),
         2,
     );
     db.exec_elements(
         QueryBuilder::select()
             .aliases()
-            .ids(&["alias1".into(), "alias2".into()])
+            .ids(vec!["alias1", "alias2"])
             .query(),
         &[
             DbElement {
@@ -86,31 +80,23 @@ fn select_aliases_aliases() {
 fn select_aliases_search() {
     let mut db = TestDb::new();
 
-    let values = [
-        ("key1", 1).into(),
-        ("key2", 10).into(),
-        ("key3", 100).into(),
-    ];
-
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-                "alias5".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4", "alias5"])
             .query(),
         5,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&[1.into(), 3.into()])
-            .to(&[3.into(), 5.into()])
-            .values_uniform(&values)
+            .from(vec![1, 3])
+            .to(vec![3, 5])
+            .values_uniform(vec![
+                ("key1", 1).into(),
+                ("key2", 10).into(),
+                ("key3", 100).into(),
+            ])
             .query(),
         2,
     );
@@ -145,7 +131,7 @@ fn select_all_aliases() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".into(), "alias2".into(), "alias3".into()])
+            .aliases(vec!["alias1", "alias2", "alias3"])
             .query(),
         3,
     );

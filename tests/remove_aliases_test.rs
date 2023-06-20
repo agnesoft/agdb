@@ -11,13 +11,13 @@ fn remove_aliases() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias".into(), "alias2".into()])
+            .aliases(vec!["alias", "alias2"])
             .query(),
         2,
     );
     db.exec_mut(
         QueryBuilder::remove()
-            .aliases(&["alias".into(), "alias2".into()])
+            .aliases(vec!["alias", "alias2"])
             .query(),
         -2,
     );
@@ -29,7 +29,7 @@ fn remove_aliases_rollback() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias".into(), "alias2".into()])
+            .aliases(vec!["alias", "alias2"])
             .query(),
         2,
     );
@@ -38,21 +38,21 @@ fn remove_aliases_rollback() {
         |t| -> Result<QueryResult, QueryError> {
             t.exec_mut(
                 &QueryBuilder::remove()
-                    .aliases(&["alias".into(), "alias2".into()])
+                    .aliases(vec!["alias", "alias2"])
                     .query(),
             )?;
-            t.exec(&QueryBuilder::select().ids(&["alias2".into()]).query())
+            t.exec(&QueryBuilder::select().ids("alias2").query())
         },
         "Alias 'alias2' not found".into(),
     );
 
-    db.exec(QueryBuilder::select().ids(&["alias2".into()]).query(), 1);
+    db.exec(QueryBuilder::select().ids("alias2").query(), 1);
 }
 
 #[test]
 fn remove_missing_aliases() {
     let mut db = TestDb::new();
-    db.exec_mut(QueryBuilder::remove().aliases(&["alias".into()]).query(), 0);
+    db.exec_mut(QueryBuilder::remove().aliases("alias").query(), 0);
 }
 
 #[test]
@@ -60,7 +60,7 @@ fn remove_missing_alias_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().aliases(&["alias".into()]).query())?;
+            t.exec_mut(&QueryBuilder::remove().aliases("alias").query())?;
             Err("error".into())
         },
         "error".into(),

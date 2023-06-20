@@ -11,20 +11,20 @@ fn quickstart() {
     let _test_file = TestFile::from("db_file.agdb");
 
     let mut db = Db::new("db_file.agdb").unwrap();
-    let insert_users_root = QueryBuilder::insert().nodes().aliases(&["users".into()]).query();
+    let insert_users_root = QueryBuilder::insert().nodes().aliases("users").query();
     db.exec_mut(&insert_users_root).unwrap();
 
-    let insert_users = QueryBuilder::insert().nodes().values(&[
-            &[("id", 1).into(), ("username", "user_1").into()],
-            &[("id", 2).into(), ("username", "user_2").into()],
-            &[("id", 3).into(), ("username", "user_3").into()],
+    let insert_users = QueryBuilder::insert().nodes().values(vec![
+            vec![("id", 1).into(), ("username", "user_1").into()],
+            vec![("id", 2).into(), ("username", "user_2").into()],
+            vec![("id", 3).into(), ("username", "user_3").into()],
         ]).query();
     let users = db.exec_mut(&insert_users).unwrap();
 
-    let insert_edges = QueryBuilder::insert().edges().from(&["users".into()]).to(&users.ids()).query();
+    let insert_edges = QueryBuilder::insert().edges().from("users").to(users.ids()).query();
     db.exec_mut(&insert_edges).unwrap();
 
-    let select_users = QueryBuilder::select().ids(&users.ids()).query();
+    let select_users = QueryBuilder::select().ids(users.ids()).query();
     let user_elements = db.exec(&select_users).unwrap();
 
     println!("{:?}", user_elements);

@@ -1,5 +1,4 @@
 use crate::query::insert_values_query::InsertValuesQuery;
-use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
 
@@ -10,8 +9,8 @@ pub struct InsertValuesIds(pub InsertValuesQuery);
 pub struct InsertValues(pub InsertValuesQuery);
 
 impl InsertValues {
-    pub fn ids(mut self, ids: &[QueryId]) -> InsertValuesIds {
-        self.0.ids = QueryIds::Ids(ids.to_vec());
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertValuesIds {
+        self.0.ids = ids.into();
 
         InsertValuesIds(self.0)
     }
@@ -24,8 +23,8 @@ impl InsertValues {
 }
 
 impl InsertValuesUniform {
-    pub fn ids(mut self, ids: &[QueryId]) -> InsertValuesIds {
-        self.0.ids = QueryIds::Ids(ids.to_vec());
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertValuesIds {
+        self.0.ids = ids.into();
 
         InsertValuesIds(self.0)
     }

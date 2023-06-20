@@ -15,7 +15,7 @@ fn insert_values_ids_rollback() {
             assert_eq!(
                 t.exec_mut(
                     &QueryBuilder::insert()
-                        .values(&[&[
+                        .values(vec![vec![
                             ("key", vec![1.1, 2.1]).into(),
                             (vec!["a".to_string(), "b".to_string()], vec![1, 2]).into(),
                             ("numbers", vec![1_u64, 2_u64, 3_u64]).into(),
@@ -23,15 +23,14 @@ fn insert_values_ids_rollback() {
                             ("bytes", vec![0_u8, 1_u8, 2_u8, 3_u8, 4_u8]).into(),
                             ("really large bytes", vec![1_u8; 32]).into()
                         ]])
-                        .ids(&[1.into()])
+                        .ids(1)
                         .query()
                 )?
                 .result,
                 6
             );
             assert_eq!(
-                t.exec(&QueryBuilder::select().ids(&[1.into()]).query())?
-                    .elements,
+                t.exec(&QueryBuilder::select().ids(1).query())?.elements,
                 vec![DbElement {
                     id: DbId(1),
                     values: vec![
@@ -49,7 +48,7 @@ fn insert_values_ids_rollback() {
         QueryError::from("error"),
     );
     db.exec_elements(
-        QueryBuilder::select().ids(&[1.into()]).query(),
+        QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
             values: vec![],
@@ -63,16 +62,16 @@ fn insert_values_ids() {
     db.exec_mut_ids(QueryBuilder::insert().nodes().count(2).query(), &[1, 2]);
     db.exec_mut(
         QueryBuilder::insert()
-            .values(&[
-                &[("some really long key", 1000).into()],
-                &[(10, 1.1).into()],
+            .values(vec![
+                vec![("some really long key", 1000).into()],
+                vec![(10, 1.1).into()],
             ])
-            .ids(&[1.into(), 2.into()])
+            .ids(vec![1, 2])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
+        QueryBuilder::select().ids(vec![1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -91,8 +90,8 @@ fn insert_values_invalid_length() {
     let mut db = TestDb::new();
     db.exec_mut_error(
         QueryBuilder::insert()
-            .values(&[&[("key", "value").into()]])
-            .ids(&[])
+            .values(vec![vec![("key", "value").into()]])
+            .ids(vec![1, 2])
             .query(),
         "Ids and values length do not match",
     )
@@ -104,21 +103,19 @@ fn insert_values_uniform_ids() {
     db.exec_mut_ids(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias".into(), "alias2".into()])
+            .aliases(vec!["alias", "alias2"])
             .query(),
         &[1, 2],
     );
     db.exec_mut(
         QueryBuilder::insert()
-            .values_uniform(&[("key", "value").into()])
-            .ids(&["alias".into(), "alias2".into()])
+            .values_uniform(vec![("key", "value").into()])
+            .ids(vec!["alias", "alias2"])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&["alias".into(), "alias2".into()])
-            .query(),
+        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -139,14 +136,14 @@ fn insert_values_uniform_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&[1.into(), 2.into()])
-            .to(&[2.into(), 3.into()])
+            .from(vec![1, 2])
+            .to(vec![2, 3])
             .query(),
         2,
     );
     db.exec_mut(
         QueryBuilder::insert()
-            .values_uniform(&[("key", "value").into()])
+            .values_uniform(vec![("key", "value").into()])
             .search(QueryBuilder::search().from(1).query())
             .query(),
         5,
@@ -184,20 +181,13 @@ fn insert_values_uniform_search() {
 fn insert_values_search() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
-            .edges()
-            .from(&[1.into()])
-            .to(&[3.into()])
-            .query(),
-        1,
-    );
-    db.exec_mut(
-        QueryBuilder::insert()
-            .values(&[
-                &[("key1", "value1").into()],
-                &[("key2", "value2").into()],
-                &[("key3", "value3").into()],
+            .values(vec![
+                vec![("key1", "value1").into()],
+                vec![("key2", "value2").into()],
+                vec![("key3", "value3").into()],
             ])
             .search(QueryBuilder::search().from(1).query())
             .query(),
@@ -231,14 +221,17 @@ fn insert_values_search_invalid_length() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&[1.into()])
-            .to(&[3.into()])
+            .from(vec![1])
+            .to(vec![3])
             .query(),
         1,
     );
     db.exec_mut_error(
         QueryBuilder::insert()
-            .values(&[&[("key1", "value1").into()], &[("key2", "value2").into()]])
+            .values(vec![
+                vec![("key1", "value1").into()],
+                vec![("key2", "value2").into()],
+            ])
             .search(QueryBuilder::search().from(1).query())
             .query(),
         "Ids and values length do not match",

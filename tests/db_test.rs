@@ -5,6 +5,7 @@ use agdb::Db;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
+use agdb::QueryId;
 use test_db::test_file::TestFile;
 
 #[allow(unused_imports)]
@@ -67,23 +68,17 @@ fn data_persistence() {
         db.exec_mut(
             &QueryBuilder::insert()
                 .nodes()
-                .aliases(&["alias".into(), "alias2".into()])
-                .values_uniform(&values)
+                .aliases(vec!["alias", "alias2"])
+                .values_uniform(values.clone())
                 .query(),
         )
         .unwrap();
-        db.exec_mut(
-            &QueryBuilder::insert()
-                .edges()
-                .from(&[1.into()])
-                .to(&[2.into()])
-                .query(),
-        )
-        .unwrap();
+        db.exec_mut(&QueryBuilder::insert().edges().from(1).to(2).query())
+            .unwrap();
         let result = db
             .exec(
                 &QueryBuilder::select()
-                    .ids(&["alias".into(), "alias2".into(), (-3).into()])
+                    .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
             .unwrap();
@@ -111,7 +106,7 @@ fn data_persistence() {
     let result = db
         .exec(
             &QueryBuilder::select()
-                .ids(&["alias".into(), "alias2".into(), (-3).into()])
+                .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                 .query(),
         )
         .unwrap();
@@ -144,23 +139,17 @@ fn data_remove_persistence() {
         db.exec_mut(
             &QueryBuilder::insert()
                 .nodes()
-                .aliases(&["alias".into(), "alias2".into()])
-                .values_uniform(&[("key", 100).into()])
+                .aliases(vec!["alias", "alias2"])
+                .values_uniform(vec![("key", 100).into()])
                 .query(),
         )
         .unwrap();
-        db.exec_mut(
-            &QueryBuilder::insert()
-                .edges()
-                .from(&[1.into()])
-                .to(&[2.into()])
-                .query(),
-        )
-        .unwrap();
+        db.exec_mut(&QueryBuilder::insert().edges().from(1).to(2).query())
+            .unwrap();
         let result = db
             .exec(
                 &QueryBuilder::select()
-                    .ids(&["alias".into(), "alias2".into(), (-3).into()])
+                    .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
             .unwrap();
@@ -183,12 +172,12 @@ fn data_remove_persistence() {
             ]
         );
 
-        db.exec_mut(&QueryBuilder::remove().ids(&[(-3).into()]).query())
+        db.exec_mut(&QueryBuilder::remove().ids(-3).query())
             .unwrap();
         db.exec_mut(
             &QueryBuilder::remove()
-                .values(&["key".into()])
-                .ids(&[1.into()])
+                .values(vec!["key".into()])
+                .ids(1)
                 .query(),
         )
         .unwrap();
@@ -196,11 +185,7 @@ fn data_remove_persistence() {
 
     let db = Db::new(test_file.file_name()).unwrap();
     let result = db
-        .exec(
-            &QueryBuilder::select()
-                .ids(&["alias".into(), "alias2".into()])
-                .query(),
-        )
+        .exec(&QueryBuilder::select().ids(vec!["alias", "alias2"]).query())
         .unwrap();
 
     assert_eq!(
@@ -218,7 +203,7 @@ fn data_remove_persistence() {
     );
 
     let error = db
-        .exec(&QueryBuilder::select().ids(&[(-3).into()]).query())
+        .exec(&QueryBuilder::select().ids(-3).query())
         .unwrap_err();
     assert_eq!(error.description, "Id '-3' not found");
 }
@@ -252,11 +237,11 @@ fn optimize_on_drop() {
                 &QueryBuilder::insert()
                     .nodes()
                     .count(1000)
-                    .values_uniform(&[("key", "value").into()])
+                    .values_uniform(vec![("key", "value").into()])
                     .query(),
             )
             .unwrap();
-        db.exec_mut(&QueryBuilder::remove().ids(&result.ids()).query())
+        db.exec_mut(&QueryBuilder::remove().ids(result.ids()).query())
             .unwrap();
         db_file_size = std::fs::File::open(test_file.file_name())
             .unwrap()
@@ -281,18 +266,18 @@ fn quickstart() {
     let mut db = Db::new("db_file.agdb").unwrap();
 
     //create a nodes with data
-    db.exec_mut(&QueryBuilder::insert().nodes().aliases(&["users".into()]).query()).unwrap();
-    let users = db.exec_mut(&QueryBuilder::insert().nodes().values(&[
-        &[("id", 1).into(), ("username", "user_1").into()],
-        &[("id", 2).into(), ("username", "user_2").into()],
-        &[("id", 3).into(), ("username", "user_3").into()]]
+    db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query()).unwrap();
+    let users = db.exec_mut(&QueryBuilder::insert().nodes().values(vec![
+        vec![("id", 1).into(), ("username", "user_1").into()],
+        vec![("id", 2).into(), ("username", "user_2").into()],
+        vec![("id", 3).into(), ("username", "user_3").into()]]
     ).query()).unwrap();
 
     //connect nodes
-    db.exec_mut(&QueryBuilder::insert().edges().from(&["users".into()]).to(&users.ids()).query()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().edges().from("users").to(users.ids()).query()).unwrap();
 
     //select nodes
-    let user_elements = db.exec(&QueryBuilder::select().ids(&users.ids()).query()).unwrap();
+    let user_elements = db.exec(&QueryBuilder::select().ids(users.ids()).query()).unwrap();
 
     for element in user_elements.elements {
         println!("{:?}: {:?}", element.id, element.values);

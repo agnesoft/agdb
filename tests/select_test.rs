@@ -6,14 +6,8 @@ use test_db::TestDb;
 #[test]
 fn select_ids_aliases() {
     let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias".into()])
-            .query(),
-        1,
-    );
-    db.exec_ids(QueryBuilder::select().ids(&["alias".into()]).query(), &[1]);
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
+    db.exec_ids(QueryBuilder::select().ids("alias").query(), &[1]);
 }
 
 #[test]
@@ -22,14 +16,12 @@ fn select_from_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias".into(), "alias2".into()])
+            .aliases(vec!["alias", "alias2"])
             .query(),
         2,
     );
     db.exec_ids(
-        QueryBuilder::select()
-            .ids(&["alias".into(), "alias2".into()])
-            .query(),
+        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
         &[1, 2],
     );
 }
@@ -38,7 +30,7 @@ fn select_from_ids() {
 fn select_missing_aliases() {
     let db = TestDb::new();
     db.exec_error(
-        QueryBuilder::select().ids(&["alias".into()]).query(),
+        QueryBuilder::select().ids("alias").query(),
         "Alias 'alias' not found",
     );
 }
@@ -46,19 +38,13 @@ fn select_missing_aliases() {
 #[test]
 fn select_missing_ids() {
     let db = TestDb::new();
-    db.exec_error(
-        QueryBuilder::select().ids(&[1.into()]).query(),
-        "Id '1' not found",
-    );
+    db.exec_error(QueryBuilder::select().ids(1).query(), "Id '1' not found");
 }
 
 #[test]
 fn select_invalid_ids() {
     let db = TestDb::new();
-    db.exec_error(
-        QueryBuilder::select().ids(&[0.into()]).query(),
-        "Id '0' not found",
-    );
+    db.exec_error(QueryBuilder::select().ids(0).query(), "Id '0' not found");
 }
 
 #[test]
@@ -68,21 +54,15 @@ fn select_from_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-                "alias5".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4", "alias5"])
             .query(),
         5,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias3".into()])
-            .to(&["alias3".into(), "alias5".into()])
+            .from(vec!["alias1", "alias3"])
+            .to(vec!["alias3", "alias5"])
             .query(),
         2,
     );

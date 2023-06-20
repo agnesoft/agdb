@@ -6,6 +6,45 @@ use agdb::DbId;
 use agdb::QueryBuilder;
 use test_db::test_file::TestFile;
 
+#[allow(unused_imports)]
+#[test]
+fn public_types() {
+    use agdb::Comparison;
+    use agdb::CountComparison;
+    use agdb::Db;
+    use agdb::DbElement;
+    use agdb::DbError;
+    use agdb::DbId;
+    use agdb::DbKey;
+    use agdb::DbKeyOrder;
+    use agdb::DbKeyValue;
+    use agdb::DbValue;
+    use agdb::InsertAliasesQuery;
+    use agdb::InsertEdgesQuery;
+    use agdb::InsertNodesQuery;
+    use agdb::InsertValuesQuery;
+    use agdb::Query;
+    use agdb::QueryBuilder;
+    use agdb::QueryCondition;
+    use agdb::QueryError;
+    use agdb::QueryId;
+    use agdb::QueryIds;
+    use agdb::QueryMut;
+    use agdb::QueryResult;
+    use agdb::QueryValues;
+    use agdb::RemoveAliasesQuery;
+    use agdb::RemoveQuery;
+    use agdb::RemoveValuesQuery;
+    use agdb::SearchQuery;
+    use agdb::SelectAllAliases;
+    use agdb::SelectKeyCountQuery;
+    use agdb::SelectKeysQuery;
+    use agdb::SelectQuery;
+    use agdb::SelectValuesQuery;
+    use agdb::Transaction;
+    use agdb::TransactionMut;
+}
+
 #[test]
 fn data_persistence() {
     let test_file = TestFile::new();

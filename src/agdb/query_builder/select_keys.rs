@@ -1,4 +1,3 @@
-use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
 use crate::query::search_query::SearchQuery;
 use crate::query::select_keys_query::SelectKeysQuery;
@@ -8,8 +7,8 @@ pub struct SelectKeys(pub SelectKeysQuery);
 pub struct SelectKeysIds(pub SelectKeysQuery);
 
 impl SelectKeys {
-    pub fn ids(mut self, ids: &[QueryId]) -> SelectKeysIds {
-        self.0 .0 = QueryIds::Ids(ids.to_vec());
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectKeysIds {
+        self.0 .0 = ids.into();
 
         SelectKeysIds(self.0)
     }

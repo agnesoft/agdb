@@ -9,50 +9,25 @@ use test_db::TestDb;
 #[test]
 fn insert_edges_from_to_rollback() {
     let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias1".into()])
-            .query(),
-        1,
-    );
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(
-                &QueryBuilder::insert()
-                    .edges()
-                    .from(&["alias1".into()])
-                    .to(&[2.into()])
-                    .query(),
-            )?;
+            t.exec_mut(&QueryBuilder::insert().edges().from("alias1").to(2).query())?;
             Err("error".into())
         },
         "error".into(),
     );
-    db.exec_error(
-        QueryBuilder::select().ids(&[(-3).into()]).query(),
-        "Id '-3' not found",
-    );
+    db.exec_error(QueryBuilder::select().ids(-3).query(), "Id '-3' not found");
 }
 
 #[test]
 fn insert_edges_missing_from() {
     let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias1".into()])
-            .query(),
-        1,
-    );
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("alias1").query(), 1);
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut_error(
-        QueryBuilder::insert()
-            .edges()
-            .from(&["alias".into()])
-            .to(&[2.into()])
-            .query(),
+        QueryBuilder::insert().edges().from("alias").to(2).query(),
         "Alias 'alias' not found",
     );
 }
@@ -63,20 +38,15 @@ fn insert_edges_from_to() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
     db.exec_mut_ids(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into(), "alias4".into()])
+            .from(vec!["alias1", "alias2"])
+            .to(vec!["alias3", "alias4"])
             .each()
             .query(),
         &[-5, -6, -7, -8],
@@ -89,15 +59,15 @@ fn insert_edges_from_to_each() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".into(), "alias2".into(), "alias3".into()])
+            .aliases(vec!["alias1", "alias2", "alias3"])
             .query(),
         3,
     );
     db.exec_mut_ids(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into()])
+            .from(vec!["alias1", "alias2"])
+            .to("alias3")
             .query(),
         &[-4, -5],
     );
@@ -109,28 +79,24 @@ fn insert_edges_from_to_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into(), "alias4".into()])
-            .values(&[&[("key", "value").into()], &[("key", "value2").into()]])
+            .from(vec!["alias1", "alias2"])
+            .to(vec!["alias3", "alias4"])
+            .values(vec![
+                vec![("key", "value").into()],
+                vec![("key", "value2").into()],
+            ])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&[(-5).into(), (-6).into()])
-            .query(),
+        QueryBuilder::select().ids(vec![-5, -6]).query(),
         &[
             DbElement {
                 id: DbId(-5),
@@ -150,34 +116,27 @@ fn insert_edges_from_to_each_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into(), "alias4".into()])
+            .from(vec!["alias1", "alias2"])
+            .to(vec!["alias3", "alias4"])
             .each()
-            .values(&[
-                &[("key", "value1").into()],
-                &[("key", "value2").into()],
-                &[("key", "value3").into()],
-                &[("key", "value4").into()],
+            .values(vec![
+                vec![("key", "value1").into()],
+                vec![("key", "value2").into()],
+                vec![("key", "value3").into()],
+                vec![("key", "value4").into()],
             ])
             .query(),
         4,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&[(-5).into(), (-6).into(), (-7).into(), (-8).into()])
-            .query(),
+        QueryBuilder::select().ids(vec![-5, -6, -7, -8]).query(),
         &[
             DbElement {
                 id: DbId(-5),
@@ -205,29 +164,22 @@ fn insert_edges_from_to_each_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into(), "alias4".into()])
+            .from(vec!["alias1", "alias2"])
+            .to(vec!["alias3", "alias4"])
             .each()
-            .values_uniform(&[("key", "value").into(), ("key", "value2").into()])
+            .values_uniform(vec![("key", "value").into(), ("key", "value2").into()])
             .query(),
         4,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&[(-5).into(), (-6).into(), (-7).into(), (-8).into()])
-            .query(),
+        QueryBuilder::select().ids(vec![-5, -6, -7, -8]).query(),
         &[
             DbElement {
                 id: DbId(-5),
@@ -255,21 +207,16 @@ fn insert_edges_from_to_values_bad_length() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
     db.exec_mut_error(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into(), "alias4".into()])
-            .values(&[&[("key", "value").into()]])
+            .from(vec!["alias1", "alias2"])
+            .to(vec!["alias3", "alias4"])
+            .values(vec![vec![("key", "value").into()]])
             .query(),
         "Values len '1' do not match the insert count '2'",
     );
@@ -281,22 +228,17 @@ fn insert_edges_from_to_values_each_bad_length() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&[
-                "alias1".into(),
-                "alias2".into(),
-                "alias3".into(),
-                "alias4".into(),
-            ])
+            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
     db.exec_mut_error(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into(), "alias4".into()])
+            .from(vec!["alias1", "alias2"])
+            .to(vec!["alias3", "alias4"])
             .each()
-            .values(&[&[("key", "value").into()]])
+            .values(vec![vec![("key", "value").into()]])
             .query(),
         "Values len '1' do not match the insert count '4'",
     );
@@ -308,23 +250,24 @@ fn insert_edges_from_to_values_asymmetric() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".into(), "alias2".into(), "alias3".into()])
+            .aliases(vec!["alias1", "alias2", "alias3"])
             .query(),
         3,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into()])
-            .values(&[&[("key", "value").into()], &[("key", "value2").into()]])
+            .from(vec!["alias1", "alias2"])
+            .to("alias3")
+            .values(vec![
+                vec![("key", "value").into()],
+                vec![("key", "value2").into()],
+            ])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&[(-4).into(), (-5).into()])
-            .query(),
+        QueryBuilder::select().ids(vec![-4, -5]).query(),
         &[
             DbElement {
                 id: DbId(-4),
@@ -344,23 +287,21 @@ fn insert_edges_from_to_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".into(), "alias2".into(), "alias3".into()])
+            .aliases(vec!["alias1", "alias2", "alias3"])
             .query(),
         3,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["alias1".into(), "alias2".into()])
-            .to(&["alias3".into()])
-            .values_uniform(&[("key", "value").into(), ("key", "value2").into()])
+            .from(vec!["alias1", "alias2"])
+            .to("alias3")
+            .values_uniform(vec![("key", "value").into(), ("key", "value2").into()])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&[(-4).into(), (-5).into()])
-            .query(),
+        QueryBuilder::select().ids(vec![-4, -5]).query(),
         &[
             DbElement {
                 id: DbId(-4),
@@ -381,8 +322,8 @@ fn insert_edges_from_to_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&[1.into(), 2.into()])
-            .to(&[3.into(), 4.into()])
+            .from(vec![1, 2])
+            .to(vec![3, 4])
             .query(),
         2,
     );
@@ -405,8 +346,8 @@ fn insert_edges_from_to_inserted_nodes() {
     db.exec_mut_ids(
         QueryBuilder::insert()
             .edges()
-            .from(&from.ids())
-            .to(&to.ids())
+            .from(from.ids())
+            .to(to.ids())
             .query(),
         &[-5, -6],
     );

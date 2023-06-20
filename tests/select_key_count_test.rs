@@ -11,8 +11,8 @@ fn select_key_count_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias".into()])
-            .values(&[&[
+            .aliases("alias")
+            .values(vec![vec![
                 ("key", 100).into(),
                 (1, "value").into(),
                 (vec![1.1_f64], 1).into(),
@@ -21,10 +21,7 @@ fn select_key_count_ids() {
         1,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .key_count()
-            .ids(&["alias".into()])
-            .query(),
+        QueryBuilder::select().key_count().ids("alias").query(),
         &[DbElement {
             id: DbId(1),
             values: vec![("key_count", 3_u64).into()],
@@ -35,18 +32,9 @@ fn select_key_count_ids() {
 #[test]
 fn select_keys_count_no_keys() {
     let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias".into()])
-            .query(),
-        1,
-    );
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.exec_elements(
-        QueryBuilder::select()
-            .key_count()
-            .ids(&["alias".into()])
-            .query(),
+        QueryBuilder::select().key_count().ids("alias").query(),
         &[DbElement {
             id: DbId(1),
             values: vec![("key_count", 0_u64).into()],
@@ -58,7 +46,7 @@ fn select_keys_count_no_keys() {
 fn select_keys_search() {
     let mut db = TestDb::new();
 
-    let values = [
+    let values = vec![
         ("key1", 1).into(),
         ("key2", 10).into(),
         ("key3", 100).into(),
@@ -68,16 +56,16 @@ fn select_keys_search() {
         QueryBuilder::insert()
             .nodes()
             .count(5)
-            .values_uniform(&values)
+            .values_uniform(values.clone())
             .query(),
         5,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&[1.into(), 3.into()])
-            .to(&[3.into(), 5.into()])
-            .values_uniform(&values)
+            .from(vec![1, 3])
+            .to(vec![3, 5])
+            .values_uniform(values)
             .query(),
         2,
     );

@@ -11,14 +11,14 @@ fn select_values_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".to_string(), "alias2".to_string()])
-            .values(&[
-                &[
+            .aliases(vec!["alias1", "alias2"])
+            .values(vec![
+                vec![
                     ("key", "value").into(),
                     ("key2", "value2").into(),
                     ("key3", "value3").into(),
                 ],
-                &[
+                vec![
                     ("key", "value4").into(),
                     ("key2", "value5").into(),
                     ("key3", "value6").into(),
@@ -29,8 +29,8 @@ fn select_values_ids() {
     );
     db.exec_elements(
         QueryBuilder::select()
-            .values(&["key".into(), "key2".into()])
-            .ids(&["alias1".into(), "alias2".into()])
+            .values(vec!["key".into(), "key2".into()])
+            .ids(vec!["alias1", "alias2"])
             .query(),
         &[
             DbElement {
@@ -51,22 +51,22 @@ fn select_values_ids_missing_key() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".to_string(), "alias2".to_string()])
-            .values(&[
-                &[
+            .aliases(vec!["alias1", "alias2"])
+            .values(vec![
+                vec![
                     ("key", "value").into(),
                     ("key2", "value2").into(),
                     ("key3", "value3").into(),
                 ],
-                &[("key", "value4").into()],
+                vec![("key", "value4").into()],
             ])
             .query(),
         2,
     );
     db.exec_error(
         QueryBuilder::select()
-            .values(&["key".into(), "key2".into()])
-            .ids(&["alias1".into(), "alias2".into()])
+            .values(vec!["key".into(), "key2".into()])
+            .ids(vec!["alias1", "alias2"])
             .query(),
         "Missing key 'key2' for id '2'",
     );
@@ -76,32 +76,30 @@ fn select_values_ids_missing_key() {
 fn select_values_search() {
     let mut db = TestDb::new();
 
-    let values = [
-        ("key1", 1).into(),
-        ("key2", 10).into(),
-        ("key3", 100).into(),
-    ];
-
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
             .count(5)
-            .values_uniform(&values)
+            .values_uniform(vec![
+                ("key1", 1).into(),
+                ("key2", 10).into(),
+                ("key3", 100).into(),
+            ])
             .query(),
         5,
     );
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&[1.into(), 3.into()])
-            .to(&[3.into(), 5.into()])
+            .from(vec![1, 3])
+            .to(vec![3, 5])
             .query(),
         2,
     );
 
     db.exec_elements(
         QueryBuilder::select()
-            .values(&["key2".into()])
+            .values(vec!["key2".into()])
             .search(QueryBuilder::search().from(3).query())
             .query(),
         &[

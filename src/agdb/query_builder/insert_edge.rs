@@ -1,9 +1,9 @@
 use crate::query::insert_edges_query::InsertEdgesQuery;
-use crate::query::query_id::QueryId;
 use crate::query::query_ids::QueryIds;
+use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
+use crate::query::query_values::SingleValues;
 use crate::query::search_query::SearchQuery;
-use crate::DbKeyValue;
 
 pub struct InsertEdgesEach(pub InsertEdgesQuery);
 
@@ -20,22 +20,22 @@ impl InsertEdgesEach {
         self.0
     }
 
-    pub fn values(mut self, key_values: &[&[DbKeyValue]]) -> InsertEdgesValues {
-        self.0.values = QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect());
+    pub fn values<T: Into<MultiValues>>(mut self, key_values: T) -> InsertEdgesValues {
+        self.0.values = QueryValues::Multi(Into::<MultiValues>::into(key_values).0);
 
         InsertEdgesValues(self.0)
     }
 
-    pub fn values_uniform(mut self, key_values: &[DbKeyValue]) -> InsertEdgesValues {
-        self.0.values = QueryValues::Single(key_values.to_vec());
+    pub fn values_uniform<T: Into<SingleValues>>(mut self, key_values: T) -> InsertEdgesValues {
+        self.0.values = QueryValues::Single(Into::<SingleValues>::into(key_values).0);
 
         InsertEdgesValues(self.0)
     }
 }
 
 impl InsertEdges {
-    pub fn from(mut self, ids: &[QueryId]) -> InsertEdgesFrom {
-        self.0.from = QueryIds::Ids(ids.to_vec());
+    pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
+        self.0.from = ids.into();
 
         InsertEdgesFrom(self.0)
     }
@@ -49,8 +49,8 @@ impl InsertEdges {
 }
 
 impl InsertEdgesFrom {
-    pub fn to(mut self, ids: &[QueryId]) -> InsertEdgesFromTo {
-        self.0.to = QueryIds::Ids(ids.to_vec());
+    pub fn to<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFromTo {
+        self.0.to = ids.into();
 
         InsertEdgesFromTo(self.0)
     }
@@ -74,14 +74,14 @@ impl InsertEdgesFromTo {
         self.0
     }
 
-    pub fn values(mut self, key_values: &[&[DbKeyValue]]) -> InsertEdgesValues {
-        self.0.values = QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect());
+    pub fn values<T: Into<MultiValues>>(mut self, key_values: T) -> InsertEdgesValues {
+        self.0.values = QueryValues::Multi(Into::<MultiValues>::into(key_values).0);
 
         InsertEdgesValues(self.0)
     }
 
-    pub fn values_uniform(mut self, key_values: &[DbKeyValue]) -> InsertEdgesValues {
-        self.0.values = QueryValues::Single(key_values.to_vec());
+    pub fn values_uniform<T: Into<SingleValues>>(mut self, key_values: T) -> InsertEdgesValues {
+        self.0.values = QueryValues::Single(Into::<SingleValues>::into(key_values).0);
 
         InsertEdgesValues(self.0)
     }

@@ -2,6 +2,7 @@ pub mod insert_aliases_query;
 pub mod insert_edges_query;
 pub mod insert_nodes_query;
 pub mod insert_values_query;
+pub mod query_aliases;
 pub mod query_condition;
 pub mod query_error;
 pub mod query_id;

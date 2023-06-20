@@ -7,17 +7,19 @@ use crate::query::insert_aliases_query::InsertAliasesQuery;
 use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;
 use crate::query::insert_values_query::InsertValuesQuery;
+use crate::query::query_aliases::QueryAliases;
 use crate::query::query_ids::QueryIds;
+use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
-use crate::DbKeyValue;
+use crate::query::query_values::SingleValues;
 
 pub struct Insert {}
 
 impl Insert {
-    pub fn aliases(self, names: &[String]) -> InsertAliases {
+    pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> InsertAliases {
         InsertAliases(InsertAliasesQuery {
             ids: QueryIds::Ids(vec![]),
-            aliases: names.to_vec(),
+            aliases: Into::<QueryAliases>::into(names).0,
         })
     }
 
@@ -38,17 +40,17 @@ impl Insert {
         })
     }
 
-    pub fn values(self, key_values: &[&[DbKeyValue]]) -> InsertValues {
+    pub fn values<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
         InsertValues(InsertValuesQuery {
             ids: QueryIds::Ids(vec![]),
-            values: QueryValues::Multi(key_values.iter().map(|v| v.to_vec()).collect()),
+            values: QueryValues::Multi(Into::<MultiValues>::into(key_values).0),
         })
     }
 
-    pub fn values_uniform(self, key_values: &[DbKeyValue]) -> InsertValuesUniform {
+    pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValuesUniform {
         InsertValuesUniform(InsertValuesQuery {
             ids: QueryIds::Ids(vec![0.into()]),
-            values: QueryValues::Single(key_values.to_vec()),
+            values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
         })
     }
 }

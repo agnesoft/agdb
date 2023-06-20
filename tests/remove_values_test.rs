@@ -11,15 +11,13 @@ fn remove_values_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias".into(), "alias2".into()])
-            .values_uniform(&[("key1", "value1").into()])
+            .aliases(vec!["alias", "alias2"])
+            .values_uniform(vec![("key1", "value1").into()])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&["alias".into(), "alias2".into()])
-            .query(),
+        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -33,15 +31,13 @@ fn remove_values_ids() {
     );
     db.exec_mut(
         QueryBuilder::remove()
-            .values(&["key1".into()])
-            .ids(&["alias".into(), "alias2".into()])
+            .values(vec!["key1".into()])
+            .ids(vec!["alias", "alias2"])
             .query(),
         -2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&["alias".into(), "alias2".into()])
-            .query(),
+        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -61,27 +57,20 @@ fn remove_values_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(&[&[("key", 1).into()], &[("key", 2).into()]])
+            .values(vec![vec![("key", 1).into()], vec![("key", 2).into()]])
             .query(),
         2,
     );
-    db.exec_mut(
-        QueryBuilder::insert()
-            .edges()
-            .from(&[1.into()])
-            .to(&[2.into()])
-            .query(),
-        1,
-    );
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut(
         QueryBuilder::remove()
-            .values(&["key".into()])
+            .values(vec!["key".into()])
             .search(QueryBuilder::search().from(1).query())
             .query(),
         -2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
+        QueryBuilder::select().ids(vec![1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -101,22 +90,20 @@ fn remove_missing_key() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias".into(), "alias2".into()])
-            .values_uniform(&[("key1", "value1").into(), ("key2", 100).into()])
+            .aliases(vec!["alias", "alias2"])
+            .values_uniform(vec![("key1", "value1").into(), ("key2", 100).into()])
             .query(),
         2,
     );
     db.exec_mut(
         QueryBuilder::remove()
-            .values(&["key3".into()])
-            .ids(&["alias".into(), "alias2".into()])
+            .values(vec!["key3".into()])
+            .ids(vec!["alias", "alias2"])
             .query(),
         0,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&["alias".into(), "alias2".into()])
-            .query(),
+        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),

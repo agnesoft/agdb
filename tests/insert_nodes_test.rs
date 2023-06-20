@@ -11,18 +11,13 @@ fn insert_nodes_aliases_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |transaction| -> Result<(), QueryError> {
-            transaction.exec_mut(
-                &QueryBuilder::insert()
-                    .nodes()
-                    .aliases(&["alias".into()])
-                    .query(),
-            )?;
+            transaction.exec_mut(&QueryBuilder::insert().nodes().aliases("alias").query())?;
             Err("error".into())
         },
         "error".into(),
     );
     db.exec_error(
-        QueryBuilder::select().ids(&["alias".into()]).query(),
+        QueryBuilder::select().ids("alias").query(),
         "Alias 'alias' not found",
     );
 }
@@ -31,17 +26,11 @@ fn insert_nodes_aliases_rollback() {
 fn insert_node_existing_alias() {
     let mut db = TestDb::new();
     db.exec_mut_ids(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias".into()])
-            .query(),
+        QueryBuilder::insert().nodes().aliases("alias").query(),
         &[1],
     );
     db.exec_mut_error(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(&["alias".into()])
-            .query(),
+        QueryBuilder::insert().nodes().aliases("alias").query(),
         "Alias 'alias' already exists (1)",
     )
 }
@@ -52,7 +41,7 @@ fn insert_nodes_aliases() {
     db.exec_mut_ids(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".to_string(), "alias2".to_string()])
+            .aliases(vec!["alias1", "alias2"])
             .query(),
         &[1, 2],
     );
@@ -70,18 +59,16 @@ fn insert_nodes_aliases_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".to_string(), "alias2".to_string()])
-            .values(&[
-                &[("key", "value").into(), ("key2", "value2").into()],
-                &[("key", "value3").into()],
+            .aliases(vec!["alias1", "alias2"])
+            .values(vec![
+                vec![("key", "value").into(), ("key2", "value2").into()],
+                vec![("key", "value3").into()],
             ])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&["alias1".into(), "alias2".into()])
-            .query(),
+        QueryBuilder::select().ids(vec!["alias1", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -104,21 +91,17 @@ fn insert_nodes_aliases_values_rollback() {
                 .exec_mut(
                     &QueryBuilder::insert()
                         .nodes()
-                        .aliases(&["alias1".to_string(), "alias2".to_string()])
-                        .values(&[
-                            &[("key", "value").into(), ("key2", "value2").into()],
-                            &[("key", "value3").into()],
+                        .aliases(vec!["alias1", "alias2"])
+                        .values(vec![
+                            vec![("key", "value").into(), ("key2", "value2").into()],
+                            vec![("key", "value3").into()],
                         ])
                         .query(),
                 )
                 .unwrap();
             assert_eq!(
                 transaction
-                    .exec(
-                        &QueryBuilder::select()
-                            .ids(&["alias1".into(), "alias2".into()])
-                            .query()
-                    )
+                    .exec(&QueryBuilder::select().ids(vec!["alias1", "alias2"]).query())
                     .unwrap()
                     .elements,
                 &[
@@ -137,11 +120,11 @@ fn insert_nodes_aliases_values_rollback() {
         "error".into(),
     );
     db.exec_error(
-        QueryBuilder::select().ids(&["alias1".into()]).query(),
+        QueryBuilder::select().ids("alias1").query(),
         "Alias 'alias1' not found",
     );
     db.exec_error(
-        QueryBuilder::select().ids(&["alias2".into()]).query(),
+        QueryBuilder::select().ids("alias2").query(),
         "Alias 'alias2' not found",
     );
 }
@@ -152,15 +135,13 @@ fn insert_nodes_aliases_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["alias1".to_string(), "alias2".to_string()])
-            .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
+            .aliases(vec!["alias1", "alias2"])
+            .values_uniform(vec![("key", "value").into(), ("key2", "value2").into()])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(&["alias1".into(), "alias2".into()])
-            .query(),
+        QueryBuilder::select().ids(vec!["alias1", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -181,12 +162,12 @@ fn insert_nodes_count_values_uniform() {
         QueryBuilder::insert()
             .nodes()
             .count(2)
-            .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
+            .values_uniform(vec![("key", "value").into(), ("key2", "value2").into()])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
+        QueryBuilder::select().ids(vec![1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -206,15 +187,15 @@ fn insert_nodes_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(&[
-                &[("key", "value").into(), ("key2", "value2").into()],
-                &[("key", "value3").into()],
+            .values(vec![
+                vec![("key", "value").into(), ("key2", "value2").into()],
+                vec![("key", "value3").into()],
             ])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(&[1.into(), 2.into()]).query(),
+        QueryBuilder::select().ids(vec![1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -234,12 +215,12 @@ fn insert_nodes_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values_uniform(&[("key", "value").into(), ("key2", "value2").into()])
+            .values_uniform(vec![("key", "value").into(), ("key2", "value2").into()])
             .query(),
         1,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(&[1.into()]).query(),
+        QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
             values: vec![("key", "value").into(), ("key2", "value2").into()],

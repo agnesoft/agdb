@@ -13,7 +13,7 @@ fn create_db() -> TestDb {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(&["root".into(), "users".into(), "docs".into()])
+            .aliases(vec!["root", "users", "docs"])
             .query(),
         3,
     );
@@ -21,8 +21,8 @@ fn create_db() -> TestDb {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["root".into()])
-            .to(&["users".into(), "docs".into()])
+            .from("root")
+            .to(vec!["users", "docs"])
             .query(),
         2,
     );
@@ -30,12 +30,12 @@ fn create_db() -> TestDb {
     let docs = db.exec_mut_result(
         QueryBuilder::insert()
             .nodes()
-            .values(&[
-                &[
+            .values(vec![
+                vec![
                     ("name", "notes").into(),
                     ("content", vec!["abc", "def", "ghi"]).into(),
                 ],
-                &[
+                vec![
                     ("name", "book").into(),
                     (
                         "content",
@@ -43,7 +43,7 @@ fn create_db() -> TestDb {
                     )
                         .into(),
                 ],
-                &[
+                vec![
                     ("name", "shopping list").into(),
                     ("content", vec!["apples", "oranges"]).into(),
                 ],
@@ -54,8 +54,8 @@ fn create_db() -> TestDb {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["docs".into()])
-            .to(&docs.ids())
+            .from("docs")
+            .to(docs.ids())
             .query(),
         3,
     );
@@ -63,32 +63,32 @@ fn create_db() -> TestDb {
     let users = db.exec_mut_result(
         QueryBuilder::insert()
             .nodes()
-            .values(&[
-                &[
+            .values(vec![
+                vec![
                     ("id", 1).into(),
                     ("username", "user_1").into(),
                     ("active", 1).into(),
                     ("registered", 10).into(),
                 ],
-                &[
+                vec![
                     ("id", 2).into(),
                     ("username", "user_2").into(),
                     ("active", 0).into(),
                     ("registered", 20).into(),
                 ],
-                &[
+                vec![
                     ("id", 3).into(),
                     ("username", "user_3").into(),
                     ("active", 1).into(),
                     ("registered", 30).into(),
                 ],
-                &[
+                vec![
                     ("id", 4).into(),
                     ("username", "user_4").into(),
                     ("active", 1).into(),
                     ("registered", 40).into(),
                 ],
-                &[
+                vec![
                     ("id", 5).into(),
                     ("username", "user_5").into(),
                     ("active", 0).into(),
@@ -101,8 +101,8 @@ fn create_db() -> TestDb {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&["users".into()])
-            .to(&users.ids())
+            .from("users")
+            .to(users.ids())
             .query(),
         5,
     );
@@ -110,20 +110,20 @@ fn create_db() -> TestDb {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(&[
-                users.elements[0].id.into(),
-                users.elements[2].id.into(),
-                users.elements[3].id.into(),
+            .from(vec![
+                users.elements[0].id,
+                users.elements[2].id,
+                users.elements[3].id,
             ])
-            .to(&[
-                docs.elements[1].id.into(),
-                docs.elements[0].id.into(),
-                docs.elements[2].id.into(),
+            .to(vec![
+                docs.elements[1].id,
+                docs.elements[0].id,
+                docs.elements[2].id,
             ])
-            .values(&[
-                &[("type", "writes").into()],
-                &[("type", "owns").into()],
-                &[("type", "owns").into()],
+            .values(vec![
+                vec![("type", "writes").into()],
+                vec![("type", "owns").into()],
+                vec![("type", "owns").into()],
             ])
             .query(),
         3,

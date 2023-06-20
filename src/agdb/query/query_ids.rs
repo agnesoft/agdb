@@ -14,27 +14,9 @@ impl From<Vec<QueryId>> for QueryIds {
     }
 }
 
-impl From<&[QueryId]> for QueryIds {
-    fn from(value: &[QueryId]) -> Self {
-        QueryIds::Ids(value.to_vec())
-    }
-}
-
-impl From<QueryId> for QueryIds {
-    fn from(value: QueryId) -> Self {
-        QueryIds::Ids(vec![value])
-    }
-}
-
 impl From<Vec<String>> for QueryIds {
     fn from(value: Vec<String>) -> Self {
         QueryIds::Ids(value.into_iter().map(|v| v.into()).collect())
-    }
-}
-
-impl From<&[String]> for QueryIds {
-    fn from(value: &[String]) -> Self {
-        QueryIds::Ids(value.iter().map(|v| v.into()).collect())
     }
 }
 
@@ -52,12 +34,6 @@ impl From<Vec<i64>> for QueryIds {
 
 impl From<Vec<DbId>> for QueryIds {
     fn from(value: Vec<DbId>) -> Self {
-        QueryIds::Ids(value.into_iter().map(|v| v.into()).collect())
-    }
-}
-
-impl From<&[DbId]> for QueryIds {
-    fn from(value: &[DbId]) -> Self {
         QueryIds::Ids(value.into_iter().map(|v| v.into()).collect())
     }
 }

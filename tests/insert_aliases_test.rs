@@ -11,7 +11,7 @@ fn insert_aliases_of() {
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(
         QueryBuilder::insert()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(vec![String::from("alias"), String::from("alias2")])
             .of(vec![1, 2])
             .query(),
         2,

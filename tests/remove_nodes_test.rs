@@ -15,11 +15,11 @@ fn remove_nodes_rollback() {
         |t| {
             t.exec_mut(&QueryBuilder::remove().ids("alias").query())
                 .unwrap();
-            t.exec(&QueryBuilder::select().ids(1).query())
+            t.exec(&QueryBuilder::select().ids(DbId(1)).query())
         },
         "Id '1' not found".into(),
     );
-    db.exec(QueryBuilder::select().ids("alias").query(), 1);
+    db.exec(QueryBuilder::select().ids(String::from("alias")).query(), 1);
 }
 
 #[test]
@@ -33,7 +33,9 @@ fn remove_nodes() {
         2,
     );
     db.exec_mut(
-        QueryBuilder::remove().ids(vec!["alias", "alias2"]).query(),
+        QueryBuilder::remove()
+            .ids(vec![String::from("alias"), String::from("alias2")])
+            .query(),
         -2,
     );
 }

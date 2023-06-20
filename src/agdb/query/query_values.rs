@@ -16,38 +16,14 @@ impl From<Vec<DbKeyValue>> for SingleValues {
     }
 }
 
-impl From<&[DbKeyValue]> for SingleValues {
-    fn from(values: &[DbKeyValue]) -> Self {
-        SingleValues(values.to_vec())
-    }
-}
-
 impl From<Vec<Vec<DbKeyValue>>> for MultiValues {
     fn from(values: Vec<Vec<DbKeyValue>>) -> Self {
         MultiValues(values)
     }
 }
 
-impl From<&[Vec<DbKeyValue>]> for MultiValues {
-    fn from(values: &[Vec<DbKeyValue>]) -> Self {
-        MultiValues(values.to_vec())
-    }
-}
-
-impl From<&[&[DbKeyValue]]> for MultiValues {
-    fn from(values: &[&[DbKeyValue]]) -> Self {
-        MultiValues(values.iter().map(|v| v.to_vec()).collect())
-    }
-}
-
 impl From<Vec<DbKey>> for QueryKeys {
     fn from(value: Vec<DbKey>) -> Self {
         QueryKeys(value)
-    }
-}
-
-impl From<&[DbKey]> for QueryKeys {
-    fn from(value: &[DbKey]) -> Self {
-        QueryKeys(value.to_vec())
     }
 }

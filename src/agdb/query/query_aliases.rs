@@ -6,20 +6,8 @@ impl From<Vec<String>> for QueryAliases {
     }
 }
 
-impl From<&[String]> for QueryAliases {
-    fn from(value: &[String]) -> Self {
-        QueryAliases(value.to_vec())
-    }
-}
-
 impl From<Vec<&str>> for QueryAliases {
     fn from(value: Vec<&str>) -> Self {
-        QueryAliases(value.iter().map(|v| v.to_string()).collect())
-    }
-}
-
-impl From<&[&str]> for QueryAliases {
-    fn from(value: &[&str]) -> Self {
         QueryAliases(value.iter().map(|v| v.to_string()).collect())
     }
 }

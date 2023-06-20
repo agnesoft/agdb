@@ -65,7 +65,7 @@ fn select_keys_search() {
             .edges()
             .from(vec![1, 3])
             .to(vec![3, 5])
-            .values_uniform(values.clone())
+            .values_uniform(values)
             .query(),
         2,
     );

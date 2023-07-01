@@ -22,6 +22,7 @@
     - [Select aliases](#select-aliases)
     - [Select all aliases](#select-all-aliases)
   - [Search](#search)
+    - [Conditions](#conditions)
 
 All interactions with the `agdb` are realized through queries. There are two kinds of queries:
 
@@ -348,13 +349,10 @@ The result will contain:
 ### Remove values
 
 ```Rust
-pub struct SelectValuesQuery {
-    pub keys: Vec<DbKey>,
-    pub ids: QueryIds,
-}
-
 pub struct RemoveValuesQuery(pub SelectValuesQuery);
 ```
+
+NOTE: See [`SelectValuesQuery`](#select-values) for more details.
 
 Builder pattern:
 
@@ -518,4 +516,149 @@ The result will contain:
 
 ## Search
 
-There is only a single search query.
+There is only a single search query that provides the ability to search the graph examining connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**.
+
+```Rust
+pub struct SearchQuery {
+    pub origin: QueryId,
+    pub destination: QueryId,
+    pub limit: u64,
+    pub offset: u64,
+    pub order_by: Vec<DbKeyOrder>,
+    pub conditions: Vec<QueryCondition>,
+}
+
+pub enum DbKeyOrder {
+    Asc(DbKey),
+    Desc(DbKey),
+}
+```
+
+Builder pattern:
+
+```Rust
+QueryBuilder::search().from("a").query();
+QueryBuilder::search().to(1).query(); //reverse search
+QueryBuilder::search().from("a").to("b").query(); //path search, A*
+
+//limit, offset and order_by can be applied similarly to all the search variants
+QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()
+QueryBuilder::search().from(1).offset(10).query();
+QueryBuilder::search().from(1).limit(5).query();
+QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).offset(10).query();
+QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).limit(5).query();
+QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).offset(10).limit(5).query();
+QueryBuilder::search().from(1).offset(10).limit(5).query();
+```
+
+The search query is made up of the `origin` and `destination` of the search. Specifying only `origin` (from) will result in breadth first search along `from->to` edges. Specifying only `destination` will result in the reverse breadth first search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm is switched to `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element ids. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
+
+Finally the list of `conditions` that each examined graph element must satisfy to be included in the result (and subjected to the `limit` and `offset`).
+
+**NOTE:** When both `origin` and `destination` are specified and the algorithm is switched to the `A*` the `limit` and `offset` are applied differently. In regular (open-ended) search the search will end when the `limit` is reached but with the path search (A\*) the `destination` must be reached first before they are applied.
+
+### Conditions
+
+The currently supported conditions are:
+
+- Where (opens nested list of conditions)
+- Edge (if the element is an `edge`)
+- Node (if the element is a `node`)
+- Distance (if the current distance of the search satisfies the numerical comparison, each graph element away from the start increases the distance, including edges, i.e. second node from start is at distance `2`)
+- EdgeCount (if the element is a node and total number of edges (in and out) satisfies the numerical comparison - self-referential edges are counted twice)
+- EdgeCountFrom (if the element is a node and total number of outgoing edges satisfies the numerical comparison)
+- EdgeCountTo (if the element is a node and total number of incoming edges satisfies the numerical comparison)
+- Ids (if the element id is in the list)
+- KeyValue (if the element's property has the `key` and its value satisfies `value` comparison)
+- Keys (if the element has all the `keys` regardless of their values)
+- EndWhere (closes nested list of conditions)
+
+All conditions can be further modified as follows:
+
+- Not (reverses the condition result)
+- NotBeyond (stops the search beyond this element)
+
+The conditions can be changed with logic operators:
+
+- And (logical `and`)
+- Or (logical `or`)
+
+```Rust
+pub struct QueryCondition {
+    pub logic: QueryConditionLogic,
+    pub modifier: QueryConditionModifier,
+    pub data: QueryConditionData,
+}
+
+pub enum QueryConditionLogic {
+    And,
+    Or,
+}
+
+pub enum QueryConditionModifier {
+    None,
+    Not,
+    NotBeyond,
+}
+
+pub enum QueryConditionData {
+    Distance { value: CountComparison },
+    Edge,
+    EdgeCount { value: CountComparison },
+    EdgeCountFrom { value: CountComparison },
+    EdgeCountTo { value: CountComparison },
+    Ids { values: Vec<QueryId> },
+    KeyValue { key: DbKey, value: Comparison },
+    Keys { values: Vec<DbKey> },
+    Node,
+    Where { conditions: Vec<QueryCondition> },
+}
+
+pub enum CountComparison {
+    Equal(u64),
+    GreaterThan(u64),
+    GreaterThanOrEqual(u64),
+    LessThan(u64),
+    LessThanOrEqual(u64),
+    NotEqual(u64),
+}
+
+pub enum Comparison {
+    Equal(DbValue),
+    GreaterThan(DbValue),
+    GreaterThanOrEqual(DbValue),
+    LessThan(DbValue),
+    LessThanOrEqual(DbValue),
+    NotEqual(DbValue),
+}
+```
+
+Builder pattern:
+
+```Rust
+//the where_() can be applied to any of the basic search queries after order_by/offset/limit
+//not() and not_beyond() can be applied to all conditions including nested where_()
+QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query();
+QueryBuilder::search().from(1).where_().edge().query();
+QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2))().query();
+QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1))().query();
+QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1))().query();
+QueryBuilder::search().from(1).where_().node().query();
+QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
+QueryBuilder::search().from(1).where_().keys(vec!["k1".into(), "k2".into()]).query();
+QueryBuilder::search().from(1).where_().not().keys(vec!["k1".into(), "k2".into()]).query();
+QueryBuilder::search().from(1).where_().ids(vec![1, 2]).query();
+QueryBuilder::search().from(1).where_().not().ids(vec![1, 2]).query();
+QueryBuilder::search().from(1).where_().not_beyond().ids("a").query();
+QueryBuilder::search().from(1).where_().node().or().edge().query();
+QueryBuilder::search().from(1).where_().node().and().distance().query(CountComparison::GreaterThanOrEqual(3)).query();
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Equal(1.into())).end_where().query();
+```
+
+NOTE: The use of `where_` with an underscore as the method name is necessary to avoid conflict with the Rust keyword.
+
+The conditions are applied one at a time to each visited element and chained using logic operators `AND` and `OR`. They can be nested using `where_` and `end_where` (in place of brackets). The condition evaluator supports short-circuiting not evaluating conditions further if the logical outcome cannot change.
+
+The condition `Distance` and the condition modifier `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements.
+
+For further examples and use cases see the [in-depth guide](guide.md).

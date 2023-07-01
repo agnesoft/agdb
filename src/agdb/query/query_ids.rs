@@ -8,6 +8,15 @@ pub enum QueryIds {
     Search(SearchQuery),
 }
 
+impl QueryIds {
+    pub(crate) fn get_ids(self) -> Vec<QueryId> {
+        match self {
+            QueryIds::Ids(ids) => ids,
+            QueryIds::Search(_) => vec![],
+        }
+    }
+}
+
 impl From<Vec<QueryId>> for QueryIds {
     fn from(value: Vec<QueryId>) -> Self {
         QueryIds::Ids(value)

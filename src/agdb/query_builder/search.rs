@@ -52,8 +52,8 @@ impl SearchFrom {
         SelectOffset(self.0)
     }
 
-    pub fn order_by(mut self, keys: &[DbKeyOrder]) -> SearchOrderBy {
-        self.0.order_by = keys.to_vec();
+    pub fn order_by(mut self, keys: Vec<DbKeyOrder>) -> SearchOrderBy {
+        self.0.order_by = keys;
 
         SearchOrderBy(self.0)
     }

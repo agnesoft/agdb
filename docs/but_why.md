@@ -22,7 +22,7 @@ There are two key properties of representing data as a graph that directly relat
 
 That is in a nutshell why the graph database is the best choice for most problem domains and data sets out there and why `agdb` is the graph database.
 
-## Costs
+**Costs**
 
 Everything has the cost and graph databases are no exception. Some operations and some data representations may be costlier in them as opposed to table based databases. For example if you had immutable schema that never updates then table based database might a better fit as the representation in form of tables is more storage efficient. or if you always read the whole table or whole rows then once again the table based databases might be more performant. Typically though these are uncommon edge cases unlikely to be found in the real world applications. The data is almost always sparse and diverse in nature, the schema is never truly stable etc. On the other hand most use cases benefit greatly from graph based representation and thus such a database is well worth it despite some (often more theoretical) costs.
 

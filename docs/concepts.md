@@ -1,5 +1,11 @@
 # Concepts
 
+- [Concepts](#concepts)
+  - [Graph](#graph)
+  - [Query](#query)
+  - [Transaction](#transaction)
+  - [Storage](#storage)
+
 ## Graph
 
 _Related:_ [Why graph?](but_why.md#why-graph)

@@ -7,26 +7,26 @@ pub struct SelectAliases(pub SelectAliasesQuery);
 
 pub struct SelectAliasesIds(pub SelectAliasesQuery);
 
-impl SelectAliasesIds {
-    pub fn query(self) -> SelectAliasesQuery {
-        self.0
-    }
-}
-
 impl SelectAliases {
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> SelectAliasesIds {
-        self.0.ids = ids.into();
+        self.0 .0 = ids.into();
 
         SelectAliasesIds(self.0)
     }
 
     pub fn search(mut self, query: SearchQuery) -> SelectAliasesIds {
-        self.0.ids = QueryIds::Search(query);
+        self.0 .0 = QueryIds::Search(query);
 
         SelectAliasesIds(self.0)
     }
 
     pub fn query(self) -> SelectAllAliases {
         SelectAllAliases {}
+    }
+}
+
+impl SelectAliasesIds {
+    pub fn query(self) -> SelectAliasesQuery {
+        self.0
     }
 }

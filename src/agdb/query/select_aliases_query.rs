@@ -6,13 +6,11 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
 
-pub struct SelectAliasesQuery {
-    pub ids: QueryIds,
-}
+pub struct SelectAliasesQuery(pub QueryIds);
 
 impl Query for SelectAliasesQuery {
     fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
-        match &self.ids {
+        match &self.0 {
             QueryIds::Ids(ids) => {
                 result.elements.reserve(ids.len());
                 result.result += ids.len() as i64;

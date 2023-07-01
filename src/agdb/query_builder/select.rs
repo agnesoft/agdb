@@ -16,9 +16,7 @@ pub struct Select {}
 
 impl Select {
     pub fn aliases(self) -> SelectAliases {
-        SelectAliases(SelectAliasesQuery {
-            ids: QueryIds::Ids(vec![]),
-        })
+        SelectAliases(SelectAliasesQuery(QueryIds::Ids(vec![])))
     }
 
     pub fn ids<T: Into<QueryIds>>(self, ids: T) -> SelectIds {

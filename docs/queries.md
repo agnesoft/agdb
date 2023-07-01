@@ -201,7 +201,7 @@ pub struct InsertAliasesQuery {
 }
 ```
 
-It is possible to insert or update aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.
+Inserts or updates aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.
 
 Note that this query is used also for updating existing aliases. Byt inserting a different alias of an id that already has one the alias will be overwritten with the new one.
 
@@ -219,7 +219,7 @@ pub struct InsertValuesQuery {
 }
 ```
 
-It is possible to insert or update key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`.
+Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`.
 
 Note that this query is used also for updating existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
@@ -235,6 +235,50 @@ There are 3 distinct remove queries:
 - remove (elements)
 - remove aliases
 - remove values
+
+#### Remove elements
+
+```
+pub struct RemoveQuery(pub QueryIds)
+```
+
+The elements identified by [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is NOT an error if the elements to be removed do not exist in the database. All associated properties (key-value pairs) are also removed from all elements. Removing nodes will also remove all their edges (incoming and outgoing) and their properties.
+
+The result will contain:
+
+- negative number of elements removed (edges not explicitly listed or those listed but removed as part of one of their node's removal do not contribute to the result counter)
+- empty list of elements
+
+#### Remove aliases
+
+```
+pub struct RemoveAliasesQuery(pub Vec<String>)
+```
+
+The aliases listed will be removed from the database if they exist. It is NOT an error if the aliases do not exist in the database.
+
+The result will contain:
+
+- negative number of aliases removed
+- empty list of elements
+
+#### Remove values
+
+```
+pub struct SelectValuesQuery {
+    pub keys: Vec<DbKey>,
+    pub ids: QueryIds,
+}
+
+pub struct RemoveValuesQuery(pub SelectValuesQuery)
+```
+
+The properties (key-value pairs) identified by `keys` and associated with `ids` [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is a data error if any of the `ids` do not exist in the database but it is NOT an error if any of the keys does not exist or is not associated as property to any of the `ids`.
+
+The result will contain:
+
+- Number of actually removed key-value pairs
+- empty list of elements
 
 ## Immutable queries
 

@@ -602,16 +602,16 @@ pub enum QueryConditionModifier {
 }
 
 pub enum QueryConditionData {
-    Distance { value: CountComparison },
+    Distance(CountComparison),
     Edge,
-    EdgeCount { value: CountComparison },
-    EdgeCountFrom { value: CountComparison },
-    EdgeCountTo { value: CountComparison },
-    Ids { values: Vec<QueryId> },
+    EdgeCount(CountComparison),
+    EdgeCountFrom(CountComparison),
+    EdgeCountTo(CountComparison),
+    Ids(Vec<QueryId>),
     KeyValue { key: DbKey, value: Comparison },
-    Keys { values: Vec<DbKey> },
+    Keys(Vec<DbKey>),
     Node,
-    Where { conditions: Vec<QueryCondition> },
+    Where(Vec<QueryCondition>),
 }
 
 pub enum CountComparison {

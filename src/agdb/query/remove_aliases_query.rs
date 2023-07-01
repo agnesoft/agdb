@@ -3,13 +3,11 @@ use crate::Db;
 use crate::QueryError;
 use crate::QueryResult;
 
-pub struct RemoveAliasesQuery {
-    pub aliases: Vec<String>,
-}
+pub struct RemoveAliasesQuery(pub Vec<String>);
 
 impl QueryMut for RemoveAliasesQuery {
     fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
-        for alias in &self.aliases {
+        for alias in &self.0 {
             if db.remove_alias(alias)? {
                 result.result -= 1;
             }

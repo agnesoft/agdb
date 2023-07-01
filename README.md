@@ -6,8 +6,8 @@ The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph datab
 
 # Key Features
 
-- Data organization on a graph
-- Typed key-value properties associated to graph elements
+- Data plotted on a graph
+- Typed key-value properties of graph elements (nodes & edges)
 - Persistent file based storage
 - ACID compliant
 - Object queries with builder pattern (no text, no query language)

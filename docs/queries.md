@@ -30,7 +30,7 @@ There can be unlimited number of immutable concurrent queries or exactly one mut
 
 The queries are executed against the database by calling the corresponding method on the database object:
 
-```
+```Rust
 impl Db {
     // immutable queries only
     pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError>
@@ -48,7 +48,7 @@ All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#query
 
 The `QueryResult` is the universal result type for all successful queries. It looks like:
 
-```
+```Rust
 pub struct QueryResult {
     pub result: i64,
     pub elements: Vec<DbElement>,
@@ -59,7 +59,7 @@ The `result` field holds numerical result of the query. It typically returns the
 
 The `elements` field hold the [database elements](concepts.md#graph) returned. Each element looks like:
 
-```
+```Rust
 pub struct DbElement {
     pub id: DbId,
     pub values: Vec<DbKeyValue>,
@@ -70,7 +70,7 @@ The `id` (i.e. `pub struct DbId(i64)`) is a numerical identifier of a database e
 
 The values are `key-value` pairs (properties) associated with the given element:
 
-```
+```Rust
 pub struct DbKeyValue {
     pub key: DbKey,
     pub value: DbValue,
@@ -79,7 +79,7 @@ pub struct DbKeyValue {
 
 The `DbKey` is an alias of `DbValue` and the value itself is an enum of valid types:
 
-```
+```Rust
 pub enum DbValue {
     Bytes(Vec<u8>),
     Int(i64),
@@ -103,7 +103,7 @@ Failure when running a query is reported through a single `QueryError` object wh
 
 You can run a series of queries as a transaction invoking corresponding methods on the database object:
 
-```
+```Rust
 impl Db {
     // immutable transactions
     pub fn transaction<T, E>(&self, f: impl Fn(&Transaction) -> Result<T, E>) -> Result<T, E>
@@ -125,7 +125,7 @@ Worth noting is that regular `exec / exec_mut` methods on the `Db` object are ac
 
 Most queries operate over a set of database ids. The `QueryIds` type is actually an enum:
 
-```
+```Rust
 pub enum QueryIds {
     Ids(Vec<QueryId>),
     Search(SearchQuery),
@@ -134,7 +134,7 @@ pub enum QueryIds {
 
 It represents either a set of actual `ids` or a `search` query that will be executed as the larger query and its results fed as ids to the larger query. The `QueryId` is defined as another enum:
 
-```
+```Rust
 pub enum QueryId {
     Id(DbId),
     Alias(String),
@@ -147,7 +147,7 @@ This is because you can refer to the database elements via their numerical ident
 
 The `QueryValues` is a an enum type that makes a distinction between singular and multiple values like so:
 
-```
+```Rust
 pub enum QueryValues {
     Single(Vec<DbKeyValue>),
     Multi(Vec<Vec<DbKeyValue>>),
@@ -176,7 +176,7 @@ There are 4 distinct insert queries:
 
 ### Insert nodes
 
-```
+```Rust
 pub struct InsertNodesQuery {
     pub count: u64,
     pub values: QueryValues,
@@ -186,7 +186,7 @@ pub struct InsertNodesQuery {
 
 Builder pattern:
 
-```
+```Rust
 QueryBuilder::insert().nodes().count(2).query()
 QueryBuilder::insert().nodes().count(2).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query()
 QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).query()
@@ -204,7 +204,7 @@ The result will contain:
 
 ### Insert edges
 
-```
+```Rust
 pub struct InsertEdgesQuery {
     pub from: QueryIds,
     pub to: QueryIds,
@@ -215,7 +215,7 @@ pub struct InsertEdgesQuery {
 
 Builder pattern:
 
-```
+```Rust
 QueryBuilder::insert().edges().from(1).to(2).query()
 QueryBuilder::insert().edges().from("a").to("b").query()
 QueryBuilder::insert().edges().from("a").to(vec![1, 2]).query()
@@ -237,7 +237,7 @@ The result will contain:
 
 ### Inserted aliases
 
-```
+```Rust
 pub struct InsertAliasesQuery {
     pub ids: QueryIds,
     pub aliases: Vec<String>,
@@ -246,7 +246,7 @@ pub struct InsertAliasesQuery {
 
 Builder pattern:
 
-```
+```Rust
 QueryBuilder::insert().aliases("a").of(1).query()
 QueryBuilder::insert().aliases("a").of("b").query()
 QueryBuilder::insert().aliases(vec!["a", "b"]).of(vec![1, 2]).query()
@@ -263,7 +263,7 @@ The result will contain:
 
 ### Insert values
 
-```
+```Rust
 pub struct InsertValuesQuery {
     pub ids: QueryIds,
     pub values: QueryValues,
@@ -272,7 +272,7 @@ pub struct InsertValuesQuery {
 
 Builder pattern:
 
-```
+```Rust
 QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(vec![1, 2]).query()
 QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).search(QueryBuilder::search().from("a").query()).query()
 QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).ids(vec![1, 2]).query()
@@ -285,7 +285,7 @@ Note that this query is used also for updating existing values. By inserting the
 
 The result will contain:
 
-- number of key-value pairs (properties) inserted (NOT number of elements affected)
+- number of key-value pairs (properties) inserted
 - empty list of elements
 
 ## Remove
@@ -298,13 +298,13 @@ There are 3 distinct remove queries:
 
 ### Remove elements
 
-```
+```Rust
 pub struct RemoveQuery(pub QueryIds)
 ```
 
 Builder pattern:
 
-```
+```Rust
 QueryBuilder::remove().ids(1).query()
 QueryBuilder::remove().ids("a").query()
 QueryBuilder::remove().ids(vec![1, 2]).query()
@@ -321,13 +321,13 @@ The result will contain:
 
 ### Remove aliases
 
-```
+```Rust
 pub struct RemoveAliasesQuery(pub Vec<String>)
 ```
 
 Builder pattern:
 
-```
+```Rust
 QueryBuilder::remove().aliases("a").query()
 QueryBuilder::remove().aliases(vec!["a", "b"]).query()
 ```
@@ -341,7 +341,7 @@ The result will contain:
 
 ### Remove values
 
-```
+```Rust
 pub struct SelectValuesQuery {
     pub keys: Vec<DbKey>,
     pub ids: QueryIds,
@@ -352,7 +352,7 @@ pub struct RemoveValuesQuery(pub SelectValuesQuery)
 
 Builder pattern:
 
-```
+```Rust
 QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).ids(vec![1, 2]).query()
 QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).search(QueryBuilder::search().from("a").query()).query()
 ```

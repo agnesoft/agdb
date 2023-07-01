@@ -5,7 +5,6 @@ use agdb::Comparison;
 use agdb::Db;
 use agdb::QueryBuilder;
 
-#[rustfmt::skip]
 #[test]
 fn quickstart() {
     let _test_file = TestFile::from("db_file.agdb");
@@ -14,18 +13,27 @@ fn quickstart() {
     let insert_users_root = QueryBuilder::insert().nodes().aliases("users").query();
     db.exec_mut(&insert_users_root).unwrap();
 
-    let insert_users = QueryBuilder::insert().nodes().values(vec![
-            vec![("id", 1).into(), ("username", "user_1").into()],
-            vec![("id", 2).into(), ("username", "user_2").into()],
-            vec![("id", 3).into(), ("username", "user_3").into()],
-        ]).query();
-    let users = db.exec_mut(&insert_users).unwrap();
+    let user_values = vec![
+        vec![("id", 1).into(), ("username", "user_1").into()],
+        vec![("id", 2).into(), ("username", "user_2").into()],
+        vec![("id", 3).into(), ("username", "user_3").into()],
+    ];
+    let users = db
+        .exec_mut(&QueryBuilder::insert().nodes().values(user_values).query())
+        .unwrap();
 
-    let insert_edges = QueryBuilder::insert().edges().from("users").to(users.ids()).query();
-    db.exec_mut(&insert_edges).unwrap();
+    db.exec_mut(
+        &QueryBuilder::insert()
+            .edges()
+            .from("users")
+            .to(users.ids())
+            .query(),
+    )
+    .unwrap();
 
-    let select_users = QueryBuilder::select().ids(users.ids()).query();
-    let user_elements = db.exec(&select_users).unwrap();
+    let user_elements = db
+        .exec(&QueryBuilder::select().ids(users.ids()).query())
+        .unwrap();
 
     println!("{:?}", user_elements);
     // QueryResult {
@@ -36,9 +44,20 @@ fn quickstart() {
     //     DbElement { id: DbId(4), values: [DbKeyValue { key: String("id"), value: Int(3) }, DbKeyValue { key: String("username"), value: String("user_3") }] }
     // ] }
 
-    let search_for_user = QueryBuilder::search().from("users").where_().key("username").value(Comparison::Equal("user_2".into())).query();
-    let select_user = QueryBuilder::select().search(search_for_user).query();
-    let user_id = db.exec(&select_user).unwrap();
+    let user_id = db
+        .exec(
+            &QueryBuilder::select()
+                .search(
+                    QueryBuilder::search()
+                        .from("users")
+                        .where_()
+                        .key("username")
+                        .value(Comparison::Equal("user_2".into()))
+                        .query(),
+                )
+                .query(),
+        )
+        .unwrap();
 
     println!("{:?}", user_id);
     // QueryResult {

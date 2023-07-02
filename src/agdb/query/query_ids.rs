@@ -95,4 +95,19 @@ mod tests {
     fn derived_from_debug() {
         format!("{:?}", QueryIds::Ids(vec![QueryId::from(0)]));
     }
+
+    #[test]
+    fn get_ids_from_search() {
+        let ids = QueryIds::Search(SearchQuery {
+            origin: QueryId::Id(DbId(0)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
+        .get_ids();
+
+        assert_eq!(ids, vec![]);
+    }
 }

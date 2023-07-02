@@ -516,16 +516,22 @@ The result will contain:
 
 ## Search
 
-There is only a single search query that provides the ability to search the graph examining connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**.
+There is only a single search query that provides the ability to search the graph examining connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose `depth first` as well.
 
 ```Rust
 pub struct SearchQuery {
+    pub algorithm: SearchQueryAlgorithm,
     pub origin: QueryId,
     pub destination: QueryId,
     pub limit: u64,
     pub offset: u64,
     pub order_by: Vec<DbKeyOrder>,
     pub conditions: Vec<QueryCondition>,
+}
+
+pub enum SearchQueryAlgorithm {
+    BreadthFirst,
+    DepthFirst,
 }
 
 pub enum DbKeyOrder {
@@ -541,6 +547,9 @@ QueryBuilder::search().from("a").query();
 QueryBuilder::search().to(1).query(); //reverse search
 QueryBuilder::search().from("a").to("b").query(); //path search, A*
 
+QueryBuilder::search().breadth_first().from("a").query(); //breadth first is the default and can be omitted however
+QueryBuilder::search().depth_first().from("a").query();
+
 //limit, offset and order_by can be applied similarly to all the search variants
 QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()
 QueryBuilder::search().from(1).offset(10).query();
@@ -551,7 +560,7 @@ QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).offs
 QueryBuilder::search().from(1).offset(10).limit(5).query();
 ```
 
-The search query is made up of the `origin` and `destination` of the search. Specifying only `origin` (from) will result in breadth first search along `from->to` edges. Specifying only `destination` will result in the reverse breadth first search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm is switched to `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element ids. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
+The search query is made up of the `origin` and `destination` of the search and the algorithm. Specifying only `origin` (from) will result in a search along `from->to` edges. Specifying only `destination` (to) will result in the reverse search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm used will be `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element ids. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
 
 Finally the list of `conditions` that each examined graph element must satisfy to be included in the result (and subjected to the `limit` and `offset`).
 

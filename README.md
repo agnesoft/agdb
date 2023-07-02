@@ -23,6 +23,10 @@ cargo add agdb
 Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](docs/queries.md#queryerror) error types for operator `?` to work:
 
 ```Rust
+use agdb::Db;
+use agdb::QueryBuilder;
+use agdb::Comparison::Equal;
+
 let mut db = Db::new("user_db.agdb")?;
 
 db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
@@ -59,7 +63,7 @@ let user = db.exec(&QueryBuilder::select()
                                     .from("users")
                                     .where_()
                                     .key("username")
-                                    .value(Comparison::Equal("John".into()))
+                                    .value(Equal("John".into()))
                                     .query())
                         .query())?;
 println!("{:?}", user);

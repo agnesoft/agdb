@@ -240,7 +240,7 @@ fn optimize_on_drop() {
                     .query(),
             )
             .unwrap();
-        db.exec_mut(&QueryBuilder::remove().ids(result.ids()).query())
+        db.exec_mut(&QueryBuilder::remove().ids(result).query())
             .unwrap();
         db_file_size = std::fs::File::open(test_file.file_name())
             .unwrap()

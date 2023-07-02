@@ -26,14 +26,12 @@ fn quickstart() {
         &QueryBuilder::insert()
             .edges()
             .from("users")
-            .to(users.ids())
+            .to(&users)
             .query(),
     )
     .unwrap();
 
-    let user_elements = db
-        .exec(&QueryBuilder::select().ids(users.ids()).query())
-        .unwrap();
+    let user_elements = db.exec(&QueryBuilder::select().ids(users).query()).unwrap();
 
     println!("{:?}", user_elements);
     // QueryResult {

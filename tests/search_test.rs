@@ -412,3 +412,183 @@ fn search_to_ordered_by() {
         ],
     );
 }
+
+#[test]
+fn search_breadth_first_from() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search().breadth_first().from(1).query(),
+        &[1, -15, -11, 3, -16, -12, 5, -17, -13, 7, -18, -14, 9],
+    );
+}
+
+#[test]
+fn search_depth_first_from_limit() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .depth_first()
+            .from(1)
+            .limit(3)
+            .query(),
+        &[1, -11, 3],
+    );
+}
+
+#[test]
+fn search_depth_first_from_offset() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .depth_first()
+            .from(1)
+            .offset(3)
+            .query(),
+        &[-12, 5, -13, 7, -14, 9, -18, -17, -16, -15],
+    );
+}
+
+#[test]
+fn search_depth_first_from_offset_limit() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .depth_first()
+            .from(1)
+            .offset(3)
+            .limit(3)
+            .query(),
+        &[-12, 5, -13],
+    );
+}
+
+#[test]
+fn search_depth_first_from() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search().depth_first().from(1).query(),
+        &[1, -11, 3, -12, 5, -13, 7, -14, 9, -18, -17, -16, -15],
+    );
+}
+
+#[test]
+fn search_depth_first_to() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search().depth_first().to(9).query(),
+        &[9, -14, 7, -13, 5, -12, 3, -11, 1, -15, -16, -17, -18],
+    );
+}
+
+#[test]
+fn search_depth_first_to_limit() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search().depth_first().to(9).limit(3).query(),
+        &[9, -14, 7],
+    );
+}
+
+#[test]
+fn search_depth_first_to_offset() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search().depth_first().to(9).offset(3).query(),
+        &[-13, 5, -12, 3, -11, 1, -15, -16, -17, -18],
+    );
+}
+
+#[test]
+fn search_depth_first_to_offset_limit() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(10).query(), 10);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
+            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .query(),
+        8,
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .depth_first()
+            .to(9)
+            .offset(3)
+            .limit(3)
+            .query(),
+        &[-13, 5, -12],
+    );
+}

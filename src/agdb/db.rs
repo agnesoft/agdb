@@ -41,6 +41,7 @@ use crate::DbKeyValue;
 use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
+use crate::SearchQueryAlgorithm;
 use crate::Transaction;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -312,6 +313,7 @@ impl Db {
     pub(crate) fn search_from(
         &self,
         from: DbId,
+        algorithm: SearchQueryAlgorithm,
         limit: u64,
         offset: u64,
         conditions: &Vec<QueryCondition>,
@@ -319,20 +321,49 @@ impl Db {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search
-                .breadth_first_search(GraphIndex(from.0), DefaultHandler::new(self, conditions))?,
-            (_, 0) => search.breadth_first_search(
-                GraphIndex(from.0),
-                LimitHandler::new(limit, self, conditions),
-            )?,
-            (0, _) => search.breadth_first_search(
-                GraphIndex(from.0),
-                OffsetHandler::new(offset, self, conditions),
-            )?,
-            (_, _) => search.breadth_first_search(
-                GraphIndex(from.0),
-                LimitOffsetHandler::new(limit, offset, self, conditions),
-            )?,
+            (0, 0) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search(
+                    GraphIndex(from.0),
+                    DefaultHandler::new(self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                    GraphIndex(from.0),
+                    DefaultHandler::new(self, conditions),
+                )?,
+            },
+
+            (_, 0) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search(
+                    GraphIndex(from.0),
+                    LimitHandler::new(limit, self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                    GraphIndex(from.0),
+                    LimitHandler::new(limit, self, conditions),
+                )?,
+            },
+
+            (0, _) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search(
+                    GraphIndex(from.0),
+                    OffsetHandler::new(offset, self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                    GraphIndex(from.0),
+                    OffsetHandler::new(offset, self, conditions),
+                )?,
+            },
+
+            (_, _) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search(
+                    GraphIndex(from.0),
+                    LimitOffsetHandler::new(limit, offset, self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                    GraphIndex(from.0),
+                    LimitOffsetHandler::new(limit, offset, self, conditions),
+                )?,
+            },
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())
@@ -341,6 +372,7 @@ impl Db {
     pub(crate) fn search_to(
         &self,
         to: DbId,
+        algorithm: SearchQueryAlgorithm,
         limit: u64,
         offset: u64,
         conditions: &Vec<QueryCondition>,
@@ -348,22 +380,49 @@ impl Db {
         let search = GraphSearch::from(&self.graph);
 
         let indexes = match (limit, offset) {
-            (0, 0) => search.breadth_first_search_reverse(
-                GraphIndex(to.0),
-                DefaultHandler::new(self, conditions),
-            )?,
-            (_, 0) => search.breadth_first_search_reverse(
-                GraphIndex(to.0),
-                LimitHandler::new(limit, self, conditions),
-            )?,
-            (0, _) => search.breadth_first_search_reverse(
-                GraphIndex(to.0),
-                OffsetHandler::new(offset, self, conditions),
-            )?,
-            (_, _) => search.breadth_first_search_reverse(
-                GraphIndex(to.0),
-                LimitOffsetHandler::new(limit, offset, self, conditions),
-            )?,
+            (0, 0) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search_reverse(
+                    GraphIndex(to.0),
+                    DefaultHandler::new(self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                    GraphIndex(to.0),
+                    DefaultHandler::new(self, conditions),
+                )?,
+            },
+
+            (_, 0) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search_reverse(
+                    GraphIndex(to.0),
+                    LimitHandler::new(limit, self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                    GraphIndex(to.0),
+                    LimitHandler::new(limit, self, conditions),
+                )?,
+            },
+
+            (0, _) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search_reverse(
+                    GraphIndex(to.0),
+                    OffsetHandler::new(offset, self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                    GraphIndex(to.0),
+                    OffsetHandler::new(offset, self, conditions),
+                )?,
+            },
+
+            (_, _) => match algorithm {
+                SearchQueryAlgorithm::BreadthFirst => search.breadth_first_search_reverse(
+                    GraphIndex(to.0),
+                    LimitOffsetHandler::new(limit, offset, self, conditions),
+                )?,
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                    GraphIndex(to.0),
+                    LimitOffsetHandler::new(limit, offset, self, conditions),
+                )?,
+            },
         };
 
         Ok(indexes.iter().map(|index| DbId(index.0)).collect())

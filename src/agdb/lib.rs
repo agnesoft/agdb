@@ -37,6 +37,7 @@ pub use query::remove_aliases_query::RemoveAliasesQuery;
 pub use query::remove_query::RemoveQuery;
 pub use query::remove_values_query::RemoveValuesQuery;
 pub use query::search_query::SearchQuery;
+pub use query::search_query::SearchQueryAlgorithm;
 pub use query::select_all_aliases_query::SelectAllAliases;
 pub use query::select_key_count_query::SelectKeyCountQuery;
 pub use query::select_keys_query::SelectKeysQuery;

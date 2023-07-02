@@ -2,6 +2,7 @@ use super::where_::Where;
 use crate::db::db_key::DbKeyOrder;
 use crate::query::query_id::QueryId;
 use crate::query::search_query::SearchQuery;
+use crate::SearchQueryAlgorithm;
 
 pub struct Search {}
 
@@ -15,9 +16,36 @@ pub struct SelectLimit(pub SearchQuery);
 
 pub struct SelectOffset(pub SearchQuery);
 
+pub struct SearchAlgorithm(pub SearchQuery);
+
 impl Search {
+    pub fn breadth_first(self) -> SearchAlgorithm {
+        SearchAlgorithm(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
+    }
+
+    pub fn depth_first(self) -> SearchAlgorithm {
+        SearchAlgorithm(SearchQuery {
+            algorithm: SearchQueryAlgorithm::DepthFirst,
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
+    }
+
     pub fn from<T: Into<QueryId>>(self, id: T) -> SearchFrom {
         SearchFrom(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
             origin: id.into(),
             destination: QueryId::from(0),
             limit: 0,
@@ -29,6 +57,7 @@ impl Search {
 
     pub fn to<T: Into<QueryId>>(self, id: T) -> SearchTo {
         SearchTo(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
             origin: QueryId::from(0),
             destination: id.into(),
             limit: 0,
@@ -36,6 +65,18 @@ impl Search {
             order_by: vec![],
             conditions: vec![],
         })
+    }
+}
+
+impl SearchAlgorithm {
+    pub fn from<T: Into<QueryId>>(mut self, id: T) -> SearchFrom {
+        self.0.origin = id.into();
+        SearchFrom(self.0)
+    }
+
+    pub fn to<T: Into<QueryId>>(mut self, id: T) -> SearchTo {
+        self.0.destination = id.into();
+        SearchTo(self.0)
     }
 }
 

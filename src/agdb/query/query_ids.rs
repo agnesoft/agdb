@@ -74,6 +74,7 @@ impl From<String> for QueryIds {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::search_query::SearchQueryAlgorithm;
 
     #[test]
     #[allow(clippy::redundant_clone)]
@@ -99,6 +100,7 @@ mod tests {
     #[test]
     fn get_ids_from_search() {
         let ids = QueryIds::Search(SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
             origin: QueryId::Id(DbId(0)),
             destination: QueryId::Id(DbId(0)),
             limit: 0,

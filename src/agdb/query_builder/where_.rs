@@ -224,6 +224,7 @@ mod test {
     use super::*;
     use crate::DbId;
     use crate::QueryId;
+    use crate::SearchQueryAlgorithm;
 
     #[test]
     fn invalid_collapse() {
@@ -232,6 +233,7 @@ mod test {
             modifier: QueryConditionModifier::None,
             conditions: vec![vec![], vec![]],
             query: SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
                 origin: QueryId::Id(DbId(0)),
                 destination: QueryId::Id(DbId(0)),
                 limit: 0,

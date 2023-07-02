@@ -10,8 +10,15 @@ use crate::QueryError;
 use crate::QueryResult;
 use std::cmp::Ordering;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SearchQueryAlgorithm {
+    BreadthFirst,
+    DepthFirst,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SearchQuery {
+    pub algorithm: SearchQueryAlgorithm,
     pub origin: QueryId,
     pub destination: QueryId,
     pub limit: u64,
@@ -38,9 +45,15 @@ impl SearchQuery {
             let origin = db.db_id(&self.origin)?;
 
             if self.order_by.is_empty() {
-                db.search_from(origin, self.limit, self.offset, &self.conditions)
+                db.search_from(
+                    origin,
+                    self.algorithm,
+                    self.limit,
+                    self.offset,
+                    &self.conditions,
+                )
             } else {
-                let mut ids = db.search_from(origin, 0, 0, &self.conditions)?;
+                let mut ids = db.search_from(origin, self.algorithm, 0, 0, &self.conditions)?;
                 self.sort(&mut ids, db)?;
                 self.slice(ids)
             }
@@ -48,9 +61,15 @@ impl SearchQuery {
             let destination = db.db_id(&self.destination)?;
 
             if self.order_by.is_empty() {
-                db.search_to(destination, self.limit, self.offset, &self.conditions)
+                db.search_to(
+                    destination,
+                    self.algorithm,
+                    self.limit,
+                    self.offset,
+                    &self.conditions,
+                )
             } else {
-                let mut ids = db.search_to(destination, 0, 0, &self.conditions)?;
+                let mut ids = db.search_to(destination, self.algorithm, 0, 0, &self.conditions)?;
                 self.sort(&mut ids, db)?;
                 self.slice(ids)
             }
@@ -123,6 +142,7 @@ mod tests {
         format!(
             "{:?}",
             SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
                 origin: QueryId::from(0),
                 destination: QueryId::from(0),
                 limit: 0,
@@ -137,6 +157,7 @@ mod tests {
     #[allow(clippy::redundant_clone)]
     fn derived_from_clone() {
         let left = SearchQuery {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
             origin: QueryId::from(0),
             destination: QueryId::from(0),
             limit: 0,
@@ -152,6 +173,7 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
                 origin: QueryId::from(0),
                 destination: QueryId::from(0),
                 limit: 0,
@@ -160,6 +182,7 @@ mod tests {
                 conditions: vec![]
             },
             SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
                 origin: QueryId::from(0),
                 destination: QueryId::from(0),
                 limit: 0,

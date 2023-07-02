@@ -40,6 +40,7 @@ mod tests {
     use crate::query::search_query::SearchQuery;
     use crate::test_utilities::test_file::TestFile;
     use crate::DbId;
+    use crate::SearchQueryAlgorithm;
 
     #[test]
     fn invalid_query() {
@@ -48,6 +49,7 @@ mod tests {
         let mut result = QueryResult::default();
         let query = InsertAliasesQuery {
             ids: QueryIds::Search(SearchQuery {
+                algorithm: SearchQueryAlgorithm::BreadthFirst,
                 origin: QueryId::Id(DbId(0)),
                 destination: QueryId::Id(DbId(0)),
                 limit: 0,

@@ -1,7 +1,7 @@
 mod test_db;
 
 use crate::test_db::TestFile;
-use agdb::Comparison;
+use agdb::Comparison::Equal;
 use agdb::Db;
 use agdb::QueryBuilder;
 
@@ -50,7 +50,7 @@ fn quickstart() {
                         .from("users")
                         .where_()
                         .key("username")
-                        .value(Comparison::Equal("user_2".into()))
+                        .value(Equal("user_2".into()))
                         .query(),
                 )
                 .query(),

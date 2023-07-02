@@ -14,9 +14,7 @@ pub struct Remove {}
 
 impl Remove {
     pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> RemoveAliases {
-        RemoveAliases(RemoveAliasesQuery {
-            aliases: Into::<QueryAliases>::into(names).0,
-        })
+        RemoveAliases(RemoveAliasesQuery(Into::<QueryAliases>::into(names).0))
     }
 
     pub fn ids<T: Into<QueryIds>>(self, ids: T) -> RemoveIds {

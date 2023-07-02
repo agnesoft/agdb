@@ -139,7 +139,7 @@ fn search_from_where_keys() {
         QueryBuilder::search()
             .from("users")
             .where_()
-            .keys(&["username".into(), "id".into()])
+            .keys(vec!["username".into(), "id".into()])
             .query(),
         &[16, 15, 14, 13, 12],
     );
@@ -243,10 +243,10 @@ fn search_from_where_node_edge() {
             .node()
             .and()
             .not()
-            .ids(&[1.into(), 2.into(), 3.into()])
+            .ids(vec![1, 2, 3])
             .and()
             .not_beyond()
-            .ids(&["users".into()])
+            .ids("users")
             .query(),
         &[8, 7, 6],
     );
@@ -263,10 +263,10 @@ fn search_from_where_ids() {
         QueryBuilder::search()
             .from(1)
             .where_()
-            .ids(&["docs".into(), "users".into()])
+            .ids(vec!["docs", "users"])
             .and()
             .not_beyond()
-            .ids(&["docs".into(), "users".into()])
+            .ids(vec!["docs", "users"])
             .query(),
         &[3, 2],
     );
@@ -278,7 +278,7 @@ fn search_from_where_key_value() {
     db.exec_ids(
         QueryBuilder::search()
             .from("users")
-            .order_by(&[DbKeyOrder::Asc("id".into())])
+            .order_by(vec![DbKeyOrder::Asc("id".into())])
             .where_()
             .key("active")
             .value(Comparison::Equal(1.into()))
@@ -288,7 +288,7 @@ fn search_from_where_key_value() {
     db.exec_ids(
         QueryBuilder::search()
             .from("users")
-            .order_by(&[DbKeyOrder::Asc("id".into())])
+            .order_by(vec![DbKeyOrder::Asc("id".into())])
             .where_()
             .key("active")
             .value(Comparison::NotEqual(1.into()))
@@ -298,7 +298,7 @@ fn search_from_where_key_value() {
     db.exec_ids(
         QueryBuilder::search()
             .from("users")
-            .order_by(&[DbKeyOrder::Asc("id".into())])
+            .order_by(vec![DbKeyOrder::Asc("id".into())])
             .where_()
             .key("active")
             .value(Comparison::LessThan(1.into()))
@@ -308,7 +308,7 @@ fn search_from_where_key_value() {
     db.exec_ids(
         QueryBuilder::search()
             .from("users")
-            .order_by(&[DbKeyOrder::Asc("id".into())])
+            .order_by(vec![DbKeyOrder::Asc("id".into())])
             .where_()
             .key("active")
             .value(Comparison::LessThanOrEqual(1.into()))
@@ -318,7 +318,7 @@ fn search_from_where_key_value() {
     db.exec_ids(
         QueryBuilder::search()
             .from("users")
-            .order_by(&[DbKeyOrder::Desc("id".into())])
+            .order_by(vec![DbKeyOrder::Desc("id".into())])
             .where_()
             .key("active")
             .value(Comparison::GreaterThan(0.into()))
@@ -328,7 +328,7 @@ fn search_from_where_key_value() {
     db.exec_ids(
         QueryBuilder::search()
             .from("users")
-            .order_by(&[DbKeyOrder::Desc("id".into())])
+            .order_by(vec![DbKeyOrder::Desc("id".into())])
             .where_()
             .key("active")
             .value(Comparison::GreaterThanOrEqual(0.into()))
@@ -373,10 +373,10 @@ fn search_from_limit_offset_where() {
             .node()
             .and()
             .not()
-            .ids(&[1.into(), 2.into(), 3.into()])
+            .ids(vec![1, 2, 3])
             .and()
             .not_beyond()
-            .ids(&["users".into()])
+            .ids("users")
             .query(),
         &[8, 7],
     );
@@ -388,10 +388,10 @@ fn search_from_limit_offset_where() {
             .node()
             .and()
             .not()
-            .ids(&[1.into(), 2.into(), 3.into()])
+            .ids(vec![1, 2, 3])
             .and()
             .not_beyond()
-            .ids(&["users".into()])
+            .ids("users")
             .query(),
         &[7, 6],
     );
@@ -404,10 +404,10 @@ fn search_from_limit_offset_where() {
             .node()
             .and()
             .not()
-            .ids(&[1.into(), 2.into(), 3.into()])
+            .ids(vec![1, 2, 3])
             .and()
             .not_beyond()
-            .ids(&["users".into()])
+            .ids("users")
             .query(),
         &[7],
     );
@@ -423,9 +423,9 @@ fn search_from_to_where() {
             .to(7)
             .where_()
             .not_beyond()
-            .ids(&["docs".into()])
+            .ids("docs")
             .and()
-            .keys(&["id".into()])
+            .keys(vec!["id".into()])
             .query(),
         &[12.into()],
     )

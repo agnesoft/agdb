@@ -3,10 +3,11 @@ use crate::query::query_condition::QueryCondition;
 use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
-use crate::query::query_id::QueryId;
+use crate::query::query_values::QueryKeys;
 use crate::query::search_query::SearchQuery;
 use crate::Comparison;
 use crate::DbKey;
+use crate::QueryIds;
 
 pub struct Where {
     logic: QueryConditionLogic,
@@ -36,7 +37,7 @@ impl Where {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::Distance { value: comparison },
+            data: QueryConditionData::Distance(comparison),
         });
 
         WhereLogicOperator(self)
@@ -56,7 +57,7 @@ impl Where {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::EdgeCount { value: comparison },
+            data: QueryConditionData::EdgeCount(comparison),
         });
 
         WhereLogicOperator(self)
@@ -66,7 +67,7 @@ impl Where {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::EdgeCountFrom { value: comparison },
+            data: QueryConditionData::EdgeCountFrom(comparison),
         });
 
         WhereLogicOperator(self)
@@ -76,19 +77,17 @@ impl Where {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::EdgeCountTo { value: comparison },
+            data: QueryConditionData::EdgeCountTo(comparison),
         });
 
         WhereLogicOperator(self)
     }
 
-    pub fn ids(mut self, ids: &[QueryId]) -> WhereLogicOperator {
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> WhereLogicOperator {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::Ids {
-                values: ids.to_vec(),
-            },
+            data: QueryConditionData::Ids(Into::<QueryIds>::into(ids).get_ids()),
         });
 
         WhereLogicOperator(self)
@@ -101,13 +100,11 @@ impl Where {
         }
     }
 
-    pub fn keys(mut self, names: &[DbKey]) -> WhereLogicOperator {
+    pub fn keys<T: Into<QueryKeys>>(mut self, keys: T) -> WhereLogicOperator {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::Keys {
-                values: names.to_vec(),
-            },
+            data: QueryConditionData::Keys(Into::<QueryKeys>::into(keys).0),
         });
 
         WhereLogicOperator(self)
@@ -139,7 +136,7 @@ impl Where {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::Where { conditions: vec![] },
+            data: QueryConditionData::Where(vec![]),
         });
         self.conditions.push(vec![]);
 
@@ -163,7 +160,7 @@ impl Where {
             if let Some(QueryCondition {
                 logic: _,
                 modifier: _,
-                data: QueryConditionData::Where { conditions },
+                data: QueryConditionData::Where(conditions),
             }) = current_conditions.last_mut()
             {
                 *conditions = last_conditions;
@@ -226,6 +223,7 @@ impl WhereLogicOperator {
 mod test {
     use super::*;
     use crate::DbId;
+    use crate::QueryId;
 
     #[test]
     fn invalid_collapse() {

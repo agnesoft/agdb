@@ -8,6 +8,15 @@ pub enum QueryIds {
     Search(SearchQuery),
 }
 
+impl QueryIds {
+    pub(crate) fn get_ids(self) -> Vec<QueryId> {
+        match self {
+            QueryIds::Ids(ids) => ids,
+            QueryIds::Search(_) => vec![],
+        }
+    }
+}
+
 impl From<Vec<QueryId>> for QueryIds {
     fn from(value: Vec<QueryId>) -> Self {
         QueryIds::Ids(value)
@@ -85,5 +94,20 @@ mod tests {
     #[test]
     fn derived_from_debug() {
         format!("{:?}", QueryIds::Ids(vec![QueryId::from(0)]));
+    }
+
+    #[test]
+    fn get_ids_from_search() {
+        let ids = QueryIds::Search(SearchQuery {
+            origin: QueryId::Id(DbId(0)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
+        .get_ids();
+
+        assert_eq!(ids, vec![]);
     }
 }

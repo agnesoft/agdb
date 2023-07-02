@@ -566,30 +566,30 @@ impl Db {
         condition: &QueryConditionData,
     ) -> Result<SearchControl, DbError> {
         match condition {
-            QueryConditionData::Distance { value } => Ok(value.compare(distance)),
+            QueryConditionData::Distance(value) => Ok(value.compare(distance)),
             QueryConditionData::Edge => Ok(SearchControl::Continue(index.is_edge())),
-            QueryConditionData::EdgeCount { value } => {
+            QueryConditionData::EdgeCount(value) => {
                 Ok(if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count())
                 } else {
                     SearchControl::Continue(false)
                 })
             }
-            QueryConditionData::EdgeCountFrom { value } => {
+            QueryConditionData::EdgeCountFrom(value) => {
                 Ok(if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count_from())
                 } else {
                     SearchControl::Continue(false)
                 })
             }
-            QueryConditionData::EdgeCountTo { value } => {
+            QueryConditionData::EdgeCountTo(value) => {
                 Ok(if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count_to())
                 } else {
                     SearchControl::Continue(false)
                 })
             }
-            QueryConditionData::Ids { values } => {
+            QueryConditionData::Ids(values) => {
                 Ok(SearchControl::Continue(values.iter().any(|id| {
                     index.0
                         == match id {
@@ -615,7 +615,7 @@ impl Db {
                     false
                 },
             )),
-            QueryConditionData::Keys { values } => {
+            QueryConditionData::Keys(values) => {
                 let keys = self
                     .values
                     .iter_key(&DbId(index.0))
@@ -626,7 +626,7 @@ impl Db {
                 ))
             }
             QueryConditionData::Node => Ok(SearchControl::Continue(index.is_node())),
-            QueryConditionData::Where { conditions } => {
+            QueryConditionData::Where(conditions) => {
                 self.evaluate_conditions(index, distance, conditions)
             }
         }

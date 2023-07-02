@@ -55,7 +55,7 @@ fn create_db() -> TestDb {
         QueryBuilder::insert()
             .edges()
             .from("docs")
-            .to(docs.ids())
+            .to(&docs)
             .query(),
         3,
     );
@@ -102,7 +102,7 @@ fn create_db() -> TestDb {
         QueryBuilder::insert()
             .edges()
             .from("users")
-            .to(users.ids())
+            .to(&users)
             .query(),
         5,
     );

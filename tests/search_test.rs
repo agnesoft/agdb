@@ -316,7 +316,7 @@ fn search_from_ordered_by() {
         QueryBuilder::insert()
             .edges()
             .from("users")
-            .to(users.ids())
+            .to(users)
             .query(),
         10,
     );
@@ -377,7 +377,7 @@ fn search_to_ordered_by() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(users.ids())
+            .from(users)
             .to("users")
             .query(),
         10,

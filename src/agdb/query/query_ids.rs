@@ -1,6 +1,6 @@
 use super::query_id::QueryId;
 use super::search_query::SearchQuery;
-use crate::DbId;
+use crate::{DbId, QueryResult};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryIds {
@@ -68,6 +68,18 @@ impl From<&str> for QueryIds {
 impl From<String> for QueryIds {
     fn from(value: String) -> Self {
         QueryIds::Ids(vec![value.into()])
+    }
+}
+
+impl From<QueryResult> for QueryIds {
+    fn from(value: QueryResult) -> Self {
+        Self::from(&value)
+    }
+}
+
+impl From<&QueryResult> for QueryIds {
+    fn from(value: &QueryResult) -> Self {
+        QueryIds::Ids(value.ids())
     }
 }
 

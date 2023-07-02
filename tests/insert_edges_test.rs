@@ -344,11 +344,7 @@ fn insert_edges_from_to_inserted_nodes() {
     let to = db.exec_mut_result(QueryBuilder::insert().nodes().count(2).query());
 
     db.exec_mut_ids(
-        QueryBuilder::insert()
-            .edges()
-            .from(from.ids())
-            .to(to.ids())
-            .query(),
+        QueryBuilder::insert().edges().from(from).to(to).query(),
         &[-5, -6],
     );
 }

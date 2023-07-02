@@ -32,7 +32,7 @@ let users = db.exec_mut(&QueryBuilder::insert()
                                          vec![("username", "Bob").into(), ("joined", 2015).into()],
                                          vec![("username", "John").into()]])
                             .query())?;
-db.exec_mut(&QueryBuilder::insert().edges().from("users").to(users.ids()).query())?;
+db.exec_mut(&QueryBuilder::insert().edges().from("users").to(&users).query())?;
 ```
 
 This code creates a database called `user_db.agdb` with a simple graph of 4 nodes. The first node is aliased `users` and 3 user nodes for Alice, Bob and John are then connected with edges to the `users` node. The arbitrary `username` and sometimes `joined` properties are attached to the user nodes.
@@ -40,7 +40,7 @@ This code creates a database called `user_db.agdb` with a simple graph of 4 node
 You can select the graph elements (both nodes & edges) with their ids to get them back with their associated data (key-value properties):
 
 ```Rust
-let user_elements = db.exec(&QueryBuilder::select().ids(users.ids()).query())?;
+let user_elements = db.exec(&QueryBuilder::select().ids(users).query())?;
 println!("{:?}", user_elements);
 // QueryResult {
 //   result: 3,

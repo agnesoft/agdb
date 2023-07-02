@@ -12,7 +12,7 @@ fn insert_aliases_of() {
     db.exec_mut(
         QueryBuilder::insert()
             .aliases(vec![String::from("alias"), String::from("alias2")])
-            .of(vec![1, 2])
+            .ids(vec![1, 2])
             .query(),
         2,
     );
@@ -26,7 +26,7 @@ fn insert_aliases_of_alias() {
     db.exec_mut(
         QueryBuilder::insert()
             .aliases(vec!["alias1", "alias2"])
-            .of(vec![QueryId::from("alias"), 2.into()])
+            .ids(vec![QueryId::from("alias"), 2.into()])
             .query(),
         2,
     );
@@ -42,7 +42,7 @@ fn insert_aliases_rollback() {
             t.exec_mut(
                 &QueryBuilder::insert()
                     .aliases(vec!["alias1", "alias2"])
-                    .of(vec![QueryId::from("alias"), 2.into()])
+                    .ids(vec![QueryId::from("alias"), 2.into()])
                     .query(),
             )?;
 
@@ -62,7 +62,7 @@ fn insert_aliases_rollback() {
 fn insert_aliases_empty_alias() {
     let mut db = TestDb::new();
     db.exec_mut_error(
-        QueryBuilder::insert().aliases(String::new()).of(1).query(),
+        QueryBuilder::insert().aliases(String::new()).ids(1).query(),
         "Empty alias is not allowed",
     );
 }
@@ -73,7 +73,7 @@ fn insert_aliases_ids_mismatched_length() {
     db.exec_mut_error(
         QueryBuilder::insert()
             .aliases(String::new())
-            .of(vec![1, 2])
+            .ids(vec![1, 2])
             .query(),
         "Ids and aliases must have the same length",
     );

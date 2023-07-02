@@ -6,7 +6,7 @@ pub struct InsertAliases(pub InsertAliasesQuery);
 pub struct InsertAliasesIds(pub InsertAliasesQuery);
 
 impl InsertAliases {
-    pub fn of<T: Into<QueryIds>>(mut self, ids: T) -> InsertAliasesIds {
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertAliasesIds {
         self.0.ids = ids.into();
 
         InsertAliasesIds(self.0)

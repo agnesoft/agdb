@@ -7,7 +7,7 @@
   - [Insert](#insert)
     - [Insert nodes](#insert-nodes)
     - [Insert edges](#insert-edges)
-    - [Inserted aliases](#inserted-aliases)
+    - [Insert aliases](#insert-aliases)
     - [Insert values](#insert-values)
   - [Remove](#remove)
     - [Remove elements](#remove-elements)
@@ -242,7 +242,7 @@ The result will contain:
 - number of edges inserted
 - list of elements inserted with their ids (negative) but without the inserted values
 
-### Inserted aliases
+### Insert aliases
 
 ```Rust
 pub struct InsertAliasesQuery {
@@ -254,9 +254,9 @@ pub struct InsertAliasesQuery {
 Builder pattern:
 
 ```Rust
-QueryBuilder::insert().aliases("a").of(1).query();
-QueryBuilder::insert().aliases("a").of("b").query();
-QueryBuilder::insert().aliases(vec!["a", "b"]).of(vec![1, 2]).query();
+QueryBuilder::insert().aliases("a").ids(1).query();
+QueryBuilder::insert().aliases("a").ids("b").query(); // alias "b" is replaced  with "a"
+QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]).query();
 ```
 
 Inserts or updates aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.

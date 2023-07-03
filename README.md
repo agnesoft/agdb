@@ -4,6 +4,12 @@
 
 The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph database using object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern (or directly as objects) with no special language or text parsing.
 
+- [Agnesoft Graph Database](#agnesoft-graph-database)
+- [Key Features](#key-features)
+- [Quickstart](#quickstart)
+- [Roadmap](#roadmap)
+- [Reference](#reference)
+
 # Key Features
 
 - Data plotted on a graph
@@ -39,7 +45,7 @@ let users = db.exec_mut(&QueryBuilder::insert()
 db.exec_mut(&QueryBuilder::insert().edges().from("users").to(&users).query())?;
 ```
 
-This code creates a database called `user_db.agdb` with a simple graph of 4 nodes. The first node is aliased `users` and 3 user nodes for Alice, Bob and John are then connected with edges to the `users` node. The arbitrary `username` and sometimes `joined` properties are attached to the user nodes.
+This code creates a database called `user_db.agdb` with a simple graph of 4 nodes. The first node is aliased `users` and 3 user nodes for Alice, Bob and John are then connected with edges to the `users` node. The arbitrary `username` property and sparse `joined` property are attached to the user nodes.
 
 You can select the graph elements (both nodes & edges) with their ids to get them back with their associated data (key-value properties):
 
@@ -75,6 +81,18 @@ println!("{:?}", user);
 ```
 
 For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [guide](docs/guide.md).
+
+# Roadmap
+
+The following are planned features in priority order:
+
+| Feature                           | Description                                                                                                                                                                                              |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ability to disable memory mapping | Memory mapping aids with read performance but for databases larger than few GBs it is not very practical. To allow larger databases disable memory mapping and do reads from the database file directly. |
+| Object query (de)serialization    | To facilitate use of the database from other languages or process the query objects and results must allow (de)serialization.                                                                            |
+| Server mode                       | Executable version of the database to be accessed via network (REST & websocket).                                                                                                                        |
+| Data replication & RAFT protocol  | Allow replication by connecting several database nodes together with a RAFT protocol.                                                                                                                    |
+| Data sharding                     | Allow sharding single database data set across multiple nodes to allow super large databases.                                                                                                            |
 
 # Reference
 

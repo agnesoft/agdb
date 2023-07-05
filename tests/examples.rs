@@ -2,6 +2,8 @@ mod test_db;
 
 use crate::test_db::TestFile;
 use agdb::Comparison::Equal;
+use agdb::CountComparison;
+use agdb::CountComparison::LessThanOrEqual;
 use agdb::Db;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -69,6 +71,8 @@ fn quickstart() -> Result<(), QueryError> {
 
 #[test]
 fn guide() -> Result<(), QueryError> {
+    let _test_file = TestFile::from("myplace.agdb");
+
     let db = Arc::new(RwLock::new(Db::new("myplace.agdb")?));
     db.write()?.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
@@ -203,6 +207,42 @@ fn guide() -> Result<(), QueryError> {
             .from(user)
             .to(vec![post, top_comment])
             .values_uniform(vec![("liked", 1).into()])
+            .query(),
+    )?;
+
+    let user = db
+        .read()?
+        .exec(
+            &QueryBuilder::search()
+                .depth_first()
+                .from("users")
+                .limit(1)
+                .where_()
+                .distance(LessThanOrEqual(2))
+                .and()
+                .key("username")
+                .value(Equal(username.into()))
+                .and()
+                .key("password")
+                .value(Equal(password.into()))
+                .query(),
+        )?
+        .elements
+        .get(0)
+        .ok_or(QueryError::from("Username or password are incorrect"))?
+        .id;
+
+    let user_posts = db.read()?.exec(
+        &QueryBuilder::search()
+            .from(user)
+            .where_()
+            .distance(CountComparison::Equal(2))
+            .and()
+            .beyond()
+            .where_()
+            .node()
+            .or()
+            .keys(vec!["authored".into()])
             .query(),
     )?;
 

@@ -14,6 +14,7 @@ pub enum QueryConditionModifier {
     None,
     Not,
     NotBeyond,
+    Beyond,
 }
 
 #[derive(Debug, Clone, PartialEq)]

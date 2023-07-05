@@ -584,6 +584,7 @@ The currently supported conditions are:
 
 All conditions can be further modified as follows:
 
+- Beyond (continues the search only beyond this element)
 - Not (reverses the condition result)
 - NotBeyond (stops the search beyond this element)
 
@@ -606,6 +607,7 @@ pub enum QueryConditionLogic {
 
 pub enum QueryConditionModifier {
     None,
+    Beyond,
     Not,
     NotBeyond,
 }
@@ -657,6 +659,7 @@ QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into(
 QueryBuilder::search().from(1).where_().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().not().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().ids(vec![1, 2]).query();
+QueryBuilder::search().from(1).where_().beyond().keys(vec!["k"]).query();
 QueryBuilder::search().from(1).where_().not().ids(vec![1, 2]).query();
 QueryBuilder::search().from(1).where_().not_beyond().ids("a").query();
 QueryBuilder::search().from(1).where_().node().or().edge().query();
@@ -668,6 +671,6 @@ NOTE: The use of `where_` with an underscore as the method name is necessary to 
 
 The conditions are applied one at a time to each visited element and chained using logic operators `AND` and `OR`. They can be nested using `where_` and `end_where` (in place of brackets). The condition evaluator supports short-circuiting not evaluating conditions further if the logical outcome cannot change.
 
-The condition `Distance` and the condition modifier `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements.
+The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`Beyond` and `NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements or continue only beyond certain elements.
 
 For further examples and use cases see the [in-depth guide](guide.md).

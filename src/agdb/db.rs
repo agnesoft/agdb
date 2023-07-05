@@ -703,6 +703,13 @@ impl Db {
             let mut control = self.evaluate_condition(index, distance, &condition.data)?;
 
             match condition.modifier {
+                QueryConditionModifier::Beyond => {
+                    if control.is_true() {
+                        control = control.and(SearchControl::Continue(true));
+                    } else {
+                        control = SearchControl::Stop(true);
+                    }
+                }
                 QueryConditionModifier::Not => control.flip(),
                 QueryConditionModifier::NotBeyond => {
                     if control.is_true() {

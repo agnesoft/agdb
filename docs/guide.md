@@ -9,6 +9,10 @@ In this guide we will explore more realistic use cases and advanced concepts of 
     - [Comments](#comments)
     - [Likes](#likes)
   - [Selects \& Searches](#selects--searches)
+    - [Login](#login)
+    - [User posts, comments \& liked content](#user-posts-comments--liked-content)
+  - [Schema Updates](#schema-updates)
+  - [Summary](#summary)
 
 ## The setup
 
@@ -140,14 +144,88 @@ The edges from the user have now a property `commented` to distinguish them from
 Let's make the `likes` connections from users to posts or comments. To create likes:
 
 ```Rust
+let timestamp = 246;
+
 db.write()?.exec_mut(
     &QueryBuilder::insert()
         .edges()
         .from(user)
         .to(vec![post, top_comment])
-        .values_uniform(vec![("liked", 1).into()])
+        .values_uniform(vec![("liked", timestamp).into()])
         .query(),
 )?;
 ```
 
+The query is fairly self-explanatory. The `likes` have the `liked` property that distinguishes it from the other edges from a user.
+
 ## Selects & Searches
+
+Now that we have the data in our database and means to add more it is time to create the select and search queries.
+
+### Login
+
+First the user login which means searching the database for a particular username and matching its password:
+
+```Rust
+use agdb::Comparison::Equal;
+use agdb::CountComparison::LessThanOrEqual;
+
+let user = db.read()?.exec(
+        &QueryBuilder::search()
+            .depth_first()
+            .from("users")
+            .limit(1)
+            .where_()
+            .distance(LessThanOrEqual(2))
+            .and()
+            .key("username")
+            .value(Equal(username.into()))
+            .and()
+            .key("password")
+            .value(Equal(password.into()))
+            .query())?
+    .elements
+    .get(0)
+    .ok_or(QueryError::from("Username or password are incorrect"))?
+    .id;
+```
+
+There is a lot going on here. First we start our search at the `users` using depth first. Depth first is better here because it allows us to examine users in sequence rather than first examining all edges from users and only then examining all the users. We also limit the search to just a single element (`limit(1)`) as we want just that one user. The conditions are then straightforward:
+
+- go at most to distance 2 (distance 1 = edges from users, distance 2 == user nodes)
+- check if username matches
+- check if password matches
+
+Upon success we attempt to get the first element in the result and its id.
+
+### User posts, comments & liked content
+
+Showing a user their content or content they liked in the past would be a very typical query we would like to have:
+
+```Rust
+let user_posts = db.read()?.exec(
+    &QueryBuilder::search()
+        .from(user)
+        .where_()
+        .distance(CountComparison::Equal(2))
+        .and()
+        .beyond()
+        .where_()
+        .node()
+        .or()
+        .keys(vec!["authored".into()])
+        .query(),
+)?;
+```
+
+As usual we start the search with `from`, this time from the logged in `user` node. We know the posts are at distance 2 from there (beyond single edge) so the first condition is `distance(Equal(2))`. And we want to skip the edges that are not leading to a post (i.e. those not having the `authored` property or key). Finally we want to continue searching beyond the starting node hence the condition for the `beyond` modifier is compounded condition - either a node or an element with the `authored` key.
+
+We would retrieve the comments and likes in a similar fashion only changing the `keys` condition to `commented` or `liked` respectively.
+
+## Schema Updates
+
+TBD
+
+## Summary
+
+TBD

@@ -158,6 +158,10 @@ impl SearchTo {
     pub fn query(self) -> SearchQuery {
         self.0
     }
+
+    pub fn where_(self) -> Where {
+        Where::new(self.0)
+    }
 }
 
 impl SelectLimit {

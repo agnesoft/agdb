@@ -33,6 +33,12 @@ impl Where {
         }
     }
 
+    pub fn beyond(mut self) -> Where {
+        self.modifier = QueryConditionModifier::Beyond;
+
+        self
+    }
+
     pub fn distance(mut self, comparison: CountComparison) -> WhereLogicOperator {
         self.add_condition(QueryCondition {
             logic: self.logic,

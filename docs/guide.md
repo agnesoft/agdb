@@ -2,6 +2,14 @@
 
 In this guide we will explore more realistic use cases and advanced concepts of the `agdb`. It should help you understand how to make the best use of the `graph` data schema and how to build complex queries. The premise of this guide is building a database for a social network called `Myplace`. The users create posts and share them other users for them to react to through commenting and/or liking them.
 
+- [Guide](#guide)
+  - [The setup](#the-setup)
+    - [Users](#users)
+    - [Posts](#posts)
+    - [Comments](#comments)
+    - [Likes](#likes)
+  - [Selects \& Searches](#selects--searches)
+
 ## The setup
 
 The first thing is to setup our database:
@@ -64,10 +72,9 @@ The actual content our users create and consume are the posts. The properties we
 
 - title
 - body
+- author
 
-Each post will be connected to `posts` root node and to the user which created it and to users that liked it. Furthermore each post will be connected to comments.
-
-To create a post:
+Each post will be connected to `posts` root node and to the user which created it. To create a post:
 
 ```Rust
 use agdb::QueryId;
@@ -87,12 +94,60 @@ let post = db.write()?.transaction_mut(|t| -> Result<DbId, QueryError> {
 })?;
 ```
 
-Beside connecting the node to two others (doing the edges in a separate steps makes the queries remain fairly simple) we are also adding a property `authored` to the edge coming from the `user`. This is to distinguish it from other possible edges coming from the user - comments and likes - that will come later.
-
-### Likes
-
-- liked
+Beside connecting the node to two others (doing the edges in a separate step makes the queries remain fairly simple) we are also adding a property `authored` to the edge coming from the `user`. This is to distinguish it from other possible edges coming from the user - comments and likes - that will come later.
 
 ### Comments
 
+The comments are created by the users and are either top level comments on a post or replies to other comments. Information we want to store about the comments are:
+
 - body
+- author
+
+To create a top level comment:
+
+```Rust
+let body = "I have this car as well only in red. It's a great car!";
+let timestamp = 456;
+
+let top_comment = db.write()?.transaction_mut(|t| -> Result<DbId, QueryError> {
+    let comment = t.exec_mut(&QueryBuilder::insert().nodes().values(vec![
+        vec![("body", body).into()]]).query())?.elements[0].id;
+    t.exec_mut(&QueryBuilder::insert().edges().from(vec![post, user]).to(comment).values(vec![
+        vec![], vec![("commented", timestamp).into()]]).query())?;
+    Ok(comment)
+})?;
+```
+
+Similarly to create a reply to a comment:
+
+```Rust
+let body = "They stopped making them just a year later in 2009 and the next generation flopped so they don't make them anymore. It's a shame, it really was a good car.";
+let timestamp = 789;
+
+let reply_comment = db.write()?.transaction_mut(|t| -> Result<DbId, QueryError> {
+    let comment = t.exec_mut(&QueryBuilder::insert().nodes().values(vec![
+        vec![("body", body).into()]]).query())?.elements[0].id;
+    t.exec_mut(&QueryBuilder::insert().edges().from(vec![top_comment, user]).to(comment).values(vec![
+        vec![], vec![("commented", timestamp).into()]]).query())?;
+    Ok(comment)
+})?;
+```
+
+The edges from the user have now a property `commented` to distinguish them from `authored` edges. Alternatively one could create a proxy node (i.e. "user comments") that would identify all edges coming from it as a particular type eliminating the need to check all the edges. We will see it in action a bit later but as with any optimization technique we should measure its impact on what we are doing.
+
+### Likes
+
+Let's make the `likes` connections from users to posts or comments. To create likes:
+
+```Rust
+db.write()?.exec_mut(
+    &QueryBuilder::insert()
+        .edges()
+        .from(user)
+        .to(vec![post, top_comment])
+        .values_uniform(vec![("liked", 1).into()])
+        .query(),
+)?;
+```
+
+## Selects & Searches

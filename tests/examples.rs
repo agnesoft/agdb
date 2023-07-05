@@ -118,7 +118,7 @@ fn guide() -> Result<(), QueryError> {
         })?;
 
     let title = "My awesome car";
-    let body = format!("https://photos.myplace.net/{}/car.jpeg", user.0);
+    let body = format!("https://photos.myplace.net/{}/car.png", user.0);
     let timestamp = 123;
 
     let post = db
@@ -146,6 +146,65 @@ fn guide() -> Result<(), QueryError> {
             )?;
             Ok(post)
         })?;
+
+    let body = "I have this car since 2008 only in red. It's a great car!";
+    let timestamp = 456;
+    let top_comment = db
+        .write()?
+        .transaction_mut(|t| -> Result<DbId, QueryError> {
+            let comment = t
+                .exec_mut(
+                    &QueryBuilder::insert()
+                        .nodes()
+                        .values(vec![vec![("body", body).into()]])
+                        .query(),
+                )?
+                .elements[0]
+                .id;
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(vec![post, user])
+                    .to(comment)
+                    .values(vec![vec![], vec![("commented", timestamp).into()]])
+                    .query(),
+            )?;
+            Ok(comment)
+        })?;
+
+    let body = "They stopped making them just a year later in 2009 and the next generation flopped so they don't make them anymore. It's a shame, it really was a good car.";
+    let timestamp = 456;
+    let _reply_comment = db
+        .write()?
+        .transaction_mut(|t| -> Result<DbId, QueryError> {
+            let comment = t
+                .exec_mut(
+                    &QueryBuilder::insert()
+                        .nodes()
+                        .values(vec![vec![("body", body).into()]])
+                        .query(),
+                )?
+                .elements[0]
+                .id;
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(vec![top_comment, user])
+                    .to(comment)
+                    .values(vec![vec![], vec![("commented", timestamp).into()]])
+                    .query(),
+            )?;
+            Ok(comment)
+        })?;
+
+    db.write()?.exec_mut(
+        &QueryBuilder::insert()
+            .edges()
+            .from(user)
+            .to(vec![post, top_comment])
+            .values_uniform(vec![("liked", 1).into()])
+            .query(),
+    )?;
 
     Ok(())
 }

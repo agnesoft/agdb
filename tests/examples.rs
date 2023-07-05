@@ -6,6 +6,8 @@ use agdb::CountComparison;
 use agdb::CountComparison::LessThanOrEqual;
 use agdb::Db;
 use agdb::DbId;
+use agdb::DbKeyOrder;
+use agdb::DbKeyValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryId;
@@ -143,7 +145,7 @@ fn guide() -> Result<(), QueryError> {
             t.exec_mut(
                 &QueryBuilder::insert()
                     .edges()
-                    .from(vec![QueryId::from("users"), user.into()])
+                    .from(vec![QueryId::from("posts"), user.into()])
                     .to(post)
                     .values(vec![vec![], vec![("authored", timestamp).into()]])
                     .query(),
@@ -232,7 +234,7 @@ fn guide() -> Result<(), QueryError> {
         .ok_or(QueryError::from("Username or password are incorrect"))?
         .id;
 
-    let user_posts = db.read()?.exec(
+    let _user_posts = db.read()?.exec(
         &QueryBuilder::search()
             .from(user)
             .where_()
@@ -243,6 +245,74 @@ fn guide() -> Result<(), QueryError> {
             .node()
             .or()
             .keys(vec!["authored".into()])
+            .query(),
+    )?;
+
+    let posts = db.read()?.exec(
+        &QueryBuilder::select()
+            .search(
+                QueryBuilder::search()
+                    .from("posts")
+                    .order_by(vec![DbKeyOrder::Desc("likes".into())])
+                    .offset(0)
+                    .limit(10)
+                    .where_()
+                    .distance(CountComparison::Equal(2))
+                    .query(),
+            )
+            .query(),
+    )?;
+
+    let _comments = db.read()?.exec(
+        &QueryBuilder::select()
+            .search(
+                QueryBuilder::search()
+                    .depth_first()
+                    .from(posts.elements[0].id)
+                    .query(),
+            )
+            .query(),
+    )?;
+
+    db.write()?.transaction_mut(|t| -> Result<(), QueryError> {
+        let posts = t.exec(
+            &QueryBuilder::search()
+                .from("posts")
+                .where_()
+                .distance(CountComparison::Equal(2))
+                .query(),
+        )?;
+        let mut likes = Vec::<Vec<DbKeyValue>>::new();
+
+        for post in posts.ids() {
+            let post_likes = t
+                .exec(
+                    &QueryBuilder::search()
+                        .to(post)
+                        .where_()
+                        .distance(CountComparison::Equal(1))
+                        .and()
+                        .keys(vec!["liked".into()])
+                        .query(),
+                )?
+                .result;
+            likes.push(vec![("likes", post_likes).into()]);
+        }
+
+        t.exec_mut(&QueryBuilder::insert().values(likes).ids(posts).query())?;
+        Ok(())
+    })?;
+
+    db.write()?.exec_mut(
+        &QueryBuilder::insert()
+            .values_uniform(vec![("level", 1).into()])
+            .search(
+                QueryBuilder::search()
+                    .from("posts")
+                    .where_()
+                    .distance(CountComparison::Equal(4))
+                    .query(),
+            )
             .query(),
     )?;
 

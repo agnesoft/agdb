@@ -150,7 +150,7 @@ impl<'a> PathSearchHandler for PathHandler<'a> {
             .db
             .evaluate_conditions(index, distance, self.conditions)?
         {
-            SearchControl::Continue(add) => Ok((1 - (add as u64), add)),
+            SearchControl::Continue(add) => Ok((1 + (!add as u64), add)),
             SearchControl::Finish(add) | SearchControl::Stop(add) => Ok((0, add)),
         }
     }

@@ -430,3 +430,39 @@ fn search_from_to_where() {
         &[12.into()],
     )
 }
+
+#[test]
+fn search_from_to_where_filter() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(vec!["start", "end"])
+            .query(),
+        2,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec!["start", "start"])
+            .to(vec!["end", "end"])
+            .values(vec![vec![], vec![("key", 1).into()]])
+            .query(),
+        2,
+    );
+
+    db.exec_ids(
+        QueryBuilder::search().from("start").to("end").query(),
+        &[1, -3, 2],
+    );
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("start")
+            .to("end")
+            .where_()
+            .keys(vec!["key".into()])
+            .query(),
+        &[-4],
+    );
+}

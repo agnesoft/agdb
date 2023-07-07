@@ -1,4 +1,4 @@
-use crate::DbElement;
+use crate::db::db_element::DbElement;
 use crate::DbId;
 
 #[derive(Debug, Default)]

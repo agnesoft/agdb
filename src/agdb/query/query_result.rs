@@ -1,5 +1,5 @@
-use super::query_id::QueryId;
 use crate::db::db_element::DbElement;
+use crate::DbId;
 
 #[derive(Debug, Default)]
 pub struct QueryResult {
@@ -8,8 +8,8 @@ pub struct QueryResult {
 }
 
 impl QueryResult {
-    pub fn ids(&self) -> Vec<QueryId> {
-        self.elements.iter().map(|e| QueryId::Id(e.id)).collect()
+    pub fn ids(&self) -> Vec<DbId> {
+        self.elements.iter().map(|e| e.id).collect()
     }
 }
 

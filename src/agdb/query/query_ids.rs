@@ -79,7 +79,7 @@ impl From<QueryResult> for QueryIds {
 
 impl From<&QueryResult> for QueryIds {
     fn from(value: &QueryResult) -> Self {
-        QueryIds::Ids(value.ids())
+        QueryIds::Ids(value.elements.iter().map(|e| QueryId::from(e.id)).collect())
     }
 }
 

@@ -2,7 +2,7 @@
 
 In this guide we will explore more realistic use of the `agdb`. It should help you understand how to make the best use of the `graph` data schema and how to build complex queries.
 
-The premise of this guide is building a database for a social network. The users of the network can create posts and share them with other users to commenting and like.
+The premise of this guide is building a database for a social network. The users of the network can create posts and share them with other users to commenting and like. You can see the complete code under [tests/guide.rs](../tests/guide.rs).
 
 - [Guide](#guide)
   - [The setup](#the-setup)
@@ -387,14 +387,24 @@ There is something missing though as we would want to also order the posts by th
 
 ### Comments
 
-Now that we have the posts we will want to fetch the comments on them. Our schema says that the only outgoing edges from posts are the comments so getting the comments should be done with a very simple query:
+Now that we have the posts we will want to fetch the comments on them. Our schema says that the only outgoing edges from posts are the comments so getting the comments can be done like this:
 
 ```Rust
 fn comments(db: &Db, id: DbId) -> Result<Vec<String>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
-                .search(QueryBuilder::search().depth_first().from(id).query())
+                .values(vec!["body".into()])
+                .search(
+                    QueryBuilder::search()
+                        .depth_first()
+                        .from(id)
+                        .where_()
+                        .node()
+                        .and()
+                        .distance(CountComparison::GreaterThan(1))
+                        .query(),
+                )
                 .query(),
         )?
         .elements
@@ -404,24 +414,24 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<String>, QueryError> {
 }
 ```
 
-Using the `depth_first` algorithm will help in organizing the comments in their natural tree structure in the result. Since comments have only a single property (`body`) we can assume it when extracting it to a vector of comments.
+Using the `depth_first` algorithm will help in organizing the comments in their natural tree structure in the result. The comments are nodes so `.node()` is the first condition. We are starting at the post but we are not interested in selecting that hence the condition `.distance(CountComparison::GreaterThan(1))`. Since we are selecting the `body` property we can assume it when extracting it to a vector of comments.
 
-There is a yet another flaw here however, do you see it? We currently do not have a way to tell which comment is a top level comment to correctly present the comments to the user other then in a flat list. This is another use case for a schema update to satisfy this requirement.
+There is a another flaw here however, do you see it? We currently do not have a way to tell which comment is a top level comment to correctly present the comments to the user other then in a flat list. This is another use case for a schema update to satisfy this requirement.
 
 ## Schema updates
 
-Possibly the most common problem with any database. It contains all the information we want but it does not allow easy combination for us to use it the way we want. These issues are not unique to `agdb` or to databases for that matter but are ubiquitous in all software as requirements and our understanding of the problem domain change over time.
+Possibly the most common problem with any database is that it contains the information we want in some form but it does not allow us using it in the way we would like. Perhaps we want to join the information together or get it in a different format than in which it is stored. Or the information truly is not there and we need to start capturing it. These issues are not unique to `agdb` or to databases in general for that matter. They are ubiquitous in all software as requirements and our understanding of the problem domains change over time. The ability to change is what matters the most. Let's see how `agdb` tackles this problem.
 
-We have already identified two such issues with our database so far:
+In our case we have already identified two such issues with our database so far:
 
 - ordering posts based on likes
 - determining level of comments
 
-We can come up with more such as getting the authors of both posts and comments beside their titles and bodies. There are certainly more but for now let's focus on the two listed:
+We can perhaps already come up with more such as getting the authors of posts or comments, missing timestamp information etc. There are certainly more but for now let's focus on the two highlighted:
 
 ### Likes
 
-Lets start with the likes. The query to make use of the `liked` edges would not be terribly difficult but it would certainly be rather expensive, especially as we would be doing it over and over. Instead we could simply introduce a property called `likes` and essentially cache that result on the post itself:
+Lets start with the likes. The query to make use of the `liked` edges would not be terribly difficult (counting the `liked` edges from a post or comment) but it certainly does not seem that easy or even fast. Especially as we would be doing it over and over. Instead we could simply introduce a counter property called `likes` and essentially cache the information on the post itself. That would simplify and speed up things a lot:
 
 ```Rust
 fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
@@ -456,7 +466,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
 }
 ```
 
-We are doing a mutable transaction to prevent any new posts, likes or other modifications to interfere while we do this. First we get the ids of all the posts. Then we count the `liked` edges of each post and finally we insert a new `likes` property with that count back to the posts. This allows us to select and order posts based on likes:
+We are doing a mutable transaction to prevent any new posts, likes or other modifications to interfere while we do this. First we get the ids of all the posts. Then we count the `liked` edges of each post (exactly what we would be doing if we did not want to change the schema) and finally we insert a new `likes` property with that count back to the posts. This allows us to select and order posts based on likes:
 
 ```Rust
 fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<QueryId>, QueryError> {
@@ -480,7 +490,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<QueryId>, QueryEr
 
 ```
 
-However this change is not "free" because caching any information means it now exists in two places and those places must be synchronized (the famous cache invalidation problem). Fortunately the task here is not as hard as we simply make sure that whenever we add or remove `likes` we also update the counter on the post.
+However this change is not "free" in that caching any information means it now exists in two places and those places must be synchronized (the famous cache invalidation problem). Fortunately this instance is not as hard. We simply make sure that whenever we add or remove `likes` we also update the counter on the post or comment. Since when we do those operations we also have the post/comment id doing that would be trivial.
 
 ### Comments
 
@@ -514,4 +524,4 @@ We have also discovered issues with the schema and were able seamlessly fix them
 
 Lastly we have seen that the queries can be simple, readable, statically checked and completely native while still providing complex functionality such as filtering through conditions, paging, ordering etc. Moreover while the features of object queries won't make them 100 % correct they eliminate entire categories of issues like syntax errors, type errors, security issues, certain logic errors etc.
 
-For the comprehensive overview of all queries see the [query reference](queries.md).
+For the comprehensive overview of all queries see the [query reference](queries.md). For the code used in this guide see [tests/guide.rs](../tests/guide.rs).

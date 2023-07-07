@@ -195,7 +195,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
     Ok(user.id)
 }
 
-fn user_posts(db: &Db, user: DbId) -> Result<Vec<QueryId>, QueryError> {
+fn user_posts(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::search()
@@ -213,7 +213,7 @@ fn user_posts(db: &Db, user: DbId) -> Result<Vec<QueryId>, QueryError> {
         .ids())
 }
 
-fn post_titles(db: &Db, ids: Vec<QueryId>) -> Result<Vec<String>, QueryError> {
+fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
@@ -227,7 +227,7 @@ fn post_titles(db: &Db, ids: Vec<QueryId>) -> Result<Vec<String>, QueryError> {
         .collect())
 }
 
-fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<QueryId>, QueryError> {
+fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<DbId>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
@@ -245,7 +245,7 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<QueryId>, QueryError> {
         .ids())
 }
 
-fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<QueryId>, QueryError> {
+fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<DbId>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
@@ -268,7 +268,17 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<String>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
-                .search(QueryBuilder::search().depth_first().from(id).query())
+                .values(vec!["body".into()])
+                .search(
+                    QueryBuilder::search()
+                        .depth_first()
+                        .from(id)
+                        .where_()
+                        .node()
+                        .and()
+                        .distance(CountComparison::GreaterThan(1))
+                        .query(),
+                )
                 .query(),
         )?
         .elements

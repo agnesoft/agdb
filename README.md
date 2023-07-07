@@ -9,9 +9,9 @@ The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph datab
 - [Quickstart](#quickstart)
 - [Roadmap](#roadmap)
 - [Reference](#reference)
+  - [Efficient agdb](#efficient-agdb)
   - [Concepts](#concepts)
   - [Queries](#queries)
-  - [Guide](#guide)
   - [But why?](#but-why)
 
 # Key Features
@@ -84,7 +84,7 @@ println!("{:?}", user);
 //   ] }
 ```
 
-For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [guide](docs/guide.md).
+For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
 
 # Roadmap
 
@@ -100,10 +100,10 @@ The following are planned features in priority order:
 
 # Reference
 
+## [Efficient agdb](docs/efficient_agdb.md)
+
 ## [Concepts](docs/concepts.md)
 
 ## [Queries](docs/queries.md)
-
-## [Guide](docs/guide.md)
 
 ## [But why?](docs/but_why.md)

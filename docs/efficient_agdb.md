@@ -1,10 +1,10 @@
-# Guide
+# Efficient agdb
 
-In this guide we will explore more realistic use of the `agdb`. It should help you understand how to make the best use of the `graph` data schema and how to build complex queries.
+In this document we will explore more realistic use of the `agdb`. It should help you understand how to make the best use of the `graph` data schema and how to build complex queries.
 
-The premise of this guide is building a database for a social network. The users of the network can create posts and share them with other users to commenting and like. You can see the complete code under [tests/guide.rs](../tests/guide.rs).
+The premise that we will be working on is building a database for a social network. The users of the network can create posts and share them with other users to comment and like. You can see the complete code under [tests/efficient_agdb.rs](../tests/efficient_agdb.rs).
 
-- [Guide](#guide)
+- [Efficient agdb](#efficient-agdb)
   - [The setup](#the-setup)
     - [Users](#users)
     - [Posts](#posts)
@@ -518,10 +518,10 @@ Although this task might have seemed daunting it could be done with a simple que
 
 ## Summary
 
-In this guide we have gone through a realistic example of an inception of a database for a social network - setting it up from scratch, designing search queries and leveraging the graph. We have used the ability to limit the search area based on our data and the graph schema multiple times. Instead of searching possibly millions of records and filtering them out to get what we want we could search & select just the relevant fraction of the data set. That is the main advantage of the graph databases. If a user authored just 3 posts the query would do exactly the same work if there were 30 posts in the database as if there were 3 billion.
+In this document we have gone through a realistic example of an inception of a database for a social network - setting it up from scratch, designing search queries and leveraging the graph. We have used the ability to limit the search area based on our data and the graph schema multiple times. Instead of searching possibly millions of records and filtering them out to get what we want we could search & select just the relevant fraction of the data set. That is the main advantage of the graph databases. If a user authored just 3 posts the query would do exactly the same work if there were 30 posts in the database as if there were 3 billion.
 
 We have also discovered issues with the schema and were able seamlessly fix them. It demonstrated yet another important aspect of graph databases which is fearless schema updates. Modelling data on a graph feels natural and changing it to fit new or changing requirements is just as natural.
 
 Lastly we have seen that the queries can be simple, readable, statically checked and completely native while still providing complex functionality such as filtering through conditions, paging, ordering etc. Moreover while the features of object queries won't make them 100 % correct they eliminate entire categories of issues like syntax errors, type errors, security issues, certain logic errors etc.
 
-For the comprehensive overview of all queries see the [query reference](queries.md). For the code used in this guide see [tests/guide.rs](../tests/guide.rs).
+For the comprehensive overview of all queries see the [query reference](queries.md). For the code used in this document see [tests/efficient_agdb.rs](../tests/efficient_agdb.rs).

@@ -673,4 +673,4 @@ The conditions are applied one at a time to each visited element and chained usi
 
 The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`Beyond` and `NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements or continue only beyond certain elements.
 
-For further examples and use cases see the [in-depth guide](guide.md).
+For further examples and use cases see the [efficient agdb](docs/efficient_agdb.md).

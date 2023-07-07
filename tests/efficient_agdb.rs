@@ -335,7 +335,7 @@ fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
 }
 
 #[test]
-fn guide() -> Result<(), QueryError> {
+fn efficient_agdb() -> Result<(), QueryError> {
     let _test_file = TestFile::from("database.agdb");
     let db = create_db()?;
     register_user(

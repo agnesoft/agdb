@@ -88,10 +88,7 @@ fn create_post(db: &mut Db, user: DbId, title: &str, body: &str) -> Result<DbId,
             .exec_mut(
                 &QueryBuilder::insert()
                     .nodes()
-                    .values(vec![vec![
-                        ("title", title).into(),
-                        ("body", body.clone()).into(),
-                    ]])
+                    .values(vec![vec![("title", title).into(), ("body", body).into()]])
                     .query(),
             )?
             .elements[0]

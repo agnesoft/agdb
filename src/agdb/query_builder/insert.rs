@@ -41,7 +41,7 @@ impl Insert {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().edges().from(1);
-    /// QueryBuilder::insert().edges().from_search(QueryBuilder::search().from(1).query());
+    /// QueryBuilder::insert().edges().from(QueryBuilder::search().from(1).query());
     /// ```
     pub fn edges(self) -> InsertEdges {
         InsertEdges(InsertEdgesQuery {
@@ -59,7 +59,7 @@ impl Insert {
     /// ```
     /// use agdb::QueryBuilder;
     ///
-    /// QueryBuilder::insert().nodes()
+    /// QueryBuilder::insert().nodes();
     /// ```
     pub fn nodes(self) -> InsertNodes {
         InsertNodes(InsertNodesQuery {
@@ -78,8 +78,8 @@ impl Insert {
     /// ```
     /// use agdb::QueryBuilder;
     ///
-    /// QueryBuilder::insert().values(vec![vec![("k", 1).into()]]).ids(1)
-    /// QueryBuilder::insert().values(vec![vec![("k", 1).into()]]).search(QueryBuilder::search().from(1).query())
+    /// QueryBuilder::insert().values(vec![vec![("k", 1).into()]]).ids(1);
+    /// QueryBuilder::insert().values(vec![vec![("k", 1).into()]]).ids(QueryBuilder::search().from(1).query());
     /// ```
     pub fn values<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
         InsertValues(InsertValuesQuery {
@@ -97,8 +97,8 @@ impl Insert {
     /// ```
     /// use agdb::QueryBuilder;
     ///
-    /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]).ids(1)
-    /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]).ids(QueryBuilder::search().from(1).query())
+    /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]).ids(1);
+    /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]).ids(QueryBuilder::search().from(1).query());
     /// ```
     pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
         InsertValues(InsertValuesQuery {

@@ -61,8 +61,8 @@ impl QueryBuilder {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::remove().ids(1);
+    /// QueryBuilder::remove().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::remove().aliases("a");
-    /// QueryBuilder::remove().search(QueryBuilder::search().from(1).query());
     /// QueryBuilder::remove().values(vec!["k".into()]);
     /// ```
     pub fn remove() -> Remove {
@@ -78,10 +78,10 @@ impl QueryBuilder {
     /// ```
     /// use agdb::QueryBuilder;
     ///
-    /// QueryBuilder::search().from(1) // BDS
-    /// QueryBuilder::search().to(1) // BDS
-    /// QueryBuilder::search().breadth_first()
-    /// QueryBuilder::search().depth_first()
+    /// QueryBuilder::search().from(1); // BDS
+    /// QueryBuilder::search().to(1); // BDS
+    /// QueryBuilder::search().breadth_first();
+    /// QueryBuilder::search().depth_first();
     /// ```
     pub fn search() -> Search {
         Search {}
@@ -95,7 +95,7 @@ impl QueryBuilder {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::select().ids(1);
-    /// QueryBuilder::select().search(QueryBuilder::search().from(1).query());
+    /// QueryBuilder::select().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::select().aliases();
     /// QueryBuilder::select().keys();
     /// QueryBuilder::select().key_count();

@@ -17,7 +17,7 @@ impl InsertAliases {
     /// Options:
     ///
     /// ```
-    /// use QueryBuilder:
+    /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().aliases("a").ids(1).query();
     /// ```

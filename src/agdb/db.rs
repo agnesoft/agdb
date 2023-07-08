@@ -140,6 +140,7 @@ impl Serialize for DbStorageIndex {
 ///
 /// ```
 /// use std::sync::{Arc, RwLock};
+/// use agdb::Db;
 ///
 /// let db = Arc::new(RwLock::new(Db::new("db.agdb").unwrap()));
 /// db.read().unwrap(); //for a read lock allowing Db::exec() and Db::transaction()

@@ -32,7 +32,7 @@ impl InsertEdges {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().edges().from(1).to(2);
-    /// QueryBuilder::insert().edges().from(1).to_search(QueryBuilder::search().from(1).query());
+    /// QueryBuilder::insert().edges().from(1).to(QueryBuilder::search().from(1).query());
     /// ```
     pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
         self.0.from = ids.into();

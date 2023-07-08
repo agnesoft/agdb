@@ -1,10 +1,20 @@
 use super::query_id::QueryId;
 use super::search_query::SearchQuery;
-use crate::{DbId, QueryResult};
+use crate::DbId;
+use crate::QueryResult;
 
+/// List of database ids used in queries. It
+/// can either represent a list of `QueryId`s
+/// or a search query. Search query allows query
+/// nesting and sourcing the ids dynamically for
+/// another query most commonly with the
+/// select queries.
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryIds {
+    /// List of `QueryId`s
     Ids(Vec<QueryId>),
+
+    /// Search query
     Search(SearchQuery),
 }
 

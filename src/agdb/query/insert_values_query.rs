@@ -5,8 +5,20 @@ use crate::QueryError;
 use crate::QueryMut;
 use crate::QueryResult;
 
+/// Query to insert or update key-value pairs (properties)
+/// to existing elements in the database. All `ids` must exist
+/// in the database. If `values` is set to `Single` the properties
+/// will be inserted uniformly to all `ids` otherwise there must be
+/// enough `values` for all `ids`.
+///
+/// The result will be number of inserted/update values and no elements.
+///
+/// NOTE: The result is NOT number of affected elements but individual properties.
 pub struct InsertValuesQuery {
+    /// Ids whose properties should be updated
     pub ids: QueryIds,
+
+    /// Key value pairs to be inserted to the existing elements.
     pub values: QueryValues,
 }
 

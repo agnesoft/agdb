@@ -1,8 +1,14 @@
 use crate::DbId;
 
+/// Database id used in queries that lets
+/// you refer to a database element as numerical
+/// id or a string alias.
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryId {
+    /// Numerical id as `DbId`
     Id(DbId),
+
+    /// Alias
     Alias(String),
 }
 

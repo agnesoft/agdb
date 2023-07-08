@@ -1,6 +1,11 @@
 use crate::db::db_error::DbError;
 use std::sync::PoisonError;
 
+/// Universal `query` error returned from all query operations.
+/// It represents mainly errors from executing queries but the
+/// cause of the error may be in exceptional cases a `DbError`.
+/// Typically however it will contain description of a problem with
+/// running a query such as "id/alias does not exist".
 #[derive(Default, Debug, PartialEq)]
 pub struct QueryError {
     pub description: String,

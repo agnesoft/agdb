@@ -8,6 +8,9 @@ use std::num::TryFromIntError;
 use std::panic::Location;
 use std::string::FromUtf8Error;
 
+/// Universal `agdb` database error. It represents
+/// any error caused by the database processing such as
+/// loading a database, writing data etc.
 #[derive(Debug)]
 pub struct DbError {
     pub description: String,

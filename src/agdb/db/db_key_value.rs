@@ -8,9 +8,15 @@ use crate::utilities::serialize::SerializeStatic;
 use crate::DbKey;
 use crate::DbValue;
 
+/// Database key-value pair (aka property) attached to
+/// database elements. It can be constructed from a
+/// tuple of types that are convertible to `DbValue`.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct DbKeyValue {
+    /// Key of the property
     pub key: DbKey,
+
+    /// Value of the property
     pub value: DbValue,
 }
 

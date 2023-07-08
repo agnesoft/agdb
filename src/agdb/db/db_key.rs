@@ -1,10 +1,15 @@
 use super::db_value::DbValue;
 
+/// Alias to `DbValue`
 pub type DbKey = DbValue;
 
+/// Ordering for search queries
 #[derive(Debug, Clone, PartialEq)]
 pub enum DbKeyOrder {
+    /// Ascending order (from smallest)
     Asc(DbKey),
+
+    /// Descending order (from largest)
     Desc(DbKey),
 }
 

@@ -12,7 +12,9 @@ pub struct SelectValuesQuery {
 }
 
 impl Query for SelectValuesQuery {
-    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         let (db_ids, is_search) = match &self.ids {
             QueryIds::Ids(ids) => {
                 let mut db_ids = vec![];
@@ -47,6 +49,6 @@ impl Query for SelectValuesQuery {
             result.elements.push(DbElement { id: db_id, values });
         }
 
-        Ok(())
+        Ok(result)
     }
 }

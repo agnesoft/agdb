@@ -9,7 +9,9 @@ use crate::QueryResult;
 pub struct SelectAliasesQuery(pub QueryIds);
 
 impl Query for SelectAliasesQuery {
-    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         match &self.0 {
             QueryIds::Ids(ids) => {
                 result.elements.reserve(ids.len());
@@ -42,6 +44,6 @@ impl Query for SelectAliasesQuery {
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 }

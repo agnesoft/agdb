@@ -7,7 +7,9 @@ use crate::QueryResult;
 pub struct SelectAllAliases {}
 
 impl Query for SelectAllAliases {
-    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         let mut aliases = db.aliases();
         aliases.sort();
         result.elements.reserve(aliases.len());
@@ -20,6 +22,6 @@ impl Query for SelectAllAliases {
             });
         }
 
-        Ok(())
+        Ok(result)
     }
 }

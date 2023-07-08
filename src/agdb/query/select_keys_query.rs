@@ -8,7 +8,9 @@ use crate::QueryResult;
 pub struct SelectKeysQuery(pub QueryIds);
 
 impl Query for SelectKeysQuery {
-    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         let db_ids = match &self.0 {
             QueryIds::Ids(ids) => {
                 let mut db_ids = vec![];
@@ -33,6 +35,6 @@ impl Query for SelectKeysQuery {
             });
         }
 
-        Ok(())
+        Ok(result)
     }
 }

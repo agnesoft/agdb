@@ -19,14 +19,7 @@ impl<'a> TransactionMut<'a> {
     }
 
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
-        let mut result = QueryResult {
-            result: 0,
-            elements: vec![],
-        };
-
-        query.process(self.db, &mut result)?;
-
-        Ok(result)
+        query.process(self.db)
     }
 
     pub(crate) fn commit(self) -> Result<(), QueryError> {

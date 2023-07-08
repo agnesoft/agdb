@@ -11,7 +11,9 @@ pub struct InsertValuesQuery {
 }
 
 impl QueryMut for InsertValuesQuery {
-    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         match &self.ids {
             QueryIds::Ids(ids) => match &self.values {
                 QueryValues::Single(values) => {
@@ -65,6 +67,6 @@ impl QueryMut for InsertValuesQuery {
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 }

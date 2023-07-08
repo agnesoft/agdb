@@ -6,15 +6,16 @@
 //! [Efficient agdb](https://github.com/agnesoft/agdb/blob/main/docs/efficient_agdb.md)
 //!
 //! # Example
+//! 
 //! ```
 //! use agdb::{Db, QueryBuilder};
 //!
 //! let mut db = Db::new("db.file")?;
-//! db.exec_mut(&QueryBuilder::insert().nodes().count(1).query())?;
+//! db.exec_mut(&QueryBuilder::insert().nodes().values(vec![vec![("key", 123).into()]]).query())?;
 //!
 //! let result = db.exec(&QueryBuilder::select().ids(1).query())?;
 //! println!("{:?}", result);
-//! // QueryResult { result: 1, elements: [ DbElement { id: DbId(1), values: [] } ] }
+//! // QueryResult { result: 1, elements: [ DbElement { id: DbId(1), values: [ DbKeyValue { key: String("key"), value: Int(123) } ] } ] }
 //! ```
 
 mod collections;

@@ -5,15 +5,49 @@ use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
 use crate::query::search_query::SearchQuery;
 
-pub struct InsertEdgesEach(pub InsertEdgesQuery);
-
+/// Insert edges builder that lets you add `from`
+/// (origin) nodes.
 pub struct InsertEdges(pub InsertEdgesQuery);
 
+/// Insert edges builder that lets you add values.
+pub struct InsertEdgesEach(pub InsertEdgesQuery);
+
+/// Insert edges builder that lets you add `to`
+/// (destination) nodes.
 pub struct InsertEdgesFrom(pub InsertEdgesQuery);
 
+/// Insert edges builder that lets you add values
+/// or set `each`.
 pub struct InsertEdgesFromTo(pub InsertEdgesQuery);
 
+/// Final builder that lets you create
+/// an actual query object.
 pub struct InsertEdgesValues(pub InsertEdgesQuery);
+
+impl InsertEdges {
+    /// An id or list of ids from where the edges should come from (origin).
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().edges().from(1).to(2);
+    /// QueryBuilder::insert().edges().from(1).to_search(QueryBuilder::search().from(1).query());
+    /// ```
+    pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
+        self.0.from = ids.into();
+
+        InsertEdgesFrom(self.0)
+    }
+
+    #[allow(clippy::wrong_self_convention)]
+    pub fn from_search(mut self, query: SearchQuery) -> InsertEdgesFrom {
+        self.0.from = QueryIds::Search(query);
+
+        InsertEdgesFrom(self.0)
+    }
+}
 
 impl InsertEdgesEach {
     pub fn query(self) -> InsertEdgesQuery {
@@ -30,21 +64,6 @@ impl InsertEdgesEach {
         self.0.values = QueryValues::Single(Into::<SingleValues>::into(key_values).0);
 
         InsertEdgesValues(self.0)
-    }
-}
-
-impl InsertEdges {
-    pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
-        self.0.from = ids.into();
-
-        InsertEdgesFrom(self.0)
-    }
-
-    #[allow(clippy::wrong_self_convention)]
-    pub fn from_search(mut self, query: SearchQuery) -> InsertEdgesFrom {
-        self.0.from = QueryIds::Search(query);
-
-        InsertEdgesFrom(self.0)
     }
 }
 

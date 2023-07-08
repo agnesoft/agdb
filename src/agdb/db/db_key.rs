@@ -23,6 +23,15 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::redundant_clone)]
+    fn derived_from_clone() {
+        let order = DbKeyOrder::Asc(1.into());
+        let other = order.clone();
+
+        assert_eq!(order, other);
+    }
+
+    #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
             DbKeyOrder::Asc(DbKey::default()),

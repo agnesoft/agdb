@@ -50,14 +50,6 @@ impl InsertEdgesEach {
 
     /// List of lists of `key_values` to be inserted into the edges. There must be exactly
     /// as many lists as the number of created edges.
-    ///
-    /// Options:
-    ///
-    /// ```
-    /// use agdb::QueryBuilder;
-    ///
-    /// QueryBuilder::insert().edges().from(1).to(2).each().values(vec![vec![("k", 1).into()]]).query();
-    /// ```
     pub fn values<T: Into<MultiValues>>(mut self, key_values: T) -> InsertEdgesValues {
         self.0.values = QueryValues::Multi(Into::<MultiValues>::into(key_values).0);
 
@@ -65,14 +57,6 @@ impl InsertEdgesEach {
     }
 
     /// List of `key_values` to be inserted into all created edges.
-    ///
-    /// Options:
-    ///
-    /// ```
-    /// use agdb::QueryBuilder;
-    ///
-    /// QueryBuilder::insert().edges().from(1).to(2).each().values_uniform(vec![("k", 1).into()]).query();
-    /// ```
     pub fn values_uniform<T: Into<SingleValues>>(mut self, key_values: T) -> InsertEdgesValues {
         self.0.values = QueryValues::Single(Into::<SingleValues>::into(key_values).0);
 
@@ -127,14 +111,6 @@ impl InsertEdgesFromTo {
 
     /// List of lists of `key_values` to be inserted into the edges. There must be exactly
     /// as many lists as the number of created edges.
-    ///
-    /// Options:
-    ///
-    /// ```
-    /// use agdb::QueryBuilder;
-    ///
-    /// QueryBuilder::insert().edges().from(1).to(2).values(vec![vec![("k", 1).into()]]).query();
-    /// ```
     pub fn values<T: Into<MultiValues>>(mut self, key_values: T) -> InsertEdgesValues {
         self.0.values = QueryValues::Multi(Into::<MultiValues>::into(key_values).0);
 
@@ -142,14 +118,6 @@ impl InsertEdgesFromTo {
     }
 
     /// List of `key_values` to be inserted into all created edges.
-    ///
-    /// Options:
-    ///
-    /// ```
-    /// use agdb::QueryBuilder;
-    ///
-    /// QueryBuilder::insert().edges().from(1).to(2).values_uniform(vec![("k", 1).into()]).query();
-    /// ```
     pub fn values_uniform<T: Into<SingleValues>>(mut self, key_values: T) -> InsertEdgesValues {
         self.0.values = QueryValues::Single(Into::<SingleValues>::into(key_values).0);
 

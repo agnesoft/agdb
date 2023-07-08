@@ -61,7 +61,10 @@ impl Insert {
     /// ```
     /// use agdb::QueryBuilder;
     ///
-    /// QueryBuilder::insert().nodes();
+    /// QueryBuilder::insert().nodes().count(1);
+    /// QueryBuilder::insert().nodes().aliases("a");
+    /// QueryBuilder::insert().nodes().aliases(vec!["a", "b"]);
+    /// QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()]]);
     /// ```
     pub fn nodes(self) -> InsertNodes {
         InsertNodes(InsertNodesQuery {

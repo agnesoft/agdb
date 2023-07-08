@@ -50,7 +50,7 @@ fn quickstart() -> Result<(), QueryError> {
 
     let user_id = db.exec(
         &QueryBuilder::select()
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .from("users")
                     .where_()
@@ -250,7 +250,7 @@ fn guide() -> Result<(), QueryError> {
 
     let posts = db.read()?.exec(
         &QueryBuilder::select()
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .from("posts")
                     .order_by(vec![DbKeyOrder::Desc("likes".into())])
@@ -265,7 +265,7 @@ fn guide() -> Result<(), QueryError> {
 
     let _comments = db.read()?.exec(
         &QueryBuilder::select()
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .depth_first()
                     .from(posts.elements[0].id)
@@ -306,7 +306,7 @@ fn guide() -> Result<(), QueryError> {
     db.write()?.exec_mut(
         &QueryBuilder::insert()
             .values_uniform(vec![("level", 1).into()])
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .from("posts")
                     .where_()

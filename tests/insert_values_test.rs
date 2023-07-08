@@ -144,13 +144,13 @@ fn insert_values_uniform_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .values_uniform(vec![("key", "value").into()])
-            .search(QueryBuilder::search().from(1).query())
+            .ids(QueryBuilder::search().from(1).query())
             .query(),
         5,
     );
     db.exec_elements(
         QueryBuilder::select()
-            .search(QueryBuilder::search().from(1).query())
+            .ids(QueryBuilder::search().from(1).query())
             .query(),
         &[
             DbElement {
@@ -189,13 +189,13 @@ fn insert_values_search() {
                 vec![("key2", "value2").into()],
                 vec![("key3", "value3").into()],
             ])
-            .search(QueryBuilder::search().from(1).query())
+            .ids(QueryBuilder::search().from(1).query())
             .query(),
         3,
     );
     db.exec_elements(
         QueryBuilder::select()
-            .search(QueryBuilder::search().from(1).query())
+            .ids(QueryBuilder::search().from(1).query())
             .query(),
         &[
             DbElement {
@@ -232,7 +232,7 @@ fn insert_values_search_invalid_length() {
                 vec![("key1", "value1").into()],
                 vec![("key2", "value2").into()],
             ])
-            .search(QueryBuilder::search().from(1).query())
+            .ids(QueryBuilder::search().from(1).query())
             .query(),
         "Ids and values length do not match",
     );

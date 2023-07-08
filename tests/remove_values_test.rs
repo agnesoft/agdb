@@ -65,7 +65,7 @@ fn remove_values_search() {
     db.exec_mut(
         QueryBuilder::remove()
             .values(vec!["key".into()])
-            .search(QueryBuilder::search().from(1).query())
+            .ids(QueryBuilder::search().from(1).query())
             .query(),
         -2,
     );

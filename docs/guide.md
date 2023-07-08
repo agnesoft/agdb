@@ -239,7 +239,7 @@ Selecting all posts is a fairly straightforward query but we would rarely need a
 ```Rust
 let posts = db.read()?.exec(
     &QueryBuilder::select()
-        .search(
+        .ids(
             QueryBuilder::search()
                 .from("posts")
                 .offset(0)
@@ -261,7 +261,7 @@ Now that we have the posts we will want to fetch the comments. Our graph schema 
 ```Rust
 let comments = db.read()?.exec(
     &QueryBuilder::select()
-        .search(
+        .ids(
             QueryBuilder::search()
                 .depth_first()
                 .from(posts.elements[0].id)
@@ -321,7 +321,7 @@ use agdb::DbKeyOrder;
 
 let posts = db.read()?.exec(
     &QueryBuilder::select()
-        .search(
+        .ids(
             QueryBuilder::search()
                 .from("posts")
                 .order_by(vec![DbKeyOrder::Desc("likes".into())])

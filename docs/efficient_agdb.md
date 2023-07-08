@@ -211,7 +211,7 @@ fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
             &QueryBuilder::remove()
-                .search(
+                .ids(
                     QueryBuilder::search()
                         .from(user)
                         .to(id)
@@ -263,7 +263,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
         .exec(
             &QueryBuilder::select()
                 .values(vec!["password".into()])
-                .search(
+                .ids(
                     QueryBuilder::search()
                         .depth_first()
                         .from("users")
@@ -366,7 +366,7 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<QueryId>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
-                .search(
+                .ids(
                     QueryBuilder::search()
                         .from("posts")
                         .offset(offset)
@@ -395,7 +395,7 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<String>, QueryError> {
         .exec(
             &QueryBuilder::select()
                 .values(vec!["body".into()])
-                .search(
+                .ids(
                     QueryBuilder::search()
                         .depth_first()
                         .from(id)
@@ -473,7 +473,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<QueryId>, QueryEr
     Ok(db
         .exec(
             &QueryBuilder::select()
-                .search(
+                .ids(
                     QueryBuilder::search()
                         .from("posts")
                         .order_by(vec![DbKeyOrder::Desc("likes".into())])
@@ -501,7 +501,7 @@ fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
     db.exec_mut(
         &QueryBuilder::insert()
             .values_uniform(vec![("level", 1).into()])
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .from("posts")
                     .where_()

@@ -100,7 +100,7 @@ impl Insert {
     /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]).ids(1)
     /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]).ids(QueryBuilder::search().from(1).query())
     /// ```
-    pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValuesUniform {
+    pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
         InsertValues(InsertValuesQuery {
             ids: QueryIds::Ids(vec![0.into()]),
             values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),

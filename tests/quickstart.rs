@@ -42,7 +42,7 @@ fn quickstart() -> Result<(), QueryError> {
 
     let user_id = db.exec(
         &QueryBuilder::select()
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .from("users")
                     .where_()

@@ -59,14 +59,6 @@ impl InsertEdgesEach {
     }
 }
 
-impl InsertEdges {
-    pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
-        self.0.from = ids.into();
-
-        InsertEdgesFrom(self.0)
-    }
-}
-
 impl InsertEdgesFrom {
     pub fn to<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFromTo {
         self.0.to = ids.into();

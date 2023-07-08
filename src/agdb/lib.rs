@@ -6,7 +6,7 @@
 //! [Efficient agdb](https://github.com/agnesoft/agdb/blob/main/docs/efficient_agdb.md)
 //!
 //! # Example
-//! 
+//!
 //! ```
 //! use agdb::{Db, QueryBuilder};
 //!

@@ -1,3 +1,6 @@
+# Queries
+
+- [Queries](#queries)
 - [QueryResult](#queryresult)
 - [QueryError](#queryerror)
 - [Transactions](#transactions)
@@ -23,6 +26,7 @@
     - [Select all aliases](#select-all-aliases)
   - [Search](#search)
     - [Conditions](#conditions)
+    - [Paths](#paths)
 
 All interactions with the `agdb` are realized through queries. There are two kinds of queries:
 
@@ -516,7 +520,7 @@ The result will contain:
 
 ## Search
 
-There is only a single search query that provides the ability to search the graph examining connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose `depth first` as well.
+There is only a single search query that provides the ability to search the graph examining connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used.
 
 ```Rust
 pub struct SearchQuery {
@@ -673,4 +677,10 @@ The conditions are applied one at a time to each visited element and chained usi
 
 The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`Beyond` and `NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements or continue only beyond certain elements.
 
-For further examples and use cases see the [in-depth guide](guide.md).
+### Paths
+
+Path search (`from().to()`) uses A\* algorithm. Every element (node or edge) has a cost of `1` by default. If it passes all the conditions the cost will remain `1` and would be included in the result (if the path it is on would be selected). If it fails any of the conditions its cost will be `2`. This means that the algorithm will prefer paths where elements match the conditions rather than the absolutely shortest path (that can be achieved with no conditions). If the search is not to continue beyond certain element (through `beyond()` or `not_beyond()` conditions) its cost will be `0` and the paths it is on will no longer be considered for that search.
+
+---
+
+For further examples and use cases see the [efficient agdb](docs/efficient_agdb.md).

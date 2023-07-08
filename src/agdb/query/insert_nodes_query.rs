@@ -12,7 +12,8 @@ pub struct InsertNodesQuery {
 }
 
 impl QueryMut for InsertNodesQuery {
-    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
         let mut ids = vec![];
         let count = std::cmp::max(self.count, self.aliases.len() as u64);
         let values = match &self.values {
@@ -39,6 +40,6 @@ impl QueryMut for InsertNodesQuery {
             .map(|id| DbElement { id, values: vec![] })
             .collect();
 
-        Ok(())
+        Ok(result)
     }
 }

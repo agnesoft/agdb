@@ -8,7 +8,9 @@ use crate::QueryResult;
 pub struct RemoveValuesQuery(pub SelectValuesQuery);
 
 impl QueryMut for RemoveValuesQuery {
-    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         match &self.0.ids {
             QueryIds::Ids(ids) => {
                 for id in ids {
@@ -23,6 +25,6 @@ impl QueryMut for RemoveValuesQuery {
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 }

@@ -16,7 +16,9 @@ pub struct InsertEdgesQuery {
 }
 
 impl QueryMut for InsertEdgesQuery {
-    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         let from = Self::db_ids(&self.from, db)?;
         let to: Vec<DbId> = Self::db_ids(&self.to, db)?;
 
@@ -32,7 +34,7 @@ impl QueryMut for InsertEdgesQuery {
             .map(|id| DbElement { id, values: vec![] })
             .collect();
 
-        Ok(())
+        Ok(result)
     }
 }
 

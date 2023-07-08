@@ -25,9 +25,9 @@ use crate::QueryError;
 use crate::QueryResult;
 
 pub trait Query {
-    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError>;
+    fn process(&self, db: &Db) -> Result<QueryResult, QueryError>;
 }
 
 pub trait QueryMut {
-    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError>;
+    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError>;
 }

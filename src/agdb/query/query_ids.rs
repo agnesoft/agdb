@@ -83,6 +83,12 @@ impl From<&QueryResult> for QueryIds {
     }
 }
 
+impl From<SearchQuery> for QueryIds {
+    fn from(query: SearchQuery) -> Self {
+        QueryIds::Search(query)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

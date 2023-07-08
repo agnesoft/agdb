@@ -7,7 +7,6 @@ use crate::query::query_values::QueryKeys;
 use crate::query::remove_aliases_query::RemoveAliasesQuery;
 use crate::query::remove_query::RemoveQuery;
 use crate::query::remove_values_query::RemoveValuesQuery;
-use crate::query::search_query::SearchQuery;
 use crate::query::select_values_query::SelectValuesQuery;
 
 pub struct Remove {}
@@ -19,10 +18,6 @@ impl Remove {
 
     pub fn ids<T: Into<QueryIds>>(self, ids: T) -> RemoveIds {
         RemoveIds(RemoveQuery(ids.into()))
-    }
-
-    pub fn search(self, query: SearchQuery) -> RemoveIds {
-        RemoveIds(RemoveQuery(QueryIds::Search(query)))
     }
 
     pub fn values<T: Into<QueryKeys>>(self, keys: T) -> RemoveValues {

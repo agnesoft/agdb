@@ -3,7 +3,6 @@ use crate::query::query_ids::QueryIds;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
-use crate::query::search_query::SearchQuery;
 
 /// Insert edges builder that lets you add `from`
 /// (origin) nodes.
@@ -40,13 +39,6 @@ impl InsertEdges {
 
         InsertEdgesFrom(self.0)
     }
-
-    #[allow(clippy::wrong_self_convention)]
-    pub fn from_search(mut self, query: SearchQuery) -> InsertEdgesFrom {
-        self.0.from = QueryIds::Search(query);
-
-        InsertEdgesFrom(self.0)
-    }
 }
 
 impl InsertEdgesEach {
@@ -67,16 +59,17 @@ impl InsertEdgesEach {
     }
 }
 
+impl InsertEdges {
+    pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
+        self.0.from = ids.into();
+
+        InsertEdgesFrom(self.0)
+    }
+}
+
 impl InsertEdgesFrom {
     pub fn to<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFromTo {
         self.0.to = ids.into();
-
-        InsertEdgesFromTo(self.0)
-    }
-
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_search(mut self, query: SearchQuery) -> InsertEdgesFromTo {
-        self.0.to = QueryIds::Search(query);
 
         InsertEdgesFromTo(self.0)
     }

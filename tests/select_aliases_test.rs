@@ -104,7 +104,7 @@ fn select_aliases_search() {
     db.exec_elements(
         QueryBuilder::select()
             .aliases()
-            .search(QueryBuilder::search().from(3).query())
+            .ids(QueryBuilder::search().from(3).query())
             .query(),
         &[
             DbElement {

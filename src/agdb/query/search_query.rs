@@ -28,14 +28,16 @@ pub struct SearchQuery {
 }
 
 impl Query for SearchQuery {
-    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError> {
+    fn process(&self, db: &Db) -> Result<QueryResult, QueryError> {
+        let mut result = QueryResult::default();
+
         for id in self.search(db)? {
             result.elements.push(DbElement { id, values: vec![] });
         }
 
         result.result = result.elements.len() as i64;
 
-        Ok(())
+        Ok(result)
     }
 }
 

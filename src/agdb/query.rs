@@ -27,11 +27,11 @@ use crate::QueryResult;
 /// Trait for immutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait Query {
-    fn process(&self, db: &Db, result: &mut QueryResult) -> Result<(), QueryError>;
+    fn process(&self, db: &Db) -> Result<QueryResult, QueryError>;
 }
 
 /// Trait for mutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait QueryMut {
-    fn process(&self, db: &mut Db, result: &mut QueryResult) -> Result<(), QueryError>;
+    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError>;
 }

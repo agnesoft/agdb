@@ -234,9 +234,9 @@ QueryBuilder::insert().edges().from(vec![1, 2]).to(vec![2, 3]).query();
 QueryBuilder::insert().edges().from(vec![1, 2]).to(vec![2, 3]).each().query();
 QueryBuilder::insert().edges().from("a").to(vec![1, 2]).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
 QueryBuilder::insert().edges().from("a").to(vec![1, 2]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
-QueryBuilder::insert().edges().from_search(QueryBuilder::search().from("a").where_().node().query()).to_search(QueryBuilder::search().from("b").where_().node().query()).query();
-QueryBuilder::insert().edges().from_search(QueryBuilder::search().from("a").where_().node().query()).to_search(QueryBuilder::search().from("b").where_().node().query()).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
-QueryBuilder::insert().edges().from_search(QueryBuilder::search().from("a").where_().node().query()).to_search(QueryBuilder::search().from("b").where_().node().query()).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
+QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).query();
+QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
+QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
 ```
 
 The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination.
@@ -285,9 +285,9 @@ Builder pattern:
 
 ```Rust
 QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(vec![1, 2]).query();
-QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).search(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(QueryBuilder::search().from("a").query()).query();
 QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).ids(vec![1, 2]).query();
-QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).search(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).ids(QueryBuilder::search().from("a").query()).query();
 ```
 
 Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`.
@@ -320,7 +320,7 @@ QueryBuilder::remove().ids(1).query();
 QueryBuilder::remove().ids("a").query();
 QueryBuilder::remove().ids(vec![1, 2]).query();
 QueryBuilder::remove().ids(vec!["a", "b"]).query();
-QueryBuilder::remove().search(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::remove().ids(QueryBuilder::search().from("a").query()).query();
 ```
 
 The elements identified by [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is NOT an error if the elements to be removed do not exist in the database. All associated properties (key-value pairs) are also removed from all elements. Removing nodes will also remove all their edges (incoming and outgoing) and their properties.
@@ -362,7 +362,7 @@ Builder pattern:
 
 ```Rust
 QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).ids(vec![1, 2]).query();
-QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).search(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).ids(QueryBuilder::search().from("a").query()).query();
 ```
 
 The properties (key-value pairs) identified by `keys` and associated with `ids` [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is a data error if any of the `ids` do not exist in the database but it is NOT an error if any of the keys does not exist or is not associated as property to any of the `ids`.
@@ -403,7 +403,7 @@ Builder pattern:
 ```Rust
 QueryBuilder::select().ids("a").query();
 QueryBuilder::select().ids(vec![1, 2]).query();
-QueryBuilder::select().search(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
 ```
 
 Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with all their properties. If any of the ids does not exist in the database running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select.
@@ -427,7 +427,7 @@ Builder pattern:
 ```Rust
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids("a").query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(vec![1, 2]).query();
-QueryBuilder::select().values(vec!["k".into(), "k2".into()]).search(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
 ```
 
 Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. While the search query is most commonly used to find, filter or otherwise limit what elements to select, using this particular query can limit what properties will be returned.
@@ -448,7 +448,7 @@ Builder pattern:
 ```Rust
 QueryBuilder::select().keys().ids("a").query();
 QueryBuilder::select().keys().ids(vec![1, 2]).query();
-QueryBuilder::select().keys().search(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query();
 ```
 
 Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only keys returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing what data is available in on the graph elements (e.g. when transforming the data into a table this query could be used to populate the column names).
@@ -469,7 +469,7 @@ Builder pattern:
 ```Rust
 QueryBuilder::select().key_count().ids("a").query();
 QueryBuilder::select().key_count().ids(vec![1, 2]).query();
-QueryBuilder::select().key_count().search(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query();
 ```
 
 Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only key count returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing how many properties there are associated with the graph elements.
@@ -489,7 +489,7 @@ Builder pattern:
 
 ```Rust
 QueryBuilder::select().aliases().ids(vec![1, 2]).query();
-QueryBuilder::select().aliases().search(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().aliases().ids(QueryBuilder::search().from(1).query()).query();
 ```
 
 Selects aliases of the `ids` [`QueryIds`](#queryids--queryid) or a search. If any of the ids does not have an alias running the query will return an error.

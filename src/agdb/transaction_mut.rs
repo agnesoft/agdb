@@ -36,14 +36,7 @@ impl<'a> TransactionMut<'a> {
     /// - Remove aliases
     /// - Remove values
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
-        let mut result = QueryResult {
-            result: 0,
-            elements: vec![],
-        };
-
-        query.process(self.db, &mut result)?;
-
-        Ok(result)
+        query.process(self.db)
     }
 
     pub(crate) fn new(data: &'a mut Db) -> Self {

@@ -388,7 +388,7 @@ fn search_to_ordered_by() {
             .ids(
                 QueryBuilder::search()
                     .to("users")
-                    .order_by(&[
+                    .order_by(vec![
                         DbKeyOrder::Asc("age".into()),
                         DbKeyOrder::Desc("name".into()),
                     ])

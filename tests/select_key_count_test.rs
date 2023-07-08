@@ -73,7 +73,7 @@ fn select_keys_search() {
     db.exec_elements(
         QueryBuilder::select()
             .key_count()
-            .search(QueryBuilder::search().from(3).query())
+            .ids(QueryBuilder::search().from(3).query())
             .query(),
         &[
             DbElement {

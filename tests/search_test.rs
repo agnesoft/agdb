@@ -323,7 +323,7 @@ fn search_from_ordered_by() {
 
     db.exec_elements(
         QueryBuilder::select()
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .from("users")
                     .order_by(vec![
@@ -385,7 +385,7 @@ fn search_to_ordered_by() {
 
     db.exec_elements(
         QueryBuilder::select()
-            .search(
+            .ids(
                 QueryBuilder::search()
                     .to("users")
                     .order_by(&[

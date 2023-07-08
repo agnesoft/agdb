@@ -100,7 +100,7 @@ fn select_values_search() {
     db.exec_elements(
         QueryBuilder::select()
             .values(vec!["key2".into()])
-            .search(QueryBuilder::search().from(3).query())
+            .ids(QueryBuilder::search().from(3).query())
             .query(),
         &[
             DbElement {

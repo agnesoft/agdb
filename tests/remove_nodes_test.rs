@@ -196,7 +196,7 @@ fn remove_nodes_search() {
 
     db.exec_mut(
         QueryBuilder::remove()
-            .search(QueryBuilder::search().from(1).query())
+            .ids(QueryBuilder::search().from(1).query())
             .query(),
         -2,
     );

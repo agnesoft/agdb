@@ -5,7 +5,6 @@ use super::select_keys::SelectKeys;
 use super::select_values::SelectValues;
 use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryKeys;
-use crate::query::search_query::SearchQuery;
 use crate::query::select_aliases_query::SelectAliasesQuery;
 use crate::query::select_key_count_query::SelectKeyCountQuery;
 use crate::query::select_keys_query::SelectKeysQuery;
@@ -21,10 +20,6 @@ impl Select {
 
     pub fn ids<T: Into<QueryIds>>(self, ids: T) -> SelectIds {
         SelectIds(SelectQuery(ids.into()))
-    }
-
-    pub fn search(self, search: SearchQuery) -> SelectIds {
-        SelectIds(SelectQuery(QueryIds::Search(search)))
     }
 
     pub fn keys(self) -> SelectKeys {

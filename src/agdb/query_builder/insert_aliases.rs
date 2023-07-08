@@ -20,6 +20,7 @@ impl InsertAliases {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().aliases("a").ids(1).query();
+    /// QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]).query();
     /// ```
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertAliasesIds {
         self.0.ids = ids.into();

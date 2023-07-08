@@ -88,7 +88,6 @@ impl InsertNodes {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().nodes().count(1).query();
-    /// QueryBuilder::insert().nodes().count(1).values(vec![vec![("k", 1).into()]]);
     /// QueryBuilder::insert().nodes().count(1).values_uniform(vec![("k", 1).into()]);
     /// ```
     pub fn count(mut self, num: u64) -> InsertNodesCount {

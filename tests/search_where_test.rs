@@ -234,6 +234,20 @@ fn search_from_where_edge_count_test() {
 }
 
 #[test]
+fn search_from_where_edge_count_from_test() {
+    let db = create_db();
+
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count_from(CountComparison::LessThanOrEqual(2))
+            .query(),
+        &[1, 8, 7, 6],
+    );
+}
+
+#[test]
 fn search_from_where_node_edge() {
     let db = create_db();
     db.exec_ids(

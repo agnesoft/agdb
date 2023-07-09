@@ -5,6 +5,11 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to select only property keys of given ids. All
+/// of the ids must exist in the database.
+///
+/// The result will be number of elements returned and the list
+/// of elements with all properties except all values will be empty.
 pub struct SelectKeysQuery(pub QueryIds);
 
 impl Query for SelectKeysQuery {

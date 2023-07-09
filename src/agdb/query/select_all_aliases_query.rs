@@ -4,6 +4,11 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to select all aliases in the database.
+///
+/// The result will be number of returned aliases and list
+/// of elements with a single property `String("alias")` holding
+/// the value `String`.
 pub struct SelectAllAliases {}
 
 impl Query for SelectAllAliases {

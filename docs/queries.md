@@ -26,6 +26,11 @@
     - [Select all aliases](#select-all-aliases)
   - [Search](#search)
     - [Conditions](#conditions)
+    - [Truth tables](#truth-tables)
+      - [And](#and)
+      - [Or](#or)
+      - [Modifiers](#modifiers)
+      - [Results](#results)
     - [Paths](#paths)
 
 All interactions with the `agdb` are realized through queries. There are two kinds of queries:
@@ -677,9 +682,73 @@ The conditions are applied one at a time to each visited element and chained usi
 
 The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`Beyond` and `NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements or continue only beyond certain elements.
 
+### Truth tables
+
+The following information should help with reasoning about the query conditions. Most of it should be intuitive but there are some aspects that might not be obvious especially when combining logic operators and condition modifiers. The search is using the following `enum` when evaluating conditions:
+
+```Rust
+pub enum SearchControl {
+    Continue(bool),
+    Finish(bool),
+    Stop(bool),
+}
+```
+
+The type controls the search and the boolean value controls if the given element should be included in a search result. The `Stop` will prevent the search expanding beyond current element (stopping the search in that direction). `Finish` will immediately exit the search returning accumulated elements (ids) and is only used internally with `offset` and `limit` (NOTE: path search and `order_by` still require complete search regardless of `limit`).
+
+Each condition contributes to the final control result as follows with the starting/default value being always `Continue(true)`:
+
+#### And
+
+| Left           | Right           | Result                  |
+| -------------- | --------------- | ----------------------- |
+| Continue(left) | Continue(right) | Continue(left && right) |
+| Continue(left) | Stop(right)     | Stop(left && right)     |
+| Continue(left) | Finish(right)   | Finish(left && right)   |
+| Stop(left)     | Stop(right)     | Stop(left && right)     |
+| Stop(left)     | Finish(right)   | Finish(left && right)   |
+| Finish(left)   | Finish(right)   | Finish(left && right)   |
+
+#### Or
+
+| Left           | Right           | Result                    |
+| -------------- | --------------- | ------------------------- |
+| Continue(left) | Continue(right) | Continue(left \|\| right) |
+| Continue(left) | Stop(right)     | Continue(left \|\| right) |
+| Continue(left) | Finish(right)   | Continue(left \|\| right) |
+| Stop(left)     | Stop(right)     | Stop(left \|\| right)     |
+| Stop(left)     | Finish(right)   | Stop(left \|\| right)     |
+| Finish(left)   | Finish(right)   | Finish(left \|\| right)   |
+
+#### Modifiers
+
+Modifiers will change the result of a condition based on the control value (the boolean) as follows:
+
+| Modifier  | TRUE                | FALSE                  |
+| --------- | ------------------- | ---------------------- |
+| None      | -                   | -                      |
+| Beyond    | `&& Continue(true)` | `\|\| Stop(false)`     |
+| Not       | `!`                 | `!`                    |
+| NotBeyond | `&& Stop(true)`     | `\|\| Continue(false)` |
+
+#### Results
+
+Most conditions result in `Continue(bool)` except for `distance()` and nested `where()` which can also result in `Stop(bool)`:
+
+| Condition   | Continue | Stop |
+| ----------- | -------- | ---- |
+| Where       | YES      | YES  |
+| Edge        | YES      | NO   |
+| Node        | YES      | NO   |
+| Distance    | YES      | YES  |
+| EdgeCount\* | YES      | NO   |
+| Ids         | YES      | NO   |
+| Key(Value)  | YES      | NO   |
+| Keys        | YES      | NO   |
+
 ### Paths
 
-Path search (`from().to()`) uses A\* algorithm. Every element (node or edge) has a cost of `1` by default. If it passes all the conditions the cost will remain `1` and would be included in the result (if the path it is on would be selected). If it fails any of the conditions its cost will be `2`. This means that the algorithm will prefer paths where elements match the conditions rather than the absolutely shortest path (that can be achieved with no conditions). If the search is not to continue beyond certain element (through `beyond()` or `not_beyond()` conditions) its cost will be `0` and the paths it is on will no longer be considered for that search.
+Path search (`from().to()`) uses A\* algorithm. Every element (node or edge) has a cost of `1` by default. If it passes all the conditions (the `SearchControl` value `true`) the cost will remain `1` and would be included in the result (if the path it is on would be selected). If it fails any of the conditions (the `SearchControl` value `false`) its cost will be `2`. This means that the algorithm will prefer paths where elements match the conditions rather than the absolutely shortest path (that can be achieved with no conditions). If the search is not to continue beyond certain element (through `beyond()`, `not_beyond()` or `distance()` conditions) its cost will be `0` and the paths it is on will no longer be considered for that search.
 
 ---
 

@@ -5,6 +5,7 @@
   - [Query](#query)
   - [Transaction](#transaction)
   - [Storage](#storage)
+  - [Data types](#data-types)
 
 ## Graph
 
@@ -68,7 +69,47 @@ The database durability is provided by the write ahead log (WAL) file which reco
 
 Just like the memory the main database file will get fragmented over time. Sectors of the file used for the data that was later reallocated will remain unused (fragmented) until the database file is defragmented. That operation is performed automatically on database object instance drop.
 
+The storage taken by individual elements are properties is generally as follows:
+
+- node: 32 bytes
+- edge: 32 bytes
+- single key or value (<=15 bytes): 16 bytes
+- single key or value (>15 bytes): 32 bytes (+)
+- key-value pair: 32 bytes (+)
+
+The size of the graph elements (nodes & edges) is fixed. The size of the properties (key-value pairs) is at least 32 bytes (16 per key and 16 per value) but can be greater if the value itself is greater. This creates some inefficiency for small values (e.g. integers) but it also allows application of small value optimization where values up to 15 bytes in size (e.g. strings) do not allocate or take extra space. When a value is larger than 15 bytes it will be stored separately with another 16 bytes overhead making it at least `32 + value length` bytes.
+
+The reason for values taking 16 bytes at minimum instead of 8 is that the value needs to store a type information for which 1 byte is required. 9 bytes is an awkward and very inefficient (as measured where 16 byte values were much faster) size even if it could save some file space. The next alignment is therefore 16 bytes which also allows the aforementioned small value optimization.
+
 **Terminology:**
 
 - File storage (underlying single data file)
 - Write ahead log (WAL, shadowing file storage to provide durability)
+
+## Data types
+
+Supported types of both keys and values are:
+
+- `i64`
+- `u64`
+- `f64`
+- `String`
+- `Vec<u8>`
+- `Vec<i64>`
+- `Vec<u64>`
+- `Vec<f64>`
+- `Vec<String>`
+
+It is an enum of limited number of supported types that are universal across all platforms and programming languages. They are serialized in file as follows:
+
+| Type          | Layout                                                       | Size     |
+| ------------- | ------------------------------------------------------------ | -------- |
+| `i64`         | little endian                                                | 8 bytes  |
+| `u64`         | little endian                                                | 8 bytes  |
+| `f64`         | little endian                                                | 8 bytes  |
+| `String`      | size as `u64` followed by UTF-8 encoded string as `u8` bytes | 8+ bytes |
+| `Vec<u8>`     | size as `u64` followed by individual `u8` bytes              | 8+ bytes |
+| `Vec<i64>`    | size as `u64` followed by individual `i64` elements          | 8+ bytes |
+| `Vec<u64>`    | size as `u64` followed by individual `u64` elements          | 8+ bytes |
+| `Vec<f64>`    | size as `u64` followed by individual `i64` elements          | 8+ bytes |
+| `Vec<String>` | size as `u64` followed by individual `String` elements       | 8+ bytes |

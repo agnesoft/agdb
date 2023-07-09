@@ -3,58 +3,143 @@ use crate::graph_search::SearchControl;
 use crate::DbKey;
 use crate::DbValue;
 
+/// Logical operator for query conditions
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum QueryConditionLogic {
+    /// Logical AND (&&)
     And,
+
+    /// Logical Or (||)
     Or,
 }
 
+/// Query condition modifier
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum QueryConditionModifier {
+    /// No modifier
     None,
-    Not,
-    NotBeyond,
+
+    /// Continues the search beyond the current element
+    /// if the condition being modified passes.
     Beyond,
+
+    /// Reversal of the result (equivalent to `!`).
+    Not,
+
+    /// Stops the search beyond the current element
+    /// if the condition being modified passes.
+    NotBeyond,
 }
 
+/// Query condition data
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryConditionData {
+    /// Distance from the search origin. Takes count comparison
+    /// (e.g. Equal, GreaterThan).
     Distance(CountComparison),
+
+    /// Is the current element an edge? I.e. `id < 0`.
     Edge,
+
+    /// Tests number of edges (from+to) of the current element.
+    /// Only nodes will pass. Self-referential edges are
+    /// counted twice. Takes count comparison
+    /// (e.g. Equal, GreaterThan).
     EdgeCount(CountComparison),
+
+    /// Tests the number of outgoing edges (from) of the
+    /// current element. Takes count comparison
+    /// (e.g. Equal, GreaterThan).
     EdgeCountFrom(CountComparison),
+
+    /// Tests the number of incoming edges (to) of the
+    /// current element. Takes count comparison
+    /// (e.g. Equal, GreaterThan).
     EdgeCountTo(CountComparison),
+
+    /// Tests if the current id is in the list of ids.
     Ids(Vec<QueryId>),
-    KeyValue { key: DbKey, value: Comparison },
+
+    /// Tests if the current element has a property `key`
+    /// with a value that evaluates true against `comparison`.
+    KeyValue {
+        /// Property key
+        key: DbKey,
+
+        /// Comparison operator (e.g. Equal, GreaterThan etc.)
+        value: Comparison,
+    },
+
+    /// Test if the current element has **all** of the keys listed.
     Keys(Vec<DbKey>),
+
+    /// Is the current element a node? I.e. `0 < id`.
     Node,
+
+    /// Nested list of conditions (equivalent to brackets).
     Where(Vec<QueryCondition>),
 }
 
+/// Query condition. The condition consists of
+/// `data`, logic operator and a modifier.
 #[derive(Debug, Clone, PartialEq)]
 pub struct QueryCondition {
+    /// Logic operator (e.g. And, Or)
     pub logic: QueryConditionLogic,
+
+    /// Condition modifier (e.g. None, Beyond, Not, NotBeyond)
     pub modifier: QueryConditionModifier,
+
+    /// Condition data (or type) defining what type
+    /// of validation is to be performed.
     pub data: QueryConditionData,
 }
 
+/// Comparison of unsigned integers (`u64`) used
+/// by `distance()` and `edge_count*()` conditions. Supports
+/// the usual set of named comparisons: `==, !=, <, <=, >, =>`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CountComparison {
+    /// property == this
     Equal(u64),
+
+    /// property > this
     GreaterThan(u64),
+
+    /// property >= this
     GreaterThanOrEqual(u64),
+
+    /// property < this
     LessThan(u64),
+
+    /// property <= this
     LessThanOrEqual(u64),
+
+    /// property != this
     NotEqual(u64),
 }
 
+/// Comparison of database values (`DbValue`) used
+/// by `key()` condition. Supports
+/// the usual set of named comparisons: `==, !=, <, <=, >, =>`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Comparison {
+    /// property == this
     Equal(DbValue),
+
+    /// property > this
     GreaterThan(DbValue),
+
+    /// property >= this
     GreaterThanOrEqual(DbValue),
+
+    /// property < this
     LessThan(DbValue),
+
+    /// property <= this
     LessThanOrEqual(DbValue),
+
+    /// property != this
     NotEqual(DbValue),
 }
 

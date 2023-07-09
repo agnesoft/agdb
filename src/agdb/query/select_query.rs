@@ -5,6 +5,11 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to select elements with all properties of
+/// given ids. All ids must exist in the database.
+///
+/// The result will be number of elements and the
+/// list of elements with all properties.
 pub struct SelectQuery(pub QueryIds);
 
 impl Query for SelectQuery {

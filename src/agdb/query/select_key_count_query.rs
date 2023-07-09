@@ -5,6 +5,12 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to select number of properties (key count) of
+/// given ids. All of the ids must exist in the database.
+///
+/// The result will be number of elements returned and the list
+/// of elements with a single property `String("key_count")` with
+/// a value `u64`.
 pub struct SelectKeyCountQuery(pub QueryIds);
 
 impl Query for SelectKeyCountQuery {

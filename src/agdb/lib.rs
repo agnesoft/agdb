@@ -1,3 +1,23 @@
+//! Persistent embedded memory mapped graph database with native object queries.
+//!
+//! [Readme](https://github.com/agnesoft/agdb) |
+//! [Quickstart](https://github.com/agnesoft/agdb#quickstart) |
+//! [Queries](https://github.com/agnesoft/agdb/blob/main/docs/queries.md) |
+//! [Efficient agdb](https://github.com/agnesoft/agdb/blob/main/docs/efficient_agdb.md)
+//!
+//! # Example
+//!
+//! ```
+//! use agdb::{Db, QueryBuilder};
+//!
+//! let mut db = Db::new("db.agdb").unwrap();
+//! db.exec_mut(&QueryBuilder::insert().nodes().values(vec![vec![("key", 123).into()]]).query()).unwrap();
+//!
+//! let result = db.exec(&QueryBuilder::select().ids(1).query()).unwrap();
+//! println!("{:?}", result);
+//! // QueryResult { result: 1, elements: [ DbElement { id: DbId(1), values: [ DbKeyValue { key: String("key"), value: Int(123) } ] } ] }
+//! ```
+
 mod collections;
 mod command;
 mod db;

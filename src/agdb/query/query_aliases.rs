@@ -1,3 +1,6 @@
+/// Wrapper around `Vec<String>` to provide
+/// several convenient conversions for the
+/// `QueryBuilder`.
 pub struct QueryAliases(pub Vec<String>);
 
 impl From<Vec<String>> for QueryAliases {

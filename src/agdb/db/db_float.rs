@@ -5,6 +5,12 @@ use std::cmp::Ordering;
 use std::hash::Hash;
 use std::hash::Hasher;
 
+/// Database float is a wrapper around `f64` to provide
+/// functionality like comparison. The comparison is
+/// using `total_cmp` standard library function. See its
+/// [docs](https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp)
+/// to understand how it handles NaNs and other edge cases
+/// of floating point numbers.
 #[derive(Clone, Debug)]
 pub struct DbFloat(f64);
 

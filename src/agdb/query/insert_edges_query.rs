@@ -8,10 +8,30 @@ use crate::DbKeyValue;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to inserts edges to the database. The `from`
+/// and `to` ids must exist in the database. There must be
+/// enough `values` for all new edges unless set to `Single`
+/// in which case they will be uniformly applied to all new
+/// edges. The `each` flag is only useful if `from and `to` are
+/// symmetric (same length) but you still want to connect every
+/// origin to every destination. By default it would connect only
+/// the pairs. For asymmetric inserts `each` is assumed.
+///
+/// The result will contain number of edges inserted and elements with
+/// their ids but no properties.
 pub struct InsertEdgesQuery {
+    /// Origins
     pub from: QueryIds,
+
+    /// Destinations
     pub to: QueryIds,
+
+    /// Key value pairs to be associated with
+    /// the new edges.
     pub values: QueryValues,
+
+    /// If `true` create an edge between each origin
+    /// and destination.
     pub each: bool,
 }
 

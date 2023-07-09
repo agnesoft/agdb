@@ -5,9 +5,25 @@ use crate::DbElement;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to insert nodes to the database. Only one of
+/// `count`, `values` or `aliases` need to be given as the
+/// implementation will derive the count from the other
+/// parameters. If `values` is set to `Single` either `count`
+/// or `aliases` must be provided however. If `values` are not
+/// set to `Single` there must be enough value for `count/aliases`
+/// unless they are not se and the count is derived from `values.
+///
+/// The result will contain number of nodes inserted and elements with
+/// their ids but no properties.
 pub struct InsertNodesQuery {
+    /// Number of nodes to be inserted.
     pub count: u64,
+
+    /// Key value pairs to be associated with
+    /// the new nodes.
     pub values: QueryValues,
+
+    /// Aliases of the new nodes.
     pub aliases: Vec<String>,
 }
 

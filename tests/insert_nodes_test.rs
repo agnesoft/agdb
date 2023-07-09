@@ -208,22 +208,3 @@ fn insert_nodes_values() {
         ],
     );
 }
-
-#[test]
-fn insert_nodes_values_uniform() {
-    let mut db = TestDb::new();
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .values_uniform(vec![("key", "value").into(), ("key2", "value2").into()])
-            .query(),
-        1,
-    );
-    db.exec_elements(
-        QueryBuilder::select().ids(1).query(),
-        &[DbElement {
-            id: DbId(1),
-            values: vec![("key", "value").into(), ("key2", "value2").into()],
-        }],
-    );
-}

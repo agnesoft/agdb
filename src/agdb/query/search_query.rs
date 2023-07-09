@@ -10,20 +10,48 @@ use crate::QueryError;
 use crate::QueryResult;
 use std::cmp::Ordering;
 
+/// Search algorithm to be used
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SearchQueryAlgorithm {
+    /// Examines each distance level from the search origin in full
+    /// before continuing with the next level. E.g. when starting at
+    /// a node it first examines all the edges and then nodes they lead
+    /// to.
     BreadthFirst,
+
+    /// Examines maximum distance it can reach following every element.
+    /// E.g. when starting at anode it will go `edge -> node -> edge -> node`
+    /// until it reaches dead end or encounters already visited element.
     DepthFirst,
 }
 
+/// Query to search for ids in the database following the graph.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SearchQuery {
+    /// Search algorithm to be used. Will be bypassed for path
+    /// searches that unconditionally use A*.
     pub algorithm: SearchQueryAlgorithm,
+
+    /// Starting element of the search.
     pub origin: QueryId,
+
+    /// Target element of the path search (if origin is specified)
+    /// or starting element of the reverse search (if origin is not specified).
     pub destination: QueryId,
+
+    /// How many elements maximum to return.
     pub limit: u64,
+
+    /// How many elements that would be returned should be
+    /// skipped in the result.
     pub offset: u64,
+
+    /// Order of the elements in the result. The sorting happens before
+    /// `offset` and `limit` are applied.
     pub order_by: Vec<DbKeyOrder>,
+
+    /// Set of conditions every element must satisfy to be included in the
+    /// result. Some conditions also influence the search path as well.
     pub conditions: Vec<QueryCondition>,
 }
 

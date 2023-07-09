@@ -5,6 +5,11 @@ use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 
+/// Database id is a wrapper around `i64`.
+/// The id is an identifier of a database element
+/// both nodes and edges. The positive ids represent nodes,
+/// negative ids represent edges. The value of `0` is
+/// logically invalid (there cannot be element with id 0) and a default.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct DbId(pub i64);
 

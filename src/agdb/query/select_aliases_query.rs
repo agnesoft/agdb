@@ -6,6 +6,12 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to select aliases of given ids. All of the ids
+/// must exist in the database and have an alias.
+///
+/// The result will be number of returned aliases and list
+/// of elements with a single property `String("alias")` holding
+/// the value `String`.
 pub struct SelectAliasesQuery(pub QueryIds);
 
 impl Query for SelectAliasesQuery {

@@ -84,6 +84,91 @@ impl Serialize for DbStorageIndex {
     }
 }
 
+/// An instance of the `agdb` database. To create a database:
+///
+/// ```
+/// use agdb::Db;
+///
+/// let mut db = Db::new("db.agdb").unwrap();
+/// ```
+///
+/// This will try to create or load the database file path `db.agdb`.
+/// If the file does not exist a new database will be initialized creating
+/// the given file. If the file does exist the database will try to load
+/// it and memory map the data.
+///
+/// You can execute queries or transactions on the database object with
+///
+/// - exec() //immutable queries
+/// - exec_mut() //mutable queries
+/// - transaction() //immutable transactions
+/// - transaction_mut() // mutable transaction
+///
+/// # Examples
+///
+/// ```
+/// use agdb::{Db, QueryBuilder, QueryError};
+///
+/// let mut db = Db::new("db.agdb").unwrap();
+///
+/// // Insert single node
+/// db.exec_mut(&QueryBuilder::insert().nodes().count(1).query()).unwrap();
+///
+/// // Insert single node as a transaction
+/// db.transaction_mut(|t| -> Result<(), QueryError> { t.exec_mut(&QueryBuilder::insert().nodes().count(1).query())?; Ok(()) }).unwrap();
+///
+/// // Select single database element with id 1
+/// db.exec(&QueryBuilder::select().ids(1).query()).unwrap();
+///
+/// // Select single database element with id 1 as a transaction
+/// db.transaction(|t| -> Result<(), QueryError> { t.exec(&QueryBuilder::select().ids(1).query())?; Ok(()) }).unwrap();
+///
+/// // Search the database starting at element 1
+/// db.exec(&QueryBuilder::search().from(1).query()).unwrap();
+/// ```
+/// # Transactions
+///
+/// All queries are transactions. Explicit transactions take closures that are passed
+/// the transaction object to record & execute queries. You cannot explicitly commit
+/// nor rollback transactions. To commit a transaction simply return `Ok` from the
+/// transaction closure. Conversely to rollback a transaction return `Err`. Nested
+/// transactions are not allowed.
+///
+/// # Multithreading
+///
+/// The `agdb` is multithreading enabled. It is recommended to use `Arc<RwLock>`:
+///
+/// ```
+/// use std::sync::{Arc, RwLock};
+/// use agdb::Db;
+///
+/// let db = Arc::new(RwLock::new(Db::new("db.agdb").unwrap()));
+/// db.read().unwrap(); //for a read lock allowing Db::exec() and Db::transaction()
+/// db.write().unwrap(); //for a write lock allowing additionally Db::exec_mut() and Db::transaction_mut()
+/// ```
+/// Using the database in the multi-threaded environment is then the same as in a single
+/// threaded application (minus the locking). Nevertheless while Rust does prevent
+/// race conditions you still need to be on a lookout for potential deadlocks. This is
+/// one of the reasons why nested transactions are not supported by the `agdb`.
+///
+/// Akin to the Rust borrow checker rules the `agdb` can handle unlimited number
+/// of concurrent reads (transactional or regular) but only single write operation
+/// at any one time. For that reason the transactions are not database states or objects
+/// but rather a function taking a closure executing the queries in an attempt to limit
+/// their scope as much as possible (and therefore the duration of the [exclusive] lock).
+///
+/// # Storage
+///
+/// The `agdb` is using a single database file to store all of its data. Additionally
+/// a single shadow file with a `.` prefix of the main database file name is used as
+/// a write ahead log (WAL). On drop of the `Db` object the WAL is processed and removed
+/// aborting any unfinished transactions. Furthermore the database data is defragmented.
+///
+/// On load, if the WAL file is present (e.g. due to a crash), it will be processed
+/// restoring any consistent state that existed before the crash. Data is only
+/// written to the main file if the reverse operation has been committed to the
+/// WAL file. The WAL is then purged on commit of a transaction (all queries are
+/// transactional even if the transaction is not explicitly used).
 pub struct Db {
     storage: Rc<RefCell<FileStorage>>,
     graph: DbGraph,
@@ -94,11 +179,12 @@ pub struct Db {
 
 impl std::fmt::Debug for Db {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Db").finish_non_exhaustive()
+        f.debug_struct("agdb::Db").finish_non_exhaustive()
     }
 }
 
 impl Db {
+    /// Tries to create or load `filename` file as `Db` object.
     pub fn new(filename: &str) -> Result<Db, DbError> {
         match Self::try_new(filename) {
             Ok(db) => Ok(db),
@@ -110,20 +196,71 @@ impl Db {
         }
     }
 
+    /// Executes immutable query:
+    ///
+    /// - Select elements
+    /// - Select values
+    /// - Select keys
+    /// - Select key count
+    /// - Select aliases
+    /// - Select all aliases
+    /// - Search
+    ///
+    /// It runs the query as a transaction and returns either the result or
+    /// error describing what went wrong (e.g. query error, logic error, data
+    /// error etc.).
     pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
         self.transaction(|transaction| transaction.exec(query))
     }
 
+    /// Executes mutable query:
+    ///
+    /// - Insert nodes
+    /// - Insert edges
+    /// - Insert aliases
+    /// - Insert values
+    /// - Remove elements
+    /// - Remove aliases
+    /// - Remove values
+    ///
+    /// It runs the query as a transaction and returns either the result or
+    /// error describing what went wrong (e.g. query error, logic error, data
+    /// error etc.).
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
         self.transaction_mut(|transaction| transaction.exec_mut(query))
     }
 
+    /// Executes immutable transaction. The transaction is running a closure `f`
+    /// that will receive `&Transaction` object to run `exec` queries as if run
+    /// on the main database object. You shall specify the return type `T`
+    /// (can be `()`) and the error type `E` that must be constructible from the `QueryError`
+    /// (`E` can be `QueryError`).
+    ///
+    /// Read transactions cannot be committed or rolled back but their main function is to ensure
+    /// that the database data does not change during their duration. Through its generic
+    /// parameters it also allows transforming the query results into a type `T`.
     pub fn transaction<T, E>(&self, f: impl Fn(&Transaction) -> Result<T, E>) -> Result<T, E> {
         let transaction = Transaction::new(self);
 
         f(&transaction)
     }
 
+    /// Executes mutable transaction. The transaction is running a closure `f`
+    /// that will receive `&mut Transaction` to execute `exec` and `exec_mut` queries
+    /// as if run on the main database object. You shall specify the return type `T`
+    /// (can be `()`) and the error type `E` that must be constructible from the `QueryError`
+    /// (`E` can be `QueryError`).
+    ///
+    /// Write transactions are committed if the closure returns `Ok` and rolled back if
+    /// the closure returns `Err`. If the code panics and the program exits the write
+    /// ahead log (WAL) makes sure the data in the main database file is restored to a
+    /// consistent state prior to the transaction.
+    ///
+    /// Typical use case for a write transaction is to insert nodes and edges together.
+    /// When not using a transaction you could end up only with nodes being inserted.
+    ///
+    /// Through its generic parameters the transaction also allows transforming the query
+    /// results into a type `T`.
     pub fn transaction_mut<T, E: From<QueryError>>(
         &mut self,
         f: impl Fn(&mut TransactionMut) -> Result<T, E>,

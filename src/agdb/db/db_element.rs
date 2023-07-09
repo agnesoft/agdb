@@ -1,9 +1,14 @@
 use super::db_key_value::DbKeyValue;
 use crate::DbId;
 
+/// Database element used in `QueryResult`
+/// that represents a node or an edge.
 #[derive(Debug, PartialEq)]
 pub struct DbElement {
+    /// Element id.
     pub id: DbId,
+
+    /// List of key-value pairs associated with the element.
     pub values: Vec<DbKeyValue>,
 }
 

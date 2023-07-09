@@ -4,8 +4,19 @@ use crate::Db;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to insert or update aliases of existing nodes.
+/// All `ids` must exist. None of the `aliases` can be empty.
+/// If there is an existing alias for any of the elements it
+/// will be overwritten with a new one.
+///
+/// NOTE: Setting `ids` to a search query will result in an error.
+///
+/// The result will contain number of aliases inserted/updated but no elements.
 pub struct InsertAliasesQuery {
+    /// Ids to be aliased
     pub ids: QueryIds,
+
+    /// Aliases to be inserted
     pub aliases: Vec<String>,
 }
 

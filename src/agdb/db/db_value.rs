@@ -8,16 +8,43 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as DisplayResult;
 
+/// Database value is a strongly types value.
+///
+/// It is an enum of limited number supported types
+/// that are universal across all platforms
+/// and programming languages.
+///
+/// The value is constructible from large number of
+/// raw types or associated types (e.g. i32, &str, etc.).
+/// Getting the raw value back as string can be done
+/// with `to_string()` but otherwise requires a `match`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DbValue {
+    /// Byte array, sometimes referred to as blob
     Bytes(Vec<u8>),
+
+    /// 64-bit wide signed integer
     Int(i64),
+
+    /// 64-bit wide unsigned integer
     Uint(u64),
+
+    /// 64-bit floating point number
     Float(DbFloat),
+
+    /// UTF-8 string
     String(String),
+
+    /// List of 64-bit wide signed integers
     VecInt(Vec<i64>),
+
+    /// List of 64-bit wide unsigned integers
     VecUint(Vec<u64>),
+
+    /// List of 64-bit floating point numbers
     VecFloat(Vec<DbFloat>),
+
+    /// List of UTF-8 strings
     VecString(Vec<String>),
 }
 

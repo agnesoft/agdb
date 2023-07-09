@@ -321,6 +321,55 @@ fn search_from_ordered_by() {
         10,
     );
 
+    db.exec_ids(
+        QueryBuilder::select()
+            .ids(
+                QueryBuilder::search()
+                    .from("users")
+                    .order_by(vec![
+                        DbKeyOrder::Desc("age".into()),
+                        DbKeyOrder::Asc("name".into()),
+                    ])
+                    .query(),
+            )
+            .query(),
+        &[
+            5, 4, 2, 8, 7, 3, 9, 10, 11, 6, 1, -21, -20, -19, -18, -17, -16, -15, -14, -13, -12,
+        ],
+    );
+}
+
+#[test]
+fn search_from_ordered_by_limit_offset() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query(), 1);
+
+    let users = db.exec_mut_result(
+        QueryBuilder::insert()
+            .nodes()
+            .values(vec![
+                vec![("name", "z").into(), ("age", 31).into(), ("id", 1).into()],
+                vec![("name", "x").into(), ("age", 12).into(), ("id", 2).into()],
+                vec![("name", "y").into(), ("age", 57).into(), ("id", 3).into()],
+                vec![("name", "a").into(), ("age", 60).into(), ("id", 4).into()],
+                vec![("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
+                vec![("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
+                vec![("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
+                vec![("name", "k").into(), ("age", 9).into(), ("id", 8).into()],
+                vec![("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
+                vec![("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
+            ])
+            .query(),
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from("users")
+            .to(users)
+            .query(),
+        10,
+    );
+
     db.exec_elements(
         QueryBuilder::select()
             .ids(
@@ -388,7 +437,7 @@ fn search_to_ordered_by() {
             .ids(
                 QueryBuilder::search()
                     .to("users")
-                    .order_by(&[
+                    .order_by(vec![
                         DbKeyOrder::Asc("age".into()),
                         DbKeyOrder::Desc("name".into()),
                     ])

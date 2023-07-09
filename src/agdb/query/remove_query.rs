@@ -4,6 +4,13 @@ use crate::Db;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to remove database elements (nodes & edges). It
+/// is not an error if any of the `ids` do not already exist.
+///
+/// All properties associated with a given element are also removed.
+///
+/// If removing nodes all of its incoming and outgoing edges are
+/// also removed along with their properties.
 pub struct RemoveQuery(pub QueryIds);
 
 impl QueryMut for RemoveQuery {

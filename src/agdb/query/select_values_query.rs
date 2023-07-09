@@ -6,6 +6,12 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
 
+/// Query to select elements with only certain properties of
+/// given ids. All ids must exist in the database and all
+/// of them must have the requested properties.
+///
+/// The result will be number of elements and the
+/// list of elements with the requested properties.
 pub struct SelectValuesQuery {
     pub keys: Vec<DbKey>,
     pub ids: QueryIds,

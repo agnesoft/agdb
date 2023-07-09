@@ -144,7 +144,7 @@ pub enum Comparison {
 }
 
 impl CountComparison {
-    pub(crate) fn compare(&self, right: u64) -> SearchControl {
+    pub(crate) fn compare_distance(&self, right: u64) -> SearchControl {
         match self {
             CountComparison::Equal(left) => match right.cmp(left) {
                 std::cmp::Ordering::Less => SearchControl::Continue(false),
@@ -180,6 +180,17 @@ impl CountComparison {
                 }
                 std::cmp::Ordering::Equal => SearchControl::Continue(false),
             },
+        }
+    }
+
+    pub(crate) fn compare(&self, left: u64) -> bool {
+        match self {
+            CountComparison::Equal(right) => left == *right,
+            CountComparison::GreaterThan(right) => left > *right,
+            CountComparison::GreaterThanOrEqual(right) => left >= *right,
+            CountComparison::LessThan(right) => left < *right,
+            CountComparison::LessThanOrEqual(right) => left <= *right,
+            CountComparison::NotEqual(right) => left != *right,
         }
     }
 }
@@ -271,23 +282,23 @@ mod tests {
         use SearchControl::Continue;
         use SearchControl::Stop;
 
-        assert_eq!(Equal(2).compare(3), Stop(false));
-        assert_eq!(Equal(2).compare(2), Stop(true));
-        assert_eq!(Equal(2).compare(1), Continue(false));
-        assert_eq!(NotEqual(2).compare(3), Continue(true));
-        assert_eq!(NotEqual(2).compare(2), Continue(false));
-        assert_eq!(NotEqual(2).compare(1), Continue(true));
-        assert_eq!(GreaterThan(2).compare(3), Continue(true));
-        assert_eq!(GreaterThan(2).compare(2), Continue(false));
-        assert_eq!(GreaterThan(2).compare(1), Continue(false));
-        assert_eq!(GreaterThanOrEqual(2).compare(3), Continue(true));
-        assert_eq!(GreaterThanOrEqual(2).compare(2), Continue(true));
-        assert_eq!(GreaterThanOrEqual(2).compare(1), Continue(false));
-        assert_eq!(LessThan(2).compare(3), Stop(false));
-        assert_eq!(LessThan(2).compare(2), Stop(false));
-        assert_eq!(LessThan(2).compare(1), Continue(true));
-        assert_eq!(LessThanOrEqual(2).compare(3), Stop(false));
-        assert_eq!(LessThanOrEqual(2).compare(2), Stop(true));
-        assert_eq!(LessThanOrEqual(2).compare(1), Continue(true));
+        assert_eq!(Equal(2).compare_distance(3), Stop(false));
+        assert_eq!(Equal(2).compare_distance(2), Stop(true));
+        assert_eq!(Equal(2).compare_distance(1), Continue(false));
+        assert_eq!(NotEqual(2).compare_distance(3), Continue(true));
+        assert_eq!(NotEqual(2).compare_distance(2), Continue(false));
+        assert_eq!(NotEqual(2).compare_distance(1), Continue(true));
+        assert_eq!(GreaterThan(2).compare_distance(3), Continue(true));
+        assert_eq!(GreaterThan(2).compare_distance(2), Continue(false));
+        assert_eq!(GreaterThan(2).compare_distance(1), Continue(false));
+        assert_eq!(GreaterThanOrEqual(2).compare_distance(3), Continue(true));
+        assert_eq!(GreaterThanOrEqual(2).compare_distance(2), Continue(true));
+        assert_eq!(GreaterThanOrEqual(2).compare_distance(1), Continue(false));
+        assert_eq!(LessThan(2).compare_distance(3), Stop(false));
+        assert_eq!(LessThan(2).compare_distance(2), Stop(false));
+        assert_eq!(LessThan(2).compare_distance(1), Continue(true));
+        assert_eq!(LessThanOrEqual(2).compare_distance(3), Stop(false));
+        assert_eq!(LessThanOrEqual(2).compare_distance(2), Stop(true));
+        assert_eq!(LessThanOrEqual(2).compare_distance(1), Continue(true));
     }
 }

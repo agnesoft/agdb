@@ -11,15 +11,19 @@ fn quickstart() -> Result<(), QueryError> {
     let _test_file = TestFile::from("db_file.agdb");
 
     let mut db = Db::new("db_file.agdb")?;
-    let insert_users_root = QueryBuilder::insert().nodes().aliases("users").query();
-    db.exec_mut(&insert_users_root)?;
 
-    let user_values = vec![
-        vec![("id", 1).into(), ("username", "user_1").into()],
-        vec![("id", 2).into(), ("username", "user_2").into()],
-        vec![("id", 3).into(), ("username", "user_3").into()],
-    ];
-    let users = db.exec_mut(&QueryBuilder::insert().nodes().values(user_values).query())?;
+    db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
+
+    let users = db.exec_mut(
+        &QueryBuilder::insert()
+            .nodes()
+            .values(vec![
+                vec![("id", 1).into(), ("username", "user_1").into()],
+                vec![("id", 2).into(), ("username", "user_2").into()],
+                vec![("id", 3).into(), ("username", "user_3").into()],
+            ])
+            .query(),
+    )?;
 
     db.exec_mut(
         &QueryBuilder::insert()
@@ -30,7 +34,6 @@ fn quickstart() -> Result<(), QueryError> {
     )?;
 
     let user_elements = db.exec(&QueryBuilder::select().ids(users).query())?;
-
     println!("{:?}", user_elements);
     // QueryResult {
     //   result: 3,

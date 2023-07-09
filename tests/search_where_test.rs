@@ -231,6 +231,46 @@ fn search_from_where_edge_count_test() {
             .query(),
         &[8, 7, 6],
     );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count(CountComparison::GreaterThanOrEqual(2))
+            .query(),
+        &[1, 3, 2, 8, 7, 6, 15, 14, 12],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count(CountComparison::LessThanOrEqual(2))
+            .query(),
+        &[1, 8, 7, 6, 16, 15, 14, 13, 12],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count(CountComparison::LessThan(2))
+            .query(),
+        &[16, 13],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count(CountComparison::Equal(2))
+            .query(),
+        &[1, 8, 7, 6, 15, 14, 12],
+    );
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .where_()
+            .edge_count(CountComparison::NotEqual(2))
+            .query(),
+        &[3, 2, 16, 13],
+    );
 }
 
 #[test]

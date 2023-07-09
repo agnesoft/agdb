@@ -762,29 +762,29 @@ impl Db {
         condition: &QueryConditionData,
     ) -> Result<SearchControl, DbError> {
         match condition {
-            QueryConditionData::Distance(value) => Ok(value.compare(distance)),
+            QueryConditionData::Distance(value) => Ok(value.compare_distance(distance)),
             QueryConditionData::Edge => Ok(SearchControl::Continue(index.is_edge())),
-            QueryConditionData::EdgeCount(value) => {
-                Ok(if let Some(node) = self.graph.node(index) {
+            QueryConditionData::EdgeCount(value) => Ok(SearchControl::Continue(
+                if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count())
                 } else {
-                    SearchControl::Continue(false)
-                })
-            }
-            QueryConditionData::EdgeCountFrom(value) => {
-                Ok(if let Some(node) = self.graph.node(index) {
+                    false
+                },
+            )),
+            QueryConditionData::EdgeCountFrom(value) => Ok(SearchControl::Continue(
+                if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count_from())
                 } else {
-                    SearchControl::Continue(false)
-                })
-            }
-            QueryConditionData::EdgeCountTo(value) => {
-                Ok(if let Some(node) = self.graph.node(index) {
+                    false
+                },
+            )),
+            QueryConditionData::EdgeCountTo(value) => Ok(SearchControl::Continue(
+                if let Some(node) = self.graph.node(index) {
                     value.compare(node.edge_count_to())
                 } else {
-                    SearchControl::Continue(false)
-                })
-            }
+                    false
+                },
+            )),
             QueryConditionData::Ids(values) => {
                 Ok(SearchControl::Continue(values.iter().any(|id| {
                     index.0

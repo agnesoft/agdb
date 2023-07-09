@@ -162,6 +162,8 @@ impl Where {
     /// Only elements listed in `ids` will pass this condition. It is usually combined
     /// with a modifier like `not_beyond()` or `not()`.
     ///
+    /// NOTE: Search query is NOT supported here and will be ignored.
+    ///
     /// # Examples
     ///
     /// ```

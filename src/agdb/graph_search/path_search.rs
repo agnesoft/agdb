@@ -4,6 +4,7 @@ use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use std::cmp::Ordering;
+use std::marker::PhantomData;
 
 pub trait PathSearchHandler {
     fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError>;
@@ -15,27 +16,28 @@ pub(crate) struct Path {
     pub(crate) cost: u64,
 }
 
-pub(crate) struct PathSearch<'a, Data, Handler>
+pub(crate) struct PathSearch<'a, S, Data, Handler>
 where
-    Data: GraphData,
+    Data: GraphData<S>,
     Handler: PathSearchHandler,
 {
     pub(crate) current_path: Path,
     pub(crate) destination: GraphIndex,
-    pub(crate) graph: &'a GraphImpl<Data>,
+    pub(crate) graph: &'a GraphImpl<S, Data>,
     pub(crate) handler: Handler,
     pub(crate) paths: Vec<Path>,
     pub(crate) result: Vec<(GraphIndex, bool)>,
     pub(crate) visited: BitSet,
+    pub(crate) storage: PhantomData<S>,
 }
 
-impl<'a, Data, Handler> PathSearch<'a, Data, Handler>
+impl<'a, S, Data, Handler> PathSearch<'a, S, Data, Handler>
 where
-    Data: GraphData,
+    Data: GraphData<S>,
     Handler: PathSearchHandler,
 {
     pub(crate) fn new(
-        graph: &'a GraphImpl<Data>,
+        graph: &'a GraphImpl<S, Data>,
         from: GraphIndex,
         to: GraphIndex,
         handler: Handler,
@@ -56,6 +58,7 @@ where
             }],
             result: vec![],
             visited: BitSet::new(),
+            storage: PhantomData,
         }
     }
 
@@ -167,8 +170,6 @@ mod tests {
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
-    use std::cell::RefCell;
-    use std::rc::Rc;
 
     struct Handler {
         pub processor: fn(GraphIndex, u64) -> (u64, bool),
@@ -191,12 +192,10 @@ mod tests {
     #[test]
     fn circular_path() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
-        let node = graph.insert_node().unwrap();
-        let _edge = graph.insert_edge(node, node).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+        let node = graph.insert_node(&mut storage).unwrap();
+        let _edge = graph.insert_edge(&mut storage, node, node).unwrap();
 
         let result = GraphSearch::from(&graph).path(node, node, Handler::default());
 
@@ -206,10 +205,8 @@ mod tests {
     #[test]
     fn empty_graph() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let graph = DbGraph::new(&mut storage).unwrap();
 
         let result = GraphSearch::from(&graph).path(
             GraphIndex::default(),
@@ -223,20 +220,18 @@ mod tests {
     #[test]
     fn multi_edge_path() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
 
-        let edge1 = graph.insert_edge(node1, node2).unwrap();
-        let _edge2 = graph.insert_edge(node1, node2).unwrap();
+        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
 
-        let edge3 = graph.insert_edge(node2, node3).unwrap();
-        let _edge4 = graph.insert_edge(node2, node3).unwrap();
+        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
+        let _edge4 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
@@ -246,11 +241,9 @@ mod tests {
     #[test]
     fn origin_is_destination() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
-        let node = graph.insert_node().unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+        let node = graph.insert_node(&mut storage).unwrap();
 
         let result = GraphSearch::from(&graph).path(node, node, Handler::default());
 
@@ -260,18 +253,16 @@ mod tests {
     #[test]
     fn short_circuit_path() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
 
-        let edge1 = graph.insert_edge(node1, node3).unwrap();
-        let _edge2 = graph.insert_edge(node1, node2).unwrap();
-        let _edge3 = graph.insert_edge(node2, node3).unwrap();
+        let edge1 = graph.insert_edge(&mut storage, node1, node3).unwrap();
+        let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let _edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
@@ -281,17 +272,15 @@ mod tests {
     #[test]
     fn single_path() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
 
-        let edge1 = graph.insert_edge(node1, node2).unwrap();
-        let edge2 = graph.insert_edge(node2, node3).unwrap();
+        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let edge2 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
@@ -301,18 +290,16 @@ mod tests {
     #[test]
     fn skip_short_circuit_path() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
 
-        let _edge1 = graph.insert_edge(node1, node3).unwrap();
-        let edge2 = graph.insert_edge(node1, node2).unwrap();
-        let edge3 = graph.insert_edge(node2, node3).unwrap();
+        let _edge1 = graph.insert_edge(&mut storage, node1, node3).unwrap();
+        let edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
         let result = GraphSearch::from(&graph).path(
             node1,
@@ -334,16 +321,14 @@ mod tests {
     #[test]
     fn unconnected() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
 
-        let _edge1 = graph.insert_edge(node1, node2).unwrap();
+        let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
 
         let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
 
@@ -353,18 +338,16 @@ mod tests {
     #[test]
     fn filtered_nodes() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
 
-        let _edge1 = graph.insert_edge(node1, node2).unwrap();
-        let _edge2 = graph.insert_edge(node2, node2).unwrap();
-        let _edge3 = graph.insert_edge(node2, node3).unwrap();
+        let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(&mut storage, node2, node2).unwrap();
+        let _edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
         let result = GraphSearch::from(&graph).path(
             node1,
@@ -380,18 +363,16 @@ mod tests {
     #[test]
     fn filtered_edges() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
 
-        let edge1 = graph.insert_edge(node1, node2).unwrap();
-        let _edge2 = graph.insert_edge(node2, node2).unwrap();
-        let edge3 = graph.insert_edge(node2, node3).unwrap();
+        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(&mut storage, node2, node2).unwrap();
+        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
         let result = GraphSearch::from(&graph).path(
             node1,

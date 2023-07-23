@@ -19,12 +19,18 @@ impl BreadthFirstSearchReverse {
     }
 }
 
-impl SearchIterator for BreadthFirstSearchReverse {
-    fn expand_edge<Data: GraphData>(index: GraphIndex, graph: &GraphImpl<Data>) -> GraphIndex {
+impl<S> SearchIterator<S> for BreadthFirstSearchReverse {
+    fn expand_edge<Data: GraphData<S>>(
+        index: GraphIndex,
+        graph: &GraphImpl<S, Data>,
+    ) -> GraphIndex {
         graph.edge(index).unwrap().index_from()
     }
 
-    fn expand_node<Data: GraphData>(index: GraphIndex, graph: &GraphImpl<Data>) -> Vec<GraphIndex> {
+    fn expand_node<Data: GraphData<S>>(
+        index: GraphIndex,
+        graph: &GraphImpl<S, Data>,
+    ) -> Vec<GraphIndex> {
         graph
             .node(index)
             .expect("invalid index, expected a valid node index")
@@ -54,8 +60,6 @@ mod tests {
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
-    use std::cell::RefCell;
-    use std::rc::Rc;
 
     struct Handler {
         pub processor: fn(GraphIndex, u64) -> SearchControl,
@@ -78,10 +82,8 @@ mod tests {
     #[test]
     fn empty_graph_reverse() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let graph = DbGraph::new(&mut storage).unwrap();
 
         let result = GraphSearch::from(&graph)
             .breadth_first_search_reverse(GraphIndex::default(), Handler::default());
@@ -92,19 +94,17 @@ mod tests {
     #[test]
     fn search_in_reverse() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut graph = DbGraph::new(storage).unwrap();
+        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
 
-        let node1 = graph.insert_node().unwrap();
-        let node2 = graph.insert_node().unwrap();
-        let node3 = graph.insert_node().unwrap();
-        let node4 = graph.insert_node().unwrap();
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
+        let node4 = graph.insert_node(&mut storage).unwrap();
 
-        let edge1 = graph.insert_edge(node1, node2).unwrap();
-        let edge2 = graph.insert_edge(node2, node3).unwrap();
-        let edge3 = graph.insert_edge(node3, node4).unwrap();
+        let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let edge2 = graph.insert_edge(&mut storage, node2, node3).unwrap();
+        let edge3 = graph.insert_edge(&mut storage, node3, node4).unwrap();
 
         let result =
             GraphSearch::from(&graph).breadth_first_search_reverse(node4, Handler::default());

@@ -24,7 +24,7 @@ impl VecValue for DbId {
         Ok(self.0.serialize())
     }
 
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self(i64::deserialize(bytes)?))
     }
 

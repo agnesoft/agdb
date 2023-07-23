@@ -61,7 +61,7 @@ pub(crate) const VEC_STRING_META_VALUE: u8 = 9_u8;
 impl DbValue {
     pub(crate) fn load_db_value<S: Storage>(
         value_index: DbValueIndex,
-        storage: &S,
+        storage: &mut S,
     ) -> Result<DbValue, DbError> {
         Ok(match value_index.get_type() {
             BYTES_META_VALUE => {
@@ -497,8 +497,8 @@ mod tests {
     #[should_panic]
     fn bad_deserialization() {
         let test_file = TestFile::new();
-        let storage = FileStorage::new(&test_file.filename).unwrap();
+        let mut storage = FileStorage::new(&test_file.filename).unwrap();
 
-        let _ = DbValue::load_db_value(DbValueIndex::new(), &storage);
+        let _ = DbValue::load_db_value(DbValueIndex::new(), &mut storage);
     }
 }

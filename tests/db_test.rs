@@ -5,6 +5,8 @@ use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryId;
+use std::sync::Arc;
+use std::sync::RwLock;
 use test_db::test_file::TestFile;
 
 #[allow(unused_imports)]
@@ -256,4 +258,31 @@ fn optimize_on_drop() {
         .len();
 
     assert!(optimized_file_size < db_file_size);
+}
+
+#[test]
+fn share_between_threads() {
+    let test_file = TestFile::new();
+    let db = Arc::new(RwLock::new(Db::new(test_file.file_name()).unwrap()));
+    db.write()
+        .unwrap()
+        .exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+        .unwrap();
+    let db2 = db.clone();
+
+    let t1 = std::thread::spawn(move || {
+        db.read()
+            .unwrap()
+            .exec(&QueryBuilder::search().from(1).query())
+            .unwrap()
+    });
+    let t2 = std::thread::spawn(move || {
+        db2.read()
+            .unwrap()
+            .exec(&QueryBuilder::search().from(1).query())
+            .unwrap()
+    });
+
+    t1.join().unwrap();
+    t2.join().unwrap();
 }

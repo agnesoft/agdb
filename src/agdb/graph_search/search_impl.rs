@@ -14,37 +14,43 @@ pub(crate) struct SearchIndex {
     pub(crate) distance: u64,
 }
 
-pub(crate) trait SearchIterator {
-    fn expand_edge<Data: GraphData>(index: GraphIndex, graph: &GraphImpl<Data>) -> GraphIndex;
-    fn expand_node<Data: GraphData>(index: GraphIndex, graph: &GraphImpl<Data>) -> Vec<GraphIndex>;
+pub(crate) trait SearchIterator<S> {
+    fn expand_edge<Data: GraphData<S>>(index: GraphIndex, graph: &GraphImpl<S, Data>)
+        -> GraphIndex;
+    fn expand_node<Data: GraphData<S>>(
+        index: GraphIndex,
+        graph: &GraphImpl<S, Data>,
+    ) -> Vec<GraphIndex>;
     fn new(stack: &mut Vec<SearchIndex>) -> Self;
     fn next(&mut self) -> Option<SearchIndex>;
 }
 
-pub(crate) struct SearchImpl<'a, Data, SearchIt>
+pub(crate) struct SearchImpl<'a, S, Data, SearchIt>
 where
-    Data: GraphData,
-    SearchIt: SearchIterator,
+    Data: GraphData<S>,
+    SearchIt: SearchIterator<S>,
 {
     pub(crate) algorithm: PhantomData<SearchIt>,
-    pub(crate) graph: &'a GraphImpl<Data>,
+    pub(crate) graph: &'a GraphImpl<S, Data>,
     pub(crate) result: Vec<GraphIndex>,
     pub(crate) stack: Vec<SearchIndex>,
     pub(crate) visited: BitSet,
+    pub(crate) storage: PhantomData<S>,
 }
 
-impl<'a, Data, SearchIt> SearchImpl<'a, Data, SearchIt>
+impl<'a, S, Data, SearchIt> SearchImpl<'a, S, Data, SearchIt>
 where
-    Data: GraphData,
-    SearchIt: SearchIterator,
+    Data: GraphData<S>,
+    SearchIt: SearchIterator<S>,
 {
-    pub(crate) fn new(graph: &'a GraphImpl<Data>, index: GraphIndex) -> Self {
+    pub(crate) fn new(graph: &'a GraphImpl<S, Data>, index: GraphIndex) -> Self {
         Self {
             algorithm: PhantomData,
             graph,
             result: vec![],
             stack: vec![SearchIndex { index, distance: 0 }],
             visited: BitSet::new(),
+            storage: PhantomData,
         }
     }
 

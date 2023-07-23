@@ -43,8 +43,6 @@ use crate::QueryError;
 use crate::QueryResult;
 use crate::SearchQueryAlgorithm;
 use crate::Transaction;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 #[derive(Default)]
 struct DbStorageIndex {
@@ -170,7 +168,7 @@ impl Serialize for DbStorageIndex {
 /// WAL file. The WAL is then purged on commit of a transaction (all queries are
 /// transactional even if the transaction is not explicitly used).
 pub struct Db {
-    storage: Rc<RefCell<FileStorage>>,
+    storage: FileStorage,
     graph: DbGraph,
     aliases: DbIndexedMap<String, DbId>,
     values: MultiMapStorage<DbId, DbKeyValue>,
@@ -288,18 +286,29 @@ impl Db {
 
         for command in undo_stack.iter().rev() {
             match command {
-                Command::InsertAlias { id, alias } => self.aliases.insert(alias, id)?,
-                Command::InsertEdge { from, to } => {
-                    self.graph.insert_edge(*from, *to).map(|_| ())?
+                Command::InsertAlias { id, alias } => {
+                    self.aliases.insert(&mut self.storage, alias, id)?
                 }
-                Command::InsertKeyValue { id, key_value } => self.values.insert(id, key_value)?,
-                Command::InsertNode => self.graph.insert_node().map(|_| ())?,
-                Command::RemoveAlias { alias } => self.aliases.remove_key(alias)?,
-                Command::RemoveEdge { index } => self.graph.remove_edge(*index)?,
+                Command::InsertEdge { from, to } => self
+                    .graph
+                    .insert_edge(&mut self.storage, *from, *to)
+                    .map(|_| ())?,
+                Command::InsertKeyValue { id, key_value } => {
+                    self.values.insert(&mut self.storage, id, key_value)?
+                }
+                Command::InsertNode => self.graph.insert_node(&mut self.storage).map(|_| ())?,
+                Command::RemoveAlias { alias } => {
+                    self.aliases.remove_key(&mut self.storage, alias)?
+                }
+                Command::RemoveEdge { index } => {
+                    self.graph.remove_edge(&mut self.storage, *index)?
+                }
                 Command::RemoveKeyValue { id, key_value } => {
-                    self.values.remove_value(id, key_value)?
+                    self.values.remove_value(&mut self.storage, id, key_value)?
                 }
-                Command::RemoveNode { index } => self.graph.remove_node(*index)?,
+                Command::RemoveNode { index } => {
+                    self.graph.remove_node(&mut self.storage, *index)?
+                }
             }
         }
 
@@ -332,20 +341,20 @@ impl Db {
                 id: db_id,
                 alias: old_alias.clone(),
             });
-            self.aliases.remove_key(&old_alias)?;
-            self.aliases.remove_key(&old_alias)?;
+            self.aliases.remove_key(&mut self.storage, &old_alias)?;
+            self.aliases.remove_key(&mut self.storage, &old_alias)?;
         }
 
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
-        self.aliases.insert(alias, &db_id)
+        self.aliases.insert(&mut self.storage, alias, &db_id)
     }
 
     pub(crate) fn insert_edge(&mut self, from: DbId, to: DbId) -> Result<DbId, QueryError> {
-        let index = self
-            .graph
-            .insert_edge(GraphIndex(from.0), GraphIndex(to.0))?;
+        let index =
+            self.graph
+                .insert_edge(&mut self.storage, GraphIndex(from.0), GraphIndex(to.0))?;
         self.undo_stack.push(Command::RemoveEdge { index });
 
         Ok(DbId(index.0))
@@ -366,13 +375,13 @@ impl Db {
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });
-        self.aliases.insert(alias, &db_id)?;
+        self.aliases.insert(&mut self.storage, alias, &db_id)?;
 
         Ok(())
     }
 
     pub(crate) fn insert_node(&mut self) -> Result<DbId, DbError> {
-        let index = self.graph.insert_node()?;
+        let index = self.graph.insert_node(&mut self.storage)?;
         self.undo_stack.push(Command::RemoveNode { index });
 
         Ok(DbId(index.0))
@@ -387,7 +396,7 @@ impl Db {
             id: db_id,
             key_value: key_value.clone(),
         });
-        self.values.insert(&db_id, key_value)?;
+        self.values.insert(&mut self.storage, &db_id, key_value)?;
         Ok(())
     }
 
@@ -438,8 +447,8 @@ impl Db {
                 id,
                 alias: alias.clone(),
             });
-            self.aliases.remove_key(alias)?;
-            self.aliases.remove_key(alias)?;
+            self.aliases.remove_key(&mut self.storage, alias)?;
+            self.aliases.remove_key(&mut self.storage, alias)?;
 
             return Ok(true);
         }
@@ -650,7 +659,7 @@ impl Db {
             (edge.index_from(), edge.index_to())
         };
 
-        self.graph.remove_edge(graph_index)?;
+        self.graph.remove_edge(&mut self.storage, graph_index)?;
         self.undo_stack.push(Command::InsertEdge { from, to });
         Ok(())
     }
@@ -666,19 +675,19 @@ impl Db {
                 alias: alias.clone(),
                 id: db_id,
             });
-            self.aliases.remove_key(&alias)?;
-            self.aliases.remove_key(&alias)?;
+            self.aliases.remove_key(&mut self.storage, &alias)?;
+            self.aliases.remove_key(&mut self.storage, &alias)?;
         }
 
         for edge in self.node_edges(graph_index)? {
-            self.graph.remove_edge(edge.0)?;
+            self.graph.remove_edge(&mut self.storage, edge.0)?;
             self.undo_stack.push(Command::InsertEdge {
                 from: edge.1,
                 to: edge.2,
             });
         }
 
-        self.graph.remove_node(graph_index)?;
+        self.graph.remove_node(&mut self.storage, graph_index)?;
         self.undo_stack.push(Command::InsertNode);
         Ok(())
     }
@@ -692,7 +701,8 @@ impl Db {
                     id: db_id,
                     key_value: key_value.clone(),
                 });
-                self.values.remove_value(&db_id, &key_value)?;
+                self.values
+                    .remove_value(&mut self.storage, &db_id, &key_value)?;
                 result -= 1;
             }
         }
@@ -708,38 +718,34 @@ impl Db {
             });
         }
 
-        self.values.remove_key(&db_id)?;
+        self.values.remove_key(&mut self.storage, &db_id)?;
 
         Ok(())
     }
 
     fn try_new(filename: &str) -> Result<Db, DbError> {
-        let storage = Rc::new(RefCell::new(FileStorage::new(filename)?));
+        let mut storage = FileStorage::new(filename)?;
         let graph_storage;
         let aliases_storage;
         let values_storage;
-        let len = storage.borrow_mut().len()?;
-        let index = storage
-            .borrow_mut()
-            .value::<DbStorageIndex>(StorageIndex(1));
+        let len = storage.len()?;
+        let index = storage.value::<DbStorageIndex>(StorageIndex(1));
 
         if let Ok(index) = index {
-            graph_storage = DbGraph::from_storage(storage.clone(), index.graph)?;
-            aliases_storage = DbIndexedMap::from_storage(storage.clone(), index.aliases)?;
-            values_storage = MultiMapStorage::from_storage(storage.clone(), index.values)?;
+            graph_storage = DbGraph::from_storage(&mut storage, index.graph)?;
+            aliases_storage = DbIndexedMap::from_storage(&mut storage, index.aliases)?;
+            values_storage = MultiMapStorage::from_storage(&mut storage, index.values)?;
         } else if len == 0 {
-            storage.borrow_mut().insert(&DbStorageIndex::default())?;
-            graph_storage = DbGraph::new(storage.clone())?;
-            aliases_storage = DbIndexedMap::new(storage.clone())?;
-            values_storage = MultiMapStorage::new(storage.clone())?;
+            storage.insert(&DbStorageIndex::default())?;
+            graph_storage = DbGraph::new(&mut storage)?;
+            aliases_storage = DbIndexedMap::new(&mut storage)?;
+            values_storage = MultiMapStorage::new(&mut storage)?;
             let db_storage_index = DbStorageIndex {
                 graph: graph_storage.storage_index(),
                 aliases: aliases_storage.storage_index(),
                 values: values_storage.storage_index(),
             };
-            storage
-                .borrow_mut()
-                .insert_at(StorageIndex(1), 0, &db_storage_index)?;
+            storage.insert_at(StorageIndex(1), 0, &db_storage_index)?;
         } else {
             return Err(DbError::from(format!(
                 "File '{filename}' is not a valid database file and is not empty."
@@ -870,7 +876,7 @@ impl Db {
 
 impl Drop for Db {
     fn drop(&mut self) {
-        let _ = self.storage.borrow_mut().shrink_to_fit();
+        let _ = self.storage.shrink_to_fit();
     }
 }
 

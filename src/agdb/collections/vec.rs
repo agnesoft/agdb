@@ -4,24 +4,22 @@ use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
-use std::cell::RefCell;
 use std::marker::PhantomData;
-use std::rc::Rc;
 
-pub trait VecData<T, E> {
+pub trait VecData<T, S, E> {
     fn capacity(&self) -> u64;
     fn len(&self) -> u64;
-    fn reallocate(&mut self, capacity: u64) -> Result<(), E>;
-    fn remove(&mut self, index: u64) -> Result<T, E>;
-    fn replace(&mut self, index: u64, value: &T) -> Result<T, E>;
-    fn resize(&mut self, new_len: u64, value: &T) -> Result<(), E>;
-    fn swap(&mut self, index: u64, other: u64) -> Result<(), E>;
+    fn reallocate(&mut self, storage: &mut S, capacity: u64) -> Result<(), E>;
+    fn remove(&mut self, storage: &mut S, index: u64) -> Result<T, E>;
+    fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E>;
+    fn resize(&mut self, storage: &mut S, new_len: u64, value: &T) -> Result<(), E>;
+    fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), E>;
     fn value(&self, index: u64) -> Result<T, E>;
 }
 
 pub trait VecValue: Sized {
     fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError>;
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError>;
+    fn load<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<Self, DbError>;
     fn remove<S: Storage>(storage: &mut S, _bytes: &[u8]) -> Result<(), DbError>;
     fn storage_len() -> u64;
 }
@@ -31,7 +29,7 @@ impl VecValue for u64 {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
@@ -49,7 +47,7 @@ impl VecValue for i64 {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
@@ -68,7 +66,7 @@ impl VecValue for String {
         Ok(index.serialize())
     }
 
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
         let index = StorageIndex::deserialize(bytes)?;
         storage.value(index)
     }
@@ -89,9 +87,8 @@ where
     S: Storage,
     E: From<DbError>,
 {
-    phantom_data: PhantomData<E>,
+    phantom_data: PhantomData<(S, E)>,
     capacity: u64,
-    storage: Rc<RefCell<S>>,
     storage_index: StorageIndex,
     data: Vec<T>,
 }
@@ -107,7 +104,7 @@ where
     }
 }
 
-impl<T, S, E> VecData<T, E> for DbVecData<T, S, E>
+impl<T, S, E> VecData<T, S, E> for DbVecData<T, S, E>
 where
     T: Clone + VecValue,
     S: Storage,
@@ -121,10 +118,10 @@ where
         self.data.len() as u64
     }
 
-    fn reallocate(&mut self, capacity: u64) -> Result<(), E> {
+    fn reallocate(&mut self, storage: &mut S, capacity: u64) -> Result<(), E> {
         self.capacity = capacity;
 
-        self.storage.borrow_mut().resize_value(
+        storage.resize_value(
             self.storage_index,
             self.len().serialized_size() + T::storage_len() * capacity,
         )?;
@@ -140,11 +137,10 @@ where
         Ok(())
     }
 
-    fn remove(&mut self, index: u64) -> Result<T, E> {
+    fn remove(&mut self, storage: &mut S, index: u64) -> Result<T, E> {
         let offset_from = Self::offset(index + 1);
         let offset_to = Self::offset(index);
         let move_len = T::storage_len() * (self.len() - index);
-        let storage = &mut *self.storage.borrow_mut();
         let bytes = storage.value_as_bytes_at_size(
             self.storage_index,
             Self::offset(index),
@@ -158,8 +154,7 @@ where
         Ok(self.data.remove(index as usize))
     }
 
-    fn replace(&mut self, index: u64, value: &T) -> Result<T, E> {
-        let storage = &mut *self.storage.borrow_mut();
+    fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E> {
         let old_bytes = storage.value_as_bytes_at_size(
             self.storage_index,
             Self::offset(index),
@@ -176,8 +171,7 @@ where
         Ok(old_value)
     }
 
-    fn resize(&mut self, new_len: u64, value: &T) -> Result<(), E> {
-        let storage = &mut *self.storage.borrow_mut();
+    fn resize(&mut self, storage: &mut S, new_len: u64, value: &T) -> Result<(), E> {
         let id = storage.transaction();
 
         for index in self.len()..new_len {
@@ -200,11 +194,10 @@ where
         Ok(())
     }
 
-    fn swap(&mut self, index: u64, other: u64) -> Result<(), E> {
+    fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), E> {
         let offset_from = Self::offset(other);
         let offset_to = Self::offset(index);
         let size = T::storage_len();
-        let storage = &mut *self.storage.borrow_mut();
         let bytes = storage.value_as_bytes_at_size(
             self.storage_index,
             Self::offset(index),
@@ -223,32 +216,32 @@ where
     }
 }
 
-pub struct VecImpl<T, D, E>
+pub struct VecImpl<T, S, D, E>
 where
     T: VecValue,
-    D: VecData<T, E>,
+    D: VecData<T, S, E>,
     E: From<DbError> + From<String>,
 {
-    phantom_data: PhantomData<(T, E)>,
+    phantom_data: PhantomData<(T, S, E)>,
     data: D,
 }
 
-pub struct VecIterator<'a, T, D, E>
+pub struct VecIterator<'a, T, S, D, E>
 where
     T: VecValue,
-    D: VecData<T, E>,
+    D: VecData<T, S, E>,
     E: From<DbError> + From<String>,
 {
     pub index: u64,
-    pub vec: &'a VecImpl<T, D, E>,
+    pub vec: &'a VecImpl<T, S, D, E>,
 }
 
-pub type DbVec<T, S = FileStorage> = VecImpl<T, DbVecData<T, S, DbError>, DbError>;
+pub type DbVec<T, S = FileStorage> = VecImpl<T, S, DbVecData<T, S, DbError>, DbError>;
 
-impl<'a, T, D, E> Iterator for VecIterator<'a, T, D, E>
+impl<'a, T, S, D, E> Iterator for VecIterator<'a, T, S, D, E>
 where
     T: VecValue,
-    D: VecData<T, E>,
+    D: VecData<T, S, E>,
     E: From<DbError> + From<String>,
 {
     type Item = T;
@@ -261,10 +254,10 @@ where
     }
 }
 
-impl<T, D, E> VecImpl<T, D, E>
+impl<T, S, D, E> VecImpl<T, S, D, E>
 where
     T: VecValue,
-    D: VecData<T, E>,
+    D: VecData<T, S, E>,
     E: From<DbError> + From<String>,
 {
     pub fn capacity(&self) -> u64 {
@@ -281,63 +274,65 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn iter(&self) -> VecIterator<T, D, E> {
+    pub fn iter(&self) -> VecIterator<T, S, D, E> {
         VecIterator {
             index: 0,
             vec: self,
         }
     }
 
-    pub fn push(&mut self, value: &T) -> Result<(), E> {
+    pub fn push(&mut self, storage: &mut S, value: &T) -> Result<(), E> {
         if self.data.len() == self.data.capacity() {
-            self.data
-                .reallocate(std::cmp::max(64, self.capacity() + self.capacity() / 2))?;
+            self.data.reallocate(
+                storage,
+                std::cmp::max(64, self.capacity() + self.capacity() / 2),
+            )?;
         }
 
-        self.data.resize(self.data.len() + 1, value)
+        self.data.resize(storage, self.data.len() + 1, value)
     }
 
     #[allow(dead_code)]
-    pub fn remove(&mut self, index: u64) -> Result<T, E> {
+    pub fn remove(&mut self, storage: &mut S, index: u64) -> Result<T, E> {
         self.validate_index(index)?;
-        self.data.remove(index)
+        self.data.remove(storage, index)
     }
 
-    pub fn replace(&mut self, index: u64, value: &T) -> Result<T, E> {
+    pub fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E> {
         self.validate_index(index)?;
-        self.data.replace(index, value)
+        self.data.replace(storage, index, value)
     }
 
     #[allow(dead_code)]
-    pub fn reserve(&mut self, capacity: u64) -> Result<(), E> {
+    pub fn reserve(&mut self, storage: &mut S, capacity: u64) -> Result<(), E> {
         if self.capacity() < capacity {
-            self.data.reallocate(capacity)?;
+            self.data.reallocate(storage, capacity)?;
         }
 
         Ok(())
     }
 
-    pub fn resize(&mut self, new_len: u64, value: &T) -> Result<(), E> {
+    pub fn resize(&mut self, storage: &mut S, new_len: u64, value: &T) -> Result<(), E> {
         if self.capacity() < new_len {
-            self.data.reallocate(new_len)?;
+            self.data.reallocate(storage, new_len)?;
         }
 
-        self.data.resize(new_len, value)
+        self.data.resize(storage, new_len, value)
     }
 
     #[allow(dead_code)]
-    pub fn shrink_to_fit(&mut self) -> Result<(), E> {
-        self.data.reallocate(self.len())
+    pub fn shrink_to_fit(&mut self, storage: &mut S) -> Result<(), E> {
+        self.data.reallocate(storage, self.len())
     }
 
-    pub fn swap(&mut self, index: u64, other: u64) -> Result<(), E> {
+    pub fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), E> {
         if index == other {
             return Ok(());
         }
 
         self.validate_index(index)?;
         self.validate_index(other)?;
-        self.data.swap(index, other)
+        self.data.swap(storage, index, other)
     }
 
     pub fn value(&self, index: u64) -> Result<T, E> {
@@ -362,43 +357,38 @@ where
     T: Clone + VecValue,
     S: Storage,
 {
-    pub fn new(storage: Rc<RefCell<S>>) -> Result<Self, DbError> {
-        let storage_index = storage.borrow_mut().insert(&0_u64)?;
+    pub fn new(storage: &mut S) -> Result<Self, DbError> {
+        let storage_index = storage.insert(&0_u64)?;
 
         Ok(Self {
             phantom_data: PhantomData,
             data: DbVecData {
                 phantom_data: PhantomData,
                 capacity: 0,
-                storage,
                 storage_index,
                 data: vec![],
             },
         })
     }
 
-    pub fn from_storage(
-        storage: Rc<RefCell<S>>,
-        storage_index: StorageIndex,
-    ) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &mut S, storage_index: StorageIndex) -> Result<Self, DbError> {
         let mut data = Vec::<T>::new();
         let capacity;
 
         {
-            let s = &mut *storage.borrow_mut();
-            let len = s.value::<u64>(storage_index)?;
-            let data_len = s.value_size(storage_index)?;
+            let len = storage.value::<u64>(storage_index)?;
+            let data_len = storage.value_size(storage_index)?;
             capacity = data_len / T::storage_len();
 
             data.reserve(capacity as usize);
 
             for index in 0..len {
-                let bytes = s.value_as_bytes_at_size(
+                let bytes = storage.value_as_bytes_at_size(
                     storage_index,
                     DbVecData::<T, S, DbError>::offset(index),
                     T::storage_len(),
                 )?;
-                data.push(T::load(s, &bytes)?);
+                data.push(T::load(storage, &bytes)?);
             }
         }
 
@@ -407,7 +397,6 @@ where
             data: DbVecData {
                 phantom_data: PhantomData,
                 capacity,
-                storage,
                 storage_index,
                 data,
             },
@@ -428,22 +417,20 @@ mod tests {
     #[test]
     fn from_storage_index() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index;
 
         {
-            let mut vec = DbVec::<String>::new(storage.clone()).unwrap();
-            vec.push(&"Hello".to_string()).unwrap();
-            vec.push(&", ".to_string()).unwrap();
-            vec.push(&"World".to_string()).unwrap();
-            vec.push(&"!".to_string()).unwrap();
+            let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+            vec.push(&mut storage, &"Hello".to_string()).unwrap();
+            vec.push(&mut storage, &", ".to_string()).unwrap();
+            vec.push(&mut storage, &"World".to_string()).unwrap();
+            vec.push(&mut storage, &"!".to_string()).unwrap();
             index = vec.storage_index();
         }
 
-        let vec = DbVec::<String>::from_storage(storage, index).unwrap();
+        let vec = DbVec::<String>::from_storage(&mut storage, index).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -459,12 +446,10 @@ mod tests {
     #[test]
     fn from_storage_missing_index() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            DbVec::<String>::from_storage(storage, StorageIndex::from(1_u64))
+            DbVec::<String>::from_storage(&mut storage, StorageIndex::from(1_u64))
                 .err()
                 .unwrap(),
             DbError::from("FileStorage error: index (1) not found")
@@ -474,15 +459,13 @@ mod tests {
     #[test]
     fn iter() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -493,15 +476,14 @@ mod tests {
     #[test]
     fn is_empty() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert!(vec.is_empty());
 
-        vec.push(&"Hello, World!".to_string()).unwrap();
+        vec.push(&mut storage, &"Hello, World!".to_string())
+            .unwrap();
 
         assert!(!vec.is_empty());
     }
@@ -509,18 +491,16 @@ mod tests {
     #[test]
     fn len() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert_eq!(vec.len(), 0);
 
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
         assert_eq!(vec.len(), 4)
     }
@@ -528,18 +508,16 @@ mod tests {
     #[test]
     fn min_capacity() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
         assert_eq!(vec.capacity(), 64);
     }
@@ -547,25 +525,22 @@ mod tests {
     #[test]
     fn push() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage.clone()).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
         let indexes = storage
-            .borrow_mut()
             .value::<Vec<StorageIndex>>(vec.storage_index())
             .unwrap();
 
         let mut values = Vec::<String>::new();
 
         for index in indexes {
-            values.push(storage.borrow_mut().value::<String>(index).unwrap());
+            values.push(storage.value::<String>(index).unwrap());
         }
 
         assert_eq!(
@@ -582,17 +557,15 @@ mod tests {
     #[test]
     fn remove() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.remove(1).unwrap();
+        vec.remove(&mut storage, 1).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -603,17 +576,15 @@ mod tests {
     #[test]
     fn remove_at_end() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.remove(2).unwrap();
+        vec.remove(&mut storage, 2).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -624,14 +595,12 @@ mod tests {
     #[test]
     fn remove_index_out_of_bounds() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert_eq!(
-            vec.remove(0),
+            vec.remove(&mut storage, 0),
             Err(DbError::from("Index (0) out of bounds (0)"))
         );
     }
@@ -639,14 +608,12 @@ mod tests {
     #[test]
     fn reserve_larger() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         assert_eq!(vec.capacity(), 0);
 
-        vec.reserve(20).unwrap();
+        vec.reserve(&mut storage, 20).unwrap();
 
         assert_eq!(vec.capacity(), 20);
     }
@@ -654,13 +621,11 @@ mod tests {
     #[test]
     fn reserve_smaller() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.reserve(20).unwrap();
-        vec.reserve(10).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.reserve(&mut storage, 20).unwrap();
+        vec.reserve(&mut storage, 10).unwrap();
 
         assert_eq!(vec.capacity(), 20);
     }
@@ -668,17 +633,15 @@ mod tests {
     #[test]
     fn resize_larger() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.resize(6, &" ".to_string()).unwrap();
+        vec.resize(&mut storage, 6, &" ".to_string()).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -696,17 +659,15 @@ mod tests {
     #[test]
     fn resize_over_capacity() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.resize(100, &" ".to_string()).unwrap();
+        vec.resize(&mut storage, 100, &" ".to_string()).unwrap();
 
         let mut expected = Vec::<String>::new();
         expected.resize(100, " ".to_string());
@@ -724,17 +685,15 @@ mod tests {
     #[test]
     fn resize_same() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.resize(4, &String::default()).unwrap();
+        vec.resize(&mut storage, 4, &String::default()).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -750,17 +709,15 @@ mod tests {
     #[test]
     fn resize_smaller() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.resize(3, &String::default()).unwrap();
+        vec.resize(&mut storage, 3, &String::default()).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -771,17 +728,15 @@ mod tests {
     #[test]
     fn replace() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        vec.replace(1, &" ".to_string()).unwrap();
+        vec.replace(&mut storage, 1, &" ".to_string()).unwrap();
 
         assert_eq!(vec.value(0), Ok("Hello".to_string()));
         assert_eq!(vec.value(1), Ok(" ".to_string()));
@@ -792,14 +747,12 @@ mod tests {
     #[test]
     fn replace_out_of_bounds() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert_eq!(
-            vec.replace(0, &"".to_string()),
+            vec.replace(&mut storage, 0, &"".to_string()),
             Err(DbError::from("Index (0) out of bounds (0)"))
         );
     }
@@ -807,23 +760,21 @@ mod tests {
     #[test]
     fn shrink_to_fit() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
         assert_eq!(vec.capacity(), 64);
 
-        vec.shrink_to_fit().unwrap();
+        vec.shrink_to_fit(&mut storage).unwrap();
 
         assert_eq!(vec.capacity(), 4);
 
-        vec.shrink_to_fit().unwrap();
+        vec.shrink_to_fit(&mut storage).unwrap();
 
         assert_eq!(vec.capacity(), 4);
     }
@@ -831,15 +782,13 @@ mod tests {
     #[test]
     fn shrink_to_fit_empty() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
-        vec.shrink_to_fit().unwrap();
+        vec.shrink_to_fit(&mut storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
     }
@@ -847,15 +796,13 @@ mod tests {
     #[test]
     fn swap() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
-        vec.swap(0, 2).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
+        vec.swap(&mut storage, 0, 2).unwrap();
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
             vec![
@@ -869,15 +816,13 @@ mod tests {
     #[test]
     fn swap_self() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
-        vec.swap(1, 1).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
+        vec.swap(&mut storage, 1, 1).unwrap();
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
             vec![
@@ -891,20 +836,18 @@ mod tests {
     #[test]
     fn swap_invalid() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
         assert_eq!(
-            vec.swap(1, 10),
+            vec.swap(&mut storage, 1, 10),
             Err(DbError::from("Index (10) out of bounds (4)"))
         );
         assert_eq!(
-            vec.swap(10, 1),
+            vec.swap(&mut storage, 10, 1),
             Err(DbError::from("Index (10) out of bounds (4)"))
         );
     }
@@ -912,15 +855,13 @@ mod tests {
     #[test]
     fn value() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(storage).unwrap();
-        vec.push(&"Hello".to_string()).unwrap();
-        vec.push(&", ".to_string()).unwrap();
-        vec.push(&"World".to_string()).unwrap();
-        vec.push(&"!".to_string()).unwrap();
+        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        vec.push(&mut storage, &"Hello".to_string()).unwrap();
+        vec.push(&mut storage, &", ".to_string()).unwrap();
+        vec.push(&mut storage, &"World".to_string()).unwrap();
+        vec.push(&mut storage, &"!".to_string()).unwrap();
 
         assert_eq!(vec.value(0), Ok("Hello".to_string()));
         assert_eq!(vec.value(1), Ok(", ".to_string()));
@@ -931,11 +872,9 @@ mod tests {
     #[test]
     fn value_out_of_bounds() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let vec = DbVec::<String>::new(storage).unwrap();
+        let vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert_eq!(
             vec.value(0),

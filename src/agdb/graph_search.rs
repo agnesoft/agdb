@@ -17,6 +17,7 @@ use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
+use std::marker::PhantomData;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SearchControl {
@@ -29,16 +30,17 @@ pub trait SearchHandler {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError>;
 }
 
-pub struct GraphSearch<'a, Data>
+pub struct GraphSearch<'a, S, Data>
 where
-    Data: GraphData,
+    Data: GraphData<S>,
 {
-    pub(crate) graph: &'a GraphImpl<Data>,
+    pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) storage: PhantomData<S>,
 }
 
-impl<'a, Data> GraphSearch<'a, Data>
+impl<'a, S, Data> GraphSearch<'a, S, Data>
 where
-    Data: GraphData,
+    Data: GraphData<S>,
 {
     pub fn breadth_first_search<Handler: SearchHandler>(
         &self,
@@ -46,7 +48,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearch>::new(self.graph, index).search(handler)
+            SearchImpl::<'a, S, Data, BreadthFirstSearch>::new(self.graph, index).search(handler)
         } else {
             Ok(vec![])
         }
@@ -58,7 +60,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, BreadthFirstSearchReverse>::new(self.graph, index)
+            SearchImpl::<'a, S, Data, BreadthFirstSearchReverse>::new(self.graph, index)
                 .search(handler)
         } else {
             Ok(vec![])
@@ -71,7 +73,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearch>::new(self.graph, index).search(handler)
+            SearchImpl::<'a, S, Data, DepthFirstSearch>::new(self.graph, index).search(handler)
         } else {
             Ok(vec![])
         }
@@ -83,7 +85,8 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if self.is_valid_index(index) {
-            SearchImpl::<'a, Data, DepthFirstSearchReverse>::new(self.graph, index).search(handler)
+            SearchImpl::<'a, S, Data, DepthFirstSearchReverse>::new(self.graph, index)
+                .search(handler)
         } else {
             Ok(vec![])
         }
@@ -96,7 +99,7 @@ where
         handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {
         if from != to && self.is_valid_node(from) && self.is_valid_node(to) {
-            PathSearch::<Data, Handler>::new(self.graph, from, to, handler).search()
+            PathSearch::<S, Data, Handler>::new(self.graph, from, to, handler).search()
         } else {
             Ok(vec![])
         }
@@ -111,12 +114,15 @@ where
     }
 }
 
-impl<'a, Data> From<&'a GraphImpl<Data>> for GraphSearch<'a, Data>
+impl<'a, S, Data> From<&'a GraphImpl<S, Data>> for GraphSearch<'a, S, Data>
 where
-    Data: GraphData,
+    Data: GraphData<S>,
 {
-    fn from(graph: &'a GraphImpl<Data>) -> Self {
-        GraphSearch { graph }
+    fn from(graph: &'a GraphImpl<S, Data>) -> Self {
+        GraphSearch {
+            graph,
+            storage: PhantomData,
+        }
     }
 }
 

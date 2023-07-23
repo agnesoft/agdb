@@ -8,9 +8,7 @@ use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
-use std::cell::RefCell;
 use std::marker::PhantomData;
-use std::rc::Rc;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum MapValueState {
@@ -56,7 +54,7 @@ impl VecValue for MapValueState {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
@@ -69,19 +67,24 @@ impl VecValue for MapValueState {
     }
 }
 
-pub trait MapData<K, T> {
+pub trait MapData<K, T, S> {
     fn capacity(&self) -> u64;
-    fn commit(&mut self, id: u64) -> Result<(), DbError>;
+    fn commit(&mut self, storage: &mut S, id: u64) -> Result<(), DbError>;
     fn len(&self) -> u64;
     fn key(&self, index: u64) -> Result<K, DbError>;
-    fn resize(&mut self, capacity: u64) -> Result<(), DbError>;
-    fn set_len(&mut self, len: u64) -> Result<(), DbError>;
-    fn set_state(&mut self, index: u64, state: MapValueState) -> Result<(), DbError>;
-    fn set_key(&mut self, index: u64, key: &K) -> Result<(), DbError>;
-    fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError>;
+    fn resize(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError>;
+    fn set_len(&mut self, storage: &mut S, len: u64) -> Result<(), DbError>;
+    fn set_state(
+        &mut self,
+        storage: &mut S,
+        index: u64,
+        state: MapValueState,
+    ) -> Result<(), DbError>;
+    fn set_key(&mut self, storage: &mut S, index: u64, key: &K) -> Result<(), DbError>;
+    fn set_value(&mut self, storage: &mut S, index: u64, value: &T) -> Result<(), DbError>;
     fn state(&self, index: u64) -> Result<MapValueState, DbError>;
-    fn swap(&mut self, index: u64, other: u64) -> Result<(), DbError>;
-    fn transaction(&mut self) -> u64;
+    fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), DbError>;
+    fn transaction(&mut self, storage: &mut S) -> u64;
     fn value(&self, index: u64) -> Result<T, DbError>;
 }
 
@@ -144,7 +147,6 @@ where
     T: Clone + VecValue,
     S: Storage,
 {
-    storage: Rc<RefCell<S>>,
     storage_index: StorageIndex,
     data_index: MapDataIndex,
     states: DbVec<MapValueState, S>,
@@ -158,10 +160,10 @@ where
     T: Clone + VecValue,
     S: Storage,
 {
-    pub fn new(storage: Rc<RefCell<S>>) -> Result<Self, DbError> {
-        let states = DbVec::<MapValueState, S>::new(storage.clone())?;
-        let keys = DbVec::<K, S>::new(storage.clone())?;
-        let values = DbVec::<T, S>::new(storage.clone())?;
+    pub fn new(storage: &mut S) -> Result<Self, DbError> {
+        let states = DbVec::<MapValueState, S>::new(storage)?;
+        let keys = DbVec::<K, S>::new(storage)?;
+        let values = DbVec::<T, S>::new(storage)?;
 
         let data_index = MapDataIndex {
             len: 0,
@@ -170,10 +172,9 @@ where
             values_index: values.storage_index(),
         };
 
-        let storage_index = storage.borrow_mut().insert(&data_index)?;
+        let storage_index = storage.insert(&data_index)?;
 
         Ok(Self {
-            storage,
             storage_index,
             data_index,
             states,
@@ -182,18 +183,13 @@ where
         })
     }
 
-    pub fn from_storage(
-        storage: Rc<RefCell<S>>,
-        storage_index: StorageIndex,
-    ) -> Result<Self, DbError> {
-        let data_index = storage.borrow_mut().value::<MapDataIndex>(storage_index)?;
-        let states =
-            DbVec::<MapValueState, S>::from_storage(storage.clone(), data_index.states_index)?;
-        let keys = DbVec::<K, S>::from_storage(storage.clone(), data_index.keys_index)?;
-        let values = DbVec::<T, S>::from_storage(storage.clone(), data_index.values_index)?;
+    pub fn from_storage(storage: &mut S, storage_index: StorageIndex) -> Result<Self, DbError> {
+        let data_index = storage.value::<MapDataIndex>(storage_index)?;
+        let states = DbVec::<MapValueState, S>::from_storage(storage, data_index.states_index)?;
+        let keys = DbVec::<K, S>::from_storage(storage, data_index.keys_index)?;
+        let values = DbVec::<T, S>::from_storage(storage, data_index.values_index)?;
 
         Ok(Self {
-            storage,
             storage_index,
             data_index,
             states,
@@ -207,7 +203,7 @@ where
     }
 }
 
-impl<K, T, S> MapData<K, T> for DbMapData<K, T, S>
+impl<K, T, S> MapData<K, T, S> for DbMapData<K, T, S>
 where
     K: Default + Clone + VecValue,
     T: Default + Clone + VecValue,
@@ -217,8 +213,8 @@ where
         self.states.len()
     }
 
-    fn commit(&mut self, id: u64) -> Result<(), DbError> {
-        self.storage.borrow_mut().commit(id)
+    fn commit(&mut self, storage: &mut S, id: u64) -> Result<(), DbError> {
+        storage.commit(id)
     }
 
     fn len(&self) -> u64 {
@@ -229,31 +225,35 @@ where
         self.keys.value(index)
     }
 
-    fn resize(&mut self, capacity: u64) -> Result<(), DbError> {
-        self.states.resize(capacity, &MapValueState::Empty)?;
-        self.keys.resize(capacity, &K::default())?;
-        self.values.resize(capacity, &T::default())
+    fn resize(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError> {
+        self.states
+            .resize(storage, capacity, &MapValueState::Empty)?;
+        self.keys.resize(storage, capacity, &K::default())?;
+        self.values.resize(storage, capacity, &T::default())
     }
 
-    fn set_len(&mut self, len: u64) -> Result<(), DbError> {
+    fn set_len(&mut self, storage: &mut S, len: u64) -> Result<(), DbError> {
         self.data_index.len = len;
-        self.storage
-            .borrow_mut()
-            .insert_at(self.storage_index, 0, &self.len())
+        storage.insert_at(self.storage_index, 0, &self.len())
     }
 
-    fn set_state(&mut self, index: u64, state: MapValueState) -> Result<(), DbError> {
-        self.states.replace(index, &state)?;
+    fn set_state(
+        &mut self,
+        storage: &mut S,
+        index: u64,
+        state: MapValueState,
+    ) -> Result<(), DbError> {
+        self.states.replace(storage, index, &state)?;
         Ok(())
     }
 
-    fn set_key(&mut self, index: u64, key: &K) -> Result<(), DbError> {
-        self.keys.replace(index, key)?;
+    fn set_key(&mut self, storage: &mut S, index: u64, key: &K) -> Result<(), DbError> {
+        self.keys.replace(storage, index, key)?;
         Ok(())
     }
 
-    fn set_value(&mut self, index: u64, value: &T) -> Result<(), DbError> {
-        self.values.replace(index, value)?;
+    fn set_value(&mut self, storage: &mut S, index: u64, value: &T) -> Result<(), DbError> {
+        self.values.replace(storage, index, value)?;
         Ok(())
     }
 
@@ -261,14 +261,14 @@ where
         self.states.value(index)
     }
 
-    fn swap(&mut self, index: u64, other: u64) -> Result<(), DbError> {
-        self.states.swap(index, other)?;
-        self.keys.swap(index, other)?;
-        self.values.swap(index, other)
+    fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), DbError> {
+        self.states.swap(storage, index, other)?;
+        self.keys.swap(storage, index, other)?;
+        self.values.swap(storage, index, other)
     }
 
-    fn transaction(&mut self) -> u64 {
-        self.storage.borrow_mut().transaction()
+    fn transaction(&mut self, storage: &mut S) -> u64 {
+        storage.transaction()
     }
 
     fn value(&self, index: u64) -> Result<T, DbError> {
@@ -276,20 +276,20 @@ where
     }
 }
 
-pub struct MapIterator<'a, K, T, Data>
+pub struct MapIterator<'a, K, T, S, Data>
 where
-    Data: MapData<K, T>,
+    Data: MapData<K, T, S>,
 {
     pub pos: u64,
     pub data: &'a Data,
-    pub phantom_data: PhantomData<(K, T)>,
+    pub phantom_data: PhantomData<(K, T, S)>,
 }
 
-impl<'a, K, T, Data> Iterator for MapIterator<'a, K, T, Data>
+impl<'a, K, T, S, Data> Iterator for MapIterator<'a, K, T, S, Data>
 where
     K: Default,
     T: Default,
-    Data: MapData<K, T>,
+    Data: MapData<K, T, S>,
 {
     type Item = (K, T);
 
@@ -310,18 +310,19 @@ where
     }
 }
 
-pub struct MapImpl<K, T, Data>
+pub struct MapImpl<K, T, S, Data>
 where
-    Data: MapData<K, T>,
+    Data: MapData<K, T, S>,
 {
-    pub(crate) multi_map: MultiMapImpl<K, T, Data>,
+    pub(crate) multi_map: MultiMapImpl<K, T, S, Data>,
+    pub(crate) storage: PhantomData<S>,
 }
 
-impl<K, T, Data> MapImpl<K, T, Data>
+impl<K, T, S, Data> MapImpl<K, T, S, Data>
 where
     K: Default + PartialEq + StableHash,
     T: Default + PartialEq,
-    Data: MapData<K, T>,
+    Data: MapData<K, T, S>,
 {
     #[allow(dead_code)]
     pub fn capacity(&self) -> u64 {
@@ -338,13 +339,13 @@ where
         self.multi_map.contains_value(key, value)
     }
 
-    pub fn insert(&mut self, key: &K, value: &T) -> Result<Option<T>, DbError> {
+    pub fn insert(&mut self, storage: &mut S, key: &K, value: &T) -> Result<Option<T>, DbError> {
         let old_value = self.value(key)?;
 
         if let Some(old) = &old_value {
-            self.multi_map.replace(key, old, value)?;
+            self.multi_map.replace(storage, key, old, value)?;
         } else {
-            self.multi_map.insert(key, value)?;
+            self.multi_map.insert(storage, key, value)?;
         }
 
         Ok(old_value)
@@ -355,7 +356,7 @@ where
         self.multi_map.is_empty()
     }
 
-    pub fn iter(&self) -> MapIterator<K, T, Data> {
+    pub fn iter(&self) -> MapIterator<K, T, S, Data> {
         self.multi_map.iter()
     }
 
@@ -364,13 +365,13 @@ where
         self.multi_map.len()
     }
 
-    pub fn remove(&mut self, key: &K) -> Result<(), DbError> {
-        self.multi_map.remove_key(key)
+    pub fn remove(&mut self, storage: &mut S, key: &K) -> Result<(), DbError> {
+        self.multi_map.remove_key(storage, key)
     }
 
     #[allow(dead_code)]
-    pub fn reserve(&mut self, capacity: u64) -> Result<(), DbError> {
-        self.multi_map.reserve(capacity)
+    pub fn reserve(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError> {
+        self.multi_map.reserve(storage, capacity)
     }
 
     pub fn value(&self, key: &K) -> Result<Option<T>, DbError> {
@@ -378,7 +379,7 @@ where
     }
 }
 
-pub type DbMap<K, T, S = FileStorage> = MapImpl<K, T, DbMapData<K, T, S>>;
+pub type DbMap<K, T, S = FileStorage> = MapImpl<K, T, S, DbMapData<K, T, S>>;
 
 impl<K, T, S> DbMap<K, T, S>
 where
@@ -386,21 +387,23 @@ where
     T: Default + Clone + VecValue,
     S: Storage,
 {
-    pub fn new(storage: Rc<RefCell<S>>) -> Result<Self, DbError> {
+    pub fn new(storage: &mut S) -> Result<Self, DbError> {
         Ok(Self {
-            multi_map: MultiMapImpl::<K, T, DbMapData<K, T, S>> {
+            multi_map: MultiMapImpl::<K, T, S, DbMapData<K, T, S>> {
                 data: DbMapData::<K, T, S>::new(storage)?,
                 phantom_marker: PhantomData,
             },
+            storage: PhantomData,
         })
     }
 
-    pub fn from_storage(storage: Rc<RefCell<S>>, index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &mut S, index: StorageIndex) -> Result<Self, DbError> {
         Ok(Self {
-            multi_map: MultiMapImpl::<K, T, DbMapData<K, T, S>> {
+            multi_map: MultiMapImpl::<K, T, S, DbMapData<K, T, S>> {
                 data: DbMapData::<K, T, S>::from_storage(storage, index)?,
                 phantom_marker: PhantomData,
             },
+            storage: PhantomData,
         })
     }
 
@@ -417,14 +420,12 @@ mod tests {
     #[test]
     fn contains_key() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.contains(&1), Ok(false));
 
-        map.insert(&1, &10).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
 
         assert_eq!(map.contains(&1), Ok(true));
     }
@@ -432,12 +433,10 @@ mod tests {
     #[test]
     fn contains_key_removed() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &10).unwrap();
-        map.remove(&1).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.remove(&mut storage, &1).unwrap();
 
         assert_eq!(map.contains(&1), Ok(false));
     }
@@ -445,25 +444,21 @@ mod tests {
     #[test]
     fn contains_key_missing() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &10).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
 
         assert_eq!(map.contains(&2), Ok(false));
     }
     #[test]
     fn contains_value() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.contains_value(&1, &10), Ok(false));
 
-        map.insert(&1, &10).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
 
         assert_eq!(map.contains_value(&1, &10), Ok(true));
     }
@@ -471,12 +466,10 @@ mod tests {
     #[test]
     fn contains_value_removed() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &10).unwrap();
-        map.remove(&1).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.remove(&mut storage, &1).unwrap();
 
         assert_eq!(map.contains_value(&1, &1), Ok(false));
     }
@@ -484,11 +477,9 @@ mod tests {
     #[test]
     fn contains_value_missing() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &10).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
 
         assert_eq!(map.contains_value(&1, &1), Ok(false));
     }
@@ -496,22 +487,20 @@ mod tests {
     #[test]
     fn from_storage_index() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index;
 
         {
-            let mut map = DbMap::<u64, u64>::new(storage.clone()).unwrap();
-            map.insert(&1, &1).unwrap();
-            map.insert(&3, &2).unwrap();
-            map.insert(&5, &3).unwrap();
-            map.remove(&3).unwrap();
+            let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+            map.insert(&mut storage, &1, &1).unwrap();
+            map.insert(&mut storage, &3, &2).unwrap();
+            map.insert(&mut storage, &5, &3).unwrap();
+            map.remove(&mut storage, &3).unwrap();
             index = map.storage_index();
         }
 
-        let map = DbMap::<u64, u64>::from_storage(storage, index).unwrap();
+        let map = DbMap::<u64, u64>::from_storage(&mut storage, index).unwrap();
         let expected = vec![(1_u64, 1_u64), (5_u64, 3_u64)];
 
         assert_eq!(map.iter().collect::<Vec<(u64, u64)>>(), expected);
@@ -520,12 +509,9 @@ mod tests {
     #[test]
     fn from_storage_missing_index() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
-
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(
-            DbMap::<u64, u64>::from_storage(storage, StorageIndex::from(1_u64))
+            DbMap::<u64, u64>::from_storage(&mut storage, StorageIndex::from(1_u64))
                 .err()
                 .unwrap(),
             DbError::from("FileStorage error: index (1) not found")
@@ -535,15 +521,13 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        map.insert(&1, &10).unwrap();
-        map.insert(&5, &15).unwrap();
-        map.insert(&7, &20).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.insert(&mut storage, &5, &15).unwrap();
+        map.insert(&mut storage, &7, &20).unwrap();
 
         assert_eq!(map.len(), 3);
         assert_eq!(map.value(&1), Ok(Some(10)));
@@ -554,16 +538,14 @@ mod tests {
     #[test]
     fn insert_reallocates() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.capacity(), 0);
 
         for i in 0..100 {
-            map.insert(&i, &i).unwrap();
+            map.insert(&mut storage, &i, &i).unwrap();
         }
 
         assert_eq!(map.len(), 100);
@@ -577,14 +559,12 @@ mod tests {
     #[test]
     fn insert_reallocates_with_collisions() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         for i in 1..100 {
-            map.insert(&(i * 64 - 1), &i).unwrap();
+            map.insert(&mut storage, &(i * 64 - 1), &i).unwrap();
         }
 
         for i in 1..100 {
@@ -595,16 +575,14 @@ mod tests {
     #[test]
     fn insert_same_key() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        assert_eq!(map.insert(&1, &10), Ok(None));
-        assert_eq!(map.insert(&5, &15), Ok(None));
+        assert_eq!(map.insert(&mut storage, &1, &10), Ok(None));
+        assert_eq!(map.insert(&mut storage, &5, &15), Ok(None));
         assert_eq!(map.len(), 2);
-        assert_eq!(map.insert(&5, &20), Ok(Some(15)));
+        assert_eq!(map.insert(&mut storage, &5, &20), Ok(Some(15)));
         assert_eq!(map.len(), 2);
 
         assert_eq!(map.value(&1), Ok(Some(10)));
@@ -614,34 +592,30 @@ mod tests {
     #[test]
     fn is_empty() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert!(map.is_empty());
-        map.insert(&1, &10).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
         assert!(!map.is_empty());
-        map.remove(&1).unwrap();
+        map.remove(&mut storage, &1).unwrap();
         assert!(map.is_empty());
     }
 
     #[test]
     fn iter() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        map.insert(&1, &10).unwrap();
-        map.insert(&5, &15).unwrap();
-        map.insert(&7, &20).unwrap();
-        map.insert(&2, &30).unwrap();
-        map.insert(&4, &13).unwrap();
-        map.remove(&7).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.insert(&mut storage, &5, &15).unwrap();
+        map.insert(&mut storage, &7, &20).unwrap();
+        map.insert(&mut storage, &2, &30).unwrap();
+        map.insert(&mut storage, &4, &13).unwrap();
+        map.remove(&mut storage, &7).unwrap();
 
         let mut actual = map.iter().collect::<Vec<(u64, u64)>>();
         actual.sort();
@@ -653,18 +627,16 @@ mod tests {
     #[test]
     fn remove() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        map.insert(&1, &10).unwrap();
-        map.insert(&5, &15).unwrap();
-        map.insert(&7, &20).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.insert(&mut storage, &5, &15).unwrap();
+        map.insert(&mut storage, &7, &20).unwrap();
 
         assert_eq!(map.len(), 3);
-        map.remove(&5).unwrap();
+        map.remove(&mut storage, &5).unwrap();
 
         assert_eq!(map.len(), 2);
         assert_eq!(map.value(&1), Ok(Some(10)));
@@ -675,24 +647,22 @@ mod tests {
     #[test]
     fn remove_deleted() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        map.insert(&1, &10).unwrap();
-        map.insert(&5, &15).unwrap();
-        map.insert(&7, &20).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.insert(&mut storage, &5, &15).unwrap();
+        map.insert(&mut storage, &7, &20).unwrap();
 
         assert_eq!(map.len(), 3);
 
-        map.remove(&5).unwrap();
+        map.remove(&mut storage, &5).unwrap();
 
         assert_eq!(map.len(), 2);
         assert_eq!(map.value(&5), Ok(None));
 
-        map.remove(&5).unwrap();
+        map.remove(&mut storage, &5).unwrap();
 
         assert_eq!(map.len(), 2);
     }
@@ -700,20 +670,18 @@ mod tests {
     #[test]
     fn remove_missing() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.len(), 0);
-        assert_eq!(map.remove(&0), Ok(()));
+        assert_eq!(map.remove(&mut storage, &0), Ok(()));
 
-        map.insert(&1, &10).unwrap();
+        map.insert(&mut storage, &1, &10).unwrap();
 
         assert_eq!(map.len(), 1);
 
-        map.remove(&0).unwrap();
+        map.remove(&mut storage, &0).unwrap();
 
         assert_eq!(map.len(), 1);
     }
@@ -721,21 +689,19 @@ mod tests {
     #[test]
     fn remove_shrinks_capacity() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         for i in 0..100 {
-            map.insert(&i, &i).unwrap();
+            map.insert(&mut storage, &i, &i).unwrap();
         }
 
         assert_eq!(map.len(), 100);
         assert_eq!(map.capacity(), 128);
 
         for i in (0..100).rev() {
-            map.remove(&i).unwrap();
+            map.remove(&mut storage, &i).unwrap();
         }
 
         assert_eq!(map.len(), 0);
@@ -745,17 +711,15 @@ mod tests {
     #[test]
     fn reserve_larger() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &1).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &1, &1).unwrap();
 
         let capacity = map.capacity() + 10;
         let size = map.len();
 
-        map.reserve(capacity).unwrap();
+        map.reserve(&mut storage, capacity).unwrap();
 
         assert_eq!(map.capacity(), capacity);
         assert_eq!(map.len(), size);
@@ -765,17 +729,15 @@ mod tests {
     #[test]
     fn reserve_same() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &1).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &1, &1).unwrap();
 
         let capacity = map.capacity();
         let size = map.len();
 
-        map.reserve(capacity).unwrap();
+        map.reserve(&mut storage, capacity).unwrap();
 
         assert_eq!(map.capacity(), capacity);
         assert_eq!(map.len(), size);
@@ -784,18 +746,16 @@ mod tests {
     #[test]
     fn reserve_smaller() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
-        map.insert(&1, &1).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &1, &1).unwrap();
 
         let current_capacity = map.capacity();
         let capacity = current_capacity - 10;
         let size = map.len();
 
-        map.reserve(capacity).unwrap();
+        map.reserve(&mut storage, capacity).unwrap();
 
         assert_eq!(map.capacity(), current_capacity);
         assert_eq!(map.len(), size);
@@ -804,11 +764,9 @@ mod tests {
     #[test]
     fn value_missing() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let map = DbMap::<u64, u64>::new(storage).unwrap();
+        let map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.value(&0), Ok(None));
     }
@@ -816,15 +774,13 @@ mod tests {
     #[test]
     fn values_at_end() {
         let test_file = TestFile::new();
-        let storage = Rc::new(RefCell::new(
-            FileStorage::new(test_file.file_name()).unwrap(),
-        ));
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(storage).unwrap();
+        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        map.insert(&127, &10).unwrap();
-        map.insert(&255, &11).unwrap();
-        map.insert(&191, &12).unwrap();
+        map.insert(&mut storage, &127, &10).unwrap();
+        map.insert(&mut storage, &255, &11).unwrap();
+        map.insert(&mut storage, &191, &12).unwrap();
 
         assert_eq!(map.value(&127), Ok(Some(10)));
         assert_eq!(map.value(&255), Ok(Some(11)));

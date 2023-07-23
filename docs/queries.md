@@ -650,6 +650,7 @@ pub enum Comparison {
     LessThan(DbValue),
     LessThanOrEqual(DbValue),
     NotEqual(DbValue),
+    Contains(DbValue),
 }
 ```
 
@@ -674,11 +675,13 @@ QueryBuilder::search().from(1).where_().not_beyond().ids("a").query();
 QueryBuilder::search().from(1).where_().node().or().edge().query();
 QueryBuilder::search().from(1).where_().node().and().distance().query(CountComparison::GreaterThanOrEqual(3)).query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Equal(1.into())).end_where().query();
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(1.into())).end_where().query();
+QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(vec![1, 2].into())).end_where().query();
 ```
 
 NOTE: The use of `where_` with an underscore as the method name is necessary to avoid conflict with the Rust keyword.
 
-The conditions are applied one at a time to each visited element and chained using logic operators `AND` and `OR`. They can be nested using `where_` and `end_where` (in place of brackets). The condition evaluator supports short-circuiting not evaluating conditions further if the logical outcome cannot change.
+The conditions are applied one at a time to each visited element and chained using logic operators `AND` and `OR`. They can be nested using `where_` and `end_where` (in place of brackets). The condition evaluator supports short-circuiting not evaluating conditions further if the logical outcome cannot change. The condition comparators are type strict meaning that they do not perform type conversions nor coercion (e.g. `Comparison::Equal(1_i64).compare(1_u64)` will evaluate to `false`). Slight exception to this rule is the `Comparison::Contains` as it allows vectorized version of the base type (e.g. `Comparison::Contains(vec!["bc", "ef"]).compare("abcdefg")` will evaluate to `true`).
 
 The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`Beyond` and `NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements or continue only beyond certain elements.
 

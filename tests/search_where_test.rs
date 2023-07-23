@@ -506,3 +506,17 @@ fn search_from_to_where_filter() {
         &[-4],
     );
 }
+
+#[test]
+fn search_from_where_key_value_contains() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("docs")
+            .where_()
+            .key("content")
+            .value(Comparison::Contains("apples".into()))
+            .query(),
+        &[8],
+    );
+}

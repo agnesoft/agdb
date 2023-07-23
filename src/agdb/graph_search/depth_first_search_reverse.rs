@@ -72,7 +72,7 @@ mod tests {
     #[test]
     fn empty_graph_reverse() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         let result = GraphSearch::from(&graph)
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn search_in_reverse() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();

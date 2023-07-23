@@ -529,7 +529,7 @@ mod tests {
     #[test]
     fn new() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &"Hello".to_string()).unwrap();
         map.insert(&mut storage, &1, &"World".to_string()).unwrap();
@@ -557,7 +557,7 @@ mod tests {
     #[test]
     fn iter_key() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.iter_key(&1).count(), 0);
@@ -587,7 +587,7 @@ mod tests {
     #[test]
     fn remove_value_empty_map() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
 
         assert!(map
@@ -598,7 +598,7 @@ mod tests {
     #[test]
     fn remove_missing_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
@@ -610,7 +610,7 @@ mod tests {
     #[test]
     fn remove_value_shrinks_capacity() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, u64>::new(&mut storage).unwrap();
 
         for i in 0..100 {
@@ -631,7 +631,7 @@ mod tests {
     #[test]
     fn replace_empty_map() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
 
         assert!(map
@@ -647,7 +647,7 @@ mod tests {
     #[test]
     fn replace_missing_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
@@ -664,7 +664,7 @@ mod tests {
     #[test]
     fn replace_deleted() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &10, &"Hello".to_string()).unwrap();
         map.remove_key(&mut storage, &10).unwrap();
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn values_count() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
 
@@ -705,7 +705,7 @@ mod tests {
     #[test]
     fn from_storage() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let storage_index;
 

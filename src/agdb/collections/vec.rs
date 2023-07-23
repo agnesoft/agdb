@@ -476,7 +476,7 @@ mod tests {
     #[test]
     fn is_empty() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -491,7 +491,7 @@ mod tests {
     #[test]
     fn len() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn min_capacity() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn push() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -557,7 +557,7 @@ mod tests {
     #[test]
     fn remove() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -576,7 +576,7 @@ mod tests {
     #[test]
     fn remove_at_end() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -595,7 +595,7 @@ mod tests {
     #[test]
     fn remove_index_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -608,7 +608,7 @@ mod tests {
     #[test]
     fn reserve_larger() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         assert_eq!(vec.capacity(), 0);
@@ -621,7 +621,7 @@ mod tests {
     #[test]
     fn reserve_smaller() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.reserve(&mut storage, 20).unwrap();
@@ -633,7 +633,7 @@ mod tests {
     #[test]
     fn resize_larger() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -659,7 +659,7 @@ mod tests {
     #[test]
     fn resize_over_capacity() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -685,7 +685,7 @@ mod tests {
     #[test]
     fn resize_same() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -709,7 +709,7 @@ mod tests {
     #[test]
     fn resize_smaller() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -728,7 +728,7 @@ mod tests {
     #[test]
     fn replace() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -747,7 +747,7 @@ mod tests {
     #[test]
     fn replace_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -760,7 +760,7 @@ mod tests {
     #[test]
     fn shrink_to_fit() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -782,7 +782,7 @@ mod tests {
     #[test]
     fn shrink_to_fit_empty() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -796,7 +796,7 @@ mod tests {
     #[test]
     fn swap() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
@@ -816,7 +816,7 @@ mod tests {
     #[test]
     fn swap_self() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
@@ -836,7 +836,7 @@ mod tests {
     #[test]
     fn swap_invalid() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
@@ -855,7 +855,7 @@ mod tests {
     #[test]
     fn value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -872,7 +872,7 @@ mod tests {
     #[test]
     fn value_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let vec = DbVec::<String>::new(&mut storage).unwrap();
 

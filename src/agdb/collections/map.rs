@@ -420,7 +420,7 @@ mod tests {
     #[test]
     fn contains_key() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.contains(&1), Ok(false));
@@ -433,7 +433,7 @@ mod tests {
     #[test]
     fn contains_key_removed() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
         map.remove(&mut storage, &1).unwrap();
@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn contains_key_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
 
@@ -453,7 +453,7 @@ mod tests {
     #[test]
     fn contains_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.contains_value(&1, &10), Ok(false));
@@ -466,7 +466,7 @@ mod tests {
     #[test]
     fn contains_value_removed() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
         map.remove(&mut storage, &1).unwrap();
@@ -477,7 +477,7 @@ mod tests {
     #[test]
     fn contains_value_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
 
@@ -487,7 +487,7 @@ mod tests {
     #[test]
     fn from_storage_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let index;
 
@@ -509,7 +509,7 @@ mod tests {
     #[test]
     fn from_storage_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(
             DbMap::<u64, u64>::from_storage(&mut storage, StorageIndex::from(1_u64))
                 .err()
@@ -521,7 +521,7 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -538,7 +538,7 @@ mod tests {
     #[test]
     fn insert_reallocates() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -559,7 +559,7 @@ mod tests {
     #[test]
     fn insert_reallocates_with_collisions() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -575,7 +575,7 @@ mod tests {
     #[test]
     fn insert_same_key() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -592,7 +592,7 @@ mod tests {
     #[test]
     fn is_empty() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -606,7 +606,7 @@ mod tests {
     #[test]
     fn iter() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -627,7 +627,7 @@ mod tests {
     #[test]
     fn remove() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -647,7 +647,7 @@ mod tests {
     #[test]
     fn remove_deleted() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -670,7 +670,7 @@ mod tests {
     #[test]
     fn remove_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -689,7 +689,7 @@ mod tests {
     #[test]
     fn remove_shrinks_capacity() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -711,7 +711,7 @@ mod tests {
     #[test]
     fn reserve_larger() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &1).unwrap();
@@ -729,7 +729,7 @@ mod tests {
     #[test]
     fn reserve_same() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &1).unwrap();
@@ -746,7 +746,7 @@ mod tests {
     #[test]
     fn reserve_smaller() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &1).unwrap();
@@ -764,7 +764,7 @@ mod tests {
     #[test]
     fn value_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
@@ -774,7 +774,7 @@ mod tests {
     #[test]
     fn values_at_end() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 

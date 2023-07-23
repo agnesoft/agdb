@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn from_storage() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
 
         let storage_index;
 
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbIndexedMap::<String, u64>::new(&mut storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn iter() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbIndexedMap::<String, u64>::new(&mut storage).unwrap();
         assert_eq!(
             map.insert(&mut storage, &"alias1".to_string(), &1_u64),
@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn replace_by_key() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbIndexedMap::<String, u64>::new(&mut storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;
@@ -207,7 +207,7 @@ mod tests {
     #[test]
     fn replace_by_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbIndexedMap::<String, u64>::new(&mut storage).unwrap();
         let key = "alias".to_string();
         let new_key = "new_alias".to_string();
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     fn remove_key() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbIndexedMap::<String, u64>::new(&mut storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;
@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn remove_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbIndexedMap::<String, u64>::new(&mut storage).unwrap();
         let key = "alias".to_string();
         let value = 1_u64;

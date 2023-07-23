@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn empty_graph() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         let result = GraphSearch::from(&graph)
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn cyclic_graph() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn full_search() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn filter_edges() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -171,7 +171,7 @@ mod tests {
     #[test]
     fn finish_search() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn search_twice() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -229,7 +229,7 @@ mod tests {
     #[test]
     fn stop_at_distance() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();

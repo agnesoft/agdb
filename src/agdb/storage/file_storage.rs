@@ -177,7 +177,7 @@ impl FileStorage {
     }
 
     fn read_record(&mut self) -> Result<FileRecord, DbError> {
-        let pos = self.file.seek(SeekFrom::Current(0))?;
+        let pos = self.file.stream_position()?;
         let bytes = self.read_exact(pos, Self::record_serialized_size())?;
         let index = u64::deserialize(&bytes)?;
         let size = u64::deserialize(&bytes[index.serialized_size() as usize..])?;
@@ -192,7 +192,7 @@ impl FileStorage {
         let len = self.len()?;
         self.file.seek(SeekFrom::Start(0))?;
 
-        while self.file.seek(SeekFrom::Current(0))? < len {
+        while self.file.stream_position()? < len {
             let record = self.read_record()?;
 
             if record.index != 0 {

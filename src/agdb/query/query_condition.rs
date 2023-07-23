@@ -141,6 +141,9 @@ pub enum Comparison {
 
     /// property != this
     NotEqual(DbValue),
+
+    /// property.contains(this)
+    Contains(DbValue),
 }
 
 impl CountComparison {
@@ -204,6 +207,29 @@ impl Comparison {
             Comparison::LessThan(right) => left < right,
             Comparison::LessThanOrEqual(right) => left <= right,
             Comparison::NotEqual(right) => left != right,
+            Comparison::Contains(right) => match (left, right) {
+                (DbValue::String(left), DbValue::String(right)) => left.contains(right),
+                (DbValue::String(left), DbValue::VecString(right)) => {
+                    right.iter().all(|x| left.contains(x))
+                }
+                (DbValue::VecInt(left), DbValue::Int(right)) => left.contains(right),
+                (DbValue::VecInt(left), DbValue::VecInt(right)) => {
+                    right.iter().all(|x| left.contains(x))
+                }
+                (DbValue::VecUint(left), DbValue::Uint(right)) => left.contains(right),
+                (DbValue::VecUint(left), DbValue::VecUint(right)) => {
+                    right.iter().all(|x| left.contains(x))
+                }
+                (DbValue::VecFloat(left), DbValue::Float(right)) => left.contains(right),
+                (DbValue::VecFloat(left), DbValue::VecFloat(right)) => {
+                    right.iter().all(|x| left.contains(x))
+                }
+                (DbValue::VecString(left), DbValue::String(right)) => left.contains(right),
+                (DbValue::VecString(left), DbValue::VecString(right)) => {
+                    right.iter().all(|x| left.contains(x))
+                }
+                _ => false,
+            },
         }
     }
 }
@@ -300,5 +326,54 @@ mod tests {
         assert_eq!(LessThanOrEqual(2).compare_distance(3), Stop(false));
         assert_eq!(LessThanOrEqual(2).compare_distance(2), Stop(true));
         assert_eq!(LessThanOrEqual(2).compare_distance(1), Continue(true));
+    }
+
+    #[test]
+    fn contains() {
+        assert!(Comparison::Contains("abc".into()).compare(&"0abc123".into()));
+        assert!(!Comparison::Contains("abcd".into()).compare(&"0abc123".into()));
+
+        assert!(
+            Comparison::Contains(vec!["ab".to_string(), "23".to_string()].into())
+                .compare(&"0abc123".into())
+        );
+        assert!(
+            !Comparison::Contains(vec!["abcd".to_string(), "23".to_string()].into())
+                .compare(&"0abc123".into())
+        );
+
+        assert!(Comparison::Contains(1.into()).compare(&vec![2, 1, 3].into()));
+        assert!(!Comparison::Contains(4.into()).compare(&vec![2, 1, 3].into()));
+
+        assert!(Comparison::Contains(vec![2, 3].into()).compare(&vec![2, 1, 3].into()));
+        assert!(!Comparison::Contains(vec![2, 4].into()).compare(&vec![2, 1, 3].into()));
+
+        assert!(Comparison::Contains(1_u64.into()).compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        assert!(!Comparison::Contains(4_u64.into()).compare(&vec![2_u64, 1_u64, 3_u64].into()));
+
+        assert!(Comparison::Contains(vec![2_u64, 3_u64].into())
+            .compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        assert!(!Comparison::Contains(vec![2_u64, 4_u64].into())
+            .compare(&vec![2_u64, 1_u64, 3_u64].into()));
+
+        assert!(Comparison::Contains(1.1.into()).compare(&vec![2.1, 1.1, 3.3].into()));
+        assert!(!Comparison::Contains(4.2.into()).compare(&vec![2.1, 1.1, 3.3].into()));
+
+        assert!(Comparison::Contains(vec![2.2, 3.3].into()).compare(&vec![2.2, 1.1, 3.3].into()));
+        assert!(!Comparison::Contains(vec![2.2, 4.4].into()).compare(&vec![2.2, 1.1, 3.3].into()));
+
+        assert!(Comparison::Contains("abc".into())
+            .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into()));
+        assert!(!Comparison::Contains("abcd".into())
+            .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into()));
+
+        assert!(
+            Comparison::Contains(vec!["abc".to_string(), "123".to_string()].into())
+                .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into())
+        );
+        assert!(
+            !Comparison::Contains(vec!["abcd".to_string(), "123".to_string()].into())
+                .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into())
+        );
     }
 }

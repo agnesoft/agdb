@@ -449,6 +449,7 @@ where
         }
     }
 
+    #[rustfmt::skip]
     fn rehash_values(
         &mut self,
         storage: &mut S,
@@ -459,13 +460,7 @@ where
         let mut empty_list = vec![true; new_capacity as usize];
 
         while i != current_capacity {
-            self.rehash_value(
-                storage,
-                self.data.state(i)?,
-                &mut i,
-                new_capacity,
-                &mut empty_list,
-            )?;
+            self.rehash_value(storage, self.data.state(i)?, &mut i, new_capacity, &mut empty_list)?;
         }
 
         Ok(())

@@ -375,5 +375,7 @@ mod tests {
             !Comparison::Contains(vec!["abcd".to_string(), "123".to_string()].into())
                 .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into())
         );
+
+        assert!(!Comparison::Contains("abc".into()).compare(&1.into()));
     }
 }

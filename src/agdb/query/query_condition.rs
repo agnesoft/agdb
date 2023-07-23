@@ -121,7 +121,12 @@ pub enum CountComparison {
 
 /// Comparison of database values (`DbValue`) used
 /// by `key()` condition. Supports
-/// the usual set of named comparisons: `==, !=, <, <=, >, =>`.
+/// the usual set of named comparisons: `==, !=, <, <=, >, =>`
+/// plus `contains()`. The comparisons are type
+/// strict except for the `contains` comparison
+/// which allows vectorized version of the base type. Notably
+/// however it does not support the `bytes` and integral types
+/// where the "contains" makes little sense (i.e. does 3 contain 1?).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Comparison {
     /// property == this

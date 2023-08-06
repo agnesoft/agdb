@@ -29,7 +29,15 @@ impl DbError {
 impl Display for DbError {
     fn fmt(&self, f: &mut Formatter<'_>) -> FMTResult {
         let location = self.source_location.to_string().replace('\\', "/");
-        write!(f, "{} (at {})", self.description, location)
+        if let Some(cause) = &self.cause {
+            write!(
+                f,
+                "{} (at {})\ncaused by\n  {}",
+                self.description, location, cause
+            )
+        } else {
+            write!(f, "{} (at {})", self.description, location)
+        }
     }
 }
 
@@ -111,23 +119,49 @@ mod tests {
         let file = file!();
         let col__ = column!();
         let line = line!();
-        let error = DbError::from("file not found");
+        let error = DbError::from("outer error");
         assert_eq!(
             error.to_string(),
             format!(
-                "file not found (at {}:{}:{})",
+                "outer error (at {}:{}:{})",
                 file.replace('\\', "/"),
                 line + 1,
                 col__
             )
         );
     }
+
+    #[test]
+    fn derived_from_display_cause() {
+        let file = file!();
+        let column___ = column!();
+        let line = line!();
+        let mut error = DbError::from("outer error");
+        let inner_column_adjusted = column!();
+        let inner_line = line!();
+        error.cause = Some(Box::new(DbError::from("inner error")));
+
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "outer error (at {}:{}:{})\ncaused by\n  inner error (at {}:{}:{})",
+                file.replace('\\', "/"),
+                line + 1,
+                column___,
+                file.replace('\\', "/"),
+                inner_line + 1,
+                inner_column_adjusted,
+            )
+        );
+    }
+
     #[test]
     fn derived_from_partial_eq() {
         let left = DbError::from(IOError::from(ErrorKind::NotFound));
         let right = DbError::from(IOError::from(ErrorKind::NotFound));
         assert_eq!(left, right);
     }
+
     #[test]
     fn derived_from_error() {
         let file = file!();

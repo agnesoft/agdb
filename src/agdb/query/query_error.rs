@@ -99,6 +99,29 @@ mod tests {
     }
 
     #[test]
+    fn derived_from_error() {
+        let mut error = QueryError::from("outer error");
+        let file = file!();
+        let col_adjust_ = column!();
+        let line = line!();
+        let inner_error = DbError::from("inner error");
+
+        assert!(error.source().is_none());
+
+        error.cause = Some(inner_error);
+
+        assert_eq!(
+            error.source().unwrap().to_string(),
+            format!(
+                "inner error (at {}:{}:{})",
+                file.replace('\\', "/"),
+                line + 1,
+                col_adjust_
+            )
+        );
+    }
+
+    #[test]
     fn derived_from_debug_and_default() {
         format!("{:?}", QueryError::default());
     }

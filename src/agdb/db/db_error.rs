@@ -161,6 +161,7 @@ mod tests {
         let right = DbError::from(IOError::from(ErrorKind::NotFound));
         assert_eq!(left, right);
     }
+
     #[test]
     fn derived_from_error() {
         let file = file!();

@@ -217,16 +217,16 @@ impl Comparison {
                 (DbValue::String(left), DbValue::VecString(right)) => {
                     right.iter().all(|x| left.contains(x))
                 }
-                (DbValue::VecInt(left), DbValue::Int(right)) => left.contains(right),
-                (DbValue::VecInt(left), DbValue::VecInt(right)) => {
+                (DbValue::VecI64(left), DbValue::I64(right)) => left.contains(right),
+                (DbValue::VecI64(left), DbValue::VecI64(right)) => {
                     right.iter().all(|x| left.contains(x))
                 }
-                (DbValue::VecUint(left), DbValue::Uint(right)) => left.contains(right),
-                (DbValue::VecUint(left), DbValue::VecUint(right)) => {
+                (DbValue::VecU64(left), DbValue::U64(right)) => left.contains(right),
+                (DbValue::VecU64(left), DbValue::VecU64(right)) => {
                     right.iter().all(|x| left.contains(x))
                 }
-                (DbValue::VecFloat(left), DbValue::Float(right)) => left.contains(right),
-                (DbValue::VecFloat(left), DbValue::VecFloat(right)) => {
+                (DbValue::VecF64(left), DbValue::F64(right)) => left.contains(right),
+                (DbValue::VecF64(left), DbValue::VecF64(right)) => {
                     right.iter().all(|x| left.contains(x))
                 }
                 (DbValue::VecString(left), DbValue::String(right)) => left.contains(right),
@@ -254,7 +254,7 @@ mod tests {
             }
         );
 
-        format!("{:?}", Comparison::Equal(DbValue::Int(0)));
+        format!("{:?}", Comparison::Equal(DbValue::I64(0)));
 
         format!("{:?}", CountComparison::Equal(0));
     }
@@ -270,7 +270,7 @@ mod tests {
         let right = left.clone();
         assert_eq!(left, right);
 
-        let left = Comparison::Equal(DbValue::Int(0));
+        let left = Comparison::Equal(DbValue::I64(0));
         let right = left.clone();
         assert_eq!(left, right);
 
@@ -295,8 +295,8 @@ mod tests {
         );
 
         assert_eq!(
-            Comparison::Equal(DbValue::Int(0)),
-            Comparison::Equal(DbValue::Int(0))
+            Comparison::Equal(DbValue::I64(0)),
+            Comparison::Equal(DbValue::I64(0))
         );
 
         assert_eq!(CountComparison::Equal(0), CountComparison::Equal(0));

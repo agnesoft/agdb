@@ -11,7 +11,7 @@ use std::hash::Hasher;
 /// [docs](https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp)
 /// to understand how it handles NaNs and other edge cases
 /// of floating point numbers.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct DbF64(f64);
 
 impl DbF64 {

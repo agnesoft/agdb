@@ -78,8 +78,8 @@ mod tests {
         format!(
             "{:?}",
             DbKeyValue {
-                key: DbKey::Int(0),
-                value: DbKey::Int(0)
+                key: DbKey::I64(0),
+                value: DbKey::I64(0)
             }
         );
     }
@@ -87,12 +87,12 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             DbKeyValue {
-                key: DbKey::Int(0),
-                value: DbKey::Int(0)
+                key: DbKey::I64(0),
+                value: DbKey::I64(0)
             },
             DbKeyValue {
-                key: DbKey::Int(0),
-                value: DbKey::Int(0)
+                key: DbKey::I64(0),
+                value: DbKey::I64(0)
             }
         );
     }

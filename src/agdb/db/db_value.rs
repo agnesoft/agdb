@@ -706,7 +706,7 @@ mod tests {
     #[test]
     fn to_i64() {
         assert_eq!(DbValue::from(-1_i64).to_i64().unwrap(), -1_i64);
-        assert_eq!(DbValue::from(1_u64).to_i64().unwrap(), 1_64);
+        assert_eq!(DbValue::from(1_u64).to_i64().unwrap(), 1_i64);
         assert_eq!(
             DbValue::from(u64::MAX).to_i64(),
             Err(DbError::from(

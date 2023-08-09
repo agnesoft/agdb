@@ -15,6 +15,7 @@ use std::hash::Hasher;
 pub struct DbF64(f64);
 
 impl DbF64 {
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_f64(&self) -> f64 {
         self.0
     }
@@ -85,6 +86,7 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
+    #[allow(clippy::clone_on_copy)]
     fn derived_from_clone() {
         let float = DbF64::from(1.0_f64);
         let _other = float.clone();

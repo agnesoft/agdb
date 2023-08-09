@@ -98,18 +98,36 @@ The `DbKey` is an alias of `DbValue` and the value itself is an enum of valid ty
 ```Rust
 pub enum DbValue {
     Bytes(Vec<u8>),
-    Int(i64),
-    Uint(u64),
-    Float(DbFloat),
+    I64(i64),
+    U64(u64),
+    F64(DbF64),
     String(String),
-    VecInt(Vec<i64>),
-    VecUint(Vec<u64>),
-    VecFloat(Vec<DbFloat>),
+    VecI64(Vec<i64>),
+    VecU64(Vec<u64>),
+    VecF64(Vec<DbF64>),
     VecString(Vec<String>),
 }
 ```
 
-Note the `DbFloat` type (i.e. `pub struct DbFloat(f64)`) which is a convenient wrapper of `f64` to provide opinionated implementation of some of the operations that are not floating type friendly like comparisons. In `agdb` the float type is using [`total_cmp` standard library function](https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp). Please see its documentation for important details about possible limits or issues on certain platforms.
+Note the `DbF64` type (i.e. `pub struct DbF64(f64)`) which is a convenient wrapper of `f64` to provide opinionated implementation of some of the operations that are not floating type friendly like comparisons. In `agdb` the float type is using [`total_cmp` standard library function](https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp). Please see its documentation for important details about possible limits or issues on certain platforms.
+
+The enum variants can be conveniently accessed through methods named after each variant:
+
+```Rust
+fn bytes(&self) -> Result<&Vec<u8>, DbError>;
+fn to_f64(&self) -> Result<DbF64, DbError>;
+fn to_i64(&self) -> Result<i64, DbError>;
+fn to_u64(&self) -> Result<u64, DbError>;
+fn to_string(&self) -> String;
+fn string(&self) -> Result<&String, DbError>;
+fn vec_f64(&self) -> Result<&Vec<DbF64>, DbError>;
+fn vec_i64(&self) -> Result<&Vec<i64>, DbError>;
+fn vec_u64(&self) -> Result<&Vec<u64>, DbError>;
+fn vec_string(&self) -> Result<&Vec<String>, DbError>;
+
+```
+
+The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string.
 
 # QueryError
 
@@ -461,7 +479,7 @@ Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search 
 The result will contain:
 
 - number of returned elements
-- list of elements with only keys and default (empty `Int(0)` values)
+- list of elements with only keys and default (empty `I64(0)` values)
 
 ### Select key count
 

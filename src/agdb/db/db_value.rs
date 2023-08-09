@@ -59,12 +59,41 @@ pub(crate) const VEC_F64_META_VALUE: u8 = 8_u8;
 pub(crate) const VEC_STRING_META_VALUE: u8 = 9_u8;
 
 impl DbValue {
-    fn type_error<T>(from: &str, to: &str) -> Result<T, DbError> {
-        Err(DbError::from(format!(
-            "Type mismatch. Cannot convert '{from}' to '{to}'."
-        )))
+    /// Returns `&Vec<u8>` or an error if the value is
+    /// of a different type.
+    pub fn bytes(&self) -> Result<&Vec<u8>, DbError> {
+        match self {
+            DbValue::Bytes(v) => Ok(v),
+            DbValue::I64(_) => Self::type_error("i64", "bytes"),
+            DbValue::U64(_) => Self::type_error("u64", "bytes"),
+            DbValue::F64(_) => Self::type_error("f64", "bytes"),
+            DbValue::String(_) => Self::type_error("string", "bytes"),
+            DbValue::VecI64(_) => Self::type_error("vec<i64>", "bytes"),
+            DbValue::VecU64(_) => Self::type_error("vec<u64>", "bytes"),
+            DbValue::VecF64(_) => Self::type_error("vec<f64>", "bytes"),
+            DbValue::VecString(_) => Self::type_error("vec<string>", "bytes"),
+        }
     }
 
+    /// Returns `&String` or an error if the value is
+    /// of a different type.
+    pub fn string(&self) -> Result<&String, DbError> {
+        match self {
+            DbValue::Bytes(_) => Self::type_error("bytes", "string"),
+            DbValue::I64(_) => Self::type_error("i64", "string"),
+            DbValue::U64(_) => Self::type_error("u64", "string"),
+            DbValue::F64(_) => Self::type_error("f64", "string"),
+            DbValue::String(v) => Ok(v),
+            DbValue::VecI64(_) => Self::type_error("vec<i64>", "string"),
+            DbValue::VecU64(_) => Self::type_error("vec<u64>", "string"),
+            DbValue::VecF64(_) => Self::type_error("vec<f64>", "string"),
+            DbValue::VecString(_) => Self::type_error("vec<string>", "string"),
+        }
+    }
+
+    /// Returns `DbF64` possibly converted from `i64` or `u64`
+    /// or na error if the conversion failed or the value is of
+    /// a different type.
     pub fn to_f64(&self) -> Result<DbF64, DbError> {
         match self {
             DbValue::Bytes(_) => Self::type_error("bytes", "f64"),
@@ -79,6 +108,9 @@ impl DbValue {
         }
     }
 
+    /// Returns `i64` possibly converted from `u64`
+    /// or na error if the conversion failed or the value is of
+    /// a different type.
     pub fn to_i64(&self) -> Result<i64, DbError> {
         match self {
             DbValue::Bytes(_) => Self::type_error("bytes", "i64"),
@@ -93,6 +125,9 @@ impl DbValue {
         }
     }
 
+    /// Returns `u64` possibly converted from `i64`
+    /// or na error if the conversion failed or the value is of
+    /// a different type.
     pub fn to_u64(&self) -> Result<u64, DbError> {
         match self {
             DbValue::Bytes(_) => Self::type_error("bytes", "u64"),
@@ -104,6 +139,70 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "u64"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "u64"),
             DbValue::VecString(_) => Self::type_error("vec<string>", "u64"),
+        }
+    }
+
+    /// Returns `&Vec<DbF64>` or an error if the value is
+    /// of a different type.
+    pub fn vec_f64(&self) -> Result<&Vec<DbF64>, DbError> {
+        match self {
+            DbValue::Bytes(_) => Self::type_error("bytes", "vec<f64>"),
+            DbValue::I64(_) => Self::type_error("i64", "vec<f64>"),
+            DbValue::U64(_) => Self::type_error("u64", "vec<f64>"),
+            DbValue::F64(_) => Self::type_error("f64", "vec<f64>"),
+            DbValue::String(_) => Self::type_error("string", "vec<f64>"),
+            DbValue::VecI64(_) => Self::type_error("vec<i64>", "vec<f64>"),
+            DbValue::VecU64(_) => Self::type_error("vec<u64>", "vec<f64>"),
+            DbValue::VecF64(v) => Ok(v),
+            DbValue::VecString(_) => Self::type_error("vec<string>", "vec<f64>"),
+        }
+    }
+
+    /// Returns `&Vec<i64>` or an error if the value is
+    /// of a different type.
+    pub fn vec_i64(&self) -> Result<&Vec<i64>, DbError> {
+        match self {
+            DbValue::Bytes(_) => Self::type_error("bytes", "vec<i64>"),
+            DbValue::I64(_) => Self::type_error("i64", "vec<i64>"),
+            DbValue::U64(_) => Self::type_error("u64", "vec<i64>"),
+            DbValue::F64(_) => Self::type_error("f64", "vec<i64>"),
+            DbValue::String(_) => Self::type_error("string", "vec<i64>"),
+            DbValue::VecI64(v) => Ok(v),
+            DbValue::VecU64(_) => Self::type_error("vec<u64>", "vec<i64>"),
+            DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<i64>"),
+            DbValue::VecString(_) => Self::type_error("vec<string>", "vec<i64>"),
+        }
+    }
+
+    /// Returns `&Vec<u64>` or an error if the value is
+    /// of a different type.
+    pub fn vec_u64(&self) -> Result<&Vec<u64>, DbError> {
+        match self {
+            DbValue::Bytes(_) => Self::type_error("bytes", "vec<u64>"),
+            DbValue::I64(_) => Self::type_error("i64", "vec<u64>"),
+            DbValue::U64(_) => Self::type_error("u64", "vec<u64>"),
+            DbValue::F64(_) => Self::type_error("f64", "vec<u64>"),
+            DbValue::String(_) => Self::type_error("string", "vec<u64>"),
+            DbValue::VecI64(_) => Self::type_error("vec<i64>", "vec<u64>"),
+            DbValue::VecU64(v) => Ok(v),
+            DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<u64>"),
+            DbValue::VecString(_) => Self::type_error("vec<string>", "vec<u64>"),
+        }
+    }
+
+    /// Returns `&Vec<String>` or an error if the value is
+    /// of a different type.
+    pub fn vec_string(&self) -> Result<&Vec<String>, DbError> {
+        match self {
+            DbValue::Bytes(_) => Self::type_error("bytes", "vec<string>"),
+            DbValue::I64(_) => Self::type_error("i64", "vec<string>"),
+            DbValue::U64(_) => Self::type_error("u64", "vec<string>"),
+            DbValue::F64(_) => Self::type_error("f64", "vec<string>"),
+            DbValue::String(_) => Self::type_error("string", "vec<string>"),
+            DbValue::VecI64(_) => Self::type_error("vec<i64>", "vec<string>"),
+            DbValue::VecU64(_) => Self::type_error("vec<u64>", "vec<string>"),
+            DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<string>"),
+            DbValue::VecString(v) => Ok(v),
         }
     }
 
@@ -208,6 +307,12 @@ impl DbValue {
         }
 
         Ok(index)
+    }
+
+    fn type_error<T>(from: &str, to: &str) -> Result<T, DbError> {
+        Err(DbError::from(format!(
+            "Type mismatch. Cannot convert '{from}' to '{to}'."
+        )))
     }
 }
 
@@ -547,9 +652,9 @@ mod tests {
     #[test]
     fn to_u64() {
         assert_eq!(DbValue::from(1_u64).to_u64().unwrap(), 1_u64);
-        assert_eq!(DbValue::from(1_u64).to_i64().unwrap(), 1_i64);
+        assert_eq!(DbValue::from(1_i64).to_u64().unwrap(), 1_u64);
         assert_eq!(
-            DbValue::from(u64::MAX).to_i64(),
+            DbValue::from(-1_i64).to_u64(),
             Err(DbError::from(
                 "out of range integral type conversion attempted"
             ))
@@ -601,11 +706,17 @@ mod tests {
     #[test]
     fn to_i64() {
         assert_eq!(DbValue::from(-1_i64).to_i64().unwrap(), -1_i64);
-        assert_eq!(DbValue::from(1_i64).to_u64().unwrap(), 1_u64);
+        assert_eq!(DbValue::from(1_u64).to_i64().unwrap(), 1_64);
         assert_eq!(
-            DbValue::from(-1_i64).to_u64(),
+            DbValue::from(u64::MAX).to_i64(),
             Err(DbError::from(
                 "out of range integral type conversion attempted"
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![0_u8; 1]).to_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'u64'."
             ))
         );
         assert_eq!(
@@ -658,7 +769,6 @@ mod tests {
         );
         assert_eq!(DbValue::from(1_i64).to_f64().unwrap(), DbF64::from(1.0_f64));
         assert_eq!(DbValue::from(1_u64).to_f64().unwrap(), DbF64::from(1.0_f64));
-
         assert_eq!(
             DbValue::from(i64::MAX).to_f64(),
             Err(DbError::from(
@@ -669,6 +779,12 @@ mod tests {
             DbValue::from(u64::MAX).to_f64(),
             Err(DbError::from(
                 "out of range integral type conversion attempted"
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![0_u8; 1]).to_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'f64'."
             ))
         );
         assert_eq!(
@@ -699,6 +815,324 @@ mod tests {
             DbValue::from(vec![""]).to_f64(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'vec<string>' to 'f64'."
+            ))
+        );
+    }
+
+    #[test]
+    fn to_vec_i64() {
+        assert_eq!(
+            DbValue::from(vec![-1_i64]).vec_i64().unwrap(),
+            &vec![-1_i64]
+        );
+        assert_eq!(
+            DbValue::from(-1_i64).vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'vec<i64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1_u64).vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'vec<i64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64]).vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<u64>' to 'vec<i64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1.1).vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'vec<i64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![0_u8; 1]).vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'vec<i64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from("").vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'vec<i64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1.1]).vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<f64>' to 'vec<i64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![""]).vec_i64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<string>' to 'vec<i64>'."
+            ))
+        );
+    }
+
+    #[test]
+    fn to_vec_u64() {
+        assert_eq!(DbValue::from(vec![1_u64]).vec_u64().unwrap(), &vec![1_u64]);
+        assert_eq!(
+            DbValue::from(-1_i64).vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'vec<u64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1_u64).vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'vec<u64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![-1_i64]).vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<i64>' to 'vec<u64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1.1).vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'vec<u64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![0_u8; 1]).vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'vec<u64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from("").vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'vec<u64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1.1]).vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<f64>' to 'vec<u64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![""]).vec_u64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<string>' to 'vec<u64>'."
+            ))
+        );
+    }
+
+    #[test]
+    fn to_vec_f64() {
+        assert_eq!(
+            DbValue::from(vec![1.1]).vec_f64().unwrap(),
+            &vec![DbF64::from(1.1_f64)]
+        );
+        assert_eq!(
+            DbValue::from(-1_i64).vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'vec<f64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1_u64).vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'vec<f64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![-1_i64]).vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<i64>' to 'vec<f64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64]).vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<u64>' to 'vec<f64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1.1).vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'vec<f64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![0_u8; 1]).vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'vec<f64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from("").vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'vec<f64>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![""]).vec_f64(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<string>' to 'vec<f64>'."
+            ))
+        );
+    }
+
+    #[test]
+    fn to_vec_string() {
+        assert_eq!(
+            DbValue::from(vec![""]).vec_string().unwrap(),
+            &vec!["".to_string()]
+        );
+        assert_eq!(
+            DbValue::from(-1_i64).vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'vec<string>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1_u64).vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'vec<string>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![-1_i64]).vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<i64>' to 'vec<string>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64]).vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<u64>' to 'vec<string>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1.1).vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'vec<string>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1.1]).vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<f64>' to 'vec<string>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![0_u8; 1]).vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'vec<string>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from("").vec_string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'vec<string>'."
+            ))
+        );
+    }
+
+    #[test]
+    fn to_bytes() {
+        assert_eq!(DbValue::from(vec![1_u8]).bytes().unwrap(), &vec![1_u8]);
+        assert_eq!(
+            DbValue::from(-1_i64).bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'bytes'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1_u64).bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'bytes'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![-1_i64]).bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<i64>' to 'bytes'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64]).bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<u64>' to 'bytes'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1.1).bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'bytes'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1.1]).bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<f64>' to 'bytes'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from("").bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'bytes'."
+            ))
+        );
+    }
+
+    #[test]
+    fn string() {
+        assert_eq!(
+            DbValue::from("hello").string().unwrap(),
+            &"hello".to_string()
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u8]).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'string'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(-1_i64).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'string'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1_u64).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'string'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![-1_i64]).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<i64>' to 'string'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64]).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<u64>' to 'string'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1.1).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'string'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1.1]).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<f64>' to 'string'."
             ))
         );
     }

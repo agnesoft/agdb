@@ -716,7 +716,7 @@ mod tests {
         assert_eq!(
             DbValue::from(vec![0_u8; 1]).to_i64(),
             Err(DbError::from(
-                "Type mismatch. Cannot convert 'bytes' to 'u64'."
+                "Type mismatch. Cannot convert 'bytes' to 'i64'."
             ))
         );
         assert_eq!(
@@ -820,7 +820,7 @@ mod tests {
     }
 
     #[test]
-    fn to_vec_i64() {
+    fn vec_i64() {
         assert_eq!(
             DbValue::from(vec![-1_i64]).vec_i64().unwrap(),
             &vec![-1_i64]
@@ -876,7 +876,7 @@ mod tests {
     }
 
     #[test]
-    fn to_vec_u64() {
+    fn vec_u64() {
         assert_eq!(DbValue::from(vec![1_u64]).vec_u64().unwrap(), &vec![1_u64]);
         assert_eq!(
             DbValue::from(-1_i64).vec_u64(),
@@ -929,7 +929,7 @@ mod tests {
     }
 
     #[test]
-    fn to_vec_f64() {
+    fn vec_f64() {
         assert_eq!(
             DbValue::from(vec![1.1]).vec_f64().unwrap(),
             &vec![DbF64::from(1.1_f64)]
@@ -985,7 +985,7 @@ mod tests {
     }
 
     #[test]
-    fn to_vec_string() {
+    fn vec_string() {
         assert_eq!(
             DbValue::from(vec![""]).vec_string().unwrap(),
             &vec!["".to_string()]
@@ -1041,7 +1041,7 @@ mod tests {
     }
 
     #[test]
-    fn to_bytes() {
+    fn bytes() {
         assert_eq!(DbValue::from(vec![1_u8]).bytes().unwrap(), &vec![1_u8]);
         assert_eq!(
             DbValue::from(-1_i64).bytes(),
@@ -1083,6 +1083,12 @@ mod tests {
             DbValue::from("").bytes(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'string' to 'bytes'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![""]).bytes(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<string>' to 'bytes'."
             ))
         );
     }
@@ -1133,6 +1139,12 @@ mod tests {
             DbValue::from(vec![1.1]).string(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'vec<f64>' to 'string'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![""]).string(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'vec<string>' to 'string'."
             ))
         );
     }

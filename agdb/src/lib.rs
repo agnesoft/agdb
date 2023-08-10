@@ -33,6 +33,7 @@ mod utilities;
 #[cfg(test)]
 pub mod test_utilities;
 
+pub use agdb_derive::DbUserValue;
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
 pub use db::db_id::DbId;

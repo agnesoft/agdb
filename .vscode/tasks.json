@@ -31,6 +31,8 @@
 			"command": "llvm-cov",
 			"args": [
 				"--workspace",
+				"--ignore-filename-regex",
+				"agdb_derive",
 				"--show-missing-lines"
 			],
 			"problemMatcher": [
@@ -44,6 +46,8 @@
 			"command": "llvm-cov",
 			"args": [
 				"--workspace",
+				"--ignore-filename-regex",
+				"agdb_derive",
 				"--html",
 				"--open"
 			],

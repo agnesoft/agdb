@@ -12,7 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cargo publish --dry-run
+      - run: |
+          cargo publish -p agdb_derive --dry-run
+          cargo publish -p agdb --dry-run
 
   new_version:
     runs-on: ubuntu-latest
@@ -23,7 +25,7 @@ jobs:
       - id: new_version
         run: |
           PUBLISHED_VERSION=$(cargo search ^agdb$ --limit 1 -q | head -n 1 | cut -d '"' -f 2)
-          CURRENT_VERSION=$(cat Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)
+          CURRENT_VERSION=$(cat agdb/Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)
           if [[ "${PUBLISHED_VERSION}" != "${CURRENT_VERSION}" ]]; then echo "new_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT; fi
           echo "Published version: ${PUBLISHED_VERSION}" 
           echo "Current version: ${CURRENT_VERSION}"
@@ -50,6 +52,8 @@ jobs:
     if: needs.new_version.outputs.new_version != ''
     steps:
       - uses: actions/checkout@v3
-      - run: cargo publish --token ${CRATES_IO_TOKEN}
+      - run: |
+          cargo publish -p agdb_derive --token ${CRATES_IO_TOKEN}
+          cargo publish -p agdb --token ${CRATES_IO_TOKEN}
         env:
           CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}

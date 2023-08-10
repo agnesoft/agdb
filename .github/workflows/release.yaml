@@ -12,7 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cargo publish -p agdb --dry-run
+      - run: |
+          cargo publish -p agdb_derive --dry-run
+          cargo publish -p agdb --dry-run
 
   new_version:
     runs-on: ubuntu-latest
@@ -50,6 +52,8 @@ jobs:
     if: needs.new_version.outputs.new_version != ''
     steps:
       - uses: actions/checkout@v3
-      - run: cargo publish -p agdb --token ${CRATES_IO_TOKEN}
+      - run: |
+          cargo publish -p agdb_derive --token ${CRATES_IO_TOKEN}
+          cargo publish -p agdb --token ${CRATES_IO_TOKEN}
         env:
           CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}

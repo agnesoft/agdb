@@ -22,7 +22,6 @@ The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph datab
 - ACID compliant
 - [Object queries](docs/queries.md) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
-- _No dependencies_
 
 # Quickstart
 

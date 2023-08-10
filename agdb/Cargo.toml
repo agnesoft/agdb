@@ -12,3 +12,6 @@ keywords = ["graph", "database"]
 categories = ["database", "database-implementations"]
 
 [lib]
+
+[dependencies]
+agdb_derive = { version = "0.3.1", path = "../agdb_derive" }

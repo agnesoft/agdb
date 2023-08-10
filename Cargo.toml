@@ -12,5 +12,3 @@ keywords = ["graph", "database"]
 categories = ["database", "database-implementations"]
 
 [lib]
-name = "agdb"
-path = "src/agdb/lib.rs"

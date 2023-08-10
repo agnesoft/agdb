@@ -1,4 +1,4 @@
-#[path = "../../src/agdb/test_utilities/test_file.rs"]
+#[path = "../../src/test_utilities/test_file.rs"]
 pub mod test_file;
 
 use agdb::Db;

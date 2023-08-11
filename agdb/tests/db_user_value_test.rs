@@ -1,9 +1,15 @@
+mod test_db;
+
+use agdb::DbElement;
 use agdb::DbError;
+use agdb::DbId;
 use agdb::DbKey;
 use agdb::DbKeyValue;
 use agdb::DbUserValue;
 use agdb::DbValue;
+use agdb::QueryBuilder;
 use agdb_derive::UserValue;
+use test_db::TestDb;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 enum Status {
@@ -118,7 +124,108 @@ fn db_user_value() {
         ("custom_enum", Status::Active).into(),
     ];
 
-    assert_eq!(my_data.db_keys(), keys);
+    assert_eq!(MyData::db_keys(), keys);
     assert_eq!(&my_data.db_values(), &values);
     assert_eq!(MyData::from_db_values(&values).unwrap(), my_data);
+}
+
+#[test]
+fn insert_node_values_custom() {
+    #[derive(UserValue)]
+    struct MyValue {
+        name: String,
+        age: u64,
+    }
+
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        name: "my name".to_string(),
+        age: 20,
+    };
+    db.exec_mut(QueryBuilder::insert().nodes().values(&my_value).query(), 1);
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            values: vec![("name", "my name").into(), ("age", 20_u64).into()],
+        }],
+    );
+}
+
+#[test]
+fn insert_node_values_uniform_custom() {
+    #[derive(UserValue)]
+    struct MyValue {
+        name: String,
+        age: u64,
+    }
+
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        name: "my name".to_string(),
+        age: 20,
+    };
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(2)
+            .values_uniform(&my_value)
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(vec![1, 2]).query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                values: vec![("name", "my name").into(), ("age", 20_u64).into()],
+            },
+            DbElement {
+                id: DbId(2),
+                values: vec![("name", "my name").into(), ("age", 20_u64).into()],
+            },
+        ],
+    );
+}
+
+#[test]
+fn select_values_custom() {
+    #[derive(Debug, Clone, PartialEq, UserValue)]
+    struct MyValue {
+        name: String,
+        age: u64,
+    }
+
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        name: "my name".to_string(),
+        age: 20,
+    };
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(2)
+            .values_uniform(&my_value)
+            .query(),
+        2,
+    );
+
+    let db_value: MyValue = db
+        .exec_result(QueryBuilder::select().values_t::<MyValue>().ids(1).query())
+        .try_into()
+        .unwrap();
+
+    assert_eq!(&my_value, &db_value);
+
+    let db_values: Vec<MyValue> = db
+        .exec_result(
+            QueryBuilder::select()
+                .values_t::<MyValue>()
+                .ids(vec![1, 2])
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    assert_eq!(db_values, vec![my_value.clone(), my_value]);
 }

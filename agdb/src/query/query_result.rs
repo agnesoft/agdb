@@ -1,5 +1,7 @@
 use crate::db::db_element::DbElement;
+use crate::DbError;
 use crate::DbId;
+use crate::DbUserValue;
 
 /// Universal database result. Successful
 /// execution of a query will always yield
@@ -20,6 +22,22 @@ pub struct QueryResult {
 impl QueryResult {
     pub fn ids(&self) -> Vec<DbId> {
         self.elements.iter().map(|e| e.id).collect()
+    }
+}
+
+impl<T: DbUserValue> TryInto<Vec<T>> for QueryResult {
+    type Error = DbError;
+
+    fn try_into(self) -> Result<Vec<T>, Self::Error> {
+        let mut result = vec![];
+        result.reserve(self.elements.len());
+        self.elements
+            .iter()
+            .try_for_each(|e| -> Result<(), DbError> {
+                result.push(T::from_db_values(&e.values)?);
+                Ok(())
+            })?;
+        Ok(result)
     }
 }
 

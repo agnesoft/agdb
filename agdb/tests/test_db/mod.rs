@@ -55,6 +55,11 @@ impl TestDb {
     }
 
     #[track_caller]
+    pub fn exec_result<T: Query>(&self, query: T) -> QueryResult {
+        self.db.exec(&query).unwrap()
+    }
+
+    #[track_caller]
     pub fn exec_error<T: Query>(&self, query: T, error: &str) {
         assert_eq!(self.db.exec(&query).unwrap_err().description, error);
     }

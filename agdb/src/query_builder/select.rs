@@ -10,6 +10,7 @@ use crate::query::select_key_count_query::SelectKeyCountQuery;
 use crate::query::select_keys_query::SelectKeysQuery;
 use crate::query::select_query::SelectQuery;
 use crate::query::select_values_query::SelectValuesQuery;
+use crate::DbUserValue;
 
 /// Select builder that lets you choose what
 /// data you want to select form the database.
@@ -48,6 +49,16 @@ impl Select {
     pub fn values<T: Into<QueryKeys>>(self, keys: T) -> SelectValues {
         SelectValues(SelectValuesQuery {
             keys: Into::<QueryKeys>::into(keys).0,
+            ids: QueryIds::Ids(vec![0.into()]),
+        })
+    }
+
+    /// Select elements with `ids` with only `keys` properties (key-values)
+    /// that constitute the user type `T`. All ids specified must exist in
+    /// the database.
+    pub fn values_t<T: DbUserValue>(self) -> SelectValues {
+        SelectValues(SelectValuesQuery {
+            keys: T::db_keys(),
             ids: QueryIds::Ids(vec![0.into()]),
         })
     }

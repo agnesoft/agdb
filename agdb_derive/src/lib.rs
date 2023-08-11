@@ -51,8 +51,22 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
                 vec![#(#db_values),*]
             }
 
-            fn db_keys(&self) -> Vec<agdb::DbKey> {
+            fn db_keys() -> Vec<agdb::DbKey> {
                 vec![#(#db_keys.into()),*]
+            }
+        }
+
+        impl TryFrom<agdb::QueryResult> for #name {
+            type Error = agdb::DbError;
+
+            fn try_from(value: agdb::QueryResult) -> Result<Self, Self::Error> {
+                #name::from_db_values(
+                    &value
+                        .elements
+                        .get(0)
+                        .ok_or(Self::Error::from("No element found"))?
+                        .values,
+                )
             }
         }
     };

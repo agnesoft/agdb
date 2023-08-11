@@ -33,13 +33,14 @@ mod utilities;
 #[cfg(test)]
 pub mod test_utilities;
 
-pub use agdb_derive::DbUserValue;
+pub use agdb_derive::UserValue;
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
 pub use db::db_id::DbId;
 pub use db::db_key::DbKey;
 pub use db::db_key::DbKeyOrder;
 pub use db::db_key_value::DbKeyValue;
+pub use db::db_user_value::DbUserValue;
 pub use db::db_value::DbValue;
 pub use db::Db;
 pub use query::insert_aliases_query::InsertAliasesQuery;

@@ -3,6 +3,7 @@ pub mod db_error;
 pub mod db_id;
 pub mod db_key;
 pub mod db_key_value;
+pub mod db_user_value;
 pub mod db_value;
 
 mod db_f64;

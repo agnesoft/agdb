@@ -442,6 +442,140 @@ impl From<Vec<u8>> for DbValue {
     }
 }
 
+impl TryFrom<DbValue> for Vec<u8> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.bytes()?.clone())
+    }
+}
+
+impl TryFrom<DbValue> for u64 {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        value.to_u64()
+    }
+}
+
+impl TryFrom<DbValue> for u32 {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.to_u64()?.try_into()?)
+    }
+}
+
+impl TryFrom<DbValue> for i64 {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        value.to_i64()
+    }
+}
+
+impl TryFrom<DbValue> for i32 {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.to_i64()?.try_into()?)
+    }
+}
+
+impl TryFrom<DbValue> for f64 {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.to_f64()?.to_f64())
+    }
+}
+
+impl TryFrom<DbValue> for f32 {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.to_f64()?.to_f64() as f32)
+    }
+}
+
+impl TryFrom<DbValue> for String {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.string()?.clone())
+    }
+}
+
+impl TryFrom<DbValue> for Vec<u64> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.vec_u64()?.clone())
+    }
+}
+
+impl TryFrom<DbValue> for Vec<u32> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        let mut result = vec![];
+        let value = value.vec_u64()?;
+        result.reserve(value.len());
+        value.iter().try_for_each(|u| -> Result<(), DbError> {
+            result.push((*u).try_into()?);
+            Ok(())
+        })?;
+        Ok(result)
+    }
+}
+
+impl TryFrom<DbValue> for Vec<i64> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.vec_i64()?.clone())
+    }
+}
+
+impl TryFrom<DbValue> for Vec<i32> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        let mut result = vec![];
+        let value = value.vec_i64()?;
+        result.reserve(value.len());
+        value.iter().try_for_each(|u| -> Result<(), DbError> {
+            result.push((*u).try_into()?);
+            Ok(())
+        })?;
+        Ok(result)
+    }
+}
+
+impl TryFrom<DbValue> for Vec<f64> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.vec_f64()?.iter().map(|f| f.to_f64()).collect())
+    }
+}
+
+impl TryFrom<DbValue> for Vec<f32> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.vec_f64()?.iter().map(|f| f.to_f64() as f32).collect())
+    }
+}
+
+impl TryFrom<DbValue> for Vec<String> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(value.vec_string()?.clone())
+    }
+}
+
 impl Display for DbValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> DisplayResult {
         match self {

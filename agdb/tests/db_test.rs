@@ -3,7 +3,6 @@ mod test_db;
 use agdb::Db;
 use agdb::DbElement;
 use agdb::DbId;
-use agdb::DbUserValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use std::sync::Arc;
@@ -48,14 +47,7 @@ fn public_types() {
     use agdb::SelectValuesQuery;
     use agdb::Transaction;
     use agdb::TransactionMut;
-}
-
-#[test]
-fn db_user_value() {
-    #[derive(DbUserValue)]
-    struct MyData {}
-
-    let _ = MyData {};
+    use agdb::UserValue;
 }
 
 #[test]

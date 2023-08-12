@@ -34,7 +34,7 @@ impl<T: DbUserValue> TryInto<Vec<T>> for QueryResult {
         self.elements
             .iter()
             .try_for_each(|e| -> Result<(), DbError> {
-                result.push(T::from_db_values(&e.values)?);
+                result.push(T::from_db_element(e)?);
                 Ok(())
             })?;
         Ok(result)

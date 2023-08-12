@@ -4,7 +4,6 @@ use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
 use agdb::DbKey;
-use agdb::DbKeyValue;
 use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
@@ -105,28 +104,31 @@ fn db_user_value() {
         "custom_enum".into(),
     ];
 
-    let values: Vec<DbKeyValue> = vec![
-        ("bytes", vec![1_u8]).into(),
-        ("u64", 1_u64).into(),
-        ("u32", 2_u64).into(),
-        ("i64", -1_i64).into(),
-        ("i32", -2_i64).into(),
-        ("f64", 1.1_f64).into(),
-        ("f32", 2.2_f32).into(),
-        ("string", "hello").into(),
-        ("vec_u64", vec![1_u64]).into(),
-        ("vec_u32", vec![2_u32]).into(),
-        ("vec_i64", vec![-1_i64]).into(),
-        ("vec_i32", vec![-2_i32]).into(),
-        ("vec_f64", vec![1.1_f64]).into(),
-        ("vec_f32", vec![2.2_f32]).into(),
-        ("vec_string", vec!["world"]).into(),
-        ("custom_enum", Status::Active).into(),
-    ];
+    let element = DbElement {
+        id: DbId(0),
+        values: vec![
+            ("bytes", vec![1_u8]).into(),
+            ("u64", 1_u64).into(),
+            ("u32", 2_u64).into(),
+            ("i64", -1_i64).into(),
+            ("i32", -2_i64).into(),
+            ("f64", 1.1_f64).into(),
+            ("f32", 2.2_f32).into(),
+            ("string", "hello").into(),
+            ("vec_u64", vec![1_u64]).into(),
+            ("vec_u32", vec![2_u32]).into(),
+            ("vec_i64", vec![-1_i64]).into(),
+            ("vec_i32", vec![-2_i32]).into(),
+            ("vec_f64", vec![1.1_f64]).into(),
+            ("vec_f32", vec![2.2_f32]).into(),
+            ("vec_string", vec!["world"]).into(),
+            ("custom_enum", Status::Active).into(),
+        ],
+    };
 
     assert_eq!(MyData::db_keys(), keys);
-    assert_eq!(&my_data.to_db_values(), &values);
-    assert_eq!(MyData::from_db_values(&values).unwrap(), my_data);
+    assert_eq!(&my_data.to_db_values(), &element.values);
+    assert_eq!(MyData::from_db_element(&element).unwrap(), my_data);
 }
 
 #[test]
@@ -233,4 +235,56 @@ fn select_values_custom() {
         .unwrap();
 
     assert_eq!(db_values, vec![my_value.clone(), my_value]);
+}
+
+#[test]
+fn db_user_value_with_id() {
+    #[derive(Debug, Clone, PartialEq, UserValue)]
+    struct MyValue {
+        db_id: Option<DbId>,
+        name: String,
+        age: u64,
+    }
+
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        db_id: None,
+        name: "my name".to_string(),
+        age: 20,
+    };
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(2)
+            .values_uniform(&my_value)
+            .query(),
+        2,
+    );
+
+    let db_values: Vec<MyValue> = db
+        .exec_result(
+            QueryBuilder::select()
+                .values(MyValue::db_keys())
+                .ids(vec![1, 2])
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    assert_eq!(
+        db_values,
+        vec![
+            MyValue {
+                db_id: Some(DbId(1)),
+                name: "my name".to_string(),
+                age: 20
+            },
+            MyValue {
+                db_id: Some(DbId(2)),
+                name: "my name".to_string(),
+                age: 20
+            }
+        ]
+    );
 }

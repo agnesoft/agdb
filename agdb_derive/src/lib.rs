@@ -4,55 +4,84 @@ use syn::parse_macro_input;
 use syn::DeriveInput;
 
 #[proc_macro_derive(UserValue)]
-#[allow(clippy::manual_map)]
 pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
     let syn::Data::Struct(data) = input.data else { unimplemented!() };
+    let db_id = data
+        .fields
+        .iter()
+        .find_map(|f| {
+            if let Some(name) = &f.ident {
+                if name == "db_id" {
+                    return Some(quote! {
+                        self.db_id
+                    });
+                }
+            }
+
+            None
+        })
+        .unwrap_or(quote! {
+            None
+        });
     let mut counter: usize = 0;
-    let from_db_fields = data.fields.iter().filter_map(|f| {
+    let from_db_element = data.fields.iter().filter_map(|f| {
         if let Some(name) = &f.ident {
-            let i = counter;
-            counter += 1;
-            return Some(quote! {
-                #name: values[#i].value.clone().try_into()?
-            });
+            if name == "db_id" {
+                return Some(quote! {
+                    #name: Some(element.id)
+                });
+            } else {
+                let i = counter;
+                counter += 1;
+                return Some(quote! {
+                    #name: element.values[#i].value.clone().try_into()?
+                });
+            }
         }
 
         None
     });
     let db_values = data.fields.iter().filter_map(|f| {
         if let Some(name) = &f.ident {
-            let key = name.to_string();
+            if name != "db_id" {
+                let key = name.to_string();
 
-            return Some(quote! {
-                (#key, self.#name.clone()).into()
-            });
+                return Some(quote! {
+                    (#key, self.#name.clone()).into()
+                });
+            }
         }
 
         None
     });
     let db_keys = data.fields.iter().filter_map(|f| {
         if let Some(name) = &f.ident {
-            Some(name.to_string())
-        } else {
-            None
+            if name != "db_id" {
+                return Some(name.to_string());
+            }
         }
+        None
     });
     let tokens = quote! {
         impl agdb::DbUserValue for #name {
-            fn from_db_values(values: &[agdb::DbKeyValue]) -> Result<Self, agdb::DbError> {
+            fn db_id(&self) -> Option<DbId> {
+                #db_id
+            }
+
+            fn db_keys() -> Vec<agdb::DbKey> {
+                vec![#(#db_keys.into()),*]
+            }
+
+            fn from_db_element(element: &DbElement) -> Result<Self, DbError> {
                 Ok(Self {
-                    #(#from_db_fields),*
+                    #(#from_db_element),*
                 })
             }
 
             fn to_db_values(&self) -> Vec<agdb::DbKeyValue> {
                 vec![#(#db_values),*]
-            }
-
-            fn db_keys() -> Vec<agdb::DbKey> {
-                vec![#(#db_keys.into()),*]
             }
         }
 
@@ -60,12 +89,11 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
             type Error = agdb::DbError;
 
             fn try_from(value: agdb::QueryResult) -> Result<Self, Self::Error> {
-                #name::from_db_values(
-                    &value
+                #name::from_db_element(
+                    value
                         .elements
                         .get(0)
                         .ok_or(Self::Error::from("No element found"))?
-                        .values,
                 )
             }
         }

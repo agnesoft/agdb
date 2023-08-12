@@ -1,5 +1,5 @@
 use crate::db::db_key_value::DbKeyValue;
-use crate::DbKey;
+use crate::{DbKey, DbUserValue};
 
 /// Helper type distinguishing uniform (`Single`) values
 /// and multiple (`Multi`) values in database queries.
@@ -43,5 +43,17 @@ impl From<Vec<Vec<DbKeyValue>>> for MultiValues {
 impl From<Vec<DbKey>> for QueryKeys {
     fn from(value: Vec<DbKey>) -> Self {
         QueryKeys(value)
+    }
+}
+
+impl<T: DbUserValue> From<&T> for MultiValues {
+    fn from(value: &T) -> Self {
+        MultiValues(vec![value.to_db_values()])
+    }
+}
+
+impl<T: DbUserValue> From<&T> for SingleValues {
+    fn from(value: &T) -> Self {
+        SingleValues(value.to_db_values())
     }
 }

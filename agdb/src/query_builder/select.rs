@@ -10,7 +10,6 @@ use crate::query::select_key_count_query::SelectKeyCountQuery;
 use crate::query::select_keys_query::SelectKeysQuery;
 use crate::query::select_query::SelectQuery;
 use crate::query::select_values_query::SelectValuesQuery;
-use crate::DbUserValue;
 
 /// Select builder that lets you choose what
 /// data you want to select form the database.

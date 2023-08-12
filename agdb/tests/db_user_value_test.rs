@@ -125,7 +125,7 @@ fn db_user_value() {
     ];
 
     assert_eq!(MyData::db_keys(), keys);
-    assert_eq!(&my_data.db_values(), &values);
+    assert_eq!(&my_data.to_db_values(), &values);
     assert_eq!(MyData::from_db_values(&values).unwrap(), my_data);
 }
 

@@ -47,7 +47,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
                 })
             }
 
-            fn db_values(&self) -> Vec<agdb::DbKeyValue> {
+            fn to_db_values(&self) -> Vec<agdb::DbKeyValue> {
                 vec![#(#db_values),*]
             }
 

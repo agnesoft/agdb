@@ -48,12 +48,12 @@ impl From<Vec<DbKey>> for QueryKeys {
 
 impl<T: DbUserValue> From<&T> for MultiValues {
     fn from(value: &T) -> Self {
-        MultiValues(vec![value.db_values()])
+        MultiValues(vec![value.to_db_values()])
     }
 }
 
 impl<T: DbUserValue> From<&T> for SingleValues {
     fn from(value: &T) -> Self {
-        SingleValues(value.db_values())
+        SingleValues(value.to_db_values())
     }
 }

@@ -2,6 +2,7 @@ use super::insert_aliases::InsertAliases;
 use super::insert_edge::InsertEdges;
 use super::insert_nodes::InsertNodes;
 use super::insert_values::InsertValues;
+use super::insert_values::InsertValuesIds;
 use crate::query::insert_aliases_query::InsertAliasesQuery;
 use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;
@@ -11,6 +12,8 @@ use crate::query::query_ids::QueryIds;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
+use crate::DbId;
+use crate::DbUserValue;
 
 /// Insert builder for inserting various data
 /// into the database.
@@ -51,6 +54,24 @@ impl Insert {
             to: QueryIds::Ids(vec![]),
             values: QueryValues::Single(vec![]),
             each: false,
+        })
+    }
+
+    pub fn element<T: DbUserValue>(self, e: &T) -> InsertValuesIds {
+        InsertValuesIds(InsertValuesQuery {
+            ids: e.db_id().unwrap_or_default().into(),
+            values: QueryValues::Multi(vec![e.to_db_values()]),
+        })
+    }
+
+    pub fn elements<T: DbUserValue>(self, elems: &[T]) -> InsertValuesIds {
+        InsertValuesIds(InsertValuesQuery {
+            ids: elems
+                .iter()
+                .map(|e| e.db_id().unwrap_or_default().into())
+                .collect::<Vec<DbId>>()
+                .into(),
+            values: QueryValues::Multi(elems.iter().map(|e| e.to_db_values()).collect()),
         })
     }
 

@@ -288,3 +288,56 @@ fn db_user_value_with_id() {
         ]
     );
 }
+
+#[test]
+fn insert_user_value_with_id() {
+    #[derive(Debug, Clone, PartialEq, UserValue)]
+    struct MyValue {
+        db_id: Option<DbId>,
+        name: String,
+        age: u64,
+    }
+
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        db_id: None,
+        name: "my name".to_string(),
+        age: 20,
+    };
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(2)
+            .values_uniform(&my_value)
+            .query(),
+        2,
+    );
+
+    let mut db_values: Vec<MyValue> = db
+        .exec_result(
+            QueryBuilder::select()
+                .values(MyValue::db_keys())
+                .ids(vec![1, 2])
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    db_values[0].age = 30;
+    db_values[1].age = 40;
+
+    db.exec_mut(QueryBuilder::insert().elements(&db_values).query(), 4);
+
+    let other: Vec<MyValue> = db
+        .exec_result(
+            QueryBuilder::select()
+                .values(MyValue::db_keys())
+                .ids(vec![1, 2])
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    assert_eq!(other, db_values);
+}

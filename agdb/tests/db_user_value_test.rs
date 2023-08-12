@@ -211,7 +211,12 @@ fn select_values_custom() {
     );
 
     let db_value: MyValue = db
-        .exec_result(QueryBuilder::select().values_t::<MyValue>().ids(1).query())
+        .exec_result(
+            QueryBuilder::select()
+                .values(MyValue::db_keys())
+                .ids(1)
+                .query(),
+        )
         .try_into()
         .unwrap();
 
@@ -220,7 +225,7 @@ fn select_values_custom() {
     let db_values: Vec<MyValue> = db
         .exec_result(
             QueryBuilder::select()
-                .values_t::<MyValue>()
+                .values(MyValue::db_keys())
                 .ids(vec![1, 2])
                 .query(),
         )

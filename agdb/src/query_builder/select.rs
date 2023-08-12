@@ -52,14 +52,4 @@ impl Select {
             ids: QueryIds::Ids(vec![0.into()]),
         })
     }
-
-    /// Select elements with `ids` with only `keys` properties (key-values)
-    /// that constitute the user type `T`. All ids specified must exist in
-    /// the database.
-    pub fn values_t<T: DbUserValue>(self) -> SelectValues {
-        SelectValues(SelectValuesQuery {
-            keys: T::db_keys(),
-            ids: QueryIds::Ids(vec![0.into()]),
-        })
-    }
 }

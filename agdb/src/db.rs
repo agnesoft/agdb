@@ -310,6 +310,15 @@ impl Db {
                 Command::RemoveNode { index } => {
                     self.graph.remove_node(&mut self.storage, *index)?
                 }
+                Command::ReplaceKeyValue { id, key_value } => {
+                    self.values.insert_replace(
+                        &mut self.storage,
+                        id,
+                        |v| v.key == key_value.key,
+                        key_value,
+                    )?;
+                    return Ok(());
+                }
             }
         }
 
@@ -398,6 +407,31 @@ impl Db {
             key_value: key_value.clone(),
         });
         self.values.insert(&mut self.storage, &db_id, key_value)?;
+        Ok(())
+    }
+
+    pub(crate) fn insert_or_replace_key_value(
+        &mut self,
+        db_id: DbId,
+        key_value: &DbKeyValue,
+    ) -> Result<(), QueryError> {
+        if let Some(old) = self.values.insert_replace(
+            &mut self.storage,
+            &db_id,
+            |kv| kv.key == key_value.key,
+            key_value,
+        )? {
+            self.undo_stack.push(Command::ReplaceKeyValue {
+                id: db_id,
+                key_value: old,
+            });
+        } else {
+            self.undo_stack.push(Command::RemoveKeyValue {
+                id: db_id,
+                key_value: key_value.clone(),
+            });
+        }
+
         Ok(())
     }
 

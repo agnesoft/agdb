@@ -340,15 +340,7 @@ where
     }
 
     pub fn insert(&mut self, storage: &mut S, key: &K, value: &T) -> Result<Option<T>, DbError> {
-        let old_value = self.value(key)?;
-
-        if let Some(old) = &old_value {
-            self.multi_map.replace(storage, key, old, value)?;
-        } else {
-            self.multi_map.insert(storage, key, value)?;
-        }
-
-        Ok(old_value)
+        self.multi_map.insert_replace(storage, key, |_| true, value)
     }
 
     #[allow(dead_code)]

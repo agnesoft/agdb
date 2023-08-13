@@ -31,8 +31,9 @@ impl QueryMut for InsertValuesQuery {
                 QueryValues::Single(values) => {
                     for id in ids {
                         let db_id = db.db_id(id)?;
+
                         for key_value in values {
-                            db.insert_key_value(db_id, key_value)?;
+                            db.insert_or_replace_key_value(db_id, key_value)?;
                             result.result += 1;
                         }
                     }
@@ -45,7 +46,7 @@ impl QueryMut for InsertValuesQuery {
                     for (id, values) in ids.iter().zip(values) {
                         let db_id = db.db_id(id)?;
                         for key_value in values {
-                            db.insert_key_value(db_id, key_value)?;
+                            db.insert_or_replace_key_value(db_id, key_value)?;
                             result.result += 1;
                         }
                     }
@@ -58,7 +59,7 @@ impl QueryMut for InsertValuesQuery {
                     QueryValues::Single(values) => {
                         for db_id in db_ids {
                             for key_value in values {
-                                db.insert_key_value(db_id, key_value)?;
+                                db.insert_or_replace_key_value(db_id, key_value)?;
                                 result.result += 1;
                             }
                         }
@@ -70,7 +71,7 @@ impl QueryMut for InsertValuesQuery {
 
                         for (db_id, values) in db_ids.iter().zip(values) {
                             for key_value in values {
-                                db.insert_key_value(*db_id, key_value)?;
+                                db.insert_or_replace_key_value(*db_id, key_value)?;
                                 result.result += 1;
                             }
                         }

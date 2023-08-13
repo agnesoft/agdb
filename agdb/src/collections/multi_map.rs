@@ -114,11 +114,49 @@ where
     pub fn insert(&mut self, storage: &mut S, key: &K, value: &T) -> Result<(), DbError> {
         let id = self.data.transaction(storage);
         let index = self.free_index(storage, key)?;
-        self.data.set_state(storage, index, MapValueState::Valid)?;
-        self.data.set_key(storage, index, key)?;
-        self.data.set_value(storage, index, value)?;
-        self.data.set_len(storage, self.len() + 1)?;
+        self.do_insert(storage, index, key, value)?;
         self.data.commit(storage, id)
+    }
+
+    pub fn insert_replace<P: Fn(&T) -> bool>(
+        &mut self,
+        storage: &mut S,
+        key: &K,
+        predicate: P,
+        new_value: &T,
+    ) -> Result<Option<T>, DbError> {
+        let id = self.data.transaction(storage);
+
+        if self.len() >= self.max_len() {
+            self.rehash(storage, self.capacity() * 2)?;
+        }
+
+        let hash = key.stable_hash();
+        let mut pos = hash % self.capacity();
+        let mut ret = None;
+
+        loop {
+            match self.data.state(pos)? {
+                MapValueState::Empty => {
+                    self.do_insert(storage, pos, key, new_value)?;
+                    break;
+                }
+                MapValueState::Valid if self.data.key(pos)? == *key => {
+                    let old_value = self.data.value(pos)?;
+                    if predicate(&old_value) {
+                        self.data.set_value(storage, pos, new_value)?;
+                        ret = Some(old_value);
+                        break;
+                    } else {
+                        pos = self.next_pos(pos)
+                    }
+                }
+                MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
+            }
+        }
+
+        self.data.commit(storage, id)?;
+        Ok(ret)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -213,38 +251,6 @@ where
         self.data.commit(storage, id)
     }
 
-    pub fn replace(
-        &mut self,
-        storage: &mut S,
-        key: &K,
-        value: &T,
-        new_value: &T,
-    ) -> Result<(), DbError> {
-        if self.capacity() == 0 {
-            return Ok(());
-        }
-
-        let hash = key.stable_hash();
-        let mut pos = hash % self.capacity();
-
-        let id = self.data.transaction(storage);
-
-        loop {
-            match self.data.state(pos)? {
-                MapValueState::Empty => break,
-                MapValueState::Valid
-                    if self.data.key(pos)? == *key && self.data.value(pos)? == *value =>
-                {
-                    self.data.set_value(storage, pos, new_value)?;
-                    break;
-                }
-                MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
-            }
-        }
-
-        self.data.commit(storage, id)
-    }
-
     pub fn reserve(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError> {
         if self.capacity() < capacity {
             self.rehash(storage, capacity)?;
@@ -320,6 +326,19 @@ where
         }
 
         Ok(result)
+    }
+
+    fn do_insert(
+        &mut self,
+        storage: &mut S,
+        index: u64,
+        key: &K,
+        value: &T,
+    ) -> Result<(), DbError> {
+        self.data.set_state(storage, index, MapValueState::Valid)?;
+        self.data.set_key(storage, index, key)?;
+        self.data.set_value(storage, index, value)?;
+        self.data.set_len(storage, self.len() + 1)
     }
 
     fn drop_value(&mut self, storage: &mut S, pos: u64) -> Result<(), DbError> {
@@ -630,12 +649,7 @@ mod tests {
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
 
         assert!(map
-            .replace(
-                &mut storage,
-                &10,
-                &"Hello".to_string(),
-                &"World".to_string()
-            )
+            .insert_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
             .is_ok());
     }
 
@@ -647,12 +661,7 @@ mod tests {
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
         assert!(map
-            .replace(
-                &mut storage,
-                &10,
-                &"Hello".to_string(),
-                &"World".to_string()
-            )
+            .insert_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
             .is_ok());
     }
 
@@ -665,12 +674,7 @@ mod tests {
         map.remove_key(&mut storage, &10).unwrap();
 
         assert!(map
-            .replace(
-                &mut storage,
-                &10,
-                &"Hello".to_string(),
-                &"World".to_string()
-            )
+            .insert_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
             .is_ok());
     }
 

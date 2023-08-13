@@ -118,7 +118,7 @@ where
         self.data.commit(storage, id)
     }
 
-    pub fn insert_replace<P: Fn(&T) -> bool>(
+    pub fn insert_or_replace<P: Fn(&T) -> bool>(
         &mut self,
         storage: &mut S,
         key: &K,
@@ -647,10 +647,11 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
-
+        let p = |v: &String| v == "Hello";
         assert!(map
-            .insert_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
+            .insert_or_replace(&mut storage, &10, p, &"World".to_string())
             .is_ok());
+        p(&"".to_string());
     }
 
     #[test]
@@ -658,10 +659,11 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        map.insert(&mut storage, &10, &"World".to_string()).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
         assert!(map
-            .insert_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
+            .insert_or_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
             .is_ok());
     }
 
@@ -671,10 +673,12 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &10, &"Hello".to_string()).unwrap();
-        map.remove_key(&mut storage, &10).unwrap();
+        map.insert(&mut storage, &10, &"World".to_string()).unwrap();
+        map.remove_value(&mut storage, &10, &"Hello".to_string())
+            .unwrap();
 
         assert!(map
-            .insert_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
+            .insert_or_replace(&mut storage, &10, |v| v == "Hello", &"World".to_string())
             .is_ok());
     }
 

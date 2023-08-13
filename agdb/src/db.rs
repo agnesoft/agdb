@@ -311,7 +311,7 @@ impl Db {
                     self.graph.remove_node(&mut self.storage, *index)?
                 }
                 Command::ReplaceKeyValue { id, key_value } => {
-                    self.values.insert_replace(
+                    self.values.insert_or_replace(
                         &mut self.storage,
                         id,
                         |v| v.key == key_value.key,
@@ -415,7 +415,7 @@ impl Db {
         db_id: DbId,
         key_value: &DbKeyValue,
     ) -> Result<(), QueryError> {
-        if let Some(old) = self.values.insert_replace(
+        if let Some(old) = self.values.insert_or_replace(
             &mut self.storage,
             &db_id,
             |kv| kv.key == key_value.key,

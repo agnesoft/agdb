@@ -237,3 +237,62 @@ fn insert_values_search_invalid_length() {
         "Ids and values length do not match",
     );
 }
+
+#[test]
+fn insert_values_overwrite() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values(vec![vec![("key", 10).into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values_uniform(vec![("key", 20).into(), ("key2", 30).into()])
+            .ids(1)
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            values: vec![("key", 20).into(), ("key2", 30).into()],
+        }],
+    )
+}
+
+#[test]
+fn insert_values_overwrite_transaction() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values(vec![vec![("key", 10).into()]])
+            .query(),
+        1,
+    );
+
+    db.transaction_mut_error(
+        |t| -> Result<(), QueryError> {
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .values_uniform(vec![("key", 20).into(), ("key2", 30).into()])
+                    .ids(1)
+                    .query(),
+            )?;
+            Err(QueryError::from("error"))
+        },
+        QueryError::from("error"),
+    );
+
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            values: vec![("key", 10).into()],
+        }],
+    )
+}

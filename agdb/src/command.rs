@@ -11,4 +11,5 @@ pub(crate) enum Command {
     RemoveEdge { index: GraphIndex },
     RemoveKeyValue { id: DbId, key_value: DbKeyValue },
     RemoveNode { index: GraphIndex },
+    ReplaceKeyValue { id: DbId, key_value: DbKeyValue },
 }

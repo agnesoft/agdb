@@ -13,12 +13,18 @@ use std::string::FromUtf8Error;
 /// loading a database, writing data etc.
 #[derive(Debug)]
 pub struct DbError {
+    /// Error description
     pub description: String,
+
+    /// Optional error that caused this error
     pub cause: Option<Box<DbError>>,
+
+    /// Location where the error originated in the sources
     pub source_location: Location<'static>,
 }
 
 impl DbError {
+    /// Sets the `cause` of this error to `error`.
     pub fn caused_by(mut self, error: Self) -> Self {
         self.cause = Some(Box::new(error));
 

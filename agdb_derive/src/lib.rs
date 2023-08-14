@@ -65,8 +65,6 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
         None
     });
     let tokens = quote! {
-        use agdb::DbUserValue;
-
         impl agdb::DbUserValue for #name {
             fn db_id(&self) -> Option<DbId> {
                 #db_id
@@ -91,7 +89,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
             type Error = agdb::DbError;
 
             fn try_from(value: agdb::QueryResult) -> Result<Self, Self::Error> {
-
+                use agdb::DbUserValue;
                 #name::from_db_element(
                     value
                         .elements

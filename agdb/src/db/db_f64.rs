@@ -15,6 +15,7 @@ use std::hash::Hasher;
 pub struct DbF64(f64);
 
 impl DbF64 {
+    /// Extracts the underlying `f64` value.
     #[allow(clippy::wrong_self_convention)]
     pub fn to_f64(&self) -> f64 {
         self.0

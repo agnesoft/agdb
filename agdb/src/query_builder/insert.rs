@@ -2,6 +2,7 @@ use super::insert_aliases::InsertAliases;
 use super::insert_edge::InsertEdges;
 use super::insert_nodes::InsertNodes;
 use super::insert_values::InsertValues;
+use super::insert_values::InsertValuesIds;
 use crate::query::insert_aliases_query::InsertAliasesQuery;
 use crate::query::insert_edges_query::InsertEdgesQuery;
 use crate::query::insert_nodes_query::InsertNodesQuery;
@@ -11,6 +12,7 @@ use crate::query::query_ids::QueryIds;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
+use crate::DbUserValue;
 
 /// Insert builder for inserting various data
 /// into the database.
@@ -51,6 +53,40 @@ impl Insert {
             to: QueryIds::Ids(vec![]),
             values: QueryValues::Single(vec![]),
             each: false,
+        })
+    }
+
+    /// Inserts `elem` into the database. The `elem`
+    /// must implement (or derive) `DbUserValue` that will
+    /// provide the `DbId` to be inserted to and conversion
+    /// to the values. The ids must be `Some` and valid
+    /// int the database.
+    pub fn element<T: DbUserValue>(self, elem: &T) -> InsertValuesIds {
+        InsertValuesIds(InsertValuesQuery {
+            ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default().into()]),
+            values: QueryValues::Multi(vec![elem.to_db_values()]),
+        })
+    }
+
+    /// Inserts the `elems` into the database. Each `elem`
+    /// must implement (or derive) `DbUserValue` that will
+    /// provide the `DbId` to be inserted to and conversion
+    /// to the values. The ids must be `Some` and valid
+    /// int the database.
+    pub fn elements<T: DbUserValue>(self, elems: &[T]) -> InsertValuesIds {
+        let mut ids = vec![];
+        let mut values = vec![];
+        ids.reserve(elems.len());
+        values.reserve(elems.len());
+
+        elems.iter().for_each(|v| {
+            ids.push(v.db_id().unwrap_or_default().into());
+            values.push(v.to_db_values());
+        });
+
+        InsertValuesIds(InsertValuesQuery {
+            ids: QueryIds::Ids(ids),
+            values: QueryValues::Multi(values),
         })
     }
 

@@ -41,12 +41,17 @@ impl QueryBuilder {
     /// Options:
     ///
     /// ```
-    /// use agdb::QueryBuilder;
+    /// use agdb::{DbId, QueryBuilder, UserValue};
+    ///
+    /// #[derive(UserValue)]
+    /// struct MyValue { db_id: Option<DbId>, key: String }
     ///
     /// QueryBuilder::insert().nodes();
     /// QueryBuilder::insert().edges();
     /// QueryBuilder::insert().aliases("a");
     /// QueryBuilder::insert().aliases(vec!["a", "b"]);
+    /// QueryBuilder::insert().element(&MyValue { db_id: Some(DbId(1)), key: "a".to_string(), });
+    /// QueryBuilder::insert().elements(&[MyValue { db_id: Some(DbId(1)), key: "a".to_string(), }]);
     /// QueryBuilder::insert().values(vec![vec![("k", 1).into()]]);
     /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]);
     /// ```

@@ -56,6 +56,11 @@ impl Insert {
         })
     }
 
+    /// Inserts `elem` into the database. The `elem`
+    /// must implement (or derive) `DbUserValue` that will
+    /// provide the `DbId` to be inserted to and conversion
+    /// to the values. The ids must be `Some` and valid
+    /// int the database.
     pub fn element<T: DbUserValue>(self, elem: &T) -> InsertValuesIds {
         InsertValuesIds(InsertValuesQuery {
             ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default().into()]),
@@ -63,6 +68,11 @@ impl Insert {
         })
     }
 
+    /// Inserts the `elems` into the database. Each `elem`
+    /// must implement (or derive) `DbUserValue` that will
+    /// provide the `DbId` to be inserted to and conversion
+    /// to the values. The ids must be `Some` and valid
+    /// int the database.
     pub fn elements<T: DbUserValue>(self, elems: &[T]) -> InsertValuesIds {
         let mut ids = vec![];
         let mut values = vec![];

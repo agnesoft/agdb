@@ -7,7 +7,7 @@ use agdb::DbKey;
 use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
-use agdb_derive::UserValue;
+use agdb::UserValue;
 use test_db::TestDb;
 
 #[derive(Default, Debug, Clone, PartialEq)]

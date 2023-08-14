@@ -4,7 +4,6 @@ use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
 use agdb::DbKey;
-use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::UserValue;

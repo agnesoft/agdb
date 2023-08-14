@@ -191,7 +191,7 @@ fn insert_node_values_uniform_custom() {
 }
 
 #[test]
-fn select_values_custom() {
+fn select_custom_value_keys() {
     #[derive(Debug, Clone, PartialEq, UserValue)]
     struct MyValue {
         name: String,
@@ -238,7 +238,7 @@ fn select_values_custom() {
 }
 
 #[test]
-fn db_user_value_with_id() {
+fn select_custom_value_with_id() {
     #[derive(Debug, Clone, PartialEq, UserValue)]
     struct MyValue {
         db_id: Option<DbId>,
@@ -290,7 +290,59 @@ fn db_user_value_with_id() {
 }
 
 #[test]
-fn insert_user_value_with_id() {
+fn insert_single_element() {
+    #[derive(Debug, Clone, PartialEq, UserValue)]
+    struct MyValue {
+        db_id: Option<DbId>,
+        name: String,
+        age: u64,
+    }
+
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        db_id: None,
+        name: "my name".to_string(),
+        age: 20,
+    };
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(1)
+            .values_uniform(&my_value)
+            .query(),
+        1,
+    );
+
+    let mut db_value: MyValue = db
+        .exec_result(
+            QueryBuilder::select()
+                .values(MyValue::db_keys())
+                .ids(1)
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    db_value.age = 30;
+
+    db.exec_mut(QueryBuilder::insert().element(&db_value).query(), 2);
+
+    let other: MyValue = db
+        .exec_result(
+            QueryBuilder::select()
+                .values(MyValue::db_keys())
+                .ids(1)
+                .query(),
+        )
+        .try_into()
+        .unwrap();
+
+    assert_eq!(other, db_value);
+}
+
+#[test]
+fn insert_multiple_elements() {
     #[derive(Debug, Clone, PartialEq, UserValue)]
     struct MyValue {
         db_id: Option<DbId>,
@@ -327,7 +379,6 @@ fn insert_user_value_with_id() {
     db_values[0].age = 30;
     db_values[1].age = 40;
 
-    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 4);
     db.exec_mut(QueryBuilder::insert().elements(&db_values).query(), 4);
 
     let other: Vec<MyValue> = db

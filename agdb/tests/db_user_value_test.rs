@@ -327,6 +327,7 @@ fn insert_user_value_with_id() {
     db_values[0].age = 30;
     db_values[1].age = 40;
 
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 4);
     db.exec_mut(QueryBuilder::insert().elements(&db_values).query(), 4);
 
     let other: Vec<MyValue> = db

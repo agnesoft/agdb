@@ -12,7 +12,6 @@ use crate::query::query_ids::QueryIds;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
-use crate::DbId;
 use crate::DbUserValue;
 
 /// Insert builder for inserting various data
@@ -57,21 +56,27 @@ impl Insert {
         })
     }
 
-    pub fn element<T: DbUserValue>(self, e: &T) -> InsertValuesIds {
+    pub fn element<T: DbUserValue>(self, elem: &T) -> InsertValuesIds {
         InsertValuesIds(InsertValuesQuery {
-            ids: e.db_id().unwrap_or_default().into(),
-            values: QueryValues::Multi(vec![e.to_db_values()]),
+            ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default().into()]),
+            values: QueryValues::Multi(vec![elem.to_db_values()]),
         })
     }
 
     pub fn elements<T: DbUserValue>(self, elems: &[T]) -> InsertValuesIds {
+        let mut ids = vec![];
+        let mut values = vec![];
+        ids.reserve(elems.len());
+        values.reserve(elems.len());
+
+        elems.iter().for_each(|v| {
+            ids.push(v.db_id().unwrap_or_default().into());
+            values.push(v.to_db_values());
+        });
+
         InsertValuesIds(InsertValuesQuery {
-            ids: elems
-                .iter()
-                .map(|e| e.db_id().unwrap_or_default().into())
-                .collect::<Vec<DbId>>()
-                .into(),
-            values: QueryValues::Multi(elems.iter().map(|e| e.to_db_values()).collect()),
+            ids: QueryIds::Ids(ids),
+            values: QueryValues::Multi(values),
         })
     }
 

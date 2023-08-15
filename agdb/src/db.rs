@@ -195,6 +195,18 @@ impl Db {
         }
     }
 
+    /// Flushes the underlying file and copies it
+    /// to `filename` path.
+    pub fn backup(&mut self, filename: &str) -> Result<(), DbError> {
+        self.storage.backup(filename)
+    }
+
+    /// Returns the filename that was used to
+    /// construct the database.
+    pub fn filename(&self) -> &str {
+        self.storage.filename()
+    }
+
     /// Executes immutable query:
     ///
     /// - Select elements

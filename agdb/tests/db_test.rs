@@ -323,3 +323,10 @@ fn hot_backup() {
     );
     t1.join().unwrap();
 }
+
+#[test]
+fn filename() {
+    let test_file = TestFile::new();
+    let db = Db::new(test_file.file_name()).unwrap();
+    assert_eq!(db.filename(), test_file.file_name());
+}

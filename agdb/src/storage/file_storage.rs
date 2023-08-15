@@ -18,6 +18,7 @@ use std::io::Write;
 
 pub struct FileStorage {
     file: File,
+    filename: String,
     file_records: FileRecords,
     transactions: u64,
     wal: WriteAheadLog,
@@ -31,7 +32,7 @@ impl FileStorage {
                 .write(true)
                 .create(true)
                 .open(filename)?,
-
+            filename: filename.to_string(),
             file_records: FileRecords::new(),
             transactions: 0,
             wal: WriteAheadLog::new(filename)?,
@@ -41,6 +42,12 @@ impl FileStorage {
         data.read_records()?;
 
         Ok(data)
+    }
+
+    pub fn backup(&mut self, filename: &str) -> Result<(), DbError> {
+        self.file.flush()?;
+        std::fs::copy(&self.filename, filename)?;
+        Ok(())
     }
 
     fn append(&mut self, bytes: &[u8]) -> Result<(), DbError> {

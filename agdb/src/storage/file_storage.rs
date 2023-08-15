@@ -50,6 +50,10 @@ impl FileStorage {
         Ok(())
     }
 
+    pub fn filename(&self) -> &str {
+        &self.filename
+    }
+
     fn append(&mut self, bytes: &[u8]) -> Result<(), DbError> {
         let len = self.len()?;
         self.write(len, bytes)

@@ -201,6 +201,12 @@ impl Db {
         self.storage.backup(filename)
     }
 
+    /// Returns the filename that was used to
+    /// construct the database.
+    pub fn filename(&self) -> &str {
+        self.storage.filename()
+    }
+
     /// Executes immutable query:
     ///
     /// - Select elements

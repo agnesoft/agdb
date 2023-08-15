@@ -288,3 +288,38 @@ fn share_between_threads() {
     t1.join().unwrap();
     t2.join().unwrap();
 }
+
+#[test]
+fn hot_backup() {
+    let test_file = TestFile::new();
+    let signal = Arc::new(RwLock::new(true));
+    let db = Arc::new(RwLock::new(Db::new(test_file.file_name()).unwrap()));
+    db.write()
+        .unwrap()
+        .exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+        .unwrap();
+
+    let db2 = db.clone();
+    let signal2 = signal.clone();
+    let t1 = std::thread::spawn(move || {
+        while *signal2.read().unwrap() {
+            db2.write()
+                .unwrap()
+                .exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+                .unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    });
+
+    let test_file2 = TestFile::new();
+    db.write().unwrap().backup(test_file2.file_name()).unwrap();
+    *signal.write().unwrap() = false;
+    let db = Db::new(test_file2.file_name()).unwrap();
+    assert_eq!(
+        db.exec(&QueryBuilder::select().ids(1).query())
+            .unwrap()
+            .result,
+        1
+    );
+    t1.join().unwrap();
+}

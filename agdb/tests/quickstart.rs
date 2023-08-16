@@ -3,8 +3,11 @@ mod test_db;
 use crate::test_db::TestFile;
 use agdb::Comparison::Equal;
 use agdb::Db;
+use agdb::DbId;
+use agdb::DbUserValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
+use agdb_derive::UserValue;
 
 #[test]
 fn quickstart() -> Result<(), QueryError> {
@@ -14,54 +17,68 @@ fn quickstart() -> Result<(), QueryError> {
 
     db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
 
-    let users = db.exec_mut(
-        &QueryBuilder::insert()
-            .nodes()
-            .values(vec![
-                vec![("id", 1).into(), ("username", "user_1").into()],
-                vec![("id", 2).into(), ("username", "user_2").into()],
-                vec![("id", 3).into(), ("username", "user_3").into()],
-            ])
-            .query(),
-    )?;
+    #[derive(Debug, UserValue)]
+    struct User {
+        db_id: Option<DbId>,
+        name: String,
+    }
+
+    let users = vec![
+        User {
+            db_id: None,
+            name: "Alice".to_string(),
+        },
+        User {
+            db_id: None,
+            name: "Bob".to_string(),
+        },
+        User {
+            db_id: None,
+            name: "John".to_string(),
+        },
+    ];
+
+    let users_ids = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
 
     db.exec_mut(
         &QueryBuilder::insert()
             .edges()
             .from("users")
-            .to(&users)
+            .to(&users_ids)
             .query(),
     )?;
 
-    let user_elements = db.exec(&QueryBuilder::select().ids(users).query())?;
-    println!("{:?}", user_elements);
-    // QueryResult {
-    //   result: 3,
-    //   elements: [
-    //     DbElement { id: DbId(2), values: [DbKeyValue { key: String("id"), value: Int(1) }, DbKeyValue { key: String("username"), value: String("user_1") }] },
-    //     DbElement { id: DbId(3), values: [DbKeyValue { key: String("id"), value: Int(2) }, DbKeyValue { key: String("username"), value: String("user_2") }] },
-    //     DbElement { id: DbId(4), values: [DbKeyValue { key: String("id"), value: Int(3) }, DbKeyValue { key: String("username"), value: String("user_3") }] }
-    // ] }
+    let users: Vec<User> = db
+        .exec(
+            &QueryBuilder::select()
+                .values(User::db_keys())
+                .ids(&users_ids)
+                .query(),
+        )?
+        .try_into()?;
+    println!("{:?}", users);
+    // [User { db_id: Some(DbId(2)), username: "Alice" },
+    //  User { db_id: Some(DbId(3)), username: "Bob" },
+    //  User { db_id: Some(DbId(4)), username: "John" }]
 
-    let user_id = db.exec(
-        &QueryBuilder::select()
-            .ids(
-                QueryBuilder::search()
-                    .from("users")
-                    .where_()
-                    .key("username")
-                    .value(Equal("user_2".into()))
-                    .query(),
-            )
-            .query(),
-    )?;
+    let user: User = db
+        .exec(
+            &QueryBuilder::select()
+                .values(User::db_keys())
+                .ids(
+                    QueryBuilder::search()
+                        .from("users")
+                        .where_()
+                        .key("name")
+                        .value(Equal("Bob".into()))
+                        .query(),
+                )
+                .query(),
+        )?
+        .try_into()?;
 
-    println!("{:?}", user_id);
-    // QueryResult {
-    //   result: 1,
-    //   elements: [
-    //     DbElement { id: DbId(3), values: [DbKeyValue { key: String("id"), value: Int(2) }, DbKeyValue { key: String("username"), value: String("user_2") }] }
-    //   ] }
+    println!("{:?}", user);
+    // User { db_id: Some(DbId(3)), username: "Bob" }
 
     Ok(())
 }

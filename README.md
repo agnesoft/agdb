@@ -55,6 +55,7 @@ You can select the graph elements (both nodes & edges) with their ids to get the
 
 ```Rust
 let users: Vec<User> = db.exec(&QueryBuilder::select().values(User::db_keys()).ids(&users_ids).query())?.try_into()?;
+
 println!("{:?}", users);
 // [User { db_id: Some(DbId(2)), username: "Alice" },
 //  User { db_id: Some(DbId(3)), username: "Bob" },

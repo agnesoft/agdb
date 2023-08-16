@@ -1,18 +1,12 @@
 mod test_db;
 
 use crate::test_db::TestFile;
-use agdb::Comparison::Equal;
-use agdb::Db;
-use agdb::DbId;
-use agdb::DbUserValue;
-use agdb::QueryBuilder;
 use agdb::QueryError;
-use agdb_derive::UserValue;
+use agdb::{Comparison::Equal, Db, DbId, DbUserValue, QueryBuilder, UserValue};
 
 #[test]
 fn quickstart() -> Result<(), QueryError> {
     let _test_file = TestFile::from("db_file.agdb");
-
     let mut db = Db::new("db_file.agdb")?;
 
     db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
@@ -22,7 +16,6 @@ fn quickstart() -> Result<(), QueryError> {
         db_id: Option<DbId>,
         name: String,
     }
-
     let users = vec![
         User {
             db_id: None,
@@ -56,6 +49,7 @@ fn quickstart() -> Result<(), QueryError> {
                 .query(),
         )?
         .try_into()?;
+
     println!("{:?}", users);
     // [User { db_id: Some(DbId(2)), username: "Alice" },
     //  User { db_id: Some(DbId(3)), username: "Bob" },

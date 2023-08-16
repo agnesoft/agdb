@@ -1,6 +1,7 @@
 # Queries
 
 - [Queries](#queries)
+- [DbUserValue](#dbuservalue)
 - [QueryResult](#queryresult)
 - [QueryError](#queryerror)
 - [Transactions](#transactions)
@@ -60,9 +61,38 @@ Alternatively you can run a series of queries as a [transaction](#transactions).
 
 All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#queryresult) is the universal data structure holding results of all queries in an uniform structure. The [`QueryError`](#queryerror) is the singular error type holding information of any failure or problem encountered when running the query.
 
+# DbUserValue
+
+The `DbUserValue` trait is an interface that can be implemented for user defined types so that they can be seamlessly used with the database:
+
+```Rust
+pub trait DbUserValue: Sized {
+    fn db_id(&self) -> Option<DbId>;
+    fn db_keys() -> Vec<DbKey>;
+    fn from_db_element(element: &DbElement) -> Result<Self, DbError>;
+    fn to_db_values(&self) -> Vec<DbKeyValue>;
+}
+```
+
+Typically you would derive this trait with `agdb::UserValue` procedural macro that uses the field names as keys (of type `String`) and loss-lessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
+
+It is recommended but optional to have `db_id` field of type `Option<DbId>` in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders:
+
+```Rust
+#[derive(UserValue)]
+struct User { db_id: Option<DbId>, name: String, }
+let user = User { db_id: None, name: "Bob".to_string() };
+db.exec_mut(&QueryBuilder::insert().nodes().values(vec![user]).query())?;
+let mut user: User = db.exec(&QueryBuilder::select().values(User::db_keys()).ids(1).query())?.try_into()?; // User { db_id: Some(DbId(1)), name: "Bob" }
+user.name = "Alice".to_string();
+db.exec_mut(&QueryBuilder::insert().element(&user).query())?; //updates the user element with new name
+```
+
+In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field or construct it based on other values.
+
 # QueryResult
 
-The `QueryResult` is the universal result type for all successful queries. It looks like:
+The `QueryResult` is the universal result type for all successful queries. It can be converted to user defined types that implement [`DbUserValue`](#dbuservalue) with `try_into()`. It looks like this:
 
 ```Rust
 pub struct QueryResult {
@@ -229,7 +259,7 @@ QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values_uniform(vec![("k",
 QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
 ```
 
-The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is a logic error if the count cannot be inferred and is set to `0`. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty alias (`""`) are not allowed.
+The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is a logic error if the count cannot be inferred and is set to `0`. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty alias (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
 The result will contain:
 
@@ -262,7 +292,7 @@ QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().no
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
 ```
 
-The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination.
+The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
 The result will contain:
 
@@ -307,13 +337,15 @@ pub struct InsertValuesQuery {
 Builder pattern:
 
 ```Rust
+QueryBuilder::insert().element(&T { ... }).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
+QueryBuilder::insert().elements(&vec![T {...}, T {...}]).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
 QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(vec![1, 2]).query();
 QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(QueryBuilder::search().from("a").query()).query();
 QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).ids(vec![1, 2]).query();
 QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).ids(QueryBuilder::search().from("a").query()).query();
 ```
 
-Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`.
+Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<DbId>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your objects. All the rules as if specified manually still apply (e.g. the ids must exist in the database). The `values()` can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
 Note that this query is used also for updating existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
@@ -453,7 +485,7 @@ QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(vec![1, 2]).que
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
 ```
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. While the search query is most commonly used to find, filter or otherwise limit what elements to select, using this particular query can limit what properties will be returned.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. While the search query is most commonly used to find, filter or otherwise limit what elements to select, using this particular query can limit what properties will be returned. If you plan to convert the result into your user defined type(s) you should use `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
 
 The result will contain:
 

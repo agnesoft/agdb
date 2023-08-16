@@ -90,6 +90,17 @@ db.exec_mut(&QueryBuilder::insert().element(&user).query())?; //updates the user
 
 In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field or construct it based on other values.
 
+Types not directly used in the database but for which the conversions are supported:
+
+- u32 <=> u64
+- i32 <=> i64
+- f32 <=> f64
+- Vec<i32> <=> Vec<i64>
+- Vec<u32> <=> Vec<u64>
+- Vec<f32> <=> Vec<f64>
+- &str => String (only one way conversion to `String`)
+- Vec<&str> => Vec<String> (only one way conversion to `Vec<String>`)
+
 # QueryResult
 
 The `QueryResult` is the universal result type for all successful queries. It can be converted to user defined types that implement [`DbUserValue`](#dbuservalue) with `try_into()`. It looks like this:

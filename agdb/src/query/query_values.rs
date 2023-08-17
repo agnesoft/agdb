@@ -57,3 +57,9 @@ impl<T: DbUserValue> From<&T> for SingleValues {
         SingleValues(value.to_db_values())
     }
 }
+
+impl<T: DbUserValue> From<&Vec<T>> for MultiValues {
+    fn from(value: &Vec<T>) -> Self {
+        MultiValues(value.iter().map(|v| v.to_db_values()).collect())
+    }
+}

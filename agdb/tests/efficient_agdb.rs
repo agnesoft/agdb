@@ -7,16 +7,45 @@ use agdb::Db;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyValue;
+use agdb::DbUserValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryId;
+use agdb_derive::UserValue;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+#[derive(UserValue)]
+struct User {
+    username: String,
+    email: String,
+    password: String,
+}
+
+#[derive(UserValue)]
+struct Post {
+    db_id: Option<DbId>,
+    title: String,
+    body: String,
+}
+
+#[derive(UserValue)]
+struct PostLiked {
+    db_id: Option<DbId>,
+    title: String,
+    body: String,
+    likes: i64,
+}
+
+#[derive(UserValue)]
+struct Comment {
+    body: String,
+}
+
 fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
-    let db = Arc::new(RwLock::new(Db::new("database.agdb")?));
+    let db = Arc::new(RwLock::new(Db::new("social.agdb")?));
     db.write()?.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
             &QueryBuilder::insert()
@@ -37,40 +66,35 @@ fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
     Ok(db)
 }
 
-fn register_user(
-    db: &mut Db,
-    username: &str,
-    email: &str,
-    password: &str,
-) -> Result<DbId, QueryError> {
+fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         if t.exec(
             &QueryBuilder::search()
                 .from("users")
                 .where_()
                 .key("username")
-                .value(Equal(username.into()))
+                .value(Equal(user.username.clone().into()))
                 .query(),
         )?
         .result
             != 0
         {
-            return Err(QueryError::from(format!("User {username} already exists.")));
+            return Err(QueryError::from(format!(
+                "User {} already exists.",
+                user.username
+            )));
         }
 
         let user = t
             .exec_mut(
                 &QueryBuilder::insert()
                     .nodes()
-                    .values(vec![vec![
-                        ("username", username).into(),
-                        ("email", email).into(),
-                        ("password", password).into(),
-                    ]])
+                    .values(vec![user.to_db_values()])
                     .query(),
             )?
             .elements[0]
             .id;
+
         t.exec_mut(
             &QueryBuilder::insert()
                 .edges()
@@ -78,52 +102,62 @@ fn register_user(
                 .to(user)
                 .query(),
         )?;
+
         Ok(user)
     })
 }
 
-fn create_post(db: &mut Db, user: DbId, title: &str, body: &str) -> Result<DbId, QueryError> {
+fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let post = t
             .exec_mut(
                 &QueryBuilder::insert()
                     .nodes()
-                    .values(vec![vec![("title", title).into(), ("body", body).into()]])
+                    .values(vec![post.to_db_values()])
                     .query(),
             )?
             .elements[0]
             .id;
+
         t.exec_mut(
             &QueryBuilder::insert()
                 .edges()
                 .from(vec![QueryId::from("posts"), user.into()])
                 .to(post)
-                .values(vec![vec![], vec![("authored", 1).into()]])
+                .values(vec![vec![], vec![("authored", 1_u64).into()]])
                 .query(),
         )?;
+
         Ok(post)
     })
 }
 
-fn create_comment(db: &mut Db, user: DbId, parent: DbId, body: &str) -> Result<DbId, QueryError> {
+fn create_comment(
+    db: &mut Db,
+    user: DbId,
+    parent: DbId,
+    comment: &Comment,
+) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let comment = t
             .exec_mut(
                 &QueryBuilder::insert()
                     .nodes()
-                    .values(vec![vec![("body", body).into()]])
+                    .values(vec![comment.to_db_values()])
                     .query(),
             )?
             .elements[0]
             .id;
+
         t.exec_mut(
             &QueryBuilder::insert()
                 .edges()
                 .from(vec![parent, user])
                 .to(comment)
-                .values(vec![vec![], vec![("commented", 1).into()]])
+                .values(vec![vec![], vec![("commented", 1_u64).into()]])
                 .query(),
         )?;
+
         Ok(comment)
     })
 }
@@ -192,7 +226,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
     Ok(user.id)
 }
 
-fn user_posts(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
+fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::search()
@@ -224,10 +258,11 @@ fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, QueryError> {
         .collect())
 }
 
-fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<DbId>, QueryError> {
+fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
+                .values(Post::db_keys())
                 .ids(
                     QueryBuilder::search()
                         .from("posts")
@@ -239,33 +274,14 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<DbId>, QueryError> {
                 )
                 .query(),
         )?
-        .ids())
+        .try_into()?)
 }
 
-fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<DbId>, QueryError> {
+fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, QueryError> {
     Ok(db
         .exec(
             &QueryBuilder::select()
-                .ids(
-                    QueryBuilder::search()
-                        .from("posts")
-                        .order_by(vec![DbKeyOrder::Desc("likes".into())])
-                        .offset(offset)
-                        .limit(limit)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .query(),
-                )
-                .query(),
-        )?
-        .ids())
-}
-
-fn comments(db: &Db, id: DbId) -> Result<Vec<String>, QueryError> {
-    Ok(db
-        .exec(
-            &QueryBuilder::select()
-                .values(vec!["body".into()])
+                .values(Comment::db_keys())
                 .ids(
                     QueryBuilder::search()
                         .depth_first()
@@ -278,10 +294,7 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<String>, QueryError> {
                 )
                 .query(),
         )?
-        .elements
-        .into_iter()
-        .map(|c| c.values[0].value.to_string())
-        .collect())
+        .try_into()?)
 }
 
 fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
@@ -315,6 +328,26 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
     })
 }
 
+fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, QueryError> {
+    Ok(db
+        .exec(
+            &QueryBuilder::select()
+                .values(PostLiked::db_keys())
+                .ids(
+                    QueryBuilder::search()
+                        .from("posts")
+                        .order_by(vec![DbKeyOrder::Desc("likes".into())])
+                        .offset(offset)
+                        .limit(limit)
+                        .where_()
+                        .distance(CountComparison::Equal(2))
+                        .query(),
+                )
+                .query(),
+        )?
+        .try_into()?)
+}
+
 fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
     db.exec_mut(
         &QueryBuilder::insert()
@@ -333,38 +366,50 @@ fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
 
 #[test]
 fn efficient_agdb() -> Result<(), QueryError> {
-    let _test_file = TestFile::from("database.agdb");
+    let _test_file = TestFile::from("social.agdb");
     let db = create_db()?;
-    register_user(
-        db.write()?.deref_mut(),
-        "john_doe",
-        "john@doe.com",
-        "password123",
-    )?;
-    let user = login(db.read()?.deref(), "john_doe", "password123")?;
-    let post = create_post(
-        db.write()?.deref_mut(),
-        user,
-        "Awesome car",
-        "http://pictures.com/awesome_car.png",
-    )?;
-    let comment = create_comment(db.write()?.deref_mut(), user, post, "This is truly awesome")?;
-    let reply = create_comment(db.write()?.deref_mut(), user, comment, "Indeed it is")?;
-    like(db.write()?.deref_mut(), user, post)?;
-    like(db.write()?.deref_mut(), user, comment)?;
-    like(db.write()?.deref_mut(), user, reply)?;
-    remove_like(db.write()?.deref_mut(), user, comment)?;
+
+    let user = User {
+        username: "john_doe".to_string(),
+        email: "john@doe.com".to_string(),
+        password: "password123".to_string(),
+    };
+    register_user(db.write()?.deref_mut(), &user)?;
+    let user_id = login(db.read()?.deref(), "john_doe", "password123")?;
+
+    let post = Post {
+        db_id: None,
+        title: "Awesome".to_string(),
+        body: "http://pictures.com/awesome.png".to_string(),
+    };
+    let post_id = create_post(db.write()?.deref_mut(), user_id, &post)?;
+
+    let comment = Comment {
+        body: "This is truly awesome".to_string(),
+    };
+    let comment_id = create_comment(db.write()?.deref_mut(), user_id, post_id, &comment)?;
+
+    let reply_comment = Comment {
+        body: "Indeed it is".to_string(),
+    };
+    let reply_comment_id =
+        create_comment(db.write()?.deref_mut(), user_id, comment_id, &reply_comment)?;
+
+    like(db.write()?.deref_mut(), user_id, post_id)?;
+    like(db.write()?.deref_mut(), user_id, comment_id)?;
+    like(db.write()?.deref_mut(), user_id, reply_comment_id)?;
+    remove_like(db.write()?.deref_mut(), user_id, comment_id)?;
 
     let posts = posts(db.read()?.deref(), 0, 10)?;
     assert_eq!(posts.len(), 1);
 
-    let posts = user_posts(db.read()?.deref(), user)?;
-    assert_eq!(posts.len(), 1);
+    let user_posts = user_posts_ids(db.read()?.deref(), user_id)?;
+    assert_eq!(user_posts.len(), 1);
 
-    let titles = post_titles(db.read()?.deref(), posts)?;
-    assert_eq!(titles, vec!["Awesome car"]);
+    let user_post_titles = post_titles(db.read()?.deref(), user_posts)?;
+    assert_eq!(user_post_titles, vec!["Awesome"]);
 
-    let comments = comments(db.read()?.deref(), post)?;
+    let comments = comments(db.read()?.deref(), post_id)?;
     assert_eq!(comments.len(), 2);
 
     add_likes_to_posts(db.write()?.deref_mut())?;

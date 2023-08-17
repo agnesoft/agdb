@@ -32,74 +32,73 @@ cargo add agdb
 Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](docs/queries.md#queryerror) error types for operator `?` to work:
 
 ```Rust
-use agdb::Db;
-use agdb::QueryBuilder;
-use agdb::Comparison::Equal;
+use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
 
 let mut db = Db::new("db_file.agdb")?;
 
 db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
 
-let users = db.exec_mut(
-    &QueryBuilder::insert()
-        .nodes()
-        .values(vec![
-            vec![("id", 1).into(), ("username", "user_1").into()],
-            vec![("id", 2).into(), ("username", "user_2").into()],
-            vec![("id", 3).into(), ("username", "user_3").into()],
-        ])
-        .query(),
-)?;
+#[derive(Debug, UserValue)]
+struct User { db_id: Option<DbId>, name: String, }
+let users = vec![User { db_id: None, name: "Alice".to_string(), },
+                     User { db_id: None, name: "Bob".to_string(), },
+                     User { db_id: None, name: "John".to_string(), }];
+
+let users_ids = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
 
 db.exec_mut(
     &QueryBuilder::insert()
         .edges()
         .from("users")
-        .to(&users)
+        .to(&users_ids)
         .query(),
 )?;
 ```
 
-This code creates a database called `user_db.agdb` with a simple graph of 4 nodes. The first node is aliased `users` and 3 user nodes for Alice, Bob and John are then connected with edges to the `users` node. The arbitrary `username` property and sparse `joined` property are attached to the user nodes.
+This code creates a database called `user_db.agdb` with a simple graph of 4 nodes. The first node is aliased `users` and 3 user nodes for Alice, Bob and John are then connected with edges to the `users` node. The arbitrary `name` property is attached to the user nodes. Rather than inserting values directly with keys (which is also possible) we use our own type and derive from `agdb::UserValue` to allow it to be used with the database.
 
-You can select the graph elements (both nodes & edges) with their ids to get them back with their associated data (key-value properties):
+You can select the graph elements (both nodes & edges) with their ids to get them back with their associated data (key-value properties). Lets select our users and convert the result into the list (notice we select only values relevant to our `User` type with passing `User::db_keys()`):
 
 ```Rust
-let user_elements = db.exec(&QueryBuilder::select().ids(users).query())?;
-println!("{:?}", user_elements);
-// QueryResult {
-//   result: 3,
-//   elements: [
-//     DbElement { id: DbId(2), values: [DbKeyValue { key: String("id"), value: Int(1) }, DbKeyValue { key: String("username"), value: String("user_1") }] },
-//     DbElement { id: DbId(3), values: [DbKeyValue { key: String("id"), value: Int(2) }, DbKeyValue { key: String("username"), value: String("user_2") }] },
-//     DbElement { id: DbId(4), values: [DbKeyValue { key: String("id"), value: Int(3) }, DbKeyValue { key: String("username"), value: String("user_3") }] }
-// ] }
+let users: Vec<User> = db
+    .exec(
+        &QueryBuilder::select()
+            .values(User::db_keys())
+            .ids(&users_ids)
+            .query(),
+    )?
+    .try_into()?;
+
+println!("{:?}", users);
+// [User { db_id: Some(DbId(2)), username: "Alice" },
+//  User { db_id: Some(DbId(3)), username: "Bob" },
+//  User { db_id: Some(DbId(4)), username: "John" }]
 ```
 
-You can also search through the graph to get back only the elements you want:
+You can also search through the graph to get back only certain elements based on conditions. For example:
 
 ```Rust
-let user_id = db.exec(
-    &QueryBuilder::select()
-        .ids(
-            QueryBuilder::search()
-                .from("users")
-                .where_()
-                .key("username")
-                .value(Equal("user_2".into()))
-                .query(),
-        )
-        .query(),
-)?;
+let user: User = db
+    .exec(
+        &QueryBuilder::select()
+            .values(User::db_keys())
+            .ids(
+                QueryBuilder::search()
+                    .from("users")
+                    .where_()
+                    .key("name")
+                    .value(Equal("Bob".into()))
+                    .query(),
+            )
+            .query(),
+    )?
+    .try_into()?;
+
 println!("{:?}", user);
-// QueryResult {
-//   result: 1,
-//   elements: [
-//     DbElement { id: DbId(3), values: [DbKeyValue { key: String("id"), value: Int(2) }, DbKeyValue { key: String("username"), value: String("user_2") }] }
-//   ] }
+// User { db_id: Some(DbId(3)), username: "Bob" }
 ```
 
-For database concepts and **supported data** types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
+For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
 
 # Roadmap
 

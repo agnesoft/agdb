@@ -516,6 +516,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
     Ok(db
         .exec(
             &QueryBuilder::select()
+                .values(PostLiked::db_keys())
                 .ids(
                     QueryBuilder::search()
                         .from("posts")
@@ -528,9 +529,8 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
                 )
                 .query(),
         )?
-        .ids())
+        .try_into()?)
 }
-
 ```
 
 However this change is not "free" in that caching any information means it now exists in two places and those places must be synchronized (the famous cache invalidation problem). Fortunately this instance is not as hard. We simply make sure that whenever we add or remove `likes` we also update the counter on the post or comment. Since when we do those operations we also have the post/comment id doing that would be trivial.

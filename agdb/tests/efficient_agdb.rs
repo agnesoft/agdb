@@ -332,7 +332,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
     Ok(db
         .exec(
             &QueryBuilder::select()
-                .values(Post::db_keys())
+                .values(PostLiked::db_keys())
                 .ids(
                     QueryBuilder::search()
                         .from("posts")

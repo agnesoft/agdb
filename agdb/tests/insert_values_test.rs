@@ -296,3 +296,23 @@ fn insert_values_overwrite_transaction() {
         }],
     )
 }
+
+#[test]
+fn overwrite_empty_value() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values(vec![vec![("v", "").into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values(vec![vec![("v", "a").into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+}

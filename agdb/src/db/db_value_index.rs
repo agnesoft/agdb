@@ -23,7 +23,7 @@ impl DbValueIndex {
     }
 
     pub(crate) fn is_value(&self) -> bool {
-        self.size() != 0
+        self.size() != 0 || self.index() == 0
     }
 
     pub(crate) fn set_type(&mut self, value: u8) {
@@ -142,7 +142,7 @@ mod tests {
     fn value_max() {
         let mut index = DbValueIndex::default();
         let value = vec![1_u8; 15];
-        index.set_value(&value);
+        assert!(index.set_value(&value));
 
         assert_eq!(index.value(), value);
         assert_eq!(index.size(), 15);
@@ -153,11 +153,11 @@ mod tests {
     fn value_too_large() {
         let mut index = DbValueIndex::default();
         let value = vec![1_u8; 16];
-        index.set_value(&value);
+        assert!(!index.set_value(&value));
 
         assert_eq!(index.value(), vec![]);
         assert_eq!(index.size(), 0);
-        assert!(!index.is_value());
+        assert!(index.is_value());
     }
 
     #[test]
@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn serialize() {
         let mut index = DbValueIndex::new();
-        index.set_value(&[1_u8, 2_u8, 3_u8]);
+        assert!(index.set_value(&[1_u8, 2_u8, 3_u8]));
 
         let data = index.serialize();
         let other_index = DbValueIndex::deserialize(&data).unwrap();

@@ -19,7 +19,7 @@
     {
       "type": "cargo",
       "command": "llvm-cov",
-      "args": ["--package", "agdb", "--show-missing-lines"],
+      "args": ["--package", "agdb", "--ignore-filename-regex", "agdb_", "--show-missing-lines"],
       "problemMatcher": ["$rustc"],
       "group": "build",
       "label": "Coverage"
@@ -27,7 +27,7 @@
     {
       "type": "cargo",
       "command": "llvm-cov",
-      "args": ["--package", "agdb", "--html", "--open"],
+      "args": ["--package", "agdb", "--ignore-filename-regex", "agdb_", "--html", "--open"],
       "problemMatcher": ["$rustc"],
       "group": "build",
       "label": "Coverage HTML"

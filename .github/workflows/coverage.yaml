@@ -3,6 +3,9 @@ name: coverage
 on:
   push:
     branches: ["main"]
+    paths:
+      - agdb/**
+      - agdb_derive/**
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,7 +17,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --workspace --ignore-filename-regex agdb_derive --lcov --output-path lcov.info
+      - run: cargo llvm-cov --package agdb --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v3
         with:
           files: lcov.info

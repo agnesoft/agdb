@@ -33,8 +33,8 @@ jobs:
 
   coverage:
     runs-on: ubuntu-latest
-    needs: diff_coverage
-    if: needs.diff.outputs.diff == 'true'
+    needs: diff
+    if: needs.diff.outputs.diff_coverage == 'true'
     steps:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov

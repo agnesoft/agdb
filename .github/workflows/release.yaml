@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: cargo build --release --verbose
+      - run: cargo build --package agdb_derive --package agdb --release
 
   new_version:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: |
-          cargo publish -p agdb_derive --token ${CRATES_IO_TOKEN}
-          cargo publish -p agdb --token ${CRATES_IO_TOKEN}
+          cargo publish --package agdb_derive --token ${CRATES_IO_TOKEN}
+          cargo publish --package agdb --token ${CRATES_IO_TOKEN}
         env:
           CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}

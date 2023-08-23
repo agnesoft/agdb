@@ -1,61 +1,36 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "cargo",
-			"command": "test",
-			"problemMatcher": [
-				"$rustc"
-			],
-			"group": "build",
-			"label": "Test"
-		},
-		{
-			"type": "cargo",
-			"command": "clippy",
-			"args": [
-				"--workspace",
-				"--all-targets",
-				"--",
-				"-D",
-				"warnings"
-			],
-			"problemMatcher": [
-				"$rustc"
-			],
-			"group": "build",
-			"label": "Clippy"
-		},
-		{
-			"type": "cargo",
-			"command": "llvm-cov",
-			"args": [
-				"--workspace",
-				"--ignore-filename-regex",
-				"agdb_derive",
-				"--show-missing-lines"
-			],
-			"problemMatcher": [
-				"$rustc"
-			],
-			"group": "build",
-			"label": "Coverage"
-		},
-		{
-			"type": "cargo",
-			"command": "llvm-cov",
-			"args": [
-				"--workspace",
-				"--ignore-filename-regex",
-				"agdb_derive",
-				"--html",
-				"--open"
-			],
-			"problemMatcher": [
-				"$rustc"
-			],
-			"group": "build",
-			"label": "Coverage HTML"
-		},
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "cargo",
+      "command": "test",
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "Test"
+    },
+    {
+      "type": "cargo",
+      "command": "clippy",
+      "args": ["--workspace", "--all-targets", "--", "-D", "warnings"],
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "Clippy"
+    },
+    {
+      "type": "cargo",
+      "command": "llvm-cov",
+      "args": ["--package", "agdb", "--show-missing-lines"],
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "Coverage"
+    },
+    {
+      "type": "cargo",
+      "command": "llvm-cov",
+      "args": ["--package", "agdb", "--html", "--open"],
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "Coverage HTML"
+    }
+  ]
 }

@@ -41,8 +41,8 @@ db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
 #[derive(Debug, UserValue)]
 struct User { db_id: Option<DbId>, name: String, }
 let users = vec![User { db_id: None, name: "Alice".to_string(), },
-                     User { db_id: None, name: "Bob".to_string(), },
-                     User { db_id: None, name: "John".to_string(), }];
+                 User { db_id: None, name: "Bob".to_string(), },
+                 User { db_id: None, name: "John".to_string(), }];
 
 let users_ids = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
 

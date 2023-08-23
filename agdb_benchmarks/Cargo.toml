@@ -1,0 +1,15 @@
+[package]
+name = "agdb_benchmarks"
+version = "0.4.1"
+edition = "2021"
+license = "Apache-2.0"
+homepage = "https://github.com/agnesoft/agdb"
+repository = "https://github.com/agnesoft/agdb"
+documentation = "https://github.com/agnesoft/agdb"
+readme = "../README.md"
+description = "Agnesoft Graph Database"
+keywords = ["graph", "database"]
+categories = ["database", "database-implementations"]
+
+[dependencies]
+agdb = { version = "0.4.1", path = "../agdb" }

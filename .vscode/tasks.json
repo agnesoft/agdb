@@ -3,13 +3,6 @@
   "tasks": [
     {
       "type": "cargo",
-      "command": "test",
-      "problemMatcher": ["$rustc"],
-      "group": "build",
-      "label": "Test"
-    },
-    {
-      "type": "cargo",
       "command": "clippy",
       "args": ["--workspace", "--all-targets", "--", "-D", "warnings"],
       "problemMatcher": ["$rustc"],
@@ -31,6 +24,29 @@
       "problemMatcher": ["$rustc"],
       "group": "build",
       "label": "Coverage HTML"
+    },
+    {
+      "type": "cargo",
+      "command": "fmt",
+      "args": ["--all"],
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "Format"
+    },
+    {
+      "type": "cargo",
+      "command": "fmt",
+      "args": ["--all", "--check"],
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "Format Check"
+    },
+    {
+      "type": "cargo",
+      "command": "test",
+      "problemMatcher": ["$rustc"],
+      "group": "build",
+      "label": "Test"
     }
   ]
 }

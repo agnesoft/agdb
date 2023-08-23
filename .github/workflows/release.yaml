@@ -3,6 +3,9 @@ name: release
 on:
   push:
     branches: [main]
+    paths:
+      - agdb/**
+      - agdb_derive/**
 
 env:
   CARGO_TERM_COLOR: always

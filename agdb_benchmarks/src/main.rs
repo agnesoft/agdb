@@ -1,37 +1,27 @@
 use crate::database::Database;
-use agdb::DbId;
-use agdb::QueryBuilder;
-use agdb::UserValue;
 use bench_result::BenchResult;
+use num_format::Locale;
+use users::setup_users;
 
 mod bench_error;
 mod bench_result;
 mod database;
+mod users;
+mod utilities;
 
-const USER_COUNT: u64 = 10000;
-
-#[derive(UserValue)]
-struct User {
-    name: String,
-    email: String,
-}
-
-fn setup_users(db: &mut Database) -> BenchResult<()> {
-    db.0.write()?
-        .exec_mut(&QueryBuilder::insert().nodes().aliases("users").query());
-
-    let mut user_values: Vec<User>;
-
-    db.0.write()?
-        .exec_mut(&QueryBuilder::insert().nodes().values(&user_values).query())?;
-
-    Ok(())
-}
+pub(crate) const BENCH_DATABASE: &str = "db.agdb";
+pub(crate) const LOCALE: Locale = Locale::es;
+pub(crate) const USER_COUNT: u32 = 10_000;
 
 fn main() -> BenchResult<()> {
-    let mut db = Database::new()?;
+    println!("Running agdb benchmark");
+    println!("---");
 
-    setup_users(&mut db)?;
+    {
+        let mut db = Database::new()?;
+        setup_users(&mut db)?;
+    }
 
-    Ok(())
+    println!("---");
+    Database::stat()
 }

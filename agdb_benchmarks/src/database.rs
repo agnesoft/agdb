@@ -1,23 +1,28 @@
 use crate::bench_result::BenchResult;
+use crate::BENCH_DATABASE;
 use agdb::Db;
+use num_format::Locale;
+use num_format::ToFormattedString;
+use std::os::windows::prelude::MetadataExt;
 use std::sync::Arc;
 use std::sync::RwLock;
-
-const BENCH_DATABASE: &str = "agdb.benchmark";
 
 pub(crate) struct Database(pub(crate) Arc<RwLock<Db>>);
 
 impl Database {
-    pub fn new() -> BenchResult<Self> {
+    pub(crate) fn new() -> BenchResult<Self> {
         remove_db_file();
         let db = Db::new(BENCH_DATABASE)?;
         Ok(Self(Arc::new(RwLock::new(db))))
     }
-}
 
-impl Drop for Database {
-    fn drop(&mut self) {
-        remove_db_file();
+    pub(crate) fn stat() -> BenchResult<()> {
+        let db_size = std::fs::metadata(BENCH_DATABASE)?.file_size();
+        println!(
+            "Database size: {} bytes",
+            db_size.to_formatted_string(&Locale::en)
+        );
+        Ok(())
     }
 }
 

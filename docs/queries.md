@@ -181,10 +181,10 @@ You can run a series of queries as a transaction invoking corresponding methods 
 ```Rust
 impl Db {
     // immutable transactions
-    pub fn transaction<T, E>(&self, f: impl Fn(&Transaction) -> Result<T, E>) -> Result<T, E>
+    pub fn transaction<T, E>(&self, mut f: impl FnMut(&Transaction) -> Result<T, E>) -> Result<T, E>
 
     // mutable transactions
-    pub fn transaction_mut<T, E: From<QueryError>>(&mut self, f: impl Fn(&mut TransactionMut) -> Result<T, E>) -> Result<T, E>
+    pub fn transaction_mut<T, E: From<QueryError>>(&mut self, mut f: impl FnMut(&mut TransactionMut) -> Result<T, E>) -> Result<T, E>
 }
 ```
 

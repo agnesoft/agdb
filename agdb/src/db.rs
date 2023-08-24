@@ -250,7 +250,10 @@ impl Db {
     /// Read transactions cannot be committed or rolled back but their main function is to ensure
     /// that the database data does not change during their duration. Through its generic
     /// parameters it also allows transforming the query results into a type `T`.
-    pub fn transaction<T, E>(&self, f: impl Fn(&Transaction) -> Result<T, E>) -> Result<T, E> {
+    pub fn transaction<T, E>(
+        &self,
+        mut f: impl FnMut(&Transaction) -> Result<T, E>,
+    ) -> Result<T, E> {
         let transaction = Transaction::new(self);
 
         f(&transaction)
@@ -274,7 +277,7 @@ impl Db {
     /// results into a type `T`.
     pub fn transaction_mut<T, E: From<QueryError>>(
         &mut self,
-        f: impl Fn(&mut TransactionMut) -> Result<T, E>,
+        mut f: impl FnMut(&mut TransactionMut) -> Result<T, E>,
     ) -> Result<T, E> {
         let mut transaction = TransactionMut::new(&mut *self);
         let result = f(&mut transaction);

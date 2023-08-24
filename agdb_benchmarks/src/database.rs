@@ -4,7 +4,6 @@ use crate::BENCH_DATABASE;
 use crate::CELL_PADDING;
 use crate::PADDING;
 use agdb::Db;
-use std::os::windows::prelude::MetadataExt;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -18,11 +17,11 @@ impl Database {
     }
 
     pub(crate) fn stat(&mut self) -> BenchResult<()> {
-        let original_size = std::fs::metadata(BENCH_DATABASE)?.file_size();
+        let original_size = std::fs::metadata(BENCH_DATABASE)?.len();
 
         self.0.write()?.optimize_storage()?;
 
-        let db_size = std::fs::metadata(BENCH_DATABASE)?.file_size();
+        let db_size = std::fs::metadata(BENCH_DATABASE)?.len();
 
         println!(
             "{:PADDING$} | {:CELL_PADDING$} | {} (optimized)",

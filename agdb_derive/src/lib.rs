@@ -66,7 +66,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
     });
     let tokens = quote! {
         impl agdb::DbUserValue for #name {
-            fn db_id(&self) -> Option<DbId> {
+            fn db_id(&self) -> Option<agdb::DbId> {
                 #db_id
             }
 

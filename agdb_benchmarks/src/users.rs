@@ -3,7 +3,9 @@ use crate::database::Database;
 use crate::utilities::format_duration;
 use crate::utilities::measured;
 use crate::utilities::print_flush;
+use crate::CELL_PADDING;
 use crate::LOCALE;
+use crate::PADDING;
 use crate::USER_COUNT;
 use agdb::QueryBuilder;
 use agdb::UserValue;
@@ -19,8 +21,11 @@ pub(crate) fn setup_users(db: &mut Database) -> BenchResult<()> {
     let mut db = db.0.write()?;
 
     print_flush(format!(
-        "Setting up {} users | ",
-        USER_COUNT.to_formatted_string(&LOCALE)
+        "{:PADDING$} | ",
+        format!(
+            "Creating users ({})",
+            USER_COUNT.to_formatted_string(&LOCALE)
+        )
     ));
 
     let duration = measured(|| {
@@ -59,7 +64,7 @@ pub(crate) fn setup_users(db: &mut Database) -> BenchResult<()> {
     let per_write = duration / USER_COUNT;
 
     print_flush(format!(
-        "{} | {} (per user)\n",
+        "{:CELL_PADDING$} | {} (per user)\n",
         format_duration(duration),
         format_duration(per_write),
     ));

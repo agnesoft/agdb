@@ -8,6 +8,7 @@ use agdb::QueryId;
 use std::sync::Arc;
 use std::sync::RwLock;
 use test_db::test_file::TestFile;
+use test_db::TestDb;
 
 #[allow(unused_imports)]
 #[test]
@@ -329,4 +330,24 @@ fn filename() {
     let test_file = TestFile::new();
     let db = Db::new(test_file.file_name()).unwrap();
     assert_eq!(db.filename(), test_file.file_name());
+}
+
+#[test]
+fn optimize_storage() {
+    let mut db = TestDb::new();
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .count(100)
+            .values_uniform(vec![("key", 123).into()])
+            .query(),
+        100,
+    );
+
+    let size = std::fs::metadata(db.db.filename()).unwrap().len();
+    db.db.optimize_storage().unwrap();
+    let optimized_size = std::fs::metadata(db.db.filename()).unwrap().len();
+
+    assert!(optimized_size < size);
 }

@@ -196,15 +196,12 @@ impl Db {
     }
 
     /// Flushes the underlying file and copies it
-    /// to `filename` path.
+    /// to `filename` path. Consider calling `optimize_storage()`
+    /// prior to this function to reduce the size of the storage
+    /// file. If speed is of the essence you may omit that operation
+    /// at expense of the file size.
     pub fn backup(&mut self, filename: &str) -> Result<(), DbError> {
         self.storage.backup(filename)
-    }
-
-    /// Returns the filename that was used to
-    /// construct the database.
-    pub fn filename(&self) -> &str {
-        self.storage.filename()
     }
 
     /// Executes immutable query:
@@ -239,6 +236,21 @@ impl Db {
     /// error etc.).
     pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
         self.transaction_mut(|transaction| transaction.exec_mut(query))
+    }
+
+    /// Returns the filename that was used to
+    /// construct the database.
+    pub fn filename(&self) -> &str {
+        self.storage.filename()
+    }
+
+    /// Reclaims no longer used segments of the database file by packing all
+    /// used storage segments together. This operation is done automatically
+    /// when the database goes out of scope. In long running programs it might
+    /// be desired to perform the storage file optimization without fully shutting
+    /// down.
+    pub fn optimize_storage(&mut self) -> Result<(), DbError> {
+        self.storage.shrink_to_fit()
     }
 
     /// Executes immutable transaction. The transaction is running a closure `f`

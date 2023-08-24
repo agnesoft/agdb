@@ -196,15 +196,12 @@ impl Db {
     }
 
     /// Flushes the underlying file and copies it
-    /// to `filename` path.
+    /// to `filename` path. Consider calling `optimize_storage()`
+    /// prior to this function to reduce the size of the storage
+    /// file. If speed is of the essence you may omit that operation
+    /// at expense of the file size.
     pub fn backup(&mut self, filename: &str) -> Result<(), DbError> {
         self.storage.backup(filename)
-    }
-
-    /// Returns the filename that was used to
-    /// construct the database.
-    pub fn filename(&self) -> &str {
-        self.storage.filename()
     }
 
     /// Executes immutable query:
@@ -241,6 +238,21 @@ impl Db {
         self.transaction_mut(|transaction| transaction.exec_mut(query))
     }
 
+    /// Returns the filename that was used to
+    /// construct the database.
+    pub fn filename(&self) -> &str {
+        self.storage.filename()
+    }
+
+    /// Reclaims no longer used segments of the database file by packing all
+    /// used storage segments together. This operation is done automatically
+    /// when the database goes out of scope. In long running programs it might
+    /// be desired to perform the storage file optimization without fully shutting
+    /// down.
+    pub fn optimize_storage(&mut self) -> Result<(), DbError> {
+        self.storage.shrink_to_fit()
+    }
+
     /// Executes immutable transaction. The transaction is running a closure `f`
     /// that will receive `&Transaction` object to run `exec` queries as if run
     /// on the main database object. You shall specify the return type `T`
@@ -250,7 +262,10 @@ impl Db {
     /// Read transactions cannot be committed or rolled back but their main function is to ensure
     /// that the database data does not change during their duration. Through its generic
     /// parameters it also allows transforming the query results into a type `T`.
-    pub fn transaction<T, E>(&self, f: impl Fn(&Transaction) -> Result<T, E>) -> Result<T, E> {
+    pub fn transaction<T, E>(
+        &self,
+        mut f: impl FnMut(&Transaction) -> Result<T, E>,
+    ) -> Result<T, E> {
         let transaction = Transaction::new(self);
 
         f(&transaction)
@@ -274,7 +289,7 @@ impl Db {
     /// results into a type `T`.
     pub fn transaction_mut<T, E: From<QueryError>>(
         &mut self,
-        f: impl Fn(&mut TransactionMut) -> Result<T, E>,
+        mut f: impl FnMut(&mut TransactionMut) -> Result<T, E>,
     ) -> Result<T, E> {
         let mut transaction = TransactionMut::new(&mut *self);
         let result = f(&mut transaction);

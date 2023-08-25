@@ -30,8 +30,6 @@ pub(crate) fn setup_users(db: &mut Database) -> BenchResult<()> {
 
     let duration = measured(|| {
         db.transaction_mut(|t| {
-            t.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
-
             let mut user_ids = vec![];
 
             for i in 0..USER_COUNT {

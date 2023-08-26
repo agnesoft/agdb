@@ -21,17 +21,13 @@ pub(crate) fn setup_users(db: &mut Database) -> BenchResult<()> {
     let mut db = db.0.write()?;
 
     print_flush(format!(
-        "{:PADDING$} | ",
-        format!(
-            "Creating users ({})",
-            USER_COUNT.to_formatted_string(&LOCALE)
-        )
+        "{:PADDING$} | {:CELL_PADDING$} |",
+        "Creating users",
+        USER_COUNT.to_formatted_string(&LOCALE)
     ));
 
     let duration = measured(|| {
         db.transaction_mut(|t| {
-            t.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
-
             let mut user_ids = vec![];
 
             for i in 0..USER_COUNT {
@@ -61,12 +57,12 @@ pub(crate) fn setup_users(db: &mut Database) -> BenchResult<()> {
         Ok(())
     })?;
 
-    let per_write = duration / USER_COUNT;
-
     print_flush(format!(
-        "{:CELL_PADDING$} | {} (per user)\n",
-        format_duration(duration),
-        format_duration(per_write),
+        " {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$}\n",
+        "",
+        format_duration(duration / USER_COUNT),
+        "",
+        format_duration(duration)
     ));
 
     Ok(())

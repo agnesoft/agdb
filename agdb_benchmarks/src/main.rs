@@ -1,25 +1,54 @@
 use crate::database::Database;
 use bench_result::BenchResult;
 use num_format::Locale;
-use users::setup_users;
+use std::time::Duration;
 
 mod bench_error;
 mod bench_result;
 mod database;
 mod users;
 mod utilities;
+mod writers;
 
 pub(crate) const BENCH_DATABASE: &str = "db.agdb";
 pub(crate) const LOCALE: Locale = Locale::cs;
-pub(crate) const USER_COUNT: u32 = 10_000;
-pub(crate) const PADDING: usize = 25;
-pub(crate) const CELL_PADDING: usize = 10;
+pub(crate) const PADDING: usize = 30;
+pub(crate) const CELL_PADDING: usize = 8;
 
-fn main() -> BenchResult<()> {
-    println!("Running agdb benchmark");
-    println!("---");
+pub(crate) const USER_COUNT: u32 = 1000;
+
+pub(crate) const POST_WRITER_COUNT: u32 = 100;
+pub(crate) const POSTS_PER_WRITER: u32 = 100;
+pub(crate) const POST_TITLE: &str = "Title of the testing post";
+pub(crate) const POST_BODY: &str = "Body of the testing post should be longer than the title";
+
+pub(crate) const COMMENT_WRITER_COUNT: u32 = 100;
+pub(crate) const COMMENTS_PER_WRITER: u32 = 100;
+pub(crate) const COMMENT_BODY: &str = "This is a testing comment of a post.";
+
+pub(crate) const WRITE_DELAY: Duration = Duration::from_millis(0);
+
+#[tokio::main]
+async fn main() -> BenchResult<()> {
+    println!("Running agdb benchmark\n\n");
+    utilities::print_header();
 
     let mut db = Database::new()?;
-    setup_users(&mut db)?;
+    users::setup_users(&mut db)?;
+    let mut posters = writers::start_post_writers(&mut db)?;
+    let mut commenters = writers::start_comment_writers(&mut db)?;
+
+    posters
+        .join_and_report(&format!(
+            "{POST_WRITER_COUNT} posters * {POSTS_PER_WRITER} posts"
+        ))
+        .await?;
+    commenters
+        .join_and_report(&format!(
+            "{POST_WRITER_COUNT} commenters * {COMMENTS_PER_WRITER} comments"
+        ))
+        .await?;
+
+    println!("---");
     db.stat()
 }

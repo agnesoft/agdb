@@ -14,3 +14,4 @@ categories = ["database", "database-implementations"]
 [dependencies]
 agdb = { version = "0.4.1", path = "../agdb" }
 num-format = "0.4.4"
+tokio = { version = "1.32.0", features = ["full"] }

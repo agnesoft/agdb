@@ -4,15 +4,19 @@ use crate::BENCH_DATABASE;
 use crate::CELL_PADDING;
 use crate::PADDING;
 use agdb::Db;
+use agdb::QueryBuilder;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+#[derive(Clone)]
 pub(crate) struct Database(pub(crate) Arc<RwLock<Db>>);
 
 impl Database {
     pub(crate) fn new() -> BenchResult<Self> {
         remove_db_files();
-        let db = Db::new(BENCH_DATABASE)?;
+        let mut db = Db::new(BENCH_DATABASE)?;
+        db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
+        db.exec_mut(&QueryBuilder::insert().nodes().aliases("posts").query())?;
         Ok(Self(Arc::new(RwLock::new(db))))
     }
 
@@ -29,13 +33,8 @@ impl Database {
             format_size(original_size),
             format_size(db_size)
         );
-        Ok(())
-    }
-}
 
-impl Drop for Database {
-    fn drop(&mut self) {
-        remove_db_files()
+        Ok(())
     }
 }
 

@@ -1,12 +1,15 @@
 use crate::bench_result::BenchResult;
 use crate::database::Database;
+use crate::utilities;
 use crate::utilities::measured;
+use crate::COMMENTS_PER_WRITER;
 use crate::COMMENT_BODY;
+use crate::COMMENT_WRITER_COUNT;
+use crate::POSTS_PER_WRITER;
 use crate::POST_BODY;
 use crate::POST_TITLE;
-use crate::WRITER_COUNT;
+use crate::POST_WRITER_COUNT;
 use crate::WRITE_DELAY;
-use crate::WRITE_POSTS;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryId;
@@ -25,20 +28,20 @@ struct Comment {
     body: String,
 }
 
-pub(crate) struct Writer {
+struct Writer {
     id: DbId,
     db: Database,
-    pub(crate) post_times: Vec<Duration>,
-    pub(crate) comment_times: Vec<Duration>,
+    pub(crate) times: Vec<Duration>,
 }
+
+pub(crate) struct Writers(Vec<JoinHandle<Writer>>);
 
 impl Writer {
     pub(crate) fn new(id: DbId, db: Database) -> Self {
         Self {
             id,
             db,
-            post_times: vec![],
-            comment_times: vec![],
+            times: vec![],
         }
     }
 
@@ -73,12 +76,12 @@ impl Writer {
             Ok(())
         })?;
 
-        self.post_times.push(duration);
+        self.times.push(duration);
 
         Ok(())
     }
 
-    pub(crate) fn write_comment(&mut self) -> BenchResult<()> {
+    pub(crate) fn write_comment(&mut self) -> BenchResult<bool> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
@@ -109,10 +112,11 @@ impl Writer {
                 Ok(())
             })?;
 
-            self.post_times.push(duration);
+            self.times.push(duration);
+            return Ok(true);
         }
 
-        Ok(())
+        Ok(false)
     }
 
     fn last_post(&mut self) -> BenchResult<Option<DbId>> {
@@ -139,13 +143,29 @@ impl Writer {
     }
 }
 
-pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Vec<JoinHandle<Writer>>> {
+impl Writers {
+    pub(crate) async fn join_and_report(&mut self, description: &str) -> BenchResult<()> {
+        let mut writers = vec![];
+
+        for task in self.0.iter_mut() {
+            writers.push(task.await?);
+        }
+
+        let times: Vec<Duration> = writers.into_iter().flat_map(|w| w.times).collect();
+
+        utilities::report(description, times);
+
+        Ok(())
+    }
+}
+
+pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Writers> {
     let tasks =
         db.0.read()?
             .exec(
                 &QueryBuilder::search()
                     .from("users")
-                    .limit(WRITER_COUNT.into())
+                    .limit(POST_WRITER_COUNT.into())
                     .where_()
                     .distance(agdb::CountComparison::Equal(2))
                     .query(),
@@ -159,7 +179,7 @@ pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Vec<JoinHandl
                 tokio::task::spawn(async move {
                     let mut writer = Writer::new(id, db);
 
-                    for _ in 0..WRITE_POSTS {
+                    for _ in 0..POSTS_PER_WRITER {
                         let _ = writer.write_post();
                         tokio::time::sleep(WRITE_DELAY).await;
                     }
@@ -169,5 +189,43 @@ pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Vec<JoinHandl
             })
             .collect::<Vec<JoinHandle<Writer>>>();
 
-    Ok(tasks)
+    Ok(Writers(tasks))
+}
+
+pub(crate) fn start_comment_writers(db: &mut Database) -> BenchResult<Writers> {
+    let tasks =
+        db.0.read()?
+            .exec(
+                &QueryBuilder::search()
+                    .from("users")
+                    .offset(POST_WRITER_COUNT.into())
+                    .limit(COMMENT_WRITER_COUNT.into())
+                    .where_()
+                    .distance(agdb::CountComparison::Equal(2))
+                    .query(),
+            )?
+            .elements
+            .into_iter()
+            .map(|e| {
+                let id = e.id;
+                let db = db.clone();
+
+                tokio::task::spawn(async move {
+                    let mut writer = Writer::new(id, db);
+                    let mut written = 0;
+
+                    while written != COMMENTS_PER_WRITER {
+                        if writer.write_comment().unwrap_or(false) {
+                            written += 1;
+                        }
+
+                        tokio::time::sleep(WRITE_DELAY).await;
+                    }
+
+                    writer
+                })
+            })
+            .collect::<Vec<JoinHandle<Writer>>>();
+
+    Ok(Writers(tasks))
 }

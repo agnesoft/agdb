@@ -33,13 +33,8 @@ impl Database {
             format_size(original_size),
             format_size(db_size)
         );
-        Ok(())
-    }
-}
 
-impl Drop for Database {
-    fn drop(&mut self) {
-        remove_db_files()
+        Ok(())
     }
 }
 

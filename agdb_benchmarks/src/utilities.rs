@@ -60,7 +60,7 @@ pub(crate) fn report(description: &str, mut times: Vec<Duration>) {
     let min = times.first().unwrap_or(&zero_time);
     let max = times.last().unwrap_or(&zero_time);
     let total = times.iter().sum::<Duration>();
-    let avg = if times.len() == 0 {
+    let avg = if times.is_empty() {
         zero_time
     } else {
         total / times.len() as u32

@@ -13,7 +13,7 @@ mod writers;
 pub(crate) const BENCH_DATABASE: &str = "db.agdb";
 pub(crate) const LOCALE: Locale = Locale::cs;
 pub(crate) const PADDING: usize = 30;
-pub(crate) const CELL_PADDING: usize = 5;
+pub(crate) const CELL_PADDING: usize = 8;
 
 pub(crate) const USER_COUNT: u32 = 1000;
 
@@ -26,7 +26,7 @@ pub(crate) const COMMENT_WRITER_COUNT: u32 = 100;
 pub(crate) const COMMENTS_PER_WRITER: u32 = 100;
 pub(crate) const COMMENT_BODY: &str = "This is a testing comment of a post.";
 
-pub(crate) const WRITE_DELAY: Duration = Duration::from_millis(100);
+pub(crate) const WRITE_DELAY: Duration = Duration::from_millis(0);
 
 #[tokio::main]
 async fn main() -> BenchResult<()> {

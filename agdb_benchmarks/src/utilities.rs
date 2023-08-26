@@ -67,6 +67,6 @@ pub(crate) fn report(description: &str, mut times: Vec<Duration>) {
     };
 
     println!("{:PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$}",
-        description, times.len().to_string(), format_duration(*min), format_duration(avg), format_duration(*max), format_duration(total)
+        description, times.len().to_formatted_string(&LOCALE), format_duration(*min), format_duration(avg), format_duration(*max), format_duration(total)
         )
 }

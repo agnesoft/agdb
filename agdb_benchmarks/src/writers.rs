@@ -160,34 +160,36 @@ impl Writers {
 }
 
 pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Writers> {
-    let tasks =
-        db.0.read()?
-            .exec(
-                &QueryBuilder::search()
-                    .from("users")
-                    .limit(POST_WRITERS.into())
-                    .where_()
-                    .distance(agdb::CountComparison::Equal(2))
-                    .query(),
-            )?
-            .elements
-            .into_iter()
-            .map(|e| {
-                let id = e.id;
-                let db = db.clone();
+    let tasks = db
+        .0
+        .read()?
+        .exec(
+            &QueryBuilder::search()
+                .from("users")
+                .limit(POST_WRITERS.into())
+                .where_()
+                .distance(agdb::CountComparison::Equal(2))
+                .query(),
+        )?
+        .elements
+        .into_iter()
+        .map(|e| {
+            let id = e.id;
+            let db = db.clone();
+            let write_delay = Duration::from_millis(WRITE_DELAY.as_millis() as u64 % id.0 as u64);
 
-                tokio::task::spawn(async move {
-                    let mut writer = Writer::new(id, db);
+            tokio::task::spawn(async move {
+                let mut writer = Writer::new(id, db);
 
-                    for _ in 0..POSTS_PER_WRITER {
-                        let _ = writer.write_post();
-                        tokio::time::sleep(WRITE_DELAY).await;
-                    }
+                for _ in 0..POSTS_PER_WRITER {
+                    let _ = writer.write_post();
+                    tokio::time::sleep(write_delay).await;
+                }
 
-                    writer
-                })
+                writer
             })
-            .collect::<Vec<JoinHandle<Writer>>>();
+        })
+        .collect::<Vec<JoinHandle<Writer>>>();
 
     Ok(Writers(tasks))
 }
@@ -213,13 +215,15 @@ pub(crate) fn start_comment_writers(db: &mut Database) -> BenchResult<Writers> {
                 tokio::task::spawn(async move {
                     let mut writer = Writer::new(id, db);
                     let mut written = 0;
+                    let write_delay =
+                        Duration::from_millis(WRITE_DELAY.as_millis() as u64 % id.0 as u64);
 
                     while written != COMMENTS_PER_WRITER {
                         if writer.write_comment().unwrap_or(false) {
                             written += 1;
                         }
 
-                        tokio::time::sleep(WRITE_DELAY).await;
+                        tokio::time::sleep(write_delay).await;
                     }
 
                     writer

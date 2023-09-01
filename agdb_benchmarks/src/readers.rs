@@ -124,15 +124,16 @@ impl Readers {
 pub(crate) fn start_post_readers(db: &mut Database) -> BenchResult<Readers> {
     let mut tasks = vec![];
 
-    for _ in 0..POST_READERS {
+    for i in 0..POST_READERS {
         let db = db.clone();
 
         let handle = tokio::spawn(async move {
             let mut reader = Reader::new(db);
             let mut read = 0;
+            let read_delay = Duration::from_millis(READ_DELAY.as_millis() as u64 % (i + 1) as u64);
 
             while read != READS_PER_POST_READER {
-                tokio::time::sleep(READ_DELAY).await;
+                tokio::time::sleep(read_delay).await;
 
                 if reader.read_posts().unwrap_or(false) {
                     read += 1;
@@ -151,15 +152,16 @@ pub(crate) fn start_post_readers(db: &mut Database) -> BenchResult<Readers> {
 pub(crate) fn start_comment_readers(db: &mut Database) -> BenchResult<Readers> {
     let mut tasks = vec![];
 
-    for _ in 0..COMMENTS_READERS {
+    for i in 0..COMMENTS_READERS {
         let db = db.clone();
 
         let handle = tokio::spawn(async move {
             let mut reader = Reader::new(db);
             let mut read = 0;
+            let read_delay = Duration::from_millis(READ_DELAY.as_millis() as u64 % (i + 1) as u64);
 
             while read != READS_PER_COMMENTS_READER {
-                tokio::time::sleep(READ_DELAY).await;
+                tokio::time::sleep(read_delay).await;
 
                 if reader.read_comments().unwrap_or(false) {
                     read += 1;

@@ -4,11 +4,11 @@ use crate::utilities;
 use crate::utilities::measured;
 use crate::COMMENTS_PER_WRITER;
 use crate::COMMENT_BODY;
-use crate::COMMENT_WRITER_COUNT;
+use crate::COMMENT_WRITERS;
 use crate::POSTS_PER_WRITER;
 use crate::POST_BODY;
 use crate::POST_TITLE;
-use crate::POST_WRITER_COUNT;
+use crate::POST_WRITERS;
 use crate::WRITE_DELAY;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -45,7 +45,7 @@ impl Writer {
         }
     }
 
-    pub(crate) fn write_post(&mut self) -> BenchResult<()> {
+    fn write_post(&mut self) -> BenchResult<()> {
         let duration = measured(|| {
             self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
                 let id = t
@@ -81,7 +81,7 @@ impl Writer {
         Ok(())
     }
 
-    pub(crate) fn write_comment(&mut self) -> BenchResult<bool> {
+    fn write_comment(&mut self) -> BenchResult<bool> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
@@ -160,34 +160,36 @@ impl Writers {
 }
 
 pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Writers> {
-    let tasks =
-        db.0.read()?
-            .exec(
-                &QueryBuilder::search()
-                    .from("users")
-                    .limit(POST_WRITER_COUNT.into())
-                    .where_()
-                    .distance(agdb::CountComparison::Equal(2))
-                    .query(),
-            )?
-            .elements
-            .into_iter()
-            .map(|e| {
-                let id = e.id;
-                let db = db.clone();
+    let tasks = db
+        .0
+        .read()?
+        .exec(
+            &QueryBuilder::search()
+                .from("users")
+                .limit(POST_WRITERS.into())
+                .where_()
+                .distance(agdb::CountComparison::Equal(2))
+                .query(),
+        )?
+        .elements
+        .into_iter()
+        .map(|e| {
+            let id = e.id;
+            let db = db.clone();
+            let write_delay = Duration::from_millis(WRITE_DELAY.as_millis() as u64 % id.0 as u64);
 
-                tokio::task::spawn(async move {
-                    let mut writer = Writer::new(id, db);
+            tokio::task::spawn(async move {
+                let mut writer = Writer::new(id, db);
 
-                    for _ in 0..POSTS_PER_WRITER {
-                        let _ = writer.write_post();
-                        tokio::time::sleep(WRITE_DELAY).await;
-                    }
+                for _ in 0..POSTS_PER_WRITER {
+                    let _ = writer.write_post();
+                    tokio::time::sleep(write_delay).await;
+                }
 
-                    writer
-                })
+                writer
             })
-            .collect::<Vec<JoinHandle<Writer>>>();
+        })
+        .collect::<Vec<JoinHandle<Writer>>>();
 
     Ok(Writers(tasks))
 }
@@ -198,8 +200,8 @@ pub(crate) fn start_comment_writers(db: &mut Database) -> BenchResult<Writers> {
             .exec(
                 &QueryBuilder::search()
                     .from("users")
-                    .offset(POST_WRITER_COUNT.into())
-                    .limit(COMMENT_WRITER_COUNT.into())
+                    .offset(POST_WRITERS.into())
+                    .limit(COMMENT_WRITERS.into())
                     .where_()
                     .distance(agdb::CountComparison::Equal(2))
                     .query(),
@@ -213,13 +215,15 @@ pub(crate) fn start_comment_writers(db: &mut Database) -> BenchResult<Writers> {
                 tokio::task::spawn(async move {
                     let mut writer = Writer::new(id, db);
                     let mut written = 0;
+                    let write_delay =
+                        Duration::from_millis(WRITE_DELAY.as_millis() as u64 % id.0 as u64);
 
                     while written != COMMENTS_PER_WRITER {
                         if writer.write_comment().unwrap_or(false) {
                             written += 1;
                         }
 
-                        tokio::time::sleep(WRITE_DELAY).await;
+                        tokio::time::sleep(write_delay).await;
                     }
 
                     writer

@@ -46,9 +46,9 @@ impl Reader {
 
             self.times.push(duration);
 
-            return Ok(true);
+            Ok(true)
         } else {
-            return Ok(false);
+            Ok(false)
         }
     }
 

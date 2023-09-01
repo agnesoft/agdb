@@ -50,6 +50,10 @@ pub(crate) fn print_header() {
         "{:PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$}",
         "Description", "Count", "Min", "Avg", "Max", "Total"
     );
+    println!(
+        "{:-<PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$}",
+        "", "", "", "", "", ""
+    );
 }
 
 pub(crate) fn report(description: &str, mut times: Vec<Duration>) {

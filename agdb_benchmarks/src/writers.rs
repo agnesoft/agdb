@@ -4,11 +4,11 @@ use crate::utilities;
 use crate::utilities::measured;
 use crate::COMMENTS_PER_WRITER;
 use crate::COMMENT_BODY;
-use crate::COMMENT_WRITER_COUNT;
+use crate::COMMENT_WRITERS;
 use crate::POSTS_PER_WRITER;
 use crate::POST_BODY;
 use crate::POST_TITLE;
-use crate::POST_WRITER_COUNT;
+use crate::POST_WRITERS;
 use crate::WRITE_DELAY;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -45,7 +45,7 @@ impl Writer {
         }
     }
 
-    pub(crate) fn write_post(&mut self) -> BenchResult<()> {
+    fn write_post(&mut self) -> BenchResult<()> {
         let duration = measured(|| {
             self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
                 let id = t
@@ -81,7 +81,7 @@ impl Writer {
         Ok(())
     }
 
-    pub(crate) fn write_comment(&mut self) -> BenchResult<bool> {
+    fn write_comment(&mut self) -> BenchResult<bool> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
@@ -165,7 +165,7 @@ pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Writers> {
             .exec(
                 &QueryBuilder::search()
                     .from("users")
-                    .limit(POST_WRITER_COUNT.into())
+                    .limit(POST_WRITERS.into())
                     .where_()
                     .distance(agdb::CountComparison::Equal(2))
                     .query(),
@@ -198,8 +198,8 @@ pub(crate) fn start_comment_writers(db: &mut Database) -> BenchResult<Writers> {
             .exec(
                 &QueryBuilder::search()
                     .from("users")
-                    .offset(POST_WRITER_COUNT.into())
-                    .limit(COMMENT_WRITER_COUNT.into())
+                    .offset(POST_WRITERS.into())
+                    .limit(COMMENT_WRITERS.into())
                     .where_()
                     .distance(agdb::CountComparison::Equal(2))
                     .query(),

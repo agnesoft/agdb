@@ -12,3 +12,4 @@ db.agdb
 .db.agdb
 
 lcov.info
+agdb_benchmarks.yaml

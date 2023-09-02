@@ -1,35 +1,31 @@
 use crate::bench_result::BenchResult;
-use crate::CELL_PADDING;
-use crate::LOCALE;
-use crate::PADDING;
+use crate::config::Config;
+use num_format::Locale;
 use num_format::ToFormattedString;
 use std::io::Write;
 use std::time::Duration;
 use std::time::Instant;
 
-pub(crate) fn format_duration(duration: Duration) -> String {
+pub(crate) fn format_duration(duration: Duration, locale: Locale) -> String {
     if duration.as_micros() < 1000 {
-        format!(
-            "{} μs (0 ms)",
-            duration.as_micros().to_formatted_string(&LOCALE)
-        )
+        format!("{} μs", duration.as_micros().to_formatted_string(&locale))
     } else if duration.as_millis() < 1000 {
-        format!("{} ms", duration.as_millis().to_formatted_string(&LOCALE))
+        format!("{} ms", duration.as_millis().to_formatted_string(&locale))
     } else {
-        format!("{} s", duration.as_secs().to_formatted_string(&LOCALE))
+        format!("{} s", duration.as_secs().to_formatted_string(&locale))
     }
 }
 
-pub(crate) fn format_size(bytes: u64) -> String {
+pub(crate) fn format_size(bytes: u64, locale: Locale) -> String {
     const KB: u64 = 1024;
     const MB: u64 = KB * 1024;
 
     if (10 * MB) < bytes {
-        format!("{} MB", (bytes / MB).to_formatted_string(&LOCALE))
+        format!("{} MB", (bytes / MB).to_formatted_string(&locale))
     } else if (KB) < bytes {
-        format!("{} kB", (bytes / KB).to_formatted_string(&LOCALE))
+        format!("{} kB", (bytes / KB).to_formatted_string(&locale))
     } else {
-        format!("{} b", bytes.to_formatted_string(&LOCALE))
+        format!("{} b", bytes.to_formatted_string(&locale))
     }
 }
 
@@ -45,18 +41,28 @@ pub(crate) fn print_flush(message: String) {
     std::io::stdout().flush().unwrap();
 }
 
-pub(crate) fn print_header() {
+pub(crate) fn print_header(config: &Config) {
+    let padding = config.padding as usize;
+    let cell_padding = config.cell_padding as usize;
+
     println!(
-        "{:PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$}",
-        "Description", "Count", "Min", "Avg", "Max", "Total"
+        "{:padding$} | {:^cell_padding$} | {:^cell_padding$} | {:^cell_padding$} | {:^cell_padding$} | {:^cell_padding$} | {:^cell_padding$} | {:^cell_padding$} | {:^cell_padding$}",
+        "Description", "Threads", "Iters", "Per iter", "Count", "Min", "Avg", "Max", "Total"
     );
     println!(
-        "{:-<PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$} | {:-<CELL_PADDING$}",
-        "", "", "", "", "", ""
+        "{:-<padding$} | {:-<cell_padding$} | {:-<cell_padding$} | {:-<cell_padding$} | {:-<cell_padding$} | {:-<cell_padding$} | {:-<cell_padding$} | {:-<cell_padding$} | {:-<cell_padding$}",
+        "", "", "", "", "", "", "", "", ""
     );
 }
 
-pub(crate) fn report(description: &str, mut times: Vec<Duration>) {
+pub(crate) fn report(
+    description: &str,
+    threads: u64,
+    per_thread: u64,
+    per_action: u64,
+    mut times: Vec<Duration>,
+    config: &Config,
+) {
     let zero_time: Duration = Duration::default();
 
     times.sort();
@@ -70,7 +76,10 @@ pub(crate) fn report(description: &str, mut times: Vec<Duration>) {
         total / times.len() as u32
     };
 
-    println!("{:PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$}",
-        description, times.len().to_formatted_string(&LOCALE), format_duration(*min), format_duration(avg), format_duration(*max), format_duration(total)
+    let padding = config.padding as usize;
+    let cell_padding = config.cell_padding as usize;
+
+    println!("{:padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}",
+        description, threads.to_formatted_string(&config.locale), per_thread.to_formatted_string(&config.locale), per_action.to_formatted_string(&config.locale), times.len().to_formatted_string(&config.locale), format_duration(*min, config.locale), format_duration(avg, config.locale), format_duration(*max, config.locale), format_duration(total, config.locale)
         )
 }

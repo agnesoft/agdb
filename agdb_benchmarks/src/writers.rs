@@ -1,15 +1,8 @@
 use crate::bench_result::BenchResult;
+use crate::config::Config;
 use crate::database::Database;
 use crate::utilities;
 use crate::utilities::measured;
-use crate::COMMENTS_PER_WRITER;
-use crate::COMMENT_BODY;
-use crate::COMMENT_WRITERS;
-use crate::POSTS_PER_WRITER;
-use crate::POST_BODY;
-use crate::POST_TITLE;
-use crate::POST_WRITERS;
-use crate::WRITE_DELAY;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryId;
@@ -45,7 +38,7 @@ impl Writer {
         }
     }
 
-    fn write_post(&mut self) -> BenchResult<()> {
+    fn write_post(&mut self, title: &str, body: &str) -> BenchResult<()> {
         let duration = measured(|| {
             self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
                 let id = t
@@ -53,8 +46,8 @@ impl Writer {
                         &QueryBuilder::insert()
                             .nodes()
                             .values(&Post {
-                                title: POST_TITLE.to_string(),
-                                body: POST_BODY.to_string(),
+                                title: title.to_string(),
+                                body: body.to_string(),
                             })
                             .query(),
                     )?
@@ -81,7 +74,7 @@ impl Writer {
         Ok(())
     }
 
-    fn write_comment(&mut self) -> BenchResult<bool> {
+    fn write_comment(&mut self, body: &str) -> BenchResult<bool> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
@@ -90,7 +83,7 @@ impl Writer {
                             &QueryBuilder::insert()
                                 .nodes()
                                 .values(&Comment {
-                                    body: COMMENT_BODY.to_string(),
+                                    body: body.to_string(),
                                 })
                                 .query(),
                         )?
@@ -144,7 +137,14 @@ impl Writer {
 }
 
 impl Writers {
-    pub(crate) async fn join_and_report(&mut self, description: &str) -> BenchResult<()> {
+    pub(crate) async fn join_and_report(
+        &mut self,
+        description: &str,
+        threads: u64,
+        per_thread: u64,
+        per_action: u64,
+        config: &Config,
+    ) -> BenchResult<()> {
         let mut writers = vec![];
 
         for task in self.0.iter_mut() {
@@ -153,55 +153,19 @@ impl Writers {
 
         let times: Vec<Duration> = writers.into_iter().flat_map(|w| w.times).collect();
 
-        utilities::report(description, times);
+        utilities::report(description, threads, per_thread, per_action, times, config);
 
         Ok(())
     }
 }
 
-pub(crate) fn start_post_writers(db: &mut Database) -> BenchResult<Writers> {
-    let tasks = db
-        .0
-        .read()?
-        .exec(
-            &QueryBuilder::search()
-                .from("users")
-                .limit(POST_WRITERS.into())
-                .where_()
-                .distance(agdb::CountComparison::Equal(2))
-                .query(),
-        )?
-        .elements
-        .into_iter()
-        .map(|e| {
-            let id = e.id;
-            let db = db.clone();
-            let write_delay = Duration::from_millis(WRITE_DELAY.as_millis() as u64 % id.0 as u64);
-
-            tokio::task::spawn(async move {
-                let mut writer = Writer::new(id, db);
-
-                for _ in 0..POSTS_PER_WRITER {
-                    let _ = writer.write_post();
-                    tokio::time::sleep(write_delay).await;
-                }
-
-                writer
-            })
-        })
-        .collect::<Vec<JoinHandle<Writer>>>();
-
-    Ok(Writers(tasks))
-}
-
-pub(crate) fn start_comment_writers(db: &mut Database) -> BenchResult<Writers> {
+pub(crate) fn start_post_writers(db: &mut Database, config: &Config) -> BenchResult<Writers> {
     let tasks =
         db.0.read()?
             .exec(
                 &QueryBuilder::search()
                     .from("users")
-                    .offset(POST_WRITERS.into())
-                    .limit(COMMENT_WRITERS.into())
+                    .limit(config.posters.count)
                     .where_()
                     .distance(agdb::CountComparison::Equal(2))
                     .query(),
@@ -211,15 +175,54 @@ pub(crate) fn start_comment_writers(db: &mut Database) -> BenchResult<Writers> {
             .map(|e| {
                 let id = e.id;
                 let db = db.clone();
+                let write_delay = Duration::from_millis(config.posters.delay_ms % id.0 as u64);
+                let posts = config.posters.posts;
+                let title = config.posters.title.to_string();
+                let body = config.posters.body.to_string();
+
+                tokio::task::spawn(async move {
+                    let mut writer = Writer::new(id, db);
+
+                    for _ in 0..posts {
+                        let _ = writer.write_post(&title, &body);
+                        tokio::time::sleep(write_delay).await;
+                    }
+
+                    writer
+                })
+            })
+            .collect::<Vec<JoinHandle<Writer>>>();
+
+    Ok(Writers(tasks))
+}
+
+pub(crate) fn start_comment_writers(db: &mut Database, config: &Config) -> BenchResult<Writers> {
+    let tasks =
+        db.0.read()?
+            .exec(
+                &QueryBuilder::search()
+                    .from("users")
+                    .offset(config.posters.count)
+                    .limit(config.commenters.count)
+                    .where_()
+                    .distance(agdb::CountComparison::Equal(2))
+                    .query(),
+            )?
+            .elements
+            .into_iter()
+            .map(|e| {
+                let id = e.id;
+                let db = db.clone();
+                let write_delay = Duration::from_millis(config.commenters.delay_ms % id.0 as u64);
+                let comments = config.commenters.comments;
+                let body = config.commenters.body.to_string();
 
                 tokio::task::spawn(async move {
                     let mut writer = Writer::new(id, db);
                     let mut written = 0;
-                    let write_delay =
-                        Duration::from_millis(WRITE_DELAY.as_millis() as u64 % id.0 as u64);
 
-                    while written != COMMENTS_PER_WRITER {
-                        if writer.write_comment().unwrap_or(false) {
+                    while written != comments {
+                        if writer.write_comment(&body).unwrap_or(false) {
                             written += 1;
                         }
 

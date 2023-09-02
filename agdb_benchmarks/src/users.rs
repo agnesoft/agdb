@@ -1,12 +1,9 @@
 use crate::bench_result::BenchResult;
+use crate::config::Config;
 use crate::database::Database;
 use crate::utilities::format_duration;
 use crate::utilities::measured;
 use crate::utilities::print_flush;
-use crate::CELL_PADDING;
-use crate::LOCALE;
-use crate::PADDING;
-use crate::USER_COUNT;
 use agdb::QueryBuilder;
 use agdb::UserValue;
 use num_format::ToFormattedString;
@@ -17,20 +14,26 @@ struct User {
     email: String,
 }
 
-pub(crate) fn setup_users(db: &mut Database) -> BenchResult<()> {
+pub(crate) fn setup_users(db: &mut Database, config: &Config) -> BenchResult<()> {
     let mut db = db.0.write()?;
+    let padding = config.padding as usize;
+    let cell_padding = config.cell_padding as usize;
+    let user_count = config.user_count();
 
     print_flush(format!(
-        "{:PADDING$} | {:CELL_PADDING$} |",
+        "{:<padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} | {:<cell_padding$} |",
         "Creating users",
-        USER_COUNT.to_formatted_string(&LOCALE)
+        1,
+        1,
+        user_count.to_formatted_string(&config.locale),
+        user_count.to_formatted_string(&config.locale)
     ));
 
     let duration = measured(|| {
         db.transaction_mut(|t| {
             let mut user_ids = vec![];
 
-            for i in 0..USER_COUNT {
+            for i in 0..user_count {
                 user_ids.push(
                     t.exec_mut(
                         &QueryBuilder::insert()
@@ -58,11 +61,11 @@ pub(crate) fn setup_users(db: &mut Database) -> BenchResult<()> {
     })?;
 
     print_flush(format!(
-        " {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$} | {:CELL_PADDING$}\n",
-        "",
-        format_duration(duration / USER_COUNT),
-        "",
-        format_duration(duration)
+        " {:cell_padding$} | {:cell_padding$} | {:cell_padding$} | {:cell_padding$}\n",
+        "-",
+        format_duration(duration / (user_count as u32), config.locale),
+        "-",
+        format_duration(duration, config.locale)
     ));
 
     Ok(())

@@ -17,13 +17,13 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::sync::Mutex;
 
-pub struct SyncFile {
+pub struct FileSync {
     file: File,
     filename: String,
     lock: Mutex<()>,
 }
 
-impl SyncFile {
+impl FileSync {
     pub fn len(&self) -> Result<u64, DbError> {
         if let Ok(_guard) = self.lock.try_lock() {
             Self::len_impl(&self.file)
@@ -58,19 +58,19 @@ impl SyncFile {
         Ok(File::open(&self.filename)?)
     }
 
-    fn read_impl(file: &File, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
-        (&*file).seek(SeekFrom::Start(pos))?;
-        (&*file).read_exact(buffer)?;
+    fn read_impl(mut file: &File, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
+        file.seek(SeekFrom::Start(pos))?;
+        file.read_exact(buffer)?;
         Ok(())
     }
 
-    fn len_impl(file: &File) -> Result<u64, DbError> {
-        Ok((&*file).seek(SeekFrom::End(0))?)
+    fn len_impl(mut file: &File) -> Result<u64, DbError> {
+        Ok(file.seek(SeekFrom::End(0))?)
     }
 }
 
 pub struct FileStorage {
-    file: SyncFile,
+    file: FileSync,
     file_records: FileRecords,
     transactions: u64,
     wal: WriteAheadLog,
@@ -79,7 +79,7 @@ pub struct FileStorage {
 impl FileStorage {
     pub fn new(filename: &str) -> Result<Self, DbError> {
         let mut data = FileStorage {
-            file: SyncFile {
+            file: FileSync {
                 file: OpenOptions::new()
                     .read(true)
                     .write(true)
@@ -1559,5 +1559,29 @@ mod tests {
             storage.value_size(StorageIndex::from(1_u64)),
             Err(DbError::from("FileStorage error: index (1) not found"))
         );
+    }
+
+    #[test]
+    fn file_sync() {
+        let test_file = TestFile::new();
+        let mut file_sync = FileSync {
+            file: File::options()
+                .create(true)
+                .write(true)
+                .read(true)
+                .open(test_file.file_name())
+                .unwrap(),
+            filename: test_file.filename.clone(),
+            lock: Mutex::new(()),
+        };
+        file_sync.write(0, "Hello, World".as_bytes()).unwrap();
+
+        assert_eq!(file_sync.read(0, 12).unwrap(), "Hello, World".as_bytes());
+        assert_eq!(file_sync.len().unwrap(), 12);
+
+        let _guard = file_sync.lock.lock();
+
+        assert_eq!(file_sync.read(0, 12).unwrap(), "Hello, World".as_bytes());
+        assert_eq!(file_sync.len().unwrap(), 12);
     }
 }

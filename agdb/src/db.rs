@@ -794,9 +794,9 @@ impl Db {
         let index = storage.value::<DbStorageIndex>(StorageIndex(1));
 
         if let Ok(index) = index {
-            graph_storage = DbGraph::from_storage(&mut storage, index.graph)?;
-            aliases_storage = DbIndexedMap::from_storage(&mut storage, index.aliases)?;
-            values_storage = MultiMapStorage::from_storage(&mut storage, index.values)?;
+            graph_storage = DbGraph::from_storage(&storage, index.graph)?;
+            aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
+            values_storage = MultiMapStorage::from_storage(&storage, index.values)?;
         } else if len == 0 {
             storage.insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(&mut storage)?;

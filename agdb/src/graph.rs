@@ -165,7 +165,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: &mut S, storage_index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &S, storage_index: StorageIndex) -> Result<Self, DbError> {
         let indexes = storage.value::<GraphDataStorageIndexes>(storage_index)?;
 
         let from = DbVec::<i64, S>::from_storage(storage, indexes.from)?;
@@ -764,7 +764,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: &mut S, index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &S, index: StorageIndex) -> Result<Self, DbError> {
         Ok(DbGraph {
             data: GraphDataStorage::<S>::from_storage(storage, index)?,
             storage: PhantomData,
@@ -1270,7 +1270,7 @@ mod tests {
             edge3 = graph.insert_edge(&mut storage, node3, node1).unwrap();
         }
 
-        let graph = DbGraph::from_storage(&mut storage, storage_index).unwrap();
+        let graph = DbGraph::from_storage(&storage, storage_index).unwrap();
 
         assert!(graph.node(node1).is_some());
         assert!(graph.node(node2).is_some());

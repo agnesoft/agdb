@@ -54,7 +54,7 @@ impl VecValue for MapValueState {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
@@ -183,7 +183,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: &mut S, storage_index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &S, storage_index: StorageIndex) -> Result<Self, DbError> {
         let data_index = storage.value::<MapDataIndex>(storage_index)?;
         let states = DbVec::<MapValueState, S>::from_storage(storage, data_index.states_index)?;
         let keys = DbVec::<K, S>::from_storage(storage, data_index.keys_index)?;
@@ -390,7 +390,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: &mut S, index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &S, index: StorageIndex) -> Result<Self, DbError> {
         Ok(Self {
             multi_map: MultiMapImpl::<K, T, S, DbMapData<K, T, S>> {
                 data: DbMapData::<K, T, S>::from_storage(storage, index)?,
@@ -493,7 +493,7 @@ mod tests {
             index = map.storage_index();
         }
 
-        let map = DbMap::<u64, u64>::from_storage(&mut storage, index).unwrap();
+        let map = DbMap::<u64, u64>::from_storage(&storage, index).unwrap();
         let expected = vec![(1_u64, 1_u64), (5_u64, 3_u64)];
 
         assert_eq!(map.iter().collect::<Vec<(u64, u64)>>(), expected);
@@ -502,9 +502,9 @@ mod tests {
     #[test]
     fn from_storage_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(
-            DbMap::<u64, u64>::from_storage(&mut storage, StorageIndex::from(1_u64))
+            DbMap::<u64, u64>::from_storage(&storage, StorageIndex::from(1_u64))
                 .err()
                 .unwrap(),
             DbError::from("FileStorage error: index (1) not found")

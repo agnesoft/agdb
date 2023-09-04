@@ -40,7 +40,7 @@ impl VecValue for DbKeyValue {
         Ok([key_index.value, value_index.value].concat())
     }
 
-    fn load<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         let key_index = DbValueIndex::deserialize(bytes)?;
         let value_index =
             DbValueIndex::deserialize(&bytes[key_index.serialized_size() as usize..])?;

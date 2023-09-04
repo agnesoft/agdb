@@ -178,11 +178,11 @@ impl FileStorage {
         self.file_records.new_record(pos, value_len)
     }
 
-    fn read_exact(&mut self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
-        self.file.seek(SeekFrom::Start(pos))?;
+    fn read_exact(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
+        (&self.file).seek(SeekFrom::Start(pos))?;
 
         let mut buffer = vec![0_u8; value_len as usize];
-        self.file.read_exact(&mut buffer)?;
+        (&self.file).read_exact(&mut buffer)?;
 
         Ok(buffer)
     }
@@ -406,8 +406,8 @@ impl Storage for FileStorage {
         self.commit(id)
     }
 
-    fn len(&mut self) -> Result<u64, DbError> {
-        Ok(self.file.seek(SeekFrom::End(0))?)
+    fn len(&self) -> Result<u64, DbError> {
+        Ok((&self.file).seek(SeekFrom::End(0))?)
     }
 
     fn move_at(
@@ -474,21 +474,21 @@ impl Storage for FileStorage {
         self.begin_transaction()
     }
 
-    fn value<T: Serialize>(&mut self, index: StorageIndex) -> Result<T, DbError> {
+    fn value<T: Serialize>(&self, index: StorageIndex) -> Result<T, DbError> {
         T::deserialize(&self.value_as_bytes(index)?)
     }
 
-    fn value_as_bytes(&mut self, index: StorageIndex) -> Result<Vec<u8>, DbError> {
+    fn value_as_bytes(&self, index: StorageIndex) -> Result<Vec<u8>, DbError> {
         self.value_as_bytes_at(index, 0)
     }
 
-    fn value_as_bytes_at(&mut self, index: StorageIndex, offset: u64) -> Result<Vec<u8>, DbError> {
+    fn value_as_bytes_at(&self, index: StorageIndex, offset: u64) -> Result<Vec<u8>, DbError> {
         let size = self.value_size(index)?;
         self.value_as_bytes_at_size(index, offset, size - min(size, offset))
     }
 
     fn value_as_bytes_at_size(
-        &mut self,
+        &self,
         index: StorageIndex,
         offset: u64,
         size: u64,
@@ -500,11 +500,11 @@ impl Storage for FileStorage {
         self.read_exact(pos, size)
     }
 
-    fn value_at<T: Serialize>(&mut self, index: StorageIndex, offset: u64) -> Result<T, DbError> {
+    fn value_at<T: Serialize>(&self, index: StorageIndex, offset: u64) -> Result<T, DbError> {
         T::deserialize(&self.value_as_bytes_at(index, offset)?)
     }
 
-    fn value_size(&mut self, index: StorageIndex) -> Result<u64, DbError> {
+    fn value_size(&self, index: StorageIndex) -> Result<u64, DbError> {
         Ok(self.record(index.0)?.size)
     }
 }
@@ -1083,7 +1083,7 @@ mod tests {
             storage.remove(index).unwrap();
         }
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value::<i64>(index),
@@ -1108,7 +1108,7 @@ mod tests {
             index3 = storage.insert(&value3).unwrap();
         }
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(storage.value::<u64>(index2), Ok(value2));
@@ -1133,7 +1133,7 @@ mod tests {
             storage.remove(index2).unwrap();
         }
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(
@@ -1170,7 +1170,7 @@ mod tests {
             storage.remove(index3).unwrap();
         }
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value::<u64>(StorageIndex::default()),
@@ -1220,7 +1220,7 @@ mod tests {
         wal.insert(u64::serialized_size_static() * 2, 2_u64.serialize())
             .unwrap();
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(vec![1_i64, 2_i64]));
         assert_eq!(storage.value::<u64>(index2), Ok(value2));
@@ -1291,7 +1291,7 @@ mod tests {
         let actual_size = metadata(test_file.file_name()).unwrap().len();
         assert_eq!(actual_size, expected_size);
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(
             storage.value::<i64>(index2),
@@ -1316,7 +1316,7 @@ mod tests {
             assert_eq!(storage.value::<i64>(index), Ok(1_i64));
         }
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(storage.value::<i64>(index), Ok(1_i64));
     }
 
@@ -1339,7 +1339,7 @@ mod tests {
             assert_eq!(storage.value::<i64>(index), Ok(1_i64));
         }
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
             Err(DbError::from(format!(
@@ -1363,7 +1363,7 @@ mod tests {
             storage.commit(id2).unwrap();
         }
 
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
             Err(DbError::from(format!(
@@ -1431,7 +1431,7 @@ mod tests {
     #[test]
     fn value_at_of_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value_at::<i64>(StorageIndex::from(1_u64), 8),
@@ -1474,7 +1474,7 @@ mod tests {
     #[test]
     fn value_of_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value::<i64>(StorageIndex::from(1_u64)),
@@ -1511,7 +1511,7 @@ mod tests {
     #[test]
     fn value_size_of_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value_size(StorageIndex::from(1_u64)),

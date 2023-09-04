@@ -91,10 +91,7 @@ where
         })
     }
 
-    pub fn from_storage(
-        storage: &mut S,
-        index: (StorageIndex, StorageIndex),
-    ) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &S, index: (StorageIndex, StorageIndex)) -> Result<Self, DbError> {
         let keys_to_values = DbMap::<K, T, S>::from_storage(storage, index.0)?;
         let values_to_keys = DbMap::<T, K, S>::from_storage(storage, index.1)?;
 
@@ -133,7 +130,7 @@ mod tests {
             storage_index = map.storage_index();
         }
 
-        let map = DbIndexedMap::<String, u64>::from_storage(&mut storage, storage_index).unwrap();
+        let map = DbIndexedMap::<String, u64>::from_storage(&storage, storage_index).unwrap();
         assert_eq!(map.value(&"alias".to_string()).unwrap(), Some(1_u64));
     }
 

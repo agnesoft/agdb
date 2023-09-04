@@ -371,7 +371,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: &mut S, storage_index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &S, storage_index: StorageIndex) -> Result<Self, DbError> {
         let mut data = Vec::<T>::new();
         let capacity;
 
@@ -430,7 +430,7 @@ mod tests {
             index = vec.storage_index();
         }
 
-        let vec = DbVec::<String>::from_storage(&mut storage, index).unwrap();
+        let vec = DbVec::<String>::from_storage(&storage, index).unwrap();
 
         assert_eq!(
             vec.iter().collect::<Vec<String>>(),
@@ -446,10 +446,10 @@ mod tests {
     #[test]
     fn from_storage_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            DbVec::<String>::from_storage(&mut storage, StorageIndex::from(1_u64))
+            DbVec::<String>::from_storage(&storage, StorageIndex::from(1_u64))
                 .err()
                 .unwrap(),
             DbError::from("FileStorage error: index (1) not found")

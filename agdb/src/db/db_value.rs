@@ -778,9 +778,9 @@ mod tests {
     #[should_panic]
     fn bad_deserialization() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(&test_file.filename).unwrap();
+        let storage = FileStorage::new(&test_file.filename).unwrap();
 
-        let _ = DbValue::load_db_value(DbValueIndex::new(), &mut storage);
+        let _ = DbValue::load_db_value(DbValueIndex::new(), &storage);
     }
 
     #[test]

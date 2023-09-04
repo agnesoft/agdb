@@ -523,7 +523,7 @@ where
         })
     }
 
-    pub fn from_storage(storage: &mut S, index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &S, index: StorageIndex) -> Result<Self, DbError> {
         Ok(Self {
             data: DbMapData::<K, T, S>::from_storage(storage, index)?,
             phantom_marker: PhantomData,
@@ -720,8 +720,7 @@ mod tests {
             storage_index = map.storage_index();
         }
 
-        let map =
-            MultiMapStorage::<u64, String>::from_storage(&mut storage, storage_index).unwrap();
+        let map = MultiMapStorage::<u64, String>::from_storage(&storage, storage_index).unwrap();
 
         let mut values = Vec::<(u64, String)>::new();
         values.reserve(3);

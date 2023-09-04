@@ -112,7 +112,7 @@ mod tests {
         let value = CollisionValue::<i64>::new(1);
         let bytes = value.store(&mut storage).unwrap();
         CollisionValue::<i64>::remove(&mut storage, &bytes).unwrap();
-        let other = CollisionValue::<i64>::load(&mut storage, &bytes).unwrap();
+        let other = CollisionValue::<i64>::load(&storage, &bytes).unwrap();
 
         assert_eq!(value, other);
 

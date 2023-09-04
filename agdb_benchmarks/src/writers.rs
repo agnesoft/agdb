@@ -183,8 +183,8 @@ pub(crate) fn start_post_writers(db: &mut Database, config: &Config) -> BenchRes
                 tokio::task::spawn(async move {
                     let mut writer = Writer::new(id, db);
 
-                    for _ in 0..posts {
-                        let _ = writer.write_post(&title, &body);
+                    for i in 0..posts {
+                        let _ = writer.write_post(&format!("{title} {i}"), &format!("{body} {i}"));
                         tokio::time::sleep(write_delay).await;
                     }
 
@@ -222,7 +222,10 @@ pub(crate) fn start_comment_writers(db: &mut Database, config: &Config) -> Bench
                     let mut written = 0;
 
                     while written != comments {
-                        if writer.write_comment(&body).unwrap_or(false) {
+                        if writer
+                            .write_comment(&format!("{body} {written}"))
+                            .unwrap_or(false)
+                        {
                             written += 1;
                         }
 

@@ -19,7 +19,7 @@ pub trait VecData<T, S, E> {
 
 pub trait VecValue: Sized {
     fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError>;
-    fn load<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<Self, DbError>;
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError>;
     fn remove<S: Storage>(storage: &mut S, _bytes: &[u8]) -> Result<(), DbError>;
     fn storage_len() -> u64;
 }
@@ -29,7 +29,7 @@ impl VecValue for u64 {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
@@ -47,7 +47,7 @@ impl VecValue for i64 {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
@@ -66,7 +66,7 @@ impl VecValue for String {
         Ok(index.serialize())
     }
 
-    fn load<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         let index = StorageIndex::deserialize(bytes)?;
         storage.value(index)
     }

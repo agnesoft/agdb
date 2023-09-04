@@ -54,7 +54,7 @@ impl VecValue for MapValueState {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 

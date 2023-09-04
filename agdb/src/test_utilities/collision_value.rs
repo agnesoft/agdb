@@ -51,7 +51,7 @@ where
         self.value.store(storage)
     }
 
-    fn load<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             value: T::load(storage, bytes)?,
         })

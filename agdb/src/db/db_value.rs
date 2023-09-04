@@ -208,7 +208,7 @@ impl DbValue {
 
     pub(crate) fn load_db_value<S: Storage>(
         value_index: DbValueIndex,
-        storage: &mut S,
+        storage: &S,
     ) -> Result<DbValue, DbError> {
         Ok(match value_index.get_type() {
             BYTES_META_VALUE => {

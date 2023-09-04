@@ -76,7 +76,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            db_name: "bench_db.agdb".to_string(),
+            db_name: "db.agdb".to_string(),
             locale: Locale::cs,
             padding: 20,
             cell_padding: 10,

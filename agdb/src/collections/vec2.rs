@@ -13,21 +13,7 @@ pub trait VecValue: Sized {
     fn storage_len() -> u64;
 }
 
-pub trait VecTrait<T, E> {
-    fn capacity(&self) -> u64;
-    fn len(&self) -> u64;
-    fn value(&self, index: u64) -> Result<T, E>;
-}
-
-pub trait VecTraitMut<T, E>: VecTrait<T, E> {
-    fn reallocate(&mut self, capacity: u64) -> Result<(), E>;
-    fn remove(&mut self, index: u64) -> Result<T, E>;
-    fn replace(&mut self, index: u64, value: &T) -> Result<T, E>;
-    fn resize(&mut self, new_len: u64, value: &T) -> Result<(), E>;
-    fn swap(&mut self, index: u64, other: u64) -> Result<(), E>;
-}
-
-pub struct DbVecStorage<T, S>
+pub struct DbVec<T, S = FileStorage>
 where
     T: VecValue,
     S: Storage,
@@ -44,7 +30,7 @@ where
     S: Storage,
 {
     pub index: u64,
-    pub vec: &'a DbVecStorage<T, S>,
+    pub vec: &'a DbVec<T, S>,
     pub storage: &'a S,
 }
 
@@ -53,7 +39,7 @@ where
     T: VecValue,
     S: Storage,
 {
-    vec: &'a DbVecStorage<T, S>,
+    vec: &'a DbVec<T, S>,
     storage: &'a S,
 }
 
@@ -62,13 +48,11 @@ where
     T: VecValue,
     S: Storage,
 {
-    vec: &'a mut DbVecStorage<T, S>,
+    vec: &'a mut DbVec<T, S>,
     storage: &'a mut S,
 }
 
-pub type DbVec<T> = DbVecStorage<T, FileStorage>;
-
-impl<T, S> DbVecStorage<T, S>
+impl<T, S> DbVec<T, S>
 where
     T: VecValue,
     S: Storage,
@@ -121,7 +105,7 @@ where
         DbVecImplMut { vec: self, storage }
     }
 
-    fn iter<'a>(&'a self, storage: &'a S) -> VecIterator<T, S> {
+    fn iter<'a>(&'a self, storage: &'a S) -> VecIterator<'a, T, S> {
         VecIterator {
             index: 0,
             vec: self,

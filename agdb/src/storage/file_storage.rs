@@ -15,58 +15,17 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
+
+#[cfg(feature = "no-memory-map")]
 use std::sync::Mutex;
 
 pub struct FileSync {
+    #[cfg(not(feature = "no-memory-map"))]
+    buffer: Vec<u8>,
     file: File,
     filename: String,
+    #[cfg(feature = "no-memory-map")]
     lock: Mutex<()>,
-}
-
-impl FileSync {
-    pub fn len(&self) -> Result<u64, DbError> {
-        if let Ok(_guard) = self.lock.try_lock() {
-            Self::len_impl(&self.file)
-        } else {
-            Self::len_impl(&self.open_file()?)
-        }
-    }
-
-    pub fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
-        let mut buffer = vec![0_u8; value_len as usize];
-
-        if let Ok(_guard) = self.lock.try_lock() {
-            Self::read_impl(&self.file, pos, &mut buffer)?;
-        } else {
-            Self::read_impl(&self.open_file()?, pos, &mut buffer)?;
-        }
-
-        Ok(buffer)
-    }
-
-    pub fn set_len(&mut self, len: u64) -> Result<(), DbError> {
-        Ok(self.file.set_len(len)?)
-    }
-
-    pub fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-        self.file.seek(SeekFrom::Start(pos))?;
-        self.file.write_all(bytes)?;
-        Ok(())
-    }
-
-    fn open_file(&self) -> Result<File, DbError> {
-        Ok(File::open(&self.filename)?)
-    }
-
-    fn read_impl(mut file: &File, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
-        file.seek(SeekFrom::Start(pos))?;
-        file.read_exact(buffer)?;
-        Ok(())
-    }
-
-    fn len_impl(mut file: &File) -> Result<u64, DbError> {
-        Ok(file.seek(SeekFrom::End(0))?)
-    }
 }
 
 pub struct FileStorage {
@@ -76,27 +35,119 @@ pub struct FileStorage {
     wal: WriteAheadLog,
 }
 
+impl FileSync {
+    pub fn len(&self) -> Result<u64, DbError> {
+        #[cfg(not(feature = "no-memory-map"))]
+        return Ok(self.buffer.len() as u64);
+
+        #[cfg(feature = "no-memory-map")]
+        {
+            if let Ok(_guard) = self.lock.try_lock() {
+                Self::len_impl(&self.file)
+            } else {
+                Self::len_impl(&self.open_file()?)
+            }
+        }
+    }
+
+    pub fn new(filename: &str) -> Result<Self, DbError> {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(filename)?;
+
+        #[cfg(not(feature = "no-memory-map"))]
+        let mut buffer = vec![];
+        #[cfg(not(feature = "no-memory-map"))]
+        (&file).read_to_end(&mut buffer)?;
+
+        Ok(Self {
+            #[cfg(not(feature = "no-memory-map"))]
+            buffer,
+            file,
+            filename: filename.to_string(),
+            #[cfg(feature = "no-memory-map")]
+            lock: Mutex::new(()),
+        })
+    }
+
+    pub fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
+        let end = pos + value_len;
+        return Ok(self.buffer[pos as usize..end as usize].to_vec());
+
+        #[cfg(feature = "no-memory-map")]
+        {
+            let mut buffer = vec![0_u8; value_len as usize];
+
+            if let Ok(_guard) = self.lock.try_lock() {
+                Self::read_impl(&self.file, pos, &mut buffer)?;
+            } else {
+                Self::read_impl(&self.open_file()?, pos, &mut buffer)?;
+            }
+
+            Ok(buffer)
+        }
+    }
+
+    pub fn set_len(&mut self, len: u64) -> Result<(), DbError> {
+        #[cfg(not(feature = "no-memory-map"))]
+        self.buffer.resize(len as usize, 0);
+        Ok(self.file.set_len(len)?)
+    }
+
+    pub fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
+        #[cfg(not(feature = "no-memory-map"))]
+        {
+            let end = pos as usize + bytes.len();
+
+            if end < self.buffer.len() {
+                self.buffer[pos as usize..end].copy_from_slice(bytes);
+            } else {
+                self.buffer.resize(pos as usize, 0);
+                self.buffer.extend_from_slice(&bytes);
+            }
+        }
+
+        self.file.seek(SeekFrom::Start(pos))?;
+        self.file.write_all(bytes)?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "no-memory-map")]
+    fn open_file(&self) -> Result<File, DbError> {
+        Ok(File::open(&self.filename)?)
+    }
+
+    #[cfg(feature = "no-memory-map")]
+    fn read_impl(mut file: &File, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
+        file.seek(SeekFrom::Start(pos))?;
+        file.read_exact(buffer)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "no-memory-map")]
+    fn len_impl(mut file: &File) -> Result<u64, DbError> {
+        Ok(file.seek(SeekFrom::End(0))?)
+    }
+}
+
 impl FileStorage {
     pub fn new(filename: &str) -> Result<Self, DbError> {
-        let mut data = FileStorage {
-            file: FileSync {
-                file: OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create(true)
-                    .open(filename)?,
-                filename: filename.to_string(),
-                lock: Mutex::new(()),
-            },
+        let file = FileSync::new(filename)?;
+
+        let mut storage = FileStorage {
+            file,
             file_records: FileRecords::new(),
             transactions: 0,
             wal: WriteAheadLog::new(filename)?,
         };
 
-        data.apply_wal()?;
-        data.read_records()?;
+        storage.apply_wal()?;
+        storage.read_records()?;
 
-        Ok(data)
+        Ok(storage)
     }
 
     pub fn backup(&mut self, filename: &str) -> Result<(), DbError> {
@@ -1562,18 +1613,10 @@ mod tests {
     }
 
     #[test]
-    fn file_sync() {
+    #[cfg(feature = "no-memory-map")]
+    fn file_sync_no_memory_map() {
         let test_file = TestFile::new();
-        let mut file_sync = FileSync {
-            file: File::options()
-                .create(true)
-                .write(true)
-                .read(true)
-                .open(test_file.file_name())
-                .unwrap(),
-            filename: test_file.filename.clone(),
-            lock: Mutex::new(()),
-        };
+        let mut file_sync = FileSync::new(&test_file.file_name()).unwrap();
         file_sync.write(0, "Hello, World".as_bytes()).unwrap();
 
         assert_eq!(file_sync.read(0, 12).unwrap(), "Hello, World".as_bytes());

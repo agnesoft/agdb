@@ -7,7 +7,9 @@ use syn::DeriveInput;
 pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
-    let syn::Data::Struct(data) = input.data else { unimplemented!() };
+    let syn::Data::Struct(data) = input.data else {
+        unimplemented!()
+    };
     let db_id = data
         .fields
         .iter()

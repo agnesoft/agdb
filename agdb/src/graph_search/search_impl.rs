@@ -15,11 +15,15 @@ pub(crate) struct SearchIndex {
 }
 
 pub(crate) trait SearchIterator<S> {
-    fn expand_edge<Data: GraphData<S>>(index: GraphIndex, graph: &GraphImpl<S, Data>)
-        -> GraphIndex;
+    fn expand_edge<Data: GraphData<S>>(
+        index: GraphIndex,
+        graph: &GraphImpl<S, Data>,
+        storage: &S,
+    ) -> GraphIndex;
     fn expand_node<Data: GraphData<S>>(
         index: GraphIndex,
         graph: &GraphImpl<S, Data>,
+        storage: &S,
     ) -> Vec<GraphIndex>;
     fn new(stack: &mut Vec<SearchIndex>) -> Self;
     fn next(&mut self) -> Option<SearchIndex>;
@@ -32,10 +36,10 @@ where
 {
     pub(crate) algorithm: PhantomData<SearchIt>,
     pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) storage: &'a S,
     pub(crate) result: Vec<GraphIndex>,
     pub(crate) stack: Vec<SearchIndex>,
     pub(crate) visited: BitSet,
-    pub(crate) storage: PhantomData<S>,
 }
 
 impl<'a, S, Data, SearchIt> SearchImpl<'a, S, Data, SearchIt>
@@ -43,14 +47,14 @@ where
     Data: GraphData<S>,
     SearchIt: SearchIterator<S>,
 {
-    pub(crate) fn new(graph: &'a GraphImpl<S, Data>, index: GraphIndex) -> Self {
+    pub(crate) fn new(graph: &'a GraphImpl<S, Data>, storage: &'a S, index: GraphIndex) -> Self {
         Self {
             algorithm: PhantomData,
             graph,
+            storage,
             result: vec![],
             stack: vec![SearchIndex { index, distance: 0 }],
             visited: BitSet::new(),
-            storage: PhantomData,
         }
     }
 
@@ -76,12 +80,12 @@ where
     fn expand_index(&mut self, index: SearchIndex) {
         if index.index.is_node() {
             self.add_edges_to_stack(
-                SearchIt::expand_node(index.index, self.graph),
+                SearchIt::expand_node(index.index, self.graph, self.storage),
                 index.distance + 1,
             );
         } else {
             self.add_index_to_stack(
-                SearchIt::expand_edge(index.index, self.graph),
+                SearchIt::expand_edge(index.index, self.graph, self.storage),
                 index.distance + 1,
             );
         }

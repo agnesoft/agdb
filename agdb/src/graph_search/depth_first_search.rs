@@ -12,9 +12,10 @@ impl<S> SearchIterator<S> for DepthFirstSearch {
     fn expand_edge<Data: GraphData<S>>(
         index: GraphIndex,
         graph: &GraphImpl<S, Data>,
+        storage: &S,
     ) -> GraphIndex {
         graph
-            .edge(index)
+            .edge(storage, index)
             .expect("invalid index, expected a valid edge index")
             .index_to()
     }
@@ -22,9 +23,10 @@ impl<S> SearchIterator<S> for DepthFirstSearch {
     fn expand_node<Data: GraphData<S>>(
         index: GraphIndex,
         graph: &GraphImpl<S, Data>,
+        storage: &S,
     ) -> Vec<GraphIndex> {
         graph
-            .node(index)
+            .node(storage, index)
             .expect("invalid index, expected a valid node index")
             .edge_iter_from()
             .map(|edge| edge.index())
@@ -75,8 +77,8 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
-        let result =
-            GraphSearch::from(&graph).depth_first_search(GraphIndex::default(), Handler::default());
+        let result = GraphSearch::from((&graph, &storage))
+            .depth_first_search(GraphIndex::default(), Handler::default());
 
         assert_eq!(result, Ok(vec![]));
     }
@@ -98,7 +100,8 @@ mod tests {
         let edge5 = graph.insert_edge(&mut storage, node3, node1).unwrap();
         let edge6 = graph.insert_edge(&mut storage, node3, node1).unwrap();
 
-        let result = GraphSearch::from(&graph).depth_first_search(node1, Handler::default());
+        let result =
+            GraphSearch::from((&graph, &storage)).depth_first_search(node1, Handler::default());
 
         assert_eq!(
             result,
@@ -123,7 +126,8 @@ mod tests {
         let edge2 = graph.insert_edge(&mut storage, node1, node3).unwrap();
         let edge3 = graph.insert_edge(&mut storage, node1, node4).unwrap();
 
-        let result = GraphSearch::from(&graph).depth_first_search(node1, Handler::default());
+        let result =
+            GraphSearch::from((&graph, &storage)).depth_first_search(node1, Handler::default());
 
         assert_eq!(
             result,
@@ -146,7 +150,7 @@ mod tests {
         graph.insert_edge(&mut storage, node1, node3).unwrap();
         graph.insert_edge(&mut storage, node1, node4).unwrap();
 
-        let result = GraphSearch::from(&graph).depth_first_search(
+        let result = GraphSearch::from((&graph, &storage)).depth_first_search(
             node1,
             Handler {
                 processor: |index: GraphIndex, _distance: u64| {
@@ -175,7 +179,7 @@ mod tests {
         graph.insert_edge(&mut storage, node3, node1).unwrap();
         graph.insert_edge(&mut storage, node3, node1).unwrap();
 
-        let result = GraphSearch::from(&graph).depth_first_search(
+        let result = GraphSearch::from((&graph, &storage)).depth_first_search(
             node1,
             Handler {
                 processor: |index: GraphIndex, _distance: u64| {
@@ -206,12 +210,14 @@ mod tests {
         let edge2 = graph.insert_edge(&mut storage, node1, node3).unwrap();
         let edge3 = graph.insert_edge(&mut storage, node1, node4).unwrap();
 
-        let mut result = GraphSearch::from(&graph).depth_first_search(node1, Handler::default());
+        let mut result =
+            GraphSearch::from((&graph, &storage)).depth_first_search(node1, Handler::default());
         let expected = Ok(vec![node1, edge1, node2, edge2, node3, edge3, node4]);
 
         assert_eq!(result, expected);
 
-        result = GraphSearch::from(&graph).depth_first_search(node1, Handler::default());
+        result =
+            GraphSearch::from((&graph, &storage)).depth_first_search(node1, Handler::default());
 
         assert_eq!(result, expected);
     }
@@ -231,7 +237,7 @@ mod tests {
         let _edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
         let _edge4 = graph.insert_edge(&mut storage, node3, node1).unwrap();
 
-        let result = GraphSearch::from(&graph).depth_first_search(
+        let result = GraphSearch::from((&graph, &storage)).depth_first_search(
             node1,
             Handler {
                 processor: |_index: GraphIndex, distance: u64| {

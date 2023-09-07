@@ -41,16 +41,16 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn iter(&self) -> MapIterator<K, T, S, DataKT> {
-        self.keys_to_values.iter()
+    pub fn iter<'a>(&'a self, storage: &'a S) -> MapIterator<K, T, S, DataKT> {
+        self.keys_to_values.iter(storage)
     }
 
-    pub fn key(&self, value: &T) -> Result<Option<K>, DbError> {
-        self.values_to_keys.value(value)
+    pub fn key(&self, storage: &S, value: &T) -> Result<Option<K>, DbError> {
+        self.values_to_keys.value(storage, value)
     }
 
     pub fn remove_key(&mut self, storage: &mut S, key: &K) -> Result<(), DbError> {
-        if let Some(value) = self.keys_to_values.value(key)? {
+        if let Some(value) = self.keys_to_values.value(storage, key)? {
             self.values_to_keys.remove(storage, &value)?;
         }
 
@@ -59,15 +59,15 @@ where
 
     #[allow(dead_code)]
     pub fn remove_value(&mut self, storage: &mut S, value: &T) -> Result<(), DbError> {
-        if let Some(key) = self.values_to_keys.value(value)? {
+        if let Some(key) = self.values_to_keys.value(storage, value)? {
             self.keys_to_values.remove(storage, &key)?;
         }
 
         self.values_to_keys.remove(storage, value)
     }
 
-    pub fn value(&self, key: &K) -> Result<Option<T>, DbError> {
-        self.keys_to_values.value(key)
+    pub fn value(&self, storage: &S, key: &K) -> Result<Option<T>, DbError> {
+        self.keys_to_values.value(storage, key)
     }
 }
 
@@ -131,7 +131,10 @@ mod tests {
         }
 
         let map = DbIndexedMap::<String, u64>::from_storage(&storage, storage_index).unwrap();
-        assert_eq!(map.value(&"alias".to_string()).unwrap(), Some(1_u64));
+        assert_eq!(
+            map.value(&storage, &"alias".to_string()).unwrap(),
+            Some(1_u64)
+        );
     }
 
     #[test]
@@ -144,8 +147,8 @@ mod tests {
 
         assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
 
-        assert_eq!(map.value(&key), Ok(Some(value)));
-        assert_eq!(map.key(&value), Ok(Some(key)));
+        assert_eq!(map.value(&storage, &key), Ok(Some(value)));
+        assert_eq!(map.key(&storage, &value), Ok(Some(key)));
     }
 
     #[test]
@@ -168,7 +171,7 @@ mod tests {
 
         let mut values = Vec::<(String, u64)>::new();
 
-        for key_value in map.iter() {
+        for key_value in map.iter(&storage) {
             values.push(key_value);
         }
 
@@ -196,9 +199,9 @@ mod tests {
         assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
         assert_eq!(map.insert(&mut storage, &key, &new_value), Ok(()));
 
-        assert_eq!(map.value(&key), Ok(Some(new_value)));
-        assert_eq!(map.key(&new_value), Ok(Some(key)));
-        assert_eq!(map.key(&value), Ok(None));
+        assert_eq!(map.value(&storage, &key), Ok(Some(new_value)));
+        assert_eq!(map.key(&storage, &new_value), Ok(Some(key)));
+        assert_eq!(map.key(&storage, &value), Ok(None));
     }
 
     #[test]
@@ -213,9 +216,9 @@ mod tests {
         assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
         assert_eq!(map.insert(&mut storage, &new_key, &value), Ok(()));
 
-        assert_eq!(map.value(&key), Ok(None));
-        assert_eq!(map.value(&new_key), Ok(Some(value)));
-        assert_eq!(map.key(&value), Ok(Some(new_key)));
+        assert_eq!(map.value(&storage, &key), Ok(None));
+        assert_eq!(map.value(&storage, &new_key), Ok(Some(value)));
+        assert_eq!(map.key(&storage, &value), Ok(Some(new_key)));
     }
 
     #[test]
@@ -228,14 +231,14 @@ mod tests {
 
         assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
 
-        assert_eq!(map.value(&key), Ok(Some(value)));
-        assert_eq!(map.key(&value), Ok(Some(key.clone())));
+        assert_eq!(map.value(&storage, &key), Ok(Some(value)));
+        assert_eq!(map.key(&storage, &value), Ok(Some(key.clone())));
 
         map.remove_key(&mut storage, &key).unwrap();
         map.remove_key(&mut storage, &key).unwrap();
 
-        assert_eq!(map.value(&key), Ok(None));
-        assert_eq!(map.key(&value), Ok(None));
+        assert_eq!(map.value(&storage, &key), Ok(None));
+        assert_eq!(map.key(&storage, &value), Ok(None));
     }
 
     #[test]
@@ -248,13 +251,13 @@ mod tests {
 
         assert_eq!(map.insert(&mut storage, &key, &value), Ok(()));
 
-        assert_eq!(map.value(&key), Ok(Some(value)));
-        assert_eq!(map.key(&value), Ok(Some(key.clone())));
+        assert_eq!(map.value(&storage, &key), Ok(Some(value)));
+        assert_eq!(map.key(&storage, &value), Ok(Some(key.clone())));
 
         map.remove_value(&mut storage, &value).unwrap();
         map.remove_value(&mut storage, &value).unwrap();
 
-        assert_eq!(map.value(&key), Ok(None));
-        assert_eq!(map.key(&value), Ok(None));
+        assert_eq!(map.value(&storage, &key), Ok(None));
+        assert_eq!(map.key(&storage, &value), Ok(None));
     }
 }

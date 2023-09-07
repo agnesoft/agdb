@@ -354,12 +354,12 @@ impl Db {
 
     pub(crate) fn alias(&self, db_id: DbId) -> Result<String, QueryError> {
         self.aliases
-            .key(&db_id)?
+            .key(&self.storage, &db_id)?
             .ok_or(QueryError::from(format!("Id '{}' not found", db_id.0)))
     }
 
     pub(crate) fn aliases(&self) -> Vec<(String, DbId)> {
-        self.aliases.iter().collect()
+        self.aliases.iter(&self.storage).collect()
     }
 
     pub(crate) fn db_id(&self, query_id: &QueryId) -> Result<DbId, QueryError> {
@@ -367,13 +367,13 @@ impl Db {
             QueryId::Id(id) => Ok(DbId(self.graph_index(id.0)?.0)),
             QueryId::Alias(alias) => Ok(self
                 .aliases
-                .value(alias)?
+                .value(&self.storage, alias)?
                 .ok_or(QueryError::from(format!("Alias '{alias}' not found")))?),
         }
     }
 
     pub(crate) fn insert_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
-        if let Some(old_alias) = self.aliases.key(&db_id)? {
+        if let Some(old_alias) = self.aliases.key(&self.storage, &db_id)? {
             self.undo_stack.push(Command::InsertAlias {
                 id: db_id,
                 alias: old_alias.clone(),
@@ -402,7 +402,7 @@ impl Db {
         db_id: DbId,
         alias: &String,
     ) -> Result<(), QueryError> {
-        if let Some(id) = self.aliases.value(alias)? {
+        if let Some(id) = self.aliases.value(&self.storage, alias)? {
             return Err(QueryError::from(format!(
                 "Alias '{alias}' already exists ({})",
                 id.0
@@ -465,20 +465,20 @@ impl Db {
     pub(crate) fn keys(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
         Ok(self
             .values
-            .iter_key(&db_id)
+            .iter_key(&self.storage, &db_id)
             .map(|kv| (kv.1.key, DbValue::default()).into())
             .collect())
     }
 
     pub(crate) fn key_count(&self, db_id: DbId) -> Result<u64, DbError> {
-        self.values.values_count(&db_id)
+        self.values.values_count(&self.storage, &db_id)
     }
 
     pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, QueryError> {
         match query_id {
             QueryId::Id(db_id) => self.remove_id(*db_id),
             QueryId::Alias(alias) => {
-                if let Some(db_id) = self.aliases.value(alias)? {
+                if let Some(db_id) = self.aliases.value(&self.storage, alias)? {
                     self.remove_node(db_id, GraphIndex(db_id.0), Some(alias.clone()))?;
                     self.remove_all_values(db_id)?;
                     Ok(true)
@@ -492,7 +492,7 @@ impl Db {
     pub(crate) fn remove_id(&mut self, db_id: DbId) -> Result<bool, QueryError> {
         if let Ok(graph_index) = self.graph_index(db_id.0) {
             if graph_index.is_node() {
-                self.remove_node(db_id, graph_index, self.aliases.key(&db_id)?)?;
+                self.remove_node(db_id, graph_index, self.aliases.key(&self.storage, &db_id)?)?;
             } else {
                 self.remove_edge(graph_index)?;
             }
@@ -504,7 +504,7 @@ impl Db {
     }
 
     pub(crate) fn remove_alias(&mut self, alias: &String) -> Result<bool, DbError> {
-        if let Some(id) = self.aliases.value(alias)? {
+        if let Some(id) = self.aliases.value(&self.storage, alias)? {
             self.undo_stack.push(Command::InsertAlias {
                 id,
                 alias: alias.clone(),
@@ -526,7 +526,7 @@ impl Db {
         offset: u64,
         conditions: &Vec<QueryCondition>,
     ) -> Result<Vec<DbId>, QueryError> {
-        let search = GraphSearch::from(&self.graph);
+        let search = GraphSearch::from((&self.graph, &self.storage));
 
         let indexes = match (limit, offset) {
             (0, 0) => match algorithm {
@@ -585,7 +585,7 @@ impl Db {
         offset: u64,
         conditions: &Vec<QueryCondition>,
     ) -> Result<Vec<DbId>, QueryError> {
-        let search = GraphSearch::from(&self.graph);
+        let search = GraphSearch::from((&self.graph, &self.storage));
 
         let indexes = match (limit, offset) {
             (0, 0) => match algorithm {
@@ -642,7 +642,7 @@ impl Db {
         to: DbId,
         conditions: &Vec<QueryCondition>,
     ) -> Result<Vec<DbId>, QueryError> {
-        Ok(GraphSearch::from(&self.graph)
+        Ok(GraphSearch::from((&self.graph, &self.storage))
             .path(
                 GraphIndex(from.0),
                 GraphIndex(to.0),
@@ -654,7 +654,7 @@ impl Db {
     }
 
     pub(crate) fn values(&self, db_id: DbId) -> Result<Vec<DbKeyValue>, DbError> {
-        self.values.values(&db_id)
+        self.values.values(&self.storage, &db_id)
     }
 
     pub(crate) fn values_by_keys(
@@ -664,7 +664,7 @@ impl Db {
     ) -> Result<Vec<DbKeyValue>, DbError> {
         Ok(self
             .values
-            .iter_key(&db_id)
+            .iter_key(&self.storage, &db_id)
             .filter(|kv| keys.contains(&kv.1.key))
             .map(|kv| kv.1)
             .collect())
@@ -673,13 +673,13 @@ impl Db {
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {
         match id.cmp(&0) {
             std::cmp::Ordering::Less => {
-                if self.graph.edge(GraphIndex(id)).is_some() {
+                if self.graph.edge(&self.storage, GraphIndex(id)).is_some() {
                     return Ok(GraphIndex(id));
                 }
             }
             std::cmp::Ordering::Equal => {}
             std::cmp::Ordering::Greater => {
-                if self.graph.node(GraphIndex(id)).is_some() {
+                if self.graph.node(&self.storage, GraphIndex(id)).is_some() {
                     return Ok(GraphIndex(id));
                 }
             }
@@ -695,7 +695,7 @@ impl Db {
         let mut edges = vec![];
         let node = self
             .graph
-            .node(graph_index)
+            .node(&self.storage, graph_index)
             .ok_or(DbError::from("Data integrity corrupted"))?;
 
         for edge in node.edge_iter_from() {
@@ -716,7 +716,7 @@ impl Db {
         let (from, to) = {
             let edge = self
                 .graph
-                .edge(graph_index)
+                .edge(&self.storage, graph_index)
                 .ok_or(DbError::from("Graph integrity corrupted"))?;
             (edge.index_from(), edge.index_to())
         };
@@ -757,7 +757,7 @@ impl Db {
     pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbKey]) -> Result<i64, QueryError> {
         let mut result = 0;
 
-        for key_value in self.values.values(&db_id)? {
+        for key_value in self.values.values(&self.storage, &db_id)? {
             if keys.contains(&key_value.key) {
                 self.undo_stack.push(Command::InsertKeyValue {
                     id: db_id,
@@ -773,7 +773,7 @@ impl Db {
     }
 
     fn remove_all_values(&mut self, db_id: DbId) -> Result<(), QueryError> {
-        for key_value in self.values.values(&db_id)? {
+        for key_value in self.values.values(&self.storage, &db_id)? {
             self.undo_stack.push(Command::InsertKeyValue {
                 id: db_id,
                 key_value,
@@ -833,21 +833,21 @@ impl Db {
             QueryConditionData::Distance(value) => Ok(value.compare_distance(distance)),
             QueryConditionData::Edge => Ok(SearchControl::Continue(index.is_edge())),
             QueryConditionData::EdgeCount(value) => Ok(SearchControl::Continue(
-                if let Some(node) = self.graph.node(index) {
+                if let Some(node) = self.graph.node(&self.storage, index) {
                     value.compare(node.edge_count())
                 } else {
                     false
                 },
             )),
             QueryConditionData::EdgeCountFrom(value) => Ok(SearchControl::Continue(
-                if let Some(node) = self.graph.node(index) {
+                if let Some(node) = self.graph.node(&self.storage, index) {
                     value.compare(node.edge_count_from())
                 } else {
                     false
                 },
             )),
             QueryConditionData::EdgeCountTo(value) => Ok(SearchControl::Continue(
-                if let Some(node) = self.graph.node(index) {
+                if let Some(node) = self.graph.node(&self.storage, index) {
                     value.compare(node.edge_count_to())
                 } else {
                     false
@@ -860,7 +860,7 @@ impl Db {
                             QueryId::Id(id) => id.0,
                             QueryId::Alias(alias) => {
                                 self.aliases
-                                    .value(alias)
+                                    .value(&self.storage, alias)
                                     .unwrap_or_default()
                                     .unwrap_or_default()
                                     .0
@@ -871,7 +871,7 @@ impl Db {
             QueryConditionData::KeyValue { key, value } => Ok(SearchControl::Continue(
                 if let Some((_, kv)) = self
                     .values
-                    .iter_key(&DbId(index.0))
+                    .iter_key(&self.storage, &DbId(index.0))
                     .find(|(_, kv)| &kv.key == key)
                 {
                     value.compare(&kv.value)
@@ -882,7 +882,7 @@ impl Db {
             QueryConditionData::Keys(values) => {
                 let keys = self
                     .values
-                    .iter_key(&DbId(index.0))
+                    .iter_key(&self.storage, &DbId(index.0))
                     .map(|(_, kv)| kv.key)
                     .collect::<Vec<DbKey>>();
                 Ok(SearchControl::Continue(

@@ -12,9 +12,10 @@ impl<S> SearchIterator<S> for DepthFirstSearchReverse {
     fn expand_edge<Data: GraphData<S>>(
         index: GraphIndex,
         graph: &GraphImpl<S, Data>,
+        storage: &S,
     ) -> GraphIndex {
         graph
-            .edge(index)
+            .edge(storage, index)
             .expect("invalid index, expected a valid edge index")
             .index_from()
     }
@@ -22,9 +23,10 @@ impl<S> SearchIterator<S> for DepthFirstSearchReverse {
     fn expand_node<Data: GraphData<S>>(
         index: GraphIndex,
         graph: &GraphImpl<S, Data>,
+        storage: &S,
     ) -> Vec<GraphIndex> {
         graph
-            .node(index)
+            .node(storage, index)
             .expect("invalid index, expected a valid node index")
             .edge_iter_to()
             .map(|edge| edge.index())
@@ -75,7 +77,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
-        let result = GraphSearch::from(&graph)
+        let result = GraphSearch::from((&graph, &storage))
             .depth_first_search_reverse(GraphIndex::default(), Handler::default());
 
         assert_eq!(result, Ok(vec![]));
@@ -96,8 +98,8 @@ mod tests {
         let edge2 = graph.insert_edge(&mut storage, node2, node3).unwrap();
         let edge3 = graph.insert_edge(&mut storage, node3, node4).unwrap();
 
-        let result =
-            GraphSearch::from(&graph).depth_first_search_reverse(node4, Handler::default());
+        let result = GraphSearch::from((&graph, &storage))
+            .depth_first_search_reverse(node4, Handler::default());
         let expected = Ok(vec![node4, edge3, node3, edge2, node2, edge1, node1]);
 
         assert_eq!(result, expected);

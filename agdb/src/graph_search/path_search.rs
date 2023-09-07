@@ -4,7 +4,6 @@ use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use std::cmp::Ordering;
-use std::marker::PhantomData;
 
 pub trait PathSearchHandler {
     fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError>;
@@ -24,11 +23,11 @@ where
     pub(crate) current_path: Path,
     pub(crate) destination: GraphIndex,
     pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) storage: &'a S,
     pub(crate) handler: Handler,
     pub(crate) paths: Vec<Path>,
     pub(crate) result: Vec<(GraphIndex, bool)>,
     pub(crate) visited: BitSet,
-    pub(crate) storage: PhantomData<S>,
 }
 
 impl<'a, S, Data, Handler> PathSearch<'a, S, Data, Handler>
@@ -38,6 +37,7 @@ where
 {
     pub(crate) fn new(
         graph: &'a GraphImpl<S, Data>,
+        storage: &'a S,
         from: GraphIndex,
         to: GraphIndex,
         handler: Handler,
@@ -51,6 +51,7 @@ where
             },
             destination: to,
             graph,
+            storage,
             handler,
             paths: vec![Path {
                 elements: vec![(from, add.1)],
@@ -58,7 +59,6 @@ where
             }],
             result: vec![],
             visited: BitSet::new(),
-            storage: PhantomData,
         }
     }
 
@@ -107,7 +107,7 @@ where
     fn expand(&mut self, index: GraphIndex) -> Result<(), DbError> {
         let node = self
             .graph
-            .node(index)
+            .node(self.storage, index)
             .expect("unexpected invalid node index");
         for edge in node.edge_iter_from() {
             self.expand_edge(self.current_path.clone(), edge.index(), edge.index_to())?;
@@ -197,7 +197,7 @@ mod tests {
         let node = graph.insert_node(&mut storage).unwrap();
         let _edge = graph.insert_edge(&mut storage, node, node).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node, node, Handler::default());
+        let result = GraphSearch::from((&graph, &storage)).path(node, node, Handler::default());
 
         assert_eq!(result, Ok(vec![]));
     }
@@ -208,7 +208,7 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
-        let result = GraphSearch::from(&graph).path(
+        let result = GraphSearch::from((&graph, &storage)).path(
             GraphIndex::default(),
             GraphIndex::default(),
             Handler::default(),
@@ -233,7 +233,7 @@ mod tests {
         let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
         let _edge4 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
+        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
 
         assert_eq!(result, Ok(vec![node1, edge1, node2, edge3, node3]));
     }
@@ -245,7 +245,7 @@ mod tests {
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node = graph.insert_node(&mut storage).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node, node, Handler::default());
+        let result = GraphSearch::from((&graph, &storage)).path(node, node, Handler::default());
 
         assert_eq!(result, Ok(vec![]));
     }
@@ -264,7 +264,7 @@ mod tests {
         let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
         let _edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
+        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
 
         assert_eq!(result, Ok(vec![node1, edge1, node3]));
     }
@@ -282,7 +282,7 @@ mod tests {
         let edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
         let edge2 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
+        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
 
         assert_eq!(result, Ok(vec![node1, edge1, node2, edge2, node3]));
     }
@@ -301,7 +301,7 @@ mod tests {
         let edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
         let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(
+        let result = GraphSearch::from((&graph, &storage)).path(
             node1,
             node3,
             Handler {
@@ -330,7 +330,7 @@ mod tests {
 
         let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
 
-        let result = GraphSearch::from(&graph).path(node1, node3, Handler::default());
+        let result = GraphSearch::from((&graph, &storage)).path(node1, node3, Handler::default());
 
         assert_eq!(result, Ok(vec![]));
     }
@@ -349,7 +349,7 @@ mod tests {
         let _edge2 = graph.insert_edge(&mut storage, node2, node2).unwrap();
         let _edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(
+        let result = GraphSearch::from((&graph, &storage)).path(
             node1,
             node3,
             Handler {
@@ -374,7 +374,7 @@ mod tests {
         let _edge2 = graph.insert_edge(&mut storage, node2, node2).unwrap();
         let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
 
-        let result = GraphSearch::from(&graph).path(
+        let result = GraphSearch::from((&graph, &storage)).path(
             node1,
             node3,
             Handler {

@@ -14,7 +14,7 @@ pub trait VecData<T, S, E> {
     fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E>;
     fn resize(&mut self, storage: &mut S, new_len: u64, value: &T) -> Result<(), E>;
     fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), E>;
-    fn value(&self, index: u64) -> Result<T, E>;
+    fn value(&self, storage: &S, index: u64) -> Result<T, E>;
 }
 
 pub trait VecValue: Sized {
@@ -87,10 +87,10 @@ where
     S: Storage,
     E: From<DbError>,
 {
-    phantom_data: PhantomData<(S, E)>,
     capacity: u64,
+    len: u64,
     storage_index: StorageIndex,
-    data: Vec<T>,
+    phantom_data: PhantomData<(T, S, E)>,
 }
 
 impl<T, S, E> DbVecData<T, S, E>
@@ -115,24 +115,16 @@ where
     }
 
     fn len(&self) -> u64 {
-        self.data.len() as u64
+        self.len
     }
 
     fn reallocate(&mut self, storage: &mut S, capacity: u64) -> Result<(), E> {
-        self.capacity = capacity;
-
         storage.resize_value(
             self.storage_index,
             self.len().serialized_size() + T::storage_len() * capacity,
         )?;
 
-        let current_capacity = self.data.capacity();
-
-        if capacity < current_capacity as u64 {
-            self.data.shrink_to(capacity as usize);
-        } else {
-            self.data.reserve(capacity as usize - current_capacity);
-        }
+        self.capacity = capacity;
 
         Ok(())
     }
@@ -146,12 +138,17 @@ where
             Self::offset(index),
             T::storage_len(),
         )?;
+
+        let value = T::load(storage, &bytes)?;
+        self.len -= 1;
+
         let id = storage.transaction();
         T::remove(storage, &bytes)?;
         storage.move_at(self.storage_index, offset_from, offset_to, move_len)?;
-        storage.insert_at(self.storage_index, 0, &(self.len() - 1))?;
+        storage.insert_at(self.storage_index, 0, &self.len)?;
         storage.commit(id)?;
-        Ok(self.data.remove(index as usize))
+
+        Ok(value)
     }
 
     fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E> {
@@ -160,13 +157,13 @@ where
             Self::offset(index),
             T::storage_len(),
         )?;
+        let old_value = T::load(storage, &old_bytes)?;
+
         let id = storage.transaction();
         T::remove(storage, &old_bytes)?;
         let bytes = value.store(storage)?;
         storage.insert_bytes_at(self.storage_index, Self::offset(index), &bytes)?;
         storage.commit(id)?;
-        let old_value = self.data[index as usize].clone();
-        self.data[index as usize] = value.clone();
 
         Ok(old_value)
     }
@@ -190,7 +187,9 @@ where
 
         storage.insert_at(self.storage_index, 0, &new_len)?;
         storage.commit(id)?;
-        self.data.resize_with(new_len as usize, || value.clone());
+
+        self.len = new_len;
+
         Ok(())
     }
 
@@ -203,16 +202,23 @@ where
             Self::offset(index),
             T::storage_len(),
         )?;
+
         let id = storage.transaction();
         storage.move_at(self.storage_index, offset_from, offset_to, size)?;
         storage.insert_bytes_at(self.storage_index, Self::offset(other), &bytes)?;
         storage.commit(id)?;
-        self.data.swap(index as usize, other as usize);
+
         Ok(())
     }
 
-    fn value(&self, index: u64) -> Result<T, E> {
-        Ok(self.data[index as usize].clone())
+    fn value(&self, storage: &S, index: u64) -> Result<T, E> {
+        let bytes = storage.value_as_bytes_at_size(
+            self.storage_index,
+            Self::offset(index),
+            T::storage_len(),
+        )?;
+
+        Ok(T::load(storage, &bytes)?)
     }
 }
 
@@ -234,6 +240,7 @@ where
 {
     pub index: u64,
     pub vec: &'a VecImpl<T, S, D, E>,
+    pub storage: &'a S,
 }
 
 pub type DbVec<T, S = FileStorage> = VecImpl<T, S, DbVecData<T, S, DbError>, DbError>;
@@ -247,7 +254,7 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let value = self.vec.value(self.index).ok();
+        let value = self.vec.value(self.storage, self.index).ok();
         self.index += 1;
 
         value
@@ -274,10 +281,11 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn iter(&self) -> VecIterator<T, S, D, E> {
+    pub fn iter<'a>(&'a self, storage: &'a S) -> VecIterator<T, S, D, E> {
         VecIterator {
             index: 0,
             vec: self,
+            storage,
         }
     }
 
@@ -335,9 +343,9 @@ where
         self.data.swap(storage, index, other)
     }
 
-    pub fn value(&self, index: u64) -> Result<T, E> {
+    pub fn value(&self, storage: &S, index: u64) -> Result<T, E> {
         self.validate_index(index)?;
-        self.data.value(index)
+        self.data.value(storage, index)
     }
 
     fn validate_index(&self, index: u64) -> Result<(), E> {
@@ -363,42 +371,26 @@ where
         Ok(Self {
             phantom_data: PhantomData,
             data: DbVecData {
-                phantom_data: PhantomData,
                 capacity: 0,
+                len: 0,
                 storage_index,
-                data: vec![],
+                phantom_data: PhantomData,
             },
         })
     }
 
     pub fn from_storage(storage: &S, storage_index: StorageIndex) -> Result<Self, DbError> {
-        let mut data = Vec::<T>::new();
-        let capacity;
-
-        {
-            let len = storage.value::<u64>(storage_index)?;
-            let data_len = storage.value_size(storage_index)?;
-            capacity = data_len / T::storage_len();
-
-            data.reserve(capacity as usize);
-
-            for index in 0..len {
-                let bytes = storage.value_as_bytes_at_size(
-                    storage_index,
-                    DbVecData::<T, S, DbError>::offset(index),
-                    T::storage_len(),
-                )?;
-                data.push(T::load(storage, &bytes)?);
-            }
-        }
+        let len = storage.value::<u64>(storage_index)?;
+        let data_len = storage.value_size(storage_index)?;
+        let capacity = data_len / T::storage_len();
 
         Ok(DbVec {
             phantom_data: PhantomData,
             data: DbVecData {
-                phantom_data: PhantomData,
                 capacity,
+                len,
                 storage_index,
-                data,
+                phantom_data: PhantomData,
             },
         })
     }
@@ -433,7 +425,7 @@ mod tests {
         let vec = DbVec::<String>::from_storage(&storage, index).unwrap();
 
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec![
                 "Hello".to_string(),
                 ", ".to_string(),
@@ -468,7 +460,7 @@ mod tests {
         vec.push(&mut storage, &"!".to_string()).unwrap();
 
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec!["Hello", ", ", "World", "!"]
         );
     }
@@ -568,7 +560,7 @@ mod tests {
         vec.remove(&mut storage, 1).unwrap();
 
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec!["Hello".to_string(), "World".to_string(), "!".to_string()]
         );
     }
@@ -587,7 +579,7 @@ mod tests {
         vec.remove(&mut storage, 2).unwrap();
 
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec!["Hello".to_string(), ", ".to_string(), "!".to_string(),]
         );
     }
@@ -644,7 +636,7 @@ mod tests {
         vec.resize(&mut storage, 6, &" ".to_string()).unwrap();
 
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec![
                 "Hello".to_string(),
                 ", ".to_string(),
@@ -679,7 +671,7 @@ mod tests {
         assert_eq!(vec.len(), 100);
         assert_eq!(vec.capacity(), 100);
 
-        assert_eq!(vec.iter().collect::<Vec<String>>(), expected);
+        assert_eq!(vec.iter(&storage).collect::<Vec<String>>(), expected);
     }
 
     #[test]
@@ -696,7 +688,7 @@ mod tests {
         vec.resize(&mut storage, 4, &String::default()).unwrap();
 
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec![
                 "Hello".to_string(),
                 ", ".to_string(),
@@ -720,7 +712,7 @@ mod tests {
         vec.resize(&mut storage, 3, &String::default()).unwrap();
 
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec!["Hello".to_string(), ", ".to_string(), "World".to_string()]
         );
     }
@@ -738,10 +730,10 @@ mod tests {
 
         vec.replace(&mut storage, 1, &" ".to_string()).unwrap();
 
-        assert_eq!(vec.value(0), Ok("Hello".to_string()));
-        assert_eq!(vec.value(1), Ok(" ".to_string()));
-        assert_eq!(vec.value(2), Ok("World".to_string()));
-        assert_eq!(vec.value(3), Ok("!".to_string()));
+        assert_eq!(vec.value(&storage, 0), Ok("Hello".to_string()));
+        assert_eq!(vec.value(&storage, 1), Ok(" ".to_string()));
+        assert_eq!(vec.value(&storage, 2), Ok("World".to_string()));
+        assert_eq!(vec.value(&storage, 3), Ok("!".to_string()));
     }
 
     #[test]
@@ -804,7 +796,7 @@ mod tests {
         vec.push(&mut storage, &"!".to_string()).unwrap();
         vec.swap(&mut storage, 0, 2).unwrap();
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec![
                 "World".to_string(),
                 ", ".to_string(),
@@ -824,7 +816,7 @@ mod tests {
         vec.push(&mut storage, &"!".to_string()).unwrap();
         vec.swap(&mut storage, 1, 1).unwrap();
         assert_eq!(
-            vec.iter().collect::<Vec<String>>(),
+            vec.iter(&storage).collect::<Vec<String>>(),
             vec![
                 "Hello".to_string(),
                 ", ".to_string(),
@@ -863,10 +855,10 @@ mod tests {
         vec.push(&mut storage, &"World".to_string()).unwrap();
         vec.push(&mut storage, &"!".to_string()).unwrap();
 
-        assert_eq!(vec.value(0), Ok("Hello".to_string()));
-        assert_eq!(vec.value(1), Ok(", ".to_string()));
-        assert_eq!(vec.value(2), Ok("World".to_string()));
-        assert_eq!(vec.value(3), Ok("!".to_string()));
+        assert_eq!(vec.value(&storage, 0), Ok("Hello".to_string()));
+        assert_eq!(vec.value(&storage, 1), Ok(", ".to_string()));
+        assert_eq!(vec.value(&storage, 2), Ok("World".to_string()));
+        assert_eq!(vec.value(&storage, 3), Ok("!".to_string()));
     }
 
     #[test]
@@ -877,7 +869,7 @@ mod tests {
         let vec = DbVec::<String>::new(&mut storage).unwrap();
 
         assert_eq!(
-            vec.value(0),
+            vec.value(&storage, 0),
             Err(DbError::from("Index (0) out of bounds (0)"))
         );
     }

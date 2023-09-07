@@ -71,7 +71,7 @@ pub trait MapData<K, T, S> {
     fn capacity(&self) -> u64;
     fn commit(&mut self, storage: &mut S, id: u64) -> Result<(), DbError>;
     fn len(&self) -> u64;
-    fn key(&self, index: u64) -> Result<K, DbError>;
+    fn key(&self, storage: &S, index: u64) -> Result<K, DbError>;
     fn resize(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError>;
     fn set_len(&mut self, storage: &mut S, len: u64) -> Result<(), DbError>;
     fn set_state(
@@ -82,10 +82,10 @@ pub trait MapData<K, T, S> {
     ) -> Result<(), DbError>;
     fn set_key(&mut self, storage: &mut S, index: u64, key: &K) -> Result<(), DbError>;
     fn set_value(&mut self, storage: &mut S, index: u64, value: &T) -> Result<(), DbError>;
-    fn state(&self, index: u64) -> Result<MapValueState, DbError>;
+    fn state(&self, storage: &S, index: u64) -> Result<MapValueState, DbError>;
     fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), DbError>;
     fn transaction(&mut self, storage: &mut S) -> u64;
-    fn value(&self, index: u64) -> Result<T, DbError>;
+    fn value(&self, storage: &S, index: u64) -> Result<T, DbError>;
 }
 
 pub struct MapDataIndex {
@@ -221,8 +221,8 @@ where
         self.data_index.len
     }
 
-    fn key(&self, index: u64) -> Result<K, DbError> {
-        self.keys.value(index)
+    fn key(&self, storage: &S, index: u64) -> Result<K, DbError> {
+        self.keys.value(storage, index)
     }
 
     fn resize(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError> {
@@ -257,8 +257,8 @@ where
         Ok(())
     }
 
-    fn state(&self, index: u64) -> Result<MapValueState, DbError> {
-        self.states.value(index)
+    fn state(&self, storage: &S, index: u64) -> Result<MapValueState, DbError> {
+        self.states.value(storage, index)
     }
 
     fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), DbError> {
@@ -271,8 +271,8 @@ where
         storage.transaction()
     }
 
-    fn value(&self, index: u64) -> Result<T, DbError> {
-        self.values.value(index)
+    fn value(&self, storage: &S, index: u64) -> Result<T, DbError> {
+        self.values.value(storage, index)
     }
 }
 
@@ -282,6 +282,7 @@ where
 {
     pub pos: u64,
     pub data: &'a Data,
+    pub storage: &'a S,
     pub phantom_data: PhantomData<(K, T, S)>,
 }
 
@@ -298,9 +299,17 @@ where
             let current_pos = self.pos;
             self.pos += 1;
 
-            if self.data.state(current_pos).unwrap_or_default() == MapValueState::Valid {
-                let key = self.data.key(current_pos).unwrap_or_default();
-                let value = self.data.value(current_pos).unwrap_or_default();
+            if self
+                .data
+                .state(self.storage, current_pos)
+                .unwrap_or_default()
+                == MapValueState::Valid
+            {
+                let key = self.data.key(self.storage, current_pos).unwrap_or_default();
+                let value = self
+                    .data
+                    .value(self.storage, current_pos)
+                    .unwrap_or_default();
 
                 return Some((key, value));
             }
@@ -330,13 +339,13 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn contains(&self, key: &K) -> Result<bool, DbError> {
-        self.multi_map.contains(key)
+    pub fn contains(&self, storage: &S, key: &K) -> Result<bool, DbError> {
+        self.multi_map.contains(storage, key)
     }
 
     #[allow(dead_code)]
-    pub fn contains_value(&self, key: &K, value: &T) -> Result<bool, DbError> {
-        self.multi_map.contains_value(key, value)
+    pub fn contains_value(&self, storage: &S, key: &K, value: &T) -> Result<bool, DbError> {
+        self.multi_map.contains_value(storage, key, value)
     }
 
     pub fn insert(&mut self, storage: &mut S, key: &K, value: &T) -> Result<Option<T>, DbError> {
@@ -349,8 +358,8 @@ where
         self.multi_map.is_empty()
     }
 
-    pub fn iter(&self) -> MapIterator<K, T, S, Data> {
-        self.multi_map.iter()
+    pub fn iter<'a>(&'a self, storage: &'a S) -> MapIterator<K, T, S, Data> {
+        self.multi_map.iter(storage)
     }
 
     #[allow(dead_code)]
@@ -367,8 +376,8 @@ where
         self.multi_map.reserve(storage, capacity)
     }
 
-    pub fn value(&self, key: &K) -> Result<Option<T>, DbError> {
-        self.multi_map.value(key)
+    pub fn value(&self, storage: &S, key: &K) -> Result<Option<T>, DbError> {
+        self.multi_map.value(storage, key)
     }
 }
 
@@ -411,16 +420,23 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    fn derived_from_clone() {
+        let state = MapValueState::Empty;
+        let other = state.clone();
+        assert_eq!(state, other);
+    }
+
+    #[test]
     fn contains_key() {
         let test_file = TestFile::new();
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        assert_eq!(map.contains(&1), Ok(false));
+        assert_eq!(map.contains(&storage, &1), Ok(false));
 
         map.insert(&mut storage, &1, &10).unwrap();
 
-        assert_eq!(map.contains(&1), Ok(true));
+        assert_eq!(map.contains(&storage, &1), Ok(true));
     }
 
     #[test]
@@ -431,7 +447,7 @@ mod tests {
         map.insert(&mut storage, &1, &10).unwrap();
         map.remove(&mut storage, &1).unwrap();
 
-        assert_eq!(map.contains(&1), Ok(false));
+        assert_eq!(map.contains(&storage, &1), Ok(false));
     }
 
     #[test]
@@ -441,7 +457,7 @@ mod tests {
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
 
-        assert_eq!(map.contains(&2), Ok(false));
+        assert_eq!(map.contains(&storage, &2), Ok(false));
     }
     #[test]
     fn contains_value() {
@@ -449,11 +465,11 @@ mod tests {
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        assert_eq!(map.contains_value(&1, &10), Ok(false));
+        assert_eq!(map.contains_value(&storage, &1, &10), Ok(false));
 
         map.insert(&mut storage, &1, &10).unwrap();
 
-        assert_eq!(map.contains_value(&1, &10), Ok(true));
+        assert_eq!(map.contains_value(&storage, &1, &10), Ok(true));
     }
 
     #[test]
@@ -464,7 +480,7 @@ mod tests {
         map.insert(&mut storage, &1, &10).unwrap();
         map.remove(&mut storage, &1).unwrap();
 
-        assert_eq!(map.contains_value(&1, &1), Ok(false));
+        assert_eq!(map.contains_value(&storage, &1, &1), Ok(false));
     }
 
     #[test]
@@ -474,7 +490,7 @@ mod tests {
         let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
 
-        assert_eq!(map.contains_value(&1, &1), Ok(false));
+        assert_eq!(map.contains_value(&storage, &1, &1), Ok(false));
     }
 
     #[test]
@@ -496,7 +512,7 @@ mod tests {
         let map = DbMap::<u64, u64>::from_storage(&storage, index).unwrap();
         let expected = vec![(1_u64, 1_u64), (5_u64, 3_u64)];
 
-        assert_eq!(map.iter().collect::<Vec<(u64, u64)>>(), expected);
+        assert_eq!(map.iter(&storage,).collect::<Vec<(u64, u64)>>(), expected);
     }
 
     #[test]
@@ -523,9 +539,9 @@ mod tests {
         map.insert(&mut storage, &7, &20).unwrap();
 
         assert_eq!(map.len(), 3);
-        assert_eq!(map.value(&1), Ok(Some(10)));
-        assert_eq!(map.value(&5), Ok(Some(15)));
-        assert_eq!(map.value(&7), Ok(Some(20)));
+        assert_eq!(map.value(&storage, &1), Ok(Some(10)));
+        assert_eq!(map.value(&storage, &5), Ok(Some(15)));
+        assert_eq!(map.value(&storage, &7), Ok(Some(20)));
     }
 
     #[test]
@@ -545,7 +561,7 @@ mod tests {
         assert_eq!(map.capacity(), 128);
 
         for i in 0..100 {
-            assert_eq!(map.value(&i), Ok(Some(i)));
+            assert_eq!(map.value(&storage, &i), Ok(Some(i)));
         }
     }
 
@@ -561,7 +577,7 @@ mod tests {
         }
 
         for i in 1..100 {
-            assert_eq!(map.value(&(i * 64 - 1)), Ok(Some(i)));
+            assert_eq!(map.value(&storage, &(i * 64 - 1)), Ok(Some(i)));
         }
     }
 
@@ -578,8 +594,8 @@ mod tests {
         assert_eq!(map.insert(&mut storage, &5, &20), Ok(Some(15)));
         assert_eq!(map.len(), 2);
 
-        assert_eq!(map.value(&1), Ok(Some(10)));
-        assert_eq!(map.value(&5), Ok(Some(20)));
+        assert_eq!(map.value(&storage, &1), Ok(Some(10)));
+        assert_eq!(map.value(&storage, &5), Ok(Some(20)));
     }
 
     #[test]
@@ -610,7 +626,7 @@ mod tests {
         map.insert(&mut storage, &4, &13).unwrap();
         map.remove(&mut storage, &7).unwrap();
 
-        let mut actual = map.iter().collect::<Vec<(u64, u64)>>();
+        let mut actual = map.iter(&storage).collect::<Vec<(u64, u64)>>();
         actual.sort();
         let expected: Vec<(u64, u64)> = vec![(1, 10), (2, 30), (4, 13), (5, 15)];
 
@@ -632,9 +648,9 @@ mod tests {
         map.remove(&mut storage, &5).unwrap();
 
         assert_eq!(map.len(), 2);
-        assert_eq!(map.value(&1), Ok(Some(10)));
-        assert_eq!(map.value(&5), Ok(None));
-        assert_eq!(map.value(&7), Ok(Some(20)));
+        assert_eq!(map.value(&storage, &1), Ok(Some(10)));
+        assert_eq!(map.value(&storage, &5), Ok(None));
+        assert_eq!(map.value(&storage, &7), Ok(Some(20)));
     }
 
     #[test]
@@ -653,7 +669,7 @@ mod tests {
         map.remove(&mut storage, &5).unwrap();
 
         assert_eq!(map.len(), 2);
-        assert_eq!(map.value(&5), Ok(None));
+        assert_eq!(map.value(&storage, &5), Ok(None));
 
         map.remove(&mut storage, &5).unwrap();
 
@@ -716,7 +732,7 @@ mod tests {
 
         assert_eq!(map.capacity(), capacity);
         assert_eq!(map.len(), size);
-        assert_eq!(map.value(&1), Ok(Some(1)));
+        assert_eq!(map.value(&storage, &1), Ok(Some(1)));
     }
 
     #[test]
@@ -761,7 +777,7 @@ mod tests {
 
         let map = DbMap::<u64, u64>::new(&mut storage).unwrap();
 
-        assert_eq!(map.value(&0), Ok(None));
+        assert_eq!(map.value(&storage, &0), Ok(None));
     }
 
     #[test]
@@ -775,9 +791,9 @@ mod tests {
         map.insert(&mut storage, &255, &11).unwrap();
         map.insert(&mut storage, &191, &12).unwrap();
 
-        assert_eq!(map.value(&127), Ok(Some(10)));
-        assert_eq!(map.value(&255), Ok(Some(11)));
-        assert_eq!(map.value(&191), Ok(Some(12)));
+        assert_eq!(map.value(&storage, &127), Ok(Some(10)));
+        assert_eq!(map.value(&storage, &255), Ok(Some(11)));
+        assert_eq!(map.value(&storage, &191), Ok(Some(12)));
     }
 
     #[test]

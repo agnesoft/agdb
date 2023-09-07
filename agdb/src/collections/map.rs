@@ -420,6 +420,13 @@ mod tests {
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
+    fn derived_from_clone() {
+        let state = MapValueState::Empty;
+        let other = state.clone();
+        assert_eq!(state, other);
+    }
+
+    #[test]
     fn contains_key() {
         let test_file = TestFile::new();
         let mut storage = FileStorage::new(test_file.file_name()).unwrap();

@@ -73,8 +73,11 @@ impl FileSync {
     }
 
     pub fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
-        let end = pos + value_len;
-        return Ok(self.buffer[pos as usize..end as usize].to_vec());
+        #[cfg(not(feature = "no-memory-map"))]
+        {
+            let end = pos + value_len;
+            Ok(self.buffer[pos as usize..end as usize].to_vec())
+        }
 
         #[cfg(feature = "no-memory-map")]
         {
@@ -105,7 +108,7 @@ impl FileSync {
                 self.buffer[pos as usize..end].copy_from_slice(bytes);
             } else {
                 self.buffer.resize(pos as usize, 0);
-                self.buffer.extend_from_slice(&bytes);
+                self.buffer.extend_from_slice(bytes);
             }
         }
 

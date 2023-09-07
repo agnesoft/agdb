@@ -46,11 +46,11 @@ where
     }
 
     pub fn key(&self, storage: &S, value: &T) -> Result<Option<K>, DbError> {
-        self.values_to_keys.value(&storage, value)
+        self.values_to_keys.value(storage, value)
     }
 
     pub fn remove_key(&mut self, storage: &mut S, key: &K) -> Result<(), DbError> {
-        if let Some(value) = self.keys_to_values.value(&storage, key)? {
+        if let Some(value) = self.keys_to_values.value(storage, key)? {
             self.values_to_keys.remove(storage, &value)?;
         }
 
@@ -59,7 +59,7 @@ where
 
     #[allow(dead_code)]
     pub fn remove_value(&mut self, storage: &mut S, value: &T) -> Result<(), DbError> {
-        if let Some(key) = self.values_to_keys.value(&storage, value)? {
+        if let Some(key) = self.values_to_keys.value(storage, value)? {
             self.keys_to_values.remove(storage, &key)?;
         }
 
@@ -67,7 +67,7 @@ where
     }
 
     pub fn value(&self, storage: &S, key: &K) -> Result<Option<T>, DbError> {
-        self.keys_to_values.value(&storage, key)
+        self.keys_to_values.value(storage, key)
     }
 }
 

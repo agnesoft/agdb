@@ -2,6 +2,7 @@ use super::db_error::DbError;
 use super::db_f64::DbF64;
 use super::db_value_index::DbValueIndex;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
 use std::fmt::Display;
@@ -206,9 +207,9 @@ impl DbValue {
         }
     }
 
-    pub(crate) fn load_db_value<S: Storage>(
+    pub(crate) fn load_db_value<D: StorageData>(
         value_index: DbValueIndex,
-        storage: &S,
+        storage: &Storage<D>,
     ) -> Result<DbValue, DbError> {
         Ok(match value_index.get_type() {
             BYTES_META_VALUE => {
@@ -256,9 +257,9 @@ impl DbValue {
         })
     }
 
-    pub(crate) fn store_db_value<S: Storage>(
+    pub(crate) fn store_db_value<D: StorageData>(
         &self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
     ) -> Result<DbValueIndex, DbError> {
         let mut index = DbValueIndex::new();
 
@@ -778,7 +779,7 @@ mod tests {
     #[should_panic]
     fn bad_deserialization() {
         let test_file = TestFile::new();
-        let storage = FileStorage::new(&test_file.filename).unwrap();
+        let storage = Storage::<FileStorage>::new(&test_file.filename).unwrap();
 
         let _ = DbValue::load_db_value(DbValueIndex::new(), &storage);
     }

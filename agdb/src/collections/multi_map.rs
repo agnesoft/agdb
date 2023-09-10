@@ -6,34 +6,38 @@ use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
 use std::marker::PhantomData;
 
-pub struct MultiMapImpl<K, T, S, Data>
+pub struct MultiMapImpl<K, T, D, Data>
 where
-    Data: MapData<K, T, S>,
+    D: StorageData,
+    Data: MapData<K, T, D>,
 {
     pub(crate) data: Data,
-    pub(crate) phantom_marker: PhantomData<(K, T, S)>,
+    pub(crate) phantom_marker: PhantomData<(K, T, D)>,
 }
 
-pub struct MultiMapIterator<'a, K, T, S, Data>
+pub struct MultiMapIterator<'a, K, T, D, Data>
 where
-    Data: MapData<K, T, S>,
+    D: StorageData,
+    Data: MapData<K, T, D>,
 {
     pub pos: u64,
     pub key: &'a K,
     pub data: &'a Data,
-    pub storage: &'a S,
-    pub phantom_data: PhantomData<(T, S)>,
+    pub storage: &'a Storage<D>,
+    pub phantom_data: PhantomData<(T, D)>,
 }
 
-impl<'a, K, T, S, Data> Iterator for MultiMapIterator<'a, K, T, S, Data>
+impl<'a, K, T, D, Data> Iterator for MultiMapIterator<'a, K, T, D, Data>
 where
     K: Default + PartialEq,
     T: Default,
-    Data: MapData<K, T, S>,
+    D: StorageData,
+    Data: MapData<K, T, D>,
 {
     type Item = (K, T);
 
@@ -71,17 +75,18 @@ where
     }
 }
 
-impl<K, T, S, Data> MultiMapImpl<K, T, S, Data>
+impl<K, T, D, Data> MultiMapImpl<K, T, D, Data>
 where
     K: Default + PartialEq + StableHash,
     T: Default + PartialEq,
-    Data: MapData<K, T, S>,
+    D: StorageData,
+    Data: MapData<K, T, D>,
 {
     pub fn capacity(&self) -> u64 {
         self.data.capacity()
     }
 
-    pub fn contains(&self, storage: &S, key: &K) -> Result<bool, DbError> {
+    pub fn contains(&self, storage: &Storage<D>, key: &K) -> Result<bool, DbError> {
         if self.capacity() == 0 {
             return Ok(false);
         }
@@ -98,7 +103,12 @@ where
         }
     }
 
-    pub fn contains_value(&self, storage: &S, key: &K, value: &T) -> Result<bool, DbError> {
+    pub fn contains_value(
+        &self,
+        storage: &Storage<D>,
+        key: &K,
+        value: &T,
+    ) -> Result<bool, DbError> {
         if self.capacity() == 0 {
             return Ok(false);
         }
@@ -120,7 +130,7 @@ where
         }
     }
 
-    pub fn insert(&mut self, storage: &mut S, key: &K, value: &T) -> Result<(), DbError> {
+    pub fn insert(&mut self, storage: &mut Storage<D>, key: &K, value: &T) -> Result<(), DbError> {
         let id = self.data.transaction(storage);
         let index = self.free_index(storage, key)?;
         self.do_insert(storage, index, key, value)?;
@@ -129,7 +139,7 @@ where
 
     pub fn insert_or_replace<P: Fn(&T) -> bool>(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         key: &K,
         predicate: P,
         new_value: &T,
@@ -172,7 +182,7 @@ where
         self.len() == 0
     }
 
-    pub fn iter<'a>(&'a self, storage: &'a S) -> MapIterator<K, T, S, Data> {
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<K, T, D, Data> {
         MapIterator {
             pos: 0,
             data: &self.data,
@@ -181,7 +191,11 @@ where
         }
     }
 
-    pub fn iter_key<'a>(&'a self, storage: &'a S, key: &'a K) -> MultiMapIterator<K, T, S, Data> {
+    pub fn iter_key<'a>(
+        &'a self,
+        storage: &'a Storage<D>,
+        key: &'a K,
+    ) -> MultiMapIterator<K, T, D, Data> {
         let pos = if self.capacity() == 0 {
             0
         } else {
@@ -201,7 +215,7 @@ where
         self.data.len()
     }
 
-    pub fn remove_key(&mut self, storage: &mut S, key: &K) -> Result<(), DbError> {
+    pub fn remove_key(&mut self, storage: &mut Storage<D>, key: &K) -> Result<(), DbError> {
         if self.capacity() == 0 {
             return Ok(());
         }
@@ -236,7 +250,12 @@ where
         self.data.commit(storage, id)
     }
 
-    pub fn remove_value(&mut self, storage: &mut S, key: &K, value: &T) -> Result<(), DbError> {
+    pub fn remove_value(
+        &mut self,
+        storage: &mut Storage<D>,
+        key: &K,
+        value: &T,
+    ) -> Result<(), DbError> {
         if self.capacity() == 0 {
             return Ok(());
         }
@@ -263,7 +282,7 @@ where
         self.data.commit(storage, id)
     }
 
-    pub fn reserve(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError> {
+    pub fn reserve(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError> {
         if self.capacity() < capacity {
             self.rehash(storage, capacity)?;
         }
@@ -271,7 +290,7 @@ where
         Ok(())
     }
 
-    pub fn value(&self, storage: &S, key: &K) -> Result<Option<T>, DbError> {
+    pub fn value(&self, storage: &Storage<D>, key: &K) -> Result<Option<T>, DbError> {
         if self.capacity() == 0 {
             return Ok(None);
         }
@@ -292,7 +311,7 @@ where
         }
     }
 
-    pub fn values(&self, storage: &S, key: &K) -> Result<Vec<T>, DbError> {
+    pub fn values(&self, storage: &Storage<D>, key: &K) -> Result<Vec<T>, DbError> {
         if self.capacity() == 0 {
             return Ok(vec![]);
         }
@@ -316,7 +335,7 @@ where
         Ok(values)
     }
 
-    pub fn values_count(&self, storage: &S, key: &K) -> Result<u64, DbError> {
+    pub fn values_count(&self, storage: &Storage<D>, key: &K) -> Result<u64, DbError> {
         if self.capacity() == 0 {
             return Ok(0);
         }
@@ -342,7 +361,7 @@ where
 
     fn do_insert(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         index: u64,
         key: &K,
         value: &T,
@@ -353,13 +372,13 @@ where
         self.data.set_len(storage, self.len() + 1)
     }
 
-    fn drop_value(&mut self, storage: &mut S, pos: u64) -> Result<(), DbError> {
+    fn drop_value(&mut self, storage: &mut Storage<D>, pos: u64) -> Result<(), DbError> {
         self.data.set_state(storage, pos, MapValueState::Deleted)?;
         self.data.set_key(storage, pos, &K::default())?;
         self.data.set_value(storage, pos, &T::default())
     }
 
-    fn free_index(&mut self, storage: &mut S, key: &K) -> Result<u64, DbError> {
+    fn free_index(&mut self, storage: &mut Storage<D>, key: &K) -> Result<u64, DbError> {
         if self.len() >= self.max_len() {
             self.rehash(storage, self.capacity() * 2)?;
         }
@@ -379,7 +398,7 @@ where
 
     fn grow(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         current_capacity: u64,
         new_capacity: u64,
     ) -> Result<(), DbError> {
@@ -403,7 +422,7 @@ where
         }
     }
 
-    fn rehash(&mut self, storage: &mut S, capacity: u64) -> Result<(), DbError> {
+    fn rehash(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError> {
         let current_capacity = self.capacity();
         let new_capacity = std::cmp::max(capacity, 64_u64);
 
@@ -416,7 +435,7 @@ where
 
     fn rehash_deleted(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         i: &mut u64,
         new_capacity: u64,
     ) -> Result<(), DbError> {
@@ -435,7 +454,7 @@ where
 
     fn rehash_valid(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         i: &mut u64,
         new_capacity: u64,
         empty_list: &mut [bool],
@@ -467,7 +486,7 @@ where
 
     fn rehash_value(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         state: MapValueState,
         i: &mut u64,
         new_capacity: u64,
@@ -483,7 +502,7 @@ where
     #[rustfmt::skip]
     fn rehash_values(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         current_capacity: u64,
         new_capacity: u64,
     ) -> Result<(), DbError> {
@@ -497,7 +516,7 @@ where
         Ok(())
     }
 
-    fn remove_index(&mut self, storage: &mut S, index: u64) -> Result<(), DbError> {
+    fn remove_index(&mut self, storage: &mut Storage<D>, index: u64) -> Result<(), DbError> {
         self.drop_value(storage, index)?;
         self.data.set_len(storage, self.len() - 1)?;
 
@@ -510,7 +529,7 @@ where
 
     fn shrink(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         current_capacity: u64,
         new_capacity: u64,
     ) -> Result<(), DbError> {
@@ -519,25 +538,24 @@ where
     }
 }
 
-pub type MultiMapStorage<K, T, Data = FileStorage> =
-    MultiMapImpl<K, T, Data, DbMapData<K, T, Data>>;
+pub type MultiMapStorage<K, T, D = FileStorage> = MultiMapImpl<K, T, D, DbMapData<K, T, D>>;
 
-impl<K, T, S> MultiMapStorage<K, T, S>
+impl<K, T, D> MultiMapStorage<K, T, D>
 where
     K: Clone + Default + PartialEq + VecValue,
     T: Clone + Default + PartialEq + VecValue,
-    S: Storage,
+    D: StorageData,
 {
-    pub fn new(storage: &mut S) -> Result<Self, DbError> {
+    pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
         Ok(Self {
-            data: DbMapData::<K, T, S>::new(storage)?,
+            data: DbMapData::<K, T, D>::new(storage)?,
             phantom_marker: PhantomData,
         })
     }
 
-    pub fn from_storage(storage: &S, index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &Storage<D>, index: StorageIndex) -> Result<Self, DbError> {
         Ok(Self {
-            data: DbMapData::<K, T, S>::from_storage(storage, index)?,
+            data: DbMapData::<K, T, D>::from_storage(storage, index)?,
             phantom_marker: PhantomData,
         })
     }
@@ -555,7 +573,7 @@ mod tests {
     #[test]
     fn new() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &"Hello".to_string()).unwrap();
         map.insert(&mut storage, &1, &"World".to_string()).unwrap();
@@ -583,7 +601,7 @@ mod tests {
     #[test]
     fn iter_key() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, u64>::new(&mut storage).unwrap();
 
         assert_eq!(map.iter_key(&storage, &1).count(), 0);
@@ -613,7 +631,7 @@ mod tests {
     #[test]
     fn remove_value_empty_map() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
 
         assert!(map
@@ -624,7 +642,7 @@ mod tests {
     #[test]
     fn remove_missing_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
@@ -636,7 +654,7 @@ mod tests {
     #[test]
     fn remove_value_shrinks_capacity() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, u64>::new(&mut storage).unwrap();
 
         for i in 0..100 {
@@ -657,7 +675,7 @@ mod tests {
     #[test]
     fn replace_empty_map() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         let p = |v: &String| v == "Hello";
         assert!(map
@@ -669,7 +687,7 @@ mod tests {
     #[test]
     fn replace_missing_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &10, &"World".to_string()).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
@@ -682,7 +700,7 @@ mod tests {
     #[test]
     fn replace_deleted() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
         map.insert(&mut storage, &10, &"Hello".to_string()).unwrap();
         map.insert(&mut storage, &10, &"World".to_string()).unwrap();
@@ -697,7 +715,7 @@ mod tests {
     #[test]
     fn values_count() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
 
@@ -720,7 +738,7 @@ mod tests {
     #[test]
     fn from_storage() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let storage_index;
 

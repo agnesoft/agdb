@@ -1,39 +1,43 @@
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use std::marker::PhantomData;
 
-pub trait VecData<T, S, E> {
+pub trait VecData<T, D, E>
+where
+    D: StorageData,
+{
     fn capacity(&self) -> u64;
     fn len(&self) -> u64;
-    fn reallocate(&mut self, storage: &mut S, capacity: u64) -> Result<(), E>;
-    fn remove(&mut self, storage: &mut S, index: u64) -> Result<T, E>;
-    fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E>;
-    fn resize(&mut self, storage: &mut S, new_len: u64, value: &T) -> Result<(), E>;
-    fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), E>;
-    fn value(&self, storage: &S, index: u64) -> Result<T, E>;
+    fn reallocate(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), E>;
+    fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E>;
+    fn replace(&mut self, storage: &mut Storage<D>, index: u64, value: &T) -> Result<T, E>;
+    fn resize(&mut self, storage: &mut Storage<D>, new_len: u64, value: &T) -> Result<(), E>;
+    fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), E>;
+    fn value(&self, storage: &Storage<D>, index: u64) -> Result<T, E>;
 }
 
 pub trait VecValue: Sized {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError>;
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError>;
-    fn remove<S: Storage>(storage: &mut S, _bytes: &[u8]) -> Result<(), DbError>;
+    fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError>;
+    fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError>;
+    fn remove<D: StorageData>(storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError>;
     fn storage_len() -> u64;
 }
 
 impl VecValue for u64 {
-    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
-    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -43,15 +47,15 @@ impl VecValue for u64 {
 }
 
 impl VecValue for i64 {
-    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.serialize())
     }
 
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Self::deserialize(bytes)
     }
 
-    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -61,17 +65,17 @@ impl VecValue for i64 {
 }
 
 impl VecValue for String {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
+    fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         let index = storage.insert(self)?;
         Ok(index.serialize())
     }
 
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         let index = StorageIndex::deserialize(bytes)?;
         storage.value(index)
     }
 
-    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
+    fn remove<D: StorageData>(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError> {
         let index = StorageIndex::deserialize(bytes)?;
         storage.remove(index)
     }
@@ -81,22 +85,22 @@ impl VecValue for String {
     }
 }
 
-pub struct DbVecData<T, S, E>
+pub struct DbVecData<T, D, E>
 where
     T: Clone + VecValue,
-    S: Storage,
+    D: StorageData,
     E: From<DbError>,
 {
     capacity: u64,
     len: u64,
     storage_index: StorageIndex,
-    phantom_data: PhantomData<(T, S, E)>,
+    phantom_data: PhantomData<(T, D, E)>,
 }
 
-impl<T, S, E> DbVecData<T, S, E>
+impl<T, D, E> DbVecData<T, D, E>
 where
     T: Clone + VecValue,
-    S: Storage,
+    D: StorageData,
     E: From<DbError>,
 {
     fn offset(index: u64) -> u64 {
@@ -104,10 +108,10 @@ where
     }
 }
 
-impl<T, S, E> VecData<T, S, E> for DbVecData<T, S, E>
+impl<T, D, E> VecData<T, D, E> for DbVecData<T, D, E>
 where
     T: Clone + VecValue,
-    S: Storage,
+    D: StorageData,
     E: From<DbError>,
 {
     fn capacity(&self) -> u64 {
@@ -118,7 +122,7 @@ where
         self.len
     }
 
-    fn reallocate(&mut self, storage: &mut S, capacity: u64) -> Result<(), E> {
+    fn reallocate(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), E> {
         storage.resize_value(
             self.storage_index,
             self.len().serialized_size() + T::storage_len() * capacity,
@@ -129,7 +133,7 @@ where
         Ok(())
     }
 
-    fn remove(&mut self, storage: &mut S, index: u64) -> Result<T, E> {
+    fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E> {
         let offset_from = Self::offset(index + 1);
         let offset_to = Self::offset(index);
         let move_len = T::storage_len() * (self.len() - index);
@@ -151,7 +155,7 @@ where
         Ok(value)
     }
 
-    fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E> {
+    fn replace(&mut self, storage: &mut Storage<D>, index: u64, value: &T) -> Result<T, E> {
         let old_bytes = storage.value_as_bytes_at_size(
             self.storage_index,
             Self::offset(index),
@@ -168,7 +172,7 @@ where
         Ok(old_value)
     }
 
-    fn resize(&mut self, storage: &mut S, new_len: u64, value: &T) -> Result<(), E> {
+    fn resize(&mut self, storage: &mut Storage<D>, new_len: u64, value: &T) -> Result<(), E> {
         let id = storage.transaction();
 
         for index in self.len()..new_len {
@@ -193,7 +197,7 @@ where
         Ok(())
     }
 
-    fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), E> {
+    fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), E> {
         let offset_from = Self::offset(other);
         let offset_to = Self::offset(index);
         let size = T::storage_len();
@@ -211,7 +215,7 @@ where
         Ok(())
     }
 
-    fn value(&self, storage: &S, index: u64) -> Result<T, E> {
+    fn value(&self, storage: &Storage<D>, index: u64) -> Result<T, E> {
         let bytes = storage.value_as_bytes_at_size(
             self.storage_index,
             Self::offset(index),
@@ -222,33 +226,36 @@ where
     }
 }
 
-pub struct VecImpl<T, S, D, E>
+pub struct VecImpl<T, D, Data, E>
 where
     T: VecValue,
-    D: VecData<T, S, E>,
+    D: StorageData,
+    Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
 {
-    phantom_data: PhantomData<(T, S, E)>,
-    data: D,
+    phantom_data: PhantomData<(T, D, E)>,
+    data: Data,
 }
 
-pub struct VecIterator<'a, T, S, D, E>
+pub struct VecIterator<'a, T, D, Data, E>
 where
     T: VecValue,
-    D: VecData<T, S, E>,
+    D: StorageData,
+    Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
 {
     pub index: u64,
-    pub vec: &'a VecImpl<T, S, D, E>,
-    pub storage: &'a S,
+    pub vec: &'a VecImpl<T, D, Data, E>,
+    pub storage: &'a Storage<D>,
 }
 
-pub type DbVec<T, S = FileStorage> = VecImpl<T, S, DbVecData<T, S, DbError>, DbError>;
+pub type DbVec<T, D = FileStorage> = VecImpl<T, D, DbVecData<T, D, DbError>, DbError>;
 
-impl<'a, T, S, D, E> Iterator for VecIterator<'a, T, S, D, E>
+impl<'a, T, D, Data, E> Iterator for VecIterator<'a, T, D, Data, E>
 where
     T: VecValue,
-    D: VecData<T, S, E>,
+    D: StorageData,
+    Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
 {
     type Item = T;
@@ -261,10 +268,11 @@ where
     }
 }
 
-impl<T, S, D, E> VecImpl<T, S, D, E>
+impl<T, D, Data, E> VecImpl<T, D, Data, E>
 where
     T: VecValue,
-    D: VecData<T, S, E>,
+    D: StorageData,
+    Data: VecData<T, D, E>,
     E: From<DbError> + From<String>,
 {
     pub fn capacity(&self) -> u64 {
@@ -281,7 +289,7 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn iter<'a>(&'a self, storage: &'a S) -> VecIterator<T, S, D, E> {
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> VecIterator<T, D, Data, E> {
         VecIterator {
             index: 0,
             vec: self,
@@ -289,7 +297,7 @@ where
         }
     }
 
-    pub fn push(&mut self, storage: &mut S, value: &T) -> Result<(), E> {
+    pub fn push(&mut self, storage: &mut Storage<D>, value: &T) -> Result<(), E> {
         if self.data.len() == self.data.capacity() {
             self.data.reallocate(
                 storage,
@@ -301,18 +309,18 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn remove(&mut self, storage: &mut S, index: u64) -> Result<T, E> {
+    pub fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E> {
         self.validate_index(index)?;
         self.data.remove(storage, index)
     }
 
-    pub fn replace(&mut self, storage: &mut S, index: u64, value: &T) -> Result<T, E> {
+    pub fn replace(&mut self, storage: &mut Storage<D>, index: u64, value: &T) -> Result<T, E> {
         self.validate_index(index)?;
         self.data.replace(storage, index, value)
     }
 
     #[allow(dead_code)]
-    pub fn reserve(&mut self, storage: &mut S, capacity: u64) -> Result<(), E> {
+    pub fn reserve(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), E> {
         if self.capacity() < capacity {
             self.data.reallocate(storage, capacity)?;
         }
@@ -320,7 +328,7 @@ where
         Ok(())
     }
 
-    pub fn resize(&mut self, storage: &mut S, new_len: u64, value: &T) -> Result<(), E> {
+    pub fn resize(&mut self, storage: &mut Storage<D>, new_len: u64, value: &T) -> Result<(), E> {
         if self.capacity() < new_len {
             self.data.reallocate(storage, new_len)?;
         }
@@ -329,11 +337,11 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn shrink_to_fit(&mut self, storage: &mut S) -> Result<(), E> {
+    pub fn shrink_to_fit(&mut self, storage: &mut Storage<D>) -> Result<(), E> {
         self.data.reallocate(storage, self.len())
     }
 
-    pub fn swap(&mut self, storage: &mut S, index: u64, other: u64) -> Result<(), E> {
+    pub fn swap(&mut self, storage: &mut Storage<D>, index: u64, other: u64) -> Result<(), E> {
         if index == other {
             return Ok(());
         }
@@ -343,7 +351,7 @@ where
         self.data.swap(storage, index, other)
     }
 
-    pub fn value(&self, storage: &S, index: u64) -> Result<T, E> {
+    pub fn value(&self, storage: &Storage<D>, index: u64) -> Result<T, E> {
         self.validate_index(index)?;
         self.data.value(storage, index)
     }
@@ -360,12 +368,12 @@ where
     }
 }
 
-impl<T, S> DbVec<T, S>
+impl<T, D> DbVec<T, D>
 where
     T: Clone + VecValue,
-    S: Storage,
+    D: StorageData,
 {
-    pub fn new(storage: &mut S) -> Result<Self, DbError> {
+    pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
         let storage_index = storage.insert(&0_u64)?;
 
         Ok(Self {
@@ -379,7 +387,10 @@ where
         })
     }
 
-    pub fn from_storage(storage: &S, storage_index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(
+        storage: &Storage<D>,
+        storage_index: StorageIndex,
+    ) -> Result<Self, DbError> {
         let len = storage.value::<u64>(storage_index)?;
         let data_len = storage.value_size(storage_index)?;
         let capacity = data_len / T::storage_len();
@@ -403,13 +414,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
 
     #[test]
     fn from_storage_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let index;
 
@@ -438,7 +448,7 @@ mod tests {
     #[test]
     fn from_storage_missing_index() {
         let test_file = TestFile::new();
-        let storage = FileStorage::new(test_file.file_name()).unwrap();
+        let storage = Storage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             DbVec::<String>::from_storage(&storage, StorageIndex::from(1_u64))
@@ -451,7 +461,7 @@ mod tests {
     #[test]
     fn iter() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -468,7 +478,7 @@ mod tests {
     #[test]
     fn is_empty() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -483,7 +493,7 @@ mod tests {
     #[test]
     fn len() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -500,7 +510,7 @@ mod tests {
     #[test]
     fn min_capacity() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -517,7 +527,7 @@ mod tests {
     #[test]
     fn push() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -549,7 +559,7 @@ mod tests {
     #[test]
     fn remove() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -568,7 +578,7 @@ mod tests {
     #[test]
     fn remove_at_end() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -587,7 +597,7 @@ mod tests {
     #[test]
     fn remove_index_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -600,7 +610,7 @@ mod tests {
     #[test]
     fn reserve_larger() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         assert_eq!(vec.capacity(), 0);
@@ -613,7 +623,7 @@ mod tests {
     #[test]
     fn reserve_smaller() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.reserve(&mut storage, 20).unwrap();
@@ -625,7 +635,7 @@ mod tests {
     #[test]
     fn resize_larger() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -651,7 +661,7 @@ mod tests {
     #[test]
     fn resize_over_capacity() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -677,7 +687,7 @@ mod tests {
     #[test]
     fn resize_same() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -701,7 +711,7 @@ mod tests {
     #[test]
     fn resize_smaller() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -720,7 +730,7 @@ mod tests {
     #[test]
     fn replace() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -739,7 +749,7 @@ mod tests {
     #[test]
     fn replace_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -752,7 +762,7 @@ mod tests {
     #[test]
     fn shrink_to_fit() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -774,7 +784,7 @@ mod tests {
     #[test]
     fn shrink_to_fit_empty() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
 
@@ -788,7 +798,7 @@ mod tests {
     #[test]
     fn swap() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
@@ -808,7 +818,7 @@ mod tests {
     #[test]
     fn swap_self() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
@@ -828,7 +838,7 @@ mod tests {
     #[test]
     fn swap_invalid() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
@@ -847,7 +857,7 @@ mod tests {
     #[test]
     fn value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let mut vec = DbVec::<String>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
@@ -864,7 +874,7 @@ mod tests {
     #[test]
     fn value_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::new(test_file.file_name()).unwrap();
 
         let vec = DbVec::<String>::new(&mut storage).unwrap();
 

@@ -3,6 +3,8 @@ use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
+use crate::storage::Storage;
+use crate::storage::StorageData;
 use std::cmp::Ordering;
 
 pub trait PathSearchHandler {
@@ -15,29 +17,31 @@ pub(crate) struct Path {
     pub(crate) cost: u64,
 }
 
-pub(crate) struct PathSearch<'a, S, Data, Handler>
+pub(crate) struct PathSearch<'a, D, Data, Handler>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
     Handler: PathSearchHandler,
 {
     pub(crate) current_path: Path,
     pub(crate) destination: GraphIndex,
-    pub(crate) graph: &'a GraphImpl<S, Data>,
-    pub(crate) storage: &'a S,
+    pub(crate) graph: &'a GraphImpl<D, Data>,
+    pub(crate) storage: &'a Storage<D>,
     pub(crate) handler: Handler,
     pub(crate) paths: Vec<Path>,
     pub(crate) result: Vec<(GraphIndex, bool)>,
     pub(crate) visited: BitSet,
 }
 
-impl<'a, S, Data, Handler> PathSearch<'a, S, Data, Handler>
+impl<'a, D, Data, Handler> PathSearch<'a, D, Data, Handler>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
     Handler: PathSearchHandler,
 {
     pub(crate) fn new(
-        graph: &'a GraphImpl<S, Data>,
-        storage: &'a S,
+        graph: &'a GraphImpl<D, Data>,
+        storage: &'a Storage<D>,
         from: GraphIndex,
         to: GraphIndex,
         handler: Handler,
@@ -192,7 +196,7 @@ mod tests {
     #[test]
     fn circular_path() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node = graph.insert_node(&mut storage).unwrap();
         let _edge = graph.insert_edge(&mut storage, node, node).unwrap();
@@ -205,7 +209,7 @@ mod tests {
     #[test]
     fn empty_graph() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         let result = GraphSearch::from((&graph, &storage)).path(
@@ -220,7 +224,7 @@ mod tests {
     #[test]
     fn multi_edge_path() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -241,7 +245,7 @@ mod tests {
     #[test]
     fn origin_is_destination() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node = graph.insert_node(&mut storage).unwrap();
 
@@ -253,7 +257,7 @@ mod tests {
     #[test]
     fn short_circuit_path() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -272,7 +276,7 @@ mod tests {
     #[test]
     fn single_path() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -290,7 +294,7 @@ mod tests {
     #[test]
     fn skip_short_circuit_path() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -321,7 +325,7 @@ mod tests {
     #[test]
     fn unconnected() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -338,7 +342,7 @@ mod tests {
     #[test]
     fn filtered_nodes() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -363,7 +367,7 @@ mod tests {
     #[test]
     fn filtered_edges() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();

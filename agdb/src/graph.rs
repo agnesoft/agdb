@@ -2,6 +2,7 @@ use crate::collections::vec::DbVec;
 use crate::db::db_error::DbError;
 use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -45,33 +46,43 @@ impl StableHash for GraphIndex {
     }
 }
 
-pub trait GraphData<S> {
+pub trait GraphData<D: StorageData> {
     fn capacity(&self) -> Result<u64, DbError>;
-    fn commit(&mut self, storage: &mut S, id: u64) -> Result<(), DbError>;
-    fn free_index(&self, storage: &S) -> Result<i64, DbError>;
-    fn from(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError>;
+    fn commit(&mut self, storage: &mut Storage<D>, id: u64) -> Result<(), DbError>;
+    fn free_index(&self, storage: &Storage<D>) -> Result<i64, DbError>;
+    fn from(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError>;
     #[allow(clippy::wrong_self_convention)]
-    fn from_meta(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError>;
-    fn grow(&mut self, storage: &mut S) -> Result<(), DbError>;
-    fn node_count(&self, storage: &S) -> Result<u64, DbError>;
-    fn set_from(&mut self, storage: &mut S, index: GraphIndex, value: i64) -> Result<(), DbError>;
+    fn from_meta(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError>;
+    fn grow(&mut self, storage: &mut Storage<D>) -> Result<(), DbError>;
+    fn node_count(&self, storage: &Storage<D>) -> Result<u64, DbError>;
+    fn set_from(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+        value: i64,
+    ) -> Result<(), DbError>;
     fn set_from_meta(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         index: GraphIndex,
         value: i64,
     ) -> Result<(), DbError>;
-    fn set_node_count(&mut self, storage: &mut S, count: u64) -> Result<(), DbError>;
-    fn set_to(&mut self, storage: &mut S, index: GraphIndex, value: i64) -> Result<(), DbError>;
+    fn set_node_count(&mut self, storage: &mut Storage<D>, count: u64) -> Result<(), DbError>;
+    fn set_to(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+        value: i64,
+    ) -> Result<(), DbError>;
     fn set_to_meta(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         index: GraphIndex,
         value: i64,
     ) -> Result<(), DbError>;
-    fn to(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError>;
-    fn to_meta(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError>;
-    fn transaction(&mut self, storage: &mut S) -> u64;
+    fn to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError>;
+    fn to_meta(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError>;
+    fn transaction(&mut self, storage: &mut Storage<D>) -> u64;
 }
 
 pub(crate) struct GraphDataStorageIndexes {
@@ -116,32 +127,32 @@ impl Serialize for GraphDataStorageIndexes {
 
 impl SerializeStatic for GraphDataStorageIndexes {}
 
-pub struct GraphDataStorage<S = FileStorage>
+pub struct GraphDataStorage<D = FileStorage>
 where
-    S: Storage,
+    D: StorageData,
 {
-    pub(crate) storage: PhantomData<S>,
+    pub(crate) storage: PhantomData<D>,
     pub(crate) storage_index: StorageIndex,
-    pub(crate) from: DbVec<i64, S>,
-    pub(crate) to: DbVec<i64, S>,
-    pub(crate) from_meta: DbVec<i64, S>,
-    pub(crate) to_meta: DbVec<i64, S>,
+    pub(crate) from: DbVec<i64, D>,
+    pub(crate) to: DbVec<i64, D>,
+    pub(crate) from_meta: DbVec<i64, D>,
+    pub(crate) to_meta: DbVec<i64, D>,
 }
 
-impl<S> GraphDataStorage<S>
+impl<D> GraphDataStorage<D>
 where
-    S: Storage,
+    D: StorageData,
 {
-    pub fn new(storage: &mut S) -> Result<Self, DbError> {
+    pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
         let id = storage.transaction();
 
-        let mut from = DbVec::<i64, S>::new(storage)?;
+        let mut from = DbVec::<i64, D>::new(storage)?;
         from.push(storage, &0)?;
-        let mut to = DbVec::<i64, S>::new(storage)?;
+        let mut to = DbVec::<i64, D>::new(storage)?;
         to.push(storage, &0)?;
-        let mut from_meta = DbVec::<i64, S>::new(storage)?;
+        let mut from_meta = DbVec::<i64, D>::new(storage)?;
         from_meta.push(storage, &i64::MIN)?;
-        let mut to_meta = DbVec::<i64, S>::new(storage)?;
+        let mut to_meta = DbVec::<i64, D>::new(storage)?;
         to_meta.push(storage, &0)?;
 
         let indexes = GraphDataStorageIndexes {
@@ -155,7 +166,7 @@ where
 
         storage.commit(id)?;
 
-        Ok(GraphDataStorage::<S> {
+        Ok(GraphDataStorage::<D> {
             storage: PhantomData,
             storage_index: index,
             from,
@@ -165,15 +176,18 @@ where
         })
     }
 
-    pub fn from_storage(storage: &S, storage_index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(
+        storage: &Storage<D>,
+        storage_index: StorageIndex,
+    ) -> Result<Self, DbError> {
         let indexes = storage.value::<GraphDataStorageIndexes>(storage_index)?;
 
-        let from = DbVec::<i64, S>::from_storage(storage, indexes.from)?;
-        let to = DbVec::<i64, S>::from_storage(storage, indexes.to)?;
-        let from_meta = DbVec::<i64, S>::from_storage(storage, indexes.from_meta)?;
-        let to_meta = DbVec::<i64, S>::from_storage(storage, indexes.to_meta)?;
+        let from = DbVec::<i64, D>::from_storage(storage, indexes.from)?;
+        let to = DbVec::<i64, D>::from_storage(storage, indexes.to)?;
+        let from_meta = DbVec::<i64, D>::from_storage(storage, indexes.from_meta)?;
+        let to_meta = DbVec::<i64, D>::from_storage(storage, indexes.to_meta)?;
 
-        Ok(GraphDataStorage::<S> {
+        Ok(GraphDataStorage::<D> {
             storage: PhantomData,
             storage_index,
             from,
@@ -184,49 +198,54 @@ where
     }
 }
 
-impl<S> GraphData<S> for GraphDataStorage<S>
+impl<D> GraphData<D> for GraphDataStorage<D>
 where
-    S: Storage,
+    D: StorageData,
 {
     fn capacity(&self) -> Result<u64, DbError> {
         Ok(self.from.len())
     }
 
-    fn commit(&mut self, storage: &mut S, id: u64) -> Result<(), DbError> {
+    fn commit(&mut self, storage: &mut Storage<D>, id: u64) -> Result<(), DbError> {
         storage.commit(id)
     }
 
-    fn free_index(&self, storage: &S) -> Result<i64, DbError> {
+    fn free_index(&self, storage: &Storage<D>) -> Result<i64, DbError> {
         self.from_meta.value(storage, 0)
     }
 
-    fn from(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError> {
+    fn from(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
         self.from.value(storage, index.as_u64())
     }
 
-    fn from_meta(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError> {
+    fn from_meta(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
         self.from_meta.value(storage, index.as_u64())
     }
 
-    fn grow(&mut self, storage: &mut S) -> Result<(), DbError> {
+    fn grow(&mut self, storage: &mut Storage<D>) -> Result<(), DbError> {
         self.from.push(storage, &0)?;
         self.to.push(storage, &0)?;
         self.from_meta.push(storage, &0)?;
         self.to_meta.push(storage, &0)
     }
 
-    fn node_count(&self, storage: &S) -> Result<u64, DbError> {
+    fn node_count(&self, storage: &Storage<D>) -> Result<u64, DbError> {
         Ok(self.to_meta.value(storage, 0)? as u64)
     }
 
-    fn set_from(&mut self, storage: &mut S, index: GraphIndex, value: i64) -> Result<(), DbError> {
+    fn set_from(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+        value: i64,
+    ) -> Result<(), DbError> {
         self.from.replace(storage, index.as_u64(), &value)?;
         Ok(())
     }
 
     fn set_from_meta(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         index: GraphIndex,
         value: i64,
     ) -> Result<(), DbError> {
@@ -234,19 +253,24 @@ where
         Ok(())
     }
 
-    fn set_node_count(&mut self, storage: &mut S, count: u64) -> Result<(), DbError> {
+    fn set_node_count(&mut self, storage: &mut Storage<D>, count: u64) -> Result<(), DbError> {
         self.to_meta.replace(storage, 0, &(count as i64))?;
         Ok(())
     }
 
-    fn set_to(&mut self, storage: &mut S, index: GraphIndex, value: i64) -> Result<(), DbError> {
+    fn set_to(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+        value: i64,
+    ) -> Result<(), DbError> {
         self.to.replace(storage, index.as_u64(), &value)?;
         Ok(())
     }
 
     fn set_to_meta(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         index: GraphIndex,
         value: i64,
     ) -> Result<(), DbError> {
@@ -254,38 +278,40 @@ where
         Ok(())
     }
 
-    fn to(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError> {
+    fn to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
         self.to.value(storage, index.as_u64())
     }
 
-    fn to_meta(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError> {
+    fn to_meta(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
         self.to_meta.value(storage, index.as_u64())
     }
 
-    fn transaction(&mut self, storage: &mut S) -> u64 {
+    fn transaction(&mut self, storage: &mut Storage<D>) -> u64 {
         storage.transaction()
     }
 }
 
-pub struct GraphNode<'a, S, Data>
+pub struct GraphNode<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) graph: &'a GraphImpl<D, Data>,
     pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a S,
+    pub(crate) storage: &'a Storage<D>,
 }
 
-impl<'a, S, Data> GraphNode<'a, S, Data>
+impl<'a, D, Data> GraphNode<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
     #[allow(dead_code)]
     pub fn index(&self) -> GraphIndex {
         self.index
     }
 
-    pub fn edge_iter_from(&'a self) -> GraphEdgeIterator<S, Data> {
+    pub fn edge_iter_from(&'a self) -> GraphEdgeIterator<D, Data> {
         GraphEdgeIterator {
             graph: self.graph,
             index: self
@@ -296,7 +322,7 @@ where
         }
     }
 
-    pub fn edge_iter_to(&self) -> GraphEdgeReverseIterator<S, Data> {
+    pub fn edge_iter_to(&self) -> GraphEdgeReverseIterator<D, Data> {
         GraphEdgeReverseIterator {
             graph: self.graph,
             index: self
@@ -324,20 +350,22 @@ where
     }
 }
 
-pub struct GraphNodeIterator<'a, S, Data>
+pub struct GraphNodeIterator<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) graph: &'a GraphImpl<D, Data>,
     pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a S,
+    pub(crate) storage: &'a Storage<D>,
 }
 
-impl<'a, S, Data> Iterator for GraphNodeIterator<'a, S, Data>
+impl<'a, D, Data> Iterator for GraphNodeIterator<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    type Item = GraphNode<'a, S, Data>;
+    type Item = GraphNode<'a, D, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(next) = self
@@ -357,18 +385,20 @@ where
     }
 }
 
-pub struct GraphEdge<'a, S, Data>
+pub struct GraphEdge<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) graph: &'a GraphImpl<D, Data>,
     pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a S,
+    pub(crate) storage: &'a Storage<D>,
 }
 
-impl<'a, S, Data> GraphEdge<'a, S, Data>
+impl<'a, D, Data> GraphEdge<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
     pub fn index(&self) -> GraphIndex {
         self.index
@@ -383,20 +413,22 @@ where
     }
 }
 
-pub struct GraphEdgeIterator<'a, S, Data>
+pub struct GraphEdgeIterator<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) graph: &'a GraphImpl<D, Data>,
     pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a S,
+    pub(crate) storage: &'a Storage<D>,
 }
 
-impl<'a, S, Data> Iterator for GraphEdgeIterator<'a, S, Data>
+impl<'a, D, Data> Iterator for GraphEdgeIterator<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    type Item = GraphEdge<'a, S, Data>;
+    type Item = GraphEdge<'a, D, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.index.is_valid() {
@@ -418,20 +450,22 @@ where
     }
 }
 
-pub struct GraphEdgeReverseIterator<'a, S, Data>
+pub struct GraphEdgeReverseIterator<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<S, Data>,
+    pub(crate) graph: &'a GraphImpl<D, Data>,
     pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a S,
+    pub(crate) storage: &'a Storage<D>,
 }
 
-impl<'a, S, Data> Iterator for GraphEdgeReverseIterator<'a, S, Data>
+impl<'a, D, Data> Iterator for GraphEdgeReverseIterator<'a, D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    type Item = GraphEdge<'a, S, Data>;
+    type Item = GraphEdge<'a, D, Data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.index.is_valid() {
@@ -453,19 +487,25 @@ where
     }
 }
 
-pub struct GraphImpl<S, Data>
+pub struct GraphImpl<D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
     pub(crate) data: Data,
-    pub(crate) storage: PhantomData<S>,
+    pub(crate) storage: PhantomData<D>,
 }
 
-impl<S, Data> GraphImpl<S, Data>
+impl<D, Data> GraphImpl<D, Data>
 where
-    Data: GraphData<S>,
+    Data: GraphData<D>,
+    D: StorageData,
 {
-    pub fn edge<'a>(&'a self, storage: &'a S, index: GraphIndex) -> Option<GraphEdge<S, Data>> {
+    pub fn edge<'a>(
+        &'a self,
+        storage: &'a Storage<D>,
+        index: GraphIndex,
+    ) -> Option<GraphEdge<D, Data>> {
         if self.validate_edge(storage, index).is_err() {
             return None;
         }
@@ -478,13 +518,13 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn node_count(&self, storage: &S) -> Result<u64, DbError> {
+    pub fn node_count(&self, storage: &Storage<D>) -> Result<u64, DbError> {
         self.data.node_count(storage)
     }
 
     pub fn insert_edge(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         from: GraphIndex,
         to: GraphIndex,
     ) -> Result<GraphIndex, DbError> {
@@ -499,7 +539,7 @@ where
         Ok(index)
     }
 
-    pub fn insert_node(&mut self, storage: &mut S) -> Result<GraphIndex, DbError> {
+    pub fn insert_node(&mut self, storage: &mut Storage<D>) -> Result<GraphIndex, DbError> {
         let id = self.data.transaction(storage);
         let index = GraphIndex::from(self.get_free_index(storage)?);
         let count = self.data.node_count(storage)?;
@@ -509,7 +549,11 @@ where
         Ok(index)
     }
 
-    pub fn node<'a>(&'a self, storage: &'a S, index: GraphIndex) -> Option<GraphNode<S, Data>> {
+    pub fn node<'a>(
+        &'a self,
+        storage: &'a Storage<D>,
+        index: GraphIndex,
+    ) -> Option<GraphNode<D, Data>> {
         if self.validate_node(storage, index).is_err() {
             return None;
         }
@@ -522,7 +566,7 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn node_iter<'a>(&'a self, storage: &'a S) -> GraphNodeIterator<S, Data> {
+    pub fn node_iter<'a>(&'a self, storage: &'a Storage<D>) -> GraphNodeIterator<D, Data> {
         GraphNodeIterator {
             graph: self,
             index: GraphIndex::default(),
@@ -530,7 +574,11 @@ where
         }
     }
 
-    pub fn remove_edge(&mut self, storage: &mut S, index: GraphIndex) -> Result<(), DbError> {
+    pub fn remove_edge(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+    ) -> Result<(), DbError> {
         if self.validate_edge(storage, index).is_err() {
             return Ok(());
         }
@@ -543,7 +591,11 @@ where
         self.data.commit(storage, id)
     }
 
-    pub fn remove_node(&mut self, storage: &mut S, index: GraphIndex) -> Result<(), DbError> {
+    pub fn remove_node(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+    ) -> Result<(), DbError> {
         if self.validate_node(storage, index).is_err() {
             return Ok(());
         }
@@ -559,30 +611,38 @@ where
         self.data.commit(storage, id)
     }
 
-    pub fn first_edge_from(&self, storage: &S, index: GraphIndex) -> Result<GraphIndex, DbError> {
+    pub fn first_edge_from(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.from(storage, index)?))
     }
 
-    pub fn first_edge_to(&self, storage: &S, index: GraphIndex) -> Result<GraphIndex, DbError> {
+    pub fn first_edge_to(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.to(storage, index)?))
     }
 
-    pub(crate) fn edge_from(&self, storage: &S, index: GraphIndex) -> GraphIndex {
+    pub(crate) fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.from(storage, index).unwrap_or_default())
     }
 
-    pub(crate) fn edge_to(&self, storage: &S, index: GraphIndex) -> GraphIndex {
+    pub(crate) fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.to(storage, index).unwrap_or_default())
     }
 
-    fn free_index(&mut self, storage: &mut S, index: GraphIndex) -> Result<(), DbError> {
+    fn free_index(&mut self, storage: &mut Storage<D>, index: GraphIndex) -> Result<(), DbError> {
         let next_free = self.data.from_meta(storage, GraphIndex::default())?;
         self.data.set_from_meta(storage, index, next_free)?;
         self.data
             .set_from_meta(storage, GraphIndex::default(), -index.0)
     }
 
-    fn get_free_index(&mut self, storage: &mut S) -> Result<i64, DbError> {
+    fn get_free_index(&mut self, storage: &mut Storage<D>) -> Result<i64, DbError> {
         let mut index = self.data.free_index(storage)?;
 
         if index == i64::MIN {
@@ -605,27 +665,27 @@ where
         DbError::from(format!("'{}' is invalid index", index.0))
     }
 
-    fn is_removed_index(&self, storage: &S, index: GraphIndex) -> Result<bool, DbError> {
+    fn is_removed_index(&self, storage: &Storage<D>, index: GraphIndex) -> Result<bool, DbError> {
         Ok(self.data.from_meta(storage, index)? < 0)
     }
 
-    fn is_valid_edge(&self, storage: &S, index: GraphIndex) -> Result<bool, DbError> {
+    fn is_valid_edge(&self, storage: &Storage<D>, index: GraphIndex) -> Result<bool, DbError> {
         Ok(self.data.from(storage, index)? < 0)
     }
 
-    fn is_valid_index(&self, storage: &S, index: GraphIndex) -> Result<bool, DbError> {
+    fn is_valid_index(&self, storage: &Storage<D>, index: GraphIndex) -> Result<bool, DbError> {
         Ok(index.is_valid()
             && index.as_u64() < self.data.capacity()?
             && !self.is_removed_index(storage, index)?)
     }
 
-    fn is_valid_node(&self, storage: &S, index: GraphIndex) -> Result<bool, DbError> {
+    fn is_valid_node(&self, storage: &Storage<D>, index: GraphIndex) -> Result<bool, DbError> {
         Ok(0 <= self.data.from(storage, index)?)
     }
 
     pub(crate) fn next_edge_from(
         &self,
-        storage: &S,
+        storage: &Storage<D>,
         index: GraphIndex,
     ) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.from_meta(storage, index)?))
@@ -633,23 +693,31 @@ where
 
     pub(crate) fn next_edge_to(
         &self,
-        storage: &S,
+        storage: &Storage<D>,
         index: GraphIndex,
     ) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.to_meta(storage, index)?))
     }
 
-    pub(crate) fn edge_count_from(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError> {
+    pub(crate) fn edge_count_from(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<i64, DbError> {
         self.data.from_meta(storage, index)
     }
 
-    pub(crate) fn edge_count_to(&self, storage: &S, index: GraphIndex) -> Result<i64, DbError> {
+    pub(crate) fn edge_count_to(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<i64, DbError> {
         self.data.to_meta(storage, index)
     }
 
     pub(crate) fn next_node(
         &self,
-        storage: &S,
+        storage: &Storage<D>,
         index: GraphIndex,
     ) -> Result<Option<GraphIndex>, DbError> {
         for i in (index.0 + 1)..(self.data.capacity()? as i64) {
@@ -662,7 +730,11 @@ where
         Ok(None)
     }
 
-    fn remove_from_edge(&mut self, storage: &mut S, index: GraphIndex) -> Result<(), DbError> {
+    fn remove_from_edge(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+    ) -> Result<(), DbError> {
         let node_index = GraphIndex::from(-self.data.from(storage, index)?);
         let first_index = GraphIndex::from(-self.data.from(storage, node_index)?);
         let next = self.data.from_meta(storage, index)?;
@@ -683,7 +755,11 @@ where
         self.data.set_from_meta(storage, node_index, count - 1)
     }
 
-    fn remove_from_edges(&mut self, storage: &mut S, index: GraphIndex) -> Result<(), DbError> {
+    fn remove_from_edges(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+    ) -> Result<(), DbError> {
         let mut edge = GraphIndex::from(-self.data.from(storage, index)?);
 
         while edge.is_valid() {
@@ -696,7 +772,11 @@ where
         Ok(())
     }
 
-    fn remove_to_edge(&mut self, storage: &mut S, index: GraphIndex) -> Result<(), DbError> {
+    fn remove_to_edge(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+    ) -> Result<(), DbError> {
         let node_index = GraphIndex::from(-self.data.to(storage, index)?);
         let first_index = GraphIndex::from(-self.data.to(storage, node_index)?);
         let next = self.data.to_meta(storage, index)?;
@@ -717,7 +797,11 @@ where
         self.data.set_to_meta(storage, node_index, count - 1)
     }
 
-    fn remove_to_edges(&mut self, storage: &mut S, index: GraphIndex) -> Result<(), DbError> {
+    fn remove_to_edges(
+        &mut self,
+        storage: &mut Storage<D>,
+        index: GraphIndex,
+    ) -> Result<(), DbError> {
         let mut edge_index = GraphIndex::from(-self.data.to(storage, index)?);
 
         while edge_index.is_valid() {
@@ -732,7 +816,7 @@ where
 
     fn set_edge(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         index: GraphIndex,
         from: GraphIndex,
         to: GraphIndex,
@@ -745,7 +829,7 @@ where
 
     fn update_from_edge(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         node: GraphIndex,
         edge: GraphIndex,
     ) -> Result<(), DbError> {
@@ -759,7 +843,7 @@ where
 
     fn update_to_edge(
         &mut self,
-        storage: &mut S,
+        storage: &mut Storage<D>,
         node: GraphIndex,
         edge: GraphIndex,
     ) -> Result<(), DbError> {
@@ -771,7 +855,7 @@ where
         self.data.set_to_meta(storage, node, count + 1)
     }
 
-    fn validate_edge(&self, storage: &S, index: GraphIndex) -> Result<(), DbError> {
+    fn validate_edge(&self, storage: &Storage<D>, index: GraphIndex) -> Result<(), DbError> {
         if !self.is_valid_index(storage, index)? || !self.is_valid_edge(storage, index)? {
             return Err(Self::invalid_index(index));
         }
@@ -779,7 +863,7 @@ where
         Ok(())
     }
 
-    fn validate_node(&self, storage: &S, index: GraphIndex) -> Result<(), DbError> {
+    fn validate_node(&self, storage: &Storage<D>, index: GraphIndex) -> Result<(), DbError> {
         if !self.is_valid_index(storage, index)? || !self.is_valid_node(storage, index)? {
             return Err(Self::invalid_index(index));
         }
@@ -788,26 +872,26 @@ where
     }
 }
 
-pub type DbGraph<S = FileStorage> = GraphImpl<S, GraphDataStorage<S>>;
+pub type DbGraph<D = FileStorage> = GraphImpl<D, GraphDataStorage<D>>;
 
-impl<S> DbGraph<S>
+impl<D> DbGraph<D>
 where
-    S: Storage,
+    D: StorageData,
 {
     pub fn storage_index(&self) -> StorageIndex {
         self.data.storage_index
     }
 
-    pub fn new(storage: &mut S) -> Result<Self, DbError> {
+    pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {
         Ok(DbGraph {
-            data: GraphDataStorage::<S>::new(storage)?,
+            data: GraphDataStorage::<D>::new(storage)?,
             storage: PhantomData,
         })
     }
 
-    pub fn from_storage(storage: &S, index: StorageIndex) -> Result<Self, DbError> {
+    pub fn from_storage(storage: &Storage<D>, index: StorageIndex) -> Result<Self, DbError> {
         Ok(DbGraph {
-            data: GraphDataStorage::<S>::from_storage(storage, index)?,
+            data: GraphDataStorage::<D>::from_storage(storage, index)?,
             storage: PhantomData,
         })
     }
@@ -892,7 +976,7 @@ mod tests {
     #[test]
     fn edge_from_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let from = graph.insert_node(&mut storage).unwrap();
@@ -905,7 +989,7 @@ mod tests {
     #[test]
     fn edge_from_index_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         assert!(graph.edge(&storage, GraphIndex::from(-3)).is_none());
@@ -914,7 +998,7 @@ mod tests {
     #[test]
     fn edge_iteration() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node1 = graph.insert_node(&mut storage).unwrap();
         let node2 = graph.insert_node(&mut storage).unwrap();
@@ -935,7 +1019,7 @@ mod tests {
     #[test]
     fn insert_edge() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -961,7 +1045,7 @@ mod tests {
     #[test]
     fn insert_edge_after_removed() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -975,7 +1059,7 @@ mod tests {
     #[test]
     fn insert_edge_after_several_removed() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -992,7 +1076,7 @@ mod tests {
     #[test]
     fn insert_edge_invalid_from() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         assert_eq!(
@@ -1004,7 +1088,7 @@ mod tests {
     #[test]
     fn insert_edge_invalid_to() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
 
@@ -1017,7 +1101,7 @@ mod tests {
     #[test]
     fn insert_node() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         assert_eq!(graph.insert_node(&mut storage), Ok(GraphIndex::from(1)));
@@ -1026,7 +1110,7 @@ mod tests {
     #[test]
     fn insert_node_after_removal() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         graph.insert_node(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
@@ -1040,7 +1124,7 @@ mod tests {
     #[test]
     fn node_count() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         assert_eq!(graph.node_count(&storage,).unwrap(), 0);
@@ -1059,7 +1143,7 @@ mod tests {
     #[test]
     fn node_from_index() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
 
@@ -1069,7 +1153,7 @@ mod tests {
     #[test]
     fn node_from_index_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         let node = graph.node(&storage, GraphIndex::from(1));
@@ -1080,7 +1164,7 @@ mod tests {
     #[test]
     fn node_iteration() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node1 = graph.insert_node(&mut storage).unwrap();
         let node2 = graph.insert_node(&mut storage).unwrap();
@@ -1099,7 +1183,7 @@ mod tests {
     #[test]
     fn node_iteration_with_removed_nodes() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node1 = graph.insert_node(&mut storage).unwrap();
         let node2 = graph.insert_node(&mut storage).unwrap();
@@ -1123,7 +1207,7 @@ mod tests {
     #[test]
     fn remove_edge_circular() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node = graph.insert_node(&mut storage).unwrap();
         let index = graph.insert_edge(&mut storage, node, node).unwrap();
@@ -1136,7 +1220,7 @@ mod tests {
     #[test]
     fn remove_edge_first() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1154,7 +1238,7 @@ mod tests {
     #[test]
     fn remove_edge_last() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1172,7 +1256,7 @@ mod tests {
     #[test]
     fn remove_edge_middle() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1192,7 +1276,7 @@ mod tests {
     #[test]
     fn remove_edge_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         graph
             .remove_edge(&mut storage, GraphIndex::from(-3))
@@ -1202,7 +1286,7 @@ mod tests {
     #[test]
     fn remove_edge_only() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1216,7 +1300,7 @@ mod tests {
     #[test]
     fn remove_node_circular_edge() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
         let edge = graph.insert_edge(&mut storage, index, index).unwrap();
@@ -1230,7 +1314,7 @@ mod tests {
     #[test]
     fn remove_node_only() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
 
@@ -1242,7 +1326,7 @@ mod tests {
     #[test]
     fn remove_node_missing() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         graph
             .remove_node(&mut storage, GraphIndex::from(1))
@@ -1252,7 +1336,7 @@ mod tests {
     #[test]
     fn remove_nodes_with_edges() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -1285,7 +1369,7 @@ mod tests {
     #[test]
     fn restore_from_file() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
 
         let storage_index;
 

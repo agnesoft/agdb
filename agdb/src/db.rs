@@ -1,4 +1,3 @@
-pub mod db_config;
 pub mod db_element;
 pub mod db_error;
 pub mod db_id;
@@ -170,7 +169,7 @@ impl Serialize for DbStorageIndex {
 /// WAL file. The WAL is then purged on commit of a transaction (all queries are
 /// transactional even if the transaction is not explicitly used).
 pub struct Db {
-    storage: FileStorage,
+    storage: Storage<FileStorage>,
     graph: DbGraph,
     aliases: DbIndexedMap<String, DbId>,
     values: MultiMapStorage<DbId, DbKeyValue>,
@@ -242,7 +241,7 @@ impl Db {
     /// Returns the filename that was used to
     /// construct the database.
     pub fn filename(&self) -> &str {
-        self.storage.filename()
+        self.storage.name()
     }
 
     /// Reclaims no longer used segments of the database file by packing all
@@ -787,11 +786,11 @@ impl Db {
     }
 
     fn try_new(filename: &str) -> Result<Db, DbError> {
-        let mut storage = FileStorage::new(filename)?;
+        let mut storage = Storage::new(filename)?;
         let graph_storage;
         let aliases_storage;
         let values_storage;
-        let len = storage.len()?;
+        let len = storage.len();
         let index = storage.value::<DbStorageIndex>(StorageIndex(1));
 
         if let Ok(index) = index {

@@ -6,6 +6,15 @@ pub struct MemoryStorage {
     name: String,
 }
 
+impl MemoryStorage {
+    pub fn from_buffer(name: &str, buffer: Vec<u8>) -> Self {
+        Self {
+            buffer,
+            name: name.to_string(),
+        }
+    }
+}
+
 impl StorageData for MemoryStorage {
     fn len(&self) -> u64 {
         self.buffer.len() as u64

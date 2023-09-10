@@ -1,135 +1,59 @@
-use super::write_ahead_log::WriteAheadLog;
-use super::write_ahead_log::WriteAheadLogRecord;
+use super::file_storage::FileStorage;
+use super::memory_storage::MemoryStorage;
 use super::StorageData;
 use crate::db::db_error::DbError;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::Read;
-use std::io::Seek;
-use std::io::SeekFrom;
-use std::io::Write;
 
 pub struct FileStorageMemoryMapped {
-    buffer: Vec<u8>,
-    file: File,
-    filename: String,
-    wal: WriteAheadLog,
-}
-
-impl FileStorageMemoryMapped {
-    fn apply_wal_record(file: &mut File, record: WriteAheadLogRecord) -> Result<(), DbError> {
-        if record.value.is_empty() {
-            file.set_len(record.pos)?;
-        } else {
-            file.seek(SeekFrom::Start(record.pos))?;
-            file.write_all(&record.value)?;
-        }
-
-        Ok(())
-    }
-
-    fn apply_wal(file: &mut File, wal: &mut WriteAheadLog) -> Result<(), DbError> {
-        for record in wal.records()? {
-            Self::apply_wal_record(file, record)?;
-        }
-
-        wal.clear()
-    }
+    file: FileStorage,
+    memory: MemoryStorage,
 }
 
 impl StorageData for FileStorageMemoryMapped {
     fn backup(&mut self, name: &str) -> Result<(), DbError> {
-        self.flush()?;
-        std::fs::copy(&self.filename, name)?;
-        Ok(())
+        self.file.backup(name)
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
-        self.wal.clear()?;
-        Ok(self.file.flush()?)
+        self.file.flush()
     }
 
     fn len(&self) -> u64 {
-        self.buffer.len() as u64
+        self.file.len()
     }
 
     fn name(&self) -> &str {
-        &self.filename
+        self.file.name()
     }
 
     fn new(name: &str) -> Result<Self, DbError> {
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(name)?;
-        let mut wal: WriteAheadLog = WriteAheadLog::new(name)?;
-
-        Self::apply_wal(&mut file, &mut wal)?;
-
-        let mut buffer = vec![];
-        file.seek(SeekFrom::Start(0))?;
-        file.read_to_end(&mut buffer)?;
+        let file = FileStorage::new(name)?;
+        let buffer = file.read(0, file.len())?;
 
         Ok(Self {
-            buffer,
             file,
-            filename: name.to_string(),
-            wal,
+            memory: MemoryStorage::from_buffer(name, buffer),
         })
     }
 
     fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
-        let end = pos + value_len;
-        Ok(self.buffer[pos as usize..end as usize].to_vec())
+        self.memory.read(pos, value_len)
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
-        let current_len = self.len();
-
-        if new_len < current_len {
-            let bytes = self.read(new_len, current_len - new_len)?;
-            self.wal.insert(new_len, bytes)?;
-        } else {
-            self.wal.insert(new_len, vec![])?;
-        }
-
-        self.file.set_len(new_len)?;
-        self.buffer.resize(new_len as usize, 0);
-        Ok(())
+        self.memory.resize(new_len)?;
+        self.file.resize(new_len)
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-        let current_len = self.len();
-        let end = pos + bytes.len() as u64;
-        let old_bytes = self.read(pos, std::cmp::min(current_len, end) - pos)?;
-        self.wal.insert(pos, old_bytes)?;
-
-        if end < current_len {
-            self.buffer[pos as usize..end as usize].copy_from_slice(bytes);
-        } else {
-            self.buffer.resize(pos as usize, 0);
-            self.buffer.extend_from_slice(bytes);
-        }
-
-        self.file.seek(SeekFrom::Start(pos))?;
-        self.file.write_all(bytes)?;
-
-        Ok(())
-    }
-}
-
-impl Drop for FileStorageMemoryMapped {
-    fn drop(&mut self) {
-        if Self::apply_wal(&mut self.file, &mut self.wal).is_ok() {
-            let _ = self.flush();
-        }
+        self.memory.write(pos, bytes)?;
+        self.file.write(pos, bytes)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::write_ahead_log::WriteAheadLog;
     use crate::storage::Storage;
     use crate::storage::StorageIndex;
     use crate::test_utilities::test_file::TestFile;

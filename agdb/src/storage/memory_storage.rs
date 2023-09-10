@@ -65,6 +65,18 @@ mod tests {
     use crate::utilities::serialize::SerializeStatic;
 
     #[test]
+    fn backup_does_nothing() {
+        let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
+        assert!(storage.backup("storage2").is_ok())
+    }
+
+    #[test]
+    fn name() {
+        let storage = Storage::<MemoryStorage>::new("storage").unwrap();
+        assert_eq!(storage.name(), "storage");
+    }
+
+    #[test]
     fn index_reuse() {
         let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
 

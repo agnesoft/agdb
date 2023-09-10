@@ -1145,20 +1145,4 @@ mod tests {
             Err(DbError::from("Storage error: index (1) not found"))
         );
     }
-
-    #[test]
-    #[cfg(feature = "no-memory-map")]
-    fn file_sync_no_memory_map() {
-        let test_file = TestFile::new();
-        let mut file_sync = FileSync::new(&test_file.file_name()).unwrap();
-        file_sync.write(0, "Hello, World".as_bytes()).unwrap();
-
-        assert_eq!(file_sync.read(0, 12).unwrap(), "Hello, World".as_bytes());
-        assert_eq!(file_sync.len().unwrap(), 12);
-
-        let _guard = file_sync.lock.lock();
-
-        assert_eq!(file_sync.read(0, 12).unwrap(), "Hello, World".as_bytes());
-        assert_eq!(file_sync.len().unwrap(), 12);
-    }
 }

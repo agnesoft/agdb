@@ -1,5 +1,6 @@
 pub mod file_storage;
 pub mod file_storage_memory_mapped;
+pub mod memory_storage;
 
 mod storage_records;
 mod write_ahead_log;

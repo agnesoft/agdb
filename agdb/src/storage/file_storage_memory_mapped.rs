@@ -8,17 +8,15 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
-use std::sync::Mutex;
 
-pub struct FileStorage {
+pub struct FileStorageMemoryMapped {
+    buffer: Vec<u8>,
     file: File,
     filename: String,
-    len: u64,
-    lock: Mutex<()>,
     wal: WriteAheadLog,
 }
 
-impl FileStorage {
+impl FileStorageMemoryMapped {
     fn apply_wal_record(file: &mut File, record: WriteAheadLogRecord) -> Result<(), DbError> {
         if record.value.is_empty() {
             file.set_len(record.pos)?;
@@ -37,19 +35,9 @@ impl FileStorage {
 
         wal.clear()
     }
-
-    fn open_file(&self) -> Result<File, DbError> {
-        Ok(File::open(&self.filename)?)
-    }
-
-    fn read_impl(mut file: &File, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
-        file.seek(SeekFrom::Start(pos))?;
-        file.read_exact(buffer)?;
-        Ok(())
-    }
 }
 
-impl StorageData for FileStorage {
+impl StorageData for FileStorageMemoryMapped {
     fn backup(&mut self, name: &str) -> Result<(), DbError> {
         self.flush()?;
         std::fs::copy(&self.filename, name)?;
@@ -62,7 +50,7 @@ impl StorageData for FileStorage {
     }
 
     fn len(&self) -> u64 {
-        self.len
+        self.buffer.len() as u64
     }
 
     fn name(&self) -> &str {
@@ -79,27 +67,21 @@ impl StorageData for FileStorage {
 
         Self::apply_wal(&mut file, &mut wal)?;
 
-        let len = file.seek(SeekFrom::End(0))?;
+        let mut buffer = vec![];
+        file.seek(SeekFrom::Start(0))?;
+        file.read_to_end(&mut buffer)?;
 
         Ok(Self {
+            buffer,
             file,
             filename: name.to_string(),
-            len,
-            lock: Mutex::new(()),
             wal,
         })
     }
 
     fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
-        let mut buffer = vec![0_u8; value_len as usize];
-
-        if let Ok(_guard) = self.lock.try_lock() {
-            Self::read_impl(&self.file, pos, &mut buffer)?;
-        } else {
-            Self::read_impl(&self.open_file()?, pos, &mut buffer)?;
-        }
-
-        Ok(buffer)
+        let end = pos + value_len;
+        Ok(self.buffer[pos as usize..end as usize].to_vec())
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
@@ -113,7 +95,7 @@ impl StorageData for FileStorage {
         }
 
         self.file.set_len(new_len)?;
-        self.len = new_len;
+        self.buffer.resize(new_len as usize, 0);
         Ok(())
     }
 
@@ -122,14 +104,22 @@ impl StorageData for FileStorage {
         let end = pos + bytes.len() as u64;
         let old_bytes = self.read(pos, std::cmp::min(current_len, end) - pos)?;
         self.wal.insert(pos, old_bytes)?;
+
+        if end < current_len {
+            self.buffer[pos as usize..end as usize].copy_from_slice(bytes);
+        } else {
+            self.buffer.resize(pos as usize, 0);
+            self.buffer.extend_from_slice(bytes);
+        }
+
         self.file.seek(SeekFrom::Start(pos))?;
         self.file.write_all(bytes)?;
-        self.len = std::cmp::max(current_len, end);
+
         Ok(())
     }
 }
 
-impl Drop for FileStorage {
+impl Drop for FileStorageMemoryMapped {
     fn drop(&mut self) {
         if Self::apply_wal(&mut self.file, &mut self.wal).is_ok() {
             let _ = self.flush();
@@ -148,13 +138,13 @@ mod tests {
 
     #[test]
     fn bad_file() {
-        assert!(Storage::<FileStorage>::new("/a/").is_err());
+        assert!(Storage::<FileStorageMemoryMapped>::new("/a/").is_err());
     }
 
     #[test]
     fn index_reuse() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
         let index2 = storage.insert(&10_i64).unwrap();
@@ -176,7 +166,8 @@ mod tests {
         let index2;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
             let _index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
             index2 = storage.insert(&10_i64).unwrap();
@@ -185,7 +176,7 @@ mod tests {
             storage.remove(index2).unwrap();
         }
 
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index4 = storage
             .insert(&vec!["Hello".to_string(), "World".to_string()])
@@ -202,7 +193,8 @@ mod tests {
         let index2;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
             index1 = storage.insert(&"Hello, World!".to_string()).unwrap();
             index2 = storage.insert(&10_i64).unwrap();
@@ -212,7 +204,7 @@ mod tests {
             storage.remove(index2).unwrap();
         }
 
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index4 = storage
             .insert(&vec!["Hello".to_string(), "World".to_string()])
@@ -228,7 +220,7 @@ mod tests {
     #[test]
     fn insert() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let value1 = "Hello, World!".to_string();
         let index1 = storage.insert(&value1).unwrap();
@@ -264,7 +256,7 @@ mod tests {
     #[test]
     fn insert_at() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset = u64::serialized_size_static() + i64::serialized_size_static();
@@ -280,7 +272,7 @@ mod tests {
     #[test]
     fn insert_at_value_end() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset = u64::serialized_size_static() + i64::serialized_size_static() * 3;
@@ -297,7 +289,7 @@ mod tests {
     #[test]
     fn insert_at_value_end_multiple_values() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         storage.insert(&"Hello, World!".to_string()).unwrap();
@@ -315,7 +307,7 @@ mod tests {
     #[test]
     fn insert_at_beyond_end() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset = u64::serialized_size_static() + i64::serialized_size_static() * 4;
@@ -332,7 +324,7 @@ mod tests {
     #[test]
     fn insert_at_beyond_end_multiple_values() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         storage.insert(&"Hello, World!".to_string()).unwrap();
@@ -350,7 +342,7 @@ mod tests {
     #[test]
     fn insert_at_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.insert_at(StorageIndex::from(1_u64), 8, &1_i64),
@@ -361,7 +353,7 @@ mod tests {
     #[test]
     fn move_at_left() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset_from = u64::serialized_size_static() + i64::serialized_size_static() * 2;
@@ -381,7 +373,7 @@ mod tests {
     #[test]
     fn move_at_left_overlapping() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
@@ -401,7 +393,7 @@ mod tests {
     #[test]
     fn move_at_right() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
@@ -421,7 +413,7 @@ mod tests {
     #[test]
     fn move_at_right_overlapping() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset_from = u64::serialized_size_static();
@@ -441,7 +433,7 @@ mod tests {
     #[test]
     fn move_at_beyond_end() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset_from = u64::serialized_size_static() + i64::serialized_size_static();
@@ -463,7 +455,7 @@ mod tests {
     #[test]
     fn move_at_size_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
 
@@ -478,7 +470,7 @@ mod tests {
     #[test]
     fn move_at_same_offset() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&vec![1_i64, 2_i64, 3_i64]).unwrap();
         let offset_from = u64::serialized_size_static();
@@ -498,7 +490,7 @@ mod tests {
     #[test]
     fn move_at_zero_size() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let value = vec![1_i64, 2_i64, 3_i64];
         let index = storage.insert(&value).unwrap();
@@ -514,7 +506,7 @@ mod tests {
     #[test]
     fn remove() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&1_i64).unwrap();
 
@@ -531,7 +523,7 @@ mod tests {
     #[test]
     fn remove_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.remove(StorageIndex::from(1_u64)),
@@ -542,7 +534,7 @@ mod tests {
     #[test]
     fn replace_larger() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&1_i64).unwrap();
         let value = "Hello, World!".to_string();
@@ -556,7 +548,7 @@ mod tests {
     #[test]
     fn replace_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.replace(StorageIndex::from(1_u64), &10_i64),
@@ -567,7 +559,7 @@ mod tests {
     #[test]
     fn replace_same_size() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&1_i64).unwrap();
         let size = storage.value_size(index).unwrap();
@@ -580,7 +572,7 @@ mod tests {
     #[test]
     fn replace_smaller() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&"Hello, World!".to_string()).unwrap();
         let value = 1_i64;
@@ -594,7 +586,7 @@ mod tests {
     #[test]
     fn resize_at_end_does_not_move() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&1_i64).unwrap();
         let size = storage.len();
@@ -608,7 +600,7 @@ mod tests {
     #[test]
     fn resize_value_greater() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
         let expected_size = i64::serialized_size_static();
@@ -623,7 +615,7 @@ mod tests {
     #[test]
     fn resize_value_missing_index() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.resize_value(StorageIndex::from(1_u64), 1),
@@ -634,7 +626,7 @@ mod tests {
     #[test]
     fn resize_value_same() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
         let expected_size = i64::serialized_size_static();
@@ -649,7 +641,7 @@ mod tests {
     #[test]
     fn resize_value_smaller() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
         let expected_size = i64::serialized_size_static();
@@ -664,7 +656,7 @@ mod tests {
     #[test]
     fn resize_value_zero() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
         let expected_size = i64::serialized_size_static();
@@ -679,7 +671,7 @@ mod tests {
     #[test]
     fn resize_value_resizes_file() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&3_i64).unwrap();
         let len = storage.len();
@@ -699,14 +691,15 @@ mod tests {
         let index;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             index = storage.insert(&10_i64).unwrap();
             storage.insert(&5_i64).unwrap();
             storage.resize_value(index, 1).unwrap();
             storage.remove(index).unwrap();
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value::<i64>(index),
@@ -725,13 +718,14 @@ mod tests {
         let index3;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             index1 = storage.insert(&value1).unwrap();
             index2 = storage.insert(&value2).unwrap();
             index3 = storage.insert(&value3).unwrap();
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(storage.value::<u64>(index2), Ok(value2));
@@ -749,14 +743,15 @@ mod tests {
         let index3;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             index1 = storage.insert(&value1).unwrap();
             index2 = storage.insert(&value2).unwrap();
             index3 = storage.insert(&value3).unwrap();
             storage.remove(index2).unwrap();
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(value1));
         assert_eq!(
@@ -784,7 +779,8 @@ mod tests {
         let index3;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             index1 = storage.insert(&value1).unwrap();
             index2 = storage.insert(&value2).unwrap();
             index3 = storage.insert(&value3).unwrap();
@@ -793,7 +789,7 @@ mod tests {
             storage.remove(index3).unwrap();
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value::<u64>(StorageIndex::default()),
@@ -833,7 +829,8 @@ mod tests {
         let index3;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             index1 = storage.insert(&value1).unwrap();
             index2 = storage.insert(&value2).unwrap();
             index3 = storage.insert(&value3).unwrap();
@@ -843,7 +840,7 @@ mod tests {
         wal.insert(u64::serialized_size_static() * 2, 2_u64.serialize())
             .unwrap();
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(storage.value::<Vec<i64>>(index1), Ok(vec![1_i64, 2_i64]));
         assert_eq!(storage.value::<u64>(index2), Ok(value2));
@@ -853,7 +850,7 @@ mod tests {
     #[test]
     fn shrink_to_fit() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index1 = storage.insert(&1_i64).unwrap();
         let index2 = storage.insert(&2_i64).unwrap();
@@ -873,7 +870,7 @@ mod tests {
     #[test]
     fn shrink_to_fit_no_change() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index1 = storage.insert(&1_i64).unwrap();
         let index2 = storage.insert(&2_i64).unwrap();
@@ -902,7 +899,8 @@ mod tests {
         let index3;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             index1 = storage.insert(&1_i64).unwrap();
             index2 = storage.insert(&2_i64).unwrap();
             index3 = storage.insert(&3_i64).unwrap();
@@ -917,7 +915,7 @@ mod tests {
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
         assert_eq!(actual_size, expected_size);
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         assert_eq!(storage.value(index1), Ok(1_i64));
         assert_eq!(
             storage.value::<i64>(index2),
@@ -935,21 +933,22 @@ mod tests {
         let index;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             let id = storage.transaction();
             index = storage.insert(&1_i64).unwrap();
             storage.commit(id).unwrap();
             assert_eq!(storage.value::<i64>(index), Ok(1_i64));
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         assert_eq!(storage.value::<i64>(index), Ok(1_i64));
     }
 
     #[test]
     fn transaction_commit_no_transaction() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         assert_eq!(storage.commit(0), Ok(()));
     }
 
@@ -959,13 +958,14 @@ mod tests {
         let index;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             storage.transaction();
             index = storage.insert(&1_i64).unwrap();
             assert_eq!(storage.value::<i64>(index), Ok(1_i64));
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
             Err(DbError::from(format!(
@@ -981,7 +981,8 @@ mod tests {
         let index;
 
         {
-            let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+            let mut storage =
+                Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
             let _ = storage.transaction();
             let id2 = storage.transaction();
             index = storage.insert(&1_i64).unwrap();
@@ -989,7 +990,7 @@ mod tests {
             storage.commit(id2).unwrap();
         }
 
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         assert_eq!(
             storage.value::<i64>(index),
             Err(DbError::from(format!(
@@ -1002,7 +1003,7 @@ mod tests {
     #[test]
     fn transaction_commit_mismatch() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let id1 = storage.transaction();
         let id2 = storage.transaction();
         let index = storage.insert(&1_i64).unwrap();
@@ -1019,7 +1020,7 @@ mod tests {
     #[test]
     fn value() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let index = storage.insert(&10_i64).unwrap();
 
         assert_eq!(storage.value::<i64>(index), Ok(10_i64));
@@ -1029,7 +1030,7 @@ mod tests {
     fn value_at() {
         let test_file = TestFile::new();
 
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let data = vec![1_i64, 2_i64, 3_i64];
 
         let index = storage.insert(&data).unwrap();
@@ -1042,7 +1043,7 @@ mod tests {
     fn value_at_dynamic_size() {
         let test_file = TestFile::new();
 
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let data = vec![2_i64, 1_i64, 2_i64];
 
         let index = storage.insert(&data).unwrap();
@@ -1057,7 +1058,7 @@ mod tests {
     #[test]
     fn value_at_of_missing_index() {
         let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value_at::<i64>(StorageIndex::from(1_u64), 8),
@@ -1068,7 +1069,7 @@ mod tests {
     #[test]
     fn value_at_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let data = vec![1_i64, 2_i64];
         let index = storage.insert(&data).unwrap();
@@ -1083,7 +1084,7 @@ mod tests {
     #[test]
     fn value_at_offset_overflow() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let data = vec![1_i64, 2_i64];
         let index = storage.insert(&data).unwrap();
@@ -1100,7 +1101,7 @@ mod tests {
     #[test]
     fn value_of_missing_index() {
         let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value::<i64>(StorageIndex::from(1_u64)),
@@ -1111,7 +1112,7 @@ mod tests {
     #[test]
     fn value_out_of_bounds() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
 
@@ -1126,7 +1127,7 @@ mod tests {
     #[test]
     fn value_size() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let index = storage.insert(&10_i64).unwrap();
         let expected_size = i64::serialized_size_static();
@@ -1137,7 +1138,7 @@ mod tests {
     #[test]
     fn value_size_of_missing_index() {
         let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         assert_eq!(
             storage.value_size(StorageIndex::from(1_u64)),

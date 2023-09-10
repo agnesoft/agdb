@@ -94,7 +94,7 @@ impl StorageRecords {
         }
 
         Err(DbError::from(format!(
-            "FileStorage error: index ({index}) not found"
+            "Storage error: index ({index}) not found"
         )))
     }
 

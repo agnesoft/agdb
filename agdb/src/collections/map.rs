@@ -2,7 +2,6 @@ use super::multi_map::MultiMapImpl;
 use super::vec::DbVec;
 use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
 use crate::storage::StorageData;
 use crate::storage::StorageIndex;
@@ -146,7 +145,7 @@ impl Serialize for MapDataIndex {
     }
 }
 
-pub struct DbMapData<K, T, D = FileStorage>
+pub struct DbMapData<K, T, D>
 where
     K: Clone + VecValue,
     T: Clone + VecValue,
@@ -408,7 +407,7 @@ where
     }
 }
 
-pub type DbMap<K, T, D = FileStorage> = MapImpl<K, T, D, DbMapData<K, T, D>>;
+pub type DbMap<K, T, D> = MapImpl<K, T, D, DbMapData<K, T, D>>;
 
 impl<K, T, D> DbMap<K, T, D>
 where
@@ -444,7 +443,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::test_file::TestFile;
+    use crate::{
+        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
+        test_utilities::test_file::TestFile,
+    };
 
     #[test]
     fn derived_from_clone() {
@@ -457,7 +459,7 @@ mod tests {
     fn contains_key() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.contains(&storage, &1), Ok(false));
 
@@ -470,7 +472,7 @@ mod tests {
     fn contains_key_removed() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
         map.remove(&mut storage, &1).unwrap();
 
@@ -481,7 +483,7 @@ mod tests {
     fn contains_key_missing() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
 
         assert_eq!(map.contains(&storage, &2), Ok(false));
@@ -490,7 +492,7 @@ mod tests {
     fn contains_value() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.contains_value(&storage, &1, &10), Ok(false));
 
@@ -503,7 +505,7 @@ mod tests {
     fn contains_value_removed() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
         map.remove(&mut storage, &1).unwrap();
 
@@ -514,7 +516,7 @@ mod tests {
     fn contains_value_missing() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &10).unwrap();
 
         assert_eq!(map.contains_value(&storage, &1, &1), Ok(false));
@@ -528,7 +530,7 @@ mod tests {
         let index;
 
         {
-            let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+            let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
             map.insert(&mut storage, &1, &1).unwrap();
             map.insert(&mut storage, &3, &2).unwrap();
             map.insert(&mut storage, &5, &3).unwrap();
@@ -536,7 +538,8 @@ mod tests {
             index = map.storage_index();
         }
 
-        let map = DbMap::<u64, u64>::from_storage(&storage, index).unwrap();
+        let map =
+            DbMap::<u64, u64, FileStorageMemoryMapped>::from_storage(&storage, index).unwrap();
         let expected = vec![(1_u64, 1_u64), (5_u64, 3_u64)];
 
         assert_eq!(map.iter(&storage,).collect::<Vec<(u64, u64)>>(), expected);
@@ -547,10 +550,13 @@ mod tests {
         let test_file = TestFile::new();
         let storage = Storage::new(test_file.file_name()).unwrap();
         assert_eq!(
-            DbMap::<u64, u64>::from_storage(&storage, StorageIndex::from(1_u64))
-                .err()
-                .unwrap(),
-            DbError::from("FileStorage error: index (1) not found")
+            DbMap::<u64, u64, FileStorageMemoryMapped>::from_storage(
+                &storage,
+                StorageIndex::from(1_u64)
+            )
+            .err()
+            .unwrap(),
+            DbError::from("Storage error: index (1) not found")
         );
     }
 
@@ -559,7 +565,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         map.insert(&mut storage, &1, &10).unwrap();
         map.insert(&mut storage, &5, &15).unwrap();
@@ -576,7 +582,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.capacity(), 0);
 
@@ -597,7 +603,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         for i in 1..100 {
             map.insert(&mut storage, &(i * 64 - 1), &i).unwrap();
@@ -613,7 +619,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.insert(&mut storage, &1, &10), Ok(None));
         assert_eq!(map.insert(&mut storage, &5, &15), Ok(None));
@@ -630,7 +636,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert!(map.is_empty());
         map.insert(&mut storage, &1, &10).unwrap();
@@ -644,7 +650,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         map.insert(&mut storage, &1, &10).unwrap();
         map.insert(&mut storage, &5, &15).unwrap();
@@ -665,7 +671,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         map.insert(&mut storage, &1, &10).unwrap();
         map.insert(&mut storage, &5, &15).unwrap();
@@ -685,7 +691,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         map.insert(&mut storage, &1, &10).unwrap();
         map.insert(&mut storage, &5, &15).unwrap();
@@ -708,7 +714,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.len(), 0);
         assert_eq!(map.remove(&mut storage, &0), Ok(()));
@@ -727,7 +733,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         for i in 0..100 {
             map.insert(&mut storage, &i, &i).unwrap();
@@ -749,7 +755,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &1).unwrap();
 
         let capacity = map.capacity() + 10;
@@ -767,7 +773,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &1).unwrap();
 
         let capacity = map.capacity();
@@ -784,7 +790,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &1).unwrap();
 
         let current_capacity = map.capacity();
@@ -802,7 +808,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.value(&storage, &0), Ok(None));
     }
@@ -812,7 +818,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = DbMap::<u64, u64>::new(&mut storage).unwrap();
+        let mut map = DbMap::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         map.insert(&mut storage, &127, &10).unwrap();
         map.insert(&mut storage, &255, &11).unwrap();

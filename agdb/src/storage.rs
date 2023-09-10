@@ -1,4 +1,5 @@
 pub mod file_storage;
+pub mod file_storage_memory_mapped;
 
 mod storage_records;
 mod write_ahead_log;
@@ -459,13 +460,13 @@ impl<D: StorageData> Storage<D> {
     fn validate_read_size(offset: u64, read_size: u64, value_size: u64) -> Result<(), DbError> {
         if offset > value_size {
             return Err(DbError::from(format!(
-                "FileStorage error: offset ({offset}) out of bounds ({value_size})"
+                "Storage error: offset ({offset}) out of bounds ({value_size})"
             )));
         }
 
         if (offset + read_size) > value_size {
             return Err(DbError::from(format!(
-                "FileStorage error: value size ({}) out of bounds ({})",
+                "Storage error: value size ({}) out of bounds ({})",
                 offset + read_size,
                 value_size
             )));

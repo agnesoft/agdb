@@ -1,6 +1,5 @@
 use crate::collections::vec::DbVec;
 use crate::db::db_error::DbError;
-use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
 use crate::storage::StorageData;
 use crate::storage::StorageIndex;
@@ -127,7 +126,7 @@ impl Serialize for GraphDataStorageIndexes {
 
 impl SerializeStatic for GraphDataStorageIndexes {}
 
-pub struct GraphDataStorage<D = FileStorage>
+pub struct GraphDataStorage<D>
 where
     D: StorageData,
 {
@@ -872,7 +871,7 @@ where
     }
 }
 
-pub type DbGraph<D = FileStorage> = GraphImpl<D, GraphDataStorage<D>>;
+pub type DbGraph<D> = GraphImpl<D, GraphDataStorage<D>>;
 
 impl<D> DbGraph<D>
 where
@@ -900,6 +899,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
     use crate::test_utilities::test_file::TestFile;
     use std::cmp::Ordering;
     use std::collections::hash_map::DefaultHasher;
@@ -976,7 +976,7 @@ mod tests {
     #[test]
     fn edge_from_index() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let from = graph.insert_node(&mut storage).unwrap();
@@ -989,7 +989,7 @@ mod tests {
     #[test]
     fn edge_from_index_missing() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         assert!(graph.edge(&storage, GraphIndex::from(-3)).is_none());
@@ -998,7 +998,7 @@ mod tests {
     #[test]
     fn edge_iteration() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node1 = graph.insert_node(&mut storage).unwrap();
         let node2 = graph.insert_node(&mut storage).unwrap();
@@ -1019,7 +1019,7 @@ mod tests {
     #[test]
     fn insert_edge() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1045,7 +1045,7 @@ mod tests {
     #[test]
     fn insert_edge_after_removed() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1059,7 +1059,7 @@ mod tests {
     #[test]
     fn insert_edge_after_several_removed() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1076,7 +1076,7 @@ mod tests {
     #[test]
     fn insert_edge_invalid_from() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         assert_eq!(
@@ -1088,7 +1088,7 @@ mod tests {
     #[test]
     fn insert_edge_invalid_to() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
 
@@ -1101,7 +1101,7 @@ mod tests {
     #[test]
     fn insert_node() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         assert_eq!(graph.insert_node(&mut storage), Ok(GraphIndex::from(1)));
@@ -1110,7 +1110,7 @@ mod tests {
     #[test]
     fn insert_node_after_removal() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         graph.insert_node(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
@@ -1124,7 +1124,7 @@ mod tests {
     #[test]
     fn node_count() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         assert_eq!(graph.node_count(&storage,).unwrap(), 0);
@@ -1143,7 +1143,7 @@ mod tests {
     #[test]
     fn node_from_index() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
 
@@ -1153,7 +1153,7 @@ mod tests {
     #[test]
     fn node_from_index_missing() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         let node = graph.node(&storage, GraphIndex::from(1));
@@ -1164,7 +1164,7 @@ mod tests {
     #[test]
     fn node_iteration() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node1 = graph.insert_node(&mut storage).unwrap();
         let node2 = graph.insert_node(&mut storage).unwrap();
@@ -1183,7 +1183,7 @@ mod tests {
     #[test]
     fn node_iteration_with_removed_nodes() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node1 = graph.insert_node(&mut storage).unwrap();
         let node2 = graph.insert_node(&mut storage).unwrap();
@@ -1207,7 +1207,7 @@ mod tests {
     #[test]
     fn remove_edge_circular() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let node = graph.insert_node(&mut storage).unwrap();
         let index = graph.insert_edge(&mut storage, node, node).unwrap();
@@ -1220,7 +1220,7 @@ mod tests {
     #[test]
     fn remove_edge_first() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1238,7 +1238,7 @@ mod tests {
     #[test]
     fn remove_edge_last() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1256,7 +1256,7 @@ mod tests {
     #[test]
     fn remove_edge_middle() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1276,7 +1276,7 @@ mod tests {
     #[test]
     fn remove_edge_missing() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         graph
             .remove_edge(&mut storage, GraphIndex::from(-3))
@@ -1286,7 +1286,7 @@ mod tests {
     #[test]
     fn remove_edge_only() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let from = graph.insert_node(&mut storage).unwrap();
         let to = graph.insert_node(&mut storage).unwrap();
@@ -1300,7 +1300,7 @@ mod tests {
     #[test]
     fn remove_node_circular_edge() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
         let edge = graph.insert_edge(&mut storage, index, index).unwrap();
@@ -1314,7 +1314,7 @@ mod tests {
     #[test]
     fn remove_node_only() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         let index = graph.insert_node(&mut storage).unwrap();
 
@@ -1326,7 +1326,7 @@ mod tests {
     #[test]
     fn remove_node_missing() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
         graph
             .remove_node(&mut storage, GraphIndex::from(1))
@@ -1336,7 +1336,7 @@ mod tests {
     #[test]
     fn remove_nodes_with_edges() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -1369,7 +1369,7 @@ mod tests {
     #[test]
     fn restore_from_file() {
         let test_file = TestFile::new();
-        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
 
         let storage_index;
 

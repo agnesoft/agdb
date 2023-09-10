@@ -4,7 +4,6 @@ use super::map::MapIterator;
 use super::map::MapValueState;
 use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
-use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
 use crate::storage::StorageData;
 use crate::storage::StorageIndex;
@@ -538,7 +537,7 @@ where
     }
 }
 
-pub type MultiMapStorage<K, T, D = FileStorage> = MultiMapImpl<K, T, D, DbMapData<K, T, D>>;
+pub type MultiMapStorage<K, T, D> = MultiMapImpl<K, T, D, DbMapData<K, T, D>>;
 
 impl<K, T, D> MultiMapStorage<K, T, D>
 where
@@ -568,13 +567,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::test_file::TestFile;
+    use crate::{
+        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
+        test_utilities::test_file::TestFile,
+    };
 
     #[test]
     fn new() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &1, &"Hello".to_string()).unwrap();
         map.insert(&mut storage, &1, &"World".to_string()).unwrap();
         map.insert(&mut storage, &1, &"!".to_string()).unwrap();
@@ -602,7 +605,8 @@ mod tests {
     fn iter_key() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, u64>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.iter_key(&storage, &1).count(), 0);
 
@@ -632,7 +636,8 @@ mod tests {
     fn remove_value_empty_map() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert!(map
             .remove_value(&mut storage, &10, &"Hello".to_string())
@@ -643,7 +648,8 @@ mod tests {
     fn remove_missing_value() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
         assert!(map
@@ -655,7 +661,8 @@ mod tests {
     fn remove_value_shrinks_capacity() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, u64>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, u64, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         for i in 0..100 {
             map.insert(&mut storage, &i, &i).unwrap();
@@ -676,7 +683,8 @@ mod tests {
     fn replace_empty_map() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         let p = |v: &String| v == "Hello";
         assert!(map
             .insert_or_replace(&mut storage, &10, p, &"World".to_string())
@@ -688,7 +696,8 @@ mod tests {
     fn replace_missing_value() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &10, &"World".to_string()).unwrap();
         map.insert(&mut storage, &11, &"Hello".to_string()).unwrap();
 
@@ -701,7 +710,8 @@ mod tests {
     fn replace_deleted() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         map.insert(&mut storage, &10, &"Hello".to_string()).unwrap();
         map.insert(&mut storage, &10, &"World".to_string()).unwrap();
         map.remove_value(&mut storage, &10, &"Hello".to_string())
@@ -717,7 +727,8 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+        let mut map =
+            MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(map.values_count(&storage, &4), Ok(0));
 
@@ -743,14 +754,19 @@ mod tests {
         let storage_index;
 
         {
-            let mut map = MultiMapStorage::<u64, String>::new(&mut storage).unwrap();
+            let mut map =
+                MultiMapStorage::<u64, String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
             map.insert(&mut storage, &1, &"Hello".to_string()).unwrap();
             map.insert(&mut storage, &1, &"World".to_string()).unwrap();
             map.insert(&mut storage, &1, &"!".to_string()).unwrap();
             storage_index = map.storage_index();
         }
 
-        let map = MultiMapStorage::<u64, String>::from_storage(&storage, storage_index).unwrap();
+        let map = MultiMapStorage::<u64, String, FileStorageMemoryMapped>::from_storage(
+            &storage,
+            storage_index,
+        )
+        .unwrap();
 
         let mut values = Vec::<(u64, String)>::new();
         values.reserve(3);

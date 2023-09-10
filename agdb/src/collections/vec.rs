@@ -1,5 +1,4 @@
 use crate::db::db_error::DbError;
-use crate::storage::file_storage::FileStorage;
 use crate::storage::Storage;
 use crate::storage::StorageData;
 use crate::storage::StorageIndex;
@@ -249,7 +248,7 @@ where
     pub storage: &'a Storage<D>,
 }
 
-pub type DbVec<T, D = FileStorage> = VecImpl<T, D, DbVecData<T, D, DbError>, DbError>;
+pub type DbVec<T, D> = VecImpl<T, D, DbVecData<T, D, DbError>, DbError>;
 
 impl<'a, T, D, Data, E> Iterator for VecIterator<'a, T, D, Data, E>
 where
@@ -414,7 +413,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utilities::test_file::TestFile;
+    use crate::{
+        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
+        test_utilities::test_file::TestFile,
+    };
 
     #[test]
     fn from_storage_index() {
@@ -424,7 +426,7 @@ mod tests {
         let index;
 
         {
-            let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+            let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
             vec.push(&mut storage, &"Hello".to_string()).unwrap();
             vec.push(&mut storage, &", ".to_string()).unwrap();
             vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -432,7 +434,7 @@ mod tests {
             index = vec.storage_index();
         }
 
-        let vec = DbVec::<String>::from_storage(&storage, index).unwrap();
+        let vec = DbVec::<String, FileStorageMemoryMapped>::from_storage(&storage, index).unwrap();
 
         assert_eq!(
             vec.iter(&storage).collect::<Vec<String>>(),
@@ -451,10 +453,13 @@ mod tests {
         let storage = Storage::new(test_file.file_name()).unwrap();
 
         assert_eq!(
-            DbVec::<String>::from_storage(&storage, StorageIndex::from(1_u64))
-                .err()
-                .unwrap(),
-            DbError::from("FileStorage error: index (1) not found")
+            DbVec::<String, FileStorageMemoryMapped>::from_storage(
+                &storage,
+                StorageIndex::from(1_u64)
+            )
+            .err()
+            .unwrap(),
+            DbError::from("Storage error: index (1) not found")
         );
     }
 
@@ -463,7 +468,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -480,7 +485,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert!(vec.is_empty());
 
@@ -495,7 +500,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(vec.len(), 0);
 
@@ -512,7 +517,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
@@ -529,7 +534,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -561,7 +566,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -580,7 +585,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -599,7 +604,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(
             vec.remove(&mut storage, 0),
@@ -612,7 +617,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         assert_eq!(vec.capacity(), 0);
 
         vec.reserve(&mut storage, 20).unwrap();
@@ -625,7 +630,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.reserve(&mut storage, 20).unwrap();
         vec.reserve(&mut storage, 10).unwrap();
 
@@ -637,7 +642,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -663,7 +668,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -689,7 +694,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -713,7 +718,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -732,7 +737,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -751,7 +756,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(
             vec.replace(&mut storage, 0, &"".to_string()),
@@ -764,7 +769,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -786,7 +791,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(vec.capacity(), 0);
 
@@ -799,7 +804,7 @@ mod tests {
     fn swap() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -819,7 +824,7 @@ mod tests {
     fn swap_self() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -839,7 +844,7 @@ mod tests {
     fn swap_invalid() {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -859,7 +864,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let mut vec = DbVec::<String>::new(&mut storage).unwrap();
+        let mut vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
         vec.push(&mut storage, &"Hello".to_string()).unwrap();
         vec.push(&mut storage, &", ".to_string()).unwrap();
         vec.push(&mut storage, &"World".to_string()).unwrap();
@@ -876,7 +881,7 @@ mod tests {
         let test_file = TestFile::new();
         let mut storage = Storage::new(test_file.file_name()).unwrap();
 
-        let vec = DbVec::<String>::new(&mut storage).unwrap();
+        let vec = DbVec::<String, FileStorageMemoryMapped>::new(&mut storage).unwrap();
 
         assert_eq!(
             vec.value(&storage, 0),

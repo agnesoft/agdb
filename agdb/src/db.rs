@@ -30,7 +30,7 @@ use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
-use crate::storage::file_storage::FileStorage;
+use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::transaction_mut::TransactionMut;
@@ -169,10 +169,10 @@ impl Serialize for DbStorageIndex {
 /// WAL file. The WAL is then purged on commit of a transaction (all queries are
 /// transactional even if the transaction is not explicitly used).
 pub struct Db {
-    storage: Storage<FileStorage>,
-    graph: DbGraph,
-    aliases: DbIndexedMap<String, DbId>,
-    values: MultiMapStorage<DbId, DbKeyValue>,
+    storage: Storage<FileStorageMemoryMapped>,
+    graph: DbGraph<FileStorageMemoryMapped>,
+    aliases: DbIndexedMap<String, DbId, FileStorageMemoryMapped>,
+    values: MultiMapStorage<DbId, DbKeyValue, FileStorageMemoryMapped>,
     undo_stack: Vec<Command>,
 }
 

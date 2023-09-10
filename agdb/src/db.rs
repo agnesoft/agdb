@@ -1,3 +1,4 @@
+pub mod db_config;
 pub mod db_element;
 pub mod db_error;
 pub mod db_id;

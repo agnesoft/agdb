@@ -4,6 +4,8 @@ use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
 use super::Storage;
 use super::StorageIndex;
+use crate::db::db_config::DbConfig;
+use crate::db::db_config::StorageMode;
 use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -15,16 +17,13 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
-
-#[cfg(feature = "no-memory-map")]
 use std::sync::Mutex;
 
 pub struct FileSync {
-    #[cfg(not(feature = "no-memory-map"))]
+    config: DbConfig,
     buffer: Vec<u8>,
-    file: File,
+    file: Option<File>,
     filename: String,
-    #[cfg(feature = "no-memory-map")]
     lock: Mutex<()>,
 }
 
@@ -36,109 +35,140 @@ pub struct FileStorage {
 }
 
 impl FileSync {
-    pub fn len(&self) -> Result<u64, DbError> {
-        #[cfg(not(feature = "no-memory-map"))]
-        return Ok(self.buffer.len() as u64);
-
-        #[cfg(feature = "no-memory-map")]
-        {
-            if let Ok(_guard) = self.lock.try_lock() {
-                Self::len_impl(&self.file)
-            } else {
-                Self::len_impl(&self.open_file()?)
+    pub fn flush(&mut self) -> Result<(), DbError> {
+        match self.config.storage_mode {
+            StorageMode::File | StorageMode::FileMemory => {
+                Ok(self.file.as_ref().unwrap().flush()?)
             }
+            StorageMode::Memory => Ok(()),
         }
     }
 
-    pub fn new(filename: &str) -> Result<Self, DbError> {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(filename)?;
+    pub fn len(&self) -> Result<u64, DbError> {
+        match self.config.storage_mode {
+            StorageMode::File => {
+                if let Ok(_guard) = self.lock.try_lock() {
+                    Self::len_impl(&self.file.as_ref().unwrap())
+                } else {
+                    Self::len_impl(&self.open_file()?)
+                }
+            }
+            StorageMode::FileMemory | StorageMode::Memory => Ok(self.buffer.len() as u64),
+        }
+    }
 
-        #[cfg(not(feature = "no-memory-map"))]
+    pub fn new(filename: &str, config: DbConfig) -> Result<Self, DbError> {
         let mut buffer = vec![];
-        #[cfg(not(feature = "no-memory-map"))]
-        (&file).read_to_end(&mut buffer)?;
+        let file = match config.storage_mode {
+            StorageMode::File | StorageMode::FileMemory => {
+                let file = OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .open(filename)?;
+                (&file).read_to_end(&mut buffer)?;
+                Some(file)
+            }
+            StorageMode::Memory => None,
+        };
 
         Ok(Self {
-            #[cfg(not(feature = "no-memory-map"))]
+            config,
             buffer,
             file,
             filename: filename.to_string(),
-            #[cfg(feature = "no-memory-map")]
             lock: Mutex::new(()),
         })
     }
 
     pub fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
-        #[cfg(not(feature = "no-memory-map"))]
-        {
-            let end = pos + value_len;
-            Ok(self.buffer[pos as usize..end as usize].to_vec())
-        }
+        match self.config.storage_mode {
+            StorageMode::File => {
+                let mut buffer = vec![0_u8; value_len as usize];
 
-        #[cfg(feature = "no-memory-map")]
-        {
-            let mut buffer = vec![0_u8; value_len as usize];
+                if let Ok(_guard) = self.lock.try_lock() {
+                    Self::read_impl(&self.file.as_ref().unwrap(), pos, &mut buffer)?;
+                } else {
+                    Self::read_impl(&self.open_file()?, pos, &mut buffer)?;
+                }
 
-            if let Ok(_guard) = self.lock.try_lock() {
-                Self::read_impl(&self.file, pos, &mut buffer)?;
-            } else {
-                Self::read_impl(&self.open_file()?, pos, &mut buffer)?;
+                Ok(buffer)
             }
-
-            Ok(buffer)
+            StorageMode::FileMemory | StorageMode::Memory => {
+                let end = pos + value_len;
+                Ok(self.buffer[pos as usize..end as usize].to_vec())
+            }
         }
     }
 
-    pub fn set_len(&mut self, len: u64) -> Result<(), DbError> {
-        #[cfg(not(feature = "no-memory-map"))]
-        self.buffer.resize(len as usize, 0);
-        Ok(self.file.set_len(len)?)
-    }
-
-    pub fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
-        #[cfg(not(feature = "no-memory-map"))]
-        {
-            let end = pos as usize + bytes.len();
-
-            if end < self.buffer.len() {
-                self.buffer[pos as usize..end].copy_from_slice(bytes);
-            } else {
-                self.buffer.resize(pos as usize, 0);
-                self.buffer.extend_from_slice(bytes);
+    pub fn resize(&mut self, len: u64) -> Result<(), DbError> {
+        match self.config.storage_mode {
+            StorageMode::File => self.file.as_ref().unwrap().set_len(len)?,
+            StorageMode::FileMemory => {
+                self.buffer.resize(len as usize, 0);
+                self.file.as_ref().unwrap().set_len(len)?
             }
+            StorageMode::Memory => self.buffer.resize(len as usize, 0),
         }
-
-        self.file.seek(SeekFrom::Start(pos))?;
-        self.file.write_all(bytes)?;
 
         Ok(())
     }
 
-    #[cfg(feature = "no-memory-map")]
+    pub fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
+        match self.config.storage_mode {
+            StorageMode::File => {
+                self.file.as_ref().unwrap().seek(SeekFrom::Start(pos))?;
+                self.file.as_ref().unwrap().write_all(bytes)?
+            }
+            StorageMode::FileMemory => {
+                self.write_buffer(pos, bytes);
+                self.file.as_ref().unwrap().seek(SeekFrom::Start(pos))?;
+                self.file.as_ref().unwrap().write_all(bytes)?
+            }
+            StorageMode::Memory => self.write_buffer(pos, bytes),
+        }
+
+        Ok(())
+    }
+
+    fn len_impl(mut file: &File) -> Result<u64, DbError> {
+        Ok(file.seek(SeekFrom::End(0))?)
+    }
+
     fn open_file(&self) -> Result<File, DbError> {
         Ok(File::open(&self.filename)?)
     }
 
-    #[cfg(feature = "no-memory-map")]
     fn read_impl(mut file: &File, pos: u64, buffer: &mut [u8]) -> Result<(), DbError> {
         file.seek(SeekFrom::Start(pos))?;
         file.read_exact(buffer)?;
         Ok(())
     }
 
-    #[cfg(feature = "no-memory-map")]
-    fn len_impl(mut file: &File) -> Result<u64, DbError> {
-        Ok(file.seek(SeekFrom::End(0))?)
+    fn write_buffer(&mut self, pos: u64, bytes: &[u8]) {
+        let end = pos as usize + bytes.len();
+
+        if end < self.buffer.len() {
+            self.buffer[pos as usize..end].copy_from_slice(bytes);
+        } else {
+            self.buffer.resize(pos as usize, 0);
+            self.buffer.extend_from_slice(bytes);
+        }
     }
 }
 
 impl FileStorage {
     pub fn new(filename: &str) -> Result<Self, DbError> {
-        let file = FileSync::new(filename)?;
+        Self::new_config(
+            filename,
+            DbConfig {
+                storage_mode: StorageMode::FileMemory,
+            },
+        )
+    }
+
+    pub fn new_config(filename: &str, config: DbConfig) -> Result<Self, DbError> {
+        let file = FileSync::new(filename, config)?;
 
         let mut storage = FileStorage {
             file,
@@ -154,7 +184,7 @@ impl FileStorage {
     }
 
     pub fn backup(&mut self, filename: &str) -> Result<(), DbError> {
-        self.file.file.flush()?;
+        self.file.flush()?;
         std::fs::copy(&self.file.filename, filename)?;
         Ok(())
     }
@@ -178,7 +208,7 @@ impl FileStorage {
 
     fn apply_wal_record(&mut self, record: WriteAheadLogRecord) -> Result<(), DbError> {
         if record.value.is_empty() {
-            self.file.set_len(record.pos)
+            self.file.resize(record.pos)
         } else {
             self.write(record.pos, &record.value)
         }
@@ -301,11 +331,12 @@ impl FileStorage {
 
     fn read_records(&mut self) -> Result<(), DbError> {
         let mut records: Vec<FileRecord> = vec![FileRecord::default()];
-        let len = self.file.file.seek(SeekFrom::End(0))?;
-        self.file.file.seek(SeekFrom::Start(0))?;
+        let mut file = (*self.file.file.as_ref().unwrap()).try_clone()?;
+        let len = file.seek(SeekFrom::End(0))?;
+        file.seek(SeekFrom::Start(0))?;
 
-        while self.file.file.stream_position()? < len {
-            let record = Self::read_record(&mut self.file.file)?;
+        while file.stream_position()? < len {
+            let record = Self::read_record(&mut file)?;
 
             if record.index != 0 {
                 let index = record.index as usize;
@@ -403,7 +434,7 @@ impl FileStorage {
 
         if size < current_size {
             self.record_wal(size, current_size - size)?;
-            self.file.set_len(size)?;
+            self.file.resize(size)?;
         }
 
         Ok(())

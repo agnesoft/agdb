@@ -1,16 +1,17 @@
 use crate::query::Query;
-use crate::Db;
+use crate::storage::StorageData;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 
 /// The `Transaction` is a proxy struct that
 /// encapsulates an immutably borrowed `Db`.
 /// It allows running queries via `exec()`.
-pub struct Transaction<'a> {
-    db: &'a Db,
+pub struct Transaction<'a, Store: StorageData> {
+    db: &'a DbImpl<Store>,
 }
 
-impl<'a> Transaction<'a> {
+impl<'a, Store: StorageData> Transaction<'a, Store> {
     /// Executes immutable query:
     ///
     /// - Select elements
@@ -24,7 +25,7 @@ impl<'a> Transaction<'a> {
         query.process(self.db)
     }
 
-    pub(crate) fn new(data: &'a Db) -> Self {
+    pub(crate) fn new(data: &'a DbImpl<Store>) -> Self {
         Self { db: data }
     }
 }

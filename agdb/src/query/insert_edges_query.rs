@@ -1,9 +1,10 @@
 use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
 use super::QueryMut;
-use crate::Db;
+use crate::storage::StorageData;
 use crate::DbElement;
 use crate::DbId;
+use crate::DbImpl;
 use crate::DbKeyValue;
 use crate::QueryError;
 use crate::QueryResult;
@@ -36,7 +37,10 @@ pub struct InsertEdgesQuery {
 }
 
 impl QueryMut for InsertEdgesQuery {
-    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
         let from = Self::db_ids(&self.from, db)?;
@@ -59,7 +63,10 @@ impl QueryMut for InsertEdgesQuery {
 }
 
 impl InsertEdgesQuery {
-    fn db_ids(query_ids: &QueryIds, db: &Db) -> Result<Vec<DbId>, QueryError> {
+    fn db_ids<Store: StorageData>(
+        query_ids: &QueryIds,
+        db: &DbImpl<Store>,
+    ) -> Result<Vec<DbId>, QueryError> {
         Ok(match &query_ids {
             QueryIds::Ids(query_ids) => {
                 let mut ids = vec![];
@@ -79,9 +86,9 @@ impl InsertEdgesQuery {
         })
     }
 
-    fn many_to_many(
+    fn many_to_many<Store: StorageData>(
         &self,
-        db: &mut Db,
+        db: &mut DbImpl<Store>,
         from: &[DbId],
         to: &[DbId],
     ) -> Result<Vec<DbId>, QueryError> {
@@ -101,9 +108,9 @@ impl InsertEdgesQuery {
         Ok(ids)
     }
 
-    fn many_to_many_each(
+    fn many_to_many_each<Store: StorageData>(
         &self,
-        db: &mut Db,
+        db: &mut DbImpl<Store>,
         from: &[DbId],
         to: &[DbId],
     ) -> Result<Vec<DbId>, QueryError> {

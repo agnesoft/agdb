@@ -1,6 +1,7 @@
 use crate::query::Query;
 use crate::query::QueryMut;
-use crate::Db;
+use crate::storage::StorageData;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::Transaction;
@@ -8,11 +9,11 @@ use crate::Transaction;
 /// The `TransactionMut` is a proxy struct that
 /// encapsulates a mutably borrowed `Db`.
 /// It allows running queries via `exec()` and `exec_mut()`.
-pub struct TransactionMut<'a> {
-    db: &'a mut Db,
+pub struct TransactionMut<'a, Store: StorageData> {
+    db: &'a mut DbImpl<Store>,
 }
 
-impl<'a> TransactionMut<'a> {
+impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     /// Executes immutable query:
     ///
     /// - Select elements
@@ -39,7 +40,7 @@ impl<'a> TransactionMut<'a> {
         query.process(self.db)
     }
 
-    pub(crate) fn new(data: &'a mut Db) -> Self {
+    pub(crate) fn new(data: &'a mut DbImpl<Store>) -> Self {
         Self { db: data }
     }
 

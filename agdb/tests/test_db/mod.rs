@@ -3,11 +3,11 @@ pub mod test_file;
 
 use agdb::Db;
 use agdb::DbElement;
+use agdb::DbTransactionMut;
 use agdb::Query;
 use agdb::QueryError;
 use agdb::QueryMut;
 use agdb::QueryResult;
-use agdb::TransactionMut;
 pub use test_file::TestFile;
 
 pub struct TestDb {
@@ -96,7 +96,7 @@ impl TestDb {
     #[track_caller]
     pub fn transaction_mut<T, E: From<QueryError> + std::fmt::Debug>(
         &mut self,
-        f: impl FnMut(&mut TransactionMut) -> Result<T, E>,
+        f: impl FnMut(&mut DbTransactionMut) -> Result<T, E>,
     ) {
         self.db.transaction_mut(f).unwrap();
     }
@@ -107,7 +107,7 @@ impl TestDb {
         E: From<QueryError> + std::fmt::Debug + PartialEq,
     >(
         &mut self,
-        f: impl FnMut(&mut TransactionMut) -> Result<T, E>,
+        f: impl FnMut(&mut DbTransactionMut) -> Result<T, E>,
         error: E,
     ) {
         assert_eq!(self.db.transaction_mut(f).unwrap_err(), error);

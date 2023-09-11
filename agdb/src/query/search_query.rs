@@ -1,9 +1,10 @@
 use super::query_condition::QueryCondition;
 use super::query_id::QueryId;
 use crate::db::db_key::DbKeyOrder;
-use crate::Db;
+use crate::storage::StorageData;
 use crate::DbElement;
 use crate::DbId;
+use crate::DbImpl;
 use crate::DbKey;
 use crate::Query;
 use crate::QueryError;
@@ -56,7 +57,7 @@ pub struct SearchQuery {
 }
 
 impl Query for SearchQuery {
-    fn process(&self, db: &Db) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
         for id in self.search(db)? {
@@ -70,7 +71,10 @@ impl Query for SearchQuery {
 }
 
 impl SearchQuery {
-    pub(crate) fn search(&self, db: &Db) -> Result<Vec<DbId>, QueryError> {
+    pub(crate) fn search<Store: StorageData>(
+        &self,
+        db: &DbImpl<Store>,
+    ) -> Result<Vec<DbId>, QueryError> {
         if self.destination == QueryId::Id(DbId(0)) {
             let origin = db.db_id(&self.origin)?;
 
@@ -112,7 +116,11 @@ impl SearchQuery {
         }
     }
 
-    fn sort(&self, ids: &mut [DbId], db: &Db) -> Result<(), QueryError> {
+    fn sort<Store: StorageData>(
+        &self,
+        ids: &mut [DbId],
+        db: &DbImpl<Store>,
+    ) -> Result<(), QueryError> {
         let keys = self
             .order_by
             .iter()

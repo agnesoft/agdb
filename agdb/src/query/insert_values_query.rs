@@ -1,6 +1,7 @@
 use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
-use crate::Db;
+use crate::storage::StorageData;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryMut;
 use crate::QueryResult;
@@ -23,7 +24,10 @@ pub struct InsertValuesQuery {
 }
 
 impl QueryMut for InsertValuesQuery {
-    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
         match &self.ids {

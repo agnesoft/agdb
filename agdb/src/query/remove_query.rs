@@ -1,6 +1,7 @@
 use super::query_ids::QueryIds;
 use super::QueryMut;
-use crate::Db;
+use crate::storage::StorageData;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -14,7 +15,10 @@ use crate::QueryResult;
 pub struct RemoveQuery(pub QueryIds);
 
 impl QueryMut for RemoveQuery {
-    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
         match &self.0 {

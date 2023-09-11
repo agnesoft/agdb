@@ -1,6 +1,7 @@
 use super::query_ids::QueryIds;
 use super::QueryMut;
-use crate::Db;
+use crate::storage::StorageData;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -21,7 +22,10 @@ pub struct InsertAliasesQuery {
 }
 
 impl QueryMut for InsertAliasesQuery {
-    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
         match &self.ids {
@@ -59,6 +63,7 @@ mod tests {
     use crate::query::query_id::QueryId;
     use crate::query::search_query::SearchQuery;
     use crate::test_utilities::test_file::TestFile;
+    use crate::Db;
     use crate::DbId;
     use crate::SearchQueryAlgorithm;
 

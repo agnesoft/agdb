@@ -1148,7 +1148,7 @@ mod tests {
     #[test]
     fn file_lock() {
         let test_file = TestFile::new();
-        let mut file = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
         file.write(0, "Hello, World".as_bytes()).unwrap();
 
         assert_eq!(file.read(0, 12).unwrap(), "Hello, World".as_bytes());
@@ -1163,7 +1163,7 @@ mod tests {
     #[test]
     fn resize() {
         let test_file = TestFile::new();
-        let mut file = FileStorage::new(&test_file.file_name()).unwrap();
+        let mut file = FileStorage::new(test_file.file_name()).unwrap();
         file.write(0, "Hello, World".as_bytes()).unwrap();
         assert_eq!(file.len(), 12);
         file.resize(20).unwrap();

@@ -1,17 +1,17 @@
+pub mod path_search;
+
 mod breadth_first_search;
 mod breadth_first_search_reverse;
 mod depth_first_search;
 mod depth_first_search_reverse;
-mod path_search;
 mod search_impl;
-
-pub use self::path_search::PathSearchHandler;
 
 use self::breadth_first_search::BreadthFirstSearch;
 use self::breadth_first_search_reverse::BreadthFirstSearchReverse;
 use self::depth_first_search::DepthFirstSearch;
 use self::depth_first_search_reverse::DepthFirstSearchReverse;
 use self::path_search::PathSearch;
+use self::path_search::PathSearchHandler;
 use self::search_impl::SearchImpl;
 use crate::db::db_error::DbError;
 use crate::graph::GraphData;

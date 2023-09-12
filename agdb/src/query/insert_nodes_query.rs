@@ -1,9 +1,9 @@
 use super::query_values::QueryValues;
-use super::QueryMut;
+use crate::db::DbImpl;
 use crate::storage::StorageData;
 use crate::DbElement;
-use crate::DbImpl;
 use crate::QueryError;
+use crate::QueryMut;
 use crate::QueryResult;
 
 /// Query to insert nodes to the database. Only one of

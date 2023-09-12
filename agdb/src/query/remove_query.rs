@@ -1,8 +1,8 @@
 use super::query_ids::QueryIds;
-use super::QueryMut;
+use crate::db::DbImpl;
 use crate::storage::StorageData;
-use crate::DbImpl;
 use crate::QueryError;
+use crate::QueryMut;
 use crate::QueryResult;
 
 /// Query to remove database elements (nodes & edges). It

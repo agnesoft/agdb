@@ -1,7 +1,7 @@
 use super::query_ids::QueryIds;
 use super::select_values_query::SelectValuesQuery;
+use crate::db::DbImpl;
 use crate::storage::StorageData;
-use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryMut;
 use crate::QueryResult;

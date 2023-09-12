@@ -1,6 +1,6 @@
-use super::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct DbValueIndex {

@@ -1,4 +1,3 @@
-use super::db_error::DbError;
 use super::db_value_index::DbValueIndex;
 use crate::collections::vec::VecValue;
 use crate::storage::Storage;
@@ -6,6 +5,7 @@ use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::DbError;
 use crate::DbKey;
 use crate::DbValue;
 

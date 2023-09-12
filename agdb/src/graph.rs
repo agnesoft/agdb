@@ -295,9 +295,9 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a Storage<D>,
+    graph: &'a GraphImpl<D, Data>,
+    index: GraphIndex,
+    storage: &'a Storage<D>,
 }
 
 impl<'a, D, Data> GraphNode<'a, D, Data>

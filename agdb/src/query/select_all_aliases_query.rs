@@ -1,6 +1,6 @@
+use crate::db::DbImpl;
 use crate::storage::StorageData;
 use crate::DbElement;
-use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;

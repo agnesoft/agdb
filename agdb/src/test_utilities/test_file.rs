@@ -1,4 +1,3 @@
-use std::fs::remove_file;
 use std::panic::Location;
 use std::path::Path;
 
@@ -42,7 +41,7 @@ impl TestFile {
 
     pub(crate) fn remove_file_if_exists(filename: &String) {
         if Path::new(filename).exists() {
-            remove_file(filename).unwrap();
+            std::fs::remove_file(filename).unwrap();
         }
     }
 }

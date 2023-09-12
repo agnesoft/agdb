@@ -20,8 +20,8 @@ pub mod select_keys_query;
 pub mod select_query;
 pub mod select_values_query;
 
+use crate::db::DbImpl;
 use crate::storage::StorageData;
-use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 

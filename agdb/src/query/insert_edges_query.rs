@@ -1,12 +1,12 @@
 use super::query_ids::QueryIds;
 use super::query_values::QueryValues;
-use super::QueryMut;
+use crate::db::DbImpl;
 use crate::storage::StorageData;
 use crate::DbElement;
 use crate::DbId;
-use crate::DbImpl;
 use crate::DbKeyValue;
 use crate::QueryError;
+use crate::QueryMut;
 use crate::QueryResult;
 
 /// Query to inserts edges to the database. The `from`

@@ -1,10 +1,10 @@
-use super::db_error::DbError;
 use super::db_f64::DbF64;
 use super::db_value_index::DbValueIndex;
 use crate::storage::Storage;
 use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
+use crate::DbError;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as DisplayResult;

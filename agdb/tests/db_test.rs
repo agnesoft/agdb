@@ -36,6 +36,9 @@ fn public_types() {
     use agdb::Query;
     use agdb::QueryBuilder;
     use agdb::QueryCondition;
+    use agdb::QueryConditionData;
+    use agdb::QueryConditionLogic;
+    use agdb::QueryConditionModifier;
     use agdb::QueryError;
     use agdb::QueryId;
     use agdb::QueryIds;

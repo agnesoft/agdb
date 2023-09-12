@@ -13,8 +13,8 @@ pub trait PathSearchHandler {
 
 #[derive(Clone)]
 struct Path {
-    pub(crate) elements: Vec<(GraphIndex, bool)>,
-    pub(crate) cost: u64,
+    elements: Vec<(GraphIndex, bool)>,
+    cost: u64,
 }
 
 pub struct PathSearch<'a, D, Data, Handler>

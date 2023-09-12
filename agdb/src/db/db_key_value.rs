@@ -38,7 +38,7 @@ impl VecValue for DbKeyValue {
     fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         let key_index = self.key.store_db_value(storage)?;
         let value_index = self.value.store_db_value(storage)?;
-        Ok([key_index.value, value_index.value].concat())
+        Ok([key_index.data(), value_index.data()].concat())
     }
 
     fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {

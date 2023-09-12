@@ -338,8 +338,8 @@ where
     D: StorageData,
     Data: MapData<K, T, D>,
 {
-    pub(crate) multi_map: MultiMapImpl<K, T, D, Data>,
-    pub(crate) storage: PhantomData<D>,
+    multi_map: MultiMapImpl<K, T, D, Data>,
+    storage: PhantomData<D>,
 }
 
 impl<K, T, D, Data> MapImpl<K, T, D, Data>

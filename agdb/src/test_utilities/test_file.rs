@@ -27,7 +27,7 @@ impl TestFile {
         TestFile::from(file)
     }
 
-    pub(crate) fn hidden_filename(filename: &String) -> String {
+    fn hidden_filename(filename: &String) -> String {
         let path = Path::new(filename);
         let name: String = path.file_name().unwrap().to_str().unwrap().to_string();
         let parent = path.parent().unwrap();
@@ -39,7 +39,7 @@ impl TestFile {
             .to_string()
     }
 
-    pub(crate) fn remove_file_if_exists(filename: &String) {
+    fn remove_file_if_exists(filename: &String) {
         if Path::new(filename).exists() {
             std::fs::remove_file(filename).unwrap();
         }

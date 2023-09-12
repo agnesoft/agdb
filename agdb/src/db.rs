@@ -724,13 +724,13 @@ impl<Store: StorageData> DbImpl<Store> {
             .ok_or(DbError::from("Data integrity corrupted"))?;
 
         for edge in node.edge_iter_from() {
-            edges.push((edge.index, edge.index_from(), edge.index_to()));
+            edges.push((edge.index(), edge.index_from(), edge.index_to()));
         }
 
         for edge in node.edge_iter_to() {
             let from = edge.index_from();
             if from != graph_index {
-                edges.push((edge.index, from, edge.index_to()));
+                edges.push((edge.index(), from, edge.index_to()));
             }
         }
 

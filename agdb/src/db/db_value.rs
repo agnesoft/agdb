@@ -49,15 +49,15 @@ pub enum DbValue {
     VecString(Vec<String>),
 }
 
-pub(crate) const BYTES_META_VALUE: u8 = 1_u8;
-pub(crate) const I64_META_VALUE: u8 = 2_u8;
-pub(crate) const U64_META_VALUE: u8 = 3_u8;
-pub(crate) const F64_META_VALUE: u8 = 4_u8;
-pub(crate) const STRING_META_VALUE: u8 = 5_u8;
-pub(crate) const VEC_I64_META_VALUE: u8 = 6_u8;
-pub(crate) const VEC_U64_META_VALUE: u8 = 7_u8;
-pub(crate) const VEC_F64_META_VALUE: u8 = 8_u8;
-pub(crate) const VEC_STRING_META_VALUE: u8 = 9_u8;
+const BYTES_META_VALUE: u8 = 1_u8;
+const I64_META_VALUE: u8 = 2_u8;
+const U64_META_VALUE: u8 = 3_u8;
+const F64_META_VALUE: u8 = 4_u8;
+const STRING_META_VALUE: u8 = 5_u8;
+const VEC_I64_META_VALUE: u8 = 6_u8;
+const VEC_U64_META_VALUE: u8 = 7_u8;
+const VEC_F64_META_VALUE: u8 = 8_u8;
+const VEC_STRING_META_VALUE: u8 = 9_u8;
 
 impl DbValue {
     /// Returns `&Vec<u8>` or an error if the value is

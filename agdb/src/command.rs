@@ -2,7 +2,7 @@ use crate::graph::GraphIndex;
 use crate::DbId;
 use crate::DbKeyValue;
 
-pub(crate) enum Command {
+pub enum Command {
     InsertAlias { alias: String, id: DbId },
     InsertEdge { from: GraphIndex, to: GraphIndex },
     InsertNode,

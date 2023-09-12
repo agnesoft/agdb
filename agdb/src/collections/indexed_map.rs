@@ -17,9 +17,9 @@ where
     DataKT: MapData<K, T, D>,
     DataTK: MapData<T, K, D>,
 {
-    pub(crate) keys_to_values: MapImpl<K, T, D, DataKT>,
-    pub(crate) values_to_keys: MapImpl<T, K, D, DataTK>,
-    pub(crate) storage: PhantomData<D>,
+    keys_to_values: MapImpl<K, T, D, DataKT>,
+    values_to_keys: MapImpl<T, K, D, DataTK>,
+    storage: PhantomData<D>,
 }
 
 impl<K, T, D, DataKT, DataTK> IndexedMapImpl<K, T, D, DataKT, DataTK>

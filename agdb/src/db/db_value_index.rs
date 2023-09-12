@@ -3,40 +3,44 @@ use crate::utilities::serialize::SerializeStatic;
 use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(crate) struct DbValueIndex {
-    pub(crate) value: [u8; 16],
+pub struct DbValueIndex {
+    value: [u8; 16],
 }
 
 impl DbValueIndex {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self { value: [0_u8; 16] }
     }
 
-    pub(crate) fn get_type(&self) -> u8 {
+    pub fn data(&self) -> [u8; 16] {
+        self.value
+    }
+
+    pub fn get_type(&self) -> u8 {
         self.value[15] >> 4
     }
 
-    pub(crate) fn index(&self) -> u64 {
+    pub fn index(&self) -> u64 {
         let mut bytes = [0_u8; 8];
         bytes.copy_from_slice(&self.value[0..std::mem::size_of::<u64>()]);
         u64::from_le_bytes(bytes)
     }
 
-    pub(crate) fn is_value(&self) -> bool {
+    pub fn is_value(&self) -> bool {
         self.size() != 0 || self.index() == 0
     }
 
-    pub(crate) fn set_type(&mut self, value: u8) {
+    pub fn set_type(&mut self, value: u8) {
         let v = (value << 4) | self.size();
         self.value[15] = v;
     }
 
-    pub(crate) fn set_index(&mut self, index: u64) {
+    pub fn set_index(&mut self, index: u64) {
         self.set_size(0);
         self.value[0..std::mem::size_of::<u64>()].copy_from_slice(&index.to_le_bytes());
     }
 
-    pub(crate) fn set_value(&mut self, value: &[u8]) -> bool {
+    pub fn set_value(&mut self, value: &[u8]) -> bool {
         if value.len() > 15 {
             return false;
         }
@@ -47,11 +51,11 @@ impl DbValueIndex {
         true
     }
 
-    pub(crate) fn size(&self) -> u8 {
+    pub fn size(&self) -> u8 {
         self.value[15] & 0b00001111
     }
 
-    pub(crate) fn value(&self) -> &[u8] {
+    pub fn value(&self) -> &[u8] {
         let pos = self.size();
         &self.value[0..(pos as usize)]
     }

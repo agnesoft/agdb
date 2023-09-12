@@ -36,8 +36,8 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) storage: &'a Storage<D>,
+    graph: &'a GraphImpl<D, Data>,
+    storage: &'a Storage<D>,
 }
 
 impl<'a, D, Data> GraphSearch<'a, D, Data>
@@ -138,7 +138,7 @@ where
 }
 
 impl SearchControl {
-    pub(crate) fn and(self, other: SearchControl) -> SearchControl {
+    pub fn and(self, other: SearchControl) -> SearchControl {
         use SearchControl::Continue;
         use SearchControl::Finish;
         use SearchControl::Stop;
@@ -156,7 +156,7 @@ impl SearchControl {
         }
     }
 
-    pub(crate) fn or(self, other: SearchControl) -> SearchControl {
+    pub fn or(self, other: SearchControl) -> SearchControl {
         use SearchControl::Continue;
         use SearchControl::Finish;
         use SearchControl::Stop;
@@ -174,7 +174,7 @@ impl SearchControl {
         }
     }
 
-    pub(crate) fn flip(&mut self) {
+    pub fn flip(&mut self) {
         match self {
             SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => {
                 *v = !*v;
@@ -182,13 +182,13 @@ impl SearchControl {
         };
     }
 
-    pub(crate) fn is_true(&self) -> bool {
+    pub fn is_true(&self) -> bool {
         match self {
             SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => *v,
         }
     }
 
-    pub(crate) fn set_value(&mut self, value: bool) {
+    pub fn set_value(&mut self, value: bool) {
         match self {
             SearchControl::Continue(v) | SearchControl::Finish(v) | SearchControl::Stop(v) => {
                 *v = value;

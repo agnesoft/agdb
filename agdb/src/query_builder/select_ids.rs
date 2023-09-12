@@ -1,4 +1,4 @@
-use crate::query::select_query::SelectQuery;
+use crate::SelectQuery;
 
 /// Final builder that lets you create
 /// an actual query object.

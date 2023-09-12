@@ -1,5 +1,5 @@
 use super::StorageData;
-use crate::db::db_error::DbError;
+use crate::DbError;
 
 pub struct MemoryStorage {
     buffer: Vec<u8>,
@@ -74,6 +74,14 @@ mod tests {
     fn name() {
         let storage = Storage::<MemoryStorage>::new("storage").unwrap();
         assert_eq!(storage.name(), "storage");
+    }
+
+    #[test]
+    fn is_empty() {
+        let mut store = MemoryStorage::new("name").unwrap();
+        assert!(store.is_empty());
+        store.write(0, "Hi".as_bytes()).unwrap();
+        assert!(!store.is_empty());
     }
 
     #[test]

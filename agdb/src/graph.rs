@@ -1,11 +1,11 @@
 use crate::collections::vec::DbVec;
-use crate::db::db_error::DbError;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
+use crate::DbError;
+use crate::StorageData;
 use std::marker::PhantomData;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
@@ -24,7 +24,7 @@ impl GraphIndex {
         self.0 != 0
     }
 
-    pub(crate) fn as_u64(&self) -> u64 {
+    pub fn as_u64(&self) -> u64 {
         if self.is_edge() {
             (-self.0) as u64
         } else {
@@ -84,11 +84,11 @@ pub trait GraphData<D: StorageData> {
     fn transaction(&mut self, storage: &mut Storage<D>) -> u64;
 }
 
-pub(crate) struct GraphDataStorageIndexes {
-    pub(crate) from: StorageIndex,
-    pub(crate) to: StorageIndex,
-    pub(crate) from_meta: StorageIndex,
-    pub(crate) to_meta: StorageIndex,
+pub struct GraphDataStorageIndexes {
+    from: StorageIndex,
+    to: StorageIndex,
+    from_meta: StorageIndex,
+    to_meta: StorageIndex,
 }
 
 impl Serialize for GraphDataStorageIndexes {
@@ -130,12 +130,12 @@ pub struct GraphDataStorage<D>
 where
     D: StorageData,
 {
-    pub(crate) storage: PhantomData<D>,
-    pub(crate) storage_index: StorageIndex,
-    pub(crate) from: DbVec<i64, D>,
-    pub(crate) to: DbVec<i64, D>,
-    pub(crate) from_meta: DbVec<i64, D>,
-    pub(crate) to_meta: DbVec<i64, D>,
+    storage: PhantomData<D>,
+    storage_index: StorageIndex,
+    from: DbVec<i64, D>,
+    to: DbVec<i64, D>,
+    from_meta: DbVec<i64, D>,
+    to_meta: DbVec<i64, D>,
 }
 
 impl<D> GraphDataStorage<D>
@@ -295,9 +295,9 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a Storage<D>,
+    graph: &'a GraphImpl<D, Data>,
+    index: GraphIndex,
+    storage: &'a Storage<D>,
 }
 
 impl<'a, D, Data> GraphNode<'a, D, Data>
@@ -354,9 +354,9 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a Storage<D>,
+    graph: &'a GraphImpl<D, Data>,
+    index: GraphIndex,
+    storage: &'a Storage<D>,
 }
 
 impl<'a, D, Data> Iterator for GraphNodeIterator<'a, D, Data>
@@ -389,9 +389,9 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a Storage<D>,
+    graph: &'a GraphImpl<D, Data>,
+    index: GraphIndex,
+    storage: &'a Storage<D>,
 }
 
 impl<'a, D, Data> GraphEdge<'a, D, Data>
@@ -417,9 +417,9 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a Storage<D>,
+    graph: &'a GraphImpl<D, Data>,
+    index: GraphIndex,
+    storage: &'a Storage<D>,
 }
 
 impl<'a, D, Data> Iterator for GraphEdgeIterator<'a, D, Data>
@@ -454,9 +454,9 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) index: GraphIndex,
-    pub(crate) storage: &'a Storage<D>,
+    graph: &'a GraphImpl<D, Data>,
+    index: GraphIndex,
+    storage: &'a Storage<D>,
 }
 
 impl<'a, D, Data> Iterator for GraphEdgeReverseIterator<'a, D, Data>
@@ -491,8 +491,8 @@ where
     Data: GraphData<D>,
     D: StorageData,
 {
-    pub(crate) data: Data,
-    pub(crate) storage: PhantomData<D>,
+    data: Data,
+    storage: PhantomData<D>,
 }
 
 impl<D, Data> GraphImpl<D, Data>
@@ -626,11 +626,11 @@ where
         Ok(GraphIndex::from(-self.data.to(storage, index)?))
     }
 
-    pub(crate) fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
+    fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.from(storage, index).unwrap_or_default())
     }
 
-    pub(crate) fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
+    fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.to(storage, index).unwrap_or_default())
     }
 
@@ -682,7 +682,7 @@ where
         Ok(0 <= self.data.from(storage, index)?)
     }
 
-    pub(crate) fn next_edge_from(
+    fn next_edge_from(
         &self,
         storage: &Storage<D>,
         index: GraphIndex,
@@ -690,31 +690,19 @@ where
         Ok(GraphIndex::from(-self.data.from_meta(storage, index)?))
     }
 
-    pub(crate) fn next_edge_to(
-        &self,
-        storage: &Storage<D>,
-        index: GraphIndex,
-    ) -> Result<GraphIndex, DbError> {
+    fn next_edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.to_meta(storage, index)?))
     }
 
-    pub(crate) fn edge_count_from(
-        &self,
-        storage: &Storage<D>,
-        index: GraphIndex,
-    ) -> Result<i64, DbError> {
+    fn edge_count_from(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
         self.data.from_meta(storage, index)
     }
 
-    pub(crate) fn edge_count_to(
-        &self,
-        storage: &Storage<D>,
-        index: GraphIndex,
-    ) -> Result<i64, DbError> {
+    fn edge_count_to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
         self.data.to_meta(storage, index)
     }
 
-    pub(crate) fn next_node(
+    fn next_node(
         &self,
         storage: &Storage<D>,
         index: GraphIndex,
@@ -906,8 +894,8 @@ mod tests {
     use std::hash::Hash;
     use std::hash::Hasher;
 
-    #[test]
     #[allow(clippy::clone_on_copy)]
+    #[test]
     fn derived_from_clone() {
         let index = GraphIndex(1);
         let other = index.clone();

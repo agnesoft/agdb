@@ -1,10 +1,10 @@
-use super::query_ids::QueryIds;
-use super::select_values_query::SelectValuesQuery;
-use crate::storage::StorageData;
 use crate::DbImpl;
 use crate::QueryError;
+use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
+use crate::SelectValuesQuery;
+use crate::StorageData;
 
 /// Query to remove properties from existing elements
 /// in the database. All of the specified `ids` must

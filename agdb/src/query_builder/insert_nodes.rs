@@ -1,8 +1,8 @@
-use crate::query::insert_nodes_query::InsertNodesQuery;
 use crate::query::query_aliases::QueryAliases;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
+use crate::InsertNodesQuery;
 
 /// Insert nodes builder to add aliases or count
 /// or values.

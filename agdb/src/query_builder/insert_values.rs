@@ -1,5 +1,5 @@
-use crate::query::insert_values_query::InsertValuesQuery;
-use crate::query::query_ids::QueryIds;
+use crate::InsertValuesQuery;
+use crate::QueryIds;
 
 /// Insert values builder to set ids to which the values
 /// should be inserted.

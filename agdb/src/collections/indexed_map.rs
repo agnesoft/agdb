@@ -1,14 +1,14 @@
-use super::map::DbMap;
-use super::map::DbMapData;
-use super::map::MapData;
-use super::map::MapImpl;
-use super::map::MapIterator;
-use super::vec::VecValue;
-use crate::db::db_error::DbError;
+use crate::collections::map::DbMap;
+use crate::collections::map::DbMapData;
+use crate::collections::map::MapData;
+use crate::collections::map::MapImpl;
+use crate::collections::map::MapIterator;
+use crate::collections::vec::VecValue;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
+use crate::DbError;
+use crate::StorageData;
 use std::marker::PhantomData;
 
 pub struct IndexedMapImpl<K, T, D, DataKT, DataTK>
@@ -17,9 +17,9 @@ where
     DataKT: MapData<K, T, D>,
     DataTK: MapData<T, K, D>,
 {
-    pub(crate) keys_to_values: MapImpl<K, T, D, DataKT>,
-    pub(crate) values_to_keys: MapImpl<T, K, D, DataTK>,
-    pub(crate) storage: PhantomData<D>,
+    keys_to_values: MapImpl<K, T, D, DataKT>,
+    values_to_keys: MapImpl<T, K, D, DataTK>,
+    storage: PhantomData<D>,
 }
 
 impl<K, T, D, DataKT, DataTK> IndexedMapImpl<K, T, D, DataKT, DataTK>

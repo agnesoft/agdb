@@ -1,7 +1,7 @@
 use super::file_storage::FileStorage;
 use super::memory_storage::MemoryStorage;
 use super::StorageData;
-use crate::db::db_error::DbError;
+use crate::DbError;
 
 pub struct FileStorageMemoryMapped {
     file: FileStorage,

@@ -1,13 +1,13 @@
-use super::multi_map::MultiMapImpl;
-use super::vec::DbVec;
+use crate::collections::multi_map::MultiMapImpl;
+use crate::collections::vec::DbVec;
 use crate::collections::vec::VecValue;
-use crate::db::db_error::DbError;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
+use crate::DbError;
+use crate::StorageData;
 use std::marker::PhantomData;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -338,8 +338,8 @@ where
     D: StorageData,
     Data: MapData<K, T, D>,
 {
-    pub(crate) multi_map: MultiMapImpl<K, T, D, Data>,
-    pub(crate) storage: PhantomData<D>,
+    multi_map: MultiMapImpl<K, T, D, Data>,
+    storage: PhantomData<D>,
 }
 
 impl<K, T, D, Data> MapImpl<K, T, D, Data>

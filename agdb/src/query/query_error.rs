@@ -1,4 +1,4 @@
-use crate::db::db_error::DbError;
+use crate::DbError;
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt::Formatter;

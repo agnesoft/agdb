@@ -1,13 +1,13 @@
-use super::db_error::DbError;
-use super::db_value_index::DbValueIndex;
 use crate::collections::vec::VecValue;
+use crate::db::db_value_index::DbValueIndex;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::DbError;
 use crate::DbKey;
 use crate::DbValue;
+use crate::StorageData;
 
 /// Database key-value pair (aka property) attached to
 /// database elements. It can be constructed from a
@@ -38,7 +38,7 @@ impl VecValue for DbKeyValue {
     fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         let key_index = self.key.store_db_value(storage)?;
         let value_index = self.value.store_db_value(storage)?;
-        Ok([key_index.value, value_index.value].concat())
+        Ok([key_index.data(), value_index.data()].concat())
     }
 
     fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {

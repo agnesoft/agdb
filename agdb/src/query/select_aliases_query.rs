@@ -1,11 +1,11 @@
-use super::query_id::QueryId;
-use super::query_ids::QueryIds;
-use crate::storage::StorageData;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
+use crate::QueryId;
+use crate::QueryIds;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to select aliases of given ids. All of the ids
 /// must exist in the database and have an alias.

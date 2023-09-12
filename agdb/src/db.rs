@@ -34,9 +34,7 @@ use crate::storage::file_storage::FileStorage;
 use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 use crate::storage::memory_storage::MemoryStorage;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
-use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
@@ -46,7 +44,9 @@ use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::SearchQueryAlgorithm;
+use crate::StorageData;
 use crate::Transaction;
+use crate::TransactionMut;
 
 #[derive(Default)]
 struct DbStorageIndex {
@@ -724,13 +724,13 @@ impl<Store: StorageData> DbImpl<Store> {
             .ok_or(DbError::from("Data integrity corrupted"))?;
 
         for edge in node.edge_iter_from() {
-            edges.push((edge.index, edge.index_from(), edge.index_to()));
+            edges.push((edge.index(), edge.index_from(), edge.index_to()));
         }
 
         for edge in node.edge_iter_to() {
             let from = edge.index_from();
             if from != graph_index {
-                edges.push((edge.index, from, edge.index_to()));
+                edges.push((edge.index(), from, edge.index_to()));
             }
         }
 

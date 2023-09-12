@@ -1,4 +1,4 @@
-use super::db_value::DbValue;
+use crate::DbValue;
 
 /// Alias to `DbValue`
 pub type DbKey = DbValue;

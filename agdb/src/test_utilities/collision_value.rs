@@ -1,13 +1,13 @@
 use crate::collections::vec::VecValue;
-use crate::db::db_error::DbError;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
+use crate::DbError;
+use crate::StorageData;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CollisionValue<T> {
+struct CollisionValue<T> {
     pub value: T,
 }
 

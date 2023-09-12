@@ -1,7 +1,7 @@
-use super::query_id::QueryId;
-use super::search_query::SearchQuery;
 use crate::DbId;
+use crate::QueryId;
 use crate::QueryResult;
+use crate::SearchQuery;
 
 /// List of database ids used in queries. It
 /// can either represent a list of `QueryId`s

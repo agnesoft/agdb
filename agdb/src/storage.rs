@@ -7,9 +7,9 @@ mod write_ahead_log;
 
 use self::storage_records::StorageRecord;
 use self::storage_records::StorageRecords;
-use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StorageIndex(pub u64);
@@ -42,6 +42,9 @@ pub trait StorageData: Sized {
     }
     fn flush(&mut self) -> Result<(), DbError> {
         Ok(())
+    }
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
     fn len(&self) -> u64;
     fn name(&self) -> &str;

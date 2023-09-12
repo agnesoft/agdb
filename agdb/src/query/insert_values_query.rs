@@ -1,10 +1,10 @@
-use super::query_ids::QueryIds;
-use super::query_values::QueryValues;
-use crate::storage::StorageData;
+use crate::query::query_values::QueryValues;
 use crate::DbImpl;
 use crate::QueryError;
+use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to insert or update key-value pairs (properties)
 /// to existing elements in the database. All `ids` must exist

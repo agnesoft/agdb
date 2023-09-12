@@ -1,10 +1,10 @@
-use super::query_ids::QueryIds;
-use crate::storage::StorageData;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
+use crate::QueryIds;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to select elements with all properties of
 /// given ids. All ids must exist in the database.

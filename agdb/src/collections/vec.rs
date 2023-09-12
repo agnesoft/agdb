@@ -1,9 +1,9 @@
-use crate::db::db_error::DbError;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::DbError;
+use crate::StorageData;
 use std::marker::PhantomData;
 
 pub trait VecData<T, D, E>

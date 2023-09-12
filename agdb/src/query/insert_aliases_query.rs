@@ -1,9 +1,9 @@
-use super::query_ids::QueryIds;
-use super::QueryMut;
-use crate::storage::StorageData;
 use crate::DbImpl;
 use crate::QueryError;
+use crate::QueryIds;
+use crate::QueryMut;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to insert or update aliases of existing nodes.
 /// All `ids` must exist. None of the `aliases` can be empty.

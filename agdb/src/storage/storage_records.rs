@@ -1,5 +1,5 @@
-use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
+use crate::DbError;
 
 #[derive(Clone, Copy, Default)]
 pub struct StorageRecord {

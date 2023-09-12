@@ -20,10 +20,10 @@ pub mod select_keys_query;
 pub mod select_query;
 pub mod select_values_query;
 
-use crate::storage::StorageData;
 use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Trait for immutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.

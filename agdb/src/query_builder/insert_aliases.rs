@@ -1,5 +1,5 @@
-use crate::query::insert_aliases_query::InsertAliasesQuery;
-use crate::query::query_ids::QueryIds;
+use crate::InsertAliasesQuery;
+use crate::QueryIds;
 
 /// Insert aliases builder to select `ids`
 /// of the aliases.

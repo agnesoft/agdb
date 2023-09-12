@@ -1,21 +1,20 @@
-use super::search_impl::SearchIndex;
-use super::search_impl::SearchIterator;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
+use crate::graph_search::search_impl::SearchIndex;
+use crate::graph_search::search_impl::SearchIterator;
 use crate::storage::Storage;
-use crate::storage::StorageData;
-use std::mem::swap;
+use crate::StorageData;
 use std::vec::IntoIter;
 
-pub(crate) struct BreadthFirstSearchReverse {
+pub struct BreadthFirstSearchReverse {
     stack_iterator: IntoIter<SearchIndex>,
 }
 
 impl BreadthFirstSearchReverse {
     fn take_stack(stack: &mut Vec<SearchIndex>) -> Vec<SearchIndex> {
         let mut res = Vec::<SearchIndex>::new();
-        swap(&mut res, stack);
+        std::mem::swap(&mut res, stack);
 
         res
     }
@@ -62,11 +61,11 @@ mod tests {
     use super::super::SearchControl;
     use super::super::SearchHandler;
     use super::*;
-    use crate::db::db_error::DbError;
     use crate::graph::DbGraph;
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
+    use crate::DbError;
 
     struct Handler {
         pub processor: fn(GraphIndex, u64) -> SearchControl,

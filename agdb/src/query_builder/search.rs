@@ -1,7 +1,7 @@
 use super::where_::Where;
-use crate::db::db_key::DbKeyOrder;
-use crate::query::query_id::QueryId;
-use crate::query::search_query::SearchQuery;
+use crate::DbKeyOrder;
+use crate::QueryId;
+use crate::SearchQuery;
 use crate::SearchQueryAlgorithm;
 
 /// Search builder query.

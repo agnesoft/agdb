@@ -1,6 +1,6 @@
-use crate::query::query_ids::QueryIds;
-use crate::query::select_aliases_query::SelectAliasesQuery;
-use crate::query::select_all_aliases_query::SelectAllAliases;
+use crate::QueryIds;
+use crate::SelectAliasesQuery;
+use crate::SelectAllAliasesQuery;
 
 /// Select aliases builder.
 pub struct SelectAliases(pub SelectAliasesQuery);
@@ -19,8 +19,8 @@ impl SelectAliases {
     }
 
     /// Returns the built `SelectAllAliases` object.
-    pub fn query(self) -> SelectAllAliases {
-        SelectAllAliases {}
+    pub fn query(self) -> SelectAllAliasesQuery {
+        SelectAllAliasesQuery {}
     }
 }
 

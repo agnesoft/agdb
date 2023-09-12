@@ -1,15 +1,15 @@
-use super::select_aliases::SelectAliases;
-use super::select_ids::SelectIds;
-use super::select_key_count::SelectKeyCount;
-use super::select_keys::SelectKeys;
-use super::select_values::SelectValues;
-use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryKeys;
-use crate::query::select_aliases_query::SelectAliasesQuery;
-use crate::query::select_key_count_query::SelectKeyCountQuery;
-use crate::query::select_keys_query::SelectKeysQuery;
-use crate::query::select_query::SelectQuery;
-use crate::query::select_values_query::SelectValuesQuery;
+use crate::query_builder::select_aliases::SelectAliases;
+use crate::query_builder::select_ids::SelectIds;
+use crate::query_builder::select_key_count::SelectKeyCount;
+use crate::query_builder::select_keys::SelectKeys;
+use crate::query_builder::select_values::SelectValues;
+use crate::QueryIds;
+use crate::SelectAliasesQuery;
+use crate::SelectKeyCountQuery;
+use crate::SelectKeysQuery;
+use crate::SelectQuery;
+use crate::SelectValuesQuery;
 
 /// Select builder that lets you choose what
 /// data you want to select form the database.

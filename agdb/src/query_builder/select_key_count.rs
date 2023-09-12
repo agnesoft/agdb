@@ -1,5 +1,5 @@
-use crate::query::query_ids::QueryIds;
-use crate::query::select_key_count_query::SelectKeyCountQuery;
+use crate::QueryIds;
+use crate::SelectKeyCountQuery;
 
 /// Select key count builder.
 pub struct SelectKeyCount(pub SelectKeyCountQuery);

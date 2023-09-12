@@ -1,8 +1,8 @@
-use super::query_id::QueryId;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
+use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryResult;
 use crate::StorageData;

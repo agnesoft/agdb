@@ -1,4 +1,4 @@
-use super::query_values::QueryValues;
+use crate::query::query_values::QueryValues;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::QueryError;

@@ -1,18 +1,18 @@
-use crate::db::DbImpl;
-use crate::storage::StorageData;
 use crate::DbElement;
+use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to select all aliases in the database.
 ///
 /// The result will be number of returned aliases and list
 /// of elements with a single property `String("alias")` holding
 /// the value `String`.
-pub struct SelectAllAliases {}
+pub struct SelectAllAliasesQuery {}
 
-impl Query for SelectAllAliases {
+impl Query for SelectAllAliasesQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 

@@ -34,9 +34,7 @@ use crate::storage::file_storage::FileStorage;
 use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 use crate::storage::memory_storage::MemoryStorage;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
-use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
@@ -46,7 +44,9 @@ use crate::DbValue;
 use crate::QueryError;
 use crate::QueryResult;
 use crate::SearchQueryAlgorithm;
+use crate::StorageData;
 use crate::Transaction;
+use crate::TransactionMut;
 
 #[derive(Default)]
 struct DbStorageIndex {

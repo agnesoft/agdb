@@ -13,12 +13,12 @@ use self::depth_first_search_reverse::DepthFirstSearchReverse;
 use self::path_search::PathSearch;
 use self::path_search::PathSearchHandler;
 use self::search_impl::SearchImpl;
-use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use crate::storage::Storage;
-use crate::storage::StorageData;
+use crate::DbError;
+use crate::StorageData;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SearchControl {

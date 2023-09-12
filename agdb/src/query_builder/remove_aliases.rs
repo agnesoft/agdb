@@ -1,4 +1,4 @@
-use crate::query::remove_aliases_query::RemoveAliasesQuery;
+use crate::RemoveAliasesQuery;
 
 /// Final builder that lets you create
 /// an actual query object.

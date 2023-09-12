@@ -1,8 +1,8 @@
-use crate::query::insert_edges_query::InsertEdgesQuery;
-use crate::query::query_ids::QueryIds;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
+use crate::InsertEdgesQuery;
+use crate::QueryIds;
 
 /// Insert edges builder that lets you add `from`
 /// (origin) nodes.

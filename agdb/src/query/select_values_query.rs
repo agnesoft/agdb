@@ -1,11 +1,11 @@
-use super::query_ids::QueryIds;
-use crate::db::DbImpl;
-use crate::storage::StorageData;
 use crate::DbElement;
+use crate::DbImpl;
 use crate::DbKey;
 use crate::Query;
 use crate::QueryError;
+use crate::QueryIds;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to select elements with only certain properties of
 /// given ids. All ids must exist in the database and all

@@ -1,22 +1,22 @@
 use super::SearchControl;
 use super::SearchHandler;
 use crate::collections::bit_set::BitSet;
-use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use crate::storage::Storage;
-use crate::storage::StorageData;
+use crate::DbError;
+use crate::StorageData;
 use std::marker::PhantomData;
 use std::mem::swap;
 
 #[derive(Clone, Copy)]
-pub(crate) struct SearchIndex {
-    pub(crate) index: GraphIndex,
-    pub(crate) distance: u64,
+pub struct SearchIndex {
+    index: GraphIndex,
+    distance: u64,
 }
 
-pub(crate) trait SearchIterator<D: StorageData> {
+pub trait SearchIterator<D: StorageData> {
     fn expand_edge<Data: GraphData<D>>(
         index: GraphIndex,
         graph: &GraphImpl<D, Data>,
@@ -31,18 +31,18 @@ pub(crate) trait SearchIterator<D: StorageData> {
     fn next(&mut self) -> Option<SearchIndex>;
 }
 
-pub(crate) struct SearchImpl<'a, D, Data, SearchIt>
+pub struct SearchImpl<'a, D, Data, SearchIt>
 where
     Data: GraphData<D>,
     D: StorageData,
     SearchIt: SearchIterator<D>,
 {
-    pub(crate) algorithm: PhantomData<SearchIt>,
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) storage: &'a Storage<D>,
-    pub(crate) result: Vec<GraphIndex>,
-    pub(crate) stack: Vec<SearchIndex>,
-    pub(crate) visited: BitSet,
+    algorithm: PhantomData<SearchIt>,
+    graph: &'a GraphImpl<D, Data>,
+    storage: &'a Storage<D>,
+    result: Vec<GraphIndex>,
+    stack: Vec<SearchIndex>,
+    visited: BitSet,
 }
 
 impl<'a, D, Data, SearchIt> SearchImpl<'a, D, Data, SearchIt>
@@ -51,11 +51,7 @@ where
     D: StorageData,
     SearchIt: SearchIterator<D>,
 {
-    pub(crate) fn new(
-        graph: &'a GraphImpl<D, Data>,
-        storage: &'a Storage<D>,
-        index: GraphIndex,
-    ) -> Self {
+    pub fn new(graph: &'a GraphImpl<D, Data>, storage: &'a Storage<D>, index: GraphIndex) -> Self {
         Self {
             algorithm: PhantomData,
             graph,
@@ -66,7 +62,7 @@ where
         }
     }
 
-    pub(crate) fn search<Handler: SearchHandler>(
+    pub fn search<Handler: SearchHandler>(
         &mut self,
         mut handler: Handler,
     ) -> Result<Vec<GraphIndex>, DbError> {

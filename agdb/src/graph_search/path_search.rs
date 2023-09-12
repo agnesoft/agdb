@@ -1,10 +1,10 @@
 use crate::collections::bit_set::BitSet;
-use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
 use crate::storage::Storage;
-use crate::storage::StorageData;
+use crate::DbError;
+use crate::StorageData;
 use std::cmp::Ordering;
 
 pub trait PathSearchHandler {
@@ -12,25 +12,25 @@ pub trait PathSearchHandler {
 }
 
 #[derive(Clone)]
-pub(crate) struct Path {
+struct Path {
     pub(crate) elements: Vec<(GraphIndex, bool)>,
     pub(crate) cost: u64,
 }
 
-pub(crate) struct PathSearch<'a, D, Data, Handler>
+pub struct PathSearch<'a, D, Data, Handler>
 where
     Data: GraphData<D>,
     D: StorageData,
     Handler: PathSearchHandler,
 {
-    pub(crate) current_path: Path,
-    pub(crate) destination: GraphIndex,
-    pub(crate) graph: &'a GraphImpl<D, Data>,
-    pub(crate) storage: &'a Storage<D>,
-    pub(crate) handler: Handler,
-    pub(crate) paths: Vec<Path>,
-    pub(crate) result: Vec<(GraphIndex, bool)>,
-    pub(crate) visited: BitSet,
+    current_path: Path,
+    destination: GraphIndex,
+    graph: &'a GraphImpl<D, Data>,
+    storage: &'a Storage<D>,
+    handler: Handler,
+    paths: Vec<Path>,
+    result: Vec<(GraphIndex, bool)>,
+    visited: BitSet,
 }
 
 impl<'a, D, Data, Handler> PathSearch<'a, D, Data, Handler>
@@ -39,7 +39,7 @@ where
     D: StorageData,
     Handler: PathSearchHandler,
 {
-    pub(crate) fn new(
+    pub fn new(
         graph: &'a GraphImpl<D, Data>,
         storage: &'a Storage<D>,
         from: GraphIndex,
@@ -66,7 +66,7 @@ where
         }
     }
 
-    pub(crate) fn search(&mut self) -> Result<Vec<GraphIndex>, DbError> {
+    pub fn search(&mut self) -> Result<Vec<GraphIndex>, DbError> {
         while !self.is_finished() {
             self.sort_paths();
             self.process_last_path()?;

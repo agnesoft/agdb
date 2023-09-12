@@ -46,11 +46,13 @@ fn public_types() {
     use agdb::RemoveQuery;
     use agdb::RemoveValuesQuery;
     use agdb::SearchQuery;
-    use agdb::SelectAllAliases;
+    use agdb::SelectAliasesQuery;
+    use agdb::SelectAllAliasesQuery;
     use agdb::SelectKeyCountQuery;
     use agdb::SelectKeysQuery;
     use agdb::SelectQuery;
     use agdb::SelectValuesQuery;
+    use agdb::StorageData;
     use agdb::Transaction;
     use agdb::TransactionMut;
     use agdb::UserValue;

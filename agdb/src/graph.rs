@@ -1,11 +1,11 @@
 use crate::collections::vec::DbVec;
-use crate::db::db_error::DbError;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
+use crate::DbError;
+use crate::StorageData;
 use std::marker::PhantomData;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, Hash, PartialEq, PartialOrd)]
@@ -130,12 +130,12 @@ pub struct GraphDataStorage<D>
 where
     D: StorageData,
 {
-    pub(crate) storage: PhantomData<D>,
-    pub(crate) storage_index: StorageIndex,
-    pub(crate) from: DbVec<i64, D>,
-    pub(crate) to: DbVec<i64, D>,
-    pub(crate) from_meta: DbVec<i64, D>,
-    pub(crate) to_meta: DbVec<i64, D>,
+    storage: PhantomData<D>,
+    storage_index: StorageIndex,
+    from: DbVec<i64, D>,
+    to: DbVec<i64, D>,
+    from_meta: DbVec<i64, D>,
+    to_meta: DbVec<i64, D>,
 }
 
 impl<D> GraphDataStorage<D>

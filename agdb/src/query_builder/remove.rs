@@ -1,13 +1,13 @@
-use super::remove_aliases::RemoveAliases;
-use super::remove_ids::RemoveIds;
-use super::remove_values::RemoveValues;
 use crate::query::query_aliases::QueryAliases;
-use crate::query::query_ids::QueryIds;
 use crate::query::query_values::QueryKeys;
-use crate::query::remove_aliases_query::RemoveAliasesQuery;
-use crate::query::remove_query::RemoveQuery;
-use crate::query::remove_values_query::RemoveValuesQuery;
-use crate::query::select_values_query::SelectValuesQuery;
+use crate::query_builder::remove_aliases::RemoveAliases;
+use crate::query_builder::remove_ids::RemoveIds;
+use crate::query_builder::remove_values::RemoveValues;
+use crate::QueryIds;
+use crate::RemoveAliasesQuery;
+use crate::RemoveQuery;
+use crate::RemoveValuesQuery;
+use crate::SelectValuesQuery;
 
 /// Remove builder to choose what to delete from the database.
 pub struct Remove {}

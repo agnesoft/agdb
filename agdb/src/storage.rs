@@ -7,9 +7,9 @@ mod write_ahead_log;
 
 use self::storage_records::StorageRecord;
 use self::storage_records::StorageRecords;
-use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
+use crate::DbError;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StorageIndex(pub u64);

@@ -1,10 +1,10 @@
-use super::db_f64::DbF64;
-use super::db_value_index::DbValueIndex;
+use crate::db::db_f64::DbF64;
+use crate::db::db_value_index::DbValueIndex;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
+use crate::StorageData;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Result as DisplayResult;
@@ -779,7 +779,7 @@ mod tests {
     #[should_panic]
     fn bad_deserialization() {
         let test_file = TestFile::new();
-        let storage = Storage::<FileStorage>::new(&test_file.filename).unwrap();
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
 
         let _ = DbValue::load_db_value(DbValueIndex::new(), &storage);
     }

@@ -1,14 +1,14 @@
 use super::query_condition::QueryCondition;
 use super::query_id::QueryId;
 use crate::db::db_key::DbKeyOrder;
-use crate::db::DbImpl;
-use crate::storage::StorageData;
 use crate::DbElement;
 use crate::DbId;
+use crate::DbImpl;
 use crate::DbKey;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
+use crate::StorageData;
 use std::cmp::Ordering;
 
 /// Search algorithm to be used

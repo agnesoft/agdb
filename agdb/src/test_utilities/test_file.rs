@@ -2,7 +2,7 @@ use std::panic::Location;
 use std::path::Path;
 
 pub struct TestFile {
-    pub(crate) filename: String,
+    filename: String,
 }
 
 impl TestFile {

@@ -1,4 +1,4 @@
-use crate::db::db_error::DbError;
+use crate::DbError;
 use std::any::type_name;
 
 pub trait Serialize: Sized {

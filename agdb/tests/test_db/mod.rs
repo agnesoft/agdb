@@ -8,6 +8,7 @@ use agdb::Query;
 use agdb::QueryError;
 use agdb::QueryMut;
 use agdb::QueryResult;
+
 pub use test_file::TestFile;
 
 pub struct TestDb {

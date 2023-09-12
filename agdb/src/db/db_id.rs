@@ -1,10 +1,10 @@
 use crate::collections::vec::VecValue;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
+use crate::StorageData;
 
 /// Database id is a wrapper around `i64`.
 /// The id is an identifier of a database element

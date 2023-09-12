@@ -1,8 +1,8 @@
-use crate::db::DbImpl;
-use crate::storage::StorageData;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryMut;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to remove aliases from the database. It
 /// is not an error if an alias to be removed already

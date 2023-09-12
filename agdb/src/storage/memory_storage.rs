@@ -1,5 +1,5 @@
 use super::StorageData;
-use crate::db::db_error::DbError;
+use crate::DbError;
 
 pub struct MemoryStorage {
     buffer: Vec<u8>,

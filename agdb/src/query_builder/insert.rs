@@ -1,18 +1,18 @@
-use super::insert_aliases::InsertAliases;
-use super::insert_edge::InsertEdges;
-use super::insert_nodes::InsertNodes;
-use super::insert_values::InsertValues;
-use super::insert_values::InsertValuesIds;
-use crate::query::insert_aliases_query::InsertAliasesQuery;
-use crate::query::insert_edges_query::InsertEdgesQuery;
-use crate::query::insert_nodes_query::InsertNodesQuery;
-use crate::query::insert_values_query::InsertValuesQuery;
 use crate::query::query_aliases::QueryAliases;
-use crate::query::query_ids::QueryIds;
 use crate::query::query_values::MultiValues;
 use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
+use crate::query_builder::insert_aliases::InsertAliases;
+use crate::query_builder::insert_edge::InsertEdges;
+use crate::query_builder::insert_nodes::InsertNodes;
+use crate::query_builder::insert_values::InsertValues;
+use crate::query_builder::insert_values::InsertValuesIds;
 use crate::DbUserValue;
+use crate::InsertAliasesQuery;
+use crate::InsertEdgesQuery;
+use crate::InsertNodesQuery;
+use crate::InsertValuesQuery;
+use crate::QueryIds;
 
 /// Insert builder for inserting various data
 /// into the database.

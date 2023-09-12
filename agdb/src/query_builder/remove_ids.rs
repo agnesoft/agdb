@@ -1,4 +1,4 @@
-use crate::query::remove_query::RemoveQuery;
+use crate::RemoveQuery;
 
 /// Final builder that lets you create
 /// an actual query object.

@@ -1,14 +1,14 @@
-use super::map::DbMap;
-use super::map::DbMapData;
-use super::map::MapData;
-use super::map::MapImpl;
-use super::map::MapIterator;
-use super::vec::VecValue;
-use crate::db::db_error::DbError;
+use crate::collections::map::DbMap;
+use crate::collections::map::DbMapData;
+use crate::collections::map::MapData;
+use crate::collections::map::MapImpl;
+use crate::collections::map::MapIterator;
+use crate::collections::vec::VecValue;
 use crate::storage::Storage;
-use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
+use crate::DbError;
+use crate::StorageData;
 use std::marker::PhantomData;
 
 pub struct IndexedMapImpl<K, T, D, DataKT, DataTK>

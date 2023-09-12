@@ -1,5 +1,5 @@
-use crate::query::query_ids::QueryIds;
-use crate::query::remove_values_query::RemoveValuesQuery;
+use crate::QueryIds;
+use crate::RemoveValuesQuery;
 
 /// Remove values builder that lets you select the ids from
 /// which to remove the values.

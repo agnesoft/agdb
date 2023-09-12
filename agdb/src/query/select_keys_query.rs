@@ -1,6 +1,7 @@
 use super::query_ids::QueryIds;
-use crate::Db;
+use crate::storage::StorageData;
 use crate::DbElement;
+use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryResult;
@@ -13,7 +14,7 @@ use crate::QueryResult;
 pub struct SelectKeysQuery(pub QueryIds);
 
 impl Query for SelectKeysQuery {
-    fn process(&self, db: &Db) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
         let db_ids = match &self.0 {

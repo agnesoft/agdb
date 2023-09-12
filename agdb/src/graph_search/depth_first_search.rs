@@ -3,16 +3,21 @@ use super::search_impl::SearchIterator;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
+use crate::storage::Storage;
+use crate::storage::StorageData;
 
 pub(crate) struct DepthFirstSearch {
     index: Option<SearchIndex>,
 }
 
-impl<S> SearchIterator<S> for DepthFirstSearch {
-    fn expand_edge<Data: GraphData<S>>(
+impl<D> SearchIterator<D> for DepthFirstSearch
+where
+    D: StorageData,
+{
+    fn expand_edge<Data: GraphData<D>>(
         index: GraphIndex,
-        graph: &GraphImpl<S, Data>,
-        storage: &S,
+        graph: &GraphImpl<D, Data>,
+        storage: &Storage<D>,
     ) -> GraphIndex {
         graph
             .edge(storage, index)
@@ -20,10 +25,10 @@ impl<S> SearchIterator<S> for DepthFirstSearch {
             .index_to()
     }
 
-    fn expand_node<Data: GraphData<S>>(
+    fn expand_node<Data: GraphData<D>>(
         index: GraphIndex,
-        graph: &GraphImpl<S, Data>,
-        storage: &S,
+        graph: &GraphImpl<D, Data>,
+        storage: &Storage<D>,
     ) -> Vec<GraphIndex> {
         graph
             .node(storage, index)
@@ -74,7 +79,7 @@ mod tests {
     #[test]
     fn empty_graph() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let graph = DbGraph::new(&mut storage).unwrap();
 
         let result = GraphSearch::from((&graph, &storage))
@@ -86,7 +91,7 @@ mod tests {
     #[test]
     fn cyclic_graph() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -114,7 +119,7 @@ mod tests {
     #[test]
     fn full_search() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -138,7 +143,7 @@ mod tests {
     #[test]
     fn filter_edges() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -165,7 +170,7 @@ mod tests {
     #[test]
     fn finish_search() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -198,7 +203,7 @@ mod tests {
     #[test]
     fn search_twice() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();
@@ -225,7 +230,7 @@ mod tests {
     #[test]
     fn stop_at_distance() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let mut graph = DbGraph::new(&mut storage).unwrap();
 
         let node1 = graph.insert_node(&mut storage).unwrap();

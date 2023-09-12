@@ -15,10 +15,10 @@ use test_db::TestDb;
 fn public_types() {
     use agdb::Comparison;
     use agdb::CountComparison;
-    use agdb::Db;
     use agdb::DbElement;
     use agdb::DbError;
     use agdb::DbId;
+    use agdb::DbImpl;
     use agdb::DbKey;
     use agdb::DbKeyOrder;
     use agdb::DbKeyValue;

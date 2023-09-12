@@ -1,7 +1,8 @@
 use super::query_values::QueryValues;
 use super::QueryMut;
-use crate::Db;
+use crate::storage::StorageData;
 use crate::DbElement;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 
@@ -28,7 +29,10 @@ pub struct InsertNodesQuery {
 }
 
 impl QueryMut for InsertNodesQuery {
-    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError> {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
         let mut ids = vec![];
         let count = std::cmp::max(self.count, self.aliases.len() as u64);

@@ -4,48 +4,49 @@ use crate::graph_search::PathSearchHandler;
 use crate::graph_search::SearchControl;
 use crate::graph_search::SearchHandler;
 use crate::query::query_condition::QueryCondition;
-use crate::Db;
+use crate::storage::StorageData;
+use crate::DbImpl;
 
-pub(crate) struct DefaultHandler<'a> {
-    db: &'a Db,
+pub(crate) struct DefaultHandler<'a, Store: StorageData> {
+    db: &'a DbImpl<Store>,
     conditions: &'a Vec<QueryCondition>,
 }
 
-pub(crate) struct LimitHandler<'a> {
+pub(crate) struct LimitHandler<'a, Store: StorageData> {
     limit: u64,
     counter: u64,
-    db: &'a Db,
+    db: &'a DbImpl<Store>,
     conditions: &'a Vec<QueryCondition>,
 }
 
-pub(crate) struct OffsetHandler<'a> {
+pub(crate) struct OffsetHandler<'a, Store: StorageData> {
     offset: u64,
     counter: u64,
-    db: &'a Db,
+    db: &'a DbImpl<Store>,
     conditions: &'a Vec<QueryCondition>,
 }
 
-pub(crate) struct LimitOffsetHandler<'a> {
+pub(crate) struct LimitOffsetHandler<'a, Store: StorageData> {
     limit: u64,
     offset: u64,
     counter: u64,
-    db: &'a Db,
+    db: &'a DbImpl<Store>,
     conditions: &'a Vec<QueryCondition>,
 }
 
-pub(crate) struct PathHandler<'a> {
-    db: &'a Db,
+pub(crate) struct PathHandler<'a, Store: StorageData> {
+    db: &'a DbImpl<Store>,
     conditions: &'a Vec<QueryCondition>,
 }
 
-impl<'a> DefaultHandler<'a> {
-    pub(crate) fn new(db: &'a Db, conditions: &'a Vec<QueryCondition>) -> Self {
+impl<'a, Store: StorageData> DefaultHandler<'a, Store> {
+    pub(crate) fn new(db: &'a DbImpl<Store>, conditions: &'a Vec<QueryCondition>) -> Self {
         Self { db, conditions }
     }
 }
 
-impl<'a> LimitHandler<'a> {
-    pub fn new(limit: u64, db: &'a Db, conditions: &'a Vec<QueryCondition>) -> Self {
+impl<'a, Store: StorageData> LimitHandler<'a, Store> {
+    pub fn new(limit: u64, db: &'a DbImpl<Store>, conditions: &'a Vec<QueryCondition>) -> Self {
         Self {
             limit,
             counter: 0,
@@ -55,8 +56,8 @@ impl<'a> LimitHandler<'a> {
     }
 }
 
-impl<'a> OffsetHandler<'a> {
-    pub fn new(offset: u64, db: &'a Db, conditions: &'a Vec<QueryCondition>) -> Self {
+impl<'a, Store: StorageData> OffsetHandler<'a, Store> {
+    pub fn new(offset: u64, db: &'a DbImpl<Store>, conditions: &'a Vec<QueryCondition>) -> Self {
         Self {
             offset,
             counter: 0,
@@ -66,8 +67,13 @@ impl<'a> OffsetHandler<'a> {
     }
 }
 
-impl<'a> LimitOffsetHandler<'a> {
-    pub fn new(limit: u64, offset: u64, db: &'a Db, conditions: &'a Vec<QueryCondition>) -> Self {
+impl<'a, Store: StorageData> LimitOffsetHandler<'a, Store> {
+    pub fn new(
+        limit: u64,
+        offset: u64,
+        db: &'a DbImpl<Store>,
+        conditions: &'a Vec<QueryCondition>,
+    ) -> Self {
         Self {
             limit: limit + offset,
             offset,
@@ -78,20 +84,20 @@ impl<'a> LimitOffsetHandler<'a> {
     }
 }
 
-impl<'a> PathHandler<'a> {
-    pub fn new(db: &'a Db, conditions: &'a Vec<QueryCondition>) -> Self {
+impl<'a, Store: StorageData> PathHandler<'a, Store> {
+    pub fn new(db: &'a DbImpl<Store>, conditions: &'a Vec<QueryCondition>) -> Self {
         Self { db, conditions }
     }
 }
 
-impl<'a> SearchHandler for DefaultHandler<'a> {
+impl<'a, Store: StorageData> SearchHandler for DefaultHandler<'a, Store> {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
         self.db
             .evaluate_conditions(index, distance, self.conditions)
     }
 }
 
-impl<'a> SearchHandler for LimitHandler<'a> {
+impl<'a, Store: StorageData> SearchHandler for LimitHandler<'a, Store> {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
         let control = self
             .db
@@ -110,7 +116,7 @@ impl<'a> SearchHandler for LimitHandler<'a> {
     }
 }
 
-impl<'a> SearchHandler for OffsetHandler<'a> {
+impl<'a, Store: StorageData> SearchHandler for OffsetHandler<'a, Store> {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
         let mut control = self
             .db
@@ -125,7 +131,7 @@ impl<'a> SearchHandler for OffsetHandler<'a> {
     }
 }
 
-impl<'a> SearchHandler for LimitOffsetHandler<'a> {
+impl<'a, Store: StorageData> SearchHandler for LimitOffsetHandler<'a, Store> {
     fn process(&mut self, index: GraphIndex, distance: u64) -> Result<SearchControl, DbError> {
         let mut control = self
             .db
@@ -144,7 +150,7 @@ impl<'a> SearchHandler for LimitOffsetHandler<'a> {
     }
 }
 
-impl<'a> PathSearchHandler for PathHandler<'a> {
+impl<'a, Store: StorageData> PathSearchHandler for PathHandler<'a, Store> {
     fn process(&self, index: GraphIndex, distance: u64) -> Result<(u64, bool), DbError> {
         match self
             .db

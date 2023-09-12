@@ -31,7 +31,10 @@ use crate::query::query_id::QueryId;
 use crate::query::Query;
 use crate::query::QueryMut;
 use crate::storage::file_storage::FileStorage;
+use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
+use crate::storage::memory_storage::MemoryStorage;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::transaction_mut::TransactionMut;
 use crate::utilities::serialize::Serialize;
@@ -95,6 +98,16 @@ impl Serialize for DbStorageIndex {
 /// If the file does not exist a new database will be initialized creating
 /// the given file. If the file does exist the database will try to load
 /// it and memory map the data.
+///
+/// These are the available variants of the database to choose from:
+///
+/// - `Db`: [default] File based and memory mapped database.
+/// - `DbFile`: File based only (no memory mapping).
+/// - `DbMemory`: In-memory database only.
+///
+/// For each of these there are convenient using declarations, e.g. `DbTransaction`,
+/// `DbFileTransaction`, `DbMemoryTransactionMut` etc. in case you need to name
+/// the related types of the main database type.
 ///
 /// You can execute queries or transactions on the database object with
 ///
@@ -168,23 +181,35 @@ impl Serialize for DbStorageIndex {
 /// written to the main file if the reverse operation has been committed to the
 /// WAL file. The WAL is then purged on commit of a transaction (all queries are
 /// transactional even if the transaction is not explicitly used).
-pub struct Db {
-    storage: FileStorage,
-    graph: DbGraph,
-    aliases: DbIndexedMap<String, DbId>,
-    values: MultiMapStorage<DbId, DbKeyValue>,
+pub struct DbImpl<Store: StorageData> {
+    storage: Storage<Store>,
+    graph: DbGraph<Store>,
+    aliases: DbIndexedMap<String, DbId, Store>,
+    values: MultiMapStorage<DbId, DbKeyValue, Store>,
     undo_stack: Vec<Command>,
 }
 
-impl std::fmt::Debug for Db {
+pub type Db = DbImpl<FileStorageMemoryMapped>;
+pub type DbTransaction<'a> = Transaction<'a, FileStorageMemoryMapped>;
+pub type DbTransactionMut<'a> = TransactionMut<'a, FileStorageMemoryMapped>;
+
+pub type DbFile = DbImpl<FileStorage>;
+pub type DbFileTransaction<'a> = Transaction<'a, FileStorage>;
+pub type DbFileTransactionMut<'a> = TransactionMut<'a, FileStorage>;
+
+pub type DbMemory = DbImpl<MemoryStorage>;
+pub type DbMemoryTransaction<'a> = Transaction<'a, MemoryStorage>;
+pub type DbMemoryTransactionMut<'a> = TransactionMut<'a, MemoryStorage>;
+
+impl<Store: StorageData> std::fmt::Debug for DbImpl<Store> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("agdb::Db").finish_non_exhaustive()
     }
 }
 
-impl Db {
+impl<Store: StorageData> DbImpl<Store> {
     /// Tries to create or load `filename` file as `Db` object.
-    pub fn new(filename: &str) -> Result<Db, DbError> {
+    pub fn new(filename: &str) -> Result<Self, DbError> {
         match Self::try_new(filename) {
             Ok(db) => Ok(db),
             Err(error) => {
@@ -241,7 +266,7 @@ impl Db {
     /// Returns the filename that was used to
     /// construct the database.
     pub fn filename(&self) -> &str {
-        self.storage.filename()
+        self.storage.name()
     }
 
     /// Reclaims no longer used segments of the database file by packing all
@@ -264,7 +289,7 @@ impl Db {
     /// parameters it also allows transforming the query results into a type `T`.
     pub fn transaction<T, E>(
         &self,
-        mut f: impl FnMut(&Transaction) -> Result<T, E>,
+        mut f: impl FnMut(&Transaction<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
         let transaction = Transaction::new(self);
 
@@ -289,7 +314,7 @@ impl Db {
     /// results into a type `T`.
     pub fn transaction_mut<T, E: From<QueryError>>(
         &mut self,
-        mut f: impl FnMut(&mut TransactionMut) -> Result<T, E>,
+        mut f: impl FnMut(&mut TransactionMut<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
         let mut transaction = TransactionMut::new(&mut *self);
         let result = f(&mut transaction);
@@ -785,12 +810,12 @@ impl Db {
         Ok(())
     }
 
-    fn try_new(filename: &str) -> Result<Db, DbError> {
-        let mut storage = FileStorage::new(filename)?;
+    fn try_new(filename: &str) -> Result<Self, DbError> {
+        let mut storage = Storage::new(filename)?;
         let graph_storage;
         let aliases_storage;
         let values_storage;
-        let len = storage.len()?;
+        let len = storage.len();
         let index = storage.value::<DbStorageIndex>(StorageIndex(1));
 
         if let Ok(index) = index {
@@ -936,7 +961,7 @@ impl Db {
     }
 }
 
-impl Drop for Db {
+impl<Store: StorageData> Drop for DbImpl<Store> {
     fn drop(&mut self) {
         let _ = self.storage.shrink_to_fit();
     }

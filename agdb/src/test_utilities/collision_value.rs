@@ -1,6 +1,7 @@
 use crate::collections::vec::VecValue;
 use crate::db::db_error::DbError;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
@@ -47,17 +48,17 @@ impl<T> VecValue for CollisionValue<T>
 where
     T: VecValue,
 {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
+    fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         self.value.store(storage)
     }
 
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self {
             value: T::load(storage, bytes)?,
         })
     }
 
-    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
+    fn remove<D: StorageData>(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError> {
         T::remove(storage, bytes)
     }
 
@@ -69,8 +70,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::file_storage::FileStorage;
-    use crate::test_utilities::test_file::TestFile;
+    use crate::{storage::file_storage::FileStorage, test_utilities::test_file::TestFile};
 
     #[test]
     #[allow(clippy::redundant_clone)]
@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn storage_value() {
         let test_file = TestFile::new();
-        let mut storage = FileStorage::new(test_file.file_name()).unwrap();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
         let value = CollisionValue::<i64>::new(1);
         let bytes = value.store(&mut storage).unwrap();
         CollisionValue::<i64>::remove(&mut storage, &bytes).unwrap();

@@ -2,6 +2,7 @@ use super::db_error::DbError;
 use super::db_value_index::DbValueIndex;
 use crate::collections::vec::VecValue;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
@@ -34,13 +35,13 @@ where
 }
 
 impl VecValue for DbKeyValue {
-    fn store<S: Storage>(&self, storage: &mut S) -> Result<Vec<u8>, DbError> {
+    fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         let key_index = self.key.store_db_value(storage)?;
         let value_index = self.value.store_db_value(storage)?;
         Ok([key_index.value, value_index.value].concat())
     }
 
-    fn load<S: Storage>(storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         let key_index = DbValueIndex::deserialize(bytes)?;
         let value_index =
             DbValueIndex::deserialize(&bytes[key_index.serialized_size() as usize..])?;
@@ -49,7 +50,7 @@ impl VecValue for DbKeyValue {
         Ok(Self { key, value })
     }
 
-    fn remove<S: Storage>(storage: &mut S, bytes: &[u8]) -> Result<(), DbError> {
+    fn remove<D: StorageData>(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError> {
         let key_index = DbValueIndex::deserialize(bytes)?;
         let value_index =
             DbValueIndex::deserialize(&bytes[key_index.serialized_size() as usize..])?;

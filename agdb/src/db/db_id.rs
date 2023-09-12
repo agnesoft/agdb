@@ -1,6 +1,7 @@
 use super::db_error::DbError;
 use crate::collections::vec::VecValue;
 use crate::storage::Storage;
+use crate::storage::StorageData;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::utilities::stable_hash::StableHash;
@@ -20,15 +21,15 @@ impl StableHash for DbId {
 }
 
 impl VecValue for DbId {
-    fn store<S: Storage>(&self, _storage: &mut S) -> Result<Vec<u8>, DbError> {
+    fn store<D: StorageData>(&self, _storage: &mut Storage<D>) -> Result<Vec<u8>, DbError> {
         Ok(self.0.serialize())
     }
 
-    fn load<S: Storage>(_storage: &S, bytes: &[u8]) -> Result<Self, DbError> {
+    fn load<D: StorageData>(_storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError> {
         Ok(Self(i64::deserialize(bytes)?))
     }
 
-    fn remove<S: Storage>(_storage: &mut S, _bytes: &[u8]) -> Result<(), DbError> {
+    fn remove<D: StorageData>(_storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError> {
         Ok(())
     }
 

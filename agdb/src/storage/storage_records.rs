@@ -2,13 +2,13 @@ use crate::db::db_error::DbError;
 use crate::utilities::serialize::Serialize;
 
 #[derive(Clone, Copy, Default)]
-pub struct FileRecord {
+pub struct StorageRecord {
     pub index: u64,
     pub pos: u64,
     pub size: u64,
 }
 
-impl FileRecord {
+impl StorageRecord {
     pub fn value_start(&self) -> u64 {
         self.pos + self.index.serialized_size() + self.size.serialized_size()
     }
@@ -18,27 +18,27 @@ impl FileRecord {
     }
 }
 
-pub struct FileRecords {
-    records: Vec<FileRecord>,
+pub struct StorageRecords {
+    records: Vec<StorageRecord>,
 }
 
-impl FileRecords {
+impl StorageRecords {
     pub fn new() -> Self {
         Self {
-            records: vec![FileRecord::default()],
+            records: vec![StorageRecord::default()],
         }
     }
 
-    pub fn new_record(&mut self, pos: u64, size: u64) -> FileRecord {
+    pub fn new_record(&mut self, pos: u64, size: u64) -> StorageRecord {
         let record;
 
         if self.records[0].index != 0 {
             let index = self.records[0].index;
             self.records[0].index = self.records[index as usize].index;
-            record = FileRecord { index, pos, size };
+            record = StorageRecord { index, pos, size };
             self.records[index as usize] = record;
         } else {
-            record = FileRecord {
+            record = StorageRecord {
                 index: self.records.len() as u64,
                 pos,
                 size,
@@ -49,8 +49,8 @@ impl FileRecords {
         record
     }
 
-    pub fn records(&self) -> Vec<FileRecord> {
-        let mut res = Vec::<FileRecord>::new();
+    pub fn records(&self) -> Vec<StorageRecord> {
+        let mut res = Vec::<StorageRecord>::new();
         res.reserve(self.records.len());
 
         for record in &self.records {
@@ -70,7 +70,7 @@ impl FileRecords {
         }
     }
 
-    pub fn set_records(&mut self, records: Vec<FileRecord>) {
+    pub fn set_records(&mut self, records: Vec<StorageRecord>) {
         self.records = records;
 
         for index in 1..self.records.len() {
@@ -86,7 +86,7 @@ impl FileRecords {
         }
     }
 
-    pub fn record(&self, index: u64) -> Result<FileRecord, DbError> {
+    pub fn record(&self, index: u64) -> Result<StorageRecord, DbError> {
         if let Some(record) = self.records.get(index as usize) {
             if self.is_valid(record) {
                 return Ok(*record);
@@ -94,7 +94,7 @@ impl FileRecords {
         }
 
         Err(DbError::from(format!(
-            "FileStorage error: index ({index}) not found"
+            "Storage error: index ({index}) not found"
         )))
     }
 
@@ -108,7 +108,7 @@ impl FileRecords {
         }
     }
 
-    fn is_valid(&self, record: &FileRecord) -> bool {
+    fn is_valid(&self, record: &StorageRecord) -> bool {
         record.index != 0 && self.records[record.index as usize].index == record.index
     }
 }

@@ -20,18 +20,22 @@ pub mod select_keys_query;
 pub mod select_query;
 pub mod select_values_query;
 
-use crate::Db;
+use crate::storage::StorageData;
+use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
 
 /// Trait for immutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait Query {
-    fn process(&self, db: &Db) -> Result<QueryResult, QueryError>;
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError>;
 }
 
 /// Trait for mutable `agdb` database queries. This
 /// trait is unlikely to be implementable for user types.
 pub trait QueryMut {
-    fn process(&self, db: &mut Db) -> Result<QueryResult, QueryError>;
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError>;
 }

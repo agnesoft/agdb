@@ -5,6 +5,8 @@ use crate::db::db_error::DbError;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
+use crate::storage::Storage;
+use crate::storage::StorageData;
 use std::marker::PhantomData;
 use std::mem::swap;
 
@@ -14,40 +16,46 @@ pub(crate) struct SearchIndex {
     pub(crate) distance: u64,
 }
 
-pub(crate) trait SearchIterator<S> {
-    fn expand_edge<Data: GraphData<S>>(
+pub(crate) trait SearchIterator<D: StorageData> {
+    fn expand_edge<Data: GraphData<D>>(
         index: GraphIndex,
-        graph: &GraphImpl<S, Data>,
-        storage: &S,
+        graph: &GraphImpl<D, Data>,
+        storage: &Storage<D>,
     ) -> GraphIndex;
-    fn expand_node<Data: GraphData<S>>(
+    fn expand_node<Data: GraphData<D>>(
         index: GraphIndex,
-        graph: &GraphImpl<S, Data>,
-        storage: &S,
+        graph: &GraphImpl<D, Data>,
+        storage: &Storage<D>,
     ) -> Vec<GraphIndex>;
     fn new(stack: &mut Vec<SearchIndex>) -> Self;
     fn next(&mut self) -> Option<SearchIndex>;
 }
 
-pub(crate) struct SearchImpl<'a, S, Data, SearchIt>
+pub(crate) struct SearchImpl<'a, D, Data, SearchIt>
 where
-    Data: GraphData<S>,
-    SearchIt: SearchIterator<S>,
+    Data: GraphData<D>,
+    D: StorageData,
+    SearchIt: SearchIterator<D>,
 {
     pub(crate) algorithm: PhantomData<SearchIt>,
-    pub(crate) graph: &'a GraphImpl<S, Data>,
-    pub(crate) storage: &'a S,
+    pub(crate) graph: &'a GraphImpl<D, Data>,
+    pub(crate) storage: &'a Storage<D>,
     pub(crate) result: Vec<GraphIndex>,
     pub(crate) stack: Vec<SearchIndex>,
     pub(crate) visited: BitSet,
 }
 
-impl<'a, S, Data, SearchIt> SearchImpl<'a, S, Data, SearchIt>
+impl<'a, D, Data, SearchIt> SearchImpl<'a, D, Data, SearchIt>
 where
-    Data: GraphData<S>,
-    SearchIt: SearchIterator<S>,
+    Data: GraphData<D>,
+    D: StorageData,
+    SearchIt: SearchIterator<D>,
 {
-    pub(crate) fn new(graph: &'a GraphImpl<S, Data>, storage: &'a S, index: GraphIndex) -> Self {
+    pub(crate) fn new(
+        graph: &'a GraphImpl<D, Data>,
+        storage: &'a Storage<D>,
+        index: GraphIndex,
+    ) -> Self {
         Self {
             algorithm: PhantomData,
             graph,

@@ -99,6 +99,16 @@ impl Serialize for DbStorageIndex {
 /// the given file. If the file does exist the database will try to load
 /// it and memory map the data.
 ///
+/// These are the available variants of the database to choose from:
+///
+/// - `Db`: [default] File based and memory mapped database.
+/// - `DbFile`: File based only (no memory mapping).
+/// - `DbMemory`: In-memory database only.
+///
+/// For each of these there are convenient using declarations, e.g. `DbTransaction`,
+/// `DbFileTransaction`, `DbMemoryTransactionMut` etc. in case you need to name
+/// the related types of the main database type.
+///
 /// You can execute queries or transactions on the database object with
 ///
 /// - exec() //immutable queries

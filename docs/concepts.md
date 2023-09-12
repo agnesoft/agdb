@@ -102,14 +102,14 @@ Supported types of both keys and values are:
 
 It is an enum of limited number of supported types that are universal across all platforms and programming languages. They are serialized in file as follows:
 
-| Type          | Layout                                                       | Size     |
-| ------------- | ------------------------------------------------------------ | -------- |
-| `i64`         | little endian                                                | 8 bytes  |
-| `u64`         | little endian                                                | 8 bytes  |
-| `f64`         | little endian                                                | 8 bytes  |
-| `String`      | size as `u64` followed by UTF-8 encoded string as `u8` bytes | 8+ bytes |
-| `Vec<u8>`     | size as `u64` followed by individual `u8` bytes              | 8+ bytes |
-| `Vec<i64>`    | size as `u64` followed by individual `i64` elements          | 8+ bytes |
-| `Vec<u64>`    | size as `u64` followed by individual `u64` elements          | 8+ bytes |
-| `Vec<f64>`    | size as `u64` followed by individual `i64` elements          | 8+ bytes |
-| `Vec<String>` | size as `u64` followed by individual `String` elements       | 8+ bytes |
+| Type          | Layout                                                                          | Size     |
+| ------------- | ------------------------------------------------------------------------------- | -------- |
+| `i64`         | little endian                                                                   | 8 bytes  |
+| `u64`         | little endian                                                                   | 8 bytes  |
+| `f64`         | little endian                                                                   | 8 bytes  |
+| `String`      | size as `u64` little endian followed by UTF-8 encoded string as `u8` bytes      | 8+ bytes |
+| `Vec<u8>`     | size as `u64` little endian followed by individual `u8` bytes                   | 8+ bytes |
+| `Vec<i64>`    | size as `u64` little endian followed by individual `i64` little endian elements | 8+ bytes |
+| `Vec<u64>`    | size as `u64` little endian followed by individual `u64` little endian elements | 8+ bytes |
+| `Vec<f64>`    | size as `u64` little endian followed by individual `f64` elements               | 8+ bytes |
+| `Vec<String>` | size as `u64` little endian followed by individual `String` elements            | 8+ bytes |

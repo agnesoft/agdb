@@ -22,6 +22,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph datab
 - ACID compliant
 - [Object queries](docs/queries.md) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
+- _No dependencies_
 
 # Quickstart
 
@@ -104,13 +105,12 @@ For database concepts and primitive data types see [concepts](docs/concepts.md).
 
 The following are planned features in priority order:
 
-| Feature                           | Description                                                                                                                                                                                              |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ability to disable memory mapping | Memory mapping aids with read performance but for databases larger than few GBs it is not very practical. To allow larger databases disable memory mapping and do reads from the database file directly. |
-| Object query (de)serialization    | To facilitate use of the database from other languages or process the query objects and results must allow (de)serialization.                                                                            |
-| Server mode                       | Executable version of the database to be accessed via network (REST & websocket).                                                                                                                        |
-| Data replication & RAFT protocol  | Allow replication by connecting several database nodes together with a RAFT protocol.                                                                                                                    |
-| Data sharding                     | Allow sharding single database data set across multiple nodes to allow super large databases.                                                                                                            |
+| Feature                          | Description                                                                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Object query (de)serialization   | To facilitate use of the database from other languages or process the query objects and results must allow (de)serialization. |
+| Server mode                      | Executable version of the database to be accessed via network (REST & websocket).                                             |
+| Data replication & RAFT protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                         |
+| Data sharding                    | Allow sharding single database data set across multiple nodes to allow super large databases.                                 |
 
 # Reference
 

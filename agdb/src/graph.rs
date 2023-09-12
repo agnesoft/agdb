@@ -894,8 +894,8 @@ mod tests {
     use std::hash::Hash;
     use std::hash::Hasher;
 
-    #[test]
     #[allow(clippy::clone_on_copy)]
+    #[test]
     fn derived_from_clone() {
         let index = GraphIndex(1);
         let other = index.clone();

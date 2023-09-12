@@ -77,6 +77,14 @@ mod tests {
     }
 
     #[test]
+    fn is_empty() {
+        let mut store = MemoryStorage::new("name").unwrap();
+        assert!(store.is_empty());
+        store.write(0, "Hi".as_bytes()).unwrap();
+        assert!(!store.is_empty());
+    }
+
+    #[test]
     fn index_reuse() {
         let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
 

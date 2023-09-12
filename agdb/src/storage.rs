@@ -43,6 +43,9 @@ pub trait StorageData: Sized {
     fn flush(&mut self) -> Result<(), DbError> {
         Ok(())
     }
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn len(&self) -> u64;
     fn name(&self) -> &str;
     fn new(name: &str) -> Result<Self, DbError>;

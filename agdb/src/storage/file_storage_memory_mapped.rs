@@ -1,6 +1,6 @@
 use super::file_storage::FileStorage;
 use super::memory_storage::MemoryStorage;
-use super::StorageData;
+use super::{StorageData, StorageSlice};
 use crate::DbError;
 
 pub struct FileStorageMemoryMapped {
@@ -27,7 +27,7 @@ impl StorageData for FileStorageMemoryMapped {
 
     fn new(name: &str) -> Result<Self, DbError> {
         let file = FileStorage::new(name)?;
-        let buffer = file.read(0, file.len())?;
+        let buffer = file.read(0, file.len())?.owned();
 
         Ok(Self {
             file,
@@ -35,7 +35,7 @@ impl StorageData for FileStorageMemoryMapped {
         })
     }
 
-    fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
+    fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError> {
         self.memory.read(pos, value_len)
     }
 
@@ -761,7 +761,7 @@ mod tests {
         }
 
         let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(u64::serialized_size_static() * 2, 2_u64.serialize())
+        wal.insert(u64::serialized_size_static() * 2, &2_u64.serialize())
             .unwrap();
 
         let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();

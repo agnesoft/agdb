@@ -216,7 +216,11 @@ impl DbValue {
                 if value_index.is_value() {
                     DbValue::Bytes(value_index.value().to_vec())
                 } else {
-                    DbValue::Bytes(storage.value_as_bytes(StorageIndex(value_index.index()))?)
+                    DbValue::Bytes(
+                        storage
+                            .value_as_bytes(StorageIndex(value_index.index()))?
+                            .owned(),
+                    )
                 }
             }
             I64_META_VALUE => {

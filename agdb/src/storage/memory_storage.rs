@@ -34,9 +34,7 @@ impl StorageData for MemoryStorage {
 
     fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError> {
         let end = pos + value_len;
-        Ok(StorageSlice::Slice(
-            &self.buffer[pos as usize..end as usize],
-        ))
+        Ok(StorageSlice::from(&self.buffer[pos as usize..end as usize]))
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {

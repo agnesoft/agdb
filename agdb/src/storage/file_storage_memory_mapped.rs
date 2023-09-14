@@ -27,7 +27,7 @@ impl StorageData for FileStorageMemoryMapped {
 
     fn new(name: &str) -> Result<Self, DbError> {
         let file = FileStorage::new(name)?;
-        let buffer = file.read(0, file.len())?.owned();
+        let buffer = file.read(0, file.len())?.to_vec();
 
         Ok(Self {
             file,

@@ -219,7 +219,7 @@ impl DbValue {
                     DbValue::Bytes(
                         storage
                             .value_as_bytes(StorageIndex(value_index.index()))?
-                            .owned(),
+                            .to_vec(),
                     )
                 }
             }

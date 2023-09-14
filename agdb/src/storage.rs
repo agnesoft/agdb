@@ -10,6 +10,7 @@ use self::storage_records::StorageRecords;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::DbError;
+use std::borrow::Cow;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StorageIndex(pub u64);
@@ -36,26 +37,7 @@ impl Serialize for StorageIndex {
 
 impl SerializeStatic for StorageIndex {}
 
-pub enum StorageSlice<'a> {
-    Owned(Vec<u8>),
-    Slice(&'a [u8]),
-}
-
-impl<'a> StorageSlice<'a> {
-    pub fn owned(self) -> Vec<u8> {
-        match self {
-            StorageSlice::Owned(owned) => owned,
-            StorageSlice::Slice(slice) => slice.to_vec(),
-        }
-    }
-
-    pub fn slice(&self) -> &[u8] {
-        match self {
-            StorageSlice::Owned(owned) => owned,
-            StorageSlice::Slice(slice) => slice,
-        }
-    }
-}
+pub type StorageSlice<'a> = Cow<'a, [u8]>;
 
 pub trait StorageData: Sized {
     fn backup(&mut self, _name: &str) -> Result<(), DbError> {
@@ -155,8 +137,7 @@ impl<D: StorageData> Storage<D> {
     ) -> Result<(), DbError> {
         let bytes = self
             .value_as_bytes_at_size(index, offset_from, size)?
-            .owned();
-
+            .to_vec();
         let id = self.transaction();
         self.insert_bytes_at(index, offset_to, &bytes)?;
         let record = self.record(index.0)?;
@@ -218,7 +199,7 @@ impl<D: StorageData> Storage<D> {
     }
 
     pub fn value<T: Serialize>(&self, index: StorageIndex) -> Result<T, DbError> {
-        T::deserialize(self.value_as_bytes(index)?.slice())
+        T::deserialize(&self.value_as_bytes(index)?)
     }
 
     pub fn value_as_bytes(&self, index: StorageIndex) -> Result<StorageSlice, DbError> {
@@ -249,7 +230,7 @@ impl<D: StorageData> Storage<D> {
 
     #[allow(dead_code)]
     pub fn value_at<T: Serialize>(&self, index: StorageIndex, offset: u64) -> Result<T, DbError> {
-        T::deserialize(self.value_as_bytes_at(index, offset)?.slice())
+        T::deserialize(&self.value_as_bytes_at(index, offset)?)
     }
 
     pub fn value_size(&self, index: StorageIndex) -> Result<u64, DbError> {
@@ -352,7 +333,7 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn move_to_end(&mut self, record: &mut StorageRecord, new_size: u64) -> Result<(), DbError> {
-        let mut bytes = self.read_value(record)?.owned();
+        let mut bytes = self.read_value(record)?.to_vec();
         bytes.resize(new_size as usize, 0_u8);
 
         let len = self.len();
@@ -366,8 +347,8 @@ impl<D: StorageData> Storage<D> {
 
     fn read_record(&mut self, pos: u64) -> Result<StorageRecord, DbError> {
         let bytes = self.data.read(pos, Self::record_serialized_size())?;
-        let index = u64::deserialize(bytes.slice())?;
-        let size = u64::deserialize(&bytes.slice()[index.serialized_size() as usize..])?;
+        let index = u64::deserialize(&bytes)?;
+        let size = u64::deserialize(&bytes[index.serialized_size() as usize..])?;
 
         Ok(StorageRecord { index, pos, size })
     }
@@ -428,7 +409,7 @@ impl<D: StorageData> Storage<D> {
 
     fn shrink_index(&mut self, record: &StorageRecord, current_pos: u64) -> Result<u64, DbError> {
         if record.pos != current_pos {
-            let bytes = self.read_value(record)?.owned();
+            let bytes = self.read_value(record)?.to_vec();
             self.set_pos(record.index, current_pos);
             self.write_record(&StorageRecord {
                 index: record.index,

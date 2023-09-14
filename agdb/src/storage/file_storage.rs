@@ -1154,12 +1154,12 @@ mod tests {
         let mut file = FileStorage::new(test_file.file_name()).unwrap();
         file.write(0, "Hello, World".as_bytes()).unwrap();
 
-        assert_eq!(file.read(0, 12).unwrap().slice(), "Hello, World".as_bytes());
+        assert_eq!(file.read(0, 12).unwrap(), "Hello, World".as_bytes());
         assert_eq!(file.len(), 12);
 
         let _guard = file.lock.lock();
 
-        assert_eq!(file.read(0, 12).unwrap().slice(), "Hello, World".as_bytes());
+        assert_eq!(file.read(0, 12).unwrap(), "Hello, World".as_bytes());
         assert_eq!(file.len(), 12);
     }
 
@@ -1172,6 +1172,6 @@ mod tests {
         file.resize(20).unwrap();
         assert_eq!(file.len(), 20);
         file.resize(10).unwrap();
-        assert_eq!(file.read(0, 10).unwrap().slice(), "Hello, Wor".as_bytes());
+        assert_eq!(file.read(0, 10).unwrap(), "Hello, Wor".as_bytes());
     }
 }

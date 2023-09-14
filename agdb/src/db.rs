@@ -328,6 +328,17 @@ impl<Store: StorageData> DbImpl<Store> {
         result
     }
 
+    /// Returns the database size in bytes. Depending on the underlying storage
+    /// the physical size in hardware might be higher. For example for in-memory
+    /// storage this function reports used storage but actually allocated memory
+    /// will likely be higher (expecting database growth in order to prevent too
+    /// frequent allocations). For file based storages this number will be accurate
+    /// but the actually used space on disk will be higher up to the next file system
+    /// block size.
+    pub fn size(&self) -> u64 {
+        self.storage.len()
+    }
+
     pub(crate) fn commit(&mut self) -> Result<(), QueryError> {
         self.undo_stack.clear();
         Ok(())

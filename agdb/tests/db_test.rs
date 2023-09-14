@@ -358,9 +358,9 @@ fn optimize_storage() {
         100,
     );
 
-    let size = std::fs::metadata(db.db.filename()).unwrap().len();
+    let size = db.db.size();
     db.db.optimize_storage().unwrap();
-    let optimized_size = std::fs::metadata(db.db.filename()).unwrap().len();
+    let optimized_size = db.db.size();
 
     assert!(optimized_size < size);
 }

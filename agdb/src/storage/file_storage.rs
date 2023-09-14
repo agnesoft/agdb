@@ -52,14 +52,12 @@ impl FileStorage {
 
 impl StorageData for FileStorage {
     fn backup(&mut self, name: &str) -> Result<(), DbError> {
-        self.flush()?;
         std::fs::copy(&self.filename, name)?;
         Ok(())
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
-        self.wal.clear()?;
-        Ok(self.file.flush()?)
+        self.wal.clear()
     }
 
     fn len(&self) -> u64 {

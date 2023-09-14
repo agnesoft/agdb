@@ -29,10 +29,13 @@ fn public_types() {
     use agdb::DbTransactionMut;
     use agdb::DbUserValue;
     use agdb::DbValue;
+    use agdb::FileStorage;
+    use agdb::FileStorageMemoryMapped;
     use agdb::InsertAliasesQuery;
     use agdb::InsertEdgesQuery;
     use agdb::InsertNodesQuery;
     use agdb::InsertValuesQuery;
+    use agdb::MemoryStorage;
     use agdb::Query;
     use agdb::QueryBuilder;
     use agdb::QueryCondition;
@@ -355,9 +358,9 @@ fn optimize_storage() {
         100,
     );
 
-    let size = std::fs::metadata(db.db.filename()).unwrap().len();
+    let size = db.db.size();
     db.db.optimize_storage().unwrap();
-    let optimized_size = std::fs::metadata(db.db.filename()).unwrap().len();
+    let optimized_size = db.db.size();
 
     assert!(optimized_size < size);
 }

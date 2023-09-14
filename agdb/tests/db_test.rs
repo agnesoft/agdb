@@ -29,10 +29,13 @@ fn public_types() {
     use agdb::DbTransactionMut;
     use agdb::DbUserValue;
     use agdb::DbValue;
+    use agdb::FileStorage;
+    use agdb::FileStorageMemoryMapped;
     use agdb::InsertAliasesQuery;
     use agdb::InsertEdgesQuery;
     use agdb::InsertNodesQuery;
     use agdb::InsertValuesQuery;
+    use agdb::MemoryStorage;
     use agdb::Query;
     use agdb::QueryBuilder;
     use agdb::QueryCondition;

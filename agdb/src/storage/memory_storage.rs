@@ -1,4 +1,5 @@
 use super::StorageData;
+use super::StorageSlice;
 use crate::DbError;
 
 pub struct MemoryStorage {
@@ -31,9 +32,9 @@ impl StorageData for MemoryStorage {
         })
     }
 
-    fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
+    fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError> {
         let end = pos + value_len;
-        Ok(self.buffer[pos as usize..end as usize].to_vec())
+        Ok(StorageSlice::from(&self.buffer[pos as usize..end as usize]))
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {

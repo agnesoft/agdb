@@ -23,7 +23,7 @@ where
 pub trait VecValue: Sized {
     fn store<D: StorageData>(&self, storage: &mut Storage<D>) -> Result<Vec<u8>, DbError>;
     fn load<D: StorageData>(storage: &Storage<D>, bytes: &[u8]) -> Result<Self, DbError>;
-    fn remove<D: StorageData>(storage: &mut Storage<D>, _bytes: &[u8]) -> Result<(), DbError>;
+    fn remove<D: StorageData>(storage: &mut Storage<D>, bytes: &[u8]) -> Result<(), DbError>;
     fn storage_len() -> u64;
 }
 
@@ -136,11 +136,9 @@ where
         let offset_from = Self::offset(index + 1);
         let offset_to = Self::offset(index);
         let move_len = T::storage_len() * (self.len() - index);
-        let bytes = storage.value_as_bytes_at_size(
-            self.storage_index,
-            Self::offset(index),
-            T::storage_len(),
-        )?;
+        let bytes = storage
+            .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
+            .to_vec();
 
         let value = T::load(storage, &bytes)?;
         self.len -= 1;
@@ -155,11 +153,9 @@ where
     }
 
     fn replace(&mut self, storage: &mut Storage<D>, index: u64, value: &T) -> Result<T, E> {
-        let old_bytes = storage.value_as_bytes_at_size(
-            self.storage_index,
-            Self::offset(index),
-            T::storage_len(),
-        )?;
+        let old_bytes = storage
+            .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
+            .to_vec();
         let old_value = T::load(storage, &old_bytes)?;
 
         let id = storage.transaction();
@@ -180,11 +176,9 @@ where
         }
 
         for index in new_len..self.len() {
-            let old_bytes = storage.value_as_bytes_at_size(
-                self.storage_index,
-                Self::offset(index),
-                T::storage_len(),
-            )?;
+            let old_bytes = storage
+                .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
+                .to_vec();
             T::remove(storage, &old_bytes)?;
         }
 
@@ -200,11 +194,9 @@ where
         let offset_from = Self::offset(other);
         let offset_to = Self::offset(index);
         let size = T::storage_len();
-        let bytes = storage.value_as_bytes_at_size(
-            self.storage_index,
-            Self::offset(index),
-            T::storage_len(),
-        )?;
+        let bytes = storage
+            .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
+            .to_vec();
 
         let id = storage.transaction();
         storage.move_at(self.storage_index, offset_from, offset_to, size)?;

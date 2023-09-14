@@ -10,6 +10,7 @@ use self::storage_records::StorageRecords;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::DbError;
+use std::borrow::Cow;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StorageIndex(pub u64);
@@ -36,6 +37,8 @@ impl Serialize for StorageIndex {
 
 impl SerializeStatic for StorageIndex {}
 
+pub type StorageSlice<'a> = Cow<'a, [u8]>;
+
 pub trait StorageData: Sized {
     fn backup(&mut self, _name: &str) -> Result<(), DbError> {
         Ok(())
@@ -49,7 +52,7 @@ pub trait StorageData: Sized {
     fn len(&self) -> u64;
     fn name(&self) -> &str;
     fn new(name: &str) -> Result<Self, DbError>;
-    fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError>;
+    fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError>;
     fn resize(&mut self, new_len: u64) -> Result<(), DbError>;
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError>;
 }
@@ -132,8 +135,9 @@ impl<D: StorageData> Storage<D> {
         offset_to: u64,
         size: u64,
     ) -> Result<(), DbError> {
-        let bytes = self.value_as_bytes_at_size(index, offset_from, size)?;
-
+        let bytes = self
+            .value_as_bytes_at_size(index, offset_from, size)?
+            .to_vec();
         let id = self.transaction();
         self.insert_bytes_at(index, offset_to, &bytes)?;
         let record = self.record(index.0)?;
@@ -198,11 +202,15 @@ impl<D: StorageData> Storage<D> {
         T::deserialize(&self.value_as_bytes(index)?)
     }
 
-    pub fn value_as_bytes(&self, index: StorageIndex) -> Result<Vec<u8>, DbError> {
+    pub fn value_as_bytes(&self, index: StorageIndex) -> Result<StorageSlice, DbError> {
         self.value_as_bytes_at(index, 0)
     }
 
-    pub fn value_as_bytes_at(&self, index: StorageIndex, offset: u64) -> Result<Vec<u8>, DbError> {
+    pub fn value_as_bytes_at(
+        &self,
+        index: StorageIndex,
+        offset: u64,
+    ) -> Result<StorageSlice, DbError> {
         let size = self.value_size(index)?;
         self.value_as_bytes_at_size(index, offset, size - std::cmp::min(size, offset))
     }
@@ -212,7 +220,7 @@ impl<D: StorageData> Storage<D> {
         index: StorageIndex,
         offset: u64,
         size: u64,
-    ) -> Result<Vec<u8>, DbError> {
+    ) -> Result<StorageSlice, DbError> {
         let record = self.record(index.0)?;
         Self::validate_read_size(offset, size, record.size)?;
         let pos = record.value_start() + offset;
@@ -325,7 +333,7 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn move_to_end(&mut self, record: &mut StorageRecord, new_size: u64) -> Result<(), DbError> {
-        let mut bytes = self.read_value(record)?;
+        let mut bytes = self.read_value(record)?.to_vec();
         bytes.resize(new_size as usize, 0_u8);
 
         let len = self.len();
@@ -371,7 +379,7 @@ impl<D: StorageData> Storage<D> {
         Ok(())
     }
 
-    fn read_value(&mut self, record: &StorageRecord) -> Result<Vec<u8>, DbError> {
+    fn read_value(&mut self, record: &StorageRecord) -> Result<StorageSlice, DbError> {
         self.data.read(record.value_start(), record.size)
     }
 
@@ -401,7 +409,7 @@ impl<D: StorageData> Storage<D> {
 
     fn shrink_index(&mut self, record: &StorageRecord, current_pos: u64) -> Result<u64, DbError> {
         if record.pos != current_pos {
-            let bytes = self.read_value(record)?;
+            let bytes = self.read_value(record)?.to_vec();
             self.set_pos(record.index, current_pos);
             self.write_record(&StorageRecord {
                 index: record.index,

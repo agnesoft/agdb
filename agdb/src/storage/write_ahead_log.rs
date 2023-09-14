@@ -22,10 +22,11 @@ impl WriteAheadLog {
         Ok(self.file.set_len(0)?)
     }
 
-    pub fn insert(&mut self, pos: u64, value: Vec<u8>) -> Result<(), DbError> {
+    pub fn insert(&mut self, pos: u64, value: &[u8]) -> Result<(), DbError> {
         self.file.seek(SeekFrom::End(0))?;
         self.file.write_all(&pos.serialize())?;
-        self.file.write_all(&value.serialize())?;
+        self.file.write_all(&(value.len() as u64).serialize())?;
+        self.file.write_all(value)?;
 
         Ok(())
     }

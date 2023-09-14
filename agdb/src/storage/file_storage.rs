@@ -1,6 +1,7 @@
 use super::write_ahead_log::WriteAheadLog;
 use super::write_ahead_log::WriteAheadLogRecord;
 use super::StorageData;
+use super::StorageSlice;
 use crate::DbError;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -90,7 +91,7 @@ impl StorageData for FileStorage {
         })
     }
 
-    fn read(&self, pos: u64, value_len: u64) -> Result<Vec<u8>, DbError> {
+    fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError> {
         let mut buffer = vec![0_u8; value_len as usize];
 
         if let Ok(_guard) = self.lock.try_lock() {
@@ -99,17 +100,18 @@ impl StorageData for FileStorage {
             Self::read_impl(&self.open_file()?, pos, &mut buffer)?;
         }
 
-        Ok(buffer)
+        Ok(StorageSlice::Owned(buffer))
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         let current_len = self.len();
 
         if new_len < current_len {
-            let bytes = self.read(new_len, current_len - new_len)?;
-            self.wal.insert(new_len, bytes)?;
+            let mut buffer = vec![0_u8; (current_len - new_len) as usize];
+            Self::read_impl(&self.file, new_len, &mut buffer)?;
+            self.wal.insert(new_len, &buffer)?;
         } else {
-            self.wal.insert(new_len, vec![])?;
+            self.wal.insert(new_len, &[])?;
         }
 
         self.file.set_len(new_len)?;
@@ -120,8 +122,9 @@ impl StorageData for FileStorage {
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
         let current_len = self.len();
         let end = pos + bytes.len() as u64;
-        let old_bytes = self.read(pos, std::cmp::min(current_len, end) - pos)?;
-        self.wal.insert(pos, old_bytes)?;
+        let mut buffer = vec![0_u8; (std::cmp::min(current_len, end) - pos) as usize];
+        Self::read_impl(&self.file, pos, &mut buffer)?;
+        self.wal.insert(pos, &buffer)?;
         self.file.seek(SeekFrom::Start(pos))?;
         self.file.write_all(bytes)?;
         self.len = std::cmp::max(current_len, end);
@@ -840,7 +843,7 @@ mod tests {
         }
 
         let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(u64::serialized_size_static() * 2, 2_u64.serialize())
+        wal.insert(u64::serialized_size_static() * 2, &2_u64.serialize())
             .unwrap();
 
         let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();

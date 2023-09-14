@@ -61,6 +61,7 @@ pub(crate) fn report(
     per_thread: u64,
     per_action: u64,
     mut times: Vec<Duration>,
+    total: Duration,
     config: &Config,
 ) {
     let zero_time: Duration = Duration::default();
@@ -69,11 +70,10 @@ pub(crate) fn report(
 
     let min = times.first().unwrap_or(&zero_time);
     let max = times.last().unwrap_or(&zero_time);
-    let total = times.iter().sum::<Duration>();
     let avg = if times.is_empty() {
         zero_time
     } else {
-        total / times.len() as u32
+        times.iter().sum::<Duration>() / times.len() as u32
     };
 
     let padding = config.padding as usize;

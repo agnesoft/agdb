@@ -6,8 +6,10 @@ use crate::utilities::measured;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryId;
+use agdb::StorageData;
 use agdb::UserValue;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::task::JoinHandle;
 
 #[derive(UserValue)]
@@ -21,19 +23,23 @@ struct Comment {
     body: String,
 }
 
-struct Writer {
+struct Writer<S: StorageData> {
     id: DbId,
-    db: Database,
+    db: Database<S>,
+    end: Duration,
     pub(crate) times: Vec<Duration>,
 }
 
-pub(crate) struct Writers(Vec<JoinHandle<Writer>>);
+pub(crate) struct Writers<S: StorageData> {
+    tasks: Vec<JoinHandle<Writer<S>>>,
+}
 
-impl Writer {
-    pub(crate) fn new(id: DbId, db: Database) -> Self {
+impl<S: StorageData> Writer<S> {
+    pub(crate) fn new(id: DbId, db: Database<S>) -> Self {
         Self {
             id,
             db,
+            end: Duration::default(),
             times: vec![],
         }
     }
@@ -136,7 +142,7 @@ impl Writer {
     }
 }
 
-impl Writers {
+impl<S: StorageData> Writers<S> {
     pub(crate) async fn join_and_report(
         &mut self,
         description: &str,
@@ -147,19 +153,36 @@ impl Writers {
     ) -> BenchResult<()> {
         let mut writers = vec![];
 
-        for task in self.0.iter_mut() {
+        for task in self.tasks.iter_mut() {
             writers.push(task.await?);
         }
 
+        let end = if let Some(w) = writers.iter().max_by_key(|w| w.end) {
+            w.end
+        } else {
+            Duration::default()
+        };
         let times: Vec<Duration> = writers.into_iter().flat_map(|w| w.times).collect();
 
-        utilities::report(description, threads, per_thread, per_action, times, config);
+        utilities::report(
+            description,
+            threads,
+            per_thread,
+            per_action,
+            times,
+            end,
+            config,
+        );
 
         Ok(())
     }
 }
 
-pub(crate) fn start_post_writers(db: &mut Database, config: &Config) -> BenchResult<Writers> {
+pub(crate) fn start_post_writers<S: StorageData + Send + Sync + 'static>(
+    db: &mut Database<S>,
+    config: &Config,
+) -> BenchResult<Writers<S>> {
+    let start = Instant::now();
     let tasks =
         db.0.read()?
             .exec(
@@ -188,15 +211,20 @@ pub(crate) fn start_post_writers(db: &mut Database, config: &Config) -> BenchRes
                         tokio::time::sleep(write_delay).await;
                     }
 
+                    writer.end = start.elapsed();
                     writer
                 })
             })
-            .collect::<Vec<JoinHandle<Writer>>>();
+            .collect::<Vec<JoinHandle<Writer<S>>>>();
 
-    Ok(Writers(tasks))
+    Ok(Writers { tasks })
 }
 
-pub(crate) fn start_comment_writers(db: &mut Database, config: &Config) -> BenchResult<Writers> {
+pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
+    db: &mut Database<S>,
+    config: &Config,
+) -> BenchResult<Writers<S>> {
+    let start = Instant::now();
     let tasks =
         db.0.read()?
             .exec(
@@ -232,10 +260,11 @@ pub(crate) fn start_comment_writers(db: &mut Database, config: &Config) -> Bench
                         tokio::time::sleep(write_delay).await;
                     }
 
+                    writer.end = start.elapsed();
                     writer
                 })
             })
-            .collect::<Vec<JoinHandle<Writer>>>();
+            .collect::<Vec<JoinHandle<Writer<S>>>>();
 
-    Ok(Writers(tasks))
+    Ok(Writers { tasks })
 }

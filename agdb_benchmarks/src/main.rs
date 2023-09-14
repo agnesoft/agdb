@@ -1,6 +1,11 @@
-use crate::config::Config;
-use crate::database::Database;
+use agdb::FileStorage;
+use agdb::FileStorageMemoryMapped;
+use agdb::MemoryStorage;
+use agdb::StorageData;
 use bench_result::BenchResult;
+use config::Config;
+use config::DbType;
+use database::Database;
 
 mod bench_error;
 mod bench_result;
@@ -13,14 +18,8 @@ mod writers;
 
 pub(crate) const BENCH_CONFIG_FILE: &str = "agdb_benchmarks.yaml";
 
-#[tokio::main]
-async fn main() -> BenchResult<()> {
-    let config = Config::load_config()?;
-
-    println!("Running agdb benchmark\n\n");
-    utilities::print_header(&config);
-
-    let mut db = Database::new(&config)?;
+async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> BenchResult<()> {
+    let mut db = Database::<S>::new(&config)?;
     users::setup_users(&mut db, &config)?;
 
     let mut posters = writers::start_post_writers(&mut db, &config)?;
@@ -67,4 +66,18 @@ async fn main() -> BenchResult<()> {
 
     println!("---");
     db.stat(&config)
+}
+
+#[tokio::main]
+async fn main() -> BenchResult<()> {
+    let config = Config::load_config()?;
+
+    println!("Running agdb benchmark\n\n");
+    utilities::print_header(&config);
+
+    match config.db_type {
+        DbType::File => benchmark::<FileStorage>(&config).await,
+        DbType::FileMapped => benchmark::<FileStorageMemoryMapped>(&config).await,
+        DbType::InMemory => benchmark::<MemoryStorage>(&config).await,
+    }
 }

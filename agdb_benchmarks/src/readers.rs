@@ -5,19 +5,28 @@ use crate::utilities;
 use crate::utilities::measured;
 use agdb::DbId;
 use agdb::QueryBuilder;
+use agdb::StorageData;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::task::JoinHandle;
 
-struct Reader {
-    db: Database,
+struct Reader<S: StorageData> {
+    db: Database<S>,
+    end: Duration,
     pub(crate) times: Vec<Duration>,
 }
 
-pub(crate) struct Readers(Vec<JoinHandle<Reader>>);
+pub(crate) struct Readers<S: StorageData> {
+    tasks: Vec<JoinHandle<Reader<S>>>,
+}
 
-impl Reader {
-    pub(crate) fn new(db: Database) -> Self {
-        Self { db, times: vec![] }
+impl<S: StorageData> Reader<S> {
+    pub(crate) fn new(db: Database<S>) -> Self {
+        Self {
+            db,
+            end: Duration::default(),
+            times: vec![],
+        }
     }
 
     fn read_comments(&mut self, limit: u64) -> BenchResult<bool> {
@@ -99,7 +108,7 @@ impl Reader {
     }
 }
 
-impl Readers {
+impl<S: StorageData> Readers<S> {
     pub(crate) async fn join_and_report(
         &mut self,
         description: &str,
@@ -110,19 +119,36 @@ impl Readers {
     ) -> BenchResult<()> {
         let mut readers = vec![];
 
-        for task in self.0.iter_mut() {
+        for task in self.tasks.iter_mut() {
             readers.push(task.await?);
         }
 
+        let end = if let Some(r) = readers.iter().max_by_key(|r| r.end) {
+            r.end
+        } else {
+            Duration::default()
+        };
         let times: Vec<Duration> = readers.into_iter().flat_map(|w| w.times).collect();
 
-        utilities::report(description, threads, per_thread, per_action, times, config);
+        utilities::report(
+            description,
+            threads,
+            per_thread,
+            per_action,
+            times,
+            end,
+            config,
+        );
 
         Ok(())
     }
 }
 
-pub(crate) fn start_post_readers(db: &mut Database, config: &Config) -> BenchResult<Readers> {
+pub(crate) fn start_post_readers<S: StorageData + Send + Sync + 'static>(
+    db: &mut Database<S>,
+    config: &Config,
+) -> BenchResult<Readers<S>> {
+    let start = Instant::now();
     let mut tasks = vec![];
 
     for i in 0..config.post_readers.count {
@@ -143,16 +169,21 @@ pub(crate) fn start_post_readers(db: &mut Database, config: &Config) -> BenchRes
                 }
             }
 
+            reader.end = start.elapsed();
             reader
         });
 
         tasks.push(handle);
     }
 
-    Ok(Readers(tasks))
+    Ok(Readers { tasks })
 }
 
-pub(crate) fn start_comment_readers(db: &mut Database, config: &Config) -> BenchResult<Readers> {
+pub(crate) fn start_comment_readers<S: StorageData + Send + Sync + 'static>(
+    db: &mut Database<S>,
+    config: &Config,
+) -> BenchResult<Readers<S>> {
+    let start = Instant::now();
     let mut tasks = vec![];
 
     for i in 0..config.comment_readers.count {
@@ -173,11 +204,12 @@ pub(crate) fn start_comment_readers(db: &mut Database, config: &Config) -> Bench
                 }
             }
 
+            reader.end = start.elapsed();
             reader
         });
 
         tasks.push(handle);
     }
 
-    Ok(Readers(tasks))
+    Ok(Readers { tasks })
 }

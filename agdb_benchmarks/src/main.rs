@@ -19,13 +19,13 @@ mod writers;
 pub(crate) const BENCH_CONFIG_FILE: &str = "agdb_benchmarks.yaml";
 
 async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> BenchResult<()> {
-    let mut db = Database::<S>::new(&config)?;
-    users::setup_users(&mut db, &config)?;
+    let mut db = Database::<S>::new(config)?;
+    users::setup_users(&mut db, config)?;
 
-    let mut posters = writers::start_post_writers(&mut db, &config)?;
-    let mut commenters = writers::start_comment_writers(&mut db, &config)?;
-    let mut post_readers = readers::start_post_readers(&mut db, &config)?;
-    let mut comment_readers = readers::start_comment_readers(&mut db, &config)?;
+    let mut posters = writers::start_post_writers(&mut db, config)?;
+    let mut commenters = writers::start_comment_writers(&mut db, config)?;
+    let mut post_readers = readers::start_post_readers(&mut db, config)?;
+    let mut comment_readers = readers::start_comment_readers(&mut db, config)?;
 
     posters
         .join_and_report(
@@ -33,7 +33,7 @@ async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> B
             config.posters.count,
             config.posters.posts,
             1,
-            &config,
+            config,
         )
         .await?;
     commenters
@@ -42,7 +42,7 @@ async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> B
             config.commenters.count,
             config.commenters.comments,
             1,
-            &config,
+            config,
         )
         .await?;
     post_readers
@@ -51,7 +51,7 @@ async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> B
             config.post_readers.count,
             config.post_readers.reads_per_reader,
             config.post_readers.posts,
-            &config,
+            config,
         )
         .await?;
     comment_readers
@@ -60,12 +60,12 @@ async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> B
             config.comment_readers.count,
             config.comment_readers.reads_per_reader,
             config.comment_readers.comments,
-            &config,
+            config,
         )
         .await?;
 
     println!("---");
-    db.stat(&config)
+    db.stat(config)
 }
 
 #[tokio::main]

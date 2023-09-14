@@ -50,7 +50,7 @@ fn remove_db_files(db_name: &str) {
     if path.exists() {
         let _ = std::fs::remove_file(path);
     }
-    let path = std::path::PathBuf::from(format!("{db_name}"));
+    let path = std::path::PathBuf::from(db_name);
     if path.exists() {
         let _ = std::fs::remove_file(path);
     }

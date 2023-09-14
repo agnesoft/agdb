@@ -40,8 +40,16 @@ pub(crate) struct CommentReaders {
 }
 
 #[derive(Serialize, Deserialize)]
+pub enum DbType {
+    File,
+    FileMapped,
+    InMemory,
+}
+
+#[derive(Serialize, Deserialize)]
 pub(crate) struct Config {
     pub(crate) db_name: String,
+    pub(crate) db_type: DbType,
     pub(crate) locale: Locale,
     pub(crate) padding: u64,
     pub(crate) cell_padding: u64,
@@ -77,6 +85,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             db_name: "db.agdb".to_string(),
+            db_type: DbType::FileMapped,
             locale: Locale::cs,
             padding: 20,
             cell_padding: 10,

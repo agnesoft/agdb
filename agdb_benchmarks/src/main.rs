@@ -1,6 +1,11 @@
-use crate::config::Config;
-use crate::database::Database;
+use agdb::FileStorage;
+use agdb::FileStorageMemoryMapped;
+use agdb::MemoryStorage;
+use agdb::StorageData;
 use bench_result::BenchResult;
+use config::Config;
+use config::DbType;
+use database::Database;
 
 mod bench_error;
 mod bench_result;
@@ -13,20 +18,14 @@ mod writers;
 
 pub(crate) const BENCH_CONFIG_FILE: &str = "agdb_benchmarks.yaml";
 
-#[tokio::main]
-async fn main() -> BenchResult<()> {
-    let config = Config::load_config()?;
+async fn benchmark<S: StorageData + Send + Sync + 'static>(config: &Config) -> BenchResult<()> {
+    let mut db = Database::<S>::new(config)?;
+    users::setup_users(&mut db, config)?;
 
-    println!("Running agdb benchmark\n\n");
-    utilities::print_header(&config);
-
-    let mut db = Database::new(&config)?;
-    users::setup_users(&mut db, &config)?;
-
-    let mut posters = writers::start_post_writers(&mut db, &config)?;
-    let mut commenters = writers::start_comment_writers(&mut db, &config)?;
-    let mut post_readers = readers::start_post_readers(&mut db, &config)?;
-    let mut comment_readers = readers::start_comment_readers(&mut db, &config)?;
+    let mut posters = writers::start_post_writers(&mut db, config)?;
+    let mut commenters = writers::start_comment_writers(&mut db, config)?;
+    let mut post_readers = readers::start_post_readers(&mut db, config)?;
+    let mut comment_readers = readers::start_comment_readers(&mut db, config)?;
 
     posters
         .join_and_report(
@@ -34,7 +33,7 @@ async fn main() -> BenchResult<()> {
             config.posters.count,
             config.posters.posts,
             1,
-            &config,
+            config,
         )
         .await?;
     commenters
@@ -43,7 +42,7 @@ async fn main() -> BenchResult<()> {
             config.commenters.count,
             config.commenters.comments,
             1,
-            &config,
+            config,
         )
         .await?;
     post_readers
@@ -52,7 +51,7 @@ async fn main() -> BenchResult<()> {
             config.post_readers.count,
             config.post_readers.reads_per_reader,
             config.post_readers.posts,
-            &config,
+            config,
         )
         .await?;
     comment_readers
@@ -61,10 +60,24 @@ async fn main() -> BenchResult<()> {
             config.comment_readers.count,
             config.comment_readers.reads_per_reader,
             config.comment_readers.comments,
-            &config,
+            config,
         )
         .await?;
 
     println!("---");
-    db.stat(&config)
+    db.stat(config)
+}
+
+#[tokio::main]
+async fn main() -> BenchResult<()> {
+    let config = Config::load_config()?;
+
+    println!("Running agdb benchmark\n\n");
+    utilities::print_header(&config);
+
+    match config.db_type {
+        DbType::File => benchmark::<FileStorage>(&config).await,
+        DbType::FileMapped => benchmark::<FileStorageMemoryMapped>(&config).await,
+        DbType::InMemory => benchmark::<MemoryStorage>(&config).await,
+    }
 }

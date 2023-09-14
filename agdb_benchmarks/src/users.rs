@@ -5,6 +5,7 @@ use crate::utilities::format_duration;
 use crate::utilities::measured;
 use crate::utilities::print_flush;
 use agdb::QueryBuilder;
+use agdb::StorageData;
 use agdb::UserValue;
 use num_format::ToFormattedString;
 
@@ -14,7 +15,10 @@ struct User {
     email: String,
 }
 
-pub(crate) fn setup_users(db: &mut Database, config: &Config) -> BenchResult<()> {
+pub(crate) fn setup_users<S: StorageData>(
+    db: &mut Database<S>,
+    config: &Config,
+) -> BenchResult<()> {
     let mut db = db.0.write()?;
     let padding = config.padding as usize;
     let cell_padding = config.cell_padding as usize;

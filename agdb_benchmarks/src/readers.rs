@@ -154,7 +154,11 @@ pub(crate) fn start_post_readers<S: StorageData + Send + Sync + 'static>(
     for i in 0..config.post_readers.count {
         let db = db.clone();
         let limit = config.post_readers.posts;
-        let read_delay = Duration::from_millis(config.post_readers.delay_ms % (i + 1));
+        let read_delay = Duration::from_millis(if config.post_readers.delay_ms == 0 {
+            0
+        } else {
+            config.post_readers.delay_ms % (i + 1)
+        });
         let reads = config.post_readers.reads_per_reader;
 
         let handle = tokio::spawn(async move {
@@ -188,7 +192,11 @@ pub(crate) fn start_comment_readers<S: StorageData + Send + Sync + 'static>(
 
     for i in 0..config.comment_readers.count {
         let db = db.clone();
-        let read_delay = Duration::from_millis(config.comment_readers.delay_ms % (i + 1));
+        let read_delay = Duration::from_millis(if config.comment_readers.delay_ms == 0 {
+            0
+        } else {
+            config.comment_readers.delay_ms % (i + 1)
+        });
         let reads = config.comment_readers.reads_per_reader;
         let limit = config.comment_readers.comments;
 

@@ -198,7 +198,11 @@ pub(crate) fn start_post_writers<S: StorageData + Send + Sync + 'static>(
             .map(|e| {
                 let id = e.id;
                 let db = db.clone();
-                let write_delay = Duration::from_millis(config.posters.delay_ms % id.0 as u64);
+                let write_delay = Duration::from_millis(if config.posters.delay_ms == 0 {
+                    0
+                } else {
+                    config.posters.delay_ms % id.0 as u64
+                });
                 let posts = config.posters.posts;
                 let title = config.posters.title.to_string();
                 let body = config.posters.body.to_string();
@@ -241,7 +245,11 @@ pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
             .map(|e| {
                 let id = e.id;
                 let db = db.clone();
-                let write_delay = Duration::from_millis(config.commenters.delay_ms % id.0 as u64);
+                let write_delay = Duration::from_millis(if config.commenters.delay_ms == 0 {
+                    0
+                } else {
+                    config.commenters.delay_ms % id.0 as u64
+                });
                 let comments = config.commenters.comments;
                 let body = config.commenters.body.to_string();
 

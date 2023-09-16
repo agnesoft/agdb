@@ -37,23 +37,51 @@ impl Serialize for StorageIndex {
 
 impl SerializeStatic for StorageIndex {}
 
+/// Convenience alias for `Cow<'a, [u8]>`.
 pub type StorageSlice<'a> = Cow<'a, [u8]>;
 
+/// Minimum set of data operations required by the database
+/// to store & retrieve data.
 pub trait StorageData: Sized {
+    /// Copy the underlying data storage to a new `name`. The
+    /// default implementation does nothing. File implementations
+    /// might need to copy the underlying file(s).
     fn backup(&mut self, _name: &str) -> Result<(), DbError> {
         Ok(())
     }
+
+    /// Flushes any buffers to the underlying storage (e.g. file). The
+    /// default implementation does nothing.
     fn flush(&mut self) -> Result<(), DbError> {
         Ok(())
     }
+
+    /// Convenience method that returns `len() == 0`.
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Returns the length of the underlying storage in bytes.
     fn len(&self) -> u64;
+
+    /// Returns the name this storage was constructed with.
     fn name(&self) -> &str;
+
+    /// Constructs or loads the storage `name`. The `name` might be
+    /// a file name or other identifier.
     fn new(name: &str) -> Result<Self, DbError>;
+
+    /// Reads `value_len` bytes starting at `pos`. Returns [`StorageSlice`]
+    /// (COW).
     fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError>;
+
+    /// Resizes the underlying storage to `new_len`. If the storage is enlarged as
+    /// a result the new bytes should be initialized to `0_u8`.
     fn resize(&mut self, new_len: u64) -> Result<(), DbError>;
+
+    /// Writes the `bytes` to the underlying storage at `pos`. The implementation
+    /// must handle the case where the `pos + bytes.len()` exceeds the current
+    /// [`len()`](#method.len).
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError>;
 }
 

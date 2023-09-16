@@ -7,14 +7,14 @@ use crate::StorageData;
 use crate::Transaction;
 
 /// The `TransactionMut` is a proxy struct that
-/// encapsulates a mutably borrowed `Db`.
-/// It allows running queries via `exec()` and `exec_mut()`.
+/// encapsulates a mutably borrowed [`DbImpl`].
+/// It allows running queries via [`exec()`](#method.exec) and [`exec_mut()`](#method.exec_mut).
 pub struct TransactionMut<'a, Store: StorageData> {
     db: &'a mut DbImpl<Store>,
 }
 
 impl<'a, Store: StorageData> TransactionMut<'a, Store> {
-    /// Executes immutable query:
+    /// Executes immutable queries:
     ///
     /// - Select elements
     /// - Select values
@@ -27,7 +27,7 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
         Transaction::new(self.db).exec(query)
     }
 
-    /// Executes mutable query:
+    /// Executes mutable queries:
     ///
     /// - Insert nodes
     /// - Insert edges

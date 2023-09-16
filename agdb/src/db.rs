@@ -101,9 +101,9 @@ impl Serialize for DbStorageIndex {
 ///
 /// These are the available variants of the database to choose from:
 ///
-/// - `Db`: [default] File based and memory mapped database.
-/// - `DbFile`: File based only (no memory mapping).
-/// - `DbMemory`: In-memory database only.
+/// - [`Db`]: \[default] File based and memory mapped database.
+/// - [`DbFile`]: File based only (no memory mapping).
+/// - [`DbMemory`]: In-memory database only.
 ///
 /// For each of these there are convenient using declarations, e.g. `DbTransaction`,
 /// `DbFileTransaction`, `DbMemoryTransactionMut` etc. in case you need to name
@@ -111,10 +111,10 @@ impl Serialize for DbStorageIndex {
 ///
 /// You can execute queries or transactions on the database object with
 ///
-/// - exec() //immutable queries
-/// - exec_mut() //mutable queries
-/// - transaction() //immutable transactions
-/// - transaction_mut() // mutable transaction
+/// - [exec()](#method.exec) //immutable queries
+/// - [exec_mut()](#method.exec_mut) //mutable queries
+/// - [transaction()](#method.transaction) //immutable transactions
+/// - [transaction_mut()](#method.transaction_mut) // mutable transaction
 ///
 /// # Examples
 ///
@@ -173,7 +173,7 @@ impl Serialize for DbStorageIndex {
 ///
 /// The `agdb` is using a single database file to store all of its data. Additionally
 /// a single shadow file with a `.` prefix of the main database file name is used as
-/// a write ahead log (WAL). On drop of the `Db` object the WAL is processed and removed
+/// a write ahead log (WAL). On drop of the [`Db`] object the WAL is processed and removed
 /// aborting any unfinished transactions. Furthermore the database data is defragmented.
 ///
 /// On load, if the WAL file is present (e.g. due to a crash), it will be processed
@@ -189,16 +189,37 @@ pub struct DbImpl<Store: StorageData> {
     undo_stack: Vec<Command>,
 }
 
+/// The default implementation of the database using memory mapped file (full ACID) with
+/// write ahead log. If your data set exceeds available (or reasonable amount) of memory
+/// consider using [`DbFile`] instead. You can load the file created with [`DbFile`] and
+/// vice versa.
 pub type Db = DbImpl<FileStorageMemoryMapped>;
+
+/// A convenience alias for the [`Transaction`] type for the default [`Db`].
 pub type DbTransaction<'a> = Transaction<'a, FileStorageMemoryMapped>;
+
+/// A convenience alias for the [`TransactionMut`] type for the default [`Db`].
 pub type DbTransactionMut<'a> = TransactionMut<'a, FileStorageMemoryMapped>;
 
+/// The file based implementation of the database (full ACID) with write ahead logging and
+/// but minimum memory footprint but slower than the default [`Db`]. You can load the file
+/// created with [`Db`] and vice versa.
 pub type DbFile = DbImpl<FileStorage>;
+
+/// A convenience alias for the [`Transaction`] type for the default [`DbFile`].
 pub type DbFileTransaction<'a> = Transaction<'a, FileStorage>;
+
+/// A convenience alias for the [`TransactionMut`] type for the default [`DbFile`].
 pub type DbFileTransactionMut<'a> = TransactionMut<'a, FileStorage>;
 
+/// The purely in-memory implementation of the database. It has no persistence but offers
+/// unmatched performance
 pub type DbMemory = DbImpl<MemoryStorage>;
+
+/// A convenience alias for the [`Transaction`] type for the default [`DbMemory`].
 pub type DbMemoryTransaction<'a> = Transaction<'a, MemoryStorage>;
+
+/// A convenience alias for the [`TransactionMut`] type for the default [`DbMemory`].
 pub type DbMemoryTransactionMut<'a> = TransactionMut<'a, MemoryStorage>;
 
 impl<Store: StorageData> std::fmt::Debug for DbImpl<Store> {

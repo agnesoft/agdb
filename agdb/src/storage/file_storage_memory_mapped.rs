@@ -1,8 +1,18 @@
 use super::file_storage::FileStorage;
 use super::memory_storage::MemoryStorage;
-use super::{StorageData, StorageSlice};
+use super::StorageData;
+use super::StorageSlice;
 use crate::DbError;
 
+/// The default implementation of the database storage implementing
+/// [`StorageData`]. It combines the [`FileStorage`] and [`MemoryStorage`]
+/// leveraging the former for the persistence and the latter for performance.
+/// The read operations are implemented in terms of the [`MemoryStorage`] only
+/// and the write operations are implemented in terms of both [`FileStorage`]
+/// and [`MemoryStorage`].
+///
+/// The file based storage is using write ahead logging (WAL) and single underlying
+/// file. See [`FileStorage`] for more details on the persistent storage.
 pub struct FileStorageMemoryMapped {
     file: FileStorage,
     memory: MemoryStorage,

@@ -3,6 +3,25 @@ use quote::quote;
 use syn::parse_macro_input;
 use syn::DeriveInput;
 
+/// The derive macro to add `agdb` compatibility
+/// to user defined types. It implements [`agdb::DbUserValue`]
+/// for the type automatically to allow your type to be read and
+/// stored from/to the database. If your type contains a field
+/// `db_id: Option<agdb::DbId>` it will be treated specially
+/// and will additionally allow shorthand inserts/updates
+/// of the elements directly.
+///
+/// # Examples
+///
+/// ```ignore
+/// #[derive(agdb_derive::UserValue)]
+/// struct MyValue {
+///     db_id: Option<agdb::DbId>, //this field is useful but not mandatory
+///     num_value: i64,
+///     string_value: String,
+///     vec_value: Vec<u64>,
+/// }
+/// ```
 #[proc_macro_derive(UserValue)]
 pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);

@@ -11,7 +11,7 @@ use crate::DbKeyValue;
 /// of types that are convertible to/from database
 /// primitive types.
 ///
-/// The special type `db_id` of type `Option<DbId>`
+/// The special type `db_id` of type [`Option<DbId>`](DbId)
 /// can be used to allow direct insertion and select
 /// of a user value tied with a particular database
 /// element. The field `db_id` is skipped in the derive

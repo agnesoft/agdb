@@ -119,7 +119,7 @@ pub enum CountComparison {
     NotEqual(u64),
 }
 
-/// Comparison of database values (`DbValue`) used
+/// Comparison of database values ([`DbValue`]) used
 /// by `key()` condition. Supports
 /// the usual set of named comparisons: `==, !=, <, <=, >, =>`
 /// plus `contains()`. The comparisons are type

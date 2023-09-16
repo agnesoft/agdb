@@ -7,6 +7,12 @@ pub struct MemoryStorage {
     name: String,
 }
 
+/// In memory buffer equivalent to `Vec<u8>` implementing [`StorageData`].
+/// The [`StorageData::read()`] always returns non-owning the slice to the
+/// underlying buffer. The [`StorageData::backup()`] and [`StorageData::flush()`]
+/// rely on default implementations that do nothing.
+///
+/// This implementation offers unmatched performance but also **no persistence**.
 impl MemoryStorage {
     pub fn from_buffer(name: &str, buffer: Vec<u8>) -> Self {
         Self {

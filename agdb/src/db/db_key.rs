@@ -1,6 +1,6 @@
 use crate::DbValue;
 
-/// Alias to `DbValue`
+/// Alias to [`DbValue`]
 pub type DbKey = DbValue;
 
 /// Ordering for search queries

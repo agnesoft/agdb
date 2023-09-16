@@ -1,7 +1,7 @@
 use crate::DbId;
 use crate::DbKeyValue;
 
-/// Database element used in `QueryResult`
+/// Database element used in [`QueryResult`]
 /// that represents a node or an edge.
 #[derive(Debug, PartialEq)]
 pub struct DbElement {

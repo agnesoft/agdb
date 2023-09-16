@@ -16,15 +16,15 @@ pub enum QueryValues {
     Multi(Vec<Vec<DbKeyValue>>),
 }
 
-/// Convenient wrapper for the `QueryBuilder` to
+/// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents `QueryValues::Single`.
 pub struct SingleValues(pub Vec<DbKeyValue>);
 
-/// Convenient wrapper for the `QueryBuilder` to
+/// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents `QueryValues::Multi`.
 pub struct MultiValues(pub Vec<Vec<DbKeyValue>>);
 
-/// Convenient wrapper for the `QueryBuilder` to
+/// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents list
 /// of property keys.
 pub struct QueryKeys(pub Vec<DbKey>);

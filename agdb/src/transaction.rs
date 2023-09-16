@@ -5,14 +5,14 @@ use crate::QueryResult;
 use crate::StorageData;
 
 /// The `Transaction` is a proxy struct that
-/// encapsulates an immutably borrowed `Db`.
-/// It allows running queries via `exec()`.
+/// encapsulates an immutably borrowed [`DbImpl`].
+/// It allows running queries via [`exec()`](#method.exec).
 pub struct Transaction<'a, Store: StorageData> {
     db: &'a DbImpl<Store>,
 }
 
 impl<'a, Store: StorageData> Transaction<'a, Store> {
-    /// Executes immutable query:
+    /// Executes immutable queries:
     ///
     /// - Select elements
     /// - Select values

@@ -5,10 +5,10 @@ use crate::DbId;
 /// id or a string alias.
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryId {
-    /// Numerical id as `DbId`
+    /// Numerical id as [`DbId`]
     Id(DbId),
 
-    /// Alias
+    /// String alias
     Alias(String),
 }
 

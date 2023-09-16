@@ -11,6 +11,20 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::sync::Mutex;
 
+/// Single file based storage with write ahead log (WAL) for resiliency
+/// implementing [`StorageData`]. It uses the storage name as the file
+/// name (`.{name}` for WAL). It allows multiple readers from the file
+/// by opening additional temporary file handles if the single member file
+/// handle is being used (read). The [`StorageData::read()`] always returns
+/// owning buffer.
+///
+/// The [`StorageData::backup()`] is implemented so that it copes the file
+/// to the new name.
+///
+/// The [`StorageData::flush()`] merely clears the WAL. This implementation
+/// relies on the OS to flush the content to the disk. It is specifically not
+/// using manual calls to `File::sync_data()` / `File::sync_all()` because they
+/// result in extreme slowdown.
 pub struct FileStorage {
     file: File,
     filename: String,

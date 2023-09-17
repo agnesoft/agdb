@@ -1,6 +1,6 @@
 [package]
 name = "agdb_benchmarks"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2021"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -12,7 +12,7 @@ keywords = ["graph", "database"]
 categories = ["database", "database-implementations"]
 
 [dependencies]
-agdb = { version = "0.4.1", path = "../agdb" }
+agdb = { version = "0.5.0", path = "../agdb" }
 num-format = { version = "0.4.4", features = ["with-serde"] }
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = "0.9.25"

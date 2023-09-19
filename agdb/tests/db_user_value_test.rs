@@ -393,3 +393,28 @@ fn insert_multiple_elements() {
 
     assert_eq!(other, db_values);
 }
+
+#[test]
+fn derived_macro_should_not_panic() {
+    let mut db = TestDb::new();
+
+    #[derive(Debug, UserValue)]
+    struct User {
+        value: u64,
+    }
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values(vec![User { value: 0 }.to_db_values()])
+            .query(),
+        1,
+    );
+
+    let user: Result<User, DbError> = db
+        .exec_result(QueryBuilder::search().from(1).query())
+        .try_into();
+
+    assert!(user.is_err());
+    assert_eq!(user.unwrap_err().description, "Not enough keys");
+}

@@ -1,6 +1,6 @@
 [package]
 name = "agdb"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -14,4 +14,4 @@ categories = ["database", "database-implementations"]
 [lib]
 
 [dependencies]
-agdb_derive = { version = "0.5.0", path = "../agdb_derive" }
+agdb_derive = { version = "0.5.1", path = "../agdb_derive" }

@@ -57,7 +57,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
                 let i = counter;
                 counter += 1;
                 return Some(quote! {
-                    #name: element.values[#i].value.clone().try_into()?
+                    #name: element.values.get(#i).ok_or(DbError::from("Not enough keys"))?.value.clone().try_into()?
                 });
             }
         }

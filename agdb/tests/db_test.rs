@@ -2,9 +2,12 @@ mod test_db;
 
 use agdb::Db;
 use agdb::DbElement;
+use agdb::DbError;
 use agdb::DbId;
+use agdb::DbUserValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
+use agdb_derive::UserValue;
 use std::sync::Arc;
 use std::sync::RwLock;
 use test_db::test_file::TestFile;
@@ -363,4 +366,29 @@ fn optimize_storage() {
     let optimized_size = db.db.size();
 
     assert!(optimized_size < size);
+}
+
+#[test]
+fn derived_macro_should_not_panic() {
+    let mut db = TestDb::new();
+
+    #[derive(Debug, UserValue)]
+    struct User {
+        value: u64,
+    }
+
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values(vec![User { value: 0 }.to_db_values()])
+            .query(),
+        1,
+    );
+
+    let user: Result<User, DbError> = db
+        .exec_result(QueryBuilder::search().from(1).query())
+        .try_into();
+
+    assert!(user.is_err());
+    assert_eq!(user.unwrap_err().description, "Not enough keys");
 }

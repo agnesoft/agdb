@@ -16,7 +16,7 @@ jobs:
       - uses: actions/github-script@v6
         with:
           script: |
-            const regex = RegExp("^\\[(benchmarks|ci|collections|commands|db|docs|graph|query|storage|tests)\\] .+ #[\\d]+$")
+            const regex = RegExp("^\\[(benchmarks|ci|collections|db|docs|graph|query|server|storage|studio|tests)\\] .+ #[\\d]+$")
             const title = context.payload.pull_request.title
 
             if (!regex.test(title)) {

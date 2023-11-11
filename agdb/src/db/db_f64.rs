@@ -44,7 +44,7 @@ impl PartialEq for DbF64 {
 
 impl PartialOrd for DbF64 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.0.total_cmp(&other.0))
+        Some(std::cmp::Ord::cmp(self, other))
     }
 }
 

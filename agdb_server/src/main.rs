@@ -1,4 +1,3 @@
-use agdb::DbError;
 use axum::routing;
 use axum::Router;
 use axum::Server;
@@ -12,15 +11,13 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
+#[cfg_attr(coverage, coverage(off))]
 #[tokio::main]
-async fn main() -> Result<(), DbError> {
+async fn main() -> anyhow::Result<()> {
     let app = app();
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
-    Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    Server::bind(&addr).serve(app.into_make_service()).await?;
 
     Ok(())
 }

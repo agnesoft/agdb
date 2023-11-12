@@ -6,6 +6,7 @@ on:
     paths:
       - agdb/**
       - agdb_derive/**
+      - agdb_server/**
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,7 +18,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --package agdb --ignore-filename-regex agdb_ --lcov --output-path lcov.info
+      - run: cargo llvm-cov --package agdb --package agdb_server --ignore-filename-regex "agdb(_derive|_benchmarks)" --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v3
         with:
           files: lcov.info

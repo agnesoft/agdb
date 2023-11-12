@@ -21,7 +21,7 @@ jobs:
         shell: bash
         run: |
           if [[ "$(git diff origin/main --name-only -- *.rs Cargo.toml .github/workflows/pr.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
-          if [[ "$(git diff origin/main --name-only -- agdb/*.rs agdb/Cargo.toml .github/workflows/pr.yaml)" != "" ]]; then (echo "diff_coverage=true" >> $GITHUB_OUTPUT) fi
+          if [[ "$(git diff origin/main --name-only -- agdb/* agdb_derive/* agdb_server/* .github/workflows/pr.yaml)" != "" ]]; then (echo "diff_coverage=true" >> $GITHUB_OUTPUT) fi
 
   analyse:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --package agdb --ignore-filename-regex agdb_ --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
+      - run: cargo llvm-cov --package agdb --package agdb_server --ignore-filename-regex "agdb(_derive|_benchmarks)" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
 
   format:
     runs-on: ubuntu-latest

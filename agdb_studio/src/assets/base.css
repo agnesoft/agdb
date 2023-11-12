@@ -1,0 +1,68 @@
+/* color palette from <https://github.com/vuejs/theme> */
+:root {
+  --white: #ffffff;
+  --white-soft: #f8f8f8;
+  --white-mute: #f2f2f2;
+
+  --black: #181818;
+  --black-soft: #222222;
+  --black-mute: #282828;
+
+  --indigo: #2c3e50;
+
+  --divider-light-1: rgba(60, 60, 60, 0.29);
+  --divider-light-2: rgba(60, 60, 60, 0.12);
+  --divider-dark-1: rgba(84, 84, 84, 0.65);
+  --divider-dark-2: rgba(84, 84, 84, 0.48);
+
+  --text-light-1: var(--indigo);
+  --text-light-2: rgba(60, 60, 60, 0.66);
+  --text-dark-1: var(--white);
+  --text-dark-2: rgba(235, 235, 235, 0.64);
+}
+
+/* semantic color variables for this project */
+:root {
+  --color-background: var(--white);
+  --color-background-soft: var(--white-soft);
+  --color-background-mute: var(--white-mute);
+
+  --color-border: var(--divider-light-2);
+  --color-border-hover: var(--divider-light-1);
+
+  --color-heading: var(--text-light-1);
+  --color-text: var(--text-light-1);
+
+  --section-gap: 160px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: var(--black);
+    --color-background-soft: var(--black-soft);
+    --color-background-mute: var(--black-mute);
+
+    --color-border: var(--divider-dark-2);
+    --color-border-hover: var(--divider-dark-1);
+
+    --color-heading: var(--text-dark-1);
+    --color-text: var(--text-dark-2);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-background);
+  transition:
+    color 0.4s ease,
+    background-color 0.4s ease;
+}

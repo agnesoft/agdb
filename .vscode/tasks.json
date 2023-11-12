@@ -10,43 +10,52 @@
       "label": "Clippy"
     },
     {
+      "label": "Coverage Db",
       "type": "cargo",
       "command": "llvm-cov",
       "args": ["--package", "agdb", "--ignore-filename-regex", "agdb_", "--show-missing-lines"],
       "problemMatcher": ["$rustc"],
-      "group": "build",
-      "label": "Coverage"
+      "group": "build"
     },
     {
+      "label": "Coverage Db HTML",
       "type": "cargo",
       "command": "llvm-cov",
       "args": ["--package", "agdb", "--ignore-filename-regex", "agdb_", "--html", "--open"],
       "problemMatcher": ["$rustc"],
-      "group": "build",
-      "label": "Coverage HTML"
+      "group": "build"
     },
     {
+      "label": "Coverage Server",
+      "type": "cargo",
+      "command": "llvm-cov",
+      "args": ["--package", "agdb_server", "--ignore-filename-regex", "agdb(\\src|\\\\src|/src|_derive|_benchmarks)", "--show-missing-lines"],
+      "problemMatcher": ["$rustc"],
+      "group": "build"
+    },
+    {
+      "label": "Coverage Server HTML",
+      "type": "cargo",
+      "command": "llvm-cov",
+      "args": ["--package", "agdb_server", "--ignore-filename-regex", "agdb(\\src|\\\\src|/src|_derive|_benchmarks)", "--html", "--open"],
+      "problemMatcher": ["$rustc"],
+      "group": "build"
+    },
+    {
+      "label": "Format",
       "type": "cargo",
       "command": "fmt",
       "args": ["--all"],
       "problemMatcher": ["$rustc"],
-      "group": "build",
-      "label": "Format"
+      "group": "build"
     },
     {
+      "label": "Format Check",
       "type": "cargo",
       "command": "fmt",
       "args": ["--all", "--check"],
       "problemMatcher": ["$rustc"],
-      "group": "build",
-      "label": "Format Check"
-    },
-    {
-      "type": "cargo",
-      "command": "test",
-      "problemMatcher": ["$rustc"],
-      "group": "build",
-      "label": "Test"
+      "group": "build"
     }
   ]
 }

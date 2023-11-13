@@ -1,15 +1,14 @@
-use agdb::DbError;
+mod app;
 
-fn main() -> Result<(), DbError> {
+use axum::Server;
+use std::net::SocketAddr;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let app = app::app();
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+
+    Server::bind(&addr).serve(app.into_make_service()).await?;
+
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn main_test() {
-        assert_eq!(main(), Ok(()))
-    }
 }

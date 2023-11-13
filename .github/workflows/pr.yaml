@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --package agdb --package agdb_server --ignore-filename-regex "agdb(_derive|_benchmarks)" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
+      - run: cargo llvm-cov --package agdb --package agdb_server --ignore-filename-regex "agdb(_derive|_benchmarks)|main.rs" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
 
   format:
     runs-on: ubuntu-latest

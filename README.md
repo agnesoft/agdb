@@ -1,10 +1,23 @@
-# Agnesoft Graph Database
+<p align="center">
+    <img width="300" src="./docs/images/logo.svg" alt="agdb logo">
+</p>
+<h1 align="center">
+    Agnesoft Graph Database
+</h1>
+<h3 align="center">
+    The Graph Database.
+</h3>
+<p align="center">
+    <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>
+    <a href="https://github.com/agnesoft/agdb/actions/workflows/release.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg" alt="release"></a>
+    <a href="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg" alt="coverage"></a>
+    <a href="https://codecov.io/gh/agnesoft/agdb"><img src="https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU" alt="codecov"></a>
+</p>
 
-[![Crates.io](https://img.shields.io/crates/v/agdb)](https://crates.io/crates/agdb) [![release](https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg)](https://github.com/agnesoft/agdb/actions/workflows/release.yaml) [![coverage](https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg)](https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml) [![codecov](https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU)](https://codecov.io/gh/agnesoft/agdb)
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo"> About Agnesoft Graph Database
 
 The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph database using object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern (or directly as objects) with no special language or text parsing.
 
-- [Agnesoft Graph Database](#agnesoft-graph-database)
 - [Key Features](#key-features)
 - [Quickstart](#quickstart)
 - [Roadmap](#roadmap)
@@ -15,7 +28,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph datab
   - [Queries](#queries)
   - [But why?](#but-why)
 
-# Key Features
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo"> Key Features
 
 - Data plotted on a graph
 - Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
@@ -25,7 +38,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph datab
 - Memory mapped for fast querying
 - _No dependencies_
 
-# Quickstart
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo"> Quickstart
 
 ```
 cargo add agdb
@@ -102,7 +115,7 @@ println!("{:?}", user);
 
 For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
 
-# Roadmap
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo"> Roadmap
 
 The following are planned features in priority order:
 
@@ -113,14 +126,14 @@ The following are planned features in priority order:
 | Data replication & RAFT protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                         |
 | Data sharding                    | Allow sharding single database data set across multiple nodes to allow super large databases.                                 |
 
-# Reference
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo"> Reference
 
-## [Efficient agdb](docs/efficient_agdb.md)
+- [Efficient agdb](docs/efficient_agdb.md)
 
-## [Performance](docs/performance.md)
+- [Performance](docs/performance.md)
 
-## [Concepts](docs/concepts.md)
+- [Concepts](docs/concepts.md)
 
-## [Queries](docs/queries.md)
+- [Queries](docs/queries.md)
 
-## [But why?](docs/but_why.md)
+- [But why?](docs/but_why.md)

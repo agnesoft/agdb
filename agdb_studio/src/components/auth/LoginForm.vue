@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref } from "vue";
 
-const username = ref('')
-const password = ref('')
+const username = ref("");
+const password = ref("");
 
 const login = async () => {
     // todo - handle login
-}
+};
 </script>
 
 <template>

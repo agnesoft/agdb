@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: ["main"]
 
-env:
-  CI: true
-
 jobs:
   diff:
     runs-on: ubuntu-latest
@@ -78,9 +75,12 @@ jobs:
         working-directory: agdb_studio
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
       - run: npm ci
       - run: npx playwright install --with-deps
-      - run: npm run test:e2e
+      - run: npx playwright test
       - uses: actions/upload-artifact@v3
         if: always()
         with:

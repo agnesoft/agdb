@@ -3,7 +3,7 @@ import MainLayout from '../components/layout/MainLayout.vue'
 </script>
 
 <template>
-  <main>
-    <MainLayout />
-  </main>
+    <main>
+        <MainLayout />
+    </main>
 </template>

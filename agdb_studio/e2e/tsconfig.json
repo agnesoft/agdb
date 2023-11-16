@@ -1,4 +1,4 @@
 {
-  "extends": "@tsconfig/node18/tsconfig.json",
-  "include": ["./**/*"]
+    "extends": "@tsconfig/node18/tsconfig.json",
+    "include": ["./**/*"]
 }

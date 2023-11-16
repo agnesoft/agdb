@@ -1,4 +1,4 @@
-name: pr
+name: pr-rust
 
 on:
   pull_request:
@@ -20,8 +20,8 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- *.rs Cargo.toml .github/workflows/pr.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
-          if [[ "$(git diff origin/main --name-only -- agdb/* agdb_derive/* agdb_server/* .github/workflows/pr.yaml)" != "" ]]; then (echo "diff_coverage=true" >> $GITHUB_OUTPUT) fi
+          if [[ "$(git diff origin/main --name-only -- *.rs Cargo.toml .github/workflows/pr_rust.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
+          if [[ "$(git diff origin/main --name-only -- agdb/* agdb_derive/* agdb_server/* .github/workflows/pr_rust.yaml)" != "" ]]; then (echo "diff_coverage=true" >> $GITHUB_OUTPUT) fi
 
   analyse:
     runs-on: ubuntu-latest

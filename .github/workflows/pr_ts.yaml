@@ -30,24 +30,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
-  build:
-    runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
-    defaults:
-      run:
-        working-directory: agdb_studio
-    steps:
-      - uses: actions/checkout@v3
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: dist
-          path: agdb_studio/dist/
-          retention-days: 30
-
   coverage:
     runs-on: ubuntu-latest
     needs: diff
@@ -62,7 +44,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: coverage-reports
+          name: coverage
           path: agdb_studio/coverage/
           retention-days: 30
 
@@ -82,7 +64,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: e2e-reports
+          name: e2e
           path: agdb_studio/playwright-report/
           retention-days: 30
 

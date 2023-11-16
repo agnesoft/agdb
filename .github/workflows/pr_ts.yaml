@@ -75,12 +75,10 @@ jobs:
         working-directory: agdb_studio
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
       - run: npm ci
       - run: npx playwright install --with-deps
-      - run: npx playwright test
+      - run: npm run build
+      - run: npm run test:e2e
       - uses: actions/upload-artifact@v3
         if: always()
         with:

@@ -1,34 +1,34 @@
 @import './base.css';
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
 
-  font-weight: normal;
+    font-weight: normal;
 }
 
 a {
-  text-decoration: none;
-  color: #ff8800;
-  transition: 0.4s;
+    text-decoration: none;
+    color: #ff8800;
+    transition: 0.4s;
 }
 
 @media (hover: hover) {
-  a:hover {
-    opacity: 0.8;
-  }
+    a:hover {
+        opacity: 0.8;
+    }
 }
 
 @media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+    body {
+        display: flex;
+        place-items: center;
+    }
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+    #app {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 0 2rem;
+    }
 }

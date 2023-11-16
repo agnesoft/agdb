@@ -44,8 +44,8 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: dist-ts
-          path: dist/
+          name: dist
+          path: agdb_studio/dist/
           retention-days: 30
 
   coverage:
@@ -62,8 +62,8 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: coverage-ts
-          path: coverage/
+          name: coverage-reports
+          path: agdb_studio/coverage/
           retention-days: 30
 
   e2e:
@@ -82,7 +82,7 @@ jobs:
         if: always()
         with:
           name: e2e-reports
-          path: playwright-report/
+          path: agdb_studio/playwright-report/
           retention-days: 30
 
   format:

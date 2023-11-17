@@ -1,9 +1,5 @@
-<script setup lang="ts">
-import MainLayout from "../components/layout/MainLayout.vue";
-</script>
+<script setup lang="ts"></script>
 
 <template>
-    <main>
-        <MainLayout />
-    </main>
+    <div class="greetings"><h1>Hello agdb</h1></div>
 </template>

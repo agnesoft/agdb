@@ -11,8 +11,9 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint --max-warnings=0 . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/ e2e/",
-    "format:check": "prettier --check src/ e2e/"
+    "format": "prettier --write src/ e2e/ tests/",
+    "format:check": "prettier --check src/ e2e/ tests/",
+    "before-commit": "npm run format && npm run lint && npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
     "pinia": "^2.1.7",

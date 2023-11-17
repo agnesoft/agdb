@@ -516,8 +516,7 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn write_record(&mut self, record: &StorageRecord) -> Result<(), DbError> {
-        let mut bytes = Vec::<u8>::new();
-        bytes.reserve(Self::record_serialized_size() as usize);
+        let mut bytes = Vec::with_capacity(Self::record_serialized_size() as usize);
         bytes.extend(record.index.serialize());
         bytes.extend(record.size.serialize());
 

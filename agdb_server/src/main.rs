@@ -9,7 +9,7 @@ async fn shutdown_signal(mut shutdown_shutdown: Receiver<()>) {
     #[cfg(unix)]
     tokio::select! {
         _ = signal::ctrl_c() => {},
-        _ = signal::unix::signal(signal::unix::SignalKind::terminate()).recv() => {},
+        _ = signal::unix::signal(signal::unix::SignalKind::terminate()).unwrap().recv() => {},
         _ = shutdown_shutdown.recv() => {}
     }
 

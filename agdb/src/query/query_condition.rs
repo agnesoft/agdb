@@ -335,51 +335,44 @@ mod tests {
 
     #[test]
     fn contains() {
-        assert!(Comparison::Contains("abc".into()).compare(&"0abc123".into()));
-        assert!(!Comparison::Contains("abcd".into()).compare(&"0abc123".into()));
+        let condition = Comparison::Contains("abc".into());
+        assert!(condition.compare(&"0abc123".into()));
+        assert!(!condition.compare(&"0bc123".into()));
 
-        assert!(
-            Comparison::Contains(vec!["ab".to_string(), "23".to_string()].into())
-                .compare(&"0abc123".into())
-        );
-        assert!(
-            !Comparison::Contains(vec!["abcd".to_string(), "23".to_string()].into())
-                .compare(&"0abc123".into())
-        );
+        let condition = Comparison::Contains(vec!["ab".to_string(), "23".to_string()].into());
+        assert!(condition.compare(&"0abc123".into()));
+        assert!(!condition.compare(&"0abc12".into()));
 
         assert!(Comparison::Contains(1.into()).compare(&vec![2, 1, 3].into()));
         assert!(!Comparison::Contains(4.into()).compare(&vec![2, 1, 3].into()));
 
-        assert!(Comparison::Contains(vec![2, 3].into()).compare(&vec![2, 1, 3].into()));
-        assert!(!Comparison::Contains(vec![2, 4].into()).compare(&vec![2, 1, 3].into()));
+        let condition = Comparison::Contains(vec![2, 3].into());
+        assert!(condition.compare(&vec![2, 3].into()));
+        assert!(!condition.compare(&vec![1, 3].into()));
 
-        assert!(Comparison::Contains(1_u64.into()).compare(&vec![2_u64, 1_u64, 3_u64].into()));
-        assert!(!Comparison::Contains(4_u64.into()).compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        let condition = Comparison::Contains(1_u64.into());
+        assert!(condition.compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        assert!(!condition.compare(&vec![2_u64, 3_u64].into()));
 
-        assert!(Comparison::Contains(vec![2_u64, 3_u64].into())
-            .compare(&vec![2_u64, 1_u64, 3_u64].into()));
-        assert!(!Comparison::Contains(vec![2_u64, 4_u64].into())
-            .compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        let condition = Comparison::Contains(vec![2_u64, 3_u64].into());
+        assert!(condition.compare(&vec![2_u64, 1_u64, 3_u64].into()));
+        assert!(!condition.compare(&vec![1_u64, 3_u64].into()));
 
-        assert!(Comparison::Contains(1.1.into()).compare(&vec![2.1, 1.1, 3.3].into()));
-        assert!(!Comparison::Contains(4.2.into()).compare(&vec![2.1, 1.1, 3.3].into()));
+        let condition = Comparison::Contains(1.1.into());
+        assert!(condition.compare(&vec![2.1, 1.1, 3.3].into()));
+        assert!(!condition.compare(&vec![2.1, 3.3].into()));
 
-        assert!(Comparison::Contains(vec![2.2, 3.3].into()).compare(&vec![2.2, 1.1, 3.3].into()));
-        assert!(!Comparison::Contains(vec![2.2, 4.4].into()).compare(&vec![2.2, 1.1, 3.3].into()));
+        let condition = Comparison::Contains(vec![2.2, 3.3].into());
+        assert!(condition.compare(&vec![2.2, 1.1, 3.3].into()));
+        assert!(!condition.compare(&vec![1.1, 3.3].into()));
 
-        assert!(Comparison::Contains("abc".into())
-            .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into()));
-        assert!(!Comparison::Contains("abcd".into())
-            .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into()));
+        let condition = Comparison::Contains("abc".into());
+        assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
+        assert!(!condition.compare(&vec!["0".to_string(), "123".to_string()].into()));
 
-        assert!(
-            Comparison::Contains(vec!["abc".to_string(), "123".to_string()].into())
-                .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into())
-        );
-        assert!(
-            !Comparison::Contains(vec!["abcd".to_string(), "123".to_string()].into())
-                .compare(&vec!["0".to_string(), "abc".to_string(), "123".to_string()].into())
-        );
+        let condition = Comparison::Contains(vec!["abc".to_string(), "123".to_string()].into());
+        assert!(condition.compare(&vec!["abc".to_string(), "123".to_string()].into()));
+        assert!(!condition.compare(&vec!["123".to_string()].into()));
 
         assert!(!Comparison::Contains("abc".into()).compare(&1.into()));
     }

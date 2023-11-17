@@ -108,9 +108,7 @@ impl Serialize for GraphDataStorageIndexes {
     }
 
     fn serialize(&self) -> Vec<u8> {
-        let mut bytes: Vec<u8> = vec![];
-        bytes.reserve(4 * StorageIndex::serialized_size_static() as usize);
-
+        let mut bytes = Vec::with_capacity(4 * StorageIndex::serialized_size_static() as usize);
         bytes.extend(self.from.serialize());
         bytes.extend(self.to.serialize());
         bytes.extend(self.from_meta.serialize());

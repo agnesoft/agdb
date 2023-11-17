@@ -582,8 +582,7 @@ mod tests {
         map.insert(&mut storage, &1, &"World".to_string()).unwrap();
         map.insert(&mut storage, &1, &"!".to_string()).unwrap();
 
-        let mut values = Vec::<(u64, String)>::new();
-        values.reserve(3);
+        let mut values = Vec::<(u64, String)>::with_capacity(3);
 
         for (key, value) in map.iter(&storage) {
             values.push((key, value));
@@ -620,8 +619,7 @@ mod tests {
         let value = map.iter_key(&storage, &1).find(|v| v.1 == 20).unwrap();
         assert_eq!(value, (1, 20));
 
-        let mut values = Vec::<(u64, u64)>::new();
-        values.reserve(2);
+        let mut values = Vec::<(u64, u64)>::with_capacity(2);
 
         for (key, value) in map.iter_key(&storage, &1) {
             values.push((key, value));
@@ -768,8 +766,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut values = Vec::<(u64, String)>::new();
-        values.reserve(3);
+        let mut values = Vec::<(u64, String)>::with_capacity(3);
 
         for (key, value) in map.iter(&storage) {
             values.push((key, value));

@@ -20,8 +20,7 @@ impl Query for SelectKeyCountQuery {
 
         let db_ids = match &self.0 {
             QueryIds::Ids(ids) => {
-                let mut db_ids = vec![];
-                db_ids.reserve(ids.len());
+                let mut db_ids = Vec::with_capacity(ids.len());
 
                 for query_id in ids {
                     db_ids.push(db.db_id(query_id)?);

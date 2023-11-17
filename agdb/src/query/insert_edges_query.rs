@@ -69,8 +69,7 @@ impl InsertEdgesQuery {
     ) -> Result<Vec<DbId>, QueryError> {
         Ok(match &query_ids {
             QueryIds::Ids(query_ids) => {
-                let mut ids = vec![];
-                ids.reserve(query_ids.len());
+                let mut ids = Vec::with_capacity(query_ids.len());
 
                 for query_id in query_ids {
                     ids.push(db.db_id(query_id)?);
@@ -92,8 +91,7 @@ impl InsertEdgesQuery {
         from: &[DbId],
         to: &[DbId],
     ) -> Result<Vec<DbId>, QueryError> {
-        let mut ids = vec![];
-        ids.reserve(from.len());
+        let mut ids = Vec::with_capacity(from.len());
         let values = self.values(from.len())?;
 
         for ((from, to), key_values) in from.iter().zip(to).zip(values) {
@@ -115,8 +113,7 @@ impl InsertEdgesQuery {
         to: &[DbId],
     ) -> Result<Vec<DbId>, QueryError> {
         let count = from.len() * to.len();
-        let mut ids = vec![];
-        ids.reserve(count);
+        let mut ids = Vec::with_capacity(count);
         let values = self.values(count)?;
         let mut index = 0;
 

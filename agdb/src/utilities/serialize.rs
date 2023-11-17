@@ -91,8 +91,7 @@ impl Serialize for usize {
 
 impl Serialize for String {
     fn serialize(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size() as usize);
+        let mut bytes = Vec::with_capacity(self.serialized_size() as usize);
         bytes.extend(self.len().serialize());
         bytes.extend(self.as_bytes());
 
@@ -119,8 +118,7 @@ impl Serialize for String {
 
 impl<T: Serialize> Serialize for Vec<T> {
     fn serialize(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size() as usize);
+        let mut bytes = Vec::with_capacity(self.serialized_size() as usize);
         bytes.extend(self.len().serialize());
 
         for value in self {
@@ -133,8 +131,7 @@ impl<T: Serialize> Serialize for Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
         let len = usize::deserialize(bytes)?;
         let mut begin = len.serialized_size() as usize;
-        let mut vec = Self::new();
-        vec.reserve(len);
+        let mut vec = Self::with_capacity(len);
 
         for _ in 0..len {
             let value = T::deserialize(&bytes[begin..]).map_err(|_| {
@@ -163,8 +160,7 @@ impl<T: Serialize> Serialize for Vec<T> {
 
 impl Serialize for Vec<u8> {
     fn serialize(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size() as usize);
+        let mut bytes = Vec::with_capacity(self.serialized_size() as usize);
         bytes.extend(self.len().serialize());
         bytes.extend(self);
 

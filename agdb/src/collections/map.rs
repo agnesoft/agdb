@@ -107,8 +107,7 @@ impl SerializeStatic for MapDataIndex {
 
 impl Serialize for MapDataIndex {
     fn serialize(&self) -> Vec<u8> {
-        let mut bytes = Vec::<u8>::new();
-        bytes.reserve(self.serialized_size() as usize);
+        let mut bytes = Vec::with_capacity(self.serialized_size() as usize);
         bytes.extend(self.len.serialize());
         bytes.extend(self.states_index.serialize());
         bytes.extend(self.keys_index.serialize());

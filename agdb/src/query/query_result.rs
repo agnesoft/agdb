@@ -29,8 +29,7 @@ impl<T: DbUserValue> TryInto<Vec<T>> for QueryResult {
     type Error = DbError;
 
     fn try_into(self) -> Result<Vec<T>, Self::Error> {
-        let mut result = vec![];
-        result.reserve(self.elements.len());
+        let mut result = Vec::with_capacity(self.elements.len());
         self.elements
             .iter()
             .try_for_each(|e| -> Result<(), DbError> {

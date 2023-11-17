@@ -50,8 +50,7 @@ impl StorageRecords {
     }
 
     pub fn records(&self) -> Vec<StorageRecord> {
-        let mut res = Vec::<StorageRecord>::new();
-        res.reserve(self.records.len());
+        let mut res = Vec::with_capacity(self.records.len());
 
         for record in &self.records {
             if self.is_valid(record) {

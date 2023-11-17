@@ -24,8 +24,7 @@ impl Query for SelectValuesQuery {
 
         let (db_ids, is_search) = match &self.ids {
             QueryIds::Ids(ids) => {
-                let mut db_ids = vec![];
-                db_ids.reserve(ids.len());
+                let mut db_ids = Vec::with_capacity(ids.len());
 
                 for query_id in ids {
                     db_ids.push(db.db_id(query_id)?);

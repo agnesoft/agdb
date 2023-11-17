@@ -1,18 +1,33 @@
+use crate::logger;
+use axum::body;
 use axum::extract::State;
+use axum::middleware;
 use axum::routing;
 use axum::Router;
 use hyper::StatusCode;
 use tokio::sync::broadcast::Sender;
+use tower::ServiceBuilder;
+use tower_http::map_request_body::MapRequestBodyLayer;
 
 pub(crate) fn app(shutdown_sender: Sender<()>) -> Router {
-    Router::new().route("/", routing::get(root)).route(
-        "/shutdown",
-        routing::get(shutdown).with_state(shutdown_sender),
-    )
+    let logger = ServiceBuilder::new()
+        .layer(MapRequestBodyLayer::new(body::boxed))
+        .layer(middleware::from_fn(logger::logger));
+
+    Router::new()
+        .route("/", routing::get(root))
+        .route("/error", routing::get(error))
+        .route("/shutdown", routing::get(shutdown))
+        .layer(logger)
+        .with_state(shutdown_sender)
 }
 
 async fn root() -> &'static str {
     "Hello, World!"
+}
+
+async fn error() -> StatusCode {
+    StatusCode::INTERNAL_SERVER_ERROR
 }
 
 async fn shutdown(State(shutdown_sender): State<Sender<()>>) -> StatusCode {
@@ -44,6 +59,16 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn error() -> anyhow::Result<()> {
+        let app = app(Sender::<()>::new(1));
+        let request = Request::builder().uri("/error").body(Body::empty())?;
+        let response = app.oneshot(request).await?;
+
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn shutdown() -> anyhow::Result<()> {
         let (shutdown_sender, _shutdown_receiver) = tokio::sync::broadcast::channel::<()>(1);
         let app = app(shutdown_sender);
@@ -51,7 +76,6 @@ mod tests {
         let response = app.oneshot(request).await?;
 
         assert_eq!(response.status(), StatusCode::OK);
-
         Ok(())
     }
 
@@ -62,7 +86,6 @@ mod tests {
         let response = app.oneshot(request).await?;
 
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
-
         Ok(())
     }
 }

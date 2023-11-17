@@ -3,6 +3,7 @@ use axum::body::Full;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::response::Response;
+use axum::Error as AxumError;
 use hyper::Request;
 use hyper::StatusCode;
 use serde::Serialize;
@@ -32,18 +33,15 @@ pub(crate) async fn logger(
     let response = next.run(request).await;
     log_record.time = now.elapsed().as_micros();
     let response = response_log(response, &mut log_record).await;
-    print_log(log_record);
-    response
-}
-
-fn print_log(log_record: LogRecord) {
     let message = serde_json::to_string(&log_record).unwrap_or_default();
 
-    if log_record.status < 500 {
-        tracing::info!(message);
-    } else {
-        tracing::error!(message);
+    match log_record.status {
+        ..=399 => tracing::info!(message),
+        400..=499 => tracing::warn!(message),
+        500.. => tracing::error!(message),
     }
+
+    response
 }
 
 async fn request_log(
@@ -60,9 +58,7 @@ async fn request_log(
         .collect();
 
     let (parts, body) = request.into_parts();
-    let bytes = hyper::body::to_bytes(body).await;
-    let response = bytes
-        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response())?;
+    let response = hyper::body::to_bytes(body).await.map_err(map_error)?;
 
     log_record.request_body = String::from_utf8_lossy(&response).to_string();
 
@@ -84,13 +80,30 @@ async fn response_log(
         .collect();
 
     let (parts, body) = response.into_parts();
-    let bytes = hyper::body::to_bytes(body).await;
-    let resposne = bytes
-        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response())?;
+    let resposne = hyper::body::to_bytes(body).await.map_err(map_error)?;
     log_record.response = String::from_utf8_lossy(&resposne).to_string();
 
     Ok(Response::from_parts(
         parts,
         axum::body::boxed(Full::from(resposne)),
     ))
+}
+
+fn map_error(error: AxumError) -> Response {
+    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn map_error_test() -> anyhow::Result<()> {
+        let error = AxumError::new(anyhow::Error::msg("error"));
+        let response = map_error(error);
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = hyper::body::to_bytes(response.into_body()).await?;
+        assert_eq!(&body[..], b"error");
+        Ok(())
+    }
 }

@@ -10,8 +10,7 @@ const login = async () => {
 </script>
 
 <template>
-    <div>
-        <h2>Login</h2>
+    <div class="base-form login-form">
         <form @submit.prevent="login">
             <div>
                 <label for="username">Username:</label>
@@ -21,9 +20,18 @@ const login = async () => {
                 <label for="password">Password:</label>
                 <input type="password" id="password" v-model="password" required />
             </div>
-            <button type="submit">Login</button>
+            <button type="submit" class="button button-success">Login</button>
         </form>
     </div>
 </template>
 
-<style lang="css" scoped></style>
+<style lang="less" scoped>
+.login-form {
+    width: 300px;
+    [type="submit"] {
+        width: 100%;
+        font-size: 1.2rem;
+        margin-top: 0.6rem;
+    }
+}
+</style>

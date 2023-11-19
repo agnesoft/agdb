@@ -6,4 +6,8 @@ import { RouterView } from "vue-router";
     <RouterView />
 </template>
 
+<style lang="less">
+@import "@/assets/button.less";
+@import "@/assets/form.less";
+</style>
 <style scoped></style>

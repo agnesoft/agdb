@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import MainLayout from "@/layouts/MainLayout.vue";
+import MainLayout from "../../src/layouts/MainLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [

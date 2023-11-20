@@ -1,9 +1,15 @@
+mod test_config;
+
+use crate::test_config::TestConfig;
 use assert_cmd::prelude::*;
 use std::process::Command;
 
 #[tokio::test]
 async fn endpoints() -> anyhow::Result<()> {
-    let mut server = Command::cargo_bin("agdb_server")?.spawn()?;
+    let test_config = TestConfig::new();
+    let mut server = Command::cargo_bin("agdb_server")?
+        .current_dir(&test_config.dir)
+        .spawn()?;
     assert_eq!(
         reqwest::get("http://127.0.0.1:3000")
             .await?
@@ -26,6 +32,20 @@ async fn endpoints() -> anyhow::Result<()> {
         500
     );
     assert!(reqwest::get("http://127.0.0.1:3000/shutdown")
+        .await?
+        .status()
+        .is_success());
+    assert!(server.wait()?.success());
+    Ok(())
+}
+
+#[tokio::test]
+async fn config() -> anyhow::Result<()> {
+    let test_config = TestConfig::new_content("port: 4000");
+    let mut server = Command::cargo_bin("agdb_server")?
+        .current_dir(&test_config.dir)
+        .spawn()?;
+    assert!(reqwest::get("http://127.0.0.1:4000/shutdown")
         .await?
         .status()
         .is_success());

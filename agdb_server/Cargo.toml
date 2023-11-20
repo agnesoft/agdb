@@ -17,6 +17,7 @@ axum = "0.6.20"
 hyper = "0.14.27"
 serde = { version = "1.0.192", features = ["derive"] }
 serde_json = "1.0.108"
+serde_yaml = "0.9.27"
 tokio = { version = "1.34.0", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.4.4", features = ["map-request-body"] }

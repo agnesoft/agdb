@@ -1,12 +1,17 @@
 mod app;
 mod config;
+mod db;
 mod logger;
 
+use crate::db::DbPool;
 use axum::Server;
 use std::net::SocketAddr;
 use tokio::signal;
 use tokio::sync::broadcast::Receiver;
 use tracing::Level;
+
+const BIND_ADDRESS_ARRAY: [u8; 4] = [127, 0, 0, 1];
+const BIND_ADDRESS: &str = "127.0.0.1";
 
 async fn shutdown_signal(mut shutdown_shutdown: Receiver<()>) {
     tokio::select! {
@@ -21,9 +26,10 @@ async fn main() -> anyhow::Result<()> {
 
     let (shutdown_sender, shutdown_receiver) = tokio::sync::broadcast::channel::<()>(1);
     let config = config::new()?;
-    let app = app::app(shutdown_sender);
-    tracing::info!("Listening at 127.0.0.1:{}", config.port);
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
+    let db_pool = DbPool::new()?;
+    let app = app::app(shutdown_sender, db_pool);
+    tracing::info!("Listening at {BIND_ADDRESS}:{}", config.port);
+    let addr = SocketAddr::from((BIND_ADDRESS_ARRAY, config.port));
     let shutdown = shutdown_signal(shutdown_receiver);
 
     Server::bind(&addr)

@@ -52,3 +52,21 @@ async fn config() -> anyhow::Result<()> {
     assert!(server.wait()?.success());
     Ok(())
 }
+
+#[tokio::test]
+async fn openapi() -> anyhow::Result<()> {
+    let test_config = TestConfig::new_content("port: 5000");
+    let mut server = Command::cargo_bin("agdb_server")?
+        .current_dir(&test_config.dir)
+        .spawn()?;
+    assert!(reqwest::get("http://127.0.0.1:5000/openapi")
+        .await?
+        .status()
+        .is_success());
+    assert!(reqwest::get("http://127.0.0.1:5000/shutdown")
+        .await?
+        .status()
+        .is_success());
+    assert!(server.wait()?.success());
+    Ok(())
+}

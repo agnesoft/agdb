@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-const SERVER_DB_NAME: &str = "agdb_studio.agdb";
+const SERVER_DB_NAME: &str = "agdb_server.agdb";
 
 #[allow(dead_code)]
 pub(crate) enum DbType {

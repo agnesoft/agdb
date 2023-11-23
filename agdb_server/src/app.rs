@@ -1,3 +1,4 @@
+use crate::api::Api;
 use crate::db::DbPool;
 use crate::logger;
 use axum::body;
@@ -12,17 +13,21 @@ use serde::Deserialize;
 use tokio::sync::broadcast::Sender;
 use tower::ServiceBuilder;
 use tower_http::map_request_body::MapRequestBodyLayer;
+use utoipa::IntoParams;
+use utoipa::OpenApi;
+use utoipa::ToSchema;
+use utoipa_swagger_ui::SwaggerUi;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
-enum CreateDbType {
+pub(crate) enum CreateDbType {
     File,
     Memory,
     MemoryMapped,
 }
 
-#[derive(Deserialize)]
-struct CreateDb {
+#[derive(Deserialize, IntoParams, ToSchema)]
+pub(crate) struct CreateDb {
     name: String,
     db_type: CreateDbType,
 }
@@ -56,6 +61,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
     };
 
     Router::new()
+        .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
         .route("/", routing::get(root))
         .route("/error", routing::get(error))
         .route("/shutdown", routing::get(shutdown))
@@ -64,7 +70,19 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .with_state(state)
 }
 
-async fn create_db(State(_state): State<DbPool>, Query(request): Query<CreateDb>) -> StatusCode {
+#[utoipa::path(get,
+    path = "/create_db",
+    responses(
+        (status = 201, description = "Created"),
+    ),
+    params(
+        CreateDb,
+    )
+)]
+pub(crate) async fn create_db(
+    State(_state): State<DbPool>,
+    Query(request): Query<CreateDb>,
+) -> StatusCode {
     println!("Creating db '{}' ({:?})", request.name, request.db_type);
     StatusCode::CREATED
 }
@@ -95,6 +113,8 @@ mod tests {
     use axum::http::Request;
     use axum::http::StatusCode;
     use std::collections::HashMap;
+    use std::fs::File;
+    use std::io::Write;
     use std::sync::Arc;
     use std::sync::RwLock;
     use tower::ServiceExt;
@@ -142,5 +162,12 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::CREATED);
         Ok(())
+    }
+
+    #[test]
+    fn generate_openapi_schema() {
+        let schema = Api::openapi().to_pretty_json().unwrap();
+        let mut file = File::create("openapi/schema.json").unwrap();
+        file.write_all(schema.as_bytes()).unwrap();
     }
 }

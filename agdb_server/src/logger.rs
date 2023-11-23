@@ -28,11 +28,12 @@ pub(crate) async fn logger(
     next: Next<BoxBody>,
 ) -> Result<impl IntoResponse, Response> {
     let mut log_record = LogRecord::default();
-    let request = request_log(request, &mut log_record).await?;
+    let skip_body = request.uri().path().starts_with("/openapi");
+    let request = request_log(request, &mut log_record, skip_body).await?;
     let now = Instant::now();
     let response = next.run(request).await;
     log_record.time = now.elapsed().as_micros();
-    let response = response_log(response, &mut log_record).await;
+    let response = response_log(response, &mut log_record, skip_body).await;
     let message = serde_json::to_string(&log_record).unwrap_or_default();
 
     match log_record.status {
@@ -47,6 +48,7 @@ pub(crate) async fn logger(
 async fn request_log(
     request: Request<BoxBody>,
     log_record: &mut LogRecord,
+    skip_body: bool,
 ) -> Result<Request<BoxBody>, Response> {
     log_record.method = request.method().to_string();
     log_record.uri = request.uri().to_string();
@@ -57,20 +59,24 @@ async fn request_log(
         .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
         .collect();
 
-    let (parts, body) = request.into_parts();
-    let response = hyper::body::to_bytes(body).await.map_err(map_error)?;
+    if !skip_body {
+        let (parts, body) = request.into_parts();
+        let bytes = hyper::body::to_bytes(body).await.map_err(map_error)?;
+        log_record.request_body = String::from_utf8_lossy(&bytes).to_string();
 
-    log_record.request_body = String::from_utf8_lossy(&response).to_string();
+        return Ok(Request::from_parts(
+            parts,
+            axum::body::boxed(Full::from(bytes)),
+        ));
+    }
 
-    Ok(Request::from_parts(
-        parts,
-        axum::body::boxed(Full::from(response)),
-    ))
+    Ok(request)
 }
 
 async fn response_log(
     response: Response<BoxBody>,
     log_record: &mut LogRecord,
+    skip_body: bool,
 ) -> Result<impl IntoResponse, Response> {
     log_record.status = response.status().as_u16();
     log_record.response_headers = response
@@ -79,14 +85,18 @@ async fn response_log(
         .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
         .collect();
 
-    let (parts, body) = response.into_parts();
-    let resposne = hyper::body::to_bytes(body).await.map_err(map_error)?;
-    log_record.response = String::from_utf8_lossy(&resposne).to_string();
+    if !skip_body {
+        let (parts, body) = response.into_parts();
+        let resposne = hyper::body::to_bytes(body).await.map_err(map_error)?;
+        log_record.response = String::from_utf8_lossy(&resposne).to_string();
 
-    Ok(Response::from_parts(
-        parts,
-        axum::body::boxed(Full::from(resposne)),
-    ))
+        return Ok(Response::from_parts(
+            parts,
+            axum::body::boxed(Full::from(resposne)),
+        ));
+    }
+
+    Ok(response)
 }
 
 fn map_error(error: AxumError) -> Response {

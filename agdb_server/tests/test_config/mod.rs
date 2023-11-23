@@ -8,7 +8,6 @@ pub struct TestConfig {
 const CONFIG_FILE: &str = "agdb_server.yaml";
 
 impl TestConfig {
-    #[allow(dead_code)]
     #[track_caller]
     pub fn new() -> Self {
         let caller = Location::caller();
@@ -28,6 +27,7 @@ impl TestConfig {
         Self { dir }
     }
 
+    #[track_caller]
     pub fn new_content(content: &str) -> Self {
         let test_config = Self::new();
 

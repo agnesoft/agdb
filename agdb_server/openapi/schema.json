@@ -1,0 +1,71 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "agdb_server",
+    "description": "",
+    "license": {
+      "name": "Apache-2.0"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/create_db": {
+      "get": {
+        "tags": [
+          "crate::app"
+        ],
+        "operationId": "create_db",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CreateDbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateDb": {
+        "type": "object",
+        "required": [
+          "name",
+          "db_type"
+        ],
+        "properties": {
+          "db_type": {
+            "$ref": "#/components/schemas/CreateDbType"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateDbType": {
+        "type": "string",
+        "enum": [
+          "file",
+          "memory",
+          "memory_mapped"
+        ]
+      }
+    }
+  }
+}

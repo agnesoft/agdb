@@ -13,3 +13,6 @@ db.agdb
 
 lcov.info
 agdb_benchmarks.yaml
+.agdb_server.agdb
+agdb_server.agdb
+agdb_server.yaml

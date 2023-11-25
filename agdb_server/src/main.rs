@@ -2,7 +2,9 @@ mod api;
 mod app;
 mod config;
 mod db;
+mod error;
 mod logger;
+mod password;
 
 use crate::db::DbPool;
 use axum::Server;

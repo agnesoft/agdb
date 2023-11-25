@@ -15,6 +15,7 @@ agdb = { version = "0.5.1", path = "../agdb" }
 anyhow = "1.0.75"
 axum = "0.6.20"
 hyper = "0.14.27"
+ring = "0.17.5"
 serde = { version = "1.0.192", features = ["derive"] }
 serde_json = "1.0.108"
 serde_yaml = "0.9.27"
@@ -25,7 +26,8 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 utoipa = "4.1.0"
 utoipa-swagger-ui = { version = "4.0.0", features = ["axum"] }
+uuid = { version = "1.6.1", features = ["v4"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
-reqwest = "0.11.22"
+reqwest = { version = "0.11.22", features = ["json"] }

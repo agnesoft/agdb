@@ -2,7 +2,7 @@ use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(crate::app::create_db),
-    components(schemas(crate::app::CreateDb, crate::app::CreateDbType))
+    paths(crate::app::create_user),
+    components(schemas(crate::app::CreateUser))
 )]
 pub(crate) struct Api;

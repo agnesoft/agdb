@@ -3,6 +3,7 @@ mod app;
 mod config;
 mod db;
 mod logger;
+mod password;
 
 use crate::db::DbPool;
 use axum::Server;

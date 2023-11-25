@@ -40,7 +40,7 @@ async fn endpoints() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn config() -> anyhow::Result<()> {
+async fn config_port() -> anyhow::Result<()> {
     let test_config = TestConfig::new_content("port: 4000");
     let mut server = Command::cargo_bin("agdb_server")?
         .current_dir(&test_config.dir)

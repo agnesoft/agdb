@@ -1,112 +1,33 @@
-mod test_config;
+mod framework;
 
-use crate::test_config::TestConfig;
-use assert_cmd::prelude::*;
+use crate::framework::TestServer;
 use std::collections::HashMap;
-use std::process::Command;
 
 #[tokio::test]
 async fn config_port() -> anyhow::Result<()> {
-    let test_config = TestConfig::new_content("port: 4000");
-    let mut server = Command::cargo_bin("agdb_server")?
-        .current_dir(&test_config.dir)
-        .spawn()?;
-    assert_eq!(
-        reqwest::get("http://127.0.0.1:4000/error").await?.status(),
-        500
-    );
-    assert!(reqwest::get("http://127.0.0.1:4000/shutdown")
-        .await?
-        .status()
-        .is_success());
-    assert!(server.wait()?.success());
+    let server = TestServer::new()?;
+    assert_eq!(server.get("/error").await?, 500);
     Ok(())
 }
 
 #[tokio::test]
 async fn openapi() -> anyhow::Result<()> {
-    let test_config = TestConfig::new_content("port: 5000");
-    let mut server = Command::cargo_bin("agdb_server")?
-        .current_dir(&test_config.dir)
-        .spawn()?;
-    assert!(reqwest::get("http://127.0.0.1:5000/openapi")
-        .await?
-        .status()
-        .is_success());
-    assert!(reqwest::get("http://127.0.0.1:5000/shutdown")
-        .await?
-        .status()
-        .is_success());
-    assert!(server.wait()?.success());
+    let server = TestServer::new()?;
+    assert_eq!(server.get("/openapi/").await?, 200);
     Ok(())
 }
 
 #[tokio::test]
 async fn create_user() -> anyhow::Result<()> {
-    let test_config = TestConfig::new();
-    let mut server = Command::cargo_bin("agdb_server")?
-        .current_dir(&test_config.dir)
-        .spawn()?;
-    let client = reqwest::Client::new();
-
+    let server = TestServer::new()?;
     let mut user = HashMap::new();
     user.insert("name", "a");
     user.insert("password", "");
-
-    assert_eq!(
-        client
-            .post("http://127.0.0.1:3000/create_user")
-            .json(&user)
-            .send()
-            .await?
-            .status()
-            .as_u16(),
-        461
-    );
-
+    assert_eq!(server.post("/create_user", &user).await?, 461); //short name
     user.insert("name", "alice");
-
-    assert_eq!(
-        client
-            .post("http://127.0.0.1:3000/create_user")
-            .json(&user)
-            .send()
-            .await?
-            .status()
-            .as_u16(),
-        462
-    );
-
+    assert_eq!(server.post("/create_user", &user).await?, 462); //short password
     user.insert("password", "mypassword123");
-
-    assert_eq!(
-        client
-            .post("http://127.0.0.1:3000/create_user")
-            .json(&user)
-            .send()
-            .await?
-            .status()
-            .as_u16(),
-        201
-    );
-
-    assert_eq!(
-        client
-            .post("http://127.0.0.1:3000/create_user")
-            .json(&user)
-            .send()
-            .await?
-            .status()
-            .as_u16(),
-        463
-    );
-
-    assert!(client
-        .get("http://127.0.0.1:3000/shutdown")
-        .send()
-        .await?
-        .status()
-        .is_success());
-    assert!(server.wait()?.success());
+    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+    assert_eq!(server.post("/create_user", &user).await?, 463); //user exists
     Ok(())
 }

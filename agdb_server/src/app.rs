@@ -1,6 +1,7 @@
 use crate::api::Api;
 use crate::db::DbPool;
 use crate::db::User;
+use crate::error::ServerError;
 use crate::logger;
 use crate::password::Password;
 use axum::body;
@@ -18,7 +19,6 @@ use tower_http::map_request_body::MapRequestBodyLayer;
 use utoipa::OpenApi;
 use utoipa::ToSchema;
 use utoipa_swagger_ui::SwaggerUi;
-use uuid::Uuid;
 
 #[derive(Clone)]
 struct ServerState {
@@ -26,7 +26,7 @@ struct ServerState {
     shutdown_sender: Sender<()>,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
 pub(crate) struct CreateUser {
     pub(crate) name: String,
     pub(crate) password: String,
@@ -57,6 +57,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
     Router::new()
         .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
         .route("/shutdown", routing::get(shutdown))
+        .route("/error", routing::get(test_error))
         .route("/create_user", routing::post(create_user))
         .layer(logger)
         .with_state(state)
@@ -67,25 +68,25 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
     request_body = CreateUser,
     responses(
          (status = 201, description = "User created"),
-         (status = 461, description = "User already exists"),
+         (status = 461, description = "Name too short (<3)"),
          (status = 462, description = "Password too short (<8)"),
-         (status = 463, description = "Name too short (<3)")
+         (status = 463, description = "User already exists")
     )
 )]
 pub(crate) async fn create_user(
     State(db_pool): State<DbPool>,
     Json(request): Json<CreateUser>,
-) -> StatusCode {
-    if db_pool.find_user(&request.name).is_ok() {
+) -> Result<StatusCode, ServerError> {
+    if request.name.len() < 3 {
         return Ok(StatusCode::from_u16(461_u16)?);
     }
 
     if request.password.len() < 8 {
-        return Ok(StatusCode::from_u16(463_u16)?);
+        return Ok(StatusCode::from_u16(462_u16)?);
     }
 
-    if request.name.len() < 3 {
-        return Ok(StatusCode::from_u16(464_u16)?);
+    if db_pool.find_user(&request.name).is_ok() {
+        return Ok(StatusCode::from_u16(463_u16)?);
     }
 
     let pswd = Password::create(&request.name, &request.password);
@@ -98,14 +99,10 @@ pub(crate) async fn create_user(
         token: String::new(),
     })?;
 
-    StatusCode::CREATED
+    Ok(StatusCode::CREATED)
 }
 
-async fn root() -> &'static str {
-    "Hello, World!"
-}
-
-async fn error() -> StatusCode {
+async fn test_error() -> StatusCode {
     StatusCode::INTERNAL_SERVER_ERROR
 }
 
@@ -120,9 +117,7 @@ async fn shutdown(State(shutdown_sender): State<Sender<()>>) -> StatusCode {
 mod tests {
     use super::*;
     use crate::db::DbPoolImpl;
-    use crate::db::DbType;
     use crate::db::ServerDb;
-    use agdb::DbMemory;
     use axum::body::Body;
     use axum::http::Request;
     use axum::http::StatusCode;
@@ -130,14 +125,11 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
     use std::sync::Arc;
-    use std::sync::RwLock;
     use tower::ServiceExt;
 
     fn test_db_pool() -> anyhow::Result<DbPool> {
         Ok(DbPool(Arc::new(DbPoolImpl {
-            server_db: ServerDb(Arc::new(RwLock::new(DbType::Memory(DbMemory::new(
-                "test",
-            )?)))),
+            server_db: ServerDb::new("memory:test")?,
             pool: HashMap::new(),
         })))
     }

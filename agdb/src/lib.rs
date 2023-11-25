@@ -85,5 +85,6 @@ pub use storage::file_storage::FileStorage;
 pub use storage::file_storage_memory_mapped::FileStorageMemoryMapped;
 pub use storage::memory_storage::MemoryStorage;
 pub use storage::StorageData;
+pub use storage::StorageSlice;
 pub use transaction::Transaction;
 pub use transaction_mut::TransactionMut;

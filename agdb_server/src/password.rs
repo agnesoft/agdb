@@ -17,6 +17,7 @@ pub(crate) struct Password {
     pub(crate) user_salt: [u8; 16],
 }
 
+#[allow(dead_code)]
 impl Password {
     pub(crate) fn create(user: &str, pswd: &str) -> Self {
         let rng = SystemRandom::new();
@@ -86,7 +87,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn verify_password() {
+    fn verify_password() -> anyhow::Result<()> {
         let password = Password::create("alice", "MyPassword123");
         assert_ne!(password.password, [0_u8; PASSWORD_LEN]);
         assert_ne!(password.user_salt, [0_u8; 16]);
@@ -94,13 +95,10 @@ mod tests {
         assert!(password.verify_password("MyPassword123"));
         assert!(!password.verify_password("MyPassword"));
 
-        let other = Password {
-            user: "alice".to_string(),
-            password: password.password,
-            user_salt: password.user_salt,
-        };
+        let other = Password::new(&password.user, &password.password, &password.user_salt)?;
 
         assert!(other.verify_password("MyPassword123"));
         assert!(!other.verify_password("MyPassword"));
+        Ok(())
     }
 }

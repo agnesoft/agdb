@@ -23,6 +23,18 @@ struct LogRecord {
     response: String,
 }
 
+impl LogRecord {
+    fn print(&self) {
+        let message = serde_json::to_string(&self).unwrap_or_default();
+
+        match self.status {
+            ..=399 => tracing::info!(message),
+            400..=499 => tracing::warn!(message),
+            500.. => tracing::error!(message),
+        }
+    }
+}
+
 pub(crate) async fn logger(
     request: Request<BoxBody>,
     next: Next<BoxBody>,
@@ -34,13 +46,8 @@ pub(crate) async fn logger(
     let response = next.run(request).await;
     log_record.time = now.elapsed().as_micros();
     let response = response_log(response, &mut log_record, skip_body).await;
-    let message = serde_json::to_string(&log_record).unwrap_or_default();
 
-    match log_record.status {
-        ..=399 => tracing::info!(message),
-        400..=499 => tracing::warn!(message),
-        500.. => tracing::error!(message),
-    }
+    log_record.print();
 
     response
 }
@@ -115,5 +122,21 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await?;
         assert_eq!(&body[..], b"error");
         Ok(())
+    }
+
+    #[test]
+    fn log_error_test() {
+        let log_record = LogRecord {
+            method: "GET".to_string(),
+            uri: "/".to_string(),
+            version: "HTTP/1.1".to_string(),
+            request_headers: HashMap::new(),
+            request_body: String::new(),
+            status: 500,
+            time: 1,
+            response_headers: HashMap::new(),
+            response: String::new(),
+        };
+        log_record.print();
     }
 }

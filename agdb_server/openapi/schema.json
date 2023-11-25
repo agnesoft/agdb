@@ -9,33 +9,34 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/create_db": {
-      "get": {
+    "/create_user": {
+      "post": {
         "tags": [
           "crate::app"
         ],
-        "operationId": "create_db",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
+        "operationId": "create_user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUser"
+              }
             }
           },
-          {
-            "name": "db_type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/CreateDbType"
-            }
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "201": {
-            "description": "Created"
+            "description": "User created"
+          },
+          "461": {
+            "description": "Name too short (<3)"
+          },
+          "462": {
+            "description": "Password too short (<8)"
+          },
+          "463": {
+            "description": "User already exists"
           }
         }
       }
@@ -43,28 +44,20 @@
   },
   "components": {
     "schemas": {
-      "CreateDb": {
+      "CreateUser": {
         "type": "object",
         "required": [
           "name",
-          "db_type"
+          "password"
         ],
         "properties": {
-          "db_type": {
-            "$ref": "#/components/schemas/CreateDbType"
-          },
           "name": {
+            "type": "string"
+          },
+          "password": {
             "type": "string"
           }
         }
-      },
-      "CreateDbType": {
-        "type": "string",
-        "enum": [
-          "file",
-          "memory",
-          "memory_mapped"
-        ]
       }
     }
   }

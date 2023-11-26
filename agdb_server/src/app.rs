@@ -13,12 +13,14 @@ use axum::routing;
 use axum::Json;
 use axum::Router;
 use serde::Deserialize;
+use serde::Serialize;
 use tokio::sync::broadcast::Sender;
 use tower::ServiceBuilder;
 use tower_http::map_request_body::MapRequestBodyLayer;
 use utoipa::OpenApi;
 use utoipa::ToSchema;
 use utoipa_swagger_ui::SwaggerUi;
+use uuid::Uuid;
 
 #[derive(Clone)]
 struct ServerState {
@@ -27,10 +29,13 @@ struct ServerState {
 }
 
 #[derive(Deserialize, ToSchema)]
-pub(crate) struct CreateUser {
+pub(crate) struct UserCredentials {
     pub(crate) name: String,
     pub(crate) password: String,
 }
+
+#[derive(Default, Serialize, ToSchema)]
+pub(crate) struct UserToken(String);
 
 impl FromRef<ServerState> for DbPool {
     fn from_ref(input: &ServerState) -> Self {
@@ -59,6 +64,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .route("/shutdown", routing::get(shutdown))
         .route("/error", routing::get(test_error))
         .route("/create_user", routing::post(create_user))
+        .route("/login", routing::post(login))
         .layer(logger)
         .with_state(state)
 }
@@ -75,7 +81,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
 )]
 pub(crate) async fn create_user(
     State(db_pool): State<DbPool>,
-    Json(request): Json<CreateUser>,
+    Json(request): Json<UserCredentials>,
 ) -> Result<StatusCode, ServerError> {
     if request.name.len() < 3 {
         return Ok(StatusCode::from_u16(461_u16)?);
@@ -100,6 +106,39 @@ pub(crate) async fn create_user(
     })?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
+    path = "/login",
+    request_body = UserCredentials,
+    responses(
+         (status = 200, description = "Login successful", body = UserToken),
+         (status = 401, description = "Bad password"),
+         (status = 403, description = "User not found")
+    )
+)]
+pub(crate) async fn login(
+    State(db_pool): State<DbPool>,
+    Json(request): Json<UserCredentials>,
+) -> Result<(StatusCode, Json<UserToken>), ServerError> {
+    let user = db_pool.find_user(&request.name);
+
+    if user.is_err() {
+        return Ok((StatusCode::FORBIDDEN, Json::default()));
+    }
+
+    let user = user?;
+    let pswd = Password::new(&user.name, &user.password, &user.salt)?;
+
+    if !pswd.verify_password(&request.password) {
+        return Ok((StatusCode::UNAUTHORIZED, Json::default()));
+    }
+
+    let token_uuid = Uuid::new_v4();
+    let token = token_uuid.to_string();
+    db_pool.save_token(user.db_id.unwrap(), &token)?;
+
+    Ok((StatusCode::OK, Json(UserToken(token))))
 }
 
 async fn test_error() -> StatusCode {

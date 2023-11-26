@@ -278,3 +278,28 @@ async fn remove_db() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn chnage_password() -> anyhow::Result<()> {
+    let server = TestServer::new()?;
+    let mut user = HashMap::new();
+    user.insert("name", "alice");
+    user.insert("password", "mypassword123");
+    let mut change = HashMap::new();
+    change.insert("name", "alice");
+    change.insert("password", "mypassword123");
+    change.insert("new_password", "pswd");
+    assert_eq!(server.post("/change_password", &change).await?, 462);
+    change.insert("new_password", "mypassword456");
+    assert_eq!(server.post("/change_password", &change).await?, 403);
+    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+    let (status, token) = server.post_response("/login", &user).await?;
+    assert_eq!(status, 200); //login succeeded
+    assert_eq!(token.len(), 38);
+    assert_eq!(server.post("/change_password", &change).await?, 200); //ok
+    assert_eq!(server.post("/change_password", &change).await?, 401); //invalid password
+    assert_eq!(server.post("/login", &user).await?, 401); //invalid credentials
+    user.insert("password", "mypassword456");
+    assert_eq!(server.post("/login", &user).await?, 200); //ok
+    Ok(())
+}

@@ -310,6 +310,15 @@ impl DbPool {
             .id)
     }
 
+    pub(crate) fn remove_database(&self, db: Database) -> anyhow::Result<ServerDb> {
+        self.0
+            .server_db
+            .get_mut()?
+            .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
+
+        Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
+    }
+
     pub(crate) fn save_token(&self, user: DbId, token: &str) -> anyhow::Result<()> {
         self.0.server_db.get_mut()?.exec_mut(
             &QueryBuilder::insert()
@@ -320,13 +329,12 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn remove_database(&self, db: Database) -> anyhow::Result<ServerDb> {
+    pub(crate) fn save_user(&self, user: User) -> anyhow::Result<()> {
         self.0
             .server_db
             .get_mut()?
-            .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
-
-        Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
+            .exec_mut(&QueryBuilder::insert().element(&user).query())?;
+        Ok(())
     }
 
     // fn get_pool(&self) -> anyhow::Result<RwLockReadGuard<HashMap<String, ServerDb>>> {

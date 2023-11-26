@@ -65,6 +65,13 @@ pub(crate) struct UserCredentials {
     pub(crate) password: String,
 }
 
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct ChangePassword {
+    pub(crate) name: String,
+    pub(crate) password: String,
+    pub(crate) new_password: String,
+}
+
 #[derive(Default, Serialize, ToSchema)]
 pub(crate) struct UserToken(String);
 
@@ -138,6 +145,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .route("/shutdown", routing::get(shutdown))
         .route("/error", routing::get(test_error))
         .route("/add_db", routing::post(add_db))
+        .route("/change_password", routing::post(change_password))
         .route("/create_user", routing::post(create_user))
         .route("/delete_db", routing::post(delete_db))
         .route("/list", routing::get(list))
@@ -183,8 +191,46 @@ pub(crate) async fn add_db(
 }
 
 #[utoipa::path(post,
+    path = "/change_password",
+    request_body = ChangePassword,
+    responses(
+         (status = 200, description = "Password changed"),
+         (status = 401, description = "Invalid password"),
+         (status = 403, description = "User not found"),
+         (status = 462, description = "Password too short (<8)"),
+    )
+)]
+pub(crate) async fn change_password(
+    State(db_pool): State<DbPool>,
+    Json(request): Json<ChangePassword>,
+) -> Result<StatusCode, ServerError> {
+    if request.new_password.len() < 8 {
+        return Ok(StatusCode::from_u16(462_u16)?);
+    }
+
+    let mut user = db_pool.find_user(&request.name).map_err(|_| ServerError {
+        status: StatusCode::FORBIDDEN,
+        error: anyhow!("User not found"),
+    })?;
+
+    let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
+
+    if !old_pswd.verify_password(&request.password) {
+        return Ok(StatusCode::UNAUTHORIZED);
+    }
+
+    let pswd = Password::create(&request.name, &request.new_password);
+    user.password = pswd.password.to_vec();
+    user.salt = pswd.user_salt.to_vec();
+
+    db_pool.save_user(user)?;
+
+    Ok(StatusCode::OK)
+}
+
+#[utoipa::path(post,
     path = "/create_user",
-    request_body = CreateUser,
+    request_body = UserCredentials,
     responses(
          (status = 201, description = "User created"),
          (status = 461, description = "Name too short (<3)"),

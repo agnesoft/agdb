@@ -38,6 +38,38 @@
         }
       }
     },
+    "/change_password": {
+      "post": {
+        "tags": [
+          "crate::app"
+        ],
+        "operationId": "change_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed"
+          },
+          "401": {
+            "description": "Invalid password"
+          },
+          "403": {
+            "description": "User not found"
+          },
+          "462": {
+            "description": "Password too short (<8)"
+          }
+        }
+      }
+    },
     "/create_user": {
       "post": {
         "tags": [
@@ -48,7 +80,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateUser"
+                "$ref": "#/components/schemas/UserCredentials"
               }
             }
           },
@@ -184,6 +216,25 @@
   },
   "components": {
     "schemas": {
+      "ChangePassword": {
+        "type": "object",
+        "required": [
+          "name",
+          "password",
+          "new_password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "new_password": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
       "DbType": {
         "type": "string",
         "enum": [

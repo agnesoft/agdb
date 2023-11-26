@@ -54,6 +54,11 @@ pub(crate) struct ServerDatabase {
 }
 
 #[derive(Deserialize, ToSchema)]
+pub(crate) struct DeleteServerDatabase {
+    pub(crate) name: String,
+}
+
+#[derive(Deserialize, ToSchema)]
 pub(crate) struct UserCredentials {
     pub(crate) name: String,
     pub(crate) password: String,
@@ -133,6 +138,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .route("/error", routing::get(test_error))
         .route("/create_db", routing::post(create_db))
         .route("/create_user", routing::post(create_user))
+        .route("/delete_db", routing::post(delete_db))
         .route("/list", routing::get(list))
         .route("/login", routing::post(login))
         .layer(logger)
@@ -214,6 +220,34 @@ pub(crate) async fn create_user(
 }
 
 #[utoipa::path(post,
+    path = "/delete_db",
+    request_body = DeleteServerDatabase,
+    responses(
+         (status = 200, description = "Database deleted"),
+         (status = 403, description = "User does not have permissions to delete this database"),
+    )
+)]
+pub(crate) async fn delete_db(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<DeleteServerDatabase>,
+) -> Result<StatusCode, ServerError> {
+    let db = db_pool
+        .find_user_database(user.0, &request.name)
+        .map_err(|e| ServerError {
+            status: StatusCode::FORBIDDEN,
+            error: e,
+        })?;
+
+    db_pool.delete_database(db).map_err(|e| ServerError {
+        status: StatusCode::FORBIDDEN,
+        error: e,
+    })?;
+
+    Ok(StatusCode::OK)
+}
+
+#[utoipa::path(post,
     path = "/list",
     responses(
          (status = 200, description = "Ok", body = Vec<ServerDatabase>)
@@ -224,7 +258,7 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
 ) -> Result<(StatusCode, Json<Vec<ServerDatabase>>), ServerError> {
     let dbs = db_pool
-        .find_databases(user.0)?
+        .find_user_databases(user.0)?
         .into_iter()
         .map(|db| db.into())
         .collect();

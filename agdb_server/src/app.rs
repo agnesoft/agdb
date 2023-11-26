@@ -9,6 +9,7 @@ use crate::logger;
 use crate::password::Password;
 use crate::utilities;
 use agdb::DbId;
+use anyhow::anyhow;
 use axum::async_trait;
 use axum::body;
 use axum::extract::FromRef;
@@ -51,6 +52,11 @@ pub(crate) enum DbType {
 pub(crate) struct ServerDatabase {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct DeleteServerDatabase {
+    pub(crate) name: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -133,6 +139,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .route("/error", routing::get(test_error))
         .route("/create_db", routing::post(create_db))
         .route("/create_user", routing::post(create_user))
+        .route("/delete_db", routing::post(delete_db))
         .route("/list", routing::get(list))
         .route("/login", routing::post(login))
         .layer(logger)
@@ -214,6 +221,31 @@ pub(crate) async fn create_user(
 }
 
 #[utoipa::path(post,
+    path = "/delete_db",
+    request_body = DeleteServerDatabase,
+    responses(
+         (status = 200, description = "Database deleted"),
+         (status = 403, description = "Database not found for user"),
+    )
+)]
+pub(crate) async fn delete_db(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<DeleteServerDatabase>,
+) -> Result<StatusCode, ServerError> {
+    let db = db_pool
+        .find_user_database(user.0, &request.name)
+        .map_err(|_| ServerError {
+            status: StatusCode::FORBIDDEN,
+            error: anyhow!("Database not found for user"),
+        })?;
+
+    db_pool.delete_database(db)?;
+
+    Ok(StatusCode::OK)
+}
+
+#[utoipa::path(post,
     path = "/list",
     responses(
          (status = 200, description = "Ok", body = Vec<ServerDatabase>)
@@ -224,7 +256,7 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
 ) -> Result<(StatusCode, Json<Vec<ServerDatabase>>), ServerError> {
     let dbs = db_pool
-        .find_databases(user.0)?
+        .find_user_databases(user.0)?
         .into_iter()
         .map(|db| db.into())
         .collect();

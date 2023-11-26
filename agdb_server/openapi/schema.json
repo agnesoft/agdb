@@ -70,6 +70,32 @@
         }
       }
     },
+    "/delete_db": {
+      "post": {
+        "tags": [
+          "crate::app"
+        ],
+        "operationId": "delete_db",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteServerDatabase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Database deleted"
+          },
+          "403": {
+            "description": "Database not found for user"
+          }
+        }
+      }
+    },
     "/list": {
       "post": {
         "tags": [
@@ -139,6 +165,17 @@
           "mapped",
           "memory"
         ]
+      },
+      "DeleteServerDatabase": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
       },
       "ServerDatabase": {
         "type": "object",

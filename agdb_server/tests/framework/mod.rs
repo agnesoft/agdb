@@ -13,10 +13,10 @@ const DEFAULT_PORT: u16 = 3000;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
 pub struct TestServer {
-    dir: String,
-    port: u16,
-    process: Child,
-    client: Client,
+    pub dir: String,
+    pub port: u16,
+    pub process: Child,
+    pub client: Client,
 }
 
 impl TestServer {

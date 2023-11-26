@@ -11,6 +11,7 @@ use agdb::StorageSlice;
 use agdb::UserValue;
 use anyhow::anyhow;
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::PoisonError;
 use std::sync::RwLock;
@@ -106,7 +107,7 @@ impl StorageData for ServerDbStorage {
 }
 
 type ServerDbImpl = DbImpl<ServerDbStorage>;
-pub(crate) struct ServerDb(Arc<RwLock<DbImpl<ServerDbStorage>>>);
+pub(crate) struct ServerDb(Arc<RwLock<ServerDbImpl>>);
 
 #[allow(dead_code)]
 pub(crate) struct DbPoolImpl {
@@ -184,6 +185,28 @@ impl DbPool {
         Ok(())
     }
 
+    pub(crate) fn delete_database(&self, db: Database) -> anyhow::Result<()> {
+        self.0
+            .server_db
+            .get_mut()?
+            .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
+
+        let delete_db = self.get_pool_mut()?.remove(&db.name).unwrap();
+        let filename = delete_db.get()?.filename().to_string();
+        let path = Path::new(&filename);
+
+        if path.exists() {
+            std::fs::remove_file(&filename)?;
+            let dot_file = path
+                .parent()
+                .unwrap_or(Path::new("./"))
+                .join(format!(".{filename}"));
+            std::fs::remove_file(dot_file)?;
+        }
+
+        Ok(())
+    }
+
     pub(crate) fn find_database(&self, name: &str) -> anyhow::Result<Database> {
         Ok(self
             .0
@@ -207,7 +230,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_databases(&self, user: DbId) -> anyhow::Result<Vec<Database>> {
+    pub(crate) fn find_user_databases(&self, user: DbId) -> anyhow::Result<Vec<Database>> {
         Ok(self
             .0
             .server_db
@@ -219,6 +242,28 @@ impl DbPool {
                             .from(user)
                             .where_()
                             .distance(agdb::CountComparison::Equal(2))
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .try_into()?)
+    }
+
+    pub(crate) fn find_user_database(&self, user: DbId, name: &str) -> anyhow::Result<Database> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .from(user)
+                            .where_()
+                            .distance(agdb::CountComparison::Equal(2))
+                            .and()
+                            .key("name")
+                            .value(agdb::Comparison::Equal(name.into()))
                             .query(),
                     )
                     .query(),

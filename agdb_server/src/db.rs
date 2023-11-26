@@ -262,10 +262,9 @@ impl DbPool {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    fn get_pool(&self) -> anyhow::Result<RwLockReadGuard<HashMap<String, ServerDb>>> {
-        self.0.pool.read().map_err(map_error)
-    }
+    // fn get_pool(&self) -> anyhow::Result<RwLockReadGuard<HashMap<String, ServerDb>>> {
+    //     self.0.pool.read().map_err(map_error)
+    // }
 
     fn get_pool_mut(&self) -> anyhow::Result<RwLockWriteGuard<HashMap<String, ServerDb>>> {
         self.0.pool.write().map_err(map_error)

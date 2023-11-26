@@ -39,7 +39,7 @@ struct ServerState {
     shutdown_sender: Sender<()>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbType {
     File,
@@ -83,13 +83,11 @@ where
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, db_pool: &S) -> Result<Self, Self::Rejection> {
-        let TypedHeader(Authorization(bearer)) =
-            TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, db_pool)
-                .await
-                .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        let header = TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, db_pool);
+        let bearer = header.await.map_err(unauthorized_error)?;
         let id = DbPool::from_ref(db_pool)
             .find_user_id(utilities::unquote(bearer.token()))
-            .map_err(|_| StatusCode::UNAUTHORIZED)?;
+            .map_err(unauthorized_error)?;
         Ok(Self(id))
     }
 }
@@ -133,7 +131,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
     responses(
          (status = 201, description = "Database created"),
          (status = 403, description = "Database exists"),
-         (status = 461, description = "Invalid database type"),
+         (status = 461, description = "Invalid database name"),
     )
 )]
 pub(crate) async fn create_db(
@@ -243,6 +241,10 @@ async fn shutdown(State(shutdown_sender): State<Sender<()>>) -> StatusCode {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
+}
+
+fn unauthorized_error<E>(_: E) -> StatusCode {
+    StatusCode::UNAUTHORIZED
 }
 
 #[cfg(test)]

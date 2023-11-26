@@ -67,6 +67,19 @@ impl TestServer {
             .as_u16())
     }
 
+    pub async fn get_auth_response(&self, uri: &str, token: &str) -> anyhow::Result<(u16, String)> {
+        let response = self
+            .client
+            .get(format!("{HOST}:{}{uri}", self.port))
+            .bearer_auth(token)
+            .send()
+            .await?;
+        let status = response.status().as_u16();
+        let response_content = String::from_utf8(response.bytes().await?.to_vec())?;
+
+        Ok((status, response_content))
+    }
+
     pub async fn post(&self, uri: &str, json: &HashMap<&str, &str>) -> anyhow::Result<u16> {
         Ok(self
             .client

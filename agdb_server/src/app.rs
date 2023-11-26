@@ -39,7 +39,7 @@ struct ServerState {
     shutdown_sender: Sender<()>,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbType {
     File,
@@ -47,8 +47,8 @@ pub(crate) enum DbType {
     Memory,
 }
 
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct CreateDb {
+#[derive(Serialize, Deserialize, ToSchema)]
+pub(crate) struct ServerDatabase {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
 }
@@ -70,6 +70,19 @@ impl Display for DbType {
             DbType::File => f.write_str("file"),
             DbType::Mapped => f.write_str("mapped"),
             DbType::Memory => f.write_str("memory"),
+        }
+    }
+}
+
+impl From<Database> for ServerDatabase {
+    fn from(value: Database) -> Self {
+        Self {
+            name: value.name,
+            db_type: match value.db_type.as_str() {
+                "mapped" => DbType::Mapped,
+                "file" => DbType::File,
+                _ => DbType::Memory,
+            },
         }
     }
 }
@@ -120,6 +133,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .route("/error", routing::get(test_error))
         .route("/create_db", routing::post(create_db))
         .route("/create_user", routing::post(create_user))
+        .route("/list", routing::get(list))
         .route("/login", routing::post(login))
         .layer(logger)
         .with_state(state)
@@ -137,7 +151,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
 pub(crate) async fn create_db(
     user: UserId,
     State(db_pool): State<DbPool>,
-    Json(request): Json<CreateDb>,
+    Json(request): Json<ServerDatabase>,
 ) -> Result<StatusCode, ServerError> {
     if db_pool.find_database(&request.name).is_ok() {
         return Ok(StatusCode::FORBIDDEN);
@@ -197,6 +211,24 @@ pub(crate) async fn create_user(
     })?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
+    path = "/list",
+    responses(
+         (status = 200, description = "Ok", body = Vec<ServerDatabase>)
+    )
+)]
+pub(crate) async fn list(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+) -> Result<(StatusCode, Json<Vec<ServerDatabase>>), ServerError> {
+    let dbs = db_pool
+        .find_databases(user.0)?
+        .into_iter()
+        .map(|db| db.into())
+        .collect();
+    Ok((StatusCode::OK, Json(dbs)))
 }
 
 #[utoipa::path(post,

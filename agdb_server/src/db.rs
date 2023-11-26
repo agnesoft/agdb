@@ -207,6 +207,25 @@ impl DbPool {
             .try_into()?)
     }
 
+    pub(crate) fn find_databases(&self, user: DbId) -> anyhow::Result<Vec<Database>> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .from(user)
+                            .where_()
+                            .distance(agdb::CountComparison::Equal(2))
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .try_into()?)
+    }
+
     pub(crate) fn find_user(&self, name: &str) -> anyhow::Result<User> {
         Ok(self
             .0

@@ -151,7 +151,7 @@ impl DbPool {
         Ok(db_pool)
     }
 
-    pub(crate) fn create_database(&self, user: DbId, database: Database) -> anyhow::Result<()> {
+    pub(crate) fn add_database(&self, user: DbId, database: Database) -> anyhow::Result<()> {
         let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name))?;
         self.get_pool_mut()?.insert(database.name.clone(), db);
 
@@ -186,13 +186,7 @@ impl DbPool {
     }
 
     pub(crate) fn delete_database(&self, db: Database) -> anyhow::Result<()> {
-        self.0
-            .server_db
-            .get_mut()?
-            .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
-
-        let delete_db = self.get_pool_mut()?.remove(&db.name).unwrap();
-        let filename = delete_db.get()?.filename().to_string();
+        let filename = self.remove_database(db)?.get()?.filename().to_string();
         let path = Path::new(&filename);
 
         if path.exists() {
@@ -324,6 +318,15 @@ impl DbPool {
                 .query(),
         )?;
         Ok(())
+    }
+
+    pub(crate) fn remove_database(&self, db: Database) -> anyhow::Result<ServerDb> {
+        self.0
+            .server_db
+            .get_mut()?
+            .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
+
+        Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
     }
 
     // fn get_pool(&self) -> anyhow::Result<RwLockReadGuard<HashMap<String, ServerDb>>> {

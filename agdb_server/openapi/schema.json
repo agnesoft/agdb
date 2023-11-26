@@ -9,17 +9,17 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/create_db": {
+    "/add_db": {
       "post": {
         "tags": [
           "crate::app"
         ],
-        "operationId": "create_db",
+        "operationId": "add_db",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateUser"
+                "$ref": "#/components/schemas/ServerDatabase"
               }
             }
           },
@@ -27,10 +27,10 @@
         },
         "responses": {
           "201": {
-            "description": "Database created"
+            "description": "Database added"
           },
           "403": {
-            "description": "Database exists"
+            "description": "Database already exists"
           },
           "461": {
             "description": "Invalid database name"
@@ -80,7 +80,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DeleteServerDatabase"
+                "$ref": "#/components/schemas/ServerDatabaseName"
               }
             }
           },
@@ -154,6 +154,32 @@
           }
         }
       }
+    },
+    "/remove_db": {
+      "post": {
+        "tags": [
+          "crate::app"
+        ],
+        "operationId": "remove_db",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteServerDatabase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Database removed"
+          },
+          "403": {
+            "description": "Database not found for user"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -166,17 +192,6 @@
           "memory"
         ]
       },
-      "DeleteServerDatabase": {
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          }
-        }
-      },
       "ServerDatabase": {
         "type": "object",
         "required": [
@@ -187,6 +202,17 @@
           "db_type": {
             "$ref": "#/components/schemas/DbType"
           },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseName": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
           "name": {
             "type": "string"
           }

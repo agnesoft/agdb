@@ -191,12 +191,8 @@ impl DbPool {
             .get_mut()?
             .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
 
-        let filename = if let Some(delete_db) = self.get_pool_mut()?.remove(&db.name) {
-            delete_db.get()?.filename().to_string()
-        } else {
-            String::new()
-        };
-
+        let delete_db = self.get_pool_mut()?.remove(&db.name).unwrap();
+        let filename = delete_db.get()?.filename().to_string();
         let path = Path::new(&filename);
 
         if path.exists() {
@@ -205,9 +201,7 @@ impl DbPool {
                 .parent()
                 .unwrap_or(Path::new("./"))
                 .join(format!(".{filename}"));
-            if dot_file.exists() {
-                std::fs::remove_file(dot_file)?;
-            }
+            std::fs::remove_file(dot_file)?;
         }
 
         Ok(())

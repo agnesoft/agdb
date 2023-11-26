@@ -9,6 +9,7 @@ use crate::logger;
 use crate::password::Password;
 use crate::utilities;
 use agdb::DbId;
+use anyhow::anyhow;
 use axum::async_trait;
 use axum::body;
 use axum::extract::FromRef;
@@ -224,7 +225,7 @@ pub(crate) async fn create_user(
     request_body = DeleteServerDatabase,
     responses(
          (status = 200, description = "Database deleted"),
-         (status = 403, description = "User does not have permissions to delete this database"),
+         (status = 403, description = "Database not found for user"),
     )
 )]
 pub(crate) async fn delete_db(
@@ -234,15 +235,12 @@ pub(crate) async fn delete_db(
 ) -> Result<StatusCode, ServerError> {
     let db = db_pool
         .find_user_database(user.0, &request.name)
-        .map_err(|e| ServerError {
+        .map_err(|_| ServerError {
             status: StatusCode::FORBIDDEN,
-            error: e,
+            error: anyhow!("Database not found for user"),
         })?;
 
-    db_pool.delete_database(db).map_err(|e| ServerError {
-        status: StatusCode::FORBIDDEN,
-        error: e,
-    })?;
+    db_pool.delete_database(db)?;
 
     Ok(StatusCode::OK)
 }

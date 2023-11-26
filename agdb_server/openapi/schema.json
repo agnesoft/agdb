@@ -40,11 +40,47 @@
           }
         }
       }
+    },
+    "/login": {
+      "post": {
+        "tags": [
+          "crate::app"
+        ],
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Bad password"
+          },
+          "403": {
+            "description": "User not found"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
-      "CreateUser": {
+      "UserCredentials": {
         "type": "object",
         "required": [
           "name",
@@ -58,6 +94,9 @@
             "type": "string"
           }
         }
+      },
+      "UserToken": {
+        "type": "string"
       }
     }
   }

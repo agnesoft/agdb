@@ -179,6 +179,16 @@ impl DbPool {
         })?;
         Ok(())
     }
+
+    pub(crate) fn save_token(&self, user: DbId, token: &str) -> anyhow::Result<()> {
+        self.0.server_db.get_mut()?.exec_mut(
+            &QueryBuilder::insert()
+                .values_uniform(vec![("token", token).into()])
+                .ids(user)
+                .query(),
+        )?;
+        Ok(())
+    }
 }
 
 impl ServerDb {

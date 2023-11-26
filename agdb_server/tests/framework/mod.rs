@@ -78,6 +78,23 @@ impl TestServer {
             .as_u16())
     }
 
+    pub async fn post_response(
+        &self,
+        uri: &str,
+        json: &HashMap<&str, &str>,
+    ) -> anyhow::Result<(u16, String)> {
+        let response = self
+            .client
+            .post(format!("{HOST}:{}{uri}", self.port))
+            .json(&json)
+            .send()
+            .await?;
+        let status = response.status().as_u16();
+        let response_content = String::from_utf8(response.bytes().await?.to_vec())?;
+
+        Ok((status, response_content))
+    }
+
     fn remove_dir_if_exists(dir: &str) {
         if Path::new(dir).exists() {
             std::fs::remove_dir_all(dir).unwrap();

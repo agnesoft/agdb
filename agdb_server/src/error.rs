@@ -2,11 +2,14 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use hyper::StatusCode;
 
-pub(crate) struct ServerError(anyhow::Error);
+pub(crate) struct ServerError {
+    pub(crate) status: StatusCode,
+    pub(crate) error: anyhow::Error,
+}
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self.0)).into_response()
+        (self.status, format!("{}", self.error)).into_response()
     }
 }
 
@@ -15,7 +18,10 @@ where
     E: Into<anyhow::Error>,
 {
     fn from(err: E) -> Self {
-        Self(err.into())
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            error: err.into(),
+        }
     }
 }
 

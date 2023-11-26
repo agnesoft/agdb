@@ -1,17 +1,28 @@
+use std::fmt::Display;
+
 use crate::api::Api;
+use crate::db::Database;
 use crate::db::DbPool;
 use crate::db::User;
 use crate::error::ServerError;
 use crate::logger;
 use crate::password::Password;
+use crate::utilities;
+use agdb::DbId;
+use axum::async_trait;
 use axum::body;
 use axum::extract::FromRef;
+use axum::extract::FromRequestParts;
 use axum::extract::State;
+use axum::headers::authorization::Bearer;
+use axum::headers::Authorization;
+use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::middleware;
 use axum::routing;
 use axum::Json;
 use axum::Router;
+use axum::TypedHeader;
 use serde::Deserialize;
 use serde::Serialize;
 use tokio::sync::broadcast::Sender;
@@ -28,6 +39,20 @@ struct ServerState {
     shutdown_sender: Sender<()>,
 }
 
+#[derive(Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum DbType {
+    File,
+    Mapped,
+    Memory,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct CreateDb {
+    pub(crate) name: String,
+    pub(crate) db_type: DbType,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub(crate) struct UserCredentials {
     pub(crate) name: String,
@@ -36,6 +61,38 @@ pub(crate) struct UserCredentials {
 
 #[derive(Default, Serialize, ToSchema)]
 pub(crate) struct UserToken(String);
+
+pub(crate) struct UserId(DbId);
+
+impl Display for DbType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DbType::File => f.write_str("file"),
+            DbType::Mapped => f.write_str("mapped"),
+            DbType::Memory => f.write_str("memory"),
+        }
+    }
+}
+
+#[async_trait]
+impl<S: Sync + Send> FromRequestParts<S> for UserId
+where
+    S: Send + Sync,
+    DbPool: FromRef<S>,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, db_pool: &S) -> Result<Self, Self::Rejection> {
+        let TypedHeader(Authorization(bearer)) =
+            TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, db_pool)
+                .await
+                .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        let id = DbPool::from_ref(db_pool)
+            .find_user_id(utilities::unquote(bearer.token()))
+            .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        Ok(Self(id))
+    }
+}
 
 impl FromRef<ServerState> for DbPool {
     fn from_ref(input: &ServerState) -> Self {
@@ -63,10 +120,46 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
         .route("/shutdown", routing::get(shutdown))
         .route("/error", routing::get(test_error))
+        .route("/create_db", routing::post(create_db))
         .route("/create_user", routing::post(create_user))
         .route("/login", routing::post(login))
         .layer(logger)
         .with_state(state)
+}
+
+#[utoipa::path(post,
+    path = "/create_db",
+    request_body = CreateUser,
+    responses(
+         (status = 201, description = "Database created"),
+         (status = 403, description = "Database exists"),
+         (status = 461, description = "Invalid database type"),
+    )
+)]
+pub(crate) async fn create_db(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<CreateDb>,
+) -> Result<StatusCode, ServerError> {
+    if db_pool.find_database(&request.name).is_ok() {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+
+    db_pool
+        .create_database(
+            user.0,
+            Database {
+                db_id: None,
+                name: request.name,
+                db_type: request.db_type.to_string(),
+            },
+        )
+        .map_err(|e| ServerError {
+            status: StatusCode::from_u16(461).unwrap(),
+            error: e,
+        })?;
+
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(post,
@@ -164,12 +257,13 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
     use std::sync::Arc;
+    use std::sync::RwLock;
     use tower::ServiceExt;
 
     fn test_db_pool() -> anyhow::Result<DbPool> {
         Ok(DbPool(Arc::new(DbPoolImpl {
             server_db: ServerDb::new("memory:test")?,
-            pool: HashMap::new(),
+            pool: RwLock::new(HashMap::new()),
         })))
     }
 

@@ -13,7 +13,7 @@ categories = ["database", "database-interfaces"]
 [dependencies]
 agdb = { version = "0.5.1", path = "../agdb" }
 anyhow = "1.0.75"
-axum = "0.6.20"
+axum = { version = "0.6.20", features = ["headers"] }
 hyper = "0.14.27"
 ring = "0.17.5"
 serde = { version = "1.0.192", features = ["derive"] }

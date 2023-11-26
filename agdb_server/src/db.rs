@@ -5,6 +5,7 @@ use agdb::FileStorage;
 use agdb::FileStorageMemoryMapped;
 use agdb::MemoryStorage;
 use agdb::QueryBuilder;
+use agdb::QueryId;
 use agdb::StorageData;
 use agdb::StorageSlice;
 use agdb::UserValue;
@@ -110,7 +111,7 @@ pub(crate) struct ServerDb(Arc<RwLock<DbImpl<ServerDbStorage>>>);
 #[allow(dead_code)]
 pub(crate) struct DbPoolImpl {
     pub(crate) server_db: ServerDb,
-    pub(crate) pool: HashMap<String, ServerDb>,
+    pub(crate) pool: RwLock<HashMap<String, ServerDb>>,
 }
 
 #[derive(UserValue)]
@@ -122,6 +123,13 @@ pub(crate) struct User {
     pub(crate) token: String,
 }
 
+#[derive(UserValue)]
+pub(crate) struct Database {
+    pub(crate) db_id: Option<DbId>,
+    pub(crate) name: String,
+    pub(crate) db_type: String,
+}
+
 #[derive(Clone)]
 pub(crate) struct DbPool(pub(crate) Arc<DbPoolImpl>);
 
@@ -129,7 +137,7 @@ impl DbPool {
     pub(crate) fn new() -> anyhow::Result<Self> {
         let db_pool = Self(Arc::new(DbPoolImpl {
             server_db: ServerDb::new(SERVER_DB_NAME)?,
-            pool: HashMap::new(),
+            pool: RwLock::new(HashMap::new()),
         }));
 
         db_pool.0.server_db.get_mut()?.exec_mut(
@@ -140,6 +148,63 @@ impl DbPool {
         )?;
 
         Ok(db_pool)
+    }
+
+    pub(crate) fn create_database(&self, user: DbId, database: Database) -> anyhow::Result<()> {
+        let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name))?;
+        self.get_pool_mut()?.insert(database.name.clone(), db);
+
+        self.0.server_db.get_mut()?.transaction_mut(|t| {
+            let db = t.exec_mut(&QueryBuilder::insert().nodes().values(&database).query())?;
+
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(vec![QueryId::from(user), "dbs".into()])
+                    .to(db)
+                    .values(vec![vec![("owner", 1).into()], vec![]])
+                    .query(),
+            )
+        })?;
+        Ok(())
+    }
+
+    pub(crate) fn create_user(&self, user: User) -> anyhow::Result<()> {
+        self.0.server_db.get_mut()?.transaction_mut(|t| {
+            let user = t.exec_mut(&QueryBuilder::insert().nodes().values(&user).query())?;
+
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from("users")
+                    .to(user)
+                    .query(),
+            )
+        })?;
+        Ok(())
+    }
+
+    pub(crate) fn find_database(&self, name: &str) -> anyhow::Result<Database> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .from("dbs")
+                            .limit(1)
+                            .where_()
+                            .distance(agdb::CountComparison::Equal(2))
+                            .and()
+                            .key("name")
+                            .value(agdb::Comparison::Equal(name.into()))
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .try_into()?)
     }
 
     pub(crate) fn find_user(&self, name: &str) -> anyhow::Result<User> {
@@ -165,19 +230,26 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn create_user(&self, user: User) -> anyhow::Result<()> {
-        self.0.server_db.get_mut()?.transaction_mut(|t| {
-            let user = t.exec_mut(&QueryBuilder::insert().nodes().values(&user).query())?;
-
-            t.exec_mut(
-                &QueryBuilder::insert()
-                    .edges()
+    pub(crate) fn find_user_id(&self, token: &str) -> anyhow::Result<DbId> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::search()
                     .from("users")
-                    .to(user)
+                    .limit(1)
+                    .where_()
+                    .distance(agdb::CountComparison::Equal(2))
+                    .and()
+                    .key("token")
+                    .value(agdb::Comparison::Equal(token.into()))
                     .query(),
-            )
-        })?;
-        Ok(())
+            )?
+            .elements
+            .get(0)
+            .ok_or(anyhow!("No user found for token '{token}'"))?
+            .id)
     }
 
     pub(crate) fn save_token(&self, user: DbId, token: &str) -> anyhow::Result<()> {
@@ -188,6 +260,15 @@ impl DbPool {
                 .query(),
         )?;
         Ok(())
+    }
+
+    #[allow(dead_code)]
+    fn get_pool(&self) -> anyhow::Result<RwLockReadGuard<HashMap<String, ServerDb>>> {
+        self.0.pool.read().map_err(map_error)
+    }
+
+    fn get_pool_mut(&self) -> anyhow::Result<RwLockWriteGuard<HashMap<String, ServerDb>>> {
+        self.0.pool.write().map_err(map_error)
     }
 }
 

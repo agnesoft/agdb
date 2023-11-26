@@ -70,6 +70,29 @@
         }
       }
     },
+    "/list": {
+      "post": {
+        "tags": [
+          "crate::app"
+        ],
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabase"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/login": {
       "post": {
         "tags": [
@@ -109,7 +132,15 @@
   },
   "components": {
     "schemas": {
-      "CreateDb": {
+      "DbType": {
+        "type": "string",
+        "enum": [
+          "file",
+          "mapped",
+          "memory"
+        ]
+      },
+      "ServerDatabase": {
         "type": "object",
         "required": [
           "name",
@@ -123,14 +154,6 @@
             "type": "string"
           }
         }
-      },
-      "DbType": {
-        "type": "string",
-        "enum": [
-          "file",
-          "mapped",
-          "memory"
-        ]
       },
       "UserCredentials": {
         "type": "object",

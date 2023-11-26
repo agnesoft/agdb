@@ -78,3 +78,49 @@ async fn create_database() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn list() -> anyhow::Result<()> {
+    let server = TestServer::new()?;
+    let mut user = HashMap::new();
+    user.insert("name", "alice");
+    user.insert("password", "mypassword123");
+    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+
+    let (status, list) = server.get_auth_response("/list", "token").await?;
+    assert_eq!(status, 401); //unauthorized
+    assert!(list.is_empty());
+
+    let (status, token) = server.post_response("/login", &user).await?;
+    assert_eq!(status, 200);
+
+    let (status, list) = server.get_auth_response("/list", &token).await?;
+    assert_eq!(status, 200); //ok
+    assert_eq!(list, "[]");
+
+    let mut dbs = Vec::with_capacity(2);
+    let mut db = HashMap::new();
+    db.insert("name", "my_db");
+    db.insert("db_type", "memory");
+    dbs.push(db.clone());
+    db.insert("name", "my_db2");
+    db.insert("db_type", "file");
+    dbs.push(db.clone());
+    db.insert("name", "my_db3");
+    db.insert("db_type", "mapped");
+    dbs.push(db);
+
+    assert_eq!(server.post_auth("/create_db", &token, &dbs[0]).await?, 201); //created
+    assert_eq!(server.post_auth("/create_db", &token, &dbs[1]).await?, 201); //created
+    assert_eq!(server.post_auth("/create_db", &token, &dbs[2]).await?, 201); //created
+
+    let (status, list) = server.get_auth_response("/list", &token).await?;
+    assert_eq!(status, 200); //ok
+
+    let mut list: Vec<HashMap<&str, &str>> = serde_json::from_str(&list)?;
+    list.sort_by(|left, right| left.get("name").unwrap().cmp(right.get("name").unwrap()));
+
+    assert_eq!(dbs, list);
+
+    Ok(())
+}

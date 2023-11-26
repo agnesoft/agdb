@@ -78,6 +78,23 @@ impl TestServer {
             .as_u16())
     }
 
+    pub async fn post_auth(
+        &self,
+        uri: &str,
+        token: &str,
+        json: &HashMap<&str, &str>,
+    ) -> anyhow::Result<u16> {
+        Ok(self
+            .client
+            .post(format!("{HOST}:{}{uri}", self.port))
+            .bearer_auth(token)
+            .json(&json)
+            .send()
+            .await?
+            .status()
+            .as_u16())
+    }
+
     pub async fn post_response(
         &self,
         uri: &str,

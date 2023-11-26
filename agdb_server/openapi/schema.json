@@ -9,6 +9,35 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/create_db": {
+      "post": {
+        "tags": [
+          "crate::app"
+        ],
+        "operationId": "create_db",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Database created"
+          },
+          "403": {
+            "description": "Database exists"
+          },
+          "461": {
+            "description": "Invalid database name"
+          }
+        }
+      }
+    },
     "/create_user": {
       "post": {
         "tags": [
@@ -80,6 +109,29 @@
   },
   "components": {
     "schemas": {
+      "CreateDb": {
+        "type": "object",
+        "required": [
+          "name",
+          "db_type"
+        ],
+        "properties": {
+          "db_type": {
+            "$ref": "#/components/schemas/DbType"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "DbType": {
+        "type": "string",
+        "enum": [
+          "file",
+          "mapped",
+          "memory"
+        ]
+      },
       "UserCredentials": {
         "type": "object",
         "required": [

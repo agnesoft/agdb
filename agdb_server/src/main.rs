@@ -5,6 +5,7 @@ mod db;
 mod error;
 mod logger;
 mod password;
+mod utilities;
 
 use crate::db::DbPool;
 use axum::Server;

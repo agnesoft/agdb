@@ -48,3 +48,33 @@ async fn login() -> anyhow::Result<()> {
     assert_eq!(token.len(), 38);
     Ok(())
 }
+
+#[tokio::test]
+async fn create_database() -> anyhow::Result<()> {
+    let server = TestServer::new()?;
+    let mut user = HashMap::new();
+    user.insert("name", "alice");
+    user.insert("password", "mypassword123");
+    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+
+    let mut db = HashMap::new();
+    assert_eq!(server.post_auth("/create_db", "token", &db).await?, 401); //unauthorized
+
+    let (status, token) = server.post_response("/login", &user).await?;
+    assert_eq!(status, 200);
+
+    db.insert("name", "mapped_db");
+    db.insert("db_type", "memory");
+    assert_eq!(server.post_auth("/create_db", &token, &db).await?, 201); //created
+    db.insert("name", "file_db");
+    db.insert("db_type", "file");
+    assert_eq!(server.post_auth("/create_db", &token, &db).await?, 201); //created
+    db.insert("name", "memory_db");
+    db.insert("db_type", "mapped");
+    assert_eq!(server.post_auth("/create_db", &token, &db).await?, 201); //created
+    assert_eq!(server.post_auth("/create_db", &token, &db).await?, 403); //database exists
+    db.insert("name", "");
+    assert_eq!(server.post_auth("/create_db", &token, &db).await?, 461); //invalid db type
+
+    Ok(())
+}

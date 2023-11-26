@@ -55,7 +55,7 @@ pub(crate) struct ServerDatabase {
 }
 
 #[derive(Deserialize, ToSchema)]
-pub(crate) struct DeleteServerDatabase {
+pub(crate) struct ServerDatabaseName {
     pub(crate) name: String,
 }
 
@@ -137,25 +137,26 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
         .route("/shutdown", routing::get(shutdown))
         .route("/error", routing::get(test_error))
-        .route("/create_db", routing::post(create_db))
+        .route("/add_db", routing::post(add_db))
         .route("/create_user", routing::post(create_user))
         .route("/delete_db", routing::post(delete_db))
         .route("/list", routing::get(list))
         .route("/login", routing::post(login))
+        .route("/remove_db", routing::post(remove_db))
         .layer(logger)
         .with_state(state)
 }
 
 #[utoipa::path(post,
-    path = "/create_db",
-    request_body = CreateUser,
+    path = "/add_db",
+    request_body = ServerDatabase,
     responses(
-         (status = 201, description = "Database created"),
-         (status = 403, description = "Database exists"),
+         (status = 201, description = "Database added"),
+         (status = 403, description = "Database already exists"),
          (status = 461, description = "Invalid database name"),
     )
 )]
-pub(crate) async fn create_db(
+pub(crate) async fn add_db(
     user: UserId,
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabase>,
@@ -165,7 +166,7 @@ pub(crate) async fn create_db(
     }
 
     db_pool
-        .create_database(
+        .add_database(
             user.0,
             Database {
                 db_id: None,
@@ -222,7 +223,7 @@ pub(crate) async fn create_user(
 
 #[utoipa::path(post,
     path = "/delete_db",
-    request_body = DeleteServerDatabase,
+    request_body = ServerDatabaseName,
     responses(
          (status = 200, description = "Database deleted"),
          (status = 403, description = "Database not found for user"),
@@ -231,7 +232,7 @@ pub(crate) async fn create_user(
 pub(crate) async fn delete_db(
     user: UserId,
     State(db_pool): State<DbPool>,
-    Json(request): Json<DeleteServerDatabase>,
+    Json(request): Json<ServerDatabaseName>,
 ) -> Result<StatusCode, ServerError> {
     let db = db_pool
         .find_user_database(user.0, &request.name)
@@ -294,6 +295,31 @@ pub(crate) async fn login(
     db_pool.save_token(user.db_id.unwrap(), &token)?;
 
     Ok((StatusCode::OK, Json(UserToken(token))))
+}
+
+#[utoipa::path(post,
+    path = "/remove_db",
+    request_body = DeleteServerDatabase,
+    responses(
+         (status = 200, description = "Database removed"),
+         (status = 403, description = "Database not found for user"),
+    )
+)]
+pub(crate) async fn remove_db(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<ServerDatabaseName>,
+) -> Result<StatusCode, ServerError> {
+    let db = db_pool
+        .find_user_database(user.0, &request.name)
+        .map_err(|_| ServerError {
+            status: StatusCode::FORBIDDEN,
+            error: anyhow!("Database not found for user"),
+        })?;
+
+    db_pool.remove_database(db)?;
+
+    Ok(StatusCode::OK)
 }
 
 async fn test_error() -> StatusCode {

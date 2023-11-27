@@ -1,11 +1,11 @@
-use axum::body::BoxBody;
-use axum::body::Full;
+use axum::body::Body;
+use axum::extract::Request;
+use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::response::Response;
 use axum::Error as AxumError;
-use hyper::Request;
-use hyper::StatusCode;
+use http_body_util::BodyExt;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -35,10 +35,7 @@ impl LogRecord {
     }
 }
 
-pub(crate) async fn logger(
-    request: Request<BoxBody>,
-    next: Next<BoxBody>,
-) -> Result<impl IntoResponse, Response> {
+pub(crate) async fn logger(request: Request, next: Next) -> Result<impl IntoResponse, Response> {
     let mut log_record = LogRecord::default();
     let skip_body = request.uri().path().starts_with("/openapi");
     let request = request_log(request, &mut log_record, skip_body).await?;
@@ -53,10 +50,10 @@ pub(crate) async fn logger(
 }
 
 async fn request_log(
-    request: Request<BoxBody>,
+    request: Request,
     log_record: &mut LogRecord,
     skip_body: bool,
-) -> Result<Request<BoxBody>, Response> {
+) -> Result<Request, Response> {
     log_record.method = request.method().to_string();
     log_record.uri = request.uri().to_string();
     log_record.version = format!("{:?}", request.version());
@@ -68,23 +65,20 @@ async fn request_log(
 
     if !skip_body {
         let (parts, body) = request.into_parts();
-        let bytes = hyper::body::to_bytes(body).await.map_err(map_error)?;
+        let bytes = body.collect().await.map_err(map_error)?.to_bytes();
         log_record.request_body = String::from_utf8_lossy(&bytes).to_string();
 
-        return Ok(Request::from_parts(
-            parts,
-            axum::body::boxed(Full::from(bytes)),
-        ));
+        return Ok(Request::from_parts(parts, Body::from(bytes)));
     }
 
     Ok(request)
 }
 
 async fn response_log(
-    response: Response<BoxBody>,
+    response: Response,
     log_record: &mut LogRecord,
     skip_body: bool,
-) -> Result<impl IntoResponse, Response> {
+) -> Result<Response, Response> {
     log_record.status = response.status().as_u16();
     log_record.response_headers = response
         .headers()
@@ -94,20 +88,19 @@ async fn response_log(
 
     if !skip_body {
         let (parts, body) = response.into_parts();
-        let resposne = hyper::body::to_bytes(body).await.map_err(map_error)?;
-        log_record.response = String::from_utf8_lossy(&resposne).to_string();
+        let bytes = body.collect().await.map_err(map_error)?.to_bytes();
+        log_record.response = String::from_utf8_lossy(&bytes).to_string();
 
-        return Ok(Response::from_parts(
-            parts,
-            axum::body::boxed(Full::from(resposne)),
-        ));
+        return Ok(Response::from_parts(parts, Body::from(bytes)));
     }
 
     Ok(response)
 }
 
 fn map_error(error: AxumError) -> Response {
-    (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()
+    let mut response = Response::new(Body::from(error.to_string()));
+    *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+    response
 }
 
 #[cfg(test)]
@@ -119,7 +112,7 @@ mod tests {
         let error = AxumError::new(anyhow::Error::msg("error"));
         let response = map_error(error);
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
-        let body = hyper::body::to_bytes(response.into_body()).await?;
+        let body = response.into_body().collect().await?.to_bytes();
         assert_eq!(&body[..], b"error");
         Ok(())
     }

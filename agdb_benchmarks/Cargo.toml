@@ -13,7 +13,7 @@ categories = ["database", "database-implementations"]
 
 [dependencies]
 agdb = { version = "0.5.1", path = "../agdb" }
-num-format = { version = "0.4.4", features = ["with-serde"] }
-serde = { version = "1.0.188", features = ["derive"] }
-serde_yaml = "0.9.25"
-tokio = { version = "1.32.0", features = ["full"] }
+num-format = { version = "0.4", features = ["with-serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+tokio = { version = "1", features = ["full"] }

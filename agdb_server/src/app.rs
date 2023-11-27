@@ -1,6 +1,3 @@
-use std::fmt::Display;
-
-use crate::api::Api;
 use crate::db::Database;
 use crate::db::DbPool;
 use crate::db::User;
@@ -11,27 +8,24 @@ use crate::utilities;
 use agdb::DbId;
 use anyhow::anyhow;
 use axum::async_trait;
-use axum::body;
 use axum::extract::FromRef;
 use axum::extract::FromRequestParts;
 use axum::extract::State;
-use axum::headers::authorization::Bearer;
-use axum::headers::Authorization;
 use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::middleware;
 use axum::routing;
 use axum::Json;
+use axum::RequestPartsExt;
 use axum::Router;
-use axum::TypedHeader;
+use axum_extra::headers::authorization::Bearer;
+use axum_extra::headers::Authorization;
+use axum_extra::TypedHeader;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt::Display;
 use tokio::sync::broadcast::Sender;
-use tower::ServiceBuilder;
-use tower_http::map_request_body::MapRequestBodyLayer;
-use utoipa::OpenApi;
 use utoipa::ToSchema;
-use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -109,8 +103,8 @@ where
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, db_pool: &S) -> Result<Self, Self::Rejection> {
-        let header = TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, db_pool);
-        let bearer = header.await.map_err(unauthorized_error)?;
+        let bearer: TypedHeader<Authorization<Bearer>> =
+            parts.extract().await.map_err(unauthorized_error)?;
         let id = DbPool::from_ref(db_pool)
             .find_user_id(utilities::unquote(bearer.token()))
             .map_err(unauthorized_error)?;
@@ -131,17 +125,14 @@ impl FromRef<ServerState> for Sender<()> {
 }
 
 pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
-    let logger = ServiceBuilder::new()
-        .layer(MapRequestBodyLayer::new(body::boxed))
-        .layer(middleware::from_fn(logger::logger));
-
     let state = ServerState {
         db_pool,
         shutdown_sender,
     };
 
     Router::new()
-        .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
+        //.merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
+        .route("/openapi", routing::get(StatusCode::OK))
         .route("/shutdown", routing::get(shutdown))
         .route("/error", routing::get(test_error))
         .route("/add_db", routing::post(add_db))
@@ -151,7 +142,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .route("/list", routing::get(list))
         .route("/login", routing::post(login))
         .route("/remove_db", routing::post(remove_db))
-        .layer(logger)
+        .layer(middleware::from_fn(logger::logger))
         .with_state(state)
 }
 
@@ -386,6 +377,7 @@ fn unauthorized_error<E>(_: E) -> StatusCode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::Api;
     use crate::db::DbPoolImpl;
     use crate::db::ServerDb;
     use axum::body::Body;
@@ -397,6 +389,7 @@ mod tests {
     use std::sync::Arc;
     use std::sync::RwLock;
     use tower::ServiceExt;
+    use utoipa::OpenApi;
 
     fn test_db_pool() -> anyhow::Result<DbPool> {
         Ok(DbPool(Arc::new(DbPoolImpl {

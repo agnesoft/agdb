@@ -136,17 +136,21 @@ pub(crate) struct DbPool(pub(crate) Arc<DbPoolImpl>);
 
 impl DbPool {
     pub(crate) fn new() -> anyhow::Result<Self> {
+        let db_exists = Path::new("agdb_server.agdb").exists();
+
         let db_pool = Self(Arc::new(DbPoolImpl {
             server_db: ServerDb::new(SERVER_DB_NAME)?,
             pool: RwLock::new(HashMap::new()),
         }));
 
-        db_pool.0.server_db.get_mut()?.exec_mut(
-            &QueryBuilder::insert()
-                .nodes()
-                .aliases(vec!["users", "dbs"])
-                .query(),
-        )?;
+        if !db_exists {
+            db_pool.0.server_db.get_mut()?.exec_mut(
+                &QueryBuilder::insert()
+                    .nodes()
+                    .aliases(vec!["users", "dbs"])
+                    .query(),
+            )?;
+        }
 
         Ok(db_pool)
     }

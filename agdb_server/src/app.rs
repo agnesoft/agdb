@@ -1,3 +1,4 @@
+use crate::api::Api;
 use crate::db::Database;
 use crate::db::DbPool;
 use crate::db::User;
@@ -25,7 +26,9 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
 use tokio::sync::broadcast::Sender;
+use utoipa::OpenApi;
 use utoipa::ToSchema;
+use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -131,8 +134,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
     };
 
     Router::new()
-        //.merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
-        .route("/openapi", routing::get(StatusCode::OK))
+        .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
         .route("/shutdown", routing::get(shutdown))
         .route("/error", routing::get(test_error))
         .route("/add_db", routing::post(add_db))

@@ -1,131 +1,14 @@
 use crate::api::Api;
-use crate::db::Database;
 use crate::db::DbPool;
-use crate::db::User;
-use crate::error::ServerError;
 use crate::logger;
-use crate::password::Password;
-use crate::utilities;
-use agdb::DbId;
-use anyhow::anyhow;
-use axum::async_trait;
-use axum::extract::FromRef;
-use axum::extract::FromRequestParts;
-use axum::extract::State;
-use axum::http::request::Parts;
-use axum::http::StatusCode;
+use crate::routes;
+use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
-use axum::Json;
-use axum::RequestPartsExt;
 use axum::Router;
-use axum_extra::headers::authorization::Bearer;
-use axum_extra::headers::Authorization;
-use axum_extra::TypedHeader;
-use serde::Deserialize;
-use serde::Serialize;
-use std::fmt::Display;
 use tokio::sync::broadcast::Sender;
 use utoipa::OpenApi;
-use utoipa::ToSchema;
 use utoipa_swagger_ui::SwaggerUi;
-use uuid::Uuid;
-
-#[derive(Clone)]
-struct ServerState {
-    db_pool: DbPool,
-    shutdown_sender: Sender<()>,
-}
-
-#[derive(Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum DbType {
-    File,
-    Mapped,
-    Memory,
-}
-
-#[derive(Serialize, Deserialize, ToSchema)]
-pub(crate) struct ServerDatabase {
-    pub(crate) name: String,
-    pub(crate) db_type: DbType,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct ServerDatabaseName {
-    pub(crate) name: String,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct UserCredentials {
-    pub(crate) name: String,
-    pub(crate) password: String,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct ChangePassword {
-    pub(crate) name: String,
-    pub(crate) password: String,
-    pub(crate) new_password: String,
-}
-
-#[derive(Default, Serialize, ToSchema)]
-pub(crate) struct UserToken(String);
-
-pub(crate) struct UserId(DbId);
-
-impl Display for DbType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DbType::File => f.write_str("file"),
-            DbType::Mapped => f.write_str("mapped"),
-            DbType::Memory => f.write_str("memory"),
-        }
-    }
-}
-
-impl From<Database> for ServerDatabase {
-    fn from(value: Database) -> Self {
-        Self {
-            name: value.name,
-            db_type: match value.db_type.as_str() {
-                "mapped" => DbType::Mapped,
-                "file" => DbType::File,
-                _ => DbType::Memory,
-            },
-        }
-    }
-}
-
-#[async_trait]
-impl<S: Sync + Send> FromRequestParts<S> for UserId
-where
-    S: Send + Sync,
-    DbPool: FromRef<S>,
-{
-    type Rejection = StatusCode;
-
-    async fn from_request_parts(parts: &mut Parts, db_pool: &S) -> Result<Self, Self::Rejection> {
-        let bearer: TypedHeader<Authorization<Bearer>> =
-            parts.extract().await.map_err(unauthorized_error)?;
-        let id = DbPool::from_ref(db_pool)
-            .find_user_id(utilities::unquote(bearer.token()))
-            .map_err(unauthorized_error)?;
-        Ok(Self(id))
-    }
-}
-
-impl FromRef<ServerState> for DbPool {
-    fn from_ref(input: &ServerState) -> Self {
-        input.db_pool.clone()
-    }
-}
-
-impl FromRef<ServerState> for Sender<()> {
-    fn from_ref(input: &ServerState) -> Self {
-        input.shutdown_sender.clone()
-    }
-}
 
 pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
     let state = ServerState {
@@ -133,247 +16,37 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         shutdown_sender,
     };
 
+    let admin_router_v1 = Router::new().route("/shutdown", routing::get(routes::admin::shutdown));
+
+    let user_router_v1 = Router::new()
+        .route("/create", routing::post(routes::user::create))
+        .route(
+            "/change_password",
+            routing::post(routes::user::change_password),
+        )
+        .route("/login", routing::post(routes::user::login));
+
+    let db_router_v1 = Router::new()
+        .route("/add", routing::post(routes::db::add))
+        .route("/delete", routing::post(routes::db::delete))
+        .route("/list", routing::get(routes::db::list))
+        .route("/remove", routing::post(routes::db::remove));
+
     Router::new()
-        .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
-        .route("/shutdown", routing::get(shutdown))
-        .route("/error", routing::get(test_error))
-        .route("/add_db", routing::post(add_db))
-        .route("/change_password", routing::post(change_password))
-        .route("/create_user", routing::post(create_user))
-        .route("/delete_db", routing::post(delete_db))
-        .route("/list", routing::get(list))
-        .route("/login", routing::post(login))
-        .route("/remove_db", routing::post(remove_db))
+        .nest(
+            "/api",
+            Router::new().nest(
+                "/v1",
+                Router::new()
+                    .merge(SwaggerUi::new("/openapi").url("/openapi/openapi.json", Api::openapi()))
+                    .route("/test_error", routing::get(routes::test_error))
+                    .nest("/admin", admin_router_v1)
+                    .nest("/user", user_router_v1)
+                    .nest("/db", db_router_v1),
+            ),
+        )
         .layer(middleware::from_fn(logger::logger))
         .with_state(state)
-}
-
-#[utoipa::path(post,
-    path = "/add_db",
-    request_body = ServerDatabase,
-    responses(
-         (status = 201, description = "Database added"),
-         (status = 403, description = "Database already exists"),
-         (status = 461, description = "Invalid database name"),
-    )
-)]
-pub(crate) async fn add_db(
-    user: UserId,
-    State(db_pool): State<DbPool>,
-    Json(request): Json<ServerDatabase>,
-) -> Result<StatusCode, ServerError> {
-    if db_pool.find_database(&request.name).is_ok() {
-        return Ok(StatusCode::FORBIDDEN);
-    }
-
-    db_pool
-        .add_database(
-            user.0,
-            Database {
-                db_id: None,
-                name: request.name,
-                db_type: request.db_type.to_string(),
-            },
-        )
-        .map_err(|e| ServerError {
-            status: StatusCode::from_u16(461).unwrap(),
-            error: e,
-        })?;
-
-    Ok(StatusCode::CREATED)
-}
-
-#[utoipa::path(post,
-    path = "/change_password",
-    request_body = ChangePassword,
-    responses(
-         (status = 200, description = "Password changed"),
-         (status = 401, description = "Invalid password"),
-         (status = 403, description = "User not found"),
-         (status = 462, description = "Password too short (<8)"),
-    )
-)]
-pub(crate) async fn change_password(
-    State(db_pool): State<DbPool>,
-    Json(request): Json<ChangePassword>,
-) -> Result<StatusCode, ServerError> {
-    if request.new_password.len() < 8 {
-        return Ok(StatusCode::from_u16(462_u16)?);
-    }
-
-    let mut user = db_pool.find_user(&request.name).map_err(|_| ServerError {
-        status: StatusCode::FORBIDDEN,
-        error: anyhow!("User not found"),
-    })?;
-
-    let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
-
-    if !old_pswd.verify_password(&request.password) {
-        return Ok(StatusCode::UNAUTHORIZED);
-    }
-
-    let pswd = Password::create(&request.name, &request.new_password);
-    user.password = pswd.password.to_vec();
-    user.salt = pswd.user_salt.to_vec();
-
-    db_pool.save_user(user)?;
-
-    Ok(StatusCode::OK)
-}
-
-#[utoipa::path(post,
-    path = "/create_user",
-    request_body = UserCredentials,
-    responses(
-         (status = 201, description = "User created"),
-         (status = 461, description = "Name too short (<3)"),
-         (status = 462, description = "Password too short (<8)"),
-         (status = 463, description = "User already exists")
-    )
-)]
-pub(crate) async fn create_user(
-    State(db_pool): State<DbPool>,
-    Json(request): Json<UserCredentials>,
-) -> Result<StatusCode, ServerError> {
-    if request.name.len() < 3 {
-        return Ok(StatusCode::from_u16(461_u16)?);
-    }
-
-    if request.password.len() < 8 {
-        return Ok(StatusCode::from_u16(462_u16)?);
-    }
-
-    if db_pool.find_user(&request.name).is_ok() {
-        return Ok(StatusCode::from_u16(463_u16)?);
-    }
-
-    let pswd = Password::create(&request.name, &request.password);
-
-    db_pool.create_user(User {
-        db_id: None,
-        name: request.name.clone(),
-        password: pswd.password.to_vec(),
-        salt: pswd.user_salt.to_vec(),
-        token: String::new(),
-    })?;
-
-    Ok(StatusCode::CREATED)
-}
-
-#[utoipa::path(post,
-    path = "/delete_db",
-    request_body = ServerDatabaseName,
-    responses(
-         (status = 200, description = "Database deleted"),
-         (status = 403, description = "Database not found for user"),
-    )
-)]
-pub(crate) async fn delete_db(
-    user: UserId,
-    State(db_pool): State<DbPool>,
-    Json(request): Json<ServerDatabaseName>,
-) -> Result<StatusCode, ServerError> {
-    let db = db_pool
-        .find_user_database(user.0, &request.name)
-        .map_err(|_| ServerError {
-            status: StatusCode::FORBIDDEN,
-            error: anyhow!("Database not found for user"),
-        })?;
-
-    db_pool.delete_database(db)?;
-
-    Ok(StatusCode::OK)
-}
-
-#[utoipa::path(post,
-    path = "/list",
-    responses(
-         (status = 200, description = "Ok", body = Vec<ServerDatabase>)
-    )
-)]
-pub(crate) async fn list(
-    user: UserId,
-    State(db_pool): State<DbPool>,
-) -> Result<(StatusCode, Json<Vec<ServerDatabase>>), ServerError> {
-    let dbs = db_pool
-        .find_user_databases(user.0)?
-        .into_iter()
-        .map(|db| db.into())
-        .collect();
-    Ok((StatusCode::OK, Json(dbs)))
-}
-
-#[utoipa::path(post,
-    path = "/login",
-    request_body = UserCredentials,
-    responses(
-         (status = 200, description = "Login successful", body = UserToken),
-         (status = 401, description = "Bad password"),
-         (status = 403, description = "User not found")
-    )
-)]
-pub(crate) async fn login(
-    State(db_pool): State<DbPool>,
-    Json(request): Json<UserCredentials>,
-) -> Result<(StatusCode, Json<UserToken>), ServerError> {
-    let user = db_pool.find_user(&request.name);
-
-    if user.is_err() {
-        return Ok((StatusCode::FORBIDDEN, Json::default()));
-    }
-
-    let user = user?;
-    let pswd = Password::new(&user.name, &user.password, &user.salt)?;
-
-    if !pswd.verify_password(&request.password) {
-        return Ok((StatusCode::UNAUTHORIZED, Json::default()));
-    }
-
-    let token_uuid = Uuid::new_v4();
-    let token = token_uuid.to_string();
-    db_pool.save_token(user.db_id.unwrap(), &token)?;
-
-    Ok((StatusCode::OK, Json(UserToken(token))))
-}
-
-#[utoipa::path(post,
-    path = "/remove_db",
-    request_body = DeleteServerDatabase,
-    responses(
-         (status = 200, description = "Database removed"),
-         (status = 403, description = "Database not found for user"),
-    )
-)]
-pub(crate) async fn remove_db(
-    user: UserId,
-    State(db_pool): State<DbPool>,
-    Json(request): Json<ServerDatabaseName>,
-) -> Result<StatusCode, ServerError> {
-    let db = db_pool
-        .find_user_database(user.0, &request.name)
-        .map_err(|_| ServerError {
-            status: StatusCode::FORBIDDEN,
-            error: anyhow!("Database not found for user"),
-        })?;
-
-    db_pool.remove_database(db)?;
-
-    Ok(StatusCode::OK)
-}
-
-async fn test_error() -> StatusCode {
-    StatusCode::INTERNAL_SERVER_ERROR
-}
-
-async fn shutdown(State(shutdown_sender): State<Sender<()>>) -> StatusCode {
-    match shutdown_sender.send(()) {
-        Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-    }
-}
-
-fn unauthorized_error<E>(_: E) -> StatusCode {
-    StatusCode::UNAUTHORIZED
 }
 
 #[cfg(test)]
@@ -382,6 +55,7 @@ mod tests {
     use crate::api::Api;
     use crate::db::DbPoolImpl;
     use crate::db::ServerDb;
+    use crate::server_error::ServerResult;
     use axum::body::Body;
     use axum::http::Request;
     use axum::http::StatusCode;
@@ -393,7 +67,7 @@ mod tests {
     use tower::ServiceExt;
     use utoipa::OpenApi;
 
-    fn test_db_pool() -> anyhow::Result<DbPool> {
+    fn test_db_pool() -> ServerResult<DbPool> {
         Ok(DbPool(Arc::new(DbPoolImpl {
             server_db: ServerDb::new("memory:test")?,
             pool: RwLock::new(HashMap::new()),
@@ -401,30 +75,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn shutdown() -> anyhow::Result<()> {
-        let (shutdown_sender, _shutdown_receiver) = tokio::sync::broadcast::channel::<()>(1);
-        let db_pool = test_db_pool()?;
-        let app = app(shutdown_sender, db_pool);
-        let request = Request::builder().uri("/shutdown").body(Body::empty())?;
-        let response = app.oneshot(request).await?;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn bad_shutdown() -> anyhow::Result<()> {
-        let db_pool = test_db_pool()?;
-        let app = app(Sender::<()>::new(1), db_pool);
-        let request = Request::builder().uri("/shutdown").body(Body::empty())?;
-        let response = app.oneshot(request).await?;
-
-        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn missing_endpoint() -> anyhow::Result<()> {
+    async fn missing_endpoint() -> ServerResult {
         let db_pool = test_db_pool()?;
         let app = app(Sender::<()>::new(1), db_pool);
         let request = Request::builder().uri("/missing").body(Body::empty())?;

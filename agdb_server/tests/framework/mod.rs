@@ -60,7 +60,7 @@ impl TestServer {
     pub async fn get(&self, uri: &str) -> anyhow::Result<u16> {
         Ok(self
             .client
-            .get(format!("{HOST}:{}{uri}", self.port))
+            .get(self.url(uri))
             .send()
             .await?
             .status()
@@ -70,7 +70,7 @@ impl TestServer {
     pub async fn get_auth_response(&self, uri: &str, token: &str) -> anyhow::Result<(u16, String)> {
         let response = self
             .client
-            .get(format!("{HOST}:{}{uri}", self.port))
+            .get(self.url(uri))
             .bearer_auth(token)
             .send()
             .await?;
@@ -83,7 +83,7 @@ impl TestServer {
     pub async fn post(&self, uri: &str, json: &HashMap<&str, &str>) -> anyhow::Result<u16> {
         Ok(self
             .client
-            .post(format!("{HOST}:{}{uri}", self.port))
+            .post(self.url(uri))
             .json(&json)
             .send()
             .await?
@@ -99,7 +99,7 @@ impl TestServer {
     ) -> anyhow::Result<u16> {
         Ok(self
             .client
-            .post(format!("{HOST}:{}{uri}", self.port))
+            .post(self.url(uri))
             .bearer_auth(token)
             .json(&json)
             .send()
@@ -113,12 +113,7 @@ impl TestServer {
         uri: &str,
         json: &HashMap<&str, &str>,
     ) -> anyhow::Result<(u16, String)> {
-        let response = self
-            .client
-            .post(format!("{HOST}:{}{uri}", self.port))
-            .json(&json)
-            .send()
-            .await?;
+        let response = self.client.post(self.url(uri)).json(&json).send().await?;
         let status = response.status().as_u16();
         let response_content = String::from_utf8(response.bytes().await?.to_vec())?;
 
@@ -130,6 +125,10 @@ impl TestServer {
             std::fs::remove_dir_all(dir).unwrap();
         }
     }
+
+    fn url(&self, uri: &str) -> String {
+        format!("{HOST}:{}/api/v1{uri}", self.port)
+    }
 }
 
 impl Drop for TestServer {
@@ -137,7 +136,7 @@ impl Drop for TestServer {
         let port = self.port;
         std::thread::spawn(move || {
             assert_eq!(
-                reqwest::blocking::get(format!("{HOST}:{port}/shutdown"))
+                reqwest::blocking::get(format!("{HOST}:{}/api/v1/admin/shutdown", port))
                     .unwrap()
                     .status()
                     .as_u16(),

@@ -9,8 +9,8 @@ use std::process::Command;
 #[tokio::test]
 async fn db_reuse_and_error() -> anyhow::Result<()> {
     let mut server = TestServer::new()?;
-    assert_eq!(server.get("/error").await?, 500);
-    assert_eq!(server.get("/shutdown").await?, 200);
+    assert_eq!(server.get("/test_error").await?, 500);
+    assert_eq!(server.get("/admin/shutdown").await?, 200);
     assert!(server.process.wait().unwrap().success());
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)
@@ -31,12 +31,12 @@ async fn create_user() -> anyhow::Result<()> {
     let mut user = HashMap::new();
     user.insert("name", "a");
     user.insert("password", "");
-    assert_eq!(server.post("/create_user", &user).await?, 461); //short name
+    assert_eq!(server.post("/user/create", &user).await?, 461); //short name
     user.insert("name", "alice");
-    assert_eq!(server.post("/create_user", &user).await?, 462); //short password
+    assert_eq!(server.post("/user/create", &user).await?, 462); //short password
     user.insert("password", "mypassword123");
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
-    assert_eq!(server.post("/create_user", &user).await?, 463); //user exists
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
+    assert_eq!(server.post("/user/create", &user).await?, 463); //user exists
     Ok(())
 }
 
@@ -46,13 +46,13 @@ async fn login() -> anyhow::Result<()> {
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
-    assert_eq!(server.post("/login", &user).await?, 403); //unknown user
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+    assert_eq!(server.post("/user/login", &user).await?, 403); //unknown user
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
     user.insert("password", "badpassword");
-    assert_eq!(server.post("/login", &user).await?, 401); //bad password
+    assert_eq!(server.post("/user/login", &user).await?, 401); //bad password
     user.insert("password", "mypassword123");
-    let (status, token) = server.post_response("/login", &user).await?;
-    assert_eq!(status, 200); //login succeeded
+    let (status, token) = server.post_response("/user/login", &user).await?;
+    assert_eq!(status, 200); //user/login succeeded
     assert_eq!(token.len(), 38);
     Ok(())
 }
@@ -63,26 +63,26 @@ async fn add_database() -> anyhow::Result<()> {
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
 
     let mut db = HashMap::new();
-    assert_eq!(server.post_auth("/add_db", "token", &db).await?, 401); //unauthorized
+    assert_eq!(server.post_auth("/db/add", "token", &db).await?, 401); //unauthorized
 
-    let (status, token) = server.post_response("/login", &user).await?;
+    let (status, token) = server.post_response("/user/login", &user).await?;
     assert_eq!(status, 200);
 
     db.insert("name", "mapped_db");
     db.insert("db_type", "memory");
-    assert_eq!(server.post_auth("/add_db", &token, &db).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &db).await?, 201); //created
     db.insert("name", "file_db");
     db.insert("db_type", "file");
-    assert_eq!(server.post_auth("/add_db", &token, &db).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &db).await?, 201); //created
     db.insert("name", "memory_db");
     db.insert("db_type", "mapped");
-    assert_eq!(server.post_auth("/add_db", &token, &db).await?, 201); //created
-    assert_eq!(server.post_auth("/add_db", &token, &db).await?, 403); //database exists
+    assert_eq!(server.post_auth("/db/add", &token, &db).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &db).await?, 403); //database exists
     db.insert("name", "");
-    assert_eq!(server.post_auth("/add_db", &token, &db).await?, 461); //invalid db type
+    assert_eq!(server.post_auth("/db/add", &token, &db).await?, 461); //invalid db type
 
     Ok(())
 }
@@ -93,16 +93,16 @@ async fn list() -> anyhow::Result<()> {
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
 
-    let (status, list) = server.get_auth_response("/list", "token").await?;
+    let (status, list) = server.get_auth_response("/db/list", "token").await?;
     assert_eq!(status, 401); //unauthorized
     assert!(list.is_empty());
 
-    let (status, token) = server.post_response("/login", &user).await?;
+    let (status, token) = server.post_response("/user/login", &user).await?;
     assert_eq!(status, 200);
 
-    let (status, list) = server.get_auth_response("/list", &token).await?;
+    let (status, list) = server.get_auth_response("/db/list", &token).await?;
     assert_eq!(status, 200); //ok
     assert_eq!(list, "[]");
 
@@ -118,11 +118,11 @@ async fn list() -> anyhow::Result<()> {
     db.insert("db_type", "mapped");
     dbs.push(db);
 
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[0]).await?, 201); //created
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[1]).await?, 201); //created
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[2]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[0]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[1]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[2]).await?, 201); //created
 
-    let (status, list) = server.get_auth_response("/list", &token).await?;
+    let (status, list) = server.get_auth_response("/db/list", &token).await?;
     assert_eq!(status, 200); //ok
 
     let mut list: Vec<HashMap<&str, &str>> = serde_json::from_str(&list)?;
@@ -143,13 +143,13 @@ async fn delete_db() -> anyhow::Result<()> {
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
 
     let mut delete_db = HashMap::new();
     delete_db.insert("name", "my_db");
 
     assert_eq!(
-        server.post_auth("/delete_db", "token", &delete_db).await?,
+        server.post_auth("/db/delete", "token", &delete_db).await?,
         401
     ); //unauthorized
 
@@ -162,17 +162,17 @@ async fn delete_db() -> anyhow::Result<()> {
     db.insert("db_type", "file");
     dbs.push(db);
 
-    let (status, token) = server.post_response("/login", &user).await?;
+    let (status, token) = server.post_response("/user/login", &user).await?;
     assert_eq!(status, 200); //ok
 
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[0]).await?, 201); //created
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[1]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[0]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[1]).await?, 201); //created
 
     assert!(Path::new(&server.dir).join("my_db").exists());
     assert!(Path::new(&server.dir).join("my_db2").exists());
 
     assert_eq!(
-        server.post_auth("/delete_db", &token, &delete_db).await?,
+        server.post_auth("/db/delete", &token, &delete_db).await?,
         200
     );
 
@@ -180,11 +180,11 @@ async fn delete_db() -> anyhow::Result<()> {
     assert!(Path::new(&server.dir).join("my_db2").exists());
 
     assert_eq!(
-        server.post_auth("/delete_db", &token, &delete_db).await?,
+        server.post_auth("/db/delete", &token, &delete_db).await?,
         403
     );
 
-    let (status, list) = server.get_auth_response("/list", &token).await?;
+    let (status, list) = server.get_auth_response("/db/list", &token).await?;
     assert_eq!(status, 200); //ok
 
     let list: Vec<HashMap<&str, &str>> = serde_json::from_str(&list)?;
@@ -193,20 +193,20 @@ async fn delete_db() -> anyhow::Result<()> {
 
     dbs[0].insert("db_type", "memory");
 
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[0]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[0]).await?, 201); //created
 
     assert!(!Path::new(&server.dir).join("my_db").exists());
 
     user.insert("name", "bob");
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
-    let (status, token2) = server.post_response("/login", &user).await?;
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
+    let (status, token2) = server.post_response("/user/login", &user).await?;
     assert_eq!(status, 200); //ok
     assert_eq!(
-        server.post_auth("/delete_db", &token2, &delete_db).await?,
+        server.post_auth("/db/delete", &token2, &delete_db).await?,
         403
     );
     assert_eq!(
-        server.post_auth("/delete_db", &token, &delete_db).await?,
+        server.post_auth("/db/delete", &token, &delete_db).await?,
         200
     );
 
@@ -219,13 +219,13 @@ async fn remove_db() -> anyhow::Result<()> {
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
 
     let mut remove_db = HashMap::new();
     remove_db.insert("name", "my_db");
 
     assert_eq!(
-        server.post_auth("/remove_db", "token", &remove_db).await?,
+        server.post_auth("/db/remove", "token", &remove_db).await?,
         401
     ); //unauthorized
 
@@ -238,17 +238,17 @@ async fn remove_db() -> anyhow::Result<()> {
     db.insert("db_type", "file");
     dbs.push(db);
 
-    let (status, token) = server.post_response("/login", &user).await?;
+    let (status, token) = server.post_response("/user/login", &user).await?;
     assert_eq!(status, 200); //ok
 
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[0]).await?, 201); //created
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[1]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[0]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[1]).await?, 201); //created
 
     assert!(Path::new(&server.dir).join("my_db").exists());
     assert!(Path::new(&server.dir).join("my_db2").exists());
 
     assert_eq!(
-        server.post_auth("/remove_db", &token, &remove_db).await?,
+        server.post_auth("/db/remove", &token, &remove_db).await?,
         200
     );
 
@@ -256,29 +256,29 @@ async fn remove_db() -> anyhow::Result<()> {
     assert!(Path::new(&server.dir).join("my_db2").exists());
 
     assert_eq!(
-        server.post_auth("/remove_db", &token, &remove_db).await?,
+        server.post_auth("/db/remove", &token, &remove_db).await?,
         403
     );
 
-    let (status, list) = server.get_auth_response("/list", &token).await?;
+    let (status, list) = server.get_auth_response("/db/list", &token).await?;
     assert_eq!(status, 200); //ok
 
     let list: Vec<HashMap<&str, &str>> = serde_json::from_str(&list)?;
 
     assert_eq!(dbs[1], list[0]);
 
-    assert_eq!(server.post_auth("/add_db", &token, &dbs[0]).await?, 201); //created
+    assert_eq!(server.post_auth("/db/add", &token, &dbs[0]).await?, 201); //created
 
     user.insert("name", "bob");
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
-    let (status, token2) = server.post_response("/login", &user).await?;
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
+    let (status, token2) = server.post_response("/user/login", &user).await?;
     assert_eq!(status, 200); //ok
     assert_eq!(
-        server.post_auth("/remove_db", &token2, &remove_db).await?,
+        server.post_auth("/db/remove", &token2, &remove_db).await?,
         403
     );
     assert_eq!(
-        server.post_auth("/remove_db", &token, &remove_db).await?,
+        server.post_auth("/db/remove", &token, &remove_db).await?,
         200
     );
 
@@ -297,17 +297,17 @@ async fn chnage_password() -> anyhow::Result<()> {
     change.insert("name", "alice");
     change.insert("password", "mypassword123");
     change.insert("new_password", "pswd");
-    assert_eq!(server.post("/change_password", &change).await?, 462);
+    assert_eq!(server.post("/user/change_password", &change).await?, 462);
     change.insert("new_password", "mypassword456");
-    assert_eq!(server.post("/change_password", &change).await?, 403);
-    assert_eq!(server.post("/create_user", &user).await?, 201); //created
-    let (status, token) = server.post_response("/login", &user).await?;
-    assert_eq!(status, 200); //login succeeded
+    assert_eq!(server.post("/user/change_password", &change).await?, 403);
+    assert_eq!(server.post("/user/create", &user).await?, 201); //created
+    let (status, token) = server.post_response("/user/login", &user).await?;
+    assert_eq!(status, 200); //user/login succeeded
     assert_eq!(token.len(), 38);
-    assert_eq!(server.post("/change_password", &change).await?, 200); //ok
-    assert_eq!(server.post("/change_password", &change).await?, 401); //invalid password
-    assert_eq!(server.post("/login", &user).await?, 401); //invalid credentials
+    assert_eq!(server.post("/user/change_password", &change).await?, 200); //ok
+    assert_eq!(server.post("/user/change_password", &change).await?, 401); //invalid password
+    assert_eq!(server.post("/user/login", &user).await?, 401); //invalid credentials
     user.insert("password", "mypassword456");
-    assert_eq!(server.post("/login", &user).await?, 200); //ok
+    assert_eq!(server.post("/user/login", &user).await?, 200); //ok
     Ok(())
 }

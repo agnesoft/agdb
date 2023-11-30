@@ -9,14 +9,14 @@ use agdb::QueryId;
 use agdb::StorageData;
 use agdb::StorageSlice;
 use agdb::UserValue;
-use anyhow::anyhow;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::PoisonError;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
+
+use crate::server_error::ServerResult;
 
 const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 
@@ -116,7 +116,7 @@ pub(crate) struct DbPoolImpl {
 }
 
 #[derive(UserValue)]
-pub(crate) struct User {
+pub(crate) struct DbUser {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
     pub(crate) password: Vec<u8>,
@@ -135,7 +135,7 @@ pub(crate) struct Database {
 pub(crate) struct DbPool(pub(crate) Arc<DbPoolImpl>);
 
 impl DbPool {
-    pub(crate) fn new() -> anyhow::Result<Self> {
+    pub(crate) fn new() -> ServerResult<Self> {
         let db_exists = Path::new("agdb_server.agdb").exists();
 
         let db_pool = Self(Arc::new(DbPoolImpl {
@@ -155,7 +155,7 @@ impl DbPool {
         Ok(db_pool)
     }
 
-    pub(crate) fn add_database(&self, user: DbId, database: Database) -> anyhow::Result<()> {
+    pub(crate) fn add_database(&self, user: DbId, database: Database) -> ServerResult {
         let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name))?;
         self.get_pool_mut()?.insert(database.name.clone(), db);
 
@@ -174,7 +174,7 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn create_user(&self, user: User) -> anyhow::Result<()> {
+    pub(crate) fn create_user(&self, user: DbUser) -> ServerResult {
         self.0.server_db.get_mut()?.transaction_mut(|t| {
             let user = t.exec_mut(&QueryBuilder::insert().nodes().values(&user).query())?;
 
@@ -189,7 +189,7 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn delete_database(&self, db: Database) -> anyhow::Result<()> {
+    pub(crate) fn delete_database(&self, db: Database) -> ServerResult {
         let filename = self.remove_database(db)?.get()?.filename().to_string();
         let path = Path::new(&filename);
 
@@ -205,7 +205,7 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn find_database(&self, name: &str) -> anyhow::Result<Database> {
+    pub(crate) fn find_database(&self, name: &str) -> ServerResult<Database> {
         Ok(self
             .0
             .server_db
@@ -228,7 +228,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user_databases(&self, user: DbId) -> anyhow::Result<Vec<Database>> {
+    pub(crate) fn find_user_databases(&self, user: DbId) -> ServerResult<Vec<Database>> {
         Ok(self
             .0
             .server_db
@@ -247,7 +247,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user_database(&self, user: DbId, name: &str) -> anyhow::Result<Database> {
+    pub(crate) fn find_user_database(&self, user: DbId, name: &str) -> ServerResult<Database> {
         Ok(self
             .0
             .server_db
@@ -269,7 +269,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user(&self, name: &str) -> anyhow::Result<User> {
+    pub(crate) fn find_user(&self, name: &str) -> ServerResult<DbUser> {
         Ok(self
             .0
             .server_db
@@ -292,7 +292,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user_id(&self, token: &str) -> anyhow::Result<DbId> {
+    pub(crate) fn find_user_id(&self, token: &str) -> ServerResult<DbId> {
         Ok(self
             .0
             .server_db
@@ -310,11 +310,11 @@ impl DbPool {
             )?
             .elements
             .get(0)
-            .ok_or(anyhow!("No user found for token '{token}'"))?
+            .ok_or(format!("No user found for token '{token}'"))?
             .id)
     }
 
-    pub(crate) fn remove_database(&self, db: Database) -> anyhow::Result<ServerDb> {
+    pub(crate) fn remove_database(&self, db: Database) -> ServerResult<ServerDb> {
         self.0
             .server_db
             .get_mut()?
@@ -323,7 +323,7 @@ impl DbPool {
         Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
     }
 
-    pub(crate) fn save_token(&self, user: DbId, token: &str) -> anyhow::Result<()> {
+    pub(crate) fn save_token(&self, user: DbId, token: &str) -> ServerResult {
         self.0.server_db.get_mut()?.exec_mut(
             &QueryBuilder::insert()
                 .values_uniform(vec![("token", token).into()])
@@ -333,7 +333,7 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn save_user(&self, user: User) -> anyhow::Result<()> {
+    pub(crate) fn save_user(&self, user: DbUser) -> ServerResult {
         self.0
             .server_db
             .get_mut()?
@@ -345,27 +345,23 @@ impl DbPool {
     //     self.0.pool.read().map_err(map_error)
     // }
 
-    fn get_pool_mut(&self) -> anyhow::Result<RwLockWriteGuard<HashMap<String, ServerDb>>> {
-        self.0.pool.write().map_err(map_error)
+    fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {
+        Ok(self.0.pool.write()?)
     }
 }
 
 impl ServerDb {
-    pub(crate) fn new(name: &str) -> anyhow::Result<Self> {
+    pub(crate) fn new(name: &str) -> ServerResult<Self> {
         Ok(Self(Arc::new(RwLock::new(ServerDbImpl::new(name)?))))
     }
 
-    fn get(&self) -> anyhow::Result<RwLockReadGuard<ServerDbImpl>> {
-        self.0.read().map_err(map_error)
+    fn get(&self) -> ServerResult<RwLockReadGuard<ServerDbImpl>> {
+        Ok(self.0.read()?)
     }
 
-    fn get_mut(&self) -> anyhow::Result<RwLockWriteGuard<ServerDbImpl>> {
-        self.0.write().map_err(map_error)
+    fn get_mut(&self) -> ServerResult<RwLockWriteGuard<ServerDbImpl>> {
+        Ok(self.0.write()?)
     }
-}
-
-fn map_error<T>(e: PoisonError<T>) -> anyhow::Error {
-    anyhow!(e.to_string())
 }
 
 #[cfg(test)]
@@ -395,12 +391,6 @@ mod tests {
                 Self::File(_) => f.write_str("File"),
             }
         }
-    }
-
-    #[test]
-    fn map_error_test() {
-        let error = PoisonError::new("guard");
-        map_error(error);
     }
 
     #[test]

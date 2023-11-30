@@ -12,7 +12,6 @@ categories = ["database", "database-interfaces"]
 
 [dependencies]
 agdb = { version = "0.5.1", path = "../agdb" }
-anyhow = "1"
 axum = { version = "0.7", features = ["http2"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 http-body-util = "0.1"
@@ -31,3 +30,4 @@ uuid = { version = "1", features = ["v4"] }
 [dev-dependencies]
 assert_cmd = "2"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
+anyhow = "1"

@@ -8,7 +8,7 @@ use axum::routing;
 use axum::Router;
 use tokio::sync::broadcast::Sender;
 use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_rapidoc::RapiDoc;
 
 pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
     let state = ServerState {
@@ -33,7 +33,7 @@ pub(crate) fn app(shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
         .route("/remove", routing::post(routes::db::remove));
 
     Router::new()
-        .merge(SwaggerUi::new("/api/v1/openapi").url("/openapi/openapi.json", Api::openapi()))
+        .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest(
             "/api",
             Router::new().nest(

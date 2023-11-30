@@ -4,6 +4,8 @@ use ring::rand::SecureRandom;
 use ring::rand::SystemRandom;
 use std::num::NonZeroU32;
 
+use crate::server_error::ServerResult;
+
 pub(crate) const PASSWORD_LEN: usize = digest::SHA256_OUTPUT_LEN;
 static ALGORITHM: pbkdf2::Algorithm = pbkdf2::PBKDF2_HMAC_SHA256;
 static PEPPER: &[u8; 16] = std::include_bytes!("../pepper");
@@ -32,7 +34,7 @@ impl Password {
         }
     }
 
-    pub(crate) fn new(user: &str, pswd: &[u8], salt: &[u8]) -> anyhow::Result<Self> {
+    pub(crate) fn new(user: &str, pswd: &[u8], salt: &[u8]) -> ServerResult<Self> {
         Ok(Self {
             user: user.to_string(),
             password: pswd.try_into()?,
@@ -87,7 +89,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn verify_password() -> anyhow::Result<()> {
+    fn verify_password() -> ServerResult {
         let password = Password::create("alice", "MyPassword123");
         assert_ne!(password.password, [0_u8; PASSWORD_LEN]);
         assert_ne!(password.user_salt, [0_u8; 16]);

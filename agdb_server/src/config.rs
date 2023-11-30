@@ -1,3 +1,4 @@
+use crate::server_error::ServerResult;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Arc;
@@ -11,7 +12,7 @@ pub(crate) struct ConfigImpl {
     pub(crate) port: u16,
 }
 
-pub(crate) fn new() -> anyhow::Result<Config> {
+pub(crate) fn new() -> ServerResult<Config> {
     if let Ok(content) = std::fs::read_to_string(CONFIG_FILE) {
         return Ok(Config::new(serde_yaml::from_str(&content)?));
     }

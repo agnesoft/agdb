@@ -38,3 +38,18 @@ async fn main() -> ServerResult {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::api::Api;
+    use std::fs::File;
+    use std::io::Write;
+    use utoipa::OpenApi;
+
+    #[test]
+    fn generate_openapi_schema() {
+        let schema = Api::openapi().to_pretty_json().unwrap();
+        let mut file = File::create("openapi/schema.json").unwrap();
+        file.write_all(schema.as_bytes()).unwrap();
+    }
+}

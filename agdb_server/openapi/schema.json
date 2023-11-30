@@ -9,12 +9,25 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/add_db": {
+    "/api/v1/admin/shutdown": {
+      "get": {
+        "tags": [
+          "crate::routes::admin"
+        ],
+        "operationId": "shutdown",
+        "responses": {
+          "200": {
+            "description": "Server is shutting down"
+          }
+        }
+      }
+    },
+    "/api/v1/db/add": {
       "post": {
         "tags": [
-          "crate::app"
+          "crate::routes::db"
         ],
-        "operationId": "add_db",
+        "operationId": "add",
         "requestBody": {
           "content": {
             "application/json": {
@@ -38,10 +51,85 @@
         }
       }
     },
-    "/change_password": {
+    "/api/v1/db/delete": {
       "post": {
         "tags": [
-          "crate::app"
+          "crate::routes::db"
+        ],
+        "operationId": "delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerDatabaseName"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Database deleted"
+          },
+          "403": {
+            "description": "Database not found for user"
+          }
+        }
+      }
+    },
+    "/api/v1/db/list": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabase"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/db/remove": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "remove",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteServerDatabase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Database removed"
+          },
+          "403": {
+            "description": "Database not found for user"
+          }
+        }
+      }
+    },
+    "api/v1/user/change_password": {
+      "post": {
+        "tags": [
+          "crate::routes::user"
         ],
         "operationId": "change_password",
         "requestBody": {
@@ -70,12 +158,12 @@
         }
       }
     },
-    "/create_user": {
+    "api/v1/user/create": {
       "post": {
         "tags": [
-          "crate::app"
+          "crate::routes::user"
         ],
-        "operationId": "create_user",
+        "operationId": "create",
         "requestBody": {
           "content": {
             "application/json": {
@@ -102,59 +190,10 @@
         }
       }
     },
-    "/delete_db": {
+    "api/v1/user/login": {
       "post": {
         "tags": [
-          "crate::app"
-        ],
-        "operationId": "delete_db",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabaseName"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Database deleted"
-          },
-          "403": {
-            "description": "Database not found for user"
-          }
-        }
-      }
-    },
-    "/list": {
-      "post": {
-        "tags": [
-          "crate::app"
-        ],
-        "operationId": "list",
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ServerDatabase"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/login": {
-      "post": {
-        "tags": [
-          "crate::app"
+          "crate::routes::user"
         ],
         "operationId": "login",
         "requestBody": {
@@ -183,32 +222,6 @@
           },
           "403": {
             "description": "User not found"
-          }
-        }
-      }
-    },
-    "/remove_db": {
-      "post": {
-        "tags": [
-          "crate::app"
-        ],
-        "operationId": "remove_db",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteServerDatabase"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Database removed"
-          },
-          "403": {
-            "description": "Database not found for user"
           }
         }
       }

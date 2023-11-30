@@ -39,6 +39,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn derived_from_debug() {
+        format!("{:?}", ServerError::from("my error"));
+    }
+
+    #[test]
     fn into_response() {
         let error = ServerError::from("my error");
         let response = error.into_response();

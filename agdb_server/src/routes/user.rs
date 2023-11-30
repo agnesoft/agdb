@@ -27,7 +27,7 @@ pub(crate) struct ChangePassword {
 }
 
 #[utoipa::path(post,
-    path = "api/v1/user/login",
+    path = "/api/v1/user/login",
     request_body = UserCredentials,
     responses(
          (status = 200, description = "Login successful", body = UserToken),
@@ -60,7 +60,7 @@ pub(crate) async fn login(
 }
 
 #[utoipa::path(post,
-    path = "api/v1/user/create",
+    path = "/api/v1/user/create",
     request_body = UserCredentials,
     responses(
          (status = 201, description = "User created"),
@@ -99,7 +99,7 @@ pub(crate) async fn create(
 }
 
 #[utoipa::path(post,
-    path = "api/v1/user/change_password",
+    path = "/api/v1/user/change_password",
     request_body = ChangePassword,
     responses(
          (status = 200, description = "Password changed"),

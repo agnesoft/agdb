@@ -13,9 +13,9 @@ use utoipa::ToSchema;
 #[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbType {
-    File,
-    Mapped,
     Memory,
+    Mapped,
+    File,
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -55,6 +55,7 @@ impl From<Database> for ServerDatabase {
 #[utoipa::path(post,
     path = "/api/v1/db/add",
     request_body = ServerDatabase,
+    security(("Token" = [])),
     responses(
          (status = 201, description = "Database added"),
          (status = 403, description = "Database already exists"),
@@ -90,6 +91,7 @@ pub(crate) async fn add(
 #[utoipa::path(post,
     path = "/api/v1/db/delete",
     request_body = ServerDatabaseName,
+    security(("Token" = [])),
     responses(
          (status = 200, description = "Database deleted"),
          (status = 403, description = "Database not found for user"),
@@ -112,8 +114,9 @@ pub(crate) async fn delete(
     Ok(StatusCode::OK)
 }
 
-#[utoipa::path(post,
+#[utoipa::path(get,
     path = "/api/v1/db/list",
+    security(("Token" = [])),
     responses(
          (status = 200, description = "Ok", body = Vec<ServerDatabase>)
     )
@@ -132,7 +135,8 @@ pub(crate) async fn list(
 
 #[utoipa::path(post,
     path = "/api/v1/db/remove",
-    request_body = DeleteServerDatabase,
+    request_body = ServerDatabaseName,
+    security(("Token" = [])),
     responses(
          (status = 200, description = "Database removed"),
          (status = 403, description = "Database not found for user"),

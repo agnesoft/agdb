@@ -37,7 +37,7 @@ impl LogRecord {
 
 pub(crate) async fn logger(request: Request, next: Next) -> Result<impl IntoResponse, Response> {
     let mut log_record = LogRecord::default();
-    let skip_body = request.uri().path().contains("/openapi");
+    let skip_body = request.uri().path().ends_with("openapi.json");
     let request = request_log(request, &mut log_record, skip_body).await?;
     let now = Instant::now();
     let response = next.run(request).await;

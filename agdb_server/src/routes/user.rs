@@ -100,6 +100,7 @@ pub(crate) async fn create(
 
 #[utoipa::path(post,
     path = "/api/v1/user/change_password",
+    security(("Token" = [])),
     request_body = ChangePassword,
     responses(
          (status = 200, description = "Password changed"),

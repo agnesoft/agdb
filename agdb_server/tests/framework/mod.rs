@@ -22,12 +22,11 @@ pub struct TestServer {
     pub client: Client,
     pub admin: String,
     pub admin_password: String,
+    pub admin_token: String,
 }
 
 impl TestServer {
-    #[track_caller]
-    pub fn new(port_offset: u16) -> anyhow::Result<Self> {
-        let caller = Location::caller();
+    pub async fn new(port_offset: u16, caller: &Location<'static>) -> anyhow::Result<Self> {
         let dir = format!(
             "{}.{}.{}.test",
             Path::new(caller.file())
@@ -58,16 +57,24 @@ impl TestServer {
         }
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
-
         let client = reqwest::Client::new();
-        Ok(Self {
+        let mut server = Self {
             dir,
             port,
             process,
             client,
             admin: ADMIN.to_string(),
             admin_password: ADMIN.to_string(),
-        })
+            admin_token: String::new(),
+        };
+
+        let mut admin = HashMap::<&str, &str>::new();
+        admin.insert("name", &server.admin);
+        admin.insert("password", &server.admin_password);
+
+        server.admin_token = server.post_response("/user/login", &admin).await?.1;
+
+        Ok(server)
     }
 
     pub async fn get(&self, uri: &str) -> anyhow::Result<u16> {
@@ -158,22 +165,10 @@ impl TestServer {
 impl Drop for TestServer {
     fn drop(&mut self) {
         let port = self.port;
-        let admin = self.admin.clone();
+        let admin_token = self.admin_token.clone();
 
         if self.process.try_wait().unwrap().is_none() {
             std::thread::spawn(move || {
-                let mut admin_user = HashMap::<&str, &str>::new();
-                admin_user.insert("name", &admin);
-                admin_user.insert("password", &admin);
-
-                let admin_token = reqwest::blocking::Client::new()
-                    .post(format!("{HOST}:{}/api/v1/user/login", port))
-                    .json(&admin_user)
-                    .send()
-                    .unwrap()
-                    .text()
-                    .unwrap();
-
                 assert_eq!(
                     reqwest::blocking::Client::new()
                         .get(format!("{HOST}:{}/api/v1/admin/shutdown", port))

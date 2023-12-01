@@ -240,9 +240,9 @@
           "200": {
             "description": "Login successful",
             "content": {
-              "application/json": {
+              "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserToken"
+                  "type": "string"
                 }
               }
             }
@@ -326,9 +326,6 @@
             "type": "string"
           }
         }
-      },
-      "UserToken": {
-        "type": "string"
       }
     },
     "securitySchemes": {

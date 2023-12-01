@@ -26,7 +26,7 @@ pub struct TestServer {
 
 impl TestServer {
     #[track_caller]
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(port_offset: u16) -> anyhow::Result<Self> {
         let caller = Location::caller();
         let dir = format!(
             "{}.{}.{}.test",
@@ -39,17 +39,17 @@ impl TestServer {
             caller.column()
         );
 
-        let port = PORT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let port = port_offset + PORT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         Self::remove_dir_if_exists(&dir);
         std::fs::create_dir(&dir)?;
 
-        let mut config = HashMap::<&str, serde_yaml::Value>::new();
-        config.insert("host", HOST_IP.into());
-        config.insert("port", port.into());
-        config.insert("admin", ADMIN.into());
-
         if port != DEFAULT_PORT {
+            let mut config = HashMap::<&str, serde_yaml::Value>::new();
+            config.insert("host", HOST_IP.into());
+            config.insert("port", port.into());
+            config.insert("admin", ADMIN.into());
+
             let file = std::fs::File::options()
                 .create_new(true)
                 .write(true)

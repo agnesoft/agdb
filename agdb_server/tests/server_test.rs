@@ -7,7 +7,7 @@ use std::process::Command;
 
 #[tokio::test]
 async fn db_reuse_and_error() -> anyhow::Result<()> {
-    let mut server = TestServer::new()?;
+    let mut server = TestServer::new(0)?;
     assert_eq!(server.get("/test_error").await?, 500);
     assert_eq!(server.get("/missing").await?, 404);
     assert_eq!(server.get("/admin/shutdown").await?, 401);
@@ -31,7 +31,7 @@ async fn db_reuse_and_error() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn openapi() -> anyhow::Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new(0)?;
     assert_eq!(server.get("").await?, 200);
     assert_eq!(server.get("/openapi.json").await?, 200);
     Ok(())

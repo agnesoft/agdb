@@ -19,7 +19,6 @@ use utoipa::OpenApi;
     components(schemas(
         crate::routes::user::ChangePassword,
         crate::routes::user::UserCredentials,
-        crate::routes::user::UserToken,
         crate::routes::db::DbType,
         crate::routes::db::ServerDatabase,
         crate::routes::db::ServerDatabaseName,

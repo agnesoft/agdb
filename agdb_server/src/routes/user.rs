@@ -6,7 +6,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
-use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -15,9 +14,6 @@ pub(crate) struct UserCredentials {
     pub(crate) name: String,
     pub(crate) password: String,
 }
-
-#[derive(Default, Serialize, ToSchema)]
-pub(crate) struct UserToken(String);
 
 #[derive(Deserialize, ToSchema)]
 pub(crate) struct ChangePassword {
@@ -30,7 +26,7 @@ pub(crate) struct ChangePassword {
     path = "/api/v1/user/login",
     request_body = UserCredentials,
     responses(
-         (status = 200, description = "Login successful", body = UserToken),
+         (status = 200, description = "Login successful", body = String),
          (status = 401, description = "Bad password"),
          (status = 403, description = "User not found")
     )
@@ -38,25 +34,25 @@ pub(crate) struct ChangePassword {
 pub(crate) async fn login(
     State(db_pool): State<DbPool>,
     Json(request): Json<UserCredentials>,
-) -> Result<(StatusCode, Json<UserToken>), ServerError> {
+) -> Result<(StatusCode, String), ServerError> {
     let user = db_pool.find_user(&request.name);
 
     if user.is_err() {
-        return Ok((StatusCode::FORBIDDEN, Json::default()));
+        return Ok((StatusCode::FORBIDDEN, String::new()));
     }
 
     let user = user?;
     let pswd = Password::new(&user.name, &user.password, &user.salt)?;
 
     if !pswd.verify_password(&request.password) {
-        return Ok((StatusCode::UNAUTHORIZED, Json::default()));
+        return Ok((StatusCode::UNAUTHORIZED, String::new()));
     }
 
     let token_uuid = Uuid::new_v4();
     let token = token_uuid.to_string();
     db_pool.save_token(user.db_id.unwrap(), &token)?;
 
-    Ok((StatusCode::OK, Json(UserToken(token))))
+    Ok((StatusCode::OK, token))
 }
 
 #[utoipa::path(post,

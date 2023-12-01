@@ -21,9 +21,9 @@ async fn main() -> ServerResult {
 
     let (shutdown_sender, mut shutdown_receiver) = tokio::sync::broadcast::channel::<()>(1);
     let config = config::new()?;
-    let db_pool = DbPool::new()?;
-    let app = app::app(shutdown_sender, db_pool);
+    let db_pool = DbPool::new(&config)?;
     let address = format!("{}:{}", config.host, config.port);
+    let app = app::app(config, shutdown_sender, db_pool);
     tracing::info!("Listening at {address}");
     let listener = tokio::net::TcpListener::bind(address).await?;
 

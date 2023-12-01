@@ -19,7 +19,12 @@
           "200": {
             "description": "Server is shutting down"
           }
-        }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
       }
     },
     "/api/v1/db/add": {

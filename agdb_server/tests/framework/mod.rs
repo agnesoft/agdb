@@ -7,9 +7,12 @@ use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
 
+const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
+const HOST_IP: &str = "127.0.0.1";
 const HOST: &str = "http://127.0.0.1";
 const DEFAULT_PORT: u16 = 3000;
+const ADMIN: &str = "admin";
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
 pub struct TestServer {
@@ -17,6 +20,8 @@ pub struct TestServer {
     pub port: u16,
     pub process: Child,
     pub client: Client,
+    pub admin: String,
+    pub admin_password: String,
 }
 
 impl TestServer {
@@ -40,8 +45,9 @@ impl TestServer {
         std::fs::create_dir(&dir)?;
 
         let mut config = HashMap::<&str, serde_yaml::Value>::new();
-        config.insert("host", "127.0.0.1".into());
+        config.insert("host", HOST_IP.into());
         config.insert("port", port.into());
+        config.insert("admin", ADMIN.into());
 
         if port != DEFAULT_PORT {
             let file = std::fs::File::options()
@@ -51,17 +57,16 @@ impl TestServer {
             serde_yaml::to_writer(file, &config)?;
         }
 
-        let process = Command::cargo_bin("agdb_server")?
-            .current_dir(&dir)
-            .spawn()?;
+        let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
 
         let client = reqwest::Client::new();
-
         Ok(Self {
             dir,
             port,
             process,
             client,
+            admin: ADMIN.to_string(),
+            admin_password: ADMIN.to_string(),
         })
     }
 
@@ -69,6 +74,17 @@ impl TestServer {
         Ok(self
             .client
             .get(self.url(uri))
+            .send()
+            .await?
+            .status()
+            .as_u16())
+    }
+
+    pub async fn get_auth(&self, uri: &str, token: &str) -> anyhow::Result<u16> {
+        Ok(self
+            .client
+            .get(self.url(uri))
+            .bearer_auth(token)
             .send()
             .await?
             .status()
@@ -83,7 +99,7 @@ impl TestServer {
             .send()
             .await?;
         let status = response.status().as_u16();
-        let response_content = String::from_utf8(response.bytes().await?.to_vec())?;
+        let response_content = response.text().await?;
 
         Ok((status, response_content))
     }
@@ -123,7 +139,7 @@ impl TestServer {
     ) -> anyhow::Result<(u16, String)> {
         let response = self.client.post(self.url(uri)).json(&json).send().await?;
         let status = response.status().as_u16();
-        let response_content = String::from_utf8(response.bytes().await?.to_vec())?;
+        let response_content = response.text().await?;
 
         Ok((status, response_content))
     }
@@ -142,19 +158,39 @@ impl TestServer {
 impl Drop for TestServer {
     fn drop(&mut self) {
         let port = self.port;
-        std::thread::spawn(move || {
-            assert_eq!(
-                reqwest::blocking::get(format!("{HOST}:{}/api/v1/admin/shutdown", port))
-                    .unwrap()
-                    .status()
-                    .as_u16(),
-                200
-            );
-        })
-        .join()
-        .unwrap();
+        let admin = self.admin.clone();
 
-        assert!(self.process.wait().unwrap().success());
+        if self.process.try_wait().unwrap().is_none() {
+            std::thread::spawn(move || {
+                let mut admin_user = HashMap::<&str, &str>::new();
+                admin_user.insert("name", &admin);
+                admin_user.insert("password", &admin);
+
+                let admin_token = reqwest::blocking::Client::new()
+                    .post(format!("{HOST}:{}/api/v1/user/login", port))
+                    .json(&admin_user)
+                    .send()
+                    .unwrap()
+                    .text()
+                    .unwrap();
+
+                assert_eq!(
+                    reqwest::blocking::Client::new()
+                        .get(format!("{HOST}:{}/api/v1/admin/shutdown", port))
+                        .bearer_auth(admin_token)
+                        .send()
+                        .unwrap()
+                        .status()
+                        .as_u16(),
+                    200
+                );
+            })
+            .join()
+            .unwrap();
+
+            assert!(self.process.wait().unwrap().success());
+        }
+
         Self::remove_dir_if_exists(&self.dir);
     }
 }

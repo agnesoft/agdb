@@ -43,6 +43,8 @@ impl TestServer {
         Self::remove_dir_if_exists(&dir);
         std::fs::create_dir(&dir)?;
 
+        println!("We have a dir...");
+
         if port != DEFAULT_PORT {
             let mut config = HashMap::<&str, serde_yaml::Value>::new();
             config.insert("host", HOST_IP.into());
@@ -54,10 +56,16 @@ impl TestServer {
                 .write(true)
                 .open(Path::new(&dir).join(CONFIG_FILE))?;
             serde_yaml::to_writer(file, &config)?;
+
+            println!("We have a config...");
         }
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
+
+        println!("We have a running server...");
+
         let client = reqwest::Client::new();
+
         let mut server = Self {
             dir,
             port,
@@ -73,6 +81,8 @@ impl TestServer {
         admin.insert("password", &server.admin_password);
 
         server.admin_token = server.post_response("/user/login", &admin).await?.1;
+
+        println!("We have an admin token: {}...", server.admin_token);
 
         Ok(server)
     }

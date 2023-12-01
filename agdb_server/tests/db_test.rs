@@ -7,7 +7,7 @@ use std::panic::Location;
 
 #[tokio::test]
 async fn add_database() -> anyhow::Result<()> {
-    let server = TestServer::new(100, Location::caller()).await?;
+    let server = TestServer::new(0, Location::caller()).await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");

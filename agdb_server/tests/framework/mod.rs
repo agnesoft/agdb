@@ -39,8 +39,16 @@ impl TestServer {
         Self::remove_dir_if_exists(&dir);
         std::fs::create_dir(&dir)?;
 
+        let mut config = HashMap::<&str, serde_yaml::Value>::new();
+        config.insert("host", "127.0.0.1".into());
+        config.insert("port", port.into());
+
         if port != DEFAULT_PORT {
-            std::fs::write(Path::new(&dir).join(CONFIG_FILE), format!("port: {}", port)).unwrap();
+            let file = std::fs::File::options()
+                .create_new(true)
+                .write(true)
+                .open(Path::new(&dir).join(CONFIG_FILE))?;
+            serde_yaml::to_writer(file, &config)?;
         }
 
         let process = Command::cargo_bin("agdb_server")?

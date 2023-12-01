@@ -6,6 +6,7 @@ use std::path::Path;
 use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
+use std::time::Duration;
 
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
@@ -79,6 +80,8 @@ impl TestServer {
         let mut admin = HashMap::<&str, &str>::new();
         admin.insert("name", &server.admin);
         admin.insert("password", &server.admin_password);
+
+        std::thread::sleep(Duration::from_secs(10));
 
         server.admin_token = server.post_response("/user/login", &admin).await?.1;
 

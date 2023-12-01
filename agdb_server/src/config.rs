@@ -9,6 +9,7 @@ const CONFIG_FILE: &str = "agdb_server.yaml";
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct ConfigImpl {
+    pub(crate) host: String,
     pub(crate) port: u16,
 }
 
@@ -17,7 +18,10 @@ pub(crate) fn new() -> ServerResult<Config> {
         return Ok(Config::new(serde_yaml::from_str(&content)?));
     }
 
-    let config = ConfigImpl { port: 3000 };
+    let config = ConfigImpl {
+        host: "127.0.0.1".to_string(),
+        port: 3000,
+    };
     std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config)?)?;
 
     Ok(Config::new(config))

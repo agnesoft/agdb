@@ -9,6 +9,43 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/admin/change_password": {
+      "post": {
+        "tags": [
+          "crate::routes::admin"
+        ],
+        "operationId": "change_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed"
+          },
+          "401": {
+            "description": "Invalid password"
+          },
+          "403": {
+            "description": "User not found"
+          },
+          "462": {
+            "description": "Password too short (<8)"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/create_user": {
       "post": {
         "tags": [

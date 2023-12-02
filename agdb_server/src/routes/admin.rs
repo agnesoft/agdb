@@ -10,6 +10,39 @@ use axum::Json;
 use tokio::sync::broadcast::Sender;
 
 #[utoipa::path(post,
+    path = "/api/v1/admin/change_password",
+    security(("Token" = [])),
+    request_body = UserCredentials,
+    responses(
+         (status = 200, description = "Password changed"),
+         (status = 401, description = "Invalid password"),
+         (status = 403, description = "User not found"),
+         (status = 462, description = "Password too short (<8)"),
+    )
+)]
+pub(crate) async fn change_password(
+    _admin_id: AdminId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<UserCredentials>,
+) -> Result<StatusCode, ServerError> {
+    if request.password.len() < 8 {
+        return Ok(StatusCode::from_u16(462_u16)?);
+    }
+
+    let mut user = db_pool
+        .find_user(&request.name)
+        .map_err(|_| ServerError::new(StatusCode::FORBIDDEN, "User not found"))?;
+
+    let pswd = Password::create(&request.name, &request.password);
+    user.password = pswd.password.to_vec();
+    user.salt = pswd.user_salt.to_vec();
+
+    db_pool.save_user(user)?;
+
+    Ok(StatusCode::OK)
+}
+
+#[utoipa::path(post,
     path = "/api/v1/admin/create_user",
     request_body = UserCredentials,
     responses(

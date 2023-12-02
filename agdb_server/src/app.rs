@@ -19,6 +19,10 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
     };
 
     let admin_router_v1 = Router::new()
+        .route(
+            "/change_password",
+            routing::post(routes::admin::change_password),
+        )
         .route("/create_user", routing::post(routes::admin::create_user))
         .route("/shutdown", routing::get(routes::admin::shutdown));
 

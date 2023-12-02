@@ -8,6 +8,7 @@ use utoipa::OpenApi;
 #[openapi(
     paths(
         crate::routes::status,
+        crate::routes::admin::change_password,
         crate::routes::admin::create_user,
         crate::routes::admin::shutdown,
         crate::routes::user::login,

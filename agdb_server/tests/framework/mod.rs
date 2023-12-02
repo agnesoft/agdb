@@ -16,6 +16,7 @@ const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 3;
+pub const NO_TOKEN: &Option<String> = &None;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
 pub struct TestServer {
@@ -79,78 +80,52 @@ impl TestServer {
         Err(error)
     }
 
-    pub async fn get(&self, uri: &str) -> anyhow::Result<u16> {
-        Ok(self
-            .client
-            .get(self.url(uri))
-            .send()
-            .await?
-            .status()
-            .as_u16())
+    pub async fn get(&self, uri: &str, token: &Option<String>) -> anyhow::Result<(u16, String)> {
+        let mut request = self.client.get(self.url(uri));
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+
+        Ok((response.status().as_u16(), response.text().await?))
     }
 
-    pub async fn get_auth(&self, uri: &str, token: &str) -> anyhow::Result<u16> {
-        Ok(self
-            .client
-            .get(self.url(uri))
-            .bearer_auth(token)
-            .send()
-            .await?
-            .status()
-            .as_u16())
+    pub async fn init_admin(&self) -> anyhow::Result<Option<String>> {
+        let mut admin = HashMap::<&str, &str>::new();
+        admin.insert("name", &self.admin);
+        admin.insert("password", &self.admin_password);
+        let response = self.post("/user/login", &admin, &None).await?;
+        assert_eq!(response.0, 200);
+        Ok(Some(response.1))
     }
 
-    pub async fn get_auth_response(&self, uri: &str, token: &str) -> anyhow::Result<(u16, String)> {
-        let response = self
-            .client
-            .get(self.url(uri))
-            .bearer_auth(token)
-            .send()
-            .await?;
-        let status = response.status().as_u16();
-        let response_content = response.text().await?;
-
-        Ok((status, response_content))
+    pub async fn init_user(&self, name: &str, password: &str) -> anyhow::Result<Option<String>> {
+        let mut user = HashMap::<&str, &str>::new();
+        user.insert("name", name);
+        user.insert("password", password);
+        assert_eq!(self.post("/user/create", &user, &None).await?.0, 201);
+        let response = self.post("/user/login", &user, &None).await?;
+        assert_eq!(response.0, 200);
+        Ok(Some(response.1))
     }
 
-    pub async fn post(&self, uri: &str, json: &HashMap<&str, &str>) -> anyhow::Result<u16> {
-        Ok(self
-            .client
-            .post(self.url(uri))
-            .json(&json)
-            .send()
-            .await?
-            .status()
-            .as_u16())
-    }
-
-    pub async fn post_auth(
-        &self,
-        uri: &str,
-        token: &str,
-        json: &HashMap<&str, &str>,
-    ) -> anyhow::Result<u16> {
-        Ok(self
-            .client
-            .post(self.url(uri))
-            .bearer_auth(token)
-            .json(&json)
-            .send()
-            .await?
-            .status()
-            .as_u16())
-    }
-
-    pub async fn post_response(
+    pub async fn post(
         &self,
         uri: &str,
         json: &HashMap<&str, &str>,
+        token: &Option<String>,
     ) -> anyhow::Result<(u16, String)> {
-        let response = self.client.post(self.url(uri)).json(&json).send().await?;
-        let status = response.status().as_u16();
-        let response_content = response.text().await?;
+        let mut request = self.client.post(self.url(uri)).json(&json);
 
-        Ok((status, response_content))
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+
+        Ok((response.status().as_u16(), response.text().await?))
     }
 
     fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {

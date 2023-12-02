@@ -14,7 +14,7 @@ const PROTOCOL: &str = "http";
 const HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
-const TIMEOUT: Duration = Duration::from_secs(3);
+const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 3;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
@@ -65,7 +65,6 @@ impl TestServer {
             match server
                 .client
                 .get(format!("{}:{}/api/v1/status", Self::url_base(), port))
-                .timeout(TIMEOUT)
                 .send()
                 .await
             {
@@ -74,6 +73,7 @@ impl TestServer {
                     error = e.into();
                 }
             }
+            std::thread::sleep(RETRY_TIMEOUT);
         }
 
         Err(error)

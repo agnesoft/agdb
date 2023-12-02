@@ -1,24 +1,23 @@
 pub mod framework;
 
 use crate::framework::TestServer;
+use crate::framework::NO_TOKEN;
 use assert_cmd::cargo::CommandCargoExt;
-use std::collections::HashMap;
 use std::process::Command;
 
 #[tokio::test]
 async fn db_reuse_and_error() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    assert_eq!(server.get("/test_error").await?, 500);
-    assert_eq!(server.get("/missing").await?, 404);
-    assert_eq!(server.get("/admin/shutdown").await?, 401);
-    assert_eq!(server.get_auth("/admin/shutdown", "bad_token").await?, 403);
+    assert_eq!(server.get("/status", NO_TOKEN).await?.0, 200);
+    assert_eq!(server.get("/test_error", NO_TOKEN).await?.0, 500);
+    assert_eq!(server.get("/missing", NO_TOKEN).await?.0, 404);
+    assert_eq!(server.get("/admin/shutdown", NO_TOKEN).await?.0, 401);
 
-    let mut admin = HashMap::<&str, &str>::new();
-    admin.insert("name", &server.admin);
-    admin.insert("password", &server.admin_password);
-    let token = server.post_response("/user/login", &admin).await?.1;
+    let bad_token = Some("bad".to_string());
+    assert_eq!(server.get("/admin/shutdown", &bad_token).await?.0, 403);
 
-    assert_eq!(server.get_auth("/admin/shutdown", &token).await?, 200);
+    let token = server.init_admin().await?;
+    assert_eq!(server.get("/admin/shutdown", &token).await?.0, 200);
     assert!(server.process.wait()?.success());
 
     server.process = Command::cargo_bin("agdb_server")?
@@ -31,7 +30,7 @@ async fn db_reuse_and_error() -> anyhow::Result<()> {
 #[tokio::test]
 async fn openapi() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    assert_eq!(server.get("").await?, 200);
-    assert_eq!(server.get("/openapi.json").await?, 200);
+    assert_eq!(server.get("", NO_TOKEN).await?.0, 200);
+    assert_eq!(server.get("/openapi.json", NO_TOKEN).await?.0, 200);
     Ok(())
 }

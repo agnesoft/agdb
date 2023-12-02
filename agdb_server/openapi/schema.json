@@ -9,6 +9,38 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/admin/create_user": {
+      "post": {
+        "tags": [
+          "crate::routes::admin"
+        ],
+        "operationId": "create_user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          },
+          "461": {
+            "description": "Name too short (<3)"
+          },
+          "462": {
+            "description": "Password too short (<8)"
+          },
+          "463": {
+            "description": "User already exists"
+          }
+        }
+      }
+    },
     "/api/v1/admin/shutdown": {
       "get": {
         "tags": [
@@ -199,38 +231,6 @@
             "Token": []
           }
         ]
-      }
-    },
-    "/api/v1/user/create": {
-      "post": {
-        "tags": [
-          "crate::routes::user"
-        ],
-        "operationId": "create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserCredentials"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "User created"
-          },
-          "461": {
-            "description": "Name too short (<3)"
-          },
-          "462": {
-            "description": "Password too short (<8)"
-          },
-          "463": {
-            "description": "User already exists"
-          }
-        }
       }
     },
     "/api/v1/user/login": {

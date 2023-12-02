@@ -17,7 +17,7 @@ use std::sync::RwLockWriteGuard;
 
 const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 
-#[derive(Debug, UserValue)]
+#[derive(UserValue)]
 pub(crate) struct DbUser {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,

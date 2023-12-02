@@ -1,7 +1,7 @@
+use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use reqwest::Client;
 use std::collections::HashMap;
-use std::panic::Location;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
@@ -10,10 +10,11 @@ use std::time::Duration;
 
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
-const HOST_IP: &str = "127.0.0.1";
-const HOST: &str = "http://127.0.0.1";
+const PROTOCOL: &str = "http";
+const HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
+const TIMEOUT: Duration = Duration::from_secs(3);
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
 pub struct TestServer {
@@ -23,32 +24,19 @@ pub struct TestServer {
     pub client: Client,
     pub admin: String,
     pub admin_password: String,
-    pub admin_token: String,
 }
 
 impl TestServer {
-    pub async fn new(port_offset: u16, caller: &Location<'static>) -> anyhow::Result<Self> {
-        let dir = format!(
-            "{}.{}.{}.test",
-            Path::new(caller.file())
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap(),
-            caller.line(),
-            caller.column()
-        );
+    pub async fn new() -> anyhow::Result<Self> {
+        let port = PORT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = format!("{BINARY}.{port}.test");
 
-        let port = port_offset + PORT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
-        Self::remove_dir_if_exists(&dir);
+        Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
-
-        println!("We have a dir...");
 
         if port != DEFAULT_PORT {
             let mut config = HashMap::<&str, serde_yaml::Value>::new();
-            config.insert("host", HOST_IP.into());
+            config.insert("host", HOST.into());
             config.insert("port", port.into());
             config.insert("admin", ADMIN.into());
 
@@ -57,35 +45,25 @@ impl TestServer {
                 .write(true)
                 .open(Path::new(&dir).join(CONFIG_FILE))?;
             serde_yaml::to_writer(file, &config)?;
-
-            println!("We have a config...");
         }
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
-
-        println!("We have a running server...");
-
         let client = reqwest::Client::new();
-
-        let mut server = Self {
+        let server = Self {
             dir,
             port,
             process,
             client,
             admin: ADMIN.to_string(),
             admin_password: ADMIN.to_string(),
-            admin_token: String::new(),
         };
 
-        let mut admin = HashMap::<&str, &str>::new();
-        admin.insert("name", &server.admin);
-        admin.insert("password", &server.admin_password);
-
-        std::thread::sleep(Duration::from_secs(10));
-
-        server.admin_token = server.post_response("/user/login", &admin).await?.1;
-
-        println!("We have an admin token: {}...", server.admin_token);
+        server
+            .client
+            .get(format!("{}:{}/api/v1/status", Self::url_base(), port))
+            .timeout(TIMEOUT)
+            .send()
+            .await?;
 
         Ok(server)
     }
@@ -164,41 +142,72 @@ impl TestServer {
         Ok((status, response_content))
     }
 
-    fn remove_dir_if_exists(dir: &str) {
+    fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
         if Path::new(dir).exists() {
-            std::fs::remove_dir_all(dir).unwrap();
+            std::fs::remove_dir_all(dir)?;
         }
+
+        Ok(())
+    }
+
+    fn shutdown_server(&mut self) -> anyhow::Result<()> {
+        if self.process.try_wait()?.is_none() {
+            let port = self.port;
+            let mut admin = HashMap::<&str, String>::new();
+            admin.insert("name", self.admin.clone());
+            admin.insert("password", self.admin_password.clone());
+
+            std::thread::spawn(move || -> anyhow::Result<()> {
+                let admin_token = reqwest::blocking::Client::new()
+                    .post(format!("{}:{}/api/v1/user/login", Self::url_base(), port))
+                    .json(&admin)
+                    .send()?
+                    .text()?;
+
+                assert_eq!(
+                    reqwest::blocking::Client::new()
+                        .get(format!(
+                            "{}:{}/api/v1/admin/shutdown",
+                            Self::url_base(),
+                            port
+                        ))
+                        .bearer_auth(admin_token)
+                        .send()?
+                        .status()
+                        .as_u16(),
+                    200
+                );
+
+                Ok(())
+            })
+            .join()
+            .map_err(|e| anyhow!("{:?}", e))??;
+        }
+
+        assert!(self.process.wait()?.success());
+
+        Ok(())
     }
 
     fn url(&self, uri: &str) -> String {
-        format!("{HOST}:{}/api/v1{uri}", self.port)
+        format!("{}:{}/api/v1{uri}", Self::url_base(), self.port)
+    }
+
+    fn url_base() -> String {
+        format!("{PROTOCOL}://{HOST}")
     }
 }
 
 impl Drop for TestServer {
     fn drop(&mut self) {
-        let port = self.port;
-        let admin_token = self.admin_token.clone();
+        let shutdown_result = Self::shutdown_server(self);
 
-        if self.process.try_wait().unwrap().is_none() {
-            std::thread::spawn(move || {
-                assert_eq!(
-                    reqwest::blocking::Client::new()
-                        .get(format!("{HOST}:{}/api/v1/admin/shutdown", port))
-                        .bearer_auth(admin_token)
-                        .send()
-                        .unwrap()
-                        .status()
-                        .as_u16(),
-                    200
-                );
-            })
-            .join()
-            .unwrap();
-
-            assert!(self.process.wait().unwrap().success());
+        if shutdown_result.is_err() {
+            let _ = self.process.kill();
+            let _ = self.process.wait();
         }
 
-        Self::remove_dir_if_exists(&self.dir);
+        shutdown_result.unwrap();
+        Self::remove_dir_if_exists(&self.dir).unwrap();
     }
 }

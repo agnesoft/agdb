@@ -7,6 +7,7 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        crate::routes::status,
         crate::routes::admin::shutdown,
         crate::routes::user::create,
         crate::routes::user::login,

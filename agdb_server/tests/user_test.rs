@@ -2,11 +2,10 @@ pub mod framework;
 
 use crate::framework::TestServer;
 use std::collections::HashMap;
-use std::panic::Location;
 
 #[tokio::test]
 async fn chnage_password() -> anyhow::Result<()> {
-    let server = TestServer::new(200, Location::caller()).await?;
+    let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
@@ -31,7 +30,7 @@ async fn chnage_password() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn create() -> anyhow::Result<()> {
-    let server = TestServer::new(200, Location::caller()).await?;
+    let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "a");
     user.insert("password", "");
@@ -46,7 +45,7 @@ async fn create() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn login() -> anyhow::Result<()> {
-    let server = TestServer::new(200, Location::caller()).await?;
+    let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");

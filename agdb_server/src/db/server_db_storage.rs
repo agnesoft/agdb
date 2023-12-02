@@ -126,7 +126,7 @@ mod tests {
         let _test_file_dot = TestFile::new(".file_storage.agdb");
         let test_file2 = TestFile::new("file_storage_backup.agdb");
         let mut storage = ServerDbStorage::new(&format!("file:{}", test_file.0))?;
-        println!("{:?}", storage);
+        format!("{:?}", storage);
         storage.backup(&test_file2.0)?;
         assert!(std::path::Path::new(&test_file2.0).exists());
         storage.flush()?;
@@ -145,7 +145,7 @@ mod tests {
         let _test_file_dot = TestFile::new(".mapped_storage.agdb");
         let test_file2 = TestFile::new("mapped_storage_backup.agdb");
         let mut storage = ServerDbStorage::new(&format!("mapped:{}", test_file.0))?;
-        println!("{:?}", storage);
+        format!("{:?}", storage);
         storage.backup(&test_file2.0)?;
         assert!(std::path::Path::new(&test_file2.0).exists());
         storage.flush()?;
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn memory_storage() -> anyhow::Result<()> {
         let mut storage = ServerDbStorage::new("memory:db_test.agdb")?;
-        println!("{:?}", storage);
+        format!("{:?}", storage);
         storage.backup("backup_test")?;
         storage.flush()?;
         assert!(storage.is_empty());

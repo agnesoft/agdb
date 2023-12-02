@@ -42,6 +42,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
                 "/v1",
                 Router::new()
                     .route("/test_error", routing::get(routes::test_error))
+                    .route("/status", routing::get(routes::status))
                     .nest("/admin", admin_router_v1)
                     .nest("/user", user_router_v1)
                     .nest("/db", db_router_v1),

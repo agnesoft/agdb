@@ -151,6 +151,19 @@
         ]
       }
     },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "crate::routes"
+        ],
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "Server is ready"
+          }
+        }
+      }
+    },
     "/api/v1/user/change_password": {
       "post": {
         "tags": [

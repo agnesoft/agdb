@@ -19,7 +19,12 @@
           "200": {
             "description": "Server is shutting down"
           }
-        }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
       }
     },
     "/api/v1/db/add": {
@@ -146,6 +151,19 @@
         ]
       }
     },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "crate::routes"
+        ],
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "Server is ready"
+          }
+        }
+      }
+    },
     "/api/v1/user/change_password": {
       "post": {
         "tags": [
@@ -235,9 +253,9 @@
           "200": {
             "description": "Login successful",
             "content": {
-              "application/json": {
+              "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserToken"
+                  "type": "string"
                 }
               }
             }
@@ -321,9 +339,6 @@
             "type": "string"
           }
         }
-      },
-      "UserToken": {
-        "type": "string"
       }
     },
     "securitySchemes": {

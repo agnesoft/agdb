@@ -1,15 +1,21 @@
+use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use reqwest::Client;
 use std::collections::HashMap;
-use std::panic::Location;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
+use std::time::Duration;
 
+const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
-const HOST: &str = "http://127.0.0.1";
+const PROTOCOL: &str = "http";
+const HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 3000;
+const ADMIN: &str = "admin";
+const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
+const RETRY_ATTEMPS: u16 = 3;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
 pub struct TestServer {
@@ -17,33 +23,24 @@ pub struct TestServer {
     pub port: u16,
     pub process: Child,
     pub client: Client,
+    pub admin: String,
+    pub admin_password: String,
 }
 
 impl TestServer {
-    #[track_caller]
-    pub fn new() -> anyhow::Result<Self> {
-        let caller = Location::caller();
-        let dir = format!(
-            "{}.{}.{}.test",
-            Path::new(caller.file())
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap(),
-            caller.line(),
-            caller.column()
-        );
-
+    pub async fn new() -> anyhow::Result<Self> {
         let port = PORT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = format!("{BINARY}.{port}.test");
 
-        Self::remove_dir_if_exists(&dir);
+        Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
 
-        let mut config = HashMap::<&str, serde_yaml::Value>::new();
-        config.insert("host", "127.0.0.1".into());
-        config.insert("port", port.into());
-
         if port != DEFAULT_PORT {
+            let mut config = HashMap::<&str, serde_yaml::Value>::new();
+            config.insert("host", HOST.into());
+            config.insert("port", port.into());
+            config.insert("admin", ADMIN.into());
+
             let file = std::fs::File::options()
                 .create_new(true)
                 .write(true)
@@ -51,24 +48,52 @@ impl TestServer {
             serde_yaml::to_writer(file, &config)?;
         }
 
-        let process = Command::cargo_bin("agdb_server")?
-            .current_dir(&dir)
-            .spawn()?;
-
+        let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let client = reqwest::Client::new();
-
-        Ok(Self {
+        let server = Self {
             dir,
             port,
             process,
             client,
-        })
+            admin: ADMIN.to_string(),
+            admin_password: ADMIN.to_string(),
+        };
+
+        let mut error = anyhow!("Failed to start server");
+
+        for _ in 0..RETRY_ATTEMPS {
+            match server
+                .client
+                .get(format!("{}:{}/api/v1/status", Self::url_base(), port))
+                .send()
+                .await
+            {
+                Ok(_) => return Ok(server),
+                Err(e) => {
+                    error = e.into();
+                }
+            }
+            std::thread::sleep(RETRY_TIMEOUT);
+        }
+
+        Err(error)
     }
 
     pub async fn get(&self, uri: &str) -> anyhow::Result<u16> {
         Ok(self
             .client
             .get(self.url(uri))
+            .send()
+            .await?
+            .status()
+            .as_u16())
+    }
+
+    pub async fn get_auth(&self, uri: &str, token: &str) -> anyhow::Result<u16> {
+        Ok(self
+            .client
+            .get(self.url(uri))
+            .bearer_auth(token)
             .send()
             .await?
             .status()
@@ -83,7 +108,7 @@ impl TestServer {
             .send()
             .await?;
         let status = response.status().as_u16();
-        let response_content = String::from_utf8(response.bytes().await?.to_vec())?;
+        let response_content = response.text().await?;
 
         Ok((status, response_content))
     }
@@ -123,38 +148,77 @@ impl TestServer {
     ) -> anyhow::Result<(u16, String)> {
         let response = self.client.post(self.url(uri)).json(&json).send().await?;
         let status = response.status().as_u16();
-        let response_content = String::from_utf8(response.bytes().await?.to_vec())?;
+        let response_content = response.text().await?;
 
         Ok((status, response_content))
     }
 
-    fn remove_dir_if_exists(dir: &str) {
+    fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
         if Path::new(dir).exists() {
-            std::fs::remove_dir_all(dir).unwrap();
+            std::fs::remove_dir_all(dir)?;
         }
+
+        Ok(())
+    }
+
+    fn shutdown_server(&mut self) -> anyhow::Result<()> {
+        if self.process.try_wait()?.is_none() {
+            let port = self.port;
+            let mut admin = HashMap::<&str, String>::new();
+            admin.insert("name", self.admin.clone());
+            admin.insert("password", self.admin_password.clone());
+
+            std::thread::spawn(move || -> anyhow::Result<()> {
+                let admin_token = reqwest::blocking::Client::new()
+                    .post(format!("{}:{}/api/v1/user/login", Self::url_base(), port))
+                    .json(&admin)
+                    .send()?
+                    .text()?;
+
+                assert_eq!(
+                    reqwest::blocking::Client::new()
+                        .get(format!(
+                            "{}:{}/api/v1/admin/shutdown",
+                            Self::url_base(),
+                            port
+                        ))
+                        .bearer_auth(admin_token)
+                        .send()?
+                        .status()
+                        .as_u16(),
+                    200
+                );
+
+                Ok(())
+            })
+            .join()
+            .map_err(|e| anyhow!("{:?}", e))??;
+        }
+
+        assert!(self.process.wait()?.success());
+
+        Ok(())
     }
 
     fn url(&self, uri: &str) -> String {
-        format!("{HOST}:{}/api/v1{uri}", self.port)
+        format!("{}:{}/api/v1{uri}", Self::url_base(), self.port)
+    }
+
+    fn url_base() -> String {
+        format!("{PROTOCOL}://{HOST}")
     }
 }
 
 impl Drop for TestServer {
     fn drop(&mut self) {
-        let port = self.port;
-        std::thread::spawn(move || {
-            assert_eq!(
-                reqwest::blocking::get(format!("{HOST}:{}/api/v1/admin/shutdown", port))
-                    .unwrap()
-                    .status()
-                    .as_u16(),
-                200
-            );
-        })
-        .join()
-        .unwrap();
+        let shutdown_result = Self::shutdown_server(self);
 
-        assert!(self.process.wait().unwrap().success());
-        Self::remove_dir_if_exists(&self.dir);
+        if shutdown_result.is_err() {
+            let _ = self.process.kill();
+            let _ = self.process.wait();
+        }
+
+        shutdown_result.unwrap();
+        Self::remove_dir_if_exists(&self.dir).unwrap();
     }
 }

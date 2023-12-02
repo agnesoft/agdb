@@ -7,6 +7,7 @@ use utoipa::OpenApi;
 #[derive(OpenApi)]
 #[openapi(
     paths(
+        crate::routes::status,
         crate::routes::admin::shutdown,
         crate::routes::user::create,
         crate::routes::user::login,
@@ -19,7 +20,6 @@ use utoipa::OpenApi;
     components(schemas(
         crate::routes::user::ChangePassword,
         crate::routes::user::UserCredentials,
-        crate::routes::user::UserToken,
         crate::routes::db::DbType,
         crate::routes::db::ServerDatabase,
         crate::routes::db::ServerDatabaseName,

@@ -1,7 +1,9 @@
 mod server_db;
 mod server_db_storage;
 
+use crate::config::Config;
 use crate::db::server_db::ServerDb;
+use crate::password::Password;
 use crate::server_error::ServerResult;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -41,7 +43,7 @@ pub(crate) struct DbPoolImpl {
 pub(crate) struct DbPool(pub(crate) Arc<DbPoolImpl>);
 
 impl DbPool {
-    pub(crate) fn new() -> ServerResult<Self> {
+    pub(crate) fn new(config: &Config) -> ServerResult<Self> {
         let db_exists = Path::new("agdb_server.agdb").exists();
 
         let db_pool = Self(Arc::new(DbPoolImpl {
@@ -50,12 +52,37 @@ impl DbPool {
         }));
 
         if !db_exists {
-            db_pool.0.server_db.get_mut()?.exec_mut(
-                &QueryBuilder::insert()
-                    .nodes()
-                    .aliases(vec!["users", "dbs"])
-                    .query(),
-            )?;
+            let admin_password = Password::create(&config.admin, &config.admin);
+
+            db_pool.0.server_db.get_mut()?.transaction_mut(|t| {
+                t.exec_mut(
+                    &QueryBuilder::insert()
+                        .nodes()
+                        .aliases(vec!["users", "dbs"])
+                        .query(),
+                )?;
+
+                let admin = t.exec_mut(
+                    &QueryBuilder::insert()
+                        .nodes()
+                        .values(&DbUser {
+                            db_id: None,
+                            name: config.admin.clone(),
+                            password: admin_password.password.to_vec(),
+                            salt: admin_password.user_salt.to_vec(),
+                            token: String::new(),
+                        })
+                        .query(),
+                )?;
+
+                t.exec_mut(
+                    &QueryBuilder::insert()
+                        .edges()
+                        .from("users")
+                        .to(admin)
+                        .query(),
+                )
+            })?;
         }
 
         Ok(db_pool)

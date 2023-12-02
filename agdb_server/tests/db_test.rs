@@ -6,7 +6,7 @@ use std::path::Path;
 
 #[tokio::test]
 async fn add_database() -> anyhow::Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
@@ -36,7 +36,7 @@ async fn add_database() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn delete() -> anyhow::Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
@@ -112,7 +112,7 @@ async fn delete() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn list() -> anyhow::Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
@@ -162,7 +162,7 @@ async fn list() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");

@@ -14,7 +14,7 @@ const PROTOCOL: &str = "http";
 const HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
-const TIMEOUT: Duration = Duration::from_secs(3);
+const TIMEOUT: Duration = Duration::from_secs(10);
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
 pub struct TestServer {

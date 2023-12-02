@@ -35,7 +35,14 @@ async fn chnage_password() -> anyhow::Result<()> {
         403
     ); //fordbidden
 
-    assert_eq!(server.post("/user/create", &user, NO_TOKEN).await?.0, 201); //user created
+    let admin_token = server.init_admin().await?;
+    assert_eq!(
+        server
+            .post("/admin/create_user", &user, &admin_token)
+            .await?
+            .0,
+        201
+    ); //user created
     assert_eq!(
         server
             .post("/user/change_password", &change, NO_TOKEN)
@@ -58,28 +65,20 @@ async fn chnage_password() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn create() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let mut user = HashMap::new();
-    user.insert("name", "a");
-    user.insert("password", "");
-    assert_eq!(server.post("/user/create", &user, NO_TOKEN).await?.0, 461); //short name
-    user.insert("name", "alice");
-    assert_eq!(server.post("/user/create", &user, NO_TOKEN).await?.0, 462); //short password
-    user.insert("password", "mypassword123");
-    assert_eq!(server.post("/user/create", &user, NO_TOKEN).await?.0, 201); //created
-    assert_eq!(server.post("/user/create", &user, NO_TOKEN).await?.0, 463); //user exists
-    Ok(())
-}
-
-#[tokio::test]
 async fn login() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let mut user = HashMap::new();
     user.insert("name", "alice");
     user.insert("password", "mypassword123");
     assert_eq!(server.post("/user/login", &user, NO_TOKEN).await?.0, 403); //unknown user
-    assert_eq!(server.post("/user/create", &user, NO_TOKEN).await?.0, 201); //created
+    let admin_token = server.init_admin().await?;
+    assert_eq!(
+        server
+            .post("/admin/create_user", &user, &admin_token)
+            .await?
+            .0,
+        201
+    ); //created
     user.insert("password", "badpassword");
     assert_eq!(server.post("/user/login", &user, NO_TOKEN).await?.0, 401); //bad password
     user.insert("password", "mypassword123");

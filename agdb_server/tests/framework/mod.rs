@@ -105,7 +105,13 @@ impl TestServer {
         let mut user = HashMap::<&str, &str>::new();
         user.insert("name", name);
         user.insert("password", password);
-        assert_eq!(self.post("/user/create", &user, &None).await?.0, 201);
+        let admin_token = self.init_admin().await?;
+        assert_eq!(
+            self.post("/admin/create_user", &user, &admin_token)
+                .await?
+                .0,
+            201
+        );
         let response = self.post("/user/login", &user, &None).await?;
         assert_eq!(response.0, 200);
         Ok(Some(response.1))

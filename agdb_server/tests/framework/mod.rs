@@ -107,7 +107,7 @@ impl TestServer {
         user.insert("password", password);
         let admin_token = self.init_admin().await?;
         assert_eq!(
-            self.post("/admin/create_user", &user, &admin_token)
+            self.post("/admin/user/create", &user, &admin_token)
                 .await?
                 .0,
             201

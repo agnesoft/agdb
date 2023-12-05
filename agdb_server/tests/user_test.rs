@@ -38,7 +38,7 @@ async fn chnage_password() -> anyhow::Result<()> {
     let admin_token = server.init_admin().await?;
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &admin_token)
+            .post("/admin/user/create", &user, &admin_token)
             .await?
             .0,
         201
@@ -74,7 +74,7 @@ async fn login() -> anyhow::Result<()> {
     let admin_token = server.init_admin().await?;
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &admin_token)
+            .post("/admin/user/create", &user, &admin_token)
             .await?
             .0,
         201

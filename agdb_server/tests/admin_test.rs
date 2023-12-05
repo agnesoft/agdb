@@ -11,13 +11,13 @@ async fn create_user() -> anyhow::Result<()> {
     user.insert("name", "a");
     user.insert("password", "");
     assert_eq!(
-        server.post("/admin/create_user", &user, NO_TOKEN).await?.0,
+        server.post("/admin/user/create", &user, NO_TOKEN).await?.0,
         401
     ); //permission denied
     let bad_token = Some("bad".to_string());
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &bad_token)
+            .post("/admin/user/create", &user, &bad_token)
             .await?
             .0,
         403
@@ -25,7 +25,7 @@ async fn create_user() -> anyhow::Result<()> {
     let admin_token = server.init_admin().await?;
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &admin_token)
+            .post("/admin/user/create", &user, &admin_token)
             .await?
             .0,
         461
@@ -33,7 +33,7 @@ async fn create_user() -> anyhow::Result<()> {
     user.insert("name", "alice");
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &admin_token)
+            .post("/admin/user/create", &user, &admin_token)
             .await?
             .0,
         462
@@ -41,14 +41,14 @@ async fn create_user() -> anyhow::Result<()> {
     user.insert("password", "mypassword123");
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &admin_token)
+            .post("/admin/user/create", &user, &admin_token)
             .await?
             .0,
         201
     ); //created
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &admin_token)
+            .post("/admin/user/create", &user, &admin_token)
             .await?
             .0,
         463
@@ -67,7 +67,7 @@ async fn change_password() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post("/admin/create_user", &user, &admin_token)
+            .post("/admin/user/create", &user, &admin_token)
             .await?
             .0,
         201
@@ -78,7 +78,7 @@ async fn change_password() -> anyhow::Result<()> {
     let bad_token = Some("bad".to_string());
     assert_eq!(
         server
-            .post("/admin/change_password", &user, &bad_token)
+            .post("/admin/user/change_password", &user, &bad_token)
             .await?
             .0,
         403
@@ -86,7 +86,7 @@ async fn change_password() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post("/admin/change_password", &user, &admin_token)
+            .post("/admin/user/change_password", &user, &admin_token)
             .await?
             .0,
         200
@@ -98,7 +98,7 @@ async fn change_password() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post("/admin/change_password", &user, &admin_token)
+            .post("/admin/user/change_password", &user, &admin_token)
             .await?
             .0,
         403
@@ -108,11 +108,43 @@ async fn change_password() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post("/admin/change_password", &user, &admin_token)
+            .post("/admin/user/change_password", &user, &admin_token)
             .await?
             .0,
         462
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_list() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let mut token = server.init_user("alice", "password123").await?;
+    let mut db = HashMap::<&str, &str>::new();
+    db.insert("name", "db1");
+    db.insert("db_type", "memory");
+    assert_eq!(server.post("/db/add", &db, &token).await?.0, 201);
+    token = server.init_user("bob", "password456").await?;
+    db.insert("name", "db2");
+    assert_eq!(server.post("/db/add", &db, &token).await?.0, 201);
+
+    let admin_token = server.init_admin().await?;
+    let mut dbs = Vec::<HashMap<&str, &str>>::new();
+    dbs.push(db.clone());
+    db.insert("name", "db1");
+    dbs.push(db);
+
+    let bad_token = Some("bad".to_string());
+    assert_eq!(server.get("/admin/db/list", &bad_token).await?.0, 403);
+
+    let (status, list) = server.get("/admin/db/list", &admin_token).await?;
+    assert_eq!(status, 200);
+    let mut list: Vec<HashMap<&str, &str>> = serde_json::from_str(&list)?;
+    dbs.sort_by(|left, right| left.get("name").unwrap().cmp(right.get("name").unwrap()));
+    list.sort_by(|left, right| left.get("name").unwrap().cmp(right.get("name").unwrap()));
+
+    assert_eq!(dbs, list);
 
     Ok(())
 }

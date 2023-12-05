@@ -18,13 +18,19 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         shutdown_sender,
     };
 
-    let admin_router_v1 = Router::new()
+    let admin_db_router_v1 = Router::new().route("/list", routing::get(routes::admin::db::list));
+
+    let admin_user_router_v1 = Router::new()
+        .route("/create", routing::post(routes::admin::user::create))
         .route(
             "/change_password",
-            routing::post(routes::admin::change_password),
-        )
-        .route("/create_user", routing::post(routes::admin::create_user))
-        .route("/shutdown", routing::get(routes::admin::shutdown));
+            routing::post(routes::admin::user::change_password),
+        );
+
+    let admin_router_v1 = Router::new()
+        .route("/shutdown", routing::get(routes::admin::shutdown))
+        .nest("/db", admin_db_router_v1)
+        .nest("/user", admin_user_router_v1);
 
     let user_router_v1 = Router::new()
         .route(

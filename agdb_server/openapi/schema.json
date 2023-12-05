@@ -9,10 +9,56 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/v1/admin/change_password": {
-      "post": {
+    "/api/v1/admin/db/list": {
+      "get": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabase"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/shutdown": {
+      "get": {
         "tags": [
           "crate::routes::admin"
+        ],
+        "operationId": "shutdown",
+        "responses": {
+          "200": {
+            "description": "Server is shutting down"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/change_password": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::user"
         ],
         "operationId": "change_password",
         "requestBody": {
@@ -46,12 +92,12 @@
         ]
       }
     },
-    "/api/v1/admin/create_user": {
+    "/api/v1/admin/user/create": {
       "post": {
         "tags": [
-          "crate::routes::admin"
+          "crate::routes::admin::user"
         ],
-        "operationId": "create_user",
+        "operationId": "create",
         "requestBody": {
           "content": {
             "application/json": {
@@ -76,24 +122,6 @@
             "description": "User already exists"
           }
         }
-      }
-    },
-    "/api/v1/admin/shutdown": {
-      "get": {
-        "tags": [
-          "crate::routes::admin"
-        ],
-        "operationId": "shutdown",
-        "responses": {
-          "200": {
-            "description": "Server is shutting down"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
       }
     },
     "/api/v1/db/add": {

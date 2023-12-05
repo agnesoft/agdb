@@ -138,6 +138,25 @@ impl DbPool {
         Ok(())
     }
 
+    pub(crate) fn find_databases(&self) -> ServerResult<Vec<Database>> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .from("dbs")
+                            .where_()
+                            .distance(agdb::CountComparison::Equal(2))
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .try_into()?)
+    }
+
     pub(crate) fn find_database(&self, name: &str) -> ServerResult<Database> {
         Ok(self
             .0

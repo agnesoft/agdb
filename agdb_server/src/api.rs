@@ -26,6 +26,7 @@ use utoipa::OpenApi;
         crate::routes::db::DbType,
         crate::routes::db::ServerDatabase,
         crate::routes::db::ServerDatabaseName,
+        crate::routes::admin::user::UserStatus,
     )),
     modifiers(&BearerToken),
 )]

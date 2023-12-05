@@ -7,6 +7,13 @@ use crate::user_id::AdminId;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+use serde::Serialize;
+use utoipa::ToSchema;
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct UserStatus {
+    pub(crate) name: String,
+}
 
 #[utoipa::path(post,
     path = "/api/v1/admin/user/change_password",
@@ -79,4 +86,23 @@ pub(crate) async fn create(
     })?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(get,
+    path = "/api/v1/admin/user/list",
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "Ok", body = Vec<UserStatus>)
+    )
+)]
+pub(crate) async fn list(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+) -> Result<(StatusCode, Json<Vec<UserStatus>>), ServerError> {
+    let users = db_pool
+        .find_users()?
+        .into_iter()
+        .map(|name| UserStatus { name })
+        .collect();
+    Ok((StatusCode::OK, Json(users)))
 }

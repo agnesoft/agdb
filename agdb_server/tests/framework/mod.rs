@@ -1,12 +1,28 @@
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use reqwest::Client;
+use serde::de::DeserializeOwned;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
 use std::time::Duration;
+
+pub const CHANGE_PASSWORD_URI: &str = "/user/change_password";
+pub const CREATE_USER_URI: &str = "/admin/user/create";
+pub const DB_ADD_URI: &str = "/db/add";
+pub const DB_DELETE_URI: &str = "/db/delete";
+pub const DB_LIST_URI: &str = "/db/list";
+pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
+pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
+pub const ADMIN_CHANGE_PASSWORD_URI: &str = "/admin/user/change_password";
+pub const DB_REMOVE_URI: &str = "/db/remove";
+pub const LOGIN_URI: &str = "/user/login";
+pub const SHUTDOWN_URI: &str = "/admin/shutdown";
+pub const STATUS_URI: &str = "/status";
 
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
@@ -18,6 +34,30 @@ const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 3;
 pub const NO_TOKEN: &Option<String> = &None;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Db {
+    pub name: String,
+    pub db_type: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct User<'a> {
+    pub name: &'a str,
+    pub password: &'a str,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UserStatus {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ChangePassword<'a> {
+    pub name: &'a str,
+    pub password: &'a str,
+    pub new_password: &'a str,
+}
 
 pub struct TestServer {
     pub dir: String,
@@ -65,7 +105,7 @@ impl TestServer {
         for _ in 0..RETRY_ATTEMPS {
             match server
                 .client
-                .get(format!("{}:{}/api/v1/status", Self::url_base(), port))
+                .get(format!("{}:{}/api/v1{STATUS_URI}", Self::url_base(), port))
                 .send()
                 .await
             {
@@ -80,7 +120,11 @@ impl TestServer {
         Err(error)
     }
 
-    pub async fn get(&self, uri: &str, token: &Option<String>) -> anyhow::Result<(u16, String)> {
+    pub async fn get<T: DeserializeOwned>(
+        &self,
+        uri: &str,
+        token: &Option<String>,
+    ) -> anyhow::Result<(u16, anyhow::Result<T>)> {
         let mut request = self.client.get(self.url(uri));
 
         if let Some(token) = token {
@@ -88,15 +132,16 @@ impl TestServer {
         }
 
         let response = request.send().await?;
+        let status = response.status().as_u16();
 
-        Ok((response.status().as_u16(), response.text().await?))
+        Ok((status, response.json().await.map_err(|e| anyhow!(e))))
     }
 
     pub async fn init_admin(&self) -> anyhow::Result<Option<String>> {
         let mut admin = HashMap::<&str, &str>::new();
         admin.insert("name", &self.admin);
         admin.insert("password", &self.admin_password);
-        let response = self.post("/user/login", &admin, &None).await?;
+        let response = self.post(LOGIN_URI, &admin, &None).await?;
         assert_eq!(response.0, 200);
         Ok(Some(response.1))
     }
@@ -107,20 +152,18 @@ impl TestServer {
         user.insert("password", password);
         let admin_token = self.init_admin().await?;
         assert_eq!(
-            self.post("/admin/user/create", &user, &admin_token)
-                .await?
-                .0,
+            self.post(CREATE_USER_URI, &user, &admin_token).await?.0,
             201
         );
-        let response = self.post("/user/login", &user, &None).await?;
+        let response = self.post(LOGIN_URI, &user, &None).await?;
         assert_eq!(response.0, 200);
         Ok(Some(response.1))
     }
 
-    pub async fn post(
+    pub async fn post<T: Serialize>(
         &self,
         uri: &str,
-        json: &HashMap<&str, &str>,
+        json: &T,
         token: &Option<String>,
     ) -> anyhow::Result<(u16, String)> {
         let mut request = self.client.post(self.url(uri)).json(&json);
@@ -151,7 +194,7 @@ impl TestServer {
 
             std::thread::spawn(move || -> anyhow::Result<()> {
                 let admin_token = reqwest::blocking::Client::new()
-                    .post(format!("{}:{}/api/v1/user/login", Self::url_base(), port))
+                    .post(format!("{}:{}/api/v1{LOGIN_URI}", Self::url_base(), port))
                     .json(&admin)
                     .send()?
                     .text()?;
@@ -159,7 +202,7 @@ impl TestServer {
                 assert_eq!(
                     reqwest::blocking::Client::new()
                         .get(format!(
-                            "{}:{}/api/v1/admin/shutdown",
+                            "{}:{}/api/v1{SHUTDOWN_URI}",
                             Self::url_base(),
                             port
                         ))

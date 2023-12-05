@@ -11,6 +11,7 @@ use utoipa::OpenApi;
         crate::routes::admin::db::list,
         crate::routes::admin::user::change_password,
         crate::routes::admin::user::create,
+        crate::routes::admin::user::list,
         crate::routes::admin::shutdown,
         crate::routes::user::login,
         crate::routes::user::change_password,
@@ -25,6 +26,7 @@ use utoipa::OpenApi;
         crate::routes::db::DbType,
         crate::routes::db::ServerDatabase,
         crate::routes::db::ServerDatabaseName,
+        crate::routes::admin::user::UserStatus,
     )),
     modifiers(&BearerToken),
 )]

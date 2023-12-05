@@ -180,6 +180,31 @@ impl DbPool {
             .try_into()?)
     }
 
+    pub(crate) fn find_users(&self) -> ServerResult<Vec<String>> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .values(vec!["name".into()])
+                    .ids(
+                        QueryBuilder::search()
+                            .from("users")
+                            .where_()
+                            .distance(agdb::CountComparison::Equal(2))
+                            .and()
+                            .keys(vec!["name".into()])
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .elements
+            .into_iter()
+            .map(|e| e.values[0].value.to_string())
+            .collect())
+    }
+
     pub(crate) fn find_user_databases(&self, user: DbId) -> ServerResult<Vec<Database>> {
         Ok(self
             .0

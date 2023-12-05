@@ -120,24 +120,32 @@ async fn change_password() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_list() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
+
+    let bad_token = Some("bad".to_string());
+    assert_eq!(server.get("/admin/db/list", &bad_token).await?.0, 403);
+
+    let admin_token = server.init_admin().await?;
+    let (status, list) = server.get("/admin/db/list", &admin_token).await?;
+    let list: Vec<HashMap<&str, &str>> = serde_json::from_str(&list)?;
+    assert_eq!(status, 200);
+    assert!(list.is_empty());
+
     let mut token = server.init_user("alice", "password123").await?;
     let mut db = HashMap::<&str, &str>::new();
     db.insert("name", "db1");
     db.insert("db_type", "memory");
     assert_eq!(server.post("/db/add", &db, &token).await?.0, 201);
+
     token = server.init_user("bob", "password456").await?;
     db.insert("name", "db2");
     assert_eq!(server.post("/db/add", &db, &token).await?.0, 201);
 
-    let admin_token = server.init_admin().await?;
     let mut dbs = Vec::<HashMap<&str, &str>>::new();
     dbs.push(db.clone());
     db.insert("name", "db1");
     dbs.push(db);
 
-    let bad_token = Some("bad".to_string());
-    assert_eq!(server.get("/admin/db/list", &bad_token).await?.0, 403);
-
+    let admin_token = server.init_admin().await?;
     let (status, list) = server.get("/admin/db/list", &admin_token).await?;
     assert_eq!(status, 200);
     let mut list: Vec<HashMap<&str, &str>> = serde_json::from_str(&list)?;
@@ -145,6 +153,33 @@ async fn db_list() -> anyhow::Result<()> {
     list.sort_by(|left, right| left.get("name").unwrap().cmp(right.get("name").unwrap()));
 
     assert_eq!(dbs, list);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn user_list() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let bad_token = Some("bad".to_string());
+    assert_eq!(server.get("/admin/user/list", &bad_token).await?.0, 403);
+
+    let admin_token = server.init_admin().await?;
+    let (status, list) = server.get("/admin/user/list", &admin_token).await?;
+    let list: Vec<String> = serde_json::from_str(&list)?;
+    assert_eq!(status, 200);
+    assert_eq!(list, vec!["admin"]);
+
+    server.init_user("alice", "password123").await?;
+    server.init_user("bob", "password456").await?;
+
+    let admin_token = server.init_admin().await?;
+    let (status, list) = server.get("/admin/user/list", &admin_token).await?;
+    assert_eq!(status, 200);
+    let mut list: Vec<String> = serde_json::from_str(&list)?;
+    list.sort();
+    let expected = vec!["admin", "alice", "bob"];
+
+    assert_eq!(expected, list);
 
     Ok(())
 }

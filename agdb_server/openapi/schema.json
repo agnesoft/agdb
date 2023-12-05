@@ -124,6 +124,34 @@
         }
       }
     },
+    "/api/v1/admin/user/list": {
+      "get": {
+        "tags": [
+          "crate::routes::admin::user"
+        ],
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/add": {
       "post": {
         "tags": [

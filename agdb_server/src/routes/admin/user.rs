@@ -80,3 +80,18 @@ pub(crate) async fn create(
 
     Ok(StatusCode::CREATED)
 }
+
+#[utoipa::path(get,
+    path = "/api/v1/admin/user/list",
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "Ok", body = Vec<String>)
+    )
+)]
+pub(crate) async fn list(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+) -> Result<(StatusCode, Json<Vec<String>>), ServerError> {
+    let users = db_pool.find_users()?;
+    Ok((StatusCode::OK, Json(users)))
+}

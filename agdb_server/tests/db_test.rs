@@ -6,6 +6,7 @@ use crate::framework::DB_ADD_URI;
 use crate::framework::DB_DELETE_URI;
 use crate::framework::DB_LIST_URI;
 use crate::framework::DB_REMOVE_URI;
+use crate::framework::DB_USER_ADD_URI;
 use serde::Deserialize;
 use serde::Serialize;
 use std::path::Path;
@@ -15,8 +16,15 @@ struct DeleteDb<'a> {
     name: &'a str,
 }
 
+#[derive(Serialize, Deserialize)]
+struct AddUser<'a> {
+    name: &'a str,
+    db: &'a str,
+    role: &'a str,
+}
+
 #[tokio::test]
-async fn add_database() -> anyhow::Result<()> {
+async fn add() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let token = server.init_user("alice", "mypassword123").await?;
     let bad_token = Some("bad".to_string());
@@ -43,6 +51,36 @@ async fn add_database() -> anyhow::Result<()> {
     assert_eq!(server.post(DB_ADD_URI, &db3, &token).await?.0, 201); //created
     assert_eq!(server.post(DB_ADD_URI, &db1, &token).await?.0, 403); //database exists
     assert_eq!(server.post(DB_ADD_URI, &bad_name, &token).await?.0, 461); //invalid db type
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn add_user() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let token = server.init_user("alice", "mypassword123").await?;
+    let token2: Option<String> = server.init_user("bob", "mypassword456").await?;
+    let bad_token = Some("bad".to_string());
+    let db = Db {
+        name: "db1".to_string(),
+        db_type: "mapped".to_string(),
+    };
+    let add = AddUser {
+        name: "alice",
+        db: "db1",
+        role: "read",
+    };
+    assert_eq!(server.post(DB_ADD_URI, &db, &token).await?.0, 201); //created
+    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token2).await?;
+    assert_eq!(status, 200); //Ok
+    let list = list?;
+    assert_eq!(list, vec![]);
+    assert_eq!(server.post(DB_USER_ADD_URI, &add, &bad_token).await?.0, 401); //forbidden
+    assert_eq!(server.post(DB_USER_ADD_URI, &add, &token).await?.0, 201); //created
+    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token2).await?;
+    let list = list?;
+    assert_eq!(status, 200); //Ok
+    assert_eq!(list, vec![db]);
 
     Ok(())
 }

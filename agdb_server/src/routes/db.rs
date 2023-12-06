@@ -1,3 +1,5 @@
+pub(crate) mod user;
+
 use crate::db::Database;
 use crate::db::DbPool;
 use crate::server_error::ServerError;

@@ -100,10 +100,22 @@ impl DbPool {
                     .edges()
                     .from(vec![QueryId::from(user), "dbs".into()])
                     .to(db)
-                    .values(vec![vec![("owner", 1).into()], vec![]])
+                    .values(vec![vec![("role", "admin").into()], vec![]])
                     .query(),
             )
         })?;
+        Ok(())
+    }
+
+    pub(crate) fn add_database_user(&self, database: DbId, user: DbId, role: &str) -> ServerResult {
+        self.0.server_db.get_mut()?.exec_mut(
+            &QueryBuilder::insert()
+                .edges()
+                .from(user)
+                .to(database)
+                .values_uniform(vec![("role", role).into()])
+                .query(),
+        )?;
         Ok(())
     }
 

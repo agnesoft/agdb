@@ -276,6 +276,43 @@
         ]
       }
     },
+    "/api/v1/db/user/add": {
+      "post": {
+        "tags": [
+          "crate::routes::db::user"
+        ],
+        "operationId": "add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDatabaseUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "User added"
+          },
+          "461": {
+            "description": "Database not found"
+          },
+          "462": {
+            "description": "User not found"
+          },
+          "463": {
+            "description": "Cannot add self"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/status": {
       "get": {
         "tags": [
@@ -390,6 +427,33 @@
           "memory",
           "mapped",
           "file"
+        ]
+      },
+      "DbUser": {
+        "type": "object",
+        "required": [
+          "database",
+          "user",
+          "role"
+        ],
+        "properties": {
+          "database": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "DbUserRole": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "write",
+          "read"
         ]
       },
       "ServerDatabase": {

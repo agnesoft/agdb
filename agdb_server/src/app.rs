@@ -40,11 +40,14 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         )
         .route("/login", routing::post(routes::user::login));
 
+    let db_user_router_v1 = Router::new().route("/add", routing::post(routes::db::user::add));
+
     let db_router_v1 = Router::new()
         .route("/add", routing::post(routes::db::add))
         .route("/delete", routing::post(routes::db::delete))
         .route("/list", routing::get(routes::db::list))
-        .route("/remove", routing::post(routes::db::remove));
+        .route("/remove", routing::post(routes::db::remove))
+        .nest("/user", db_user_router_v1);
 
     Router::new()
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))

@@ -5,6 +5,8 @@ use crate::config::Config;
 use crate::db::server_db::ServerDb;
 use crate::password::Password;
 use crate::server_error::ServerResult;
+use agdb::Comparison;
+use agdb::CountComparison;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryId;
@@ -161,7 +163,7 @@ impl DbPool {
                         QueryBuilder::search()
                             .from("dbs")
                             .where_()
-                            .distance(agdb::CountComparison::Equal(2))
+                            .distance(CountComparison::Equal(2))
                             .query(),
                     )
                     .query(),
@@ -169,27 +171,26 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_database(&self, name: &str) -> ServerResult<Database> {
+    pub(crate) fn find_database_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
             .0
             .server_db
             .get()?
             .exec(
-                &QueryBuilder::select()
-                    .ids(
-                        QueryBuilder::search()
-                            .from("dbs")
-                            .limit(1)
-                            .where_()
-                            .distance(agdb::CountComparison::Equal(2))
-                            .and()
-                            .key("name")
-                            .value(agdb::Comparison::Equal(name.into()))
-                            .query(),
-                    )
+                &QueryBuilder::search()
+                    .from("dbs")
+                    .limit(1)
+                    .where_()
+                    .distance(CountComparison::Equal(2))
+                    .and()
+                    .key("name")
+                    .value(Comparison::Equal(name.into()))
                     .query(),
             )?
-            .try_into()?)
+            .elements
+            .get(0)
+            .ok_or(format!("Database '{name}' not found"))?
+            .id)
     }
 
     pub(crate) fn find_users(&self) -> ServerResult<Vec<String>> {
@@ -204,7 +205,7 @@ impl DbPool {
                         QueryBuilder::search()
                             .from("users")
                             .where_()
-                            .distance(agdb::CountComparison::Equal(2))
+                            .distance(CountComparison::Equal(2))
                             .and()
                             .keys(vec!["name".into()])
                             .query(),
@@ -228,7 +229,7 @@ impl DbPool {
                         QueryBuilder::search()
                             .from(user)
                             .where_()
-                            .distance(agdb::CountComparison::Equal(2))
+                            .distance(CountComparison::Equal(2))
                             .query(),
                     )
                     .query(),
@@ -247,10 +248,10 @@ impl DbPool {
                         QueryBuilder::search()
                             .from(user)
                             .where_()
-                            .distance(agdb::CountComparison::Equal(2))
+                            .distance(CountComparison::Equal(2))
                             .and()
                             .key("name")
-                            .value(agdb::Comparison::Equal(name.into()))
+                            .value(Comparison::Equal(name.into()))
                             .query(),
                     )
                     .query(),
@@ -270,10 +271,10 @@ impl DbPool {
                             .from("users")
                             .limit(1)
                             .where_()
-                            .distance(agdb::CountComparison::Equal(2))
+                            .distance(CountComparison::Equal(2))
                             .and()
                             .key("name")
-                            .value(agdb::Comparison::Equal(name.into()))
+                            .value(Comparison::Equal(name.into()))
                             .query(),
                     )
                     .query(),
@@ -281,7 +282,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user_id(&self, token: &str) -> ServerResult<DbId> {
+    pub(crate) fn find_user_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
             .0
             .server_db
@@ -291,16 +292,59 @@ impl DbPool {
                     .from("users")
                     .limit(1)
                     .where_()
-                    .distance(agdb::CountComparison::Equal(2))
+                    .distance(CountComparison::Equal(2))
+                    .and()
+                    .key("name")
+                    .value(Comparison::Equal(name.into()))
+                    .query(),
+            )?
+            .elements
+            .get(0)
+            .ok_or(format!("User '{name}' not found"))?
+            .id)
+    }
+
+    pub(crate) fn find_user_id_by_token(&self, token: &str) -> ServerResult<DbId> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::search()
+                    .from("users")
+                    .limit(1)
+                    .where_()
+                    .distance(CountComparison::Equal(2))
                     .and()
                     .key("token")
-                    .value(agdb::Comparison::Equal(token.into()))
+                    .value(Comparison::Equal(token.into()))
                     .query(),
             )?
             .elements
             .get(0)
             .ok_or(format!("No user found for token '{token}'"))?
             .id)
+    }
+
+    pub(crate) fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::search()
+                    .from(user)
+                    .to(db)
+                    .limit(1)
+                    .where_()
+                    .distance(CountComparison::LessThanOrEqual(3))
+                    .and()
+                    .key("role")
+                    .value(Comparison::Equal("admin".into()))
+                    .query(),
+            )?
+            .result
+            == 1)
     }
 
     pub(crate) fn remove_database(&self, db: Database) -> ServerResult<ServerDb> {

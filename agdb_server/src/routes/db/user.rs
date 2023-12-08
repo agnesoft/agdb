@@ -39,6 +39,7 @@ impl Display for DbUserRole {
     security(("Token" = [])),
     responses(
          (status = 201, description = "User added"),
+         (status = 403, description = "Can only be done by a db admin"),
          (status = 461, description = "Database not found"),
          (status = 462, description = "User not found"),
          (status = 463, description = "Cannot add self"),
@@ -49,24 +50,27 @@ pub(crate) async fn add(
     State(db_pool): State<DbPool>,
     Json(request): Json<DbUser>,
 ) -> Result<StatusCode, ServerError> {
-    let db = db_pool.find_database(&request.database).map_err(|mut e| {
-        e.status = StatusCode::from_u16(461).unwrap();
-        e
-    })?;
-    let db_user = db_pool.find_user(&request.user).map_err(|mut e| {
+    let db = db_pool
+        .find_database_id(&request.database)
+        .map_err(|mut e| {
+            e.status = StatusCode::from_u16(461).unwrap();
+            e
+        })?;
+
+    if !db_pool.is_db_admin(user.0, db)? {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+
+    let db_user = db_pool.find_user_id(&request.user).map_err(|mut e| {
         e.status = StatusCode::from_u16(462).unwrap();
         e
     })?;
 
-    if db_user.db_id == Some(user.0) {
+    if db_user == user.0 {
         return Ok(StatusCode::from_u16(463)?);
     }
 
-    db_pool.add_database_user(
-        db.db_id.unwrap(),
-        db_user.db_id.unwrap(),
-        &request.role.to_string(),
-    )?;
+    db_pool.add_database_user(db, db_user, &request.role.to_string())?;
 
     Ok(StatusCode::CREATED)
 }

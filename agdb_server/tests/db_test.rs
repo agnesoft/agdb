@@ -60,6 +60,7 @@ async fn add_user() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let token = server.init_user("alice", "mypassword123").await?;
     let token2: Option<String> = server.init_user("bob", "mypassword456").await?;
+    server.init_user("chad", "mypassword789").await?;
     let bad_token = Some("bad".to_string());
     let db = Db {
         name: "db1".to_string(),
@@ -74,6 +75,11 @@ async fn add_user() -> anyhow::Result<()> {
         database: "db1",
         user: "bob",
         role: "write",
+    };
+    let add_chad = AddUser {
+        database: "db1",
+        user: "chad",
+        role: "read",
     };
     let add_admin = AddUser {
         database: "db1",
@@ -115,9 +121,17 @@ async fn add_user() -> anyhow::Result<()> {
         201
     ); //created
     assert_eq!(
+        server.post(DB_USER_ADD_URI, &add_chad, &token2).await?.0,
+        403
+    ); //not an admin
+    assert_eq!(
         server.post(DB_USER_ADD_URI, &add_write, &token).await?.0,
         201
     ); //created
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &add_chad, &token2).await?.0,
+        403
+    ); //not an admin
     assert_eq!(
         server.post(DB_USER_ADD_URI, &add_admin, &token).await?.0,
         201
@@ -126,6 +140,10 @@ async fn add_user() -> anyhow::Result<()> {
     let list = list?;
     assert_eq!(status, 200); //Ok
     assert_eq!(list, vec![db]);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &add_chad, &token2).await?.0,
+        201
+    ); //created
 
     Ok(())
 }

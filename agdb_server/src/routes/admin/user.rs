@@ -71,7 +71,7 @@ pub(crate) async fn create(
         return Ok(StatusCode::from_u16(462_u16)?);
     }
 
-    if db_pool.find_user(&request.name).is_ok() {
+    if db_pool.find_user_id(&request.name).is_ok() {
         return Ok(StatusCode::from_u16(463_u16)?);
     }
 

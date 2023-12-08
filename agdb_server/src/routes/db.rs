@@ -69,7 +69,7 @@ pub(crate) async fn add(
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabase>,
 ) -> Result<StatusCode, ServerError> {
-    if db_pool.find_database(&request.name).is_ok() {
+    if db_pool.find_database_id(&request.name).is_ok() {
         return Ok(StatusCode::FORBIDDEN);
     }
 

@@ -178,8 +178,9 @@ impl CountComparison {
                 }
             },
             CountComparison::LessThanOrEqual(left) => match right.cmp(left) {
-                std::cmp::Ordering::Less => SearchControl::Continue(true),
-                std::cmp::Ordering::Equal => SearchControl::Stop(true),
+                std::cmp::Ordering::Less | std::cmp::Ordering::Equal => {
+                    SearchControl::Continue(true)
+                }
                 std::cmp::Ordering::Greater => SearchControl::Stop(false),
             },
             CountComparison::NotEqual(left) => match right.cmp(left) {
@@ -329,7 +330,7 @@ mod tests {
         assert_eq!(LessThan(2).compare_distance(2), Stop(false));
         assert_eq!(LessThan(2).compare_distance(1), Continue(true));
         assert_eq!(LessThanOrEqual(2).compare_distance(3), Stop(false));
-        assert_eq!(LessThanOrEqual(2).compare_distance(2), Stop(true));
+        assert_eq!(LessThanOrEqual(2).compare_distance(2), Continue(true));
         assert_eq!(LessThanOrEqual(2).compare_distance(1), Continue(true));
     }
 

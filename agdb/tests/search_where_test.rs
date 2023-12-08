@@ -520,3 +520,17 @@ fn search_from_where_key_value_contains() {
         &[8],
     );
 }
+
+#[test]
+fn search_path_with_distance() {
+    let db = create_db();
+    db.exec_ids(
+        QueryBuilder::search()
+            .from("root")
+            .to("users")
+            .where_()
+            .distance(CountComparison::LessThanOrEqual(2))
+            .query(),
+        &[1, -4, 2],
+    );
+}

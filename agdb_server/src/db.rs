@@ -337,7 +337,7 @@ impl DbPool {
                     .to(db)
                     .limit(1)
                     .where_()
-                    .distance(CountComparison::LessThanOrEqual(3))
+                    .distance(CountComparison::LessThanOrEqual(2))
                     .and()
                     .key("role")
                     .value(Comparison::Equal("admin".into()))

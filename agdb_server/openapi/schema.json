@@ -296,6 +296,9 @@
           "201": {
             "description": "User added"
           },
+          "403": {
+            "description": "Can only be done by a db admin"
+          },
           "461": {
             "description": "Database not found"
           },

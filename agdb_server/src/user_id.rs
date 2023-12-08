@@ -27,7 +27,7 @@ where
         let bearer: TypedHeader<Authorization<Bearer>> =
             parts.extract().await.map_err(unauthorized_error)?;
         let id = DbPool::from_ref(state)
-            .find_user_id(utilities::unquote(bearer.token()))
+            .find_user_id_by_token(utilities::unquote(bearer.token()))
             .map_err(unauthorized_error)?;
         Ok(Self(id))
     }

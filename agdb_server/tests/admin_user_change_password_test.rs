@@ -29,7 +29,7 @@ async fn change_password_short_password() -> anyhow::Result<()> {
         password: "pswd",
     };
     let admin = &server.admin_token;
-    assert_eq!(server.post(CHANGE_PSWD_URI, &user, admin).await?.0, 462);
+    assert_eq!(server.post(CHANGE_PSWD_URI, &user, admin).await?.0, 461);
     Ok(())
 }
 
@@ -41,7 +41,7 @@ async fn change_password_no_user() -> anyhow::Result<()> {
         password: "password456",
     };
     let admin = server.init_admin().await?;
-    assert_eq!(server.post(CHANGE_PSWD_URI, &user, &admin).await?.0, 403);
+    assert_eq!(server.post(CHANGE_PSWD_URI, &user, &admin).await?.0, 464);
     Ok(())
 }
 

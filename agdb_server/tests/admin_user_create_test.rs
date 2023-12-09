@@ -25,7 +25,7 @@ async fn create_user_short_name() -> anyhow::Result<()> {
         password: "password123",
     };
     let admin = server.init_admin().await?;
-    assert_eq!(server.post(CREATE_USER_URI, &user, &admin).await?.0, 461);
+    assert_eq!(server.post(CREATE_USER_URI, &user, &admin).await?.0, 462);
     Ok(())
 }
 
@@ -37,7 +37,7 @@ async fn create_user_short_password() -> anyhow::Result<()> {
         password: "pswd",
     };
     let admin = server.init_admin().await?;
-    assert_eq!(server.post(CREATE_USER_URI, &user, &admin).await?.0, 462);
+    assert_eq!(server.post(CREATE_USER_URI, &user, &admin).await?.0, 461);
     Ok(())
 }
 

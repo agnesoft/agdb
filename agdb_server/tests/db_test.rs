@@ -49,8 +49,8 @@ async fn add_database() -> anyhow::Result<()> {
     assert_eq!(server.post(DB_ADD_URI, &db1, &token).await?.0, 201); //created
     assert_eq!(server.post(DB_ADD_URI, &db2, &token).await?.0, 201); //created
     assert_eq!(server.post(DB_ADD_URI, &db3, &token).await?.0, 201); //created
-    assert_eq!(server.post(DB_ADD_URI, &db1, &token).await?.0, 403); //database exists
-    assert_eq!(server.post(DB_ADD_URI, &bad_name, &token).await?.0, 461); //invalid db type
+    assert_eq!(server.post(DB_ADD_URI, &db1, &token).await?.0, 465); //database exists
+    assert_eq!(server.post(DB_ADD_URI, &bad_name, &token).await?.0, 467); //invalid db type
 
     Ok(())
 }
@@ -110,11 +110,11 @@ async fn add_user() -> anyhow::Result<()> {
         server.post(DB_USER_ADD_URI, &add_read, &bad_token).await?.0,
         401
     ); //forbidden
-    assert_eq!(server.post(DB_USER_ADD_URI, &no_db, &token).await?.0, 461); //missing db
-    assert_eq!(server.post(DB_USER_ADD_URI, &no_user, &token).await?.0, 462); //missing user
+    assert_eq!(server.post(DB_USER_ADD_URI, &no_db, &token).await?.0, 466); //missing db
+    assert_eq!(server.post(DB_USER_ADD_URI, &no_user, &token).await?.0, 464); //missing user
     assert_eq!(
         server.post(DB_USER_ADD_URI, &add_self, &token).await?.0,
-        463
+        403
     ); //self
     assert_eq!(
         server.post(DB_USER_ADD_URI, &add_read, &token).await?.0,
@@ -180,7 +180,7 @@ async fn delete() -> anyhow::Result<()> {
     assert!(!Path::new(&server.dir).join(del1.name).exists());
     assert!(Path::new(&server.dir).join(del2.name).exists());
 
-    assert_eq!(server.post(DB_DELETE_URI, &del1, &token).await?.0, 403); //cannot delete (already deleted)
+    assert_eq!(server.post(DB_DELETE_URI, &del1, &token).await?.0, 466); //cannot delete (already deleted)
     assert_eq!(server.post(DB_ADD_URI, &db3, &token).await?.0, 201); //created
     assert_eq!(server.post(DB_DELETE_URI, &del1, &token).await?.0, 200); //ok
 
@@ -191,7 +191,7 @@ async fn delete() -> anyhow::Result<()> {
     assert_eq!(list, vec![db2.clone()]);
 
     let token2 = server.init_user("bob", "mypassword456").await?;
-    assert_eq!(server.post(DB_DELETE_URI, &db2, &token2).await?.0, 403); //forbidden
+    assert_eq!(server.post(DB_DELETE_URI, &db2, &token2).await?.0, 466); //forbidden
 
     Ok(())
 }
@@ -253,7 +253,7 @@ async fn remove() -> anyhow::Result<()> {
     assert!(Path::new(&server.dir).join(del1.name).exists());
     assert!(Path::new(&server.dir).join(del2.name).exists());
 
-    assert_eq!(server.post(DB_REMOVE_URI, &del1, &token).await?.0, 403); //cannot delete (already deleted)
+    assert_eq!(server.post(DB_REMOVE_URI, &del1, &token).await?.0, 466); //cannot delete (already deleted)
 
     let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
     let mut list = list?;
@@ -262,7 +262,7 @@ async fn remove() -> anyhow::Result<()> {
     assert_eq!(list, vec![db2.clone()]);
 
     let token2 = server.init_user("bob", "mypassword456").await?;
-    assert_eq!(server.post(DB_REMOVE_URI, &db2, &token2).await?.0, 403); //forbidden
+    assert_eq!(server.post(DB_REMOVE_URI, &db2, &token2).await?.0, 466); //forbidden
 
     Ok(())
 }

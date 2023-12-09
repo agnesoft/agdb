@@ -16,7 +16,7 @@ async fn db_reuse_and_error() -> anyhow::Result<()> {
     assert_eq!(server.get::<()>(SHUTDOWN_URI, NO_TOKEN).await?.0, 401);
 
     let bad = Some("bad".to_string());
-    assert_eq!(server.get::<()>(SHUTDOWN_URI, &bad).await?.0, 403);
+    assert_eq!(server.get::<()>(SHUTDOWN_URI, &bad).await?.0, 401);
 
     let token = server.init_admin().await?;
     assert_eq!(server.get::<()>(SHUTDOWN_URI, &token).await?.0, 200);

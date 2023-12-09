@@ -72,7 +72,7 @@ pub(crate) async fn add(
     Json(request): Json<ServerDatabase>,
 ) -> ServerResponse {
     if db_pool.find_database_id(&request.name).is_ok() {
-        return Ok(ErrorCode::DbExists.into());
+        return Err(ErrorCode::DbExists.into());
     }
 
     let db = Database {

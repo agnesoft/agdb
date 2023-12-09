@@ -34,11 +34,11 @@ async fn chnage_password() -> anyhow::Result<()> {
 
     assert_eq!(
         server.post(CHANGE_PASSWORD_URI, &short, NO_TOKEN).await?.0,
-        462
+        461
     ); //password too short
     assert_eq!(
         server.post(CHANGE_PASSWORD_URI, &change, &bad).await?.0,
-        403
+        464
     ); //fordbidden
     assert_eq!(server.post(CREATE_USER_URI, &user, &admin).await?.0, 201); //user created
     assert_eq!(

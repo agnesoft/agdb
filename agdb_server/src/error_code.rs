@@ -1,7 +1,6 @@
 use crate::server_error::ServerError;
 use axum::http::StatusCode;
 
-#[derive(Clone)]
 pub(crate) enum ErrorCode {
     PasswordTooShort,
     NameTooShort,
@@ -14,6 +13,12 @@ pub(crate) enum ErrorCode {
 
 impl From<ErrorCode> for StatusCode {
     fn from(value: ErrorCode) -> Self {
+        (&value).into()
+    }
+}
+
+impl From<&ErrorCode> for StatusCode {
+    fn from(value: &ErrorCode) -> Self {
         StatusCode::from_u16(match value {
             ErrorCode::PasswordTooShort => 461,
             ErrorCode::NameTooShort => 462,
@@ -29,7 +34,7 @@ impl From<ErrorCode> for StatusCode {
 
 impl From<ErrorCode> for ServerError {
     fn from(value: ErrorCode) -> Self {
-        ServerError::new(value.clone().into(), value.as_str())
+        ServerError::new((&value).into(), value.as_str())
     }
 }
 
@@ -44,5 +49,16 @@ impl ErrorCode {
             ErrorCode::DbNotFound => "db not found",
             ErrorCode::DbInvalid => "db invalid",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_code_as_str() {
+        let value = ErrorCode::DbNotFound;
+        assert_eq!(value.as_str(), "db not found");
     }
 }

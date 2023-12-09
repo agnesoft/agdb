@@ -17,7 +17,7 @@
         "operationId": "list",
         "responses": {
           "200": {
-            "description": "Ok",
+            "description": "ok",
             "content": {
               "application/json": {
                 "schema": {
@@ -28,6 +28,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "unauthorized"
           }
         },
         "security": [
@@ -44,8 +47,11 @@
         ],
         "operationId": "shutdown",
         "responses": {
-          "200": {
-            "description": "Server is shutting down"
+          "204": {
+            "description": "server is shutting down"
+          },
+          "401": {
+            "description": "unauthorized"
           }
         },
         "security": [
@@ -72,17 +78,17 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "Password changed"
+          "201": {
+            "description": "password changed"
           },
           "401": {
-            "description": "Invalid password"
+            "description": "unauthorized"
           },
-          "403": {
-            "description": "User not found"
+          "461": {
+            "description": "password too short (<8)"
           },
-          "462": {
-            "description": "Password too short (<8)"
+          "464": {
+            "description": "user not found"
           }
         },
         "security": [
@@ -110,18 +116,26 @@
         },
         "responses": {
           "201": {
-            "description": "User created"
+            "description": "user created"
+          },
+          "401": {
+            "description": "unauthorized"
           },
           "461": {
-            "description": "Name too short (<3)"
+            "description": "password too short (<8)"
           },
           "462": {
-            "description": "Password too short (<8)"
+            "description": "name too short (<3)"
           },
           "463": {
-            "description": "User already exists"
+            "description": "user already exists"
           }
-        }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
       }
     },
     "/api/v1/admin/user/list": {
@@ -132,7 +146,7 @@
         "operationId": "list",
         "responses": {
           "200": {
-            "description": "Ok",
+            "description": "ok",
             "content": {
               "application/json": {
                 "schema": {
@@ -143,6 +157,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "unauthorized"
           }
         },
         "security": [
@@ -170,13 +187,16 @@
         },
         "responses": {
           "201": {
-            "description": "Database added"
+            "description": "db added"
           },
-          "403": {
-            "description": "Database already exists"
+          "401": {
+            "description": "unauthorized"
           },
-          "461": {
-            "description": "Invalid database name"
+          "465": {
+            "description": "db already exists"
+          },
+          "467": {
+            "description": "db invalid"
           }
         },
         "security": [
@@ -203,11 +223,17 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "Database deleted"
+          "204": {
+            "description": "db deleted"
+          },
+          "401": {
+            "description": "unauthorized"
           },
           "403": {
-            "description": "Database not found for user"
+            "description": "user must be a db admin"
+          },
+          "466": {
+            "description": "db not found"
           }
         },
         "security": [
@@ -225,7 +251,7 @@
         "operationId": "list",
         "responses": {
           "200": {
-            "description": "Ok",
+            "description": "ok",
             "content": {
               "application/json": {
                 "schema": {
@@ -236,6 +262,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "unauthorized"
           }
         },
         "security": [
@@ -262,11 +291,14 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "Database removed"
+          "204": {
+            "description": "db removed"
           },
-          "403": {
-            "description": "Database not found for user"
+          "401": {
+            "description": "unauthorized"
+          },
+          "466": {
+            "description": "db not found"
           }
         },
         "security": [
@@ -294,19 +326,19 @@
         },
         "responses": {
           "201": {
-            "description": "User added"
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
           },
           "403": {
-            "description": "Can only be done by a db admin"
+            "description": "user must be a db admin / cannot add self"
           },
-          "461": {
-            "description": "Database not found"
+          "464": {
+            "description": "user not found"
           },
-          "462": {
-            "description": "User not found"
-          },
-          "463": {
-            "description": "Cannot add self"
+          "466": {
+            "description": "db not found"
           }
         },
         "security": [
@@ -346,17 +378,17 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "Password changed"
+          "201": {
+            "description": "password changed"
           },
           "401": {
-            "description": "Invalid password"
+            "description": "invalid credentials"
           },
-          "403": {
-            "description": "User not found"
+          "461": {
+            "description": "password too short (<8)"
           },
-          "462": {
-            "description": "Password too short (<8)"
+          "464": {
+            "description": "user not found"
           }
         },
         "security": [
@@ -384,7 +416,7 @@
         },
         "responses": {
           "200": {
-            "description": "Login successful",
+            "description": "login successful",
             "content": {
               "text/plain": {
                 "schema": {
@@ -394,10 +426,10 @@
             }
           },
           "401": {
-            "description": "Bad password"
+            "description": "invalid credentials"
           },
-          "403": {
-            "description": "User not found"
+          "464": {
+            "description": "user not found"
           }
         }
       }

@@ -11,8 +11,8 @@ use std::process::Command;
 use std::sync::atomic::AtomicU16;
 use std::time::Duration;
 
-pub const CHANGE_PASSWORD_URI: &str = "/user/change_password";
-pub const CREATE_USER_URI: &str = "/admin/user/create";
+pub const USER_CHANGE_PASSWORD_URI: &str = "/user/change_password";
+pub const ADMIN_USER_CREATE_URI: &str = "/admin/user/create";
 pub const DB_ADD_URI: &str = "/db/add";
 pub const DB_USER_ADD_URI: &str = "/db/user/add";
 pub const DB_DELETE_URI: &str = "/db/delete";
@@ -21,7 +21,7 @@ pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
 pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
 pub const ADMIN_CHANGE_PASSWORD_URI: &str = "/admin/user/change_password";
 pub const DB_REMOVE_URI: &str = "/db/remove";
-pub const LOGIN_URI: &str = "/user/login";
+pub const USER_LOGIN_URI: &str = "/user/login";
 pub const SHUTDOWN_URI: &str = "/admin/shutdown";
 pub const STATUS_URI: &str = "/status";
 
@@ -35,6 +35,13 @@ const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 3;
 pub const NO_TOKEN: &Option<String> = &None;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
+
+#[derive(Serialize, Deserialize)]
+pub struct AddUser<'a> {
+    pub user: &'a str,
+    pub database: &'a str,
+    pub role: &'a str,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Db {
@@ -141,10 +148,11 @@ impl TestServer {
     }
 
     pub async fn init_admin(&mut self) -> anyhow::Result<Option<String>> {
-        let mut admin = HashMap::<&str, &str>::new();
-        admin.insert("name", &self.admin);
-        admin.insert("password", &self.admin_password);
-        let response = self.post(LOGIN_URI, &admin, &None).await?;
+        let admin = User {
+            name: &self.admin,
+            password: &self.admin_password,
+        };
+        let response = self.post(USER_LOGIN_URI, &admin, &None).await?;
         assert_eq!(response.0, 200);
         self.admin_token = Some(response.1);
         Ok(self.admin_token.clone())
@@ -155,21 +163,34 @@ impl TestServer {
         name: &str,
         password: &str,
     ) -> anyhow::Result<Option<String>> {
-        let mut user = HashMap::<&str, &str>::new();
-        user.insert("name", name);
-        user.insert("password", password);
+        let user = User { name, password };
         if self.admin_token.is_none() {
             self.init_admin().await?;
         }
         assert_eq!(
-            self.post(CREATE_USER_URI, &user, &self.admin_token.clone())
+            self.post(ADMIN_USER_CREATE_URI, &user, &self.admin_token.clone())
                 .await?
                 .0,
             201
         );
-        let response = self.post(LOGIN_URI, &user, &None).await?;
+        let response = self.post(USER_LOGIN_URI, &user, &None).await?;
         assert_eq!(response.0, 200);
         Ok(Some(response.1))
+    }
+
+    pub async fn init_db(
+        &self,
+        name: &str,
+        db_type: &str,
+        user_token: &Option<String>,
+    ) -> anyhow::Result<()> {
+        let db = Db {
+            name: name.to_string(),
+            db_type: db_type.to_string(),
+        };
+        let (status, _) = self.post(DB_ADD_URI, &db, user_token).await?;
+        assert_eq!(status, 201);
+        Ok(())
     }
 
     pub async fn post<T: Serialize>(
@@ -210,7 +231,11 @@ impl TestServer {
                     t
                 } else {
                     reqwest::blocking::Client::new()
-                        .post(format!("{}:{}/api/v1{LOGIN_URI}", Self::url_base(), port))
+                        .post(format!(
+                            "{}:{}/api/v1{USER_LOGIN_URI}",
+                            Self::url_base(),
+                            port
+                        ))
                         .json(&admin)
                         .send()?
                         .text()?
@@ -227,7 +252,7 @@ impl TestServer {
                         .send()?
                         .status()
                         .as_u16(),
-                    200
+                    204
                 );
 
                 Ok(())

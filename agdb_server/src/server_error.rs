@@ -9,6 +9,7 @@ pub(crate) struct ServerError {
 }
 
 pub(crate) type ServerResult<T = ()> = Result<T, ServerError>;
+pub(crate) type ServerResponse<T = StatusCode> = Result<T, ServerError>;
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {

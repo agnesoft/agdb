@@ -2,6 +2,7 @@ mod api;
 mod app;
 mod config;
 mod db;
+mod error_code;
 mod logger;
 mod password;
 mod routes;

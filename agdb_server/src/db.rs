@@ -3,7 +3,10 @@ mod server_db_storage;
 
 use crate::config::Config;
 use crate::db::server_db::ServerDb;
+use crate::db::server_db::ServerDbImpl;
+use crate::error_code::ErrorCode;
 use crate::password::Password;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::Comparison;
 use agdb::CountComparison;
@@ -15,6 +18,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
 const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
@@ -91,10 +95,16 @@ impl DbPool {
     }
 
     pub(crate) fn add_database(&self, user: DbId, database: Database) -> ServerResult {
-        let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name))?;
+        let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name)).map_err(
+            |mut e| {
+                e.status = ErrorCode::DbInvalid.into();
+                e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
+                e
+            },
+        )?;
         self.get_pool_mut()?.insert(database.name.clone(), db);
 
-        self.0.server_db.get_mut()?.transaction_mut(|t| {
+        self.db_mut()?.transaction_mut(|t| {
             let db = t.exec_mut(&QueryBuilder::insert().nodes().values(&database).query())?;
 
             t.exec_mut(
@@ -110,7 +120,7 @@ impl DbPool {
     }
 
     pub(crate) fn add_database_user(&self, database: DbId, user: DbId, role: &str) -> ServerResult {
-        self.0.server_db.get_mut()?.exec_mut(
+        self.db_mut()?.exec_mut(
             &QueryBuilder::insert()
                 .edges()
                 .from(user)
@@ -122,7 +132,7 @@ impl DbPool {
     }
 
     pub(crate) fn create_user(&self, user: DbUser) -> ServerResult {
-        self.0.server_db.get_mut()?.transaction_mut(|t| {
+        self.db_mut()?.transaction_mut(|t| {
             let user = t.exec_mut(&QueryBuilder::insert().nodes().values(&user).query())?;
 
             t.exec_mut(
@@ -154,9 +164,7 @@ impl DbPool {
 
     pub(crate) fn find_databases(&self) -> ServerResult<Vec<Database>> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::select()
                     .ids(
@@ -173,9 +181,7 @@ impl DbPool {
 
     pub(crate) fn find_database_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::search()
                     .from("dbs")
@@ -189,15 +195,16 @@ impl DbPool {
             )?
             .elements
             .get(0)
-            .ok_or(format!("Database '{name}' not found"))?
+            .ok_or(ServerError::new(
+                ErrorCode::DbNotFound.into(),
+                &format!("{}: {name}", ErrorCode::DbNotFound.as_str()),
+            ))?
             .id)
     }
 
     pub(crate) fn find_users(&self) -> ServerResult<Vec<String>> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::select()
                     .values(vec!["name".into()])
@@ -220,9 +227,7 @@ impl DbPool {
 
     pub(crate) fn find_user_databases(&self, user: DbId) -> ServerResult<Vec<Database>> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::select()
                     .ids(
@@ -247,6 +252,7 @@ impl DbPool {
                     .ids(
                         QueryBuilder::search()
                             .from(user)
+                            .limit(1)
                             .where_()
                             .distance(CountComparison::Equal(2))
                             .and()
@@ -256,14 +262,18 @@ impl DbPool {
                     )
                     .query(),
             )?
+            .elements
+            .get(0)
+            .ok_or(ServerError::new(
+                ErrorCode::DbNotFound.into(),
+                &format!("{}: {name}", ErrorCode::DbNotFound.as_str()),
+            ))?
             .try_into()?)
     }
 
     pub(crate) fn find_user(&self, name: &str) -> ServerResult<DbUser> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::select()
                     .ids(
@@ -279,14 +289,18 @@ impl DbPool {
                     )
                     .query(),
             )?
+            .elements
+            .get(0)
+            .ok_or(ServerError::new(
+                ErrorCode::UserNotFound.into(),
+                &format!("{}: {name}", ErrorCode::UserNotFound.as_str()),
+            ))?
             .try_into()?)
     }
 
     pub(crate) fn find_user_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::search()
                     .from("users")
@@ -300,15 +314,16 @@ impl DbPool {
             )?
             .elements
             .get(0)
-            .ok_or(format!("User '{name}' not found"))?
+            .ok_or(ServerError::new(
+                ErrorCode::UserNotFound.into(),
+                &format!("{}: {name}", ErrorCode::UserNotFound.as_str()),
+            ))?
             .id)
     }
 
     pub(crate) fn find_user_id_by_token(&self, token: &str) -> ServerResult<DbId> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::search()
                     .from("users")
@@ -328,9 +343,7 @@ impl DbPool {
 
     pub(crate) fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::search()
                     .from(user)
@@ -348,16 +361,14 @@ impl DbPool {
     }
 
     pub(crate) fn remove_database(&self, db: Database) -> ServerResult<ServerDb> {
-        self.0
-            .server_db
-            .get_mut()?
+        self.db_mut()?
             .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
 
         Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
     }
 
     pub(crate) fn save_token(&self, user: DbId, token: &str) -> ServerResult {
-        self.0.server_db.get_mut()?.exec_mut(
+        self.db_mut()?.exec_mut(
             &QueryBuilder::insert()
                 .values_uniform(vec![("token", token).into()])
                 .ids(user)
@@ -367,9 +378,7 @@ impl DbPool {
     }
 
     pub(crate) fn save_user(&self, user: DbUser) -> ServerResult {
-        self.0
-            .server_db
-            .get_mut()?
+        self.db_mut()?
             .exec_mut(&QueryBuilder::insert().element(&user).query())?;
         Ok(())
     }
@@ -380,5 +389,13 @@ impl DbPool {
 
     fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {
         Ok(self.0.pool.write()?)
+    }
+
+    fn db(&self) -> ServerResult<RwLockReadGuard<ServerDbImpl>> {
+        self.0.server_db.get()
+    }
+
+    fn db_mut(&self) -> ServerResult<RwLockWriteGuard<ServerDbImpl>> {
+        self.0.server_db.get_mut()
     }
 }

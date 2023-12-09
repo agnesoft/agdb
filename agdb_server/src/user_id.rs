@@ -25,10 +25,10 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let bearer: TypedHeader<Authorization<Bearer>> =
-            parts.extract().await.map_err(unauthorized_error)?;
+            parts.extract().await.map_err(unauthorized)?;
         let id = DbPool::from_ref(state)
             .find_user_id_by_token(utilities::unquote(bearer.token()))
-            .map_err(unauthorized_error)?;
+            .map_err(unauthorized)?;
         Ok(Self(id))
     }
 }
@@ -46,18 +46,18 @@ where
         let admin_user = Config::from_ref(state).admin.clone();
         let admin = DbPool::from_ref(state)
             .find_user(&admin_user)
-            .map_err(unauthorized_error)?;
+            .map_err(unauthorized)?;
         let bearer: TypedHeader<Authorization<Bearer>> =
-            parts.extract().await.map_err(unauthorized_error)?;
+            parts.extract().await.map_err(unauthorized)?;
 
         if admin.token != utilities::unquote(bearer.token()) {
-            return Err(StatusCode::FORBIDDEN);
+            return Err(unauthorized(()));
         }
 
         Ok(Self(admin.db_id.unwrap()))
     }
 }
 
-fn unauthorized_error<E>(_: E) -> StatusCode {
+fn unauthorized<E>(_: E) -> StatusCode {
     StatusCode::UNAUTHORIZED
 }

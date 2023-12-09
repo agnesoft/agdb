@@ -6,7 +6,7 @@ use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 
-type ServerDbImpl = DbImpl<ServerDbStorage>;
+pub(crate) type ServerDbImpl = DbImpl<ServerDbStorage>;
 pub(crate) struct ServerDb(pub(crate) Arc<RwLock<ServerDbImpl>>);
 
 impl ServerDb {

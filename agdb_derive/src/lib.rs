@@ -106,17 +106,25 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
             }
         }
 
+        impl TryFrom<&agdb::DbElement> for #name {
+            type Error = agdb::DbError;
+
+            fn try_from(value: &agdb::DbElement) -> Result<Self, Self::Error> {
+                use agdb::DbUserValue;
+                #name::from_db_element(value)
+            }
+        }
+
         impl TryFrom<agdb::QueryResult> for #name {
             type Error = agdb::DbError;
 
             fn try_from(value: agdb::QueryResult) -> Result<Self, Self::Error> {
                 use agdb::DbUserValue;
-                #name::from_db_element(
-                    value
-                        .elements
-                        .get(0)
-                        .ok_or(Self::Error::from("No element found"))?
-                )
+                value
+                    .elements
+                    .get(0)
+                    .ok_or(Self::Error::from("No element found"))?
+                    .try_into()
             }
         }
     };

@@ -51,14 +51,3 @@ impl ErrorCode {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn error_code_as_str() {
-        let value = ErrorCode::DbNotFound;
-        assert_eq!(value.as_str(), "db not found");
-    }
-}

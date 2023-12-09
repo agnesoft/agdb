@@ -197,7 +197,7 @@ impl DbPool {
             .get(0)
             .ok_or(ServerError::new(
                 ErrorCode::DbNotFound.into(),
-                &format!("database '{name}' not found"),
+                &format!("{}: {name}", ErrorCode::DbNotFound.as_str()),
             ))?
             .id)
     }
@@ -266,7 +266,7 @@ impl DbPool {
             .get(0)
             .ok_or(ServerError::new(
                 ErrorCode::DbNotFound.into(),
-                &format!("database '{name}' not found"),
+                &format!("{}: {name}", ErrorCode::DbNotFound.as_str()),
             ))?
             .try_into()?)
     }

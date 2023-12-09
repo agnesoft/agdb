@@ -1,6 +1,9 @@
 use crate::db::DbPool;
+use crate::error_code::ErrorCode;
+use crate::password;
 use crate::password::Password;
 use crate::server_error::ServerError;
+use crate::server_error::ServerResponse;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -25,8 +28,8 @@ pub(crate) struct ChangePassword {
     path = "/api/v1/user/login",
     request_body = UserCredentials,
     responses(
-         (status = 200, description = "Login successful", body = String),
-         (status = 401, description = "Bad password"),
+         (status = 200, description = "login successful", body = String),
+         (status = 401, description = "invalid credentials"),
          (status = 403, description = "User not found")
     )
 )]
@@ -59,23 +62,21 @@ pub(crate) async fn login(
     security(("Token" = [])),
     request_body = ChangePassword,
     responses(
-         (status = 200, description = "Password changed"),
-         (status = 401, description = "Invalid password"),
-         (status = 403, description = "User not found"),
-         (status = 462, description = "Password too short (<8)"),
+         (status = 204, description = "password changed"),
+         (status = 401, description = "invalid credentials"),
+         (status = 461, description = "password too short (<8)"),
+         (status = 464, description = "user not found"),
     )
 )]
 pub(crate) async fn change_password(
     State(db_pool): State<DbPool>,
     Json(request): Json<ChangePassword>,
-) -> Result<StatusCode, ServerError> {
-    if request.new_password.len() < 8 {
-        return Ok(StatusCode::from_u16(462_u16)?);
-    }
+) -> ServerResponse {
+    password::validate_password(&request.new_password)?;
 
     let mut user = db_pool
         .find_user(&request.name)
-        .map_err(|_| ServerError::new(StatusCode::FORBIDDEN, "User not found"))?;
+        .map_err(|_| ErrorCode::UserNotFound)?;
 
     let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
 

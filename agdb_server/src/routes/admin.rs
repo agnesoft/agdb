@@ -10,7 +10,8 @@ use tokio::sync::broadcast::Sender;
     path = "/api/v1/admin/shutdown",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "Server is shutting down"),
+         (status = 204, description = "server is shutting down"),
+         (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn shutdown(

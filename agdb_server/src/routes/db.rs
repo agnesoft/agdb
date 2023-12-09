@@ -2,7 +2,9 @@ pub(crate) mod user;
 
 use crate::db::Database;
 use crate::db::DbPool;
+use crate::error_code::ErrorCode;
 use crate::server_error::ServerError;
+use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -59,9 +61,10 @@ impl From<Database> for ServerDatabase {
     request_body = ServerDatabase,
     security(("Token" = [])),
     responses(
-         (status = 201, description = "Database added"),
-         (status = 403, description = "Database already exists"),
-         (status = 461, description = "Invalid database name"),
+         (status = 201, description = "database added"),
+         (status = 401, description = "unauthorized"),
+         (status = 465, description = "db already exists"),
+         (status = 467, description = "db invalid"),
     )
 )]
 pub(crate) async fn add(
@@ -70,20 +73,18 @@ pub(crate) async fn add(
     Json(request): Json<ServerDatabase>,
 ) -> Result<StatusCode, ServerError> {
     if db_pool.find_database_id(&request.name).is_ok() {
-        return Ok(StatusCode::FORBIDDEN);
+        return Ok(ErrorCode::DbExists.into());
     }
-
+    let db = Database {
+        db_id: None,
+        name: request.name,
+        db_type: request.db_type.to_string(),
+    };
     db_pool
-        .add_database(
-            user.0,
-            Database {
-                db_id: None,
-                name: request.name,
-                db_type: request.db_type.to_string(),
-            },
-        )
-        .map_err(|mut e| {
-            e.status = StatusCode::from_u16(461).unwrap();
+        .add_database(user.0, db)
+        .map_err(|mut e: ServerError| {
+            e.status = ErrorCode::DbNameInvalid.into();
+            e.description = format!("{}: {}", ErrorCode::DbNameInvalid.as_str(), e.description);
             e
         })?;
 
@@ -95,22 +96,16 @@ pub(crate) async fn add(
     request_body = ServerDatabaseName,
     security(("Token" = [])),
     responses(
-         (status = 200, description = "Database deleted"),
-         (status = 403, description = "Database not found for user"),
+         (status = 204, description = "database deleted"),
+         (status = 466, description = "db not found"),
     )
 )]
 pub(crate) async fn delete(
     user: UserId,
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabaseName>,
-) -> Result<StatusCode, ServerError> {
-    let db = db_pool
-        .find_user_database(user.0, &request.name)
-        .map_err(|mut e| {
-            e.status = StatusCode::FORBIDDEN;
-            e
-        })?;
-
+) -> ServerResponse {
+    let db = db_pool.find_user_database(user.0, &request.name)?;
     db_pool.delete_database(db)?;
 
     Ok(StatusCode::OK)

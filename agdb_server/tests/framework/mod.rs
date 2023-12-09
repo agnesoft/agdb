@@ -18,8 +18,8 @@ pub const DB_USER_ADD_URI: &str = "/db/user/add";
 pub const DB_DELETE_URI: &str = "/db/delete";
 pub const DB_LIST_URI: &str = "/db/list";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
-pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
-pub const ADMIN_CHANGE_PASSWORD_URI: &str = "/admin/user/change_password";
+pub const USR_LIST_URI: &str = "/admin/user/list";
+pub const CHANGE_PSWD_URI: &str = "/admin/user/change_password";
 pub const DB_REMOVE_URI: &str = "/db/remove";
 pub const LOGIN_URI: &str = "/user/login";
 pub const SHUTDOWN_URI: &str = "/admin/shutdown";
@@ -141,9 +141,10 @@ impl TestServer {
     }
 
     pub async fn init_admin(&mut self) -> anyhow::Result<Option<String>> {
-        let mut admin = HashMap::<&str, &str>::new();
-        admin.insert("name", &self.admin);
-        admin.insert("password", &self.admin_password);
+        let admin = User {
+            name: &self.admin,
+            password: &self.admin_password,
+        };
         let response = self.post(LOGIN_URI, &admin, &None).await?;
         assert_eq!(response.0, 200);
         self.admin_token = Some(response.1);
@@ -155,9 +156,7 @@ impl TestServer {
         name: &str,
         password: &str,
     ) -> anyhow::Result<Option<String>> {
-        let mut user = HashMap::<&str, &str>::new();
-        user.insert("name", name);
-        user.insert("password", password);
+        let user = User { name, password };
         if self.admin_token.is_none() {
             self.init_admin().await?;
         }
@@ -170,6 +169,21 @@ impl TestServer {
         let response = self.post(LOGIN_URI, &user, &None).await?;
         assert_eq!(response.0, 200);
         Ok(Some(response.1))
+    }
+
+    pub async fn init_db(
+        &self,
+        name: &str,
+        db_type: &str,
+        user_token: &Option<String>,
+    ) -> anyhow::Result<()> {
+        let db = Db {
+            name: name.to_string(),
+            db_type: db_type.to_string(),
+        };
+        let (status, _) = self.post(DB_ADD_URI, &db, user_token).await?;
+        assert_eq!(status, 201);
+        Ok(())
     }
 
     pub async fn post<T: Serialize>(

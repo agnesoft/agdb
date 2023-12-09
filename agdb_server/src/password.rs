@@ -1,10 +1,10 @@
+use crate::error_code::ErrorCode;
+use crate::server_error::ServerResult;
 use ring::digest;
 use ring::pbkdf2;
 use ring::rand::SecureRandom;
 use ring::rand::SystemRandom;
 use std::num::NonZeroU32;
-
-use crate::server_error::ServerResult;
 
 pub(crate) const PASSWORD_LEN: usize = digest::SHA256_OUTPUT_LEN;
 static ALGORITHM: pbkdf2::Algorithm = pbkdf2::PBKDF2_HMAC_SHA256;
@@ -81,6 +81,22 @@ impl Password {
         salt.extend(user_salt);
 
         salt
+    }
+}
+
+pub(crate) fn validate_password(password: &str) -> ServerResult {
+    if password.len() < 8 {
+        Err(ErrorCode::PasswordTooShort.into())
+    } else {
+        Ok(())
+    }
+}
+
+pub(crate) fn validate_username(name: &str) -> ServerResult {
+    if name.len() < 3 {
+        Err(ErrorCode::NameTooShort.into())
+    } else {
+        Ok(())
     }
 }
 

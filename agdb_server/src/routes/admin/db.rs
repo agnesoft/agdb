@@ -1,6 +1,6 @@
 use crate::db::DbPool;
 use crate::routes::db::ServerDatabase;
-use crate::server_error::ServerError;
+use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -10,13 +10,14 @@ use axum::Json;
     path = "/api/v1/admin/db/list",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "Ok", body = Vec<ServerDatabase>)
+         (status = 200, description = "ok", body = Vec<ServerDatabase>),
+         (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-) -> Result<(StatusCode, Json<Vec<ServerDatabase>>), ServerError> {
+) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
     let dbs = db_pool
         .find_databases()?
         .into_iter()

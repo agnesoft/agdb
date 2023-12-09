@@ -1,5 +1,5 @@
 use crate::db::DbPool;
-use crate::server_error::ServerError;
+use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -38,36 +38,23 @@ impl Display for DbUserRole {
     request_body = AddDatabaseUser,
     security(("Token" = [])),
     responses(
-         (status = 201, description = "User added"),
-         (status = 403, description = "Can only be done by a db admin"),
-         (status = 461, description = "Database not found"),
-         (status = 462, description = "User not found"),
-         (status = 463, description = "Cannot add self"),
+         (status = 201, description = "user added"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "user must be a db admin / cannot add self"),
+         (status = 466, description = "db not found"),
+         (status = 464, description = "user not found")
     )
 )]
 pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
     Json(request): Json<DbUser>,
-) -> Result<StatusCode, ServerError> {
-    let db = db_pool
-        .find_database_id(&request.database)
-        .map_err(|mut e| {
-            e.status = StatusCode::from_u16(461).unwrap();
-            e
-        })?;
+) -> ServerResponse {
+    let db = db_pool.find_database_id(&request.database)?;
+    let db_user = db_pool.find_user_id(&request.user)?;
 
-    if !db_pool.is_db_admin(user.0, db)? {
+    if !db_pool.is_db_admin(user.0, db)? || db_user == user.0 {
         return Ok(StatusCode::FORBIDDEN);
-    }
-
-    let db_user = db_pool.find_user_id(&request.user).map_err(|mut e| {
-        e.status = StatusCode::from_u16(462).unwrap();
-        e
-    })?;
-
-    if db_user == user.0 {
-        return Ok(StatusCode::from_u16(463)?);
     }
 
     db_pool.add_database_user(db, db_user, &request.role.to_string())?;

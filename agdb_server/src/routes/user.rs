@@ -1,5 +1,4 @@
 use crate::db::DbPool;
-use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
 use crate::server_error::ServerResponse;
@@ -29,20 +28,14 @@ pub(crate) struct ChangePassword {
     responses(
          (status = 200, description = "login successful", body = String),
          (status = 401, description = "invalid credentials"),
-         (status = 403, description = "User not found")
+         (status = 464, description = "user not found")
     )
 )]
 pub(crate) async fn login(
     State(db_pool): State<DbPool>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse<(StatusCode, String)> {
-    let user = db_pool.find_user(&request.name);
-
-    if user.is_err() {
-        return Ok((StatusCode::FORBIDDEN, String::new()));
-    }
-
-    let user = user?;
+    let user = db_pool.find_user(&request.name)?;
     let pswd = Password::new(&user.name, &user.password, &user.salt)?;
 
     if !pswd.verify_password(&request.password) {
@@ -73,10 +66,7 @@ pub(crate) async fn change_password(
 ) -> ServerResponse {
     password::validate_password(&request.new_password)?;
 
-    let mut user = db_pool
-        .find_user(&request.name)
-        .map_err(|_| ErrorCode::UserNotFound)?;
-
+    let mut user = db_pool.find_user(&request.name)?;
     let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {

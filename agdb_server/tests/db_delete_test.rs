@@ -109,7 +109,7 @@ async fn with_write_role() -> anyhow::Result<()> {
 async fn with_admin_role() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let token = server.init_user("alice", "password123").await?;
-    server.init_db("my_db", "mapped", &token).await?;
+    server.init_db("my_db", "memory", &token).await?;
     let reader = server.init_user("bob", "password456").await?;
     let role = AddUser {
         database: "my_db",

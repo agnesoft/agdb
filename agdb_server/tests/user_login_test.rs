@@ -34,3 +34,18 @@ async fn invalid_credentials() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn user_not_found() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    server.init_user("alice", "password123").await?;
+    let user = User {
+        name: "alice",
+        password: "password456",
+    };
+    let (status, token) = server.post(USER_LOGIN_URI, &user, NO_TOKEN).await?;
+    assert_eq!(status, 401);
+    assert!(token.is_empty());
+
+    Ok(())
+}

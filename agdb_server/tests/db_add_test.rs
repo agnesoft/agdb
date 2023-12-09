@@ -12,7 +12,7 @@ async fn add() -> anyhow::Result<()> {
     let token = server.init_user("alice", "password123").await?;
     let db = Db {
         name: "mydb".to_string(),
-        db_type: "mapped".to_string(),
+        db_type: "file".to_string(),
     };
     assert_eq!(server.post(DB_ADD_URI, &db, &token).await?.0, 201);
     assert!(Path::new(&server.dir).join(db.name).exists());

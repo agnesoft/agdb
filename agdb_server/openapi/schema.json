@@ -428,8 +428,8 @@
           "401": {
             "description": "invalid credentials"
           },
-          "403": {
-            "description": "User not found"
+          "464": {
+            "description": "user not found"
           }
         }
       }

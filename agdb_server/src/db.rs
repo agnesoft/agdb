@@ -293,7 +293,7 @@ impl DbPool {
             .get(0)
             .ok_or(ServerError::new(
                 ErrorCode::UserNotFound.into(),
-                &format!("user '{name}' not found"),
+                &format!("{}: {name}", ErrorCode::UserNotFound.as_str()),
             ))?
             .try_into()?)
     }
@@ -316,7 +316,7 @@ impl DbPool {
             .get(0)
             .ok_or(ServerError::new(
                 ErrorCode::UserNotFound.into(),
-                &format!("user '{name}' not found"),
+                &format!("{}: {name}", ErrorCode::UserNotFound.as_str()),
             ))?
             .id)
     }

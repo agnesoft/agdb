@@ -1,8 +1,10 @@
 pub mod framework;
 
 use crate::framework::AddUser;
+use crate::framework::Db;
 use crate::framework::TestServer;
 use crate::framework::DB_DELETE_URI;
+use crate::framework::DB_LIST_URI;
 use crate::framework::DB_USER_ADD_URI;
 use crate::framework::NO_TOKEN;
 use serde::Deserialize;
@@ -22,6 +24,8 @@ async fn delete() -> anyhow::Result<()> {
     assert!(Path::new(&server.dir).join("my_db").exists());
     let del = DeleteDb { name: "my_db" };
     assert_eq!(server.post(DB_DELETE_URI, &del, &token).await?.0, 204);
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    assert_eq!(list?, vec![]);
     assert!(!Path::new(&server.dir).join("my_db").exists());
     Ok(())
 }
@@ -43,6 +47,12 @@ async fn other_user() -> anyhow::Result<()> {
     let token = server.init_user("bob", "password456").await?;
     let del = DeleteDb { name: "my_db" };
     assert_eq!(server.post(DB_DELETE_URI, &del, &token).await?.0, 466);
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    let expected = vec![Db {
+        name: "my_db".to_string(),
+        db_type: "mapped".to_string(),
+    }];
+    assert_eq!(list?, expected);
     assert!(Path::new(&server.dir).join("my_db").exists());
     Ok(())
 }
@@ -61,6 +71,12 @@ async fn with_read_role() -> anyhow::Result<()> {
     assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
     let del = DeleteDb { name: "my_db" };
     assert_eq!(server.post(DB_DELETE_URI, &del, &reader).await?.0, 403);
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    let expected = vec![Db {
+        name: "my_db".to_string(),
+        db_type: "mapped".to_string(),
+    }];
+    assert_eq!(list?, expected);
     assert!(Path::new(&server.dir).join("my_db").exists());
     Ok(())
 }
@@ -79,6 +95,12 @@ async fn with_write_role() -> anyhow::Result<()> {
     assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
     let del = DeleteDb { name: "my_db" };
     assert_eq!(server.post(DB_DELETE_URI, &del, &reader).await?.0, 403);
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    let expected = vec![Db {
+        name: "my_db".to_string(),
+        db_type: "mapped".to_string(),
+    }];
+    assert_eq!(list?, expected);
     assert!(Path::new(&server.dir).join("my_db").exists());
     Ok(())
 }
@@ -97,6 +119,8 @@ async fn with_admin_role() -> anyhow::Result<()> {
     assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
     let del = DeleteDb { name: "my_db" };
     assert_eq!(server.post(DB_DELETE_URI, &del, &reader).await?.0, 204);
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    assert_eq!(list?, vec![]);
     assert!(!Path::new(&server.dir).join("my_db").exists());
     Ok(())
 }

@@ -93,6 +93,7 @@ pub(crate) async fn add(
     responses(
          (status = 204, description = "db deleted"),
          (status = 401, description = "unauthorized"),
+         (status = 403, description = "user must be a db admin"),
          (status = 466, description = "db not found"),
     )
 )]
@@ -102,6 +103,11 @@ pub(crate) async fn delete(
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
     let db = db_pool.find_user_database(user.0, &request.name)?;
+
+    if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+
     db_pool.delete_database(db)?;
 
     Ok(StatusCode::NO_CONTENT)

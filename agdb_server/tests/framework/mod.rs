@@ -36,6 +36,13 @@ const RETRY_ATTEMPS: u16 = 3;
 pub const NO_TOKEN: &Option<String> = &None;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 
+#[derive(Serialize, Deserialize)]
+pub struct AddUser<'a> {
+    pub user: &'a str,
+    pub database: &'a str,
+    pub role: &'a str,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Db {
     pub name: String,

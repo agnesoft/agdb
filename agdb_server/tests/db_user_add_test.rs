@@ -1,19 +1,11 @@
 pub mod framework;
 
+use crate::framework::AddUser;
 use crate::framework::Db;
 use crate::framework::TestServer;
 use crate::framework::DB_ADD_URI;
 use crate::framework::DB_LIST_URI;
 use crate::framework::DB_USER_ADD_URI;
-use serde::Deserialize;
-use serde::Serialize;
-
-#[derive(Serialize, Deserialize)]
-struct AddUser<'a> {
-    user: &'a str,
-    database: &'a str,
-    role: &'a str,
-}
 
 #[tokio::test]
 async fn add_user() -> anyhow::Result<()> {

@@ -95,7 +95,13 @@ impl DbPool {
     }
 
     pub(crate) fn add_database(&self, user: DbId, database: Database) -> ServerResult {
-        let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name))?;
+        let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name)).map_err(
+            |mut e| {
+                e.status = ErrorCode::DbInvalid.into();
+                e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
+                e
+            },
+        )?;
         self.get_pool_mut()?.insert(database.name.clone(), db);
 
         self.db_mut()?.transaction_mut(|t| {
@@ -237,31 +243,36 @@ impl DbPool {
     }
 
     pub(crate) fn find_user_database(&self, user: DbId, name: &str) -> ServerResult<Database> {
-        let result = self.0.server_db.get()?.exec(
-            &QueryBuilder::select()
-                .ids(
-                    QueryBuilder::search()
-                        .from(user)
-                        .limit(1)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .and()
-                        .key("name")
-                        .value(Comparison::Equal(name.into()))
-                        .query(),
-                )
-                .query(),
-        )?;
-
-        if result.result == 1 {
-            Ok(result.try_into()?)
-        } else {
-            Err(ErrorCode::DbNotFound.into())
-        }
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .from(user)
+                            .limit(1)
+                            .where_()
+                            .distance(CountComparison::Equal(2))
+                            .and()
+                            .key("name")
+                            .value(Comparison::Equal(name.into()))
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .elements
+            .get(0)
+            .ok_or(ServerError::new(
+                ErrorCode::DbNotFound.into(),
+                &format!("database '{name}' not found"),
+            ))?
+            .try_into()?)
     }
 
     pub(crate) fn find_user(&self, name: &str) -> ServerResult<DbUser> {
-        Ok(*self
+        Ok(self
             .db()?
             .exec(
                 &QueryBuilder::select()

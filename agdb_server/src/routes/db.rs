@@ -3,7 +3,6 @@ pub(crate) mod user;
 use crate::db::Database;
 use crate::db::DbPool;
 use crate::error_code::ErrorCode;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use axum::extract::State;
@@ -61,7 +60,7 @@ impl From<Database> for ServerDatabase {
     request_body = ServerDatabase,
     security(("Token" = [])),
     responses(
-         (status = 201, description = "database added"),
+         (status = 201, description = "db added"),
          (status = 401, description = "unauthorized"),
          (status = 465, description = "db already exists"),
          (status = 467, description = "db invalid"),
@@ -71,22 +70,18 @@ pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabase>,
-) -> Result<StatusCode, ServerError> {
+) -> ServerResponse {
     if db_pool.find_database_id(&request.name).is_ok() {
         return Ok(ErrorCode::DbExists.into());
     }
+
     let db = Database {
         db_id: None,
         name: request.name,
         db_type: request.db_type.to_string(),
     };
-    db_pool
-        .add_database(user.0, db)
-        .map_err(|mut e: ServerError| {
-            e.status = ErrorCode::DbNameInvalid.into();
-            e.description = format!("{}: {}", ErrorCode::DbNameInvalid.as_str(), e.description);
-            e
-        })?;
+
+    db_pool.add_database(user.0, db)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -96,7 +91,8 @@ pub(crate) async fn add(
     request_body = ServerDatabaseName,
     security(("Token" = [])),
     responses(
-         (status = 204, description = "database deleted"),
+         (status = 204, description = "db deleted"),
+         (status = 401, description = "unauthorized"),
          (status = 466, description = "db not found"),
     )
 )]
@@ -115,13 +111,14 @@ pub(crate) async fn delete(
     path = "/api/v1/db/list",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "Ok", body = Vec<ServerDatabase>)
+         (status = 200, description = "ok", body = Vec<ServerDatabase>),
+         (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
-) -> Result<(StatusCode, Json<Vec<ServerDatabase>>), ServerError> {
+) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
     let dbs = db_pool
         .find_user_databases(user.0)?
         .into_iter()
@@ -135,22 +132,17 @@ pub(crate) async fn list(
     request_body = ServerDatabaseName,
     security(("Token" = [])),
     responses(
-         (status = 200, description = "Database removed"),
-         (status = 403, description = "Database not found for user"),
+         (status = 200, description = "db removed"),
+         (status = 401, description = "unauthorized"),
+         (status = 466, description = "db not found"),
     )
 )]
 pub(crate) async fn remove(
     user: UserId,
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabaseName>,
-) -> Result<StatusCode, ServerError> {
-    let db = db_pool
-        .find_user_database(user.0, &request.name)
-        .map_err(|mut e| {
-            e.status = StatusCode::FORBIDDEN;
-            e
-        })?;
-
+) -> ServerResponse {
+    let db = db_pool.find_user_database(user.0, &request.name)?;
     db_pool.remove_database(db)?;
 
     Ok(StatusCode::OK)

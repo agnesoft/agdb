@@ -9,7 +9,7 @@ pub(crate) enum ErrorCode {
     UserExists,
     DbExists,
     DbNotFound,
-    DbNameInvalid,
+    DbInvalid,
 }
 
 impl From<ErrorCode> for StatusCode {
@@ -21,7 +21,7 @@ impl From<ErrorCode> for StatusCode {
             ErrorCode::UserNotFound => 464,
             ErrorCode::DbExists => 465,
             ErrorCode::DbNotFound => 466,
-            ErrorCode::DbNameInvalid => 467,
+            ErrorCode::DbInvalid => 467,
         })
         .unwrap()
     }
@@ -42,7 +42,7 @@ impl ErrorCode {
             ErrorCode::UserNotFound => "user not found",
             ErrorCode::DbExists => "db already exists",
             ErrorCode::DbNotFound => "db not found",
-            ErrorCode::DbNameInvalid => "db invalid",
+            ErrorCode::DbInvalid => "db invalid",
         }
     }
 }

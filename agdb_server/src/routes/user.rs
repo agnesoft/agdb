@@ -2,7 +2,6 @@ use crate::db::DbPool;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -36,7 +35,7 @@ pub(crate) struct ChangePassword {
 pub(crate) async fn login(
     State(db_pool): State<DbPool>,
     Json(request): Json<UserCredentials>,
-) -> Result<(StatusCode, String), ServerError> {
+) -> ServerResponse<(StatusCode, String)> {
     let user = db_pool.find_user(&request.name);
 
     if user.is_err() {
@@ -84,9 +83,9 @@ pub(crate) async fn change_password(
         return Ok(StatusCode::UNAUTHORIZED);
     }
 
-    let pswd = Password::create(&request.name, &request.new_password);
-    user.password = pswd.password.to_vec();
-    user.salt = pswd.user_salt.to_vec();
+    let new_pswd = Password::create(&request.name, &request.new_password);
+    user.password = new_pswd.password.to_vec();
+    user.salt = new_pswd.user_salt.to_vec();
 
     db_pool.save_user(user)?;
 

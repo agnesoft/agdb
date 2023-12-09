@@ -36,10 +36,7 @@ pub(crate) async fn change_password(
 ) -> ServerResponse {
     password::validate_password(&request.password)?;
 
-    let mut user = db_pool
-        .find_user(&request.name)
-        .map_err(|_| ErrorCode::UserNotFound)?;
-
+    let mut user = db_pool.find_user(&request.name)?;
     let pswd = Password::create(&request.name, &request.password);
     user.password = pswd.password.to_vec();
     user.salt = pswd.user_salt.to_vec();

@@ -418,3 +418,21 @@ fn derived_macro_should_not_panic() {
     assert!(user.is_err());
     assert_eq!(user.unwrap_err().description, "Not enough keys");
 }
+
+#[test]
+fn try_from_db_element() {
+    let element = DbElement {
+        id: DbId(1),
+        values: vec![
+            ("user_id", 100_u64).into(),
+            ("password", "pswd").into(),
+            ("status", Status::Active).into(),
+        ],
+    };
+
+    let user: User = (&element).try_into().unwrap();
+
+    assert_eq!(user.user_id, 100);
+    assert_eq!(user.status, Status::Active);
+    assert_eq!(user.password, "pswd");
+}

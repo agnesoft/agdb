@@ -19,7 +19,7 @@ pub(crate) async fn shutdown(
     State(shutdown_sender): State<Sender<()>>,
 ) -> StatusCode {
     match shutdown_sender.send(()) {
-        Ok(_) => StatusCode::OK,
+        Ok(_) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
@@ -35,7 +35,7 @@ mod tests {
 
         let status = shutdown(AdminId(DbId(0)), State(shutdown_sender)).await;
 
-        assert_eq!(status, StatusCode::OK);
+        assert_eq!(status, StatusCode::NO_CONTENT);
         Ok(())
     }
 

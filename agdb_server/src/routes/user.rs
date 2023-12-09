@@ -61,7 +61,7 @@ pub(crate) async fn login(
     security(("Token" = [])),
     request_body = ChangePassword,
     responses(
-         (status = 204, description = "password changed"),
+         (status = 201, description = "password changed"),
          (status = 401, description = "invalid credentials"),
          (status = 461, description = "password too short (<8)"),
          (status = 464, description = "user not found"),
@@ -89,5 +89,5 @@ pub(crate) async fn change_password(
 
     db_pool.save_user(user)?;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::CREATED)
 }

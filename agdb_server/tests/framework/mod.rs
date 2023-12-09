@@ -11,17 +11,17 @@ use std::process::Command;
 use std::sync::atomic::AtomicU16;
 use std::time::Duration;
 
-pub const CHANGE_PASSWORD_URI: &str = "/user/change_password";
-pub const CREATE_USER_URI: &str = "/admin/user/create";
+pub const USER_CHANGE_PASSWORD_URI: &str = "/user/change_password";
+pub const ADMIN_USER_CREATE_URI: &str = "/admin/user/create";
 pub const DB_ADD_URI: &str = "/db/add";
 pub const DB_USER_ADD_URI: &str = "/db/user/add";
 pub const DB_DELETE_URI: &str = "/db/delete";
 pub const DB_LIST_URI: &str = "/db/list";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
-pub const USR_LIST_URI: &str = "/admin/user/list";
-pub const CHANGE_PSWD_URI: &str = "/admin/user/change_password";
+pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
+pub const ADMIN_CHANGE_PASSWORD_URI: &str = "/admin/user/change_password";
 pub const DB_REMOVE_URI: &str = "/db/remove";
-pub const LOGIN_URI: &str = "/user/login";
+pub const USER_LOGIN_URI: &str = "/user/login";
 pub const SHUTDOWN_URI: &str = "/admin/shutdown";
 pub const STATUS_URI: &str = "/status";
 
@@ -145,7 +145,7 @@ impl TestServer {
             name: &self.admin,
             password: &self.admin_password,
         };
-        let response = self.post(LOGIN_URI, &admin, &None).await?;
+        let response = self.post(USER_LOGIN_URI, &admin, &None).await?;
         assert_eq!(response.0, 200);
         self.admin_token = Some(response.1);
         Ok(self.admin_token.clone())
@@ -161,12 +161,12 @@ impl TestServer {
             self.init_admin().await?;
         }
         assert_eq!(
-            self.post(CREATE_USER_URI, &user, &self.admin_token.clone())
+            self.post(ADMIN_USER_CREATE_URI, &user, &self.admin_token.clone())
                 .await?
                 .0,
             201
         );
-        let response = self.post(LOGIN_URI, &user, &None).await?;
+        let response = self.post(USER_LOGIN_URI, &user, &None).await?;
         assert_eq!(response.0, 200);
         Ok(Some(response.1))
     }
@@ -224,7 +224,11 @@ impl TestServer {
                     t
                 } else {
                     reqwest::blocking::Client::new()
-                        .post(format!("{}:{}/api/v1{LOGIN_URI}", Self::url_base(), port))
+                        .post(format!(
+                            "{}:{}/api/v1{USER_LOGIN_URI}",
+                            Self::url_base(),
+                            port
+                        ))
                         .json(&admin)
                         .send()?
                         .text()?
@@ -241,7 +245,7 @@ impl TestServer {
                         .send()?
                         .status()
                         .as_u16(),
-                    200
+                    204
                 );
 
                 Ok(())

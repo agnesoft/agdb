@@ -23,7 +23,7 @@ pub(crate) struct UserStatus {
     security(("Token" = [])),
     request_body = UserCredentials,
     responses(
-         (status = 204, description = "password changed"),
+         (status = 201, description = "password changed"),
          (status = 401, description = "unauthorized"),
          (status = 461, description = "password too short (<8)"),
          (status = 464, description = "user not found"),
@@ -43,7 +43,7 @@ pub(crate) async fn change_password(
 
     db_pool.save_user(user)?;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(post,

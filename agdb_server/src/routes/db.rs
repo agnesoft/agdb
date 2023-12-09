@@ -104,7 +104,7 @@ pub(crate) async fn delete(
     let db = db_pool.find_user_database(user.0, &request.name)?;
     db_pool.delete_database(db)?;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(get,
@@ -132,7 +132,7 @@ pub(crate) async fn list(
     request_body = ServerDatabaseName,
     security(("Token" = [])),
     responses(
-         (status = 200, description = "db removed"),
+         (status = 204, description = "db removed"),
          (status = 401, description = "unauthorized"),
          (status = 466, description = "db not found"),
     )
@@ -145,5 +145,5 @@ pub(crate) async fn remove(
     let db = db_pool.find_user_database(user.0, &request.name)?;
     db_pool.remove_database(db)?;
 
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }

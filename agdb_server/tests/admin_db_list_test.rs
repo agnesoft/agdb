@@ -33,7 +33,7 @@ async fn db_list() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn db_list_no_db() -> anyhow::Result<()> {
+async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let admin = server.init_admin().await?;
     let (status, list) = server.get::<Vec<Db>>(ADMIN_DB_LIST_URI, &admin).await?;
@@ -43,7 +43,7 @@ async fn db_list_no_db() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn db_list_no_admin_token() -> anyhow::Result<()> {
+async fn no_admin_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let (status, list) = server.get::<Vec<Db>>(ADMIN_DB_LIST_URI, NO_TOKEN).await?;
     assert_eq!(status, 401);

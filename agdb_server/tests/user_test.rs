@@ -10,7 +10,7 @@ use crate::framework::NO_TOKEN;
 
 #[tokio::test]
 async fn chnage_password() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let admin = server.init_admin().await?;
     let bad = Some("bad".to_string());
     let user = User {
@@ -56,7 +56,7 @@ async fn chnage_password() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn login() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let admin = server.init_admin().await?;
     let user = User {
         name: "alice",

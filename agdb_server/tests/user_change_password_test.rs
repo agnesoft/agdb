@@ -10,15 +10,15 @@ use crate::framework::USER_LOGIN_URI;
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    server.init_user("alice", "mypassword123").await?;
+    server.init_user("alice", "password123").await?;
     let change = ChangePassword {
         name: "alice",
-        password: "mypassword123",
-        new_password: "mypassword456",
+        password: "password123",
+        new_password: "password456",
     };
     let user = User {
         name: "alice",
-        password: "mypassword456",
+        password: "password456",
     };
     assert_eq!(
         server
@@ -35,11 +35,11 @@ async fn change_password() -> anyhow::Result<()> {
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    server.init_user("alice", "mypassword123").await?;
+    server.init_user("alice", "password123").await?;
     let change = ChangePassword {
         name: "alice",
         password: "bad_password",
-        new_password: "mypassword456",
+        new_password: "password456",
     };
     assert_eq!(
         server
@@ -55,10 +55,10 @@ async fn invalid_credentials() -> anyhow::Result<()> {
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    server.init_user("alice", "mypassword123").await?;
+    server.init_user("alice", "password123").await?;
     let change = ChangePassword {
         name: "alice",
-        password: "mypassword123",
+        password: "password123",
         new_password: "pswd",
     };
     assert_eq!(
@@ -77,8 +77,8 @@ async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let change = ChangePassword {
         name: "alice",
-        password: "mypassword123",
-        new_password: "mypassword456",
+        password: "password123",
+        new_password: "password456",
     };
     assert_eq!(
         server

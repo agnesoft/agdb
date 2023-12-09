@@ -8,10 +8,10 @@ use crate::framework::USER_LOGIN_URI;
 #[tokio::test]
 async fn login() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    server.init_user("alice", "mypassword123").await?;
+    server.init_user("alice", "password123").await?;
     let user = User {
         name: "alice",
-        password: "mypassword123",
+        password: "password123",
     };
     let (status, token) = server.post(USER_LOGIN_URI, &user, NO_TOKEN).await?;
     assert_eq!(status, 200);
@@ -23,10 +23,10 @@ async fn login() -> anyhow::Result<()> {
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    server.init_user("alice", "mypassword123").await?;
+    server.init_user("alice", "password123").await?;
     let user = User {
         name: "alice",
-        password: "mypassword456",
+        password: "password456",
     };
     let (status, token) = server.post(USER_LOGIN_URI, &user, NO_TOKEN).await?;
     assert_eq!(status, 401);

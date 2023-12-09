@@ -41,8 +41,8 @@ impl Display for DbUserRole {
          (status = 201, description = "user added"),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "user must be a db admin / cannot add self"),
+         (status = 464, description = "user not found"),
          (status = 466, description = "db not found"),
-         (status = 464, description = "user not found")
     )
 )]
 pub(crate) async fn add(

@@ -14,7 +14,7 @@ use crate::framework::NO_TOKEN;
 
 #[tokio::test]
 async fn create_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let admin = server.init_admin().await?;
     let bad = Some("bad".to_string());
     let user = User {
@@ -47,7 +47,7 @@ async fn create_user() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let admin = server.init_admin().await?;
     let bad = Some("bad".to_string());
     let user = User {
@@ -107,7 +107,7 @@ async fn change_password() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_list() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let token1 = server.init_user("alice", "password123").await?;
     let token2 = server.init_user("bob", "password456").await?;
     let admin = server.init_admin().await?;
@@ -140,7 +140,7 @@ async fn db_list() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_list() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     server.init_user("alice", "password123").await?;
     server.init_user("bob", "password456").await?;
     let admin = server.init_admin().await?;

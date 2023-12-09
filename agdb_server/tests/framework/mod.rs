@@ -67,6 +67,7 @@ pub struct TestServer {
     pub client: Client,
     pub admin: String,
     pub admin_password: String,
+    pub admin_token: Option<String>,
 }
 
 impl TestServer {
@@ -99,6 +100,7 @@ impl TestServer {
             client,
             admin: ADMIN.to_string(),
             admin_password: ADMIN.to_string(),
+            admin_token: None,
         };
 
         let mut error = anyhow!("Failed to start server");
@@ -138,22 +140,31 @@ impl TestServer {
         Ok((status, response.json().await.map_err(|e| anyhow!(e))))
     }
 
-    pub async fn init_admin(&self) -> anyhow::Result<Option<String>> {
+    pub async fn init_admin(&mut self) -> anyhow::Result<Option<String>> {
         let mut admin = HashMap::<&str, &str>::new();
         admin.insert("name", &self.admin);
         admin.insert("password", &self.admin_password);
         let response = self.post(LOGIN_URI, &admin, &None).await?;
         assert_eq!(response.0, 200);
-        Ok(Some(response.1))
+        self.admin_token = Some(response.1);
+        Ok(self.admin_token.clone())
     }
 
-    pub async fn init_user(&self, name: &str, password: &str) -> anyhow::Result<Option<String>> {
+    pub async fn init_user(
+        &mut self,
+        name: &str,
+        password: &str,
+    ) -> anyhow::Result<Option<String>> {
         let mut user = HashMap::<&str, &str>::new();
         user.insert("name", name);
         user.insert("password", password);
-        let admin_token = self.init_admin().await?;
+        if self.admin_token.is_none() {
+            self.init_admin().await?;
+        }
         assert_eq!(
-            self.post(CREATE_USER_URI, &user, &admin_token).await?.0,
+            self.post(CREATE_USER_URI, &user, &self.admin_token.clone())
+                .await?
+                .0,
             201
         );
         let response = self.post(LOGIN_URI, &user, &None).await?;
@@ -192,13 +203,18 @@ impl TestServer {
             let mut admin = HashMap::<&str, String>::new();
             admin.insert("name", self.admin.clone());
             admin.insert("password", self.admin_password.clone());
+            let token = self.admin_token.clone();
 
             std::thread::spawn(move || -> anyhow::Result<()> {
-                let admin_token = reqwest::blocking::Client::new()
-                    .post(format!("{}:{}/api/v1{LOGIN_URI}", Self::url_base(), port))
-                    .json(&admin)
-                    .send()?
-                    .text()?;
+                let admin_token = if let Some(t) = token {
+                    t
+                } else {
+                    reqwest::blocking::Client::new()
+                        .post(format!("{}:{}/api/v1{LOGIN_URI}", Self::url_base(), port))
+                        .json(&admin)
+                        .send()?
+                        .text()?
+                };
 
                 assert_eq!(
                     reqwest::blocking::Client::new()

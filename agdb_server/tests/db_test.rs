@@ -25,7 +25,7 @@ struct AddUser<'a> {
 
 #[tokio::test]
 async fn add_database() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let token = server.init_user("alice", "mypassword123").await?;
     let bad_token = Some("bad".to_string());
     let db1 = Db {
@@ -57,7 +57,7 @@ async fn add_database() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn add_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let token = server.init_user("alice", "mypassword123").await?;
     let token2: Option<String> = server.init_user("bob", "mypassword456").await?;
     server.init_user("chad", "mypassword789").await?;
@@ -150,7 +150,7 @@ async fn add_user() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn delete() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let token = server.init_user("alice", "mypassword123").await?;
     let bad_token = Some("bad".to_string());
     let db1 = Db {
@@ -198,7 +198,7 @@ async fn delete() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn list() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let token = server.init_user("alice", "mypassword123").await?;
     let bad = Some("bad".to_string());
     let db1 = Db {
@@ -227,7 +227,7 @@ async fn list() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let token = server.init_user("alice", "mypassword123").await?;
     let bad_token = Some("bad".to_string());
     let db1 = Db {

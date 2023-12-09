@@ -78,7 +78,7 @@
           "required": true
         },
         "responses": {
-          "204": {
+          "201": {
             "description": "password changed"
           },
           "401": {
@@ -229,6 +229,9 @@
           "401": {
             "description": "unauthorized"
           },
+          "403": {
+            "description": "user must be a db admin"
+          },
           "466": {
             "description": "db not found"
           }
@@ -288,7 +291,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "204": {
             "description": "db removed"
           },
           "401": {
@@ -375,7 +378,7 @@
           "required": true
         },
         "responses": {
-          "204": {
+          "201": {
             "description": "password changed"
           },
           "401": {

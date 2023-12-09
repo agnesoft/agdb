@@ -149,6 +149,11 @@ pub(crate) async fn remove(
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
     let db = db_pool.find_user_database(user.0, &request.name)?;
+
+    if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+
     db_pool.remove_database(db)?;
 
     Ok(StatusCode::NO_CONTENT)

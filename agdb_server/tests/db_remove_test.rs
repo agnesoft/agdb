@@ -44,9 +44,9 @@ async fn other_user() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let token = server.init_user("alice", "password123").await?;
     server.init_db("my_db", "mapped", &token).await?;
-    let token = server.init_user("bob", "password456").await?;
+    let other = server.init_user("bob", "password456").await?;
     let del = RemoveDb { name: "my_db" };
-    assert_eq!(server.post(DB_REMOVE_URI, &del, &token).await?.0, 466);
+    assert_eq!(server.post(DB_REMOVE_URI, &del, &other).await?.0, 466);
     let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
     let expected = vec![Db {
         name: "my_db".to_string(),

@@ -540,9 +540,7 @@ where
         let id = self.data.transaction(storage);
         let index = GraphIndex::from(self.get_free_index(storage)?);
         let count = self.data.node_count(storage)?;
-        self.data.set_from(storage, index, 0)?;
-        self.data.set_to(storage, index, 0)?;
-        self.data.set_to_meta(storage, index, 0)?;
+
         self.data.set_node_count(storage, count + 1)?;
         self.data.commit(storage, id)?;
 
@@ -639,7 +637,10 @@ where
         let next_free = self.data.from_meta(storage, GraphIndex::default())?;
         self.data.set_from_meta(storage, index, next_free)?;
         self.data
-            .set_from_meta(storage, GraphIndex::default(), -index.0)
+            .set_from_meta(storage, GraphIndex::default(), -index.0)?;
+        self.data.set_from(storage, index, 0)?;
+        self.data.set_to(storage, index, 0)?;
+        self.data.set_to_meta(storage, index, 0)
     }
 
     fn get_free_index(&mut self, storage: &mut Storage<D>) -> Result<i64, DbError> {

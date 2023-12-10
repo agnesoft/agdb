@@ -540,6 +540,9 @@ where
         let id = self.data.transaction(storage);
         let index = GraphIndex::from(self.get_free_index(storage)?);
         let count = self.data.node_count(storage)?;
+        self.data.set_from(storage, index, 0)?;
+        self.data.set_to(storage, index, 0)?;
+        self.data.set_to_meta(storage, index, 0)?;
         self.data.set_node_count(storage, count + 1)?;
         self.data.commit(storage, id)?;
 
@@ -1389,5 +1392,19 @@ mod tests {
         assert!(graph.edge(&storage, edge1).is_some());
         assert!(graph.edge(&storage, edge2).is_some());
         assert!(graph.edge(&storage, edge3).is_some());
+    }
+
+    #[test]
+    fn reuse_edge_index_for_node() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+
+        let n1 = graph.insert_node(&mut storage).unwrap();
+        let n2 = graph.insert_node(&mut storage).unwrap();
+        let e1 = graph.insert_edge(&mut storage, n1, n2).unwrap();
+        graph.remove_edge(&mut storage, e1).unwrap();
+        let n3 = graph.insert_node(&mut storage).unwrap();
+        assert!(graph.node(&storage, n3).is_some());
     }
 }

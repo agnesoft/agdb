@@ -1,5 +1,3 @@
-pub mod framework;
-
 use crate::framework::ChangePassword;
 use crate::framework::TestServer;
 use crate::framework::User;
@@ -9,15 +7,15 @@ use crate::framework::USER_LOGIN_URI;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.init_user("alice", "password123").await?;
+    let server = TestServer::new().await?;
+    let (name, _) = server.init_user().await?;
     let change = ChangePassword {
-        name: "alice",
-        password: "password123",
+        name: &name,
+        password: &name,
         new_password: "password456",
     };
     let user = User {
-        name: "alice",
+        name: &name,
         password: "password456",
     };
     assert_eq!(
@@ -34,10 +32,10 @@ async fn change_password() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.init_user("alice", "password123").await?;
+    let server = TestServer::new().await?;
+    let (name, _) = server.init_user().await?;
     let change = ChangePassword {
-        name: "alice",
+        name: &name,
         password: "bad_password",
         new_password: "password456",
     };
@@ -54,11 +52,11 @@ async fn invalid_credentials() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.init_user("alice", "password123").await?;
+    let server = TestServer::new().await?;
+    let (name, _) = server.init_user().await?;
     let change = ChangePassword {
-        name: "alice",
-        password: "password123",
+        name: &name,
+        password: &name,
         new_password: "pswd",
     };
     assert_eq!(
@@ -76,7 +74,7 @@ async fn password_too_short() -> anyhow::Result<()> {
 async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let change = ChangePassword {
-        name: "alice",
+        name: "user_not_found",
         password: "password123",
         new_password: "password456",
     };

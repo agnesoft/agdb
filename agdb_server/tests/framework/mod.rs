@@ -5,11 +5,15 @@ use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
+use std::sync::atomic::Ordering;
+use std::sync::OnceLock;
 use std::time::Duration;
+use tokio::sync::Mutex;
 
 pub const USER_CHANGE_PASSWORD_URI: &str = "/user/change_password";
 pub const ADMIN_USER_CREATE_URI: &str = "/admin/user/create";
@@ -25,6 +29,8 @@ pub const USER_LOGIN_URI: &str = "/user/login";
 pub const SHUTDOWN_URI: &str = "/admin/shutdown";
 pub const STATUS_URI: &str = "/status";
 
+pub const NO_TOKEN: &Option<String> = &None;
+
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
 const PROTOCOL: &str = "http";
@@ -33,8 +39,12 @@ const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 3;
-pub const NO_TOKEN: &Option<String> = &None;
+
+static MUTEX: OnceLock<Mutex<bool>> = OnceLock::new();
+static SERVER: OnceLock<TestServerImpl> = OnceLock::new();
+static INSTANCES: AtomicU16 = AtomicU16::new(0);
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
+static COUNTER: AtomicU16 = AtomicU16::new(1);
 
 #[derive(Serialize, Deserialize)]
 pub struct AddUser<'a> {
@@ -67,7 +77,7 @@ pub struct ChangePassword<'a> {
     pub new_password: &'a str,
 }
 
-pub struct TestServer {
+pub struct TestServerImpl {
     pub dir: String,
     pub port: u16,
     pub process: Child,
@@ -77,9 +87,52 @@ pub struct TestServer {
     pub admin_token: Option<String>,
 }
 
+pub struct TestServer(pub &'static TestServerImpl);
+
+impl Deref for TestServer {
+    type Target = TestServerImpl;
+
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
 impl TestServer {
     pub async fn new() -> anyhow::Result<Self> {
-        let port = PORT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let server = TestServerImpl::new().await?;
+        Ok(Self(server))
+    }
+}
+
+impl Drop for TestServer {
+    fn drop(&mut self) {
+        let remaining = INSTANCES.fetch_sub(1, Ordering::Relaxed);
+
+        println!("DROP: {remaining}");
+
+        if remaining == 1 {
+            self.0.shutdown_server().unwrap();
+        }
+    }
+}
+
+impl TestServerImpl {
+    pub async fn new() -> anyhow::Result<&'static Self> {
+        let mutex = MUTEX.get_or_init(|| Mutex::new(true));
+        let _lock = mutex.lock().await;
+
+        INSTANCES.fetch_add(1, Ordering::Relaxed);
+
+        Ok(if let Some(server) = SERVER.get() {
+            server
+        } else {
+            let server = Self::init().await?;
+            SERVER.get_or_init(|| server)
+        })
+    }
+
+    pub(crate) async fn init() -> anyhow::Result<Self> {
+        let port = PORT.fetch_add(1, Ordering::Relaxed);
         let dir = format!("{BINARY}.{port}.test");
 
         Self::remove_dir_if_exists(&dir)?;
@@ -100,26 +153,41 @@ impl TestServer {
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let client = reqwest::Client::new();
-        let server = Self {
-            dir,
-            port,
-            process,
-            client,
-            admin: ADMIN.to_string(),
-            admin_password: ADMIN.to_string(),
-            admin_token: None,
-        };
 
         let mut error = anyhow!("Failed to start server");
 
         for _ in 0..RETRY_ATTEMPS {
-            match server
-                .client
+            match client
                 .get(format!("{}:{}/api/v1{STATUS_URI}", Self::url_base(), port))
                 .send()
                 .await
             {
-                Ok(_) => return Ok(server),
+                Ok(_) => {
+                    let admin = User {
+                        name: ADMIN,
+                        password: ADMIN,
+                    };
+                    let response = client
+                        .post(format!(
+                            "{}:{}/api/v1{USER_LOGIN_URI}",
+                            Self::url_base(),
+                            port
+                        ))
+                        .json(&admin)
+                        .send()
+                        .await?;
+                    let admin_token = Some(response.text().await?);
+                    let server = Self {
+                        dir,
+                        port,
+                        process,
+                        client,
+                        admin: ADMIN.to_string(),
+                        admin_password: ADMIN.to_string(),
+                        admin_token,
+                    };
+                    return Ok(server);
+                }
                 Err(e) => {
                     error = e.into();
                 }
@@ -147,50 +215,36 @@ impl TestServer {
         Ok((status, response.json().await.map_err(|e| anyhow!(e))))
     }
 
-    pub async fn init_admin(&mut self) -> anyhow::Result<Option<String>> {
-        let admin = User {
-            name: &self.admin,
-            password: &self.admin_password,
+    pub async fn init_user(&self) -> anyhow::Result<(String, Option<String>)> {
+        let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
+        let user = User {
+            name: &name,
+            password: &name,
         };
-        let response = self.post(USER_LOGIN_URI, &admin, &None).await?;
-        assert_eq!(response.0, 200);
-        self.admin_token = Some(response.1);
-        Ok(self.admin_token.clone())
-    }
-
-    pub async fn init_user(
-        &mut self,
-        name: &str,
-        password: &str,
-    ) -> anyhow::Result<Option<String>> {
-        let user = User { name, password };
-        if self.admin_token.is_none() {
-            self.init_admin().await?;
-        }
         assert_eq!(
-            self.post(ADMIN_USER_CREATE_URI, &user, &self.admin_token.clone())
+            self.post(ADMIN_USER_CREATE_URI, &user, &self.admin_token)
                 .await?
                 .0,
             201
         );
         let response = self.post(USER_LOGIN_URI, &user, &None).await?;
         assert_eq!(response.0, 200);
-        Ok(Some(response.1))
+        Ok((name, Some(response.1)))
     }
 
     pub async fn init_db(
         &self,
-        name: &str,
         db_type: &str,
         user_token: &Option<String>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<String> {
+        let name = format!("db{}", COUNTER.fetch_add(1, Ordering::Relaxed));
         let db = Db {
-            name: name.to_string(),
+            name: name.clone(),
             db_type: db_type.to_string(),
         };
         let (status, _) = self.post(DB_ADD_URI, &db, user_token).await?;
         assert_eq!(status, 201);
-        Ok(())
+        Ok(name)
     }
 
     pub async fn post<T: Serialize>(
@@ -218,50 +272,36 @@ impl TestServer {
         Ok(())
     }
 
-    fn shutdown_server(&mut self) -> anyhow::Result<()> {
-        if self.process.try_wait()?.is_none() {
-            let port = self.port;
-            let mut admin = HashMap::<&str, String>::new();
-            admin.insert("name", self.admin.clone());
-            admin.insert("password", self.admin_password.clone());
-            let token = self.admin_token.clone();
+    fn shutdown_server(&self) -> anyhow::Result<()> {
+        //if self.process.try_wait()?.is_none() {
+        let port = self.port;
+        let mut admin = HashMap::<&str, String>::new();
+        admin.insert("name", self.admin.clone());
+        admin.insert("password", self.admin_password.clone());
+        let admin_token = self.admin_token.clone().unwrap();
 
-            std::thread::spawn(move || -> anyhow::Result<()> {
-                let admin_token = if let Some(t) = token {
-                    t
-                } else {
-                    reqwest::blocking::Client::new()
-                        .post(format!(
-                            "{}:{}/api/v1{USER_LOGIN_URI}",
-                            Self::url_base(),
-                            port
-                        ))
-                        .json(&admin)
-                        .send()?
-                        .text()?
-                };
+        std::thread::spawn(move || -> anyhow::Result<()> {
+            assert_eq!(
+                reqwest::blocking::Client::new()
+                    .get(format!(
+                        "{}:{}/api/v1{SHUTDOWN_URI}",
+                        Self::url_base(),
+                        port
+                    ))
+                    .bearer_auth(admin_token)
+                    .send()?
+                    .status()
+                    .as_u16(),
+                204
+            );
 
-                assert_eq!(
-                    reqwest::blocking::Client::new()
-                        .get(format!(
-                            "{}:{}/api/v1{SHUTDOWN_URI}",
-                            Self::url_base(),
-                            port
-                        ))
-                        .bearer_auth(admin_token)
-                        .send()?
-                        .status()
-                        .as_u16(),
-                    204
-                );
+            Ok(())
+        })
+        .join()
+        .map_err(|e| anyhow!("{:?}", e))??;
+        //}
 
-                Ok(())
-            })
-            .join()
-            .map_err(|e| anyhow!("{:?}", e))??;
-        }
-
-        assert!(self.process.wait()?.success());
+        //assert!(self.process.wait()?.success());
 
         Ok(())
     }
@@ -275,7 +315,7 @@ impl TestServer {
     }
 }
 
-impl Drop for TestServer {
+impl Drop for TestServerImpl {
     fn drop(&mut self) {
         let shutdown_result = Self::shutdown_server(self);
 

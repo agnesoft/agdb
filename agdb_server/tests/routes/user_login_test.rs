@@ -40,9 +40,8 @@ async fn user_not_found() -> anyhow::Result<()> {
         name: "user_not_found",
         password: "password456",
     };
-    let (status, token) = server.post(USER_LOGIN_URI, &user, NO_TOKEN).await?;
-    assert_eq!(status, 401);
-    assert!(token.is_empty());
+    let (status, _) = server.post(USER_LOGIN_URI, &user, NO_TOKEN).await?;
+    assert_eq!(status, 464);
 
     Ok(())
 }

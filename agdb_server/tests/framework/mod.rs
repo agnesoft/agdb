@@ -81,26 +81,56 @@ pub struct TestServerImpl {
     pub dir: String,
     pub port: u16,
     pub process: Child,
-    pub client: Client,
     pub admin: String,
     pub admin_password: String,
     pub admin_token: Option<String>,
 }
 
-pub struct TestServer(pub &'static TestServerImpl);
-
-impl Deref for TestServer {
-    type Target = TestServerImpl;
-
-    fn deref(&self) -> &Self::Target {
-        self.0
-    }
+pub struct TestServer {
+    server: &'static TestServerImpl,
+    client: Client,
 }
 
 impl TestServer {
     pub async fn new() -> anyhow::Result<Self> {
         let server = TestServerImpl::new().await?;
-        Ok(Self(server))
+        Ok(Self {
+            server,
+            client: reqwest::Client::new(),
+        })
+    }
+
+    pub async fn get<T: DeserializeOwned>(
+        &self,
+        uri: &str,
+        token: &Option<String>,
+    ) -> anyhow::Result<(u16, anyhow::Result<T>)> {
+        self.server.get(&self.client, uri, token).await
+    }
+
+    pub async fn post<T: Serialize>(
+        &self,
+        uri: &str,
+        json: &T,
+        token: &Option<String>,
+    ) -> anyhow::Result<(u16, String)> {
+        self.server.post(&self.client, uri, json, token).await
+    }
+
+    pub async fn init_user(&self) -> anyhow::Result<(String, Option<String>)> {
+        self.server.init_user(&self.client).await
+    }
+
+    pub async fn init_db(&self, db_type: &str, token: &Option<String>) -> anyhow::Result<String> {
+        self.server.init_db(&self.client, db_type, token).await
+    }
+}
+
+impl Deref for TestServer {
+    type Target = TestServerImpl;
+
+    fn deref(&self) -> &Self::Target {
+        self.server
     }
 }
 
@@ -108,10 +138,16 @@ impl Drop for TestServer {
     fn drop(&mut self) {
         let remaining = INSTANCES.fetch_sub(1, Ordering::Relaxed);
 
-        println!("DROP: {remaining}");
-
         if remaining == 1 {
-            self.0.shutdown_server().unwrap();
+            self.server.shutdown_server().unwrap();
+
+            for _ in 0..RETRY_ATTEMPS {
+                if TestServerImpl::remove_dir_if_exists(&self.dir).is_ok() {
+                    break;
+                } else {
+                    std::thread::sleep(RETRY_TIMEOUT);
+                }
+            }
         }
     }
 }
@@ -181,7 +217,6 @@ impl TestServerImpl {
                         dir,
                         port,
                         process,
-                        client,
                         admin: ADMIN.to_string(),
                         admin_password: ADMIN.to_string(),
                         admin_token,
@@ -200,10 +235,11 @@ impl TestServerImpl {
 
     pub async fn get<T: DeserializeOwned>(
         &self,
+        client: &Client,
         uri: &str,
         token: &Option<String>,
     ) -> anyhow::Result<(u16, anyhow::Result<T>)> {
-        let mut request = self.client.get(self.url(uri));
+        let mut request = client.get(self.url(uri));
 
         if let Some(token) = token {
             request = request.bearer_auth(token);
@@ -215,25 +251,26 @@ impl TestServerImpl {
         Ok((status, response.json().await.map_err(|e| anyhow!(e))))
     }
 
-    pub async fn init_user(&self) -> anyhow::Result<(String, Option<String>)> {
+    pub async fn init_user(&self, client: &Client) -> anyhow::Result<(String, Option<String>)> {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
         let user = User {
             name: &name,
             password: &name,
         };
         assert_eq!(
-            self.post(ADMIN_USER_CREATE_URI, &user, &self.admin_token)
+            self.post(client, ADMIN_USER_CREATE_URI, &user, &self.admin_token)
                 .await?
                 .0,
             201
         );
-        let response = self.post(USER_LOGIN_URI, &user, &None).await?;
+        let response = self.post(client, USER_LOGIN_URI, &user, &None).await?;
         assert_eq!(response.0, 200);
         Ok((name, Some(response.1)))
     }
 
     pub async fn init_db(
         &self,
+        client: &Client,
         db_type: &str,
         user_token: &Option<String>,
     ) -> anyhow::Result<String> {
@@ -242,18 +279,19 @@ impl TestServerImpl {
             name: name.clone(),
             db_type: db_type.to_string(),
         };
-        let (status, _) = self.post(DB_ADD_URI, &db, user_token).await?;
+        let (status, _) = self.post(client, DB_ADD_URI, &db, user_token).await?;
         assert_eq!(status, 201);
         Ok(name)
     }
 
     pub async fn post<T: Serialize>(
         &self,
+        client: &Client,
         uri: &str,
         json: &T,
         token: &Option<String>,
     ) -> anyhow::Result<(u16, String)> {
-        let mut request = self.client.post(self.url(uri)).json(&json);
+        let mut request = client.post(self.url(uri)).json(&json);
 
         if let Some(token) = token {
             request = request.bearer_auth(token);

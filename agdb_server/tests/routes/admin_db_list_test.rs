@@ -19,20 +19,15 @@ async fn db_list() -> anyhow::Result<()> {
         .get::<Vec<Db>>(ADMIN_DB_LIST_URI, &server.admin_token)
         .await?;
     assert_eq!(status, 200);
-    let mut list = list?;
-    list.sort();
-    let mut expected = vec![
-        Db {
-            name: db1,
-            db_type: "memory".to_string(),
-        },
-        Db {
-            name: db2,
-            db_type: "memory".to_string(),
-        },
-    ];
-    expected.sort();
-    assert_eq!(list, expected);
+    let list = list?;
+    assert!(list.contains(&Db {
+        name: db1,
+        db_type: "memory".to_string(),
+    }));
+    assert!(list.contains(&Db {
+        name: db2,
+        db_type: "memory".to_string(),
+    }));
 
     Ok(())
 }

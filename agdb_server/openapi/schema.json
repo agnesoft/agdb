@@ -297,6 +297,9 @@
           "401": {
             "description": "unauthorized"
           },
+          "403": {
+            "description": "user must be a db admin"
+          },
           "466": {
             "description": "db not found"
           }

@@ -242,7 +242,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user_database(&self, user: DbId, name: &str) -> ServerResult<Database> {
+    pub(crate) fn find_user_database(&self, user: DbId, db: &str) -> ServerResult<Database> {
         Ok(self
             .0
             .server_db
@@ -257,7 +257,7 @@ impl DbPool {
                             .distance(CountComparison::Equal(2))
                             .and()
                             .key("name")
-                            .value(Comparison::Equal(name.into()))
+                            .value(Comparison::Equal(db.into()))
                             .query(),
                     )
                     .query(),
@@ -266,7 +266,7 @@ impl DbPool {
             .get(0)
             .ok_or(ServerError::new(
                 ErrorCode::DbNotFound.into(),
-                &format!("{}: {name}", ErrorCode::DbNotFound.as_str()),
+                &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
             ))?
             .try_into()?)
     }

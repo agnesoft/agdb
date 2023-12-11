@@ -1,0 +1,12 @@
+mod admin_db_list_test;
+mod admin_user_change_password_test;
+mod admin_user_create_test;
+mod admin_user_list_test;
+mod db_add_test;
+mod db_delete_test;
+mod db_list_test;
+mod db_remove_test;
+mod db_user_add_test;
+mod server_test;
+mod user_change_password_test;
+mod user_login_test;

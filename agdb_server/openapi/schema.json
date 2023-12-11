@@ -351,6 +351,40 @@
         ]
       }
     },
+    "/api/v1/db/user/list": {
+      "get": {
+        "tags": [
+          "crate::routes::db::user"
+        ],
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "db",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "466": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/user/remove": {
       "post": {
         "tags": [
@@ -495,6 +529,17 @@
             "type": "string"
           },
           "password": {
+            "type": "string"
+          }
+        }
+      },
+      "DbName": {
+        "type": "object",
+        "required": [
+          "db"
+        ],
+        "properties": {
+          "db": {
             "type": "string"
           }
         }

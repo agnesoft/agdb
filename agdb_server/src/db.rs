@@ -24,7 +24,7 @@ use std::sync::RwLockWriteGuard;
 const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 
 #[derive(UserValue)]
-pub(crate) struct DbUser {
+pub(crate) struct ServerUser {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
     pub(crate) password: Vec<u8>,
@@ -71,7 +71,7 @@ impl DbPool {
                 let admin = t.exec_mut(
                     &QueryBuilder::insert()
                         .nodes()
-                        .values(&DbUser {
+                        .values(&ServerUser {
                             db_id: None,
                             name: config.admin.clone(),
                             password: admin_password.password.to_vec(),
@@ -153,7 +153,7 @@ impl DbPool {
         })
     }
 
-    pub(crate) fn create_user(&self, user: DbUser) -> ServerResult {
+    pub(crate) fn create_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut()?.transaction_mut(|t| {
             let user = t.exec_mut(&QueryBuilder::insert().nodes().values(&user).query())?;
 
@@ -293,7 +293,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user(&self, name: &str) -> ServerResult<DbUser> {
+    pub(crate) fn find_user(&self, name: &str) -> ServerResult<ServerUser> {
         Ok(self
             .db()?
             .exec(
@@ -383,6 +383,40 @@ impl DbPool {
             .ids())
     }
 
+    pub(crate) fn db_users(&self, db: DbId) -> ServerResult<Vec<(String, String)>> {
+        let mut users = vec![];
+
+        self.db()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .depth_first()
+                            .to(db)
+                            .where_()
+                            .distance(CountComparison::LessThanOrEqual(2))
+                            .and()
+                            .where_()
+                            .keys(vec!["role".into()])
+                            .or()
+                            .keys(vec!["password".into()])
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .elements
+            .into_iter()
+            .for_each(|e| {
+                if e.id.0 < 0 {
+                    users.push((String::new(), e.values[0].value.to_string()));
+                } else {
+                    users.last_mut().unwrap().0 = e.values[0].value.to_string();
+                }
+            });
+
+        Ok(users)
+    }
+
     pub(crate) fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
         Ok(self
             .db()?
@@ -436,7 +470,7 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn save_user(&self, user: DbUser) -> ServerResult {
+    pub(crate) fn save_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut()?
             .exec_mut(&QueryBuilder::insert().element(&user).query())?;
         Ok(())

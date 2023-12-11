@@ -140,6 +140,7 @@ pub(crate) async fn list(
     responses(
          (status = 204, description = "db removed"),
          (status = 401, description = "unauthorized"),
+         (status = 403, description = "user must be a db admin"),
          (status = 466, description = "db not found"),
     )
 )]

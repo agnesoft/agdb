@@ -119,16 +119,38 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn add_database_user(&self, database: DbId, user: DbId, role: &str) -> ServerResult {
-        self.db_mut()?.exec_mut(
-            &QueryBuilder::insert()
-                .edges()
-                .from(user)
-                .to(database)
-                .values_uniform(vec![("role", role).into()])
-                .query(),
-        )?;
-        Ok(())
+    pub(crate) fn add_database_user(&self, db: DbId, user: DbId, role: &str) -> ServerResult {
+        self.db_mut()?.transaction_mut(|t| {
+            let existing_role = t.exec(
+                &QueryBuilder::search()
+                    .from(user)
+                    .to(db)
+                    .limit(1)
+                    .where_()
+                    .keys(vec!["role".into()])
+                    .query(),
+            )?;
+
+            if existing_role.result == 1 {
+                t.exec_mut(
+                    &QueryBuilder::insert()
+                        .values(vec![vec![("role", role).into()]])
+                        .ids(existing_role)
+                        .query(),
+                )?;
+            } else {
+                t.exec_mut(
+                    &QueryBuilder::insert()
+                        .edges()
+                        .from(user)
+                        .to(db)
+                        .values_uniform(vec![("role", role).into()])
+                        .query(),
+                )?;
+            }
+
+            Ok(())
+        })
     }
 
     pub(crate) fn create_user(&self, user: DbUser) -> ServerResult {

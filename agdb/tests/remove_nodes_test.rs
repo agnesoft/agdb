@@ -203,3 +203,76 @@ fn remove_nodes_search() {
     db.exec_error(QueryBuilder::select().ids(1).query(), "Id '1' not found");
     db.exec_error(QueryBuilder::select().ids(2).query(), "Id '2' not found");
 }
+
+#[test]
+fn remove_nodes_removes_edges_with_all_values() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(2)
+            .to(3)
+            .values(vec![vec![("some_key", 100).into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::remove().ids(2).query(), -1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec![1, 1])
+            .to(vec![3, 3])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(vec![-2, -4]).query(),
+        &[
+            DbElement {
+                id: DbId(-2),
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(-4),
+                values: vec![],
+            },
+        ],
+    );
+}
+
+#[test]
+fn remove_nodes_removes_edges_with_all_values_rollback() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(2)
+            .to(3)
+            .values(vec![vec![("some_key", 100).into()]])
+            .query(),
+        1,
+    );
+    db.transaction_mut_error(
+        |t| -> Result<(), QueryError> {
+            t.exec_mut(&QueryBuilder::remove().ids(2).query())?;
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(vec![1, 1])
+                    .to(vec![3, 3])
+                    .query(),
+            )?;
+            Err(QueryError::from("error"))
+        },
+        QueryError::from("error"),
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(vec![-4]).query(),
+        &[DbElement {
+            id: DbId(-4),
+            values: vec![("some_key", 100).into()],
+        }],
+    );
+}

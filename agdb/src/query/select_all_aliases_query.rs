@@ -24,6 +24,8 @@ impl Query for SelectAllAliasesQuery {
         for alias in aliases {
             result.elements.push(DbElement {
                 id: alias.1,
+                from: None,
+                to: None,
                 values: vec![("alias", alias.0).into()],
             });
         }

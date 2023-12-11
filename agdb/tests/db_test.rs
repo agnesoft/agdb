@@ -105,14 +105,20 @@ fn data_persistence() {
             &[
                 DbElement {
                     id: DbId(1),
+                    from: None,
+                    to: None,
                     values: values.clone(),
                 },
                 DbElement {
                     id: DbId(2),
+                    from: None,
+                    to: None,
                     values: values.clone(),
                 },
                 DbElement {
                     id: DbId(-3),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
                     values: vec![],
                 }
             ]
@@ -133,14 +139,20 @@ fn data_persistence() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: values.clone(),
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values,
             },
             DbElement {
                 id: DbId(-3),
+                from: Some(DbId(1)),
+                to: Some(DbId(2)),
                 values: vec![],
             }
         ]
@@ -176,14 +188,20 @@ fn data_remove_persistence() {
             &[
                 DbElement {
                     id: DbId(1),
+                    from: None,
+                    to: None,
                     values: vec![("key", 100).into()],
                 },
                 DbElement {
                     id: DbId(2),
+                    from: None,
+                    to: None,
                     values: vec![("key", 100).into()],
                 },
                 DbElement {
                     id: DbId(-3),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
                     values: vec![],
                 }
             ]
@@ -210,10 +228,14 @@ fn data_remove_persistence() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("key", 100).into()],
             }
         ]

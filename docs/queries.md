@@ -108,11 +108,13 @@ The `QueryResult` is the universal result type for all successful queries. It ca
 ```Rust
 pub struct QueryResult {
     pub result: i64,
+    pub from: Option<DbId>,
+    pub to: Option<DbId>,
     pub elements: Vec<DbElement>,
 }
 ```
 
-The `result` field holds numerical result of the query. It typically returns the number of database items affected. For example when selecting from the database it will hold a positive number of elements returned. When removing from the database it will hold a negative number of elements deleted from the database.
+The `result` field holds numerical result of the query. It typically returns the number of database items affected. For example when selecting from the database it will hold a positive number of elements returned. When removing from the database it will hold a negative number of elements deleted from the database. The optional `from` and `to` fields will hold origin/destination id of an edge and will be `None` for nodes.
 
 The `elements` field hold the [database elements](concepts.md#graph) returned. Each element looks like:
 

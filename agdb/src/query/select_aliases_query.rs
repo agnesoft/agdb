@@ -28,10 +28,14 @@ impl Query for SelectAliasesQuery {
                     match id {
                         QueryId::Id(db_id) => result.elements.push(DbElement {
                             id: *db_id,
+                            from: None,
+                            to: None,
                             values: vec![("alias", db.alias(*db_id)?).into()],
                         }),
                         QueryId::Alias(alias) => result.elements.push(DbElement {
                             id: db.db_id(id)?,
+                            from: None,
+                            to: None,
                             values: vec![("alias", alias).into()],
                         }),
                     }
@@ -42,6 +46,8 @@ impl Query for SelectAliasesQuery {
                     if let Ok(alias) = db.alias(db_id) {
                         result.elements.push(DbElement {
                             id: db_id,
+                            from: None,
+                            to: None,
                             values: vec![("alias", alias).into()],
                         });
                     }

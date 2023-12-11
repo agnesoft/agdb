@@ -625,11 +625,11 @@ where
         Ok(GraphIndex::from(-self.data.to(storage, index)?))
     }
 
-    fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
+    pub fn edge_from(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.from(storage, index).unwrap_or_default())
     }
 
-    fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
+    pub fn edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> GraphIndex {
         GraphIndex::from(-self.data.to(storage, index).unwrap_or_default())
     }
 

@@ -38,10 +38,14 @@ fn select_aliases_ids() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias1").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias2").into()],
             },
         ],
@@ -66,10 +70,14 @@ fn select_aliases_aliases() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias1").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias2").into()],
             },
         ],
@@ -109,10 +117,14 @@ fn select_aliases_search() {
         &[
             DbElement {
                 id: DbId(3),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias3").into()],
             },
             DbElement {
                 id: DbId(5),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias5").into()],
             },
         ],
@@ -140,14 +152,20 @@ fn select_all_aliases() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias1").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias2").into()],
             },
             DbElement {
                 id: DbId(3),
+                from: None,
+                to: None,
                 values: vec![("alias", "alias3").into()],
             },
         ],

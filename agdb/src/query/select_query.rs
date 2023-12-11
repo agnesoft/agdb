@@ -33,10 +33,12 @@ impl Query for SelectQuery {
         result.elements.reserve(db_ids.len());
         result.result = db_ids.len() as i64;
 
-        for db_id in db_ids {
+        for id in db_ids {
             result.elements.push(DbElement {
-                id: db_id,
-                values: db.values(db_id)?,
+                id,
+                from: db.from_id(id),
+                to: db.to_id(id),
+                values: db.values(id)?,
             });
         }
 

@@ -24,6 +24,8 @@ fn select_key_count_ids() {
         QueryBuilder::select().key_count().ids("alias").query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![("key_count", 3_u64).into()],
         }],
     );
@@ -37,6 +39,8 @@ fn select_keys_count_no_keys() {
         QueryBuilder::select().key_count().ids("alias").query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![("key_count", 0_u64).into()],
         }],
     );
@@ -78,14 +82,20 @@ fn select_keys_search() {
         &[
             DbElement {
                 id: DbId(3),
+                from: None,
+                to: None,
                 values: vec![("key_count", 3_u64).into()],
             },
             DbElement {
                 id: DbId(-7),
+                from: Some(DbId(3)),
+                to: Some(DbId(5)),
                 values: vec![("key_count", 3_u64).into()],
             },
             DbElement {
                 id: DbId(5),
+                from: None,
+                to: None,
                 values: vec![("key_count", 3_u64).into()],
             },
         ],

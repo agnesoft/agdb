@@ -8,6 +8,12 @@ pub struct DbElement {
     /// Element id.
     pub id: DbId,
 
+    /// Origin node id.
+    pub from: Option<DbId>,
+
+    /// Destination node id.
+    pub to: Option<DbId>,
+
     /// List of key-value pairs associated with the element.
     pub values: Vec<DbKeyValue>,
 }
@@ -21,6 +27,8 @@ mod tests {
             "{:?}",
             DbElement {
                 id: DbId(0),
+                from: None,
+                to: None,
                 values: vec![]
             }
         );
@@ -30,10 +38,14 @@ mod tests {
         assert_eq!(
             DbElement {
                 id: DbId(0),
+                from: None,
+                to: None,
                 values: vec![]
             },
             DbElement {
                 id: DbId(0),
+                from: None,
+                to: None,
                 values: vec![]
             }
         );

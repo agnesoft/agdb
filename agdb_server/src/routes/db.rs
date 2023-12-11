@@ -71,7 +71,7 @@ pub(crate) async fn add(
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabase>,
 ) -> ServerResponse {
-    if db_pool.find_database_id(&request.name).is_ok() {
+    if db_pool.find_db_id(&request.name).is_ok() {
         return Err(ErrorCode::DbExists.into());
     }
 
@@ -81,7 +81,7 @@ pub(crate) async fn add(
         db_type: request.db_type.to_string(),
     };
 
-    db_pool.add_database(user.0, db)?;
+    db_pool.add_db(user.0, db)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -102,13 +102,13 @@ pub(crate) async fn delete(
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
-    let db = db_pool.find_user_database(user.0, &request.name)?;
+    let db = db_pool.find_user_db(user.0, &request.name)?;
 
     if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
         return Ok(StatusCode::FORBIDDEN);
     }
 
-    db_pool.delete_database(db)?;
+    db_pool.delete_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -126,7 +126,7 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
     let dbs = db_pool
-        .find_user_databases(user.0)?
+        .find_user_dbs(user.0)?
         .into_iter()
         .map(|db| db.into())
         .collect();
@@ -149,13 +149,13 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
-    let db = db_pool.find_user_database(user.0, &request.name)?;
+    let db = db_pool.find_user_db(user.0, &request.name)?;
 
     if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
         return Ok(StatusCode::FORBIDDEN);
     }
 
-    db_pool.remove_database(db)?;
+    db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

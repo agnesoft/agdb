@@ -19,7 +19,7 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
     let dbs = db_pool
-        .find_databases()?
+        .find_dbs()?
         .into_iter()
         .map(|db| db.into())
         .collect();

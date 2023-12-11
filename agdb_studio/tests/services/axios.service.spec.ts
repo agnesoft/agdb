@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import axiosService from "../../src/services/axios.service";
+import axiosService from "@/services/axios.service";
 import MockAdapter from "axios-mock-adapter";
 
 const mock = new MockAdapter(axiosService);

@@ -804,6 +804,7 @@ impl<Store: StorageData> DbImpl<Store> {
                 from: edge.1,
                 to: edge.2,
             });
+            self.remove_all_values(DbId(edge.0 .0))?;
         }
 
         self.graph.remove_node(&mut self.storage, graph_index)?;
@@ -829,7 +830,7 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(result)
     }
 
-    fn remove_all_values(&mut self, db_id: DbId) -> Result<(), QueryError> {
+    fn remove_all_values(&mut self, db_id: DbId) -> Result<(), DbError> {
         for key_value in self.values.values(&self.storage, &db_id)? {
             self.undo_stack.push(Command::InsertKeyValue {
                 id: db_id,

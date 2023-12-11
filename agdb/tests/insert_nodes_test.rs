@@ -72,10 +72,14 @@ fn insert_nodes_aliases_values() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("key", "value3").into()],
             },
         ],
@@ -107,10 +111,14 @@ fn insert_nodes_aliases_values_rollback() {
                 &[
                     DbElement {
                         id: DbId(1),
+                        from: None,
+                        to: None,
                         values: vec![("key", "value").into(), ("key2", "value2").into()],
                     },
                     DbElement {
                         id: DbId(2),
+                        from: None,
+                        to: None,
                         values: vec![("key", "value3").into()],
                     },
                 ],
@@ -145,10 +153,14 @@ fn insert_nodes_aliases_values_uniform() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
         ],
@@ -171,10 +183,14 @@ fn insert_nodes_count_values_uniform() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
         ],
@@ -199,10 +215,14 @@ fn insert_nodes_values() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("key", "value").into(), ("key2", "value2").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("key", "value3").into()],
             },
         ],

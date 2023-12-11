@@ -38,21 +38,26 @@ impl Query for SelectValuesQuery {
         result.elements.reserve(db_ids.len());
         result.result = db_ids.len() as i64;
 
-        for db_id in db_ids {
-            let values = db.values_by_keys(db_id, &self.keys)?;
+        for id in db_ids {
+            let values = db.values_by_keys(id, &self.keys)?;
 
             if !is_search && values.len() != self.keys.len() {
                 for key in &self.keys {
                     if !values.iter().any(|x| x.key == *key) {
                         return Err(QueryError::from(format!(
                             "Missing key '{}' for id '{}'",
-                            key, db_id.0
+                            key, id.0
                         )));
                     }
                 }
             }
 
-            result.elements.push(DbElement { id: db_id, values });
+            result.elements.push(DbElement {
+                id,
+                from: db.from_id(id),
+                to: db.to_id(id),
+                values,
+            });
         }
 
         Ok(result)

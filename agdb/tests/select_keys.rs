@@ -25,6 +25,8 @@ fn select_keys_ids() {
         QueryBuilder::select().keys().ids("alias").query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![
                 ("key", DbValue::default()).into(),
                 (1, DbValue::default()).into(),
@@ -42,6 +44,8 @@ fn select_keys_no_keys() {
         QueryBuilder::select().keys().ids("alias").query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![],
         }],
     );
@@ -80,6 +84,8 @@ fn select_keys_search() {
         &[
             DbElement {
                 id: DbId(3),
+                from: None,
+                to: None,
                 values: vec![
                     ("key1", DbValue::default()).into(),
                     ("key2", DbValue::default()).into(),
@@ -88,10 +94,14 @@ fn select_keys_search() {
             },
             DbElement {
                 id: DbId(-7),
+                from: Some(DbId(3)),
+                to: Some(DbId(5)),
                 values: vec![],
             },
             DbElement {
                 id: DbId(5),
+                from: None,
+                to: None,
                 values: vec![
                     ("key1", DbValue::default()).into(),
                     ("key2", DbValue::default()).into(),

@@ -34,10 +34,12 @@ impl Query for SelectKeyCountQuery {
         result.elements.reserve(db_ids.len());
         result.result = db_ids.len() as i64;
 
-        for db_id in db_ids {
+        for id in db_ids {
             result.elements.push(DbElement {
-                id: db_id,
-                values: vec![("key_count", db.key_count(db_id)?).into()],
+                id,
+                from: db.from_id(id),
+                to: db.to_id(id),
+                values: vec![("key_count", db.key_count(id)?).into()],
             });
         }
 

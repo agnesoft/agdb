@@ -106,6 +106,8 @@ fn db_user_value() {
 
     let element = DbElement {
         id: DbId(0),
+        from: None,
+        to: None,
         values: vec![
             ("bytes", vec![1_u8]).into(),
             ("u64", 1_u64).into(),
@@ -149,6 +151,8 @@ fn insert_node_values_custom() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![("name", "my name").into(), ("age", 20_u64).into()],
         }],
     );
@@ -180,10 +184,14 @@ fn insert_node_values_uniform_custom() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("name", "my name").into(), ("age", 20_u64).into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("name", "my name").into(), ("age", 20_u64).into()],
             },
         ],
@@ -423,6 +431,8 @@ fn derived_macro_should_not_panic() {
 fn try_from_db_element() {
     let element = DbElement {
         id: DbId(1),
+        from: None,
+        to: None,
         values: vec![
             ("user_id", 100_u64).into(),
             ("password", "pswd").into(),

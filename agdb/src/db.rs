@@ -429,6 +429,25 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
+    pub(crate) fn from_id(&self, id: DbId) -> Option<DbId> {
+        if id.0 < 0 {
+            Some(DbId(
+                self.graph.edge_from(&self.storage, GraphIndex(id.0)).0,
+            ))
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn to_id(&self, id: DbId) -> Option<DbId> {
+        if id.0 < 0 {
+            Some(DbId(self.graph.edge_to(&self.storage, GraphIndex(id.0)).0))
+        } else {
+            None
+        }
+    }
+
     pub(crate) fn insert_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
         if let Some(old_alias) = self.aliases.key(&self.storage, &db_id)? {
             self.undo_stack.push(Command::InsertAlias {

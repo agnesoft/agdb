@@ -21,10 +21,14 @@ fn remove_values_ids() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("key1", "value1").into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("key1", "value1").into()],
             },
         ],
@@ -41,10 +45,14 @@ fn remove_values_ids() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![],
             },
         ],
@@ -74,10 +82,14 @@ fn remove_values_search() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![],
             },
         ],
@@ -107,10 +119,14 @@ fn remove_missing_key() {
         &[
             DbElement {
                 id: DbId(1),
+                from: None,
+                to: None,
                 values: vec![("key1", "value1").into(), ("key2", 100).into()],
             },
             DbElement {
                 id: DbId(2),
+                from: None,
+                to: None,
                 values: vec![("key1", "value1").into(), ("key2", 100).into()],
             },
         ],

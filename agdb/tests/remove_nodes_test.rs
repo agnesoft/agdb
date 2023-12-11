@@ -146,6 +146,8 @@ fn remove_nodes_with_values() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![("key", "value").into()],
         }],
     );
@@ -167,6 +169,8 @@ fn remove_nodes_with_values_rollback() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![("key", vec![1, 2, 3]).into()],
         }],
     );
@@ -183,6 +187,8 @@ fn remove_nodes_with_values_rollback() {
         QueryBuilder::select().ids(1).query(),
         &[DbElement {
             id: DbId(1),
+            from: None,
+            to: None,
             values: vec![("key", vec![1, 2, 3]).into()],
         }],
     );
@@ -231,10 +237,14 @@ fn remove_nodes_removes_edges_with_all_values() {
         &[
             DbElement {
                 id: DbId(-2),
+                from: Some(DbId(1)),
+                to: Some(DbId(3)),
                 values: vec![],
             },
             DbElement {
                 id: DbId(-4),
+                from: Some(DbId(1)),
+                to: Some(DbId(3)),
                 values: vec![],
             },
         ],
@@ -272,6 +282,8 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
         QueryBuilder::select().ids(vec![-4]).query(),
         &[DbElement {
             id: DbId(-4),
+            from: Some(DbId(2)),
+            to: Some(DbId(3)),
             values: vec![("some_key", 100).into()],
         }],
     );

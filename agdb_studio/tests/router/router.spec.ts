@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createRouter, createWebHistory } from "vue-router";
 import { mount } from "@vue/test-utils";
-import { routes } from "../../src/router/index";
+import { routes } from "@/router/index";
 import type { Router } from "vue-router";
-import HomeView from "../../src/views/HomeView.vue";
-import AboutView from "../../src/views/HomeView.vue";
-import App from "../../src/App.vue";
+import HomeView from "@/views/HomeView.vue";
+import AboutView from "@/views/HomeView.vue";
+import App from "@/App.vue";
 
 let router: Router | undefined;
 

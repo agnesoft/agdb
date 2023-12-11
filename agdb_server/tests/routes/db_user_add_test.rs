@@ -112,6 +112,30 @@ async fn add_admin_as_non_admin() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn change_user_role() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let (name, token) = server.init_user().await?;
+    let (other_name, other) = server.init_user().await?;
+    let db = server.init_db("memory", &token).await?;
+    let mut role = AddUser {
+        database: &db,
+        user: &other_name,
+        role: "write",
+    };
+    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
+    assert_eq!(server.post(DB_USER_ADD_URI, &role, &other).await?.0, 403);
+    role.role = "admin";
+    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
+    role.role = "write";
+    role.user = &name;
+    assert_eq!(server.post(DB_USER_ADD_URI, &role, &other).await?.0, 201);
+    role.user = &other_name;
+    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 403);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let (_, token) = server.init_user().await?;

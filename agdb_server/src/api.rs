@@ -20,6 +20,7 @@ use utoipa::OpenApi;
         crate::routes::db::list,
         crate::routes::db::remove,
         crate::routes::db::user::add,
+        crate::routes::db::user::remove,
     ),
     components(schemas(
         crate::routes::admin::user::UserStatus,
@@ -27,6 +28,7 @@ use utoipa::OpenApi;
         crate::routes::db::ServerDatabase,
         crate::routes::db::ServerDatabaseName,
         crate::routes::db::user::DbUser,
+        crate::routes::db::user::RemoveDbUser,
         crate::routes::db::user::DbUserRole,
         crate::routes::user::ChangePassword,
         crate::routes::user::UserCredentials,

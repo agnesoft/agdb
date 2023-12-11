@@ -94,7 +94,7 @@ impl DbPool {
         Ok(db_pool)
     }
 
-    pub(crate) fn add_database(&self, user: DbId, database: Database) -> ServerResult {
+    pub(crate) fn add_db(&self, user: DbId, database: Database) -> ServerResult {
         let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name)).map_err(
             |mut e| {
                 e.status = ErrorCode::DbInvalid.into();
@@ -119,16 +119,38 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn add_database_user(&self, database: DbId, user: DbId, role: &str) -> ServerResult {
-        self.db_mut()?.exec_mut(
-            &QueryBuilder::insert()
-                .edges()
-                .from(user)
-                .to(database)
-                .values_uniform(vec![("role", role).into()])
-                .query(),
-        )?;
-        Ok(())
+    pub(crate) fn add_db_user(&self, db: DbId, user: DbId, role: &str) -> ServerResult {
+        self.db_mut()?.transaction_mut(|t| {
+            let existing_role = t.exec(
+                &QueryBuilder::search()
+                    .from(user)
+                    .to(db)
+                    .limit(1)
+                    .where_()
+                    .keys(vec!["role".into()])
+                    .query(),
+            )?;
+
+            if existing_role.result == 1 {
+                t.exec_mut(
+                    &QueryBuilder::insert()
+                        .values(vec![vec![("role", role).into()]])
+                        .ids(existing_role)
+                        .query(),
+                )?;
+            } else {
+                t.exec_mut(
+                    &QueryBuilder::insert()
+                        .edges()
+                        .from(user)
+                        .to(db)
+                        .values_uniform(vec![("role", role).into()])
+                        .query(),
+                )?;
+            }
+
+            Ok(())
+        })
     }
 
     pub(crate) fn create_user(&self, user: DbUser) -> ServerResult {
@@ -146,8 +168,8 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn delete_database(&self, db: Database) -> ServerResult {
-        let filename = self.remove_database(db)?.get()?.filename().to_string();
+    pub(crate) fn delete_db(&self, db: Database) -> ServerResult {
+        let filename = self.remove_db(db)?.get()?.filename().to_string();
         let path = Path::new(&filename);
 
         if path.exists() {
@@ -162,7 +184,7 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn find_databases(&self) -> ServerResult<Vec<Database>> {
+    pub(crate) fn find_dbs(&self) -> ServerResult<Vec<Database>> {
         Ok(self
             .db()?
             .exec(
@@ -179,7 +201,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_database_id(&self, name: &str) -> ServerResult<DbId> {
+    pub(crate) fn find_db_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
             .db()?
             .exec(
@@ -225,7 +247,7 @@ impl DbPool {
             .collect())
     }
 
-    pub(crate) fn find_user_databases(&self, user: DbId) -> ServerResult<Vec<Database>> {
+    pub(crate) fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<Database>> {
         Ok(self
             .db()?
             .exec(
@@ -242,7 +264,7 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user_database(&self, user: DbId, db: &str) -> ServerResult<Database> {
+    pub(crate) fn find_user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
         Ok(self
             .0
             .server_db
@@ -341,6 +363,26 @@ impl DbPool {
             .id)
     }
 
+    pub(crate) fn db_admins(&self, db: DbId) -> ServerResult<Vec<DbId>> {
+        Ok(self
+            .db()?
+            .exec(
+                &QueryBuilder::search()
+                    .to(db)
+                    .where_()
+                    .distance(CountComparison::Equal(2))
+                    .and()
+                    .beyond()
+                    .where_()
+                    .node()
+                    .or()
+                    .key("role")
+                    .value(Comparison::Equal("admin".into()))
+                    .query(),
+            )?
+            .ids())
+    }
+
     pub(crate) fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
         Ok(self
             .db()?
@@ -360,7 +402,24 @@ impl DbPool {
             == 1)
     }
 
-    pub(crate) fn remove_database(&self, db: Database) -> ServerResult<ServerDb> {
+    pub(crate) fn remove_db_user(&self, db: DbId, user: DbId) -> ServerResult {
+        self.db_mut()?.exec_mut(
+            &QueryBuilder::remove()
+                .ids(
+                    QueryBuilder::search()
+                        .from(user)
+                        .to(db)
+                        .limit(1)
+                        .where_()
+                        .edge()
+                        .query(),
+                )
+                .query(),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn remove_db(&self, db: Database) -> ServerResult<ServerDb> {
         self.db_mut()?
             .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
 

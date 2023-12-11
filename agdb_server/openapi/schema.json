@@ -351,6 +351,46 @@
         ]
       }
     },
+    "/api/v1/db/user/remove": {
+      "post": {
+        "tags": [
+          "crate::routes::db::user"
+        ],
+        "operationId": "remove",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoveDbUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "user removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db admin / cannot remove last admin user"
+          },
+          "464": {
+            "description": "user not found"
+          },
+          "466": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/status": {
       "get": {
         "tags": [
@@ -493,6 +533,21 @@
           "write",
           "read"
         ]
+      },
+      "RemoveDbUser": {
+        "type": "object",
+        "required": [
+          "database",
+          "user"
+        ],
+        "properties": {
+          "database": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
       },
       "ServerDatabase": {
         "type": "object",

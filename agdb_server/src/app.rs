@@ -42,6 +42,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
 
     let db_user_router_v1 = Router::new()
         .route("/add", routing::post(routes::db::user::add))
+        .route("/list", routing::get(routes::db::user::list))
         .route("/remove", routing::post(routes::db::user::remove));
 
     let db_router_v1 = Router::new()

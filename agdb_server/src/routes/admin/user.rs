@@ -1,10 +1,9 @@
 use crate::db::DbPool;
-use crate::db::DbUser;
+use crate::db::ServerUser;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
 use crate::routes::user::UserCredentials;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use axum::extract::State;
@@ -72,7 +71,7 @@ pub(crate) async fn create(
 
     let pswd = Password::create(&request.name, &request.password);
 
-    db_pool.create_user(DbUser {
+    db_pool.create_user(ServerUser {
         db_id: None,
         name: request.name.clone(),
         password: pswd.password.to_vec(),
@@ -94,7 +93,7 @@ pub(crate) async fn create(
 pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-) -> Result<(StatusCode, Json<Vec<UserStatus>>), ServerError> {
+) -> ServerResponse<(StatusCode, Json<Vec<UserStatus>>)> {
     let users = db_pool
         .find_users()?
         .into_iter()

@@ -1,7 +1,7 @@
-use crate::framework::TestServer;
-use crate::framework::UserStatus;
-use crate::framework::ADMIN_USER_LIST_URI;
-use crate::framework::NO_TOKEN;
+use crate::TestServer;
+use crate::UserStatus;
+use crate::ADMIN_USER_LIST_URI;
+use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn user_list() -> anyhow::Result<()> {

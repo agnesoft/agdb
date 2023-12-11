@@ -1,7 +1,7 @@
-use crate::framework::TestServer;
-use crate::framework::User;
-use crate::framework::ADMIN_USER_CREATE_URI;
-use crate::framework::NO_TOKEN;
+use crate::TestServer;
+use crate::User;
+use crate::ADMIN_USER_CREATE_URI;
+use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn create_user() -> anyhow::Result<()> {

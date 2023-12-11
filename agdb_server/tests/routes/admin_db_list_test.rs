@@ -1,7 +1,7 @@
-use crate::framework::Db;
-use crate::framework::TestServer;
-use crate::framework::ADMIN_DB_LIST_URI;
-use crate::framework::NO_TOKEN;
+use crate::Db;
+use crate::TestServer;
+use crate::ADMIN_DB_LIST_URI;
+use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn db_list() -> anyhow::Result<()> {

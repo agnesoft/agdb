@@ -1,9 +1,9 @@
-use crate::framework::ChangePassword;
-use crate::framework::TestServer;
-use crate::framework::User;
-use crate::framework::NO_TOKEN;
-use crate::framework::USER_CHANGE_PASSWORD_URI;
-use crate::framework::USER_LOGIN_URI;
+use crate::ChangePassword;
+use crate::TestServer;
+use crate::User;
+use crate::NO_TOKEN;
+use crate::USER_CHANGE_PASSWORD_URI;
+use crate::USER_LOGIN_URI;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {

@@ -1,9 +1,9 @@
-use crate::framework::AddUser;
-use crate::framework::Db;
-use crate::framework::TestServer;
-use crate::framework::DB_LIST_URI;
-use crate::framework::DB_USER_ADD_URI;
-use crate::framework::NO_TOKEN;
+use crate::AddUser;
+use crate::Db;
+use crate::TestServer;
+use crate::DB_LIST_URI;
+use crate::DB_USER_ADD_URI;
+use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn add_reader() -> anyhow::Result<()> {

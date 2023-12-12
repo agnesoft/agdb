@@ -1,5 +1,6 @@
 use crate::db::DbPool;
 use crate::routes::db::ServerDatabase;
+use crate::routes::db::ServerDatabaseName;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use axum::extract::State;
@@ -24,4 +25,25 @@ pub(crate) async fn list(
         .map(|db| db.into())
         .collect();
     Ok((StatusCode::OK, Json(dbs)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/remove",
+    request_body = ServerDatabaseName,
+    security(("Token" = [])),
+    responses(
+         (status = 204, description = "db removed"),
+         (status = 401, description = "unauthorized"),
+         (status = 466, description = "db not found"),
+    )
+)]
+pub(crate) async fn remove(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<ServerDatabaseName>,
+) -> ServerResponse {
+    let db = db_pool.find_db(&request.name)?;
+    db_pool.remove_db(db)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

@@ -15,7 +15,7 @@ struct RemoveDb<'a> {
 }
 
 #[tokio::test]
-async fn delete() -> anyhow::Result<()> {
+async fn remove() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let (_, token) = server.init_user().await?;
     let db = server.init_db("mapped", &token).await?;

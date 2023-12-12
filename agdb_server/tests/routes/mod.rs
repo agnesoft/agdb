@@ -1,4 +1,5 @@
 mod admin_db_list_test;
+mod admin_db_remove_test;
 mod admin_user_change_password_test;
 mod admin_user_create_test;
 mod admin_user_list_test;

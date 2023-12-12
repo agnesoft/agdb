@@ -18,7 +18,7 @@ async fn list_user() -> anyhow::Result<()> {
     let (name, token) = server.init_user().await?;
     let db = server.init_db("memory", &token).await?;
     let (_, list) = server
-        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?db={}", &db), &token)
+        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?name={}", &db), &token)
         .await?;
     let expected = vec![DbUser {
         database: db,
@@ -42,7 +42,7 @@ async fn list_users() -> anyhow::Result<()> {
     };
     assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
     let (_, list) = server
-        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?db={}", &db), &other)
+        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?name={}", &db), &other)
         .await?;
     let mut list = list?;
     list.sort();
@@ -67,7 +67,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?db=some_db"), NO_TOKEN)
+            .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?name=some_db"), NO_TOKEN)
             .await?
             .0,
         401

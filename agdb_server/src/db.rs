@@ -201,6 +201,35 @@ impl DbPool {
             .try_into()?)
     }
 
+    pub(crate) fn find_db(&self, db: &str) -> ServerResult<Database> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .from("dbs")
+                            .limit(1)
+                            .where_()
+                            .distance(CountComparison::Equal(2))
+                            .and()
+                            .key("name")
+                            .value(Comparison::Equal(db.into()))
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .elements
+            .get(0)
+            .ok_or(ServerError::new(
+                ErrorCode::DbNotFound.into(),
+                &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
+            ))?
+            .try_into()?)
+    }
+
     pub(crate) fn find_db_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
             .db()?

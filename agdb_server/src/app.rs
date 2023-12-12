@@ -18,7 +18,9 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         shutdown_sender,
     };
 
-    let admin_db_router_v1 = Router::new().route("/list", routing::get(routes::admin::db::list));
+    let admin_db_router_v1 = Router::new()
+        .route("/list", routing::get(routes::admin::db::list))
+        .route("/remove", routing::post(routes::admin::db::remove));
 
     let admin_user_router_v1 = Router::new()
         .route(

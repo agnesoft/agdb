@@ -11,6 +11,7 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
+use utoipa::IntoParams;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -27,7 +28,7 @@ pub(crate) struct ServerDatabase {
     pub(crate) db_type: DbType,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, IntoParams)]
 pub(crate) struct ServerDatabaseName {
     pub(crate) name: String,
 }

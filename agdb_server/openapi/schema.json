@@ -40,6 +40,40 @@
         ]
       }
     },
+    "/api/v1/admin/db/remove": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "remove",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerDatabaseName"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "db removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "466": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/shutdown": {
       "get": {
         "tags": [
@@ -359,7 +393,7 @@
         "operationId": "list",
         "parameters": [
           {
-            "name": "db",
+            "name": "name",
             "in": "path",
             "required": true,
             "schema": {
@@ -529,17 +563,6 @@
             "type": "string"
           },
           "password": {
-            "type": "string"
-          }
-        }
-      },
-      "DbName": {
-        "type": "object",
-        "required": [
-          "db"
-        ],
-        "properties": {
-          "db": {
             "type": "string"
           }
         }

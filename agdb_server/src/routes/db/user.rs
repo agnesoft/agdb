@@ -1,4 +1,5 @@
 use crate::db::DbPool;
+use crate::routes::db::ServerDatabaseName;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use axum::extract::Query;
@@ -8,7 +9,6 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
-use utoipa::IntoParams;
 use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -24,11 +24,6 @@ pub(crate) struct DbUser {
     pub(crate) database: String,
     pub(crate) user: String,
     pub(crate) role: DbUserRole,
-}
-
-#[derive(Deserialize, IntoParams, ToSchema)]
-pub(crate) struct DbName {
-    pub(crate) db: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -90,7 +85,7 @@ pub(crate) async fn add(
     path = "/api/v1/db/user/list",
     security(("Token" = [])),
     params(
-        DbName,
+        ServerDatabaseName,
     ),
     responses(
          (status = 200, description = "ok"),
@@ -101,14 +96,14 @@ pub(crate) async fn add(
 pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
-    request: Query<DbName>,
+    request: Query<ServerDatabaseName>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let db = db_pool.find_user_db(user.0, &request.db)?;
+    let db = db_pool.find_user_db(user.0, &request.name)?;
     let users = db_pool
         .db_users(db.db_id.unwrap())?
         .into_iter()
         .map(|(name, role)| DbUser {
-            database: request.db.clone(),
+            database: request.name.clone(),
             user: name,
             role: role.into(),
         })

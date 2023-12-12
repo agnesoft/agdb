@@ -9,6 +9,7 @@ use utoipa::OpenApi;
     paths(
         crate::routes::status,
         crate::routes::admin::db::list,
+        crate::routes::admin::db::remove,
         crate::routes::admin::user::change_password,
         crate::routes::admin::user::create,
         crate::routes::admin::user::list,
@@ -29,7 +30,6 @@ use utoipa::OpenApi;
         crate::routes::db::ServerDatabase,
         crate::routes::db::ServerDatabaseName,
         crate::routes::db::user::DbUser,
-        crate::routes::db::user::DbName,
         crate::routes::db::user::RemoveDbUser,
         crate::routes::db::user::DbUserRole,
         crate::routes::user::ChangePassword,

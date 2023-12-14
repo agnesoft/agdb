@@ -11,8 +11,8 @@ async fn db_list() -> anyhow::Result<()> {
         .await?;
     assert_eq!(status, 200);
     assert!(list?.is_empty());
-    let (_, user1) = server.init_user().await?;
-    let (_, user2) = server.init_user().await?;
+    let user1 = server.init_user().await?;
+    let user2 = server.init_user().await?;
     let db1 = server.init_db("memory", &user1).await?;
     let db2 = server.init_db("memory", &user2).await?;
     let (status, list) = server

@@ -57,9 +57,9 @@ async fn password_too_short() -> anyhow::Result<()> {
 #[tokio::test]
 async fn user_already_exists() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, _) = server.init_user().await?;
+    let user = server.init_user().await?;
     let user = User {
-        name: &name,
+        name: &user.name,
         password: "password123",
     };
     assert_eq!(

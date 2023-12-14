@@ -7,9 +7,9 @@ use crate::USER_LOGIN_URI;
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, _) = server.init_user().await?;
+    let user = server.init_user().await?;
     let user = User {
-        name: &name,
+        name: &user.name,
         password: "password456",
     };
     let admin = &server.admin_token;
@@ -27,9 +27,9 @@ async fn change_password() -> anyhow::Result<()> {
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, _) = server.init_user().await?;
+    let user = server.init_user().await?;
     let user = User {
-        name: &name,
+        name: &user.name,
         password: "pswd",
     };
     let admin = &server.admin_token;

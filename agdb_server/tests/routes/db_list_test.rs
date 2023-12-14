@@ -6,9 +6,9 @@ use crate::NO_TOKEN;
 #[tokio::test]
 async fn list() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let db1 = server.init_db("memory", &token).await?;
-    let db2 = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let db1 = server.init_db("memory", &user).await?;
+    let db2 = server.init_db("memory", &user).await?;
     let expected = vec![
         Db {
             name: db1.clone(),
@@ -19,7 +19,7 @@ async fn list() -> anyhow::Result<()> {
             db_type: "memory".to_string(),
         },
     ];
-    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(status, 200);
     let mut list = list?;
     list.sort();
@@ -30,8 +30,8 @@ async fn list() -> anyhow::Result<()> {
 #[tokio::test]
 async fn list_empty() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    let user = server.init_user().await?;
+    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(status, 200);
     assert_eq!(list?, vec![]);
     Ok(())

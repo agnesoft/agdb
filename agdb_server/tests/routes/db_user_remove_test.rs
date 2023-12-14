@@ -8,37 +8,43 @@ use crate::NO_TOKEN;
 use serde::Serialize;
 
 #[derive(Serialize)]
-struct RemoveUser<'a> {
-    database: &'a str,
-    user: &'a str,
+struct RemoveUser {
+    database: String,
+    user: String,
 }
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (reader_name, reader_token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let reader = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &reader_name,
+        user: &reader.name,
         role: "read",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader_token).await?;
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
     assert_eq!(list?, vec![]);
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader_token).await?;
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
     let expected = vec![Db {
         name: db.clone(),
         db_type: "memory".to_string(),
     }];
     assert_eq!(list?, expected);
     let rem = RemoveUser {
-        database: &db,
-        user: &reader_name,
+        database: db,
+        user: reader.name,
     };
-    assert_eq!(server.post(DB_USER_REMOVE_URI, &rem, &token).await?.0, 204);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader_token).await?;
+    assert_eq!(
+        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        204
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }
@@ -46,41 +52,53 @@ async fn remove() -> anyhow::Result<()> {
 #[tokio::test]
 async fn remove_user_non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, token) = server.init_user().await?;
-    let (other_name, other) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &other_name,
+        user: &other.name,
         role: "read",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
     let rem = RemoveUser {
-        database: &db,
-        user: &name,
+        database: db,
+        user: user.name,
     };
-    assert_eq!(server.post(DB_USER_REMOVE_URI, &rem, &other).await?.0, 403);
+    assert_eq!(
+        server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
+        403
+    );
     Ok(())
 }
 
 #[tokio::test]
 async fn remove_self() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (other_name, other) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &other_name,
+        user: &other.name,
         role: "read",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
     let rem = RemoveUser {
-        database: &db,
-        user: &other_name,
+        database: db,
+        user: other.name,
     };
-    assert_eq!(server.post(DB_USER_REMOVE_URI, &rem, &other).await?.0, 204);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other).await?;
+    assert_eq!(
+        server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
+        204
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }
@@ -88,21 +106,27 @@ async fn remove_self() -> anyhow::Result<()> {
 #[tokio::test]
 async fn remove_self_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (other_name, other) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &other_name,
+        user: &other.name,
         role: "admin",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
     let rem = RemoveUser {
-        database: &db,
-        user: &other_name,
+        database: db,
+        user: other.name,
     };
-    assert_eq!(server.post(DB_USER_REMOVE_URI, &rem, &other).await?.0, 204);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other).await?;
+    assert_eq!(
+        server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
+        204
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }
@@ -110,14 +134,17 @@ async fn remove_self_admin() -> anyhow::Result<()> {
 #[tokio::test]
 async fn remove_self_admin_last() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let rem = RemoveUser {
-        database: &db,
-        user: &name,
+        database: db.clone(),
+        user: user.name,
     };
-    assert_eq!(server.post(DB_USER_REMOVE_URI, &rem, &token).await?.0, 403);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &token).await?;
+    assert_eq!(
+        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        403
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     let expected = vec![Db {
         name: db,
         db_type: "memory".to_string(),
@@ -129,25 +156,31 @@ async fn remove_self_admin_last() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
+    let user = server.init_user().await?;
     let rem = RemoveUser {
-        database: "db_not_found",
-        user: "some_user",
+        database: format!("{}/db_not_found", user.name),
+        user: String::new(),
     };
-    assert_eq!(server.post(DB_USER_REMOVE_URI, &rem, &token).await?.0, 466);
+    assert_eq!(
+        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        466
+    );
     Ok(())
 }
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let rem = RemoveUser {
-        database: &db,
-        user: "user_not_found",
+        database: db,
+        user: "user_not_found".to_string(),
     };
-    assert_eq!(server.post(DB_USER_REMOVE_URI, &rem, &token).await?.0, 464);
+    assert_eq!(
+        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        464
+    );
     Ok(())
 }
 
@@ -155,8 +188,8 @@ async fn user_not_found() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let rem = RemoveUser {
-        database: "my_db",
-        user: "bob",
+        database: String::new(),
+        user: String::new(),
     };
     assert_eq!(
         server.post(DB_USER_REMOVE_URI, &rem, NO_TOKEN).await?.0,

@@ -94,14 +94,17 @@ impl DbPool {
         Ok(db_pool)
     }
 
-    pub(crate) fn add_db(&self, user: DbId, database: Database) -> ServerResult {
-        let db = ServerDb::new(&format!("{}:{}", database.db_type, database.name)).map_err(
-            |mut e| {
-                e.status = ErrorCode::DbInvalid.into();
-                e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
-                e
-            },
-        )?;
+    pub(crate) fn add_db(&self, user: DbId, database: Database, config: &Config) -> ServerResult {
+        let db_path = Path::new(&config.data_dir).join(&database.name);
+        let user_dir = db_path.parent().ok_or(ErrorCode::DbInvalid)?;
+        std::fs::create_dir_all(user_dir)?;
+        let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
+
+        let db = ServerDb::new(&format!("{}:{}", database.db_type, path)).map_err(|mut e| {
+            e.status = ErrorCode::DbInvalid.into();
+            e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
+            e
+        })?;
         self.get_pool_mut()?.insert(database.name.clone(), db);
 
         self.db_mut()?.transaction_mut(|t| {
@@ -168,16 +171,20 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn delete_db(&self, db: Database) -> ServerResult {
-        let filename = self.remove_db(db)?.get()?.filename().to_string();
-        let path = Path::new(&filename);
+    pub(crate) fn delete_db(&self, db: Database, config: &Config) -> ServerResult {
+        let path = Path::new(&config.data_dir).join(&db.name);
+        self.remove_db(db)?;
 
         if path.exists() {
-            std::fs::remove_file(&filename)?;
+            let main_file_name = path
+                .file_name()
+                .ok_or(ErrorCode::DbInvalid)?
+                .to_string_lossy();
+            std::fs::remove_file(&path)?;
             let dot_file = path
                 .parent()
-                .unwrap_or(Path::new("./"))
-                .join(format!(".{filename}"));
+                .ok_or(ErrorCode::DbInvalid)?
+                .join(format!(".{main_file_name}"));
             std::fs::remove_file(dot_file)?;
         }
 

@@ -34,7 +34,7 @@ async fn remove() -> anyhow::Result<()> {
     let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(status, 200);
     assert!(list?.is_empty());
-    assert!(Path::new(&server.dir).join(db).exists());
+    assert!(Path::new(&server.data_dir).join(db).exists());
     Ok(())
 }
 
@@ -66,7 +66,7 @@ async fn user_not_found() -> anyhow::Result<()> {
             .post(ADMIN_DB_REMOVE_URI, &db, &server.admin_token)
             .await?
             .0,
-        464
+        466
     );
     Ok(())
 }

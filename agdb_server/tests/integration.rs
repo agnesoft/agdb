@@ -38,6 +38,7 @@ pub const NO_TOKEN: &Option<String> = &None;
 
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
+const SERVER_DATA_DIR: &str = "agdb_server_data";
 const PROTOCOL: &str = "http";
 const HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 3000;
@@ -84,6 +85,7 @@ pub struct ChangePassword<'a> {
 
 pub struct TestServerImpl {
     pub dir: String,
+    pub data_dir: String,
     pub port: u16,
     pub process: Child,
     pub admin: String,
@@ -182,6 +184,7 @@ impl TestServerImpl {
     pub async fn init() -> anyhow::Result<Self> {
         let port = PORT.fetch_add(1, Ordering::Relaxed);
         let dir = format!("{BINARY}.{port}.test");
+        let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
 
         Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
@@ -191,6 +194,7 @@ impl TestServerImpl {
             config.insert("host", HOST.into());
             config.insert("port", port.into());
             config.insert("admin", ADMIN.into());
+            config.insert("data_dir", SERVER_DATA_DIR.into());
 
             let file = std::fs::File::options()
                 .create_new(true)
@@ -227,6 +231,7 @@ impl TestServerImpl {
                     let admin_token = Some(response.text().await?);
                     let server = Self {
                         dir,
+                        data_dir,
                         port,
                         process,
                         admin: ADMIN.to_string(),

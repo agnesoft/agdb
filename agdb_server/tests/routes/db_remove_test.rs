@@ -19,12 +19,12 @@ async fn remove() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    assert!(Path::new(&server.dir).join(&db).exists());
+    assert!(Path::new(&server.data_dir).join(&db).exists());
     let del = RemoveDb { name: db.clone() };
     assert_eq!(server.post(DB_REMOVE_URI, &del, &user.token).await?.0, 204);
     let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(list?, vec![]);
-    assert!(Path::new(&server.dir).join(db).exists());
+    assert!(Path::new(&server.data_dir).join(db).exists());
     Ok(())
 }
 
@@ -133,7 +133,7 @@ async fn with_admin_role() -> anyhow::Result<()> {
     assert_eq!(server.post(DB_REMOVE_URI, &del, &admin.token).await?.0, 204);
     let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(list?, vec![]);
-    assert!(Path::new(&server.dir).join(db).exists());
+    assert!(Path::new(&server.data_dir).join(db).exists());
     Ok(())
 }
 

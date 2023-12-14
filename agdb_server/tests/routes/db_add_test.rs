@@ -13,7 +13,27 @@ async fn add() -> anyhow::Result<()> {
         db_type: "file".to_string(),
     };
     assert_eq!(server.post(DB_ADD_URI, &db, &user.token).await?.0, 201);
-    assert!(Path::new(&server.dir).join(db.name).exists());
+    assert!(Path::new(&server.data_dir).join(db.name).exists());
+    Ok(())
+}
+
+#[tokio::test]
+async fn add_same_name_different_user() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = Db {
+        name: format!("{}/add_same_name_different_user", user.name),
+        db_type: "file".to_string(),
+    };
+    assert_eq!(server.post(DB_ADD_URI, &db, &user.token).await?.0, 201);
+    assert!(Path::new(&server.data_dir).join(db.name).exists());
+    let db = Db {
+        name: format!("{}/add_same_name_different_user", other.name),
+        db_type: "file".to_string(),
+    };
+    assert_eq!(server.post(DB_ADD_URI, &db, &other.token).await?.0, 201);
+    assert!(Path::new(&server.data_dir).join(db.name).exists());
     Ok(())
 }
 
@@ -39,7 +59,7 @@ async fn db_user_mismatch() -> anyhow::Result<()> {
         name: format!("{}/", other.name),
         db_type: "mapped".to_string(),
     };
-    assert_eq!(server.post(DB_ADD_URI, &db, &user.token).await?.0, 464);
+    assert_eq!(server.post(DB_ADD_URI, &db, &user.token).await?.0, 467);
     Ok(())
 }
 

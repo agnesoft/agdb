@@ -1,5 +1,6 @@
 pub(crate) mod user;
 
+use crate::config::Config;
 use crate::db::Database;
 use crate::db::DbPool;
 use crate::error_code::ErrorCode;
@@ -70,8 +71,16 @@ impl From<Database> for ServerDatabase {
 pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(config): State<Config>,
     Json(request): Json<ServerDatabase>,
 ) -> ServerResponse {
+    let (db_user, _db) = request.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+    let db_user_id = db_pool.find_user_id(db_user)?;
+
+    if db_user_id != user.0 {
+        return Err(ErrorCode::DbInvalid.into());
+    }
+
     if db_pool.find_db_id(&request.name).is_ok() {
         return Err(ErrorCode::DbExists.into());
     }
@@ -82,7 +91,7 @@ pub(crate) async fn add(
         db_type: request.db_type.to_string(),
     };
 
-    db_pool.add_db(user.0, db)?;
+    db_pool.add_db(user.0, db, &config)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -101,6 +110,7 @@ pub(crate) async fn add(
 pub(crate) async fn delete(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(config): State<Config>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
     let db = db_pool.find_user_db(user.0, &request.name)?;
@@ -109,7 +119,7 @@ pub(crate) async fn delete(
         return Ok(StatusCode::FORBIDDEN);
     }
 
-    db_pool.delete_db(db)?;
+    db_pool.delete_db(db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

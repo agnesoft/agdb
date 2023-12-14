@@ -13,8 +13,8 @@ async fn user_list() -> anyhow::Result<()> {
     assert!(list?.contains(&UserStatus {
         name: "admin".to_string()
     }));
-    let (name1, _) = server.init_user().await?;
-    let (name2, _) = server.init_user().await?;
+    let user1 = server.init_user().await?;
+    let user2 = server.init_user().await?;
     let (status, list) = server
         .get::<Vec<UserStatus>>(ADMIN_USER_LIST_URI, &server.admin_token)
         .await?;
@@ -23,8 +23,8 @@ async fn user_list() -> anyhow::Result<()> {
     assert!(list.contains(&UserStatus {
         name: "admin".to_string(),
     }));
-    assert!(list.contains(&UserStatus { name: name1 }));
-    assert!(list.contains(&UserStatus { name: name2 }));
+    assert!(list.contains(&UserStatus { name: user1.name }));
+    assert!(list.contains(&UserStatus { name: user2.name }));
     Ok(())
 }
 

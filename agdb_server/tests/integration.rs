@@ -38,6 +38,7 @@ pub const NO_TOKEN: &Option<String> = &None;
 
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
+const SERVER_DATA_DIR: &str = "agdb_server_data";
 const PROTOCOL: &str = "http";
 const HOST: &str = "127.0.0.1";
 const DEFAULT_PORT: u16 = 3000;
@@ -84,11 +85,17 @@ pub struct ChangePassword<'a> {
 
 pub struct TestServerImpl {
     pub dir: String,
+    pub data_dir: String,
     pub port: u16,
     pub process: Child,
     pub admin: String,
     pub admin_password: String,
     pub admin_token: Option<String>,
+}
+
+pub struct ServerUser {
+    pub name: String,
+    pub token: Option<String>,
 }
 
 pub struct TestServer {
@@ -122,12 +129,14 @@ impl TestServer {
         self.server.post(&self.client, uri, json, token).await
     }
 
-    pub async fn init_user(&self) -> anyhow::Result<(String, Option<String>)> {
+    pub async fn init_user(&self) -> anyhow::Result<ServerUser> {
         self.server.init_user(&self.client).await
     }
 
-    pub async fn init_db(&self, db_type: &str, token: &Option<String>) -> anyhow::Result<String> {
-        self.server.init_db(&self.client, db_type, token).await
+    pub async fn init_db(&self, db_type: &str, server_user: &ServerUser) -> anyhow::Result<String> {
+        self.server
+            .init_db(&self.client, db_type, server_user)
+            .await
     }
 }
 
@@ -175,6 +184,7 @@ impl TestServerImpl {
     pub async fn init() -> anyhow::Result<Self> {
         let port = PORT.fetch_add(1, Ordering::Relaxed);
         let dir = format!("{BINARY}.{port}.test");
+        let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
 
         Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
@@ -184,6 +194,7 @@ impl TestServerImpl {
             config.insert("host", HOST.into());
             config.insert("port", port.into());
             config.insert("admin", ADMIN.into());
+            config.insert("data_dir", SERVER_DATA_DIR.into());
 
             let file = std::fs::File::options()
                 .create_new(true)
@@ -220,6 +231,7 @@ impl TestServerImpl {
                     let admin_token = Some(response.text().await?);
                     let server = Self {
                         dir,
+                        data_dir,
                         port,
                         process,
                         admin: ADMIN.to_string(),
@@ -256,7 +268,7 @@ impl TestServerImpl {
         Ok((status, response.json().await.map_err(|e| anyhow!(e))))
     }
 
-    pub async fn init_user(&self, client: &Client) -> anyhow::Result<(String, Option<String>)> {
+    pub async fn init_user(&self, client: &Client) -> anyhow::Result<ServerUser> {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
         let user = User {
             name: &name,
@@ -270,21 +282,30 @@ impl TestServerImpl {
         );
         let response = self.post(client, USER_LOGIN_URI, &user, &None).await?;
         assert_eq!(response.0, 200);
-        Ok((name, Some(response.1)))
+        Ok(ServerUser {
+            name,
+            token: Some(response.1),
+        })
     }
 
     pub async fn init_db(
         &self,
         client: &Client,
         db_type: &str,
-        user_token: &Option<String>,
+        server_user: &ServerUser,
     ) -> anyhow::Result<String> {
-        let name = format!("db{}", COUNTER.fetch_add(1, Ordering::Relaxed));
+        let name = format!(
+            "{}/db{}",
+            server_user.name,
+            COUNTER.fetch_add(1, Ordering::Relaxed)
+        );
         let db = Db {
             name: name.clone(),
             db_type: db_type.to_string(),
         };
-        let (status, _) = self.post(client, DB_ADD_URI, &db, user_token).await?;
+        let (status, _) = self
+            .post(client, DB_ADD_URI, &db, &server_user.token)
+            .await?;
         assert_eq!(status, 201);
         Ok(name)
     }

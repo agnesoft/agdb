@@ -8,14 +8,14 @@ use crate::USER_LOGIN_URI;
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, _) = server.init_user().await?;
+    let user = server.init_user().await?;
     let change = ChangePassword {
-        name: &name,
-        password: &name,
+        name: &user.name,
+        password: &user.name,
         new_password: "password456",
     };
     let user = User {
-        name: &name,
+        name: &user.name,
         password: "password456",
     };
     assert_eq!(
@@ -33,9 +33,9 @@ async fn change_password() -> anyhow::Result<()> {
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, _) = server.init_user().await?;
+    let user = server.init_user().await?;
     let change = ChangePassword {
-        name: &name,
+        name: &user.name,
         password: "bad_password",
         new_password: "password456",
     };
@@ -53,10 +53,10 @@ async fn invalid_credentials() -> anyhow::Result<()> {
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, _) = server.init_user().await?;
+    let user = server.init_user().await?;
     let change = ChangePassword {
-        name: &name,
-        password: &name,
+        name: &user.name,
+        password: &user.name,
         new_password: "pswd",
     };
     assert_eq!(

@@ -15,14 +15,14 @@ struct DbUser {
 #[tokio::test]
 async fn list_user() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let (_, list) = server
-        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?name={}", &db), &token)
+        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?name={}", &db), &user.token)
         .await?;
     let expected = vec![DbUser {
         database: db,
-        user: name,
+        user: user.name,
         role: "admin".to_string(),
     }];
     assert_eq!(list?, expected);
@@ -32,29 +32,32 @@ async fn list_user() -> anyhow::Result<()> {
 #[tokio::test]
 async fn list_users() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, token) = server.init_user().await?;
-    let (other_name, other) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &other_name,
+        user: &other.name,
         role: "read",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
     let (_, list) = server
-        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?name={}", &db), &other)
+        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?name={}", &db), &other.token)
         .await?;
     let mut list = list?;
     list.sort();
     let expected = vec![
         DbUser {
             database: db.clone(),
-            user: name,
+            user: user.name,
             role: "admin".to_string(),
         },
         DbUser {
             database: db,
-            user: other_name,
+            user: other.name,
             role: "read".to_string(),
         },
     ];

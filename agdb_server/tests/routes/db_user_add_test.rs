@@ -8,18 +8,21 @@ use crate::NO_TOKEN;
 #[tokio::test]
 async fn add_reader() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (reader_name, reader_token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let reader = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &reader_name,
+        user: &reader.name,
         role: "read",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader_token).await?;
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
     assert_eq!(list?, vec![]);
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader_token).await?;
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
     let expected = vec![Db {
         name: db,
         db_type: "memory".to_string(),
@@ -31,18 +34,21 @@ async fn add_reader() -> anyhow::Result<()> {
 #[tokio::test]
 async fn add_writer() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (writer_name, writer_token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let writer = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &writer_name,
+        user: &writer.name,
         role: "write",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &writer_token).await?;
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &writer.token).await?;
     assert_eq!(list?, vec![]);
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &writer_token).await?;
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &writer.token).await?;
     let expected = vec![Db {
         name: db,
         db_type: "memory".to_string(),
@@ -54,18 +60,21 @@ async fn add_writer() -> anyhow::Result<()> {
 #[tokio::test]
 async fn add_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (admin_name, admin_token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let admin = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &admin_name,
+        user: &admin.name,
         role: "admin",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &admin_token).await?;
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &admin.token).await?;
     assert_eq!(list?, vec![]);
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &admin_token).await?;
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &admin.token).await?;
     let expected = vec![Db {
         name: db,
         db_type: "memory".to_string(),
@@ -77,36 +86,39 @@ async fn add_admin() -> anyhow::Result<()> {
 #[tokio::test]
 async fn add_self() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &name,
+        user: &user.name,
         role: "read",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 403);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        403
+    );
     Ok(())
 }
 
 #[tokio::test]
 async fn add_admin_as_non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let (_, writer_token) = server.init_user().await?;
-    let (other_name, other_token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let writer = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
-        user: &other_name,
+        user: &other.name,
         role: "write",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other_token).await?;
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
     assert_eq!(list?, vec![]);
     assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &writer_token).await?.0,
+        server.post(DB_USER_ADD_URI, &role, &writer.token).await?.0,
         403
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other_token).await?;
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }
@@ -114,23 +126,38 @@ async fn add_admin_as_non_admin() -> anyhow::Result<()> {
 #[tokio::test]
 async fn change_user_role() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (name, token) = server.init_user().await?;
-    let (other_name, other) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let mut role = AddUser {
         database: &db,
-        user: &other_name,
+        user: &other.name,
         role: "write",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &other).await?.0, 403);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &other.token).await?.0,
+        403
+    );
     role.role = "admin";
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 201);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        201
+    );
     role.role = "write";
-    role.user = &name;
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &other).await?.0, 201);
-    role.user = &other_name;
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 403);
+    role.user = &user.name;
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &other.token).await?.0,
+        201
+    );
+    role.user = &other.name;
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        403
+    );
 
     Ok(())
 }
@@ -138,27 +165,33 @@ async fn change_user_role() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
+    let user = server.init_user().await?;
     let role = AddUser {
         database: "db_not_found",
         user: "some_user",
         role: "read",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 466);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        466
+    );
     Ok(())
 }
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (_, token) = server.init_user().await?;
-    let db = server.init_db("memory", &token).await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
         database: &db,
         user: "user_not_found",
         role: "read",
     };
-    assert_eq!(server.post(DB_USER_ADD_URI, &role, &token).await?.0, 464);
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        464
+    );
     Ok(())
 }
 

@@ -9,7 +9,7 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 struct DbName {
-    name: String,
+    db: String,
 }
 
 #[tokio::test]
@@ -23,7 +23,7 @@ async fn remove() -> anyhow::Result<()> {
         name: db.clone(),
         db_type: "mapped".to_string(),
     }));
-    let rem = DbName { name: db.clone() };
+    let rem = DbName { db: db.clone() };
     assert_eq!(
         server
             .post(ADMIN_DB_REMOVE_URI, &rem, &server.admin_token)
@@ -43,7 +43,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = DbName {
-        name: format!("{}/some_db", user.name),
+        db: format!("{}/some_db", user.name),
     };
     assert_eq!(
         server
@@ -59,7 +59,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let db = DbName {
-        name: "missing_user/some_db".to_string(),
+        db: "missing_user/some_db".to_string(),
     };
     assert_eq!(
         server
@@ -75,7 +75,7 @@ async fn user_not_found() -> anyhow::Result<()> {
 async fn no_admin_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let db = DbName {
-        name: "user/some_db".to_string(),
+        db: "user/some_db".to_string(),
     };
     assert_eq!(
         server.post(ADMIN_DB_REMOVE_URI, &db, NO_TOKEN).await?.0,

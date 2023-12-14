@@ -1,7 +1,7 @@
 use crate::AddUser;
 use crate::TestServer;
+use crate::ADMIN_DB_USER_LIST_URI;
 use crate::DB_USER_ADD_URI;
-use crate::DB_USER_LIST_URI;
 use crate::NO_TOKEN;
 use serde::Deserialize;
 
@@ -28,11 +28,14 @@ async fn list_users() -> anyhow::Result<()> {
         201
     );
     let (_, list) = server
-        .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?db={}", &db), &other.token)
+        .get::<Vec<DbUser>>(
+            &format!("{ADMIN_DB_USER_LIST_URI}?db={}", &db),
+            &server.admin_token,
+        )
         .await?;
     let mut list = list?;
     list.sort();
-    let expected = vec![
+    let mut expected = vec![
         DbUser {
             database: db.clone(),
             user: user.name,
@@ -44,6 +47,7 @@ async fn list_users() -> anyhow::Result<()> {
             role: "read".to_string(),
         },
     ];
+    expected.sort();
     assert_eq!(list, expected);
     Ok(())
 }
@@ -53,7 +57,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .get::<Vec<DbUser>>(&format!("{DB_USER_LIST_URI}?db=some_db"), NO_TOKEN)
+            .get::<Vec<DbUser>>(&format!("{ADMIN_DB_USER_LIST_URI}?db=some_db"), NO_TOKEN)
             .await?
             .0,
         401

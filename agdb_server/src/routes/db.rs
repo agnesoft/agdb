@@ -31,7 +31,7 @@ pub(crate) struct ServerDatabase {
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub(crate) struct ServerDatabaseName {
-    pub(crate) name: String,
+    pub(crate) db: String,
 }
 
 impl Display for DbType {
@@ -113,7 +113,7 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
-    let db = db_pool.find_user_db(user.0, &request.name)?;
+    let db = db_pool.find_user_db(user.0, &request.db)?;
 
     if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
         return Ok(StatusCode::FORBIDDEN);
@@ -160,7 +160,7 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
-    let db = db_pool.find_user_db(user.0, &request.name)?;
+    let db = db_pool.find_user_db(user.0, &request.db)?;
 
     if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
         return Ok(StatusCode::FORBIDDEN);

@@ -1,3 +1,5 @@
+pub(crate) mod user;
+
 use crate::db::DbPool;
 use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseName;
@@ -42,7 +44,7 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
-    let db = db_pool.find_db(&request.name)?;
+    let db = db_pool.find_db(&request.db)?;
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)

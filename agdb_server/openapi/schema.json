@@ -74,6 +74,40 @@
         ]
       }
     },
+    "/api/v1/admin/db/user/list": {
+      "get": {
+        "tags": [
+          "crate::routes::admin::db::user"
+        ],
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "db",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "466": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/shutdown": {
       "get": {
         "tags": [
@@ -393,7 +427,7 @@
         "operationId": "list",
         "parameters": [
           {
-            "name": "name",
+            "name": "db",
             "in": "path",
             "required": true,
             "schema": {
@@ -635,10 +669,10 @@
       "ServerDatabaseName": {
         "type": "object",
         "required": [
-          "name"
+          "db"
         ],
         "properties": {
-          "name": {
+          "db": {
             "type": "string"
           }
         }

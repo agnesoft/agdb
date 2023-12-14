@@ -98,12 +98,12 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
     request: Query<ServerDatabaseName>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let db = db_pool.find_user_db(user.0, &request.name)?;
+    let db = db_pool.find_user_db(user.0, &request.db)?;
     let users = db_pool
         .db_users(db.db_id.unwrap())?
         .into_iter()
         .map(|(name, role)| DbUser {
-            database: request.name.clone(),
+            database: request.db.clone(),
             user: name,
             role: role.into(),
         })

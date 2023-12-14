@@ -11,7 +11,7 @@ use std::path::Path;
 
 #[derive(Serialize, Deserialize)]
 struct RemoveDb {
-    name: String,
+    db: String,
 }
 
 #[tokio::test]
@@ -20,7 +20,7 @@ async fn remove() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     assert!(Path::new(&server.data_dir).join(&db).exists());
-    let del = RemoveDb { name: db.clone() };
+    let del = RemoveDb { db: db.clone() };
     assert_eq!(server.post(DB_REMOVE_URI, &del, &user.token).await?.0, 204);
     let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(list?, vec![]);
@@ -33,7 +33,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let del = RemoveDb {
-        name: format!("{}/db_not_found", user.name),
+        db: format!("{}/db_not_found", user.name),
     };
     assert_eq!(server.post(DB_REMOVE_URI, &del, &user.token).await?.0, 466);
     Ok(())
@@ -45,7 +45,7 @@ async fn other_user() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let other = server.init_user().await?;
-    let del = RemoveDb { name: db.clone() };
+    let del = RemoveDb { db: db.clone() };
     assert_eq!(server.post(DB_REMOVE_URI, &del, &other.token).await?.0, 466);
     let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     let expected = vec![Db {
@@ -71,7 +71,7 @@ async fn with_read_role() -> anyhow::Result<()> {
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         201
     );
-    let del = RemoveDb { name: db.clone() };
+    let del = RemoveDb { db: db.clone() };
     assert_eq!(
         server.post(DB_REMOVE_URI, &del, &reader.token).await?.0,
         403
@@ -100,7 +100,7 @@ async fn with_write_role() -> anyhow::Result<()> {
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         201
     );
-    let del = RemoveDb { name: db.clone() };
+    let del = RemoveDb { db: db.clone() };
     assert_eq!(
         server.post(DB_REMOVE_URI, &del, &writer.token).await?.0,
         403
@@ -129,7 +129,7 @@ async fn with_admin_role() -> anyhow::Result<()> {
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         201
     );
-    let del = RemoveDb { name: db.clone() };
+    let del = RemoveDb { db: db.clone() };
     assert_eq!(server.post(DB_REMOVE_URI, &del, &admin.token).await?.0, 204);
     let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(list?, vec![]);
@@ -140,9 +140,7 @@ async fn with_admin_role() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let del = RemoveDb {
-        name: String::new(),
-    };
+    let del = RemoveDb { db: String::new() };
     assert_eq!(server.post(DB_REMOVE_URI, &del, NO_TOKEN).await?.0, 401);
     Ok(())
 }

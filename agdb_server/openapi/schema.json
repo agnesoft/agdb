@@ -74,6 +74,46 @@
         ]
       }
     },
+    "/api/v1/admin/db/user/add": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db::user"
+        ],
+        "operationId": "add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDatabaseUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db admin / cannot add self"
+          },
+          "464": {
+            "description": "user not found"
+          },
+          "466": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/user/list": {
       "get": {
         "tags": [

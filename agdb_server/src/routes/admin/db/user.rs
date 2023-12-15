@@ -8,6 +8,30 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/user/add",
+    request_body = AddDatabaseUser,
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "user added"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "user must be a db admin / cannot add self"),
+         (status = 464, description = "user not found"),
+         (status = 466, description = "db not found"),
+    )
+)]
+pub(crate) async fn add(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<DbUser>,
+) -> ServerResponse {
+    let db = db_pool.find_db_id(&request.database)?;
+    let db_user = db_pool.find_user_id(&request.user)?;
+    db_pool.add_db_user(db, db_user, &request.role.to_string())?;
+
+    Ok(StatusCode::CREATED)
+}
+
 #[utoipa::path(get,
     path = "/api/v1/admin/db/user/list",
     security(("Token" = [])),

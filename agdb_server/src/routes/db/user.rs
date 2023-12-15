@@ -130,10 +130,8 @@ pub(crate) async fn remove(
     Json(request): Json<RemoveDbUser>,
 ) -> ServerResponse {
     let db = db_pool.find_db_id(&request.database)?;
-    let db_user = db_pool.find_user_id(&request.user)?;
+    let db_user = db_pool.db_user_id(db, &request.user)?;
     let admins = db_pool.db_admins(db)?;
-
-    println!("{:?} == {:?}", admins, vec![db_user]);
 
     if (!admins.contains(&user.0) && user.0 != db_user) || admins == vec![db_user] {
         return Ok(StatusCode::FORBIDDEN);

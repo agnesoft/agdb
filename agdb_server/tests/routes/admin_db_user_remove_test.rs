@@ -1,9 +1,9 @@
 use crate::AddUser;
 use crate::DbWithRole;
 use crate::TestServer;
+use crate::ADMIN_DB_USER_REMOVE_URI;
 use crate::DB_LIST_URI;
 use crate::DB_USER_ADD_URI;
-use crate::DB_USER_REMOVE_URI;
 use crate::NO_TOKEN;
 use serde::Serialize;
 
@@ -46,7 +46,10 @@ async fn remove() -> anyhow::Result<()> {
         user: reader.name,
     };
     assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        server
+            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
+            .await?
+            .0,
         204
     );
     let (_, list) = server
@@ -57,93 +60,7 @@ async fn remove() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn remove_user_non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: &other.name,
-        role: "read",
-    };
-    assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
-        201
-    );
-    let rem = RemoveUser {
-        database: db,
-        user: user.name,
-    };
-    assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
-        403
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn remove_self() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: &other.name,
-        role: "read",
-    };
-    assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
-        201
-    );
-    let rem = RemoveUser {
-        database: db,
-        user: other.name,
-    };
-    assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
-        204
-    );
-    let (_, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?;
-    assert_eq!(list?, vec![]);
-    Ok(())
-}
-
-#[tokio::test]
-async fn remove_self_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: &other.name,
-        role: "admin",
-    };
-    assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
-        201
-    );
-    let rem = RemoveUser {
-        database: db,
-        user: other.name,
-    };
-    assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
-        204
-    );
-    let (_, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?;
-    assert_eq!(list?, vec![]);
-    Ok(())
-}
-
-#[tokio::test]
-async fn remove_self_admin_last() -> anyhow::Result<()> {
+async fn remove_last_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
@@ -152,7 +69,10 @@ async fn remove_self_admin_last() -> anyhow::Result<()> {
         user: user.name,
     };
     assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        server
+            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
+            .await?
+            .0,
         403
     );
     let (_, list) = server
@@ -176,7 +96,10 @@ async fn db_not_found() -> anyhow::Result<()> {
         user: String::new(),
     };
     assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        server
+            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
+            .await?
+            .0,
         466
     );
     Ok(())
@@ -192,7 +115,10 @@ async fn user_not_found() -> anyhow::Result<()> {
         user: "user_not_found".to_string(),
     };
     assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        server
+            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
+            .await?
+            .0,
         464
     );
     Ok(())
@@ -209,7 +135,10 @@ async fn db_user_not_found() -> anyhow::Result<()> {
         user: other.name,
     };
     assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
+        server
+            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
+            .await?
+            .0,
         464
     );
     Ok(())
@@ -223,7 +152,10 @@ async fn no_token() -> anyhow::Result<()> {
         user: String::new(),
     };
     assert_eq!(
-        server.post(DB_USER_REMOVE_URI, &rem, NO_TOKEN).await?.0,
+        server
+            .post(ADMIN_DB_USER_REMOVE_URI, &rem, NO_TOKEN)
+            .await?
+            .0,
         401
     );
     Ok(())

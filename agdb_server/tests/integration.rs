@@ -67,6 +67,13 @@ pub struct Db {
     pub db_type: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DbWithRole {
+    pub name: String,
+    pub db_type: String,
+    pub role: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct User<'a> {
     pub name: &'a str,

@@ -30,6 +30,7 @@ use utoipa::OpenApi;
         crate::routes::admin::user::UserStatus,
         crate::routes::db::DbType,
         crate::routes::db::ServerDatabase,
+        crate::routes::db::ServerDatabaseWithRole,
         crate::routes::db::ServerDatabaseName,
         crate::routes::db::user::DbUser,
         crate::routes::db::user::RemoveDbUser,

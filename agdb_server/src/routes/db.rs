@@ -1,8 +1,8 @@
 pub(crate) mod user;
 
 use crate::config::Config;
-use crate::db::Database;
-use crate::db::DbPool;
+use crate::db_pool::Database;
+use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
@@ -29,9 +29,35 @@ pub(crate) struct ServerDatabase {
     pub(crate) db_type: DbType,
 }
 
+#[derive(Serialize, ToSchema)]
+pub(crate) struct ServerDatabaseWithRole {
+    pub(crate) name: String,
+    pub(crate) db_type: DbType,
+    pub(crate) role: String,
+}
+
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub(crate) struct ServerDatabaseName {
     pub(crate) db: String,
+}
+
+impl From<Database> for ServerDatabase {
+    fn from(value: Database) -> Self {
+        Self {
+            name: value.name,
+            db_type: value.db_type.as_str().into(),
+        }
+    }
+}
+
+impl From<&str> for DbType {
+    fn from(value: &str) -> Self {
+        match value {
+            "mapped" => DbType::Mapped,
+            "file" => DbType::File,
+            _ => DbType::Memory,
+        }
+    }
 }
 
 impl Display for DbType {
@@ -40,19 +66,6 @@ impl Display for DbType {
             DbType::File => f.write_str("file"),
             DbType::Mapped => f.write_str("mapped"),
             DbType::Memory => f.write_str("memory"),
-        }
-    }
-}
-
-impl From<Database> for ServerDatabase {
-    fn from(value: Database) -> Self {
-        Self {
-            name: value.name,
-            db_type: match value.db_type.as_str() {
-                "mapped" => DbType::Mapped,
-                "file" => DbType::File,
-                _ => DbType::Memory,
-            },
         }
     }
 }
@@ -128,18 +141,22 @@ pub(crate) async fn delete(
     path = "/api/v1/db/list",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "ok", body = Vec<ServerDatabase>),
+         (status = 200, description = "ok", body = Vec<ServerDatabaseWithRole>),
          (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
-) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
+) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabaseWithRole>>)> {
     let dbs = db_pool
         .find_user_dbs(user.0)?
         .into_iter()
-        .map(|db| db.into())
+        .map(|(db, role)| ServerDatabaseWithRole {
+            name: db.name,
+            db_type: db.db_type.as_str().into(),
+            role,
+        })
         .collect();
     Ok((StatusCode::OK, Json(dbs)))
 }

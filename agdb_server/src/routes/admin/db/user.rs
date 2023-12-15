@@ -1,4 +1,4 @@
-use crate::db::DbPool;
+use crate::db_pool::DbPool;
 use crate::routes::db::user::DbUser;
 use crate::routes::db::ServerDatabaseName;
 use crate::server_error::ServerResponse;

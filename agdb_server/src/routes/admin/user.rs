@@ -1,5 +1,5 @@
-use crate::db::DbPool;
-use crate::db::ServerUser;
+use crate::db_pool::DbPool;
+use crate::db_pool::ServerUser;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;

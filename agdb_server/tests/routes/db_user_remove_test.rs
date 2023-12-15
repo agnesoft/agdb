@@ -1,5 +1,5 @@
 use crate::AddUser;
-use crate::Db;
+use crate::DbWithRole;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::DB_USER_ADD_URI;
@@ -24,16 +24,21 @@ async fn remove() -> anyhow::Result<()> {
         user: &reader.name,
         role: "read",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
+        .await?;
     assert_eq!(list?, vec![]);
     assert_eq!(
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         201
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
-    let expected = vec![Db {
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
+        .await?;
+    let expected = vec![DbWithRole {
         name: db.clone(),
         db_type: "memory".to_string(),
+        role: "read".to_string(),
     }];
     assert_eq!(list?, expected);
     let rem = RemoveUser {
@@ -44,7 +49,9 @@ async fn remove() -> anyhow::Result<()> {
         server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
         204
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
+        .await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }
@@ -98,7 +105,9 @@ async fn remove_self() -> anyhow::Result<()> {
         server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
         204
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
+        .await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }
@@ -126,7 +135,9 @@ async fn remove_self_admin() -> anyhow::Result<()> {
         server.post(DB_USER_REMOVE_URI, &rem, &other.token).await?.0,
         204
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
+        .await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }
@@ -144,10 +155,13 @@ async fn remove_self_admin_last() -> anyhow::Result<()> {
         server.post(DB_USER_REMOVE_URI, &rem, &user.token).await?.0,
         403
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
-    let expected = vec![Db {
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
+        .await?;
+    let expected = vec![DbWithRole {
         name: db,
         db_type: "memory".to_string(),
+        role: "admin".to_string(),
     }];
     assert_eq!(list?, expected);
     Ok(())

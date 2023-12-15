@@ -365,7 +365,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ServerDatabase"
+                    "$ref": "#/components/schemas/ServerDatabaseWithRole"
                   }
                 }
               }
@@ -713,6 +713,25 @@
         ],
         "properties": {
           "db": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseWithRole": {
+        "type": "object",
+        "required": [
+          "name",
+          "db_type",
+          "role"
+        ],
+        "properties": {
+          "db_type": {
+            "$ref": "#/components/schemas/DbType"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
             "type": "string"
           }
         }

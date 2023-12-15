@@ -2,8 +2,6 @@ mod server_db;
 mod server_db_storage;
 
 use crate::config::Config;
-use crate::db::server_db::ServerDb;
-use crate::db::server_db::ServerDbImpl;
 use crate::error_code::ErrorCode;
 use crate::password::Password;
 use crate::server_error::ServerError;
@@ -11,9 +9,12 @@ use crate::server_error::ServerResult;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbId;
+use agdb::DbUserValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::UserValue;
+use server_db::ServerDb;
+use server_db::ServerDbImpl;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -32,7 +33,7 @@ pub(crate) struct ServerUser {
     pub(crate) token: String,
 }
 
-#[derive(UserValue)]
+#[derive(Default, UserValue)]
 pub(crate) struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
@@ -283,21 +284,35 @@ impl DbPool {
             .collect())
     }
 
-    pub(crate) fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<Database>> {
-        Ok(self
-            .db()?
+    pub(crate) fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<(Database, String)>> {
+        let mut dbs = vec![];
+
+        self.db()?
             .exec(
                 &QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
+                            .depth_first()
                             .from(user)
                             .where_()
+                            .distance(CountComparison::Equal(1))
+                            .or()
                             .distance(CountComparison::Equal(2))
                             .query(),
                     )
                     .query(),
             )?
-            .try_into()?)
+            .elements
+            .into_iter()
+            .for_each(|e| {
+                if e.id.0 < 0 {
+                    dbs.push((Database::default(), e.values[0].value.to_string()));
+                } else {
+                    dbs.last_mut().unwrap().0 = Database::from_db_element(&e).unwrap_or_default();
+                }
+            });
+
+        Ok(dbs)
     }
 
     pub(crate) fn find_user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {

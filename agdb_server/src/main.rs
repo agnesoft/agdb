@@ -1,7 +1,7 @@
 mod api;
 mod app;
 mod config;
-mod db;
+mod db_pool;
 mod error_code;
 mod logger;
 mod password;
@@ -11,7 +11,7 @@ mod server_state;
 mod user_id;
 mod utilities;
 
-use crate::db::DbPool;
+use crate::db_pool::DbPool;
 use server_error::ServerResult;
 use tokio::signal;
 use tracing::Level;

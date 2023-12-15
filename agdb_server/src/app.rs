@@ -1,6 +1,6 @@
 use crate::api::Api;
 use crate::config::Config;
-use crate::db::DbPool;
+use crate::db_pool::DbPool;
 use crate::logger;
 use crate::routes;
 use crate::server_state::ServerState;

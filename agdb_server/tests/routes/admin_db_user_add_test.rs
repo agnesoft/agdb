@@ -1,5 +1,5 @@
 use crate::AddUser;
-use crate::Db;
+use crate::DbWithRole;
 use crate::TestServer;
 use crate::ADMIN_DB_USER_ADD_URI;
 use crate::DB_LIST_URI;
@@ -14,9 +14,11 @@ async fn add_db_user() -> anyhow::Result<()> {
     let role = AddUser {
         database: &db,
         user: &other.name,
-        role: "admin",
+        role: "write",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
+        .await?;
     assert_eq!(list?, vec![]);
     assert_eq!(
         server
@@ -25,10 +27,13 @@ async fn add_db_user() -> anyhow::Result<()> {
             .0,
         201
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
-    let expected = vec![Db {
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
+        .await?;
+    let expected = vec![DbWithRole {
         name: db,
         db_type: "memory".to_string(),
+        role: "write".to_string(),
     }];
     assert_eq!(list?, expected);
     Ok(())

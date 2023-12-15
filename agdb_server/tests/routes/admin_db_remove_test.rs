@@ -1,11 +1,10 @@
-use std::path::Path;
-
-use crate::Db;
+use crate::DbWithRole;
 use crate::TestServer;
 use crate::ADMIN_DB_REMOVE_URI;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
 use serde::Serialize;
+use std::path::Path;
 
 #[derive(Serialize)]
 struct DbName {
@@ -17,11 +16,14 @@ async fn remove() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
+    let (status, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
+        .await?;
     assert_eq!(status, 200);
-    assert!(list?.contains(&Db {
+    assert!(list?.contains(&DbWithRole {
         name: db.clone(),
         db_type: "mapped".to_string(),
+        role: "admin".to_string(),
     }));
     let rem = DbName { db: db.clone() };
     assert_eq!(
@@ -31,7 +33,9 @@ async fn remove() -> anyhow::Result<()> {
             .0,
         204
     );
-    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
+    let (status, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
+        .await?;
     assert_eq!(status, 200);
     assert!(list?.is_empty());
     assert!(Path::new(&server.data_dir).join(db).exists());

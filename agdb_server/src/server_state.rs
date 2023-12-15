@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::db::DbPool;
+use crate::db_pool::DbPool;
 use axum::extract::FromRef;
 use tokio::sync::broadcast::Sender;
 

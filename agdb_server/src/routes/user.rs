@@ -1,4 +1,4 @@
-use crate::db::DbPool;
+use crate::db_pool::DbPool;
 use crate::password;
 use crate::password::Password;
 use crate::server_error::ServerResponse;

@@ -1,5 +1,5 @@
 use crate::AddUser;
-use crate::Db;
+use crate::DbWithRole;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::DB_USER_ADD_URI;
@@ -16,16 +16,21 @@ async fn add_reader() -> anyhow::Result<()> {
         user: &reader.name,
         role: "read",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
+        .await?;
     assert_eq!(list?, vec![]);
     assert_eq!(
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         201
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &reader.token).await?;
-    let expected = vec![Db {
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
+        .await?;
+    let expected = vec![DbWithRole {
         name: db,
         db_type: "memory".to_string(),
+        role: "read".to_string(),
     }];
     assert_eq!(list?, expected);
     Ok(())
@@ -42,16 +47,21 @@ async fn add_writer() -> anyhow::Result<()> {
         user: &writer.name,
         role: "write",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &writer.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &writer.token)
+        .await?;
     assert_eq!(list?, vec![]);
     assert_eq!(
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         201
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &writer.token).await?;
-    let expected = vec![Db {
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &writer.token)
+        .await?;
+    let expected = vec![DbWithRole {
         name: db,
         db_type: "memory".to_string(),
+        role: "write".to_string(),
     }];
     assert_eq!(list?, expected);
     Ok(())
@@ -68,16 +78,21 @@ async fn add_admin() -> anyhow::Result<()> {
         user: &admin.name,
         role: "admin",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &admin.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &admin.token)
+        .await?;
     assert_eq!(list?, vec![]);
     assert_eq!(
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         201
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &admin.token).await?;
-    let expected = vec![Db {
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &admin.token)
+        .await?;
+    let expected = vec![DbWithRole {
         name: db,
         db_type: "memory".to_string(),
+        role: "admin".to_string(),
     }];
     assert_eq!(list?, expected);
     Ok(())
@@ -112,13 +127,17 @@ async fn add_admin_as_non_admin() -> anyhow::Result<()> {
         user: &other.name,
         role: "write",
     };
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
+        .await?;
     assert_eq!(list?, vec![]);
     assert_eq!(
         server.post(DB_USER_ADD_URI, &role, &writer.token).await?.0,
         403
     );
-    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?;
+    let (_, list) = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
+        .await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }

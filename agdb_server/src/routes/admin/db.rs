@@ -1,6 +1,6 @@
 pub(crate) mod user;
 
-use crate::db::DbPool;
+use crate::db_pool::DbPool;
 use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseName;
 use crate::server_error::ServerResponse;

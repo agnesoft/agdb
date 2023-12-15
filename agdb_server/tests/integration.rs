@@ -25,6 +25,7 @@ pub const DB_USER_REMOVE_URI: &str = "/db/user/remove";
 pub const DB_DELETE_URI: &str = "/db/delete";
 pub const DB_LIST_URI: &str = "/db/list";
 pub const ADMIN_USER_CREATE_URI: &str = "/admin/user/create";
+pub const ADMIN_DB_ADD_URI: &str = "/admin/db/add";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
 pub const ADMIN_DB_DELETE_URI: &str = "/admin/db/delete";
 pub const ADMIN_DB_REMOVE_URI: &str = "/admin/db/remove";

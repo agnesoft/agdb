@@ -9,6 +9,43 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/admin/db/add": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerDatabase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "465": {
+            "description": "db already exists"
+          },
+          "467": {
+            "description": "db invalid"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/delete": {
       "post": {
         "tags": [

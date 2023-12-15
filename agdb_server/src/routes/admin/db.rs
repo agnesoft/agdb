@@ -1,5 +1,6 @@
 pub(crate) mod user;
 
+use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseName;
@@ -8,6 +9,28 @@ use crate::user_id::AdminId;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/delete",
+    request_body = ServerDatabaseName,
+    security(("Token" = [])),
+    responses(
+         (status = 204, description = "db deleted"),
+         (status = 401, description = "unauthorized"),
+         (status = 466, description = "db not found"),
+    )
+)]
+pub(crate) async fn delete(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Json(request): Json<ServerDatabaseName>,
+) -> ServerResponse {
+    let db = db_pool.find_db(&request.db)?;
+    db_pool.delete_db(db, &config)?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
 
 #[utoipa::path(get,
     path = "/api/v1/admin/db/list",

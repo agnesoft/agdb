@@ -218,6 +218,7 @@ impl DbPool {
                 &QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
+                            .depth_first()
                             .from("dbs")
                             .limit(1)
                             .where_()
@@ -243,6 +244,7 @@ impl DbPool {
             .db()?
             .exec(
                 &QueryBuilder::search()
+                    .depth_first()
                     .from("dbs")
                     .limit(1)
                     .where_()
@@ -324,6 +326,7 @@ impl DbPool {
                 &QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
+                            .depth_first()
                             .from(user)
                             .limit(1)
                             .where_()
@@ -351,6 +354,7 @@ impl DbPool {
                 &QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
+                            .depth_first()
                             .from("users")
                             .limit(1)
                             .where_()
@@ -376,6 +380,7 @@ impl DbPool {
             .db()?
             .exec(
                 &QueryBuilder::search()
+                    .depth_first()
                     .from("users")
                     .limit(1)
                     .where_()
@@ -399,6 +404,7 @@ impl DbPool {
             .db()?
             .exec(
                 &QueryBuilder::search()
+                    .depth_first()
                     .from("users")
                     .limit(1)
                     .where_()
@@ -432,6 +438,26 @@ impl DbPool {
                     .query(),
             )?
             .ids())
+    }
+
+    pub(crate) fn db_user_id(&self, db: DbId, name: &str) -> ServerResult<DbId> {
+        Ok(self
+            .db()?
+            .exec(
+                &QueryBuilder::search()
+                    .depth_first()
+                    .to(db)
+                    .where_()
+                    .distance(CountComparison::Equal(2))
+                    .and()
+                    .key("name")
+                    .value(Comparison::Equal(name.into()))
+                    .query(),
+            )?
+            .elements
+            .get(0)
+            .ok_or(ErrorCode::UserNotFound)?
+            .id)
     }
 
     pub(crate) fn db_users(&self, db: DbId) -> ServerResult<Vec<(String, String)>> {

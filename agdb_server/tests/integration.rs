@@ -29,6 +29,7 @@ pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
 pub const ADMIN_DB_REMOVE_URI: &str = "/admin/db/remove";
 pub const ADMIN_DB_USER_ADD_URI: &str = "/admin/db/user/add";
 pub const ADMIN_DB_USER_LIST_URI: &str = "/admin/db/user/list";
+pub const ADMIN_DB_USER_REMOVE_URI: &str = "/admin/db/user/remove";
 pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
 pub const ADMIN_CHANGE_PASSWORD_URI: &str = "/admin/user/change_password";
 pub const DB_REMOVE_URI: &str = "/db/remove";

@@ -32,7 +32,7 @@ async fn list_users() -> anyhow::Result<()> {
         .await?;
     let mut list = list?;
     list.sort();
-    let expected = vec![
+    let mut expected = vec![
         DbUser {
             database: db.clone(),
             user: user.name,
@@ -44,6 +44,7 @@ async fn list_users() -> anyhow::Result<()> {
             role: "read".to_string(),
         },
     ];
+    expected.sort();
     assert_eq!(list, expected);
     Ok(())
 }

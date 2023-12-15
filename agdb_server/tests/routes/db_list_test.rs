@@ -9,7 +9,7 @@ async fn list() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db1 = server.init_db("memory", &user).await?;
     let db2 = server.init_db("memory", &user).await?;
-    let expected = vec![
+    let mut expected = vec![
         DbWithRole {
             name: db1.clone(),
             db_type: "memory".to_string(),
@@ -21,6 +21,7 @@ async fn list() -> anyhow::Result<()> {
             role: "admin".to_string(),
         },
     ];
+    expected.sort();
     let (status, list) = server
         .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
         .await?;

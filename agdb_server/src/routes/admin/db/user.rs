@@ -1,5 +1,6 @@
 use crate::db_pool::DbPool;
 use crate::routes::db::user::DbUser;
+use crate::routes::db::user::RemoveDbUser;
 use crate::routes::db::ServerDatabaseName;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
@@ -61,4 +62,34 @@ pub(crate) async fn list(
         .collect();
 
     Ok((StatusCode::OK, Json(users)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/user/remove",
+    request_body = RemoveDbUser,
+    security(("Token" = [])),
+    responses(
+         (status = 204, description = "user removed"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "cannot remove last admin user"),
+         (status = 464, description = "user not found"),
+         (status = 466, description = "db not found"),
+    )
+)]
+pub(crate) async fn remove(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<RemoveDbUser>,
+) -> ServerResponse {
+    let db = db_pool.find_db_id(&request.database)?;
+    let db_user = db_pool.db_user_id(db, &request.user)?;
+    let admins = db_pool.db_admins(db)?;
+
+    if admins == vec![db_user] {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+
+    db_pool.remove_db_user(db, db_user)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

@@ -1,7 +1,9 @@
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::db_pool::Database;
 use crate::db_pool::DbPool;
+use crate::error_code::ErrorCode;
 use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseName;
 use crate::server_error::ServerResponse;
@@ -9,6 +11,41 @@ use crate::user_id::AdminId;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/add",
+    request_body = ServerDatabase,
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "db added"),
+         (status = 401, description = "unauthorized"),
+         (status = 465, description = "db already exists"),
+         (status = 467, description = "db invalid"),
+    )
+)]
+pub(crate) async fn add(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Json(request): Json<ServerDatabase>,
+) -> ServerResponse {
+    let (db_user, _db) = request.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+    let db_user_id = db_pool.find_user_id(db_user)?;
+
+    if db_pool.find_db_id(&request.name).is_ok() {
+        return Err(ErrorCode::DbExists.into());
+    }
+
+    let db = Database {
+        db_id: None,
+        name: request.name,
+        db_type: request.db_type.to_string(),
+    };
+
+    db_pool.add_db(db_user_id, db, &config)?;
+
+    Ok(StatusCode::CREATED)
+}
 
 #[utoipa::path(post,
     path = "/api/v1/admin/db/delete",

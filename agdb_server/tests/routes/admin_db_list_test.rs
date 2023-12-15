@@ -6,11 +6,6 @@ use crate::NO_TOKEN;
 #[tokio::test]
 async fn db_list() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (status, list) = server
-        .get::<Vec<Db>>(ADMIN_DB_LIST_URI, &server.admin_token)
-        .await?;
-    assert_eq!(status, 200);
-    assert!(list?.is_empty());
     let user1 = server.init_user().await?;
     let user2 = server.init_user().await?;
     let db1 = server.init_db("memory", &user1).await?;

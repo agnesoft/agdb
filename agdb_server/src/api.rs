@@ -8,6 +8,7 @@ use utoipa::OpenApi;
 #[openapi(
     paths(
         crate::routes::status,
+        crate::routes::admin::db::add,
         crate::routes::admin::db::delete,
         crate::routes::admin::db::list,
         crate::routes::admin::db::remove,

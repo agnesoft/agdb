@@ -9,6 +9,40 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/admin/db/delete": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerDatabaseName"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "db deleted"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "466": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/list": {
       "get": {
         "tags": [

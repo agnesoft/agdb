@@ -10,6 +10,7 @@ mod admin_user_create_test;
 mod admin_user_list_test;
 mod db_add_test;
 mod db_delete_test;
+mod db_exec_test;
 mod db_list_test;
 mod db_remove_test;
 mod db_user_add_test;

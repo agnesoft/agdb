@@ -12,6 +12,7 @@ use crate::StorageData;
 /// negative ids represent edges. The value of `0` is
 /// logically invalid (there cannot be element with id 0) and a default.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DbId(pub i64);
 
 impl StableHash for DbId {

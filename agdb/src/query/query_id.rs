@@ -4,6 +4,7 @@ use crate::DbId;
 /// you refer to a database element as numerical
 /// id or a string alias.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum QueryId {
     /// Numerical id as [`DbId`]
     Id(DbId),

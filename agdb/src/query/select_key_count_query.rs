@@ -12,6 +12,7 @@ use crate::StorageData;
 /// The result will be number of elements returned and the list
 /// of elements with a single property `String("key_count")` with
 /// a value `u64`.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SelectKeyCountQuery(pub QueryIds);
 
 impl Query for SelectKeyCountQuery {

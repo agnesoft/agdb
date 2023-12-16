@@ -5,6 +5,7 @@ use crate::QueryId;
 
 /// Logical operator for query conditions
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum QueryConditionLogic {
     /// Logical AND (&&)
     And,
@@ -15,6 +16,7 @@ pub enum QueryConditionLogic {
 
 /// Query condition modifier
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum QueryConditionModifier {
     /// No modifier
     None,
@@ -33,6 +35,7 @@ pub enum QueryConditionModifier {
 
 /// Query condition data
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum QueryConditionData {
     /// Distance from the search origin. Takes count comparison
     /// (e.g. Equal, GreaterThan).
@@ -83,6 +86,7 @@ pub enum QueryConditionData {
 /// Query condition. The condition consists of
 /// `data`, logic operator and a modifier.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct QueryCondition {
     /// Logic operator (e.g. And, Or)
     pub logic: QueryConditionLogic,
@@ -99,6 +103,7 @@ pub struct QueryCondition {
 /// by `distance()` and `edge_count*()` conditions. Supports
 /// the usual set of named comparisons: `==, !=, <, <=, >, =>`.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CountComparison {
     /// property == this
     Equal(u64),
@@ -128,6 +133,7 @@ pub enum CountComparison {
 /// however it does not support the `bytes` and integral types
 /// where the "contains" makes little sense (i.e. does 3 contain 1?).
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Comparison {
     /// property == this
     Equal(DbValue),

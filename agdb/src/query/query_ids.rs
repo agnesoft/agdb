@@ -10,6 +10,7 @@ use crate::SearchQuery;
 /// another query most commonly with the
 /// select queries.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum QueryIds {
     /// List of [`QueryId`]s
     Ids(Vec<QueryId>),

@@ -15,6 +15,7 @@ use crate::StorageData;
 /// The result will be number of inserted/update values and no elements.
 ///
 /// NOTE: The result is NOT number of affected elements but individual properties.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InsertValuesQuery {
     /// Ids whose properties should be updated
     pub ids: QueryIds,

@@ -16,6 +16,7 @@ use crate::StorageData;
 ///
 /// The result will contain number of nodes inserted and elements with
 /// their ids but no properties.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InsertNodesQuery {
     /// Number of nodes to be inserted.
     pub count: u64,

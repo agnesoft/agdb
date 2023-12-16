@@ -1,3 +1,5 @@
+#[cfg(feature = "serde")]
+mod serde_feature_test;
 mod test_db;
 
 use agdb::Db;

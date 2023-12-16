@@ -4,6 +4,7 @@ use crate::DbKeyValue;
 /// Database element used in [`QueryResult`]
 /// that represents a node or an edge.
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DbElement {
     /// Element id.
     pub id: DbId,

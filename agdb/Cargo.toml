@@ -13,5 +13,13 @@ categories = ["database", "database-implementations"]
 
 [lib]
 
+[features]
+default = []
+serde = ["dep:serde"]
+
 [dependencies]
 agdb_derive = { version = "0.5.2", path = "../agdb_derive" }
+serde = { version = "1", features = ["derive"], optional = true }
+
+[dev-dependencies]
+serde_json = { version = "1" }

@@ -10,6 +10,7 @@ use crate::StorageData;
 /// The result will be number of returned aliases and list
 /// of elements with a single property `String("alias")` holding
 /// the value `String`.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SelectAllAliasesQuery {}
 
 impl Query for SelectAllAliasesQuery {

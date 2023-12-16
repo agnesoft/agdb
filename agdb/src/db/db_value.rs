@@ -20,6 +20,7 @@ use std::fmt::Result as DisplayResult;
 /// Getting the raw value back as string can be done
 /// with `to_string()` but otherwise requires a `match`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DbValue {
     /// Byte array, sometimes referred to as blob
     Bytes(Vec<u8>),

@@ -13,6 +13,7 @@ use crate::StorageData;
 /// NOTE: Setting `ids` to a search query will result in an error.
 ///
 /// The result will contain number of aliases inserted/updated but no elements.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InsertAliasesQuery {
     /// Ids to be aliased
     pub ids: QueryIds,

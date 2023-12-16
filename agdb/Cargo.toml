@@ -14,11 +14,12 @@ categories = ["database", "database-implementations"]
 [lib]
 
 [features]
-default = []
+default = ["derive"]
+derive = ["dep:agdb_derive"]
 serde = ["dep:serde"]
 
 [dependencies]
-agdb_derive = { version = "0.5.2", path = "../agdb_derive" }
+agdb_derive = { version = "0.5.2", path = "../agdb_derive", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]

@@ -13,6 +13,7 @@ use crate::StorageData;
 /// database elements. It can be constructed from a
 /// tuple of types that are convertible to `DbValue`.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DbKeyValue {
     /// Key of the property
     pub key: DbKey,

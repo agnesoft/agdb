@@ -11,6 +11,7 @@ use crate::StorageData;
 ///
 /// The result will be number of elements and the
 /// list of elements with all properties.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SelectQuery(pub QueryIds);
 
 impl Query for SelectQuery {

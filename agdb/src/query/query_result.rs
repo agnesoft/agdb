@@ -10,6 +10,7 @@ use crate::DbUserValue;
 /// `elements` are the list of `DbElement`s
 /// with database ids and properties (key-value pairs).
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct QueryResult {
     /// Query result
     pub result: i64,

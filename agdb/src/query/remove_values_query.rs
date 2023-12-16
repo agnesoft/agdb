@@ -11,6 +11,7 @@ use crate::StorageData;
 /// exist in the database however they do not need to have
 /// all the listed keys (it is NOT an error if any or all keys
 /// do not exist on any of the elements).
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RemoveValuesQuery(pub SelectValuesQuery);
 
 impl QueryMut for RemoveValuesQuery {

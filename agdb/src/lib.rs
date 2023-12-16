@@ -36,7 +36,9 @@ pub mod test_utilities;
 #[cfg(feature = "serde")]
 pub use query::QueryType;
 
+#[cfg(feature = "derive")]
 pub use agdb_derive::UserValue;
+
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
 pub use db::db_id::DbId;

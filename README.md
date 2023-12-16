@@ -20,6 +20,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph datab
 
 - [Key Features](#key-features)
 - [Quickstart](#quickstart)
+- [Crate Features](#crate-features)
 - [Roadmap](#roadmap)
 - [Reference](#reference)
   - [Efficient agdb](docs/efficient_agdb.md)
@@ -115,16 +116,22 @@ println!("{:?}", user);
 
 For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
 
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
+
+| Feature | Default | Description                                                                             |
+| ------- | ------- | --------------------------------------------------------------------------------------- |
+| derive  | yes     | Enables derive macro to enable custom user types to be directly used with the database. |
+| serde   | no      | Enables serialiation/deserialization of queries and QueryResult using `serde`.          |
+
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 
-The following are planned features in priority order:
+The following are planned features in no particular order:
 
-| Feature                          | Description                                                                                                                   |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Object query (de)serialization   | To facilitate use of the database from other languages or process the query objects and results must allow (de)serialization. |
-| Server mode                      | Executable version of the database to be accessed via network (REST & websocket).                                             |
-| Data replication & RAFT protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                         |
-| Data sharding                    | Allow sharding single database data set across multiple nodes to allow super large databases.                                 |
+| Feature                          | Description                                                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Data replication & RAFT protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                                            |
+| Data sharding                    | Allow sharding single database data set across multiple nodes to allow super large databases.                                                    |
+| #\[no_std]                       | Since `agdb` does not require any dependencies it should be (in theory) `no_std` friendly but it will likely require some development & testing. |
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 

@@ -8,10 +8,9 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
-use std::fmt::Display;
 use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbUserRole {
     Admin,
@@ -30,26 +29,6 @@ pub(crate) struct DbUser {
 pub(crate) struct RemoveDbUser {
     pub(crate) database: String,
     pub(crate) user: String,
-}
-
-impl Display for DbUserRole {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DbUserRole::Admin => f.write_str("admin"),
-            DbUserRole::Write => f.write_str("write"),
-            DbUserRole::Read => f.write_str("read"),
-        }
-    }
-}
-
-impl From<String> for DbUserRole {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "admin" => DbUserRole::Admin,
-            "write" => DbUserRole::Write,
-            _ => DbUserRole::Read,
-        }
-    }
 }
 
 #[utoipa::path(post,
@@ -76,7 +55,7 @@ pub(crate) async fn add(
         return Ok(StatusCode::FORBIDDEN);
     }
 
-    db_pool.add_db_user(db, db_user, &request.role.to_string())?;
+    db_pool.add_db_user(db, db_user, request.role)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -105,7 +84,7 @@ pub(crate) async fn list(
         .map(|(name, role)| DbUser {
             database: request.db.clone(),
             user: name,
-            role: role.into(),
+            role,
         })
         .collect();
 
@@ -140,4 +119,19 @@ pub(crate) async fn remove(
     db_pool.remove_db_user(db, db_user)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[allow(clippy::clone_on_copy)]
+    fn derived_from_clone() {
+        let db_role = DbUserRole::Admin;
+        let other = db_role.clone();
+        let res = db_role == other;
+
+        assert!(res);
+    }
 }

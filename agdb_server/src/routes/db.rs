@@ -1,11 +1,20 @@
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
+use crate::routes::db::user::DbUserRole;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use agdb::QueryError;
+use agdb::QueryResult;
+use agdb::QueryType;
+use agdb::Transaction;
+use agdb::TransactionMut;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -33,13 +42,19 @@ pub(crate) struct ServerDatabase {
 pub(crate) struct ServerDatabaseWithRole {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
-    pub(crate) role: String,
+    pub(crate) role: DbUserRole,
 }
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub(crate) struct ServerDatabaseName {
     pub(crate) db: String,
 }
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct Queries(pub(crate) Vec<QueryType>);
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct QueriesResults(pub(crate) Vec<QueryResult>);
 
 impl From<Database> for ServerDatabase {
     fn from(value: Database) -> Self {
@@ -137,6 +152,68 @@ pub(crate) async fn delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(post,
+    path = "/api/v1/db/exec",
+    request_body = Queries,
+    params(
+        ServerDatabaseName,
+    ),
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "ok", body = QueriesResults),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "permission denied"),
+         (status = 466, description = "db not found"),
+    )
+)]
+pub(crate) async fn exec(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    request: Query<ServerDatabaseName>,
+    Json(queries): Json<Queries>,
+) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
+    let role = db_pool.find_user_db_role(user.0, &request.db)?;
+    let required_role = required_role(&queries);
+
+    if required_role == DbUserRole::Write && role == DbUserRole::Read {
+        return Err(ServerError {
+            description: "Permission denied: mutable queries require at least 'write' role (current role: 'read')".to_string(),
+            status: StatusCode::FORBIDDEN,
+        });
+    }
+
+    let pool = db_pool.get_pool()?;
+    let db = pool.get(&request.db).ok_or(ErrorCode::DbNotFound)?;
+
+    let results = if required_role == DbUserRole::Read {
+        db.get()?.transaction(|t| {
+            let mut results = vec![];
+
+            for q in &queries.0 {
+                results.push(t_exec(t, q)?);
+            }
+
+            Ok(results)
+        })
+    } else {
+        db.get_mut()?.transaction_mut(|t| {
+            let mut results = vec![];
+
+            for q in &queries.0 {
+                results.push(t_exec_mut(t, q)?);
+            }
+
+            Ok(results)
+        })
+    }
+    .map_err(|e: QueryError| ServerError {
+        description: e.to_string(),
+        status: StatusCode::from_u16(470).unwrap(),
+    })?;
+
+    Ok((StatusCode::OK, Json(QueriesResults(results))))
+}
+
 #[utoipa::path(get,
     path = "/api/v1/db/list",
     security(("Token" = [])),
@@ -186,4 +263,78 @@ pub(crate) async fn remove(
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
+    for q in &queries.0 {
+        match q {
+            QueryType::InsertAlias(_)
+            | QueryType::InsertEdges(_)
+            | QueryType::InsertNodes(_)
+            | QueryType::InsertValues(_)
+            | QueryType::Remove(_)
+            | QueryType::RemoveAliases(_)
+            | QueryType::RemoveValues(_) => {
+                return DbUserRole::Write;
+            }
+            _ => {}
+        }
+    }
+
+    DbUserRole::Read
+}
+
+pub(crate) fn t_exec(
+    t: &Transaction<ServerDbStorage>,
+    q: &QueryType,
+) -> Result<QueryResult, QueryError> {
+    match q {
+        QueryType::Search(q) => t.exec(q),
+        QueryType::Select(q) => t.exec(q),
+        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectKeys(q) => t.exec(q),
+        QueryType::SelectKeyCount(q) => t.exec(q),
+        QueryType::SelectValues(q) => t.exec(q),
+        _ => unreachable!(),
+    }
+}
+
+pub(crate) fn t_exec_mut(
+    t: &mut TransactionMut<ServerDbStorage>,
+    q: &QueryType,
+) -> Result<QueryResult, QueryError> {
+    match q {
+        QueryType::Search(q) => t.exec(q),
+        QueryType::Select(q) => t.exec(q),
+        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectKeys(q) => t.exec(q),
+        QueryType::SelectKeyCount(q) => t.exec(q),
+        QueryType::SelectValues(q) => t.exec(q),
+        QueryType::InsertAlias(q) => t.exec_mut(q),
+        QueryType::InsertEdges(q) => t.exec_mut(q),
+        QueryType::InsertNodes(q) => t.exec_mut(q),
+        QueryType::InsertValues(q) => t.exec_mut(q),
+        QueryType::Remove(q) => t.exec_mut(q),
+        QueryType::RemoveAliases(q) => t.exec_mut(q),
+        QueryType::RemoveValues(q) => t.exec_mut(q),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db_pool::server_db::ServerDb;
+    use agdb::QueryBuilder;
+
+    #[test]
+    #[should_panic]
+    fn unreachable() {
+        let db = ServerDb::new("memory:test").unwrap();
+        db.get()
+            .unwrap()
+            .transaction(|t| t_exec(t, &QueryType::Remove(QueryBuilder::remove().ids(1).query())))
+            .unwrap();
+    }
 }

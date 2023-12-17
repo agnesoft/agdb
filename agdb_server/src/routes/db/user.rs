@@ -120,3 +120,18 @@ pub(crate) async fn remove(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[allow(clippy::clone_on_copy)]
+    fn derived_from_clone() {
+        let db_role = DbUserRole::Admin;
+        let other = db_role.clone();
+        let res = db_role == other;
+
+        assert!(res);
+    }
+}

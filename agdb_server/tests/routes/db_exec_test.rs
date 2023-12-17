@@ -90,6 +90,85 @@ async fn read_only() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn read_queries() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
+    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+        .nodes()
+        .aliases("node1")
+        .values(vec![vec![("key", "value").into()]])
+        .query()
+        .into()];
+    server.exec(&db, &queries, &user.token).await?;
+    let queries: Vec<QueryType> = vec![
+        QueryBuilder::search().from(1).query().into(),
+        QueryBuilder::select().ids(1).query().into(),
+        QueryBuilder::select().aliases().ids(1).query().into(),
+        QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().keys().ids(1).query().into(),
+        QueryBuilder::select().key_count().ids(1).query().into(),
+        QueryBuilder::select()
+            .values(vec!["key".into()])
+            .ids(1)
+            .query()
+            .into(),
+    ];
+    let responses = server.exec(&db, &queries, &user.token).await?;
+    assert_eq!(responses.len(), 7);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn write_queries() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
+    let queries: Vec<QueryType> = vec![
+        QueryBuilder::insert().nodes().count(2).query().into(),
+        QueryBuilder::insert()
+            .aliases(vec!["node1", "node2"])
+            .ids(vec![1, 2])
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .from("node1")
+            .to("node2")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .values(vec![vec![("key", 1.1).into()]])
+            .ids("node1")
+            .query()
+            .into(),
+        QueryBuilder::search().from(1).query().into(),
+        QueryBuilder::select().ids(1).query().into(),
+        QueryBuilder::select().aliases().ids(1).query().into(),
+        QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().keys().ids(1).query().into(),
+        QueryBuilder::select().key_count().ids(1).query().into(),
+        QueryBuilder::select()
+            .values(vec!["key".into()])
+            .ids(1)
+            .query()
+            .into(),
+        QueryBuilder::remove().aliases("node2").query().into(),
+        QueryBuilder::remove()
+            .values(vec!["key".into()])
+            .ids(1)
+            .query()
+            .into(),
+        QueryBuilder::remove().ids("node1").query().into(),
+    ];
+    let responses = server.exec(&db, &queries, &user.token).await?;
+    assert_eq!(responses.len(), 14);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn query_error() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;

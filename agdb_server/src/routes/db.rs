@@ -1,6 +1,7 @@
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
@@ -11,6 +12,8 @@ use crate::user_id::UserId;
 use agdb::QueryError;
 use agdb::QueryResult;
 use agdb::QueryType;
+use agdb::Transaction;
+use agdb::TransactionMut;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -187,16 +190,7 @@ pub(crate) async fn exec(
             let mut results = vec![];
 
             for q in &queries.0 {
-                results.push(match q {
-                    QueryType::Search(q) => t.exec(q)?,
-                    QueryType::Select(q) => t.exec(q)?,
-                    QueryType::SelectAliases(q) => t.exec(q)?,
-                    QueryType::SelectAllAliases(q) => t.exec(q)?,
-                    QueryType::SelectKeys(q) => t.exec(q)?,
-                    QueryType::SelectKeyCount(q) => t.exec(q)?,
-                    QueryType::SelectValues(q) => t.exec(q)?,
-                    _ => unreachable!(),
-                });
+                results.push(t_exec(t, q)?);
             }
 
             Ok(results)
@@ -206,22 +200,7 @@ pub(crate) async fn exec(
             let mut results = vec![];
 
             for q in &queries.0 {
-                results.push(match q {
-                    QueryType::Search(q) => t.exec(q)?,
-                    QueryType::Select(q) => t.exec(q)?,
-                    QueryType::SelectAliases(q) => t.exec(q)?,
-                    QueryType::SelectAllAliases(q) => t.exec(q)?,
-                    QueryType::SelectKeys(q) => t.exec(q)?,
-                    QueryType::SelectKeyCount(q) => t.exec(q)?,
-                    QueryType::SelectValues(q) => t.exec(q)?,
-                    QueryType::InsertAlias(q) => t.exec_mut(q)?,
-                    QueryType::InsertEdges(q) => t.exec_mut(q)?,
-                    QueryType::InsertNodes(q) => t.exec_mut(q)?,
-                    QueryType::InsertValues(q) => t.exec_mut(q)?,
-                    QueryType::Remove(q) => t.exec_mut(q)?,
-                    QueryType::RemoveAliases(q) => t.exec_mut(q)?,
-                    QueryType::RemoveValues(q) => t.exec_mut(q)?,
-                });
+                results.push(t_exec_mut(t, q)?);
             }
 
             Ok(results)
@@ -303,4 +282,59 @@ pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
     }
 
     DbUserRole::Read
+}
+
+pub(crate) fn t_exec(
+    t: &Transaction<ServerDbStorage>,
+    q: &QueryType,
+) -> Result<QueryResult, QueryError> {
+    match q {
+        QueryType::Search(q) => t.exec(q),
+        QueryType::Select(q) => t.exec(q),
+        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectKeys(q) => t.exec(q),
+        QueryType::SelectKeyCount(q) => t.exec(q),
+        QueryType::SelectValues(q) => t.exec(q),
+        _ => unreachable!(),
+    }
+}
+
+pub(crate) fn t_exec_mut(
+    t: &mut TransactionMut<ServerDbStorage>,
+    q: &QueryType,
+) -> Result<QueryResult, QueryError> {
+    match q {
+        QueryType::Search(q) => t.exec(q),
+        QueryType::Select(q) => t.exec(q),
+        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectKeys(q) => t.exec(q),
+        QueryType::SelectKeyCount(q) => t.exec(q),
+        QueryType::SelectValues(q) => t.exec(q),
+        QueryType::InsertAlias(q) => t.exec_mut(q),
+        QueryType::InsertEdges(q) => t.exec_mut(q),
+        QueryType::InsertNodes(q) => t.exec_mut(q),
+        QueryType::InsertValues(q) => t.exec_mut(q),
+        QueryType::Remove(q) => t.exec_mut(q),
+        QueryType::RemoveAliases(q) => t.exec_mut(q),
+        QueryType::RemoveValues(q) => t.exec_mut(q),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db_pool::server_db::ServerDb;
+    use agdb::QueryBuilder;
+
+    #[test]
+    #[should_panic]
+    fn unreachable() {
+        let db = ServerDb::new("memory:test").unwrap();
+        db.get()
+            .unwrap()
+            .transaction(|t| t_exec(t, &QueryType::Remove(QueryBuilder::remove().ids(1).query())))
+            .unwrap();
+    }
 }

@@ -1,5 +1,5 @@
-mod server_db;
-mod server_db_storage;
+pub(crate) mod server_db;
+pub(crate) mod server_db_storage;
 
 use crate::config::Config;
 use crate::error_code::ErrorCode;

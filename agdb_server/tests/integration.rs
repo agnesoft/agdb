@@ -1,5 +1,7 @@
 mod routes;
 
+use agdb::QueryResult;
+use agdb::QueryType;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use reqwest::Client;
@@ -19,6 +21,7 @@ use tokio::sync::Mutex;
 
 pub const USER_CHANGE_PASSWORD_URI: &str = "/user/change_password";
 pub const DB_ADD_URI: &str = "/db/add";
+pub const DB_EXEC_URI: &str = "/db/exec";
 pub const DB_USER_ADD_URI: &str = "/db/user/add";
 pub const DB_USER_LIST_URI: &str = "/db/user/list";
 pub const DB_USER_REMOVE_URI: &str = "/db/user/remove";
@@ -122,6 +125,25 @@ impl TestServer {
             server,
             client: reqwest::Client::new(),
         })
+    }
+
+    pub async fn exec(
+        &self,
+        db: &str,
+        queries: &Vec<QueryType>,
+        token: &Option<String>,
+    ) -> anyhow::Result<Vec<QueryResult>> {
+        let (status, response) = self
+            .server
+            .post(
+                &self.client,
+                &format!("{DB_EXEC_URI}?db={}", db),
+                &queries,
+                token,
+            )
+            .await?;
+        assert_eq!(status, 200);
+        Ok(serde_json::from_str(&response)?)
     }
 
     pub async fn get<T: DeserializeOwned>(

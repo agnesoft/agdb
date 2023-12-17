@@ -1,4 +1,7 @@
+use crate::AddUser;
 use crate::TestServer;
+use crate::DB_EXEC_URI;
+use crate::DB_USER_ADD_URI;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -46,6 +49,78 @@ async fn exec() -> anyhow::Result<()> {
     assert_eq!(responses[0].elements, expected[0].elements);
     assert_eq!(responses[1].result, expected[1].result);
     assert_eq!(responses[1].elements, expected[1].elements);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn query_error() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
+    let queries: Vec<QueryType> = vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("")
+            .values(vec![vec![("key", 1.1).into()]])
+            .query()
+            .into(),
+        QueryBuilder::select().ids("root").query().into(),
+    ];
+    let (status, response) = server
+        .post(&format!("{DB_EXEC_URI}?db={db}"), &queries, &user.token)
+        .await?;
+    assert_eq!(status, 470);
+    assert_eq!(response, "Alias 'root' not found");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn permission_denied() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
+    let role = AddUser {
+        database: &db,
+        user: &other.name,
+        role: "read",
+    };
+
+    server.post(DB_USER_ADD_URI, &role, &user.token).await?;
+
+    let queries: Vec<QueryType> = vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .values(vec![vec![("key", 1.1).into()]])
+            .query()
+            .into(),
+        QueryBuilder::select().ids("root").query().into(),
+    ];
+    let (status, _response) = server
+        .post(&format!("{DB_EXEC_URI}?db={db}"), &queries, &other.token)
+        .await?;
+    assert_eq!(status, 403);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_not_found() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let queries: Vec<QueryType> = vec![];
+    let status = server
+        .post(
+            &format!("{DB_EXEC_URI}?db={}/not_found", user.name),
+            &queries,
+            &user.token,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 466);
 
     Ok(())
 }

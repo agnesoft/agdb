@@ -14,6 +14,8 @@ use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
+use agdb::QueryResult;
+use agdb::SearchQuery;
 use agdb::UserValue;
 use server_db::ServerDb;
 use server_db::ServerDbImpl;
@@ -340,89 +342,71 @@ impl DbPool {
     }
 
     pub(crate) fn find_user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
+        let db_id_query = self.find_user_db_id_query(user, db);
         Ok(self
             .0
             .server_db
             .get()?
-            .exec(
-                &QueryBuilder::select()
-                    .ids(
-                        QueryBuilder::search()
-                            .depth_first()
-                            .from(user)
-                            .limit(1)
-                            .where_()
-                            .distance(CountComparison::Equal(2))
-                            .and()
-                            .key("name")
-                            .value(Comparison::Equal(db.into()))
-                            .query(),
-                    )
-                    .query(),
-            )?
-            .elements
-            .get(0)
-            .ok_or(ServerError::new(
-                ErrorCode::DbNotFound.into(),
-                &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
-            ))?
+            .transaction(|t| -> Result<QueryResult, ServerError> {
+                let db_id = t
+                    .exec(&db_id_query)?
+                    .elements
+                    .get(0)
+                    .ok_or(ServerError::new(
+                        ErrorCode::DbNotFound.into(),
+                        &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
+                    ))?
+                    .id;
+                Ok(t.exec(&QueryBuilder::select().ids(db_id).query())?)
+            })?
             .try_into()?)
     }
 
     pub(crate) fn find_user_db_role(&self, user: DbId, db: &str) -> ServerResult<DbUserRole> {
+        let db_id_query = self.find_user_db_id_query(user, db);
         Ok((&self
             .0
             .server_db
             .get()?
-            .exec(
-                &QueryBuilder::select()
-                    .ids(
-                        QueryBuilder::search()
-                            .depth_first()
-                            .from(user)
-                            .limit(1)
-                            .where_()
-                            .keys(vec!["role".into()])
-                            .query(),
-                    )
-                    .query(),
-            )?
-            .elements
-            .get(0)
-            .ok_or(ServerError::new(
-                ErrorCode::DbNotFound.into(),
-                &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
-            ))?
+            .transaction(|t| -> Result<QueryResult, ServerError> {
+                let db_id = t
+                    .exec(&db_id_query)?
+                    .elements
+                    .get(0)
+                    .ok_or(ServerError::new(
+                        ErrorCode::DbNotFound.into(),
+                        &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
+                    ))?
+                    .id;
+
+                Ok(t.exec(
+                    &QueryBuilder::select()
+                        .ids(
+                            QueryBuilder::search()
+                                .depth_first()
+                                .from(user)
+                                .to(db_id)
+                                .limit(1)
+                                .where_()
+                                .distance(CountComparison::LessThanOrEqual(2))
+                                .and()
+                                .keys(vec!["role".into()])
+                                .query(),
+                        )
+                        .query(),
+                )?)
+            })?
+            .elements[0]
             .values[0]
             .value)
             .into())
     }
 
     pub(crate) fn find_user(&self, name: &str) -> ServerResult<ServerUser> {
+        let user_id = self.find_user_id(name)?;
         Ok(self
             .db()?
-            .exec(
-                &QueryBuilder::select()
-                    .ids(
-                        QueryBuilder::search()
-                            .depth_first()
-                            .from("users")
-                            .limit(1)
-                            .where_()
-                            .distance(CountComparison::Equal(2))
-                            .and()
-                            .key("name")
-                            .value(Comparison::Equal(name.into()))
-                            .query(),
-                    )
-                    .query(),
-            )?
-            .elements
-            .get(0)
-            .ok_or(ServerError::new(
-                ErrorCode::UserNotFound.into(),
-                &format!("{}: {name}", ErrorCode::UserNotFound.as_str()),
-            ))?
+            .exec(&QueryBuilder::select().ids(user_id).query())?
             .try_into()?)
     }
 
@@ -606,6 +590,19 @@ impl DbPool {
 
     pub(crate) fn get_pool(&self) -> ServerResult<RwLockReadGuard<HashMap<String, ServerDb>>> {
         Ok(self.0.pool.read()?)
+    }
+
+    fn find_user_db_id_query(&self, user: DbId, db: &str) -> SearchQuery {
+        QueryBuilder::search()
+            .depth_first()
+            .from(user)
+            .limit(1)
+            .where_()
+            .distance(CountComparison::Equal(2))
+            .and()
+            .key("name")
+            .value(Comparison::Equal(db.into()))
+            .query()
     }
 
     fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {

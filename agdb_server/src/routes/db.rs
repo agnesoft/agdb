@@ -4,6 +4,7 @@ use crate::config::Config;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
+use crate::routes::db::user::DbUserRole;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
@@ -38,7 +39,7 @@ pub(crate) struct ServerDatabase {
 pub(crate) struct ServerDatabaseWithRole {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
-    pub(crate) role: String,
+    pub(crate) role: DbUserRole,
 }
 
 #[derive(Deserialize, ToSchema, IntoParams)]
@@ -169,26 +170,11 @@ pub(crate) async fn exec(
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
     let role = db_pool.find_user_db_role(user.0, &request.db)?;
-    let mut required_role = "read";
-    for q in &queries.0 {
-        match q {
-            QueryType::InsertAlias(_)
-            | QueryType::InsertEdges(_)
-            | QueryType::InsertNodes(_)
-            | QueryType::InsertValues(_)
-            | QueryType::Remove(_)
-            | QueryType::RemoveAliases(_)
-            | QueryType::RemoveValues(_) => {
-                required_role = "write";
-                break;
-            }
-            _ => {}
-        }
-    }
+    let required_role = required_role(&queries);
 
-    if required_role == "write" && role == "read" {
+    if required_role == DbUserRole::Write && role == DbUserRole::Read {
         return Err(ServerError {
-            description: "Permission denied: mutable queries require at least 'write' (current permission level: 'read')".to_string(),
+            description: "Permission denied: mutable queries require at least 'write' role (current role: 'read')".to_string(),
             status: StatusCode::FORBIDDEN,
         });
     }
@@ -196,7 +182,7 @@ pub(crate) async fn exec(
     let pool = db_pool.get_pool()?;
     let db = pool.get(&request.db).ok_or(ErrorCode::DbNotFound)?;
 
-    let results = if required_role == "read" {
+    let results = if required_role == DbUserRole::Read {
         db.get()?.transaction(|t| {
             let mut results = vec![];
 
@@ -298,4 +284,23 @@ pub(crate) async fn remove(
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
+    for q in &queries.0 {
+        match q {
+            QueryType::InsertAlias(_)
+            | QueryType::InsertEdges(_)
+            | QueryType::InsertNodes(_)
+            | QueryType::InsertValues(_)
+            | QueryType::Remove(_)
+            | QueryType::RemoveAliases(_)
+            | QueryType::RemoveValues(_) => {
+                return DbUserRole::Write;
+            }
+            _ => {}
+        }
+    }
+
+    DbUserRole::Read
 }

@@ -11,7 +11,7 @@ use serde::Serialize;
 use std::fmt::Display;
 use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbUserRole {
     Admin,
@@ -76,7 +76,7 @@ pub(crate) async fn add(
         return Ok(StatusCode::FORBIDDEN);
     }
 
-    db_pool.add_db_user(db, db_user, &request.role.to_string())?;
+    db_pool.add_db_user(db, db_user, request.role)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -105,7 +105,7 @@ pub(crate) async fn list(
         .map(|(name, role)| DbUser {
             database: request.db.clone(),
             user: name,
-            role: role.into(),
+            role,
         })
         .collect();
 

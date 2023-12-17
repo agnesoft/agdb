@@ -28,7 +28,7 @@ pub(crate) async fn add(
 ) -> ServerResponse {
     let db = db_pool.find_db_id(&request.database)?;
     let db_user = db_pool.find_user_id(&request.user)?;
-    db_pool.add_db_user(db, db_user, &request.role.to_string())?;
+    db_pool.add_db_user(db, db_user, request.role)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -57,7 +57,7 @@ pub(crate) async fn list(
         .map(|(name, role)| DbUser {
             database: request.db.clone(),
             user: name,
-            role: role.into(),
+            role,
         })
         .collect();
 

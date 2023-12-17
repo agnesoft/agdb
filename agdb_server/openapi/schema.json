@@ -462,6 +462,60 @@
         ]
       }
     },
+    "/api/v1/db/exec": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "exec",
+        "parameters": [
+          {
+            "name": "db",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "permission denied"
+          },
+          "466": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/list": {
       "get": {
         "tags": [
@@ -787,6 +841,18 @@
           "read"
         ]
       },
+      "Queries": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryType"
+        }
+      },
+      "QueriesResults": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryResult"
+        }
+      },
       "RemoveDbUser": {
         "type": "object",
         "required": [
@@ -843,7 +909,7 @@
             "type": "string"
           },
           "role": {
-            "type": "string"
+            "$ref": "#/components/schemas/DbUserRole"
           }
         }
       },

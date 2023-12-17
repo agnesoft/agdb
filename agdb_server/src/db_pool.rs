@@ -4,12 +4,14 @@ mod server_db_storage;
 use crate::config::Config;
 use crate::error_code::ErrorCode;
 use crate::password::Password;
+use crate::routes::db::user::DbUserRole;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbId;
 use agdb::DbUserValue;
+use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::UserValue;
@@ -44,6 +46,26 @@ pub(crate) struct Database {
 pub(crate) struct DbPoolImpl {
     server_db: ServerDb,
     pool: RwLock<HashMap<String, ServerDb>>,
+}
+
+impl From<&DbValue> for DbUserRole {
+    fn from(value: &DbValue) -> Self {
+        match value.to_u64().unwrap_or_default() {
+            1 => Self::Admin,
+            2 => Self::Write,
+            _ => Self::Read,
+        }
+    }
+}
+
+impl From<DbUserRole> for DbValue {
+    fn from(value: DbUserRole) -> Self {
+        match value {
+            DbUserRole::Admin => 1_u64.into(),
+            DbUserRole::Write => 2_u64.into(),
+            DbUserRole::Read => 3_u64.into(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -116,14 +138,14 @@ impl DbPool {
                     .edges()
                     .from(vec![QueryId::from(user), "dbs".into()])
                     .to(db)
-                    .values(vec![vec![("role", "admin").into()], vec![]])
+                    .values(vec![vec![("role", DbUserRole::Admin).into()], vec![]])
                     .query(),
             )
         })?;
         Ok(())
     }
 
-    pub(crate) fn add_db_user(&self, db: DbId, user: DbId, role: &str) -> ServerResult {
+    pub(crate) fn add_db_user(&self, db: DbId, user: DbId, role: DbUserRole) -> ServerResult {
         self.db_mut()?.transaction_mut(|t| {
             let existing_role = t.exec(
                 &QueryBuilder::search()
@@ -286,7 +308,7 @@ impl DbPool {
             .collect())
     }
 
-    pub(crate) fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<(Database, String)>> {
+    pub(crate) fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<(Database, DbUserRole)>> {
         let mut dbs = vec![];
 
         self.db()?
@@ -308,7 +330,7 @@ impl DbPool {
             .into_iter()
             .for_each(|e| {
                 if e.id.0 < 0 {
-                    dbs.push((Database::default(), e.values[0].value.to_string()));
+                    dbs.push((Database::default(), (&e.values[0].value).into()));
                 } else {
                     dbs.last_mut().unwrap().0 = Database::from_db_element(&e).unwrap_or_default();
                 }
@@ -347,8 +369,8 @@ impl DbPool {
             .try_into()?)
     }
 
-    pub(crate) fn find_user_db_role(&self, user: DbId, db: &str) -> ServerResult<String> {
-        Ok(self
+    pub(crate) fn find_user_db_role(&self, user: DbId, db: &str) -> ServerResult<DbUserRole> {
+        Ok((&self
             .0
             .server_db
             .get()?
@@ -372,8 +394,8 @@ impl DbPool {
                 &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
             ))?
             .values[0]
-            .value
-            .to_string())
+            .value)
+            .into())
     }
 
     pub(crate) fn find_user(&self, name: &str) -> ServerResult<ServerUser> {
@@ -463,7 +485,7 @@ impl DbPool {
                     .node()
                     .or()
                     .key("role")
-                    .value(Comparison::Equal("admin".into()))
+                    .value(Comparison::Equal(DbUserRole::Admin.into()))
                     .query(),
             )?
             .ids())
@@ -489,7 +511,7 @@ impl DbPool {
             .id)
     }
 
-    pub(crate) fn db_users(&self, db: DbId) -> ServerResult<Vec<(String, String)>> {
+    pub(crate) fn db_users(&self, db: DbId) -> ServerResult<Vec<(String, DbUserRole)>> {
         let mut users = vec![];
 
         self.db()?
@@ -514,7 +536,7 @@ impl DbPool {
             .into_iter()
             .for_each(|e| {
                 if e.id.0 < 0 {
-                    users.push((String::new(), e.values[0].value.to_string()));
+                    users.push((String::new(), (&e.values[0].value).into()));
                 } else {
                     users.last_mut().unwrap().0 = e.values[0].value.to_string();
                 }
@@ -535,7 +557,7 @@ impl DbPool {
                     .distance(CountComparison::LessThanOrEqual(2))
                     .and()
                     .key("role")
-                    .value(Comparison::Equal("admin".into()))
+                    .value(Comparison::Equal(DbUserRole::Admin.into()))
                     .query(),
             )?
             .result

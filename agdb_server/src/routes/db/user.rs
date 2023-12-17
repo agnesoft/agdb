@@ -8,7 +8,6 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
-use std::fmt::Display;
 use utoipa::ToSchema;
 
 #[derive(Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
@@ -30,26 +29,6 @@ pub(crate) struct DbUser {
 pub(crate) struct RemoveDbUser {
     pub(crate) database: String,
     pub(crate) user: String,
-}
-
-impl Display for DbUserRole {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DbUserRole::Admin => f.write_str("admin"),
-            DbUserRole::Write => f.write_str("write"),
-            DbUserRole::Read => f.write_str("read"),
-        }
-    }
-}
-
-impl From<String> for DbUserRole {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "admin" => DbUserRole::Admin,
-            "write" => DbUserRole::Write,
-            _ => DbUserRole::Read,
-        }
-    }
 }
 
 #[utoipa::path(post,

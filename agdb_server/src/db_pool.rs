@@ -347,6 +347,35 @@ impl DbPool {
             .try_into()?)
     }
 
+    pub(crate) fn find_user_db_role(&self, user: DbId, db: &str) -> ServerResult<String> {
+        Ok(self
+            .0
+            .server_db
+            .get()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .depth_first()
+                            .from(user)
+                            .limit(1)
+                            .where_()
+                            .keys(vec!["role".into()])
+                            .query(),
+                    )
+                    .query(),
+            )?
+            .elements
+            .get(0)
+            .ok_or(ServerError::new(
+                ErrorCode::DbNotFound.into(),
+                &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
+            ))?
+            .values[0]
+            .value
+            .to_string())
+    }
+
     pub(crate) fn find_user(&self, name: &str) -> ServerResult<ServerUser> {
         Ok(self
             .db()?
@@ -553,9 +582,9 @@ impl DbPool {
         Ok(())
     }
 
-    // fn get_pool(&self) -> anyhow::Result<RwLockReadGuard<HashMap<String, ServerDb>>> {
-    //     self.0.pool.read().map_err(map_error)
-    // }
+    pub(crate) fn get_pool(&self) -> ServerResult<RwLockReadGuard<HashMap<String, ServerDb>>> {
+        Ok(self.0.pool.read()?)
+    }
 
     fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {
         Ok(self.0.pool.write()?)

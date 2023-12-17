@@ -58,6 +58,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
     let db_router_v1 = Router::new()
         .route("/add", routing::post(routes::db::add))
         .route("/delete", routing::post(routes::db::delete))
+        .route("/exec", routing::post(routes::db::exec))
         .route("/list", routing::get(routes::db::list))
         .route("/remove", routing::post(routes::db::remove))
         .nest("/user", db_user_router_v1);

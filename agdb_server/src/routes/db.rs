@@ -4,8 +4,13 @@ use crate::config::Config;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use agdb::QueryError;
+use agdb::QueryResult;
+use agdb::QueryType;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -40,6 +45,12 @@ pub(crate) struct ServerDatabaseWithRole {
 pub(crate) struct ServerDatabaseName {
     pub(crate) db: String,
 }
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct Queries(pub(crate) Vec<QueryType>);
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct QueriesResults(pub(crate) Vec<QueryResult>);
 
 impl From<Database> for ServerDatabase {
     fn from(value: Database) -> Self {
@@ -135,6 +146,107 @@ pub(crate) async fn delete(
     db_pool.delete_db(db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/db/exec",
+    request_body = Queries,
+    params(
+        ServerDatabaseName,
+    ),
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "ok", body = QueriesResults),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "permission denied"),
+         (status = 466, description = "db not found"),
+    )
+)]
+pub(crate) async fn exec(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    request: Query<ServerDatabaseName>,
+    Json(queries): Json<Queries>,
+) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
+    let role = db_pool.find_user_db_role(user.0, &request.db)?;
+    let mut required_role = "read";
+    for q in &queries.0 {
+        match q {
+            QueryType::InsertAlias(_)
+            | QueryType::InsertEdges(_)
+            | QueryType::InsertNodes(_)
+            | QueryType::InsertValues(_)
+            | QueryType::Remove(_)
+            | QueryType::RemoveAliases(_)
+            | QueryType::RemoveValues(_) => {
+                required_role = "write";
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    if required_role == "write" && role == "read" {
+        return Err(ServerError {
+            description: "Permission denied: mutable queries require at least 'write' (current permission level: 'read')".to_string(),
+            status: StatusCode::FORBIDDEN,
+        });
+    }
+
+    let pool = db_pool.get_pool()?;
+    let db = pool.get(&request.db).ok_or(ErrorCode::DbNotFound)?;
+
+    let results = if required_role == "read" {
+        db.get()?.transaction(|t| {
+            let mut results = vec![];
+
+            for q in &queries.0 {
+                results.push(match q {
+                    QueryType::Search(q) => t.exec(q)?,
+                    QueryType::Select(q) => t.exec(q)?,
+                    QueryType::SelectAliases(q) => t.exec(q)?,
+                    QueryType::SelectAllAliases(q) => t.exec(q)?,
+                    QueryType::SelectKeys(q) => t.exec(q)?,
+                    QueryType::SelectKeyCount(q) => t.exec(q)?,
+                    QueryType::SelectValues(q) => t.exec(q)?,
+                    _ => unreachable!(),
+                });
+            }
+
+            Ok(results)
+        })
+    } else {
+        db.get_mut()?.transaction_mut(|t| {
+            let mut results = vec![];
+
+            for q in &queries.0 {
+                results.push(match q {
+                    QueryType::Search(q) => t.exec(q)?,
+                    QueryType::Select(q) => t.exec(q)?,
+                    QueryType::SelectAliases(q) => t.exec(q)?,
+                    QueryType::SelectAllAliases(q) => t.exec(q)?,
+                    QueryType::SelectKeys(q) => t.exec(q)?,
+                    QueryType::SelectKeyCount(q) => t.exec(q)?,
+                    QueryType::SelectValues(q) => t.exec(q)?,
+                    QueryType::InsertAlias(q) => t.exec_mut(q)?,
+                    QueryType::InsertEdges(q) => t.exec_mut(q)?,
+                    QueryType::InsertNodes(q) => t.exec_mut(q)?,
+                    QueryType::InsertValues(q) => t.exec_mut(q)?,
+                    QueryType::Remove(q) => t.exec_mut(q)?,
+                    QueryType::RemoveAliases(q) => t.exec_mut(q)?,
+                    QueryType::RemoveValues(q) => t.exec_mut(q)?,
+                });
+            }
+
+            Ok(results)
+        })
+    }
+    .map_err(|e: QueryError| ServerError {
+        description: e.to_string(),
+        status: StatusCode::from_u16(470).unwrap(),
+    })?;
+
+    Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
 
 #[utoipa::path(get,

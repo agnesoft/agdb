@@ -66,6 +66,14 @@ impl StorageData for ServerDbStorage {
         }
     }
 
+    fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
+        match self {
+            ServerDbStorage::MemoryMapped(s) => s.rename(new_name),
+            ServerDbStorage::Memory(s) => s.rename(new_name),
+            ServerDbStorage::File(s) => s.rename(new_name),
+        }
+    }
+
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         match self {
             ServerDbStorage::MemoryMapped(s) => s.resize(new_len),
@@ -123,7 +131,9 @@ mod tests {
     #[test]
     fn file_storage() -> anyhow::Result<()> {
         let test_file = TestFile::new("file_storage.agdb");
+        let test_file_rename = TestFile::new("file_storage_rename.agdb");
         let _test_file_dot = TestFile::new(".file_storage.agdb");
+        let _test_file_rename_dot = TestFile::new(".file_storage_rename.agdb");
         let test_file2 = TestFile::new("file_storage_backup.agdb");
         let mut storage = ServerDbStorage::new(&format!("file:{}", test_file.0))?;
         format!("{:?}", storage);
@@ -134,6 +144,7 @@ mod tests {
         assert_eq!(storage.len(), 0);
         assert_eq!(storage.name(), test_file.0);
         assert!(storage.read(0, 0)?.is_empty());
+        storage.rename(&test_file_rename.0)?;
         storage.write(0, &[])?;
         storage.resize(0)?;
         Ok(())
@@ -142,7 +153,9 @@ mod tests {
     #[test]
     fn mapped_storage() -> anyhow::Result<()> {
         let test_file = TestFile::new("mapped_storage.agdb");
+        let test_file_rename = TestFile::new("mapped_storage_rename.agdb");
         let _test_file_dot = TestFile::new(".mapped_storage.agdb");
+        let _test_file_dot = TestFile::new(".mapped_storage_rename.agdb");
         let test_file2 = TestFile::new("mapped_storage_backup.agdb");
         let mut storage = ServerDbStorage::new(&format!("mapped:{}", test_file.0))?;
         format!("{:?}", storage);
@@ -153,6 +166,7 @@ mod tests {
         assert_eq!(storage.len(), 0);
         assert_eq!(storage.name(), test_file.0);
         assert!(storage.read(0, 0)?.is_empty());
+        storage.rename(&test_file_rename.0)?;
         storage.write(0, &[])?;
         storage.resize(0)?;
         Ok(())
@@ -168,6 +182,7 @@ mod tests {
         assert_eq!(storage.len(), 0);
         assert_eq!(storage.name(), "db_test.agdb");
         assert!(storage.read(0, 0)?.is_empty());
+        storage.rename("new_name")?;
         storage.write(0, &[])?;
         storage.resize(0)?;
         Ok(())

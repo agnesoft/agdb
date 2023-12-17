@@ -43,6 +43,11 @@ impl StorageData for MemoryStorage {
         Ok(StorageSlice::from(&self.buffer[pos as usize..end as usize]))
     }
 
+    fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
+        self.name = new_name.to_string();
+        Ok(())
+    }
+
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         self.buffer.resize(new_len as usize, 0);
         Ok(())

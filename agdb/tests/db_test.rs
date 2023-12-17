@@ -4,7 +4,9 @@ mod test_db;
 
 use agdb::Db;
 use agdb::DbElement;
+use agdb::DbFile;
 use agdb::DbId;
+use agdb::DbMemory;
 use agdb::QueryBuilder;
 use agdb::QueryId;
 use std::sync::Arc;
@@ -387,4 +389,45 @@ fn optimize_storage() {
     let optimized_size = db.db.size();
 
     assert!(optimized_size < size);
+}
+
+#[test]
+fn rename_memory() {
+    let mut db = DbMemory::new("memdb").unwrap();
+    db.rename("mydb").unwrap();
+    assert_eq!(db.filename(), "mydb");
+}
+
+#[test]
+fn rename_mapped() {
+    let test_file = TestFile::new();
+    let test_file2 = TestFile::new();
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.rename(test_file2.file_name()).unwrap();
+    assert_eq!(db.filename(), test_file2.file_name());
+}
+
+#[test]
+fn rename_file() {
+    let test_file = TestFile::new();
+    let test_file2 = TestFile::new();
+    {
+        let mut db = DbFile::new(test_file.file_name()).unwrap();
+        db.exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+            .unwrap();
+        db.rename(test_file2.file_name()).unwrap();
+        assert_eq!(
+            db.exec(&QueryBuilder::select().ids(1).query())
+                .unwrap()
+                .result,
+            1
+        );
+    }
+    let db = DbFile::new(test_file2.file_name()).unwrap();
+    assert_eq!(
+        db.exec(&QueryBuilder::select().ids(1).query())
+            .unwrap()
+            .result,
+        1
+    );
 }

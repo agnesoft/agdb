@@ -49,6 +49,11 @@ impl StorageData for FileStorageMemoryMapped {
         self.memory.read(pos, value_len)
     }
 
+    fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
+        self.file.rename(new_name)?;
+        self.memory.rename(new_name)
+    }
+
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         self.memory.resize(new_len)?;
         self.file.resize(new_len)

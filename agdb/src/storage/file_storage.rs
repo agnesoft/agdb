@@ -115,6 +115,15 @@ impl StorageData for FileStorage {
         Ok(StorageSlice::Owned(buffer))
     }
 
+    fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
+        std::fs::rename(&self.filename, new_name)?;
+        self.file = OpenOptions::new().read(true).write(true).open(new_name)?;
+        self.wal = WriteAheadLog::new(new_name)?;
+        std::fs::remove_file(WriteAheadLog::wal_filename(&self.filename))?;
+        self.filename = new_name.to_string();
+        Ok(())
+    }
+
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         let current_len = self.len();
 

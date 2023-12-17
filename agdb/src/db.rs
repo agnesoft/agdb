@@ -299,6 +299,12 @@ impl<Store: StorageData> DbImpl<Store> {
         self.storage.shrink_to_fit()
     }
 
+    /// Changes the name of the database changing also the names of the files
+    /// (if the storage is file based).
+    pub fn rename(&mut self, filename: &str) -> Result<(), DbError> {
+        self.storage.rename(filename)
+    }
+
     /// Executes immutable transaction. The transaction is running a closure `f`
     /// that will receive `&Transaction` object to run `exec` queries as if run
     /// on the main database object. You shall specify the return type `T`

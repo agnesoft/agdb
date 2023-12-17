@@ -53,6 +53,23 @@ impl WriteAheadLog {
         Ok(records)
     }
 
+    pub(crate) fn wal_filename(filename: &str) -> String {
+        let pos;
+
+        if let Some(slash) = filename.rfind('/') {
+            pos = slash + 1;
+        } else if let Some(backslash) = filename.rfind('\\') {
+            pos = backslash + 1
+        } else {
+            pos = 0;
+        }
+
+        let mut name = filename.to_owned();
+        name.insert(pos, '.');
+
+        name
+    }
+
     fn read_exact(file: &mut File, size: u64) -> Result<Vec<u8>, DbError> {
         let mut buffer = vec![0_u8; size as usize];
         file.read_exact(&mut buffer)?;
@@ -68,23 +85,6 @@ impl WriteAheadLog {
             pos,
             value: Self::read_exact(file, size)?,
         })
-    }
-
-    fn wal_filename(filename: &str) -> String {
-        let pos;
-
-        if let Some(slash) = filename.rfind('/') {
-            pos = slash + 1;
-        } else if let Some(backslash) = filename.rfind('\\') {
-            pos = backslash + 1
-        } else {
-            pos = 0;
-        }
-
-        let mut name = filename.to_owned();
-        name.insert(pos, '.');
-
-        name
     }
 }
 

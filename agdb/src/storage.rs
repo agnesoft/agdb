@@ -75,6 +75,10 @@ pub trait StorageData: Sized {
     /// (COW).
     fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError>;
 
+    /// Changes the name of the storage changing also the names of the files
+    /// (if the storage is file based).
+    fn rename(&mut self, new_name: &str) -> Result<(), DbError>;
+
     /// Resizes the underlying storage to `new_len`. If the storage is enlarged as
     /// a result the new bytes should be initialized to `0_u8`.
     fn resize(&mut self, new_len: u64) -> Result<(), DbError>;
@@ -173,6 +177,10 @@ impl<D: StorageData> Storage<D> {
         self.commit(id)
     }
 
+    pub fn name(&self) -> &str {
+        self.data.name()
+    }
+
     pub fn remove(&mut self, index: StorageIndex) -> Result<(), DbError> {
         let record = self.record(index.0)?;
 
@@ -182,8 +190,8 @@ impl<D: StorageData> Storage<D> {
         self.commit(id)
     }
 
-    pub fn name(&self) -> &str {
-        self.data.name()
+    pub fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
+        self.data.rename(new_name)
     }
 
     #[allow(dead_code)]

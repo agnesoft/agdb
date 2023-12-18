@@ -51,6 +51,12 @@ pub(crate) struct ServerDatabaseName {
 }
 
 #[derive(Deserialize, ToSchema)]
+pub(crate) struct ServerDatabaseRename {
+    pub(crate) db: String,
+    pub(crate) new_name: String,
+}
+
+#[derive(Deserialize, ToSchema)]
 pub(crate) struct Queries(pub(crate) Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]
@@ -261,6 +267,44 @@ pub(crate) async fn remove(
     }
 
     db_pool.remove_db(db)?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/db/rename",
+    request_body = ServerDatabaseRename,
+    security(("Token" = [])),
+    responses(
+         (status = 204, description = "db renamed"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "user must be a db admin"),
+         (status = 466, description = "db not found"),
+         (status = 467, description = "invalid db"),
+    )
+)]
+pub(crate) async fn rename(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Json(request): Json<ServerDatabaseRename>,
+) -> ServerResponse {
+    let (db_user, _db) = request.db.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+    let (new_db_user, _db) = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
+    let db = db_pool.find_user_db(user.0, &request.db)?;
+
+    if db_user != new_db_user {
+        return Err(ErrorCode::DbInvalid.into());
+    }
+
+    if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
+        return Ok(StatusCode::FORBIDDEN);
+    }
+
+    db_pool.rename_db(db, &request.new_name, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

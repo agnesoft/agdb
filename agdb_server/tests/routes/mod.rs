@@ -13,6 +13,7 @@ mod db_delete_test;
 mod db_exec_test;
 mod db_list_test;
 mod db_remove_test;
+mod db_rename_test;
 mod db_user_add_test;
 mod db_user_list;
 mod db_user_remove_test;

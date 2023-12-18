@@ -92,7 +92,7 @@ async fn invalid_new_name() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let json = DbRename {
         db: db.clone(),
-        new_name: format!("{}/???", &user.name),
+        new_name: format!("{}/\0??", &user.name),
     };
     let (status, _response) = server.post(DB_RENAME_URI, &json, &user.token).await?;
     assert_eq!(status, 467);

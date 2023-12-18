@@ -584,6 +584,46 @@
         ]
       }
     },
+    "/api/v1/db/rename": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "rename",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerDatabaseRename"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "db renamed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db admin"
+          },
+          "466": {
+            "description": "db not found"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/user/add": {
       "post": {
         "tags": [
@@ -890,6 +930,21 @@
         ],
         "properties": {
           "db": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseRename": {
+        "type": "object",
+        "required": [
+          "db",
+          "new_name"
+        ],
+        "properties": {
+          "db": {
+            "type": "string"
+          },
+          "new_name": {
             "type": "string"
           }
         }

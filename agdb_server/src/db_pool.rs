@@ -572,6 +572,31 @@ impl DbPool {
         Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
     }
 
+    pub(crate) fn rename_db(
+        &self,
+        mut db: Database,
+        new_name: &str,
+        config: &Config,
+    ) -> ServerResult {
+        let mut pool = self.get_pool_mut()?;
+        let server_db = pool.remove(&db.name).unwrap();
+        server_db
+            .get_mut()?
+            .rename(
+                Path::new(&config.data_dir)
+                    .join(new_name)
+                    .to_string_lossy()
+                    .as_ref(),
+            )
+            .map_err(|_| ErrorCode::DbInvalid)?;
+        pool.insert(new_name.to_string(), server_db);
+        db.name = new_name.to_string();
+        self.db_mut()?
+            .exec_mut(&QueryBuilder::insert().element(&db).query())?;
+
+        Ok(())
+    }
+
     pub(crate) fn save_token(&self, user: DbId, token: &str) -> ServerResult {
         self.db_mut()?.exec_mut(
             &QueryBuilder::insert()

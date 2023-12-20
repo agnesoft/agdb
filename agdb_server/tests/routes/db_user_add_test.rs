@@ -173,11 +173,6 @@ async fn change_user_role() -> anyhow::Result<()> {
     role.user = &user.name;
     assert_eq!(
         server.post(DB_USER_ADD_URI, &role, &other.token).await?.0,
-        201
-    );
-    role.user = &other.name;
-    assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         403
     );
 
@@ -189,13 +184,29 @@ async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let role = AddUser {
-        database: "db_not_found",
+        database: "user/db_not_found",
         user: "some_user",
         role: "read",
     };
     assert_eq!(
         server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
         466
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_invalid() -> anyhow::Result<()> {
+    let server: TestServer = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let role = AddUser {
+        database: "invalid",
+        user: "some_user",
+        role: "read",
+    };
+    assert_eq!(
+        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        467
     );
     Ok(())
 }

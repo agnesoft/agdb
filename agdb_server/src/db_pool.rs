@@ -455,26 +455,6 @@ impl DbPool {
             .id)
     }
 
-    pub(crate) fn db_admins(&self, db: DbId) -> ServerResult<Vec<DbId>> {
-        Ok(self
-            .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .to(db)
-                    .where_()
-                    .distance(CountComparison::Equal(2))
-                    .and()
-                    .beyond()
-                    .where_()
-                    .node()
-                    .or()
-                    .key("role")
-                    .value(Comparison::Equal(DbUserRole::Admin.into()))
-                    .query(),
-            )?
-            .ids())
-    }
-
     pub(crate) fn db_user_id(&self, db: DbId, name: &str) -> ServerResult<DbId> {
         Ok(self
             .db()?

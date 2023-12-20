@@ -547,6 +547,37 @@
         ]
       }
     },
+    "/api/v1/db/optimize": {
+      "get": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "optimize",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabaseSize"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "permission denied"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/remove": {
       "post": {
         "tags": [

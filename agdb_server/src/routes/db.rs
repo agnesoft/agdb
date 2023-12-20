@@ -149,7 +149,10 @@ pub(crate) async fn delete(
     let db = db_pool.find_user_db(user.0, &request.db)?;
 
     if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "user must be a db admin",
+        ));
     }
 
     db_pool.delete_db(db, &config)?;
@@ -251,6 +254,46 @@ pub(crate) async fn list(
     Ok((StatusCode::OK, Json(dbs)))
 }
 
+#[utoipa::path(get,
+    path = "/api/v1/db/optimize",
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "ok", body = ServerDatabaseSize),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "permission denied"),
+    )
+)]
+pub(crate) async fn optimize(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    Json(request): Json<ServerDatabaseName>,
+) -> ServerResponse<(StatusCode, Json<ServerDatabaseSize>)> {
+    let db = db_pool.find_user_db(user.0, &request.db)?;
+    let role = db_pool.find_user_db_role(user.0, &request.db)?;
+
+    if role == DbUserRole::Read {
+        return Err(ServerError {
+            description: "Permission denied: optimization can only be done with write permissions"
+                .to_string(),
+            status: StatusCode::FORBIDDEN,
+        });
+    }
+
+    let pool = db_pool.get_pool()?;
+    let server_db = pool.get(&db.name).ok_or(ErrorCode::DbNotFound)?;
+    server_db.get_mut()?.optimize_storage()?;
+    let size = server_db.get()?.size();
+
+    Ok((
+        StatusCode::OK,
+        Json(ServerDatabaseSize {
+            name: db.name,
+            db_type: db.db_type.as_str().into(),
+            size,
+        }),
+    ))
+}
+
 #[utoipa::path(post,
     path = "/api/v1/db/remove",
     request_body = ServerDatabaseName,
@@ -270,7 +313,10 @@ pub(crate) async fn remove(
     let db = db_pool.find_user_db(user.0, &request.db)?;
 
     if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "user must be a db admin",
+        ));
     }
 
     db_pool.remove_db(db)?;
@@ -308,7 +354,10 @@ pub(crate) async fn rename(
     }
 
     if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "user must be a db admin",
+        ));
     }
 
     db_pool.rename_db(db, &request.new_name, &config)?;

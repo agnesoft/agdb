@@ -31,6 +31,7 @@ async fn add_reader() -> anyhow::Result<()> {
         name: db,
         db_type: "memory".to_string(),
         role: "read".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())
@@ -62,6 +63,7 @@ async fn add_writer() -> anyhow::Result<()> {
         name: db,
         db_type: "memory".to_string(),
         role: "write".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())
@@ -93,6 +95,7 @@ async fn add_admin() -> anyhow::Result<()> {
         name: db,
         db_type: "memory".to_string(),
         role: "admin".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())

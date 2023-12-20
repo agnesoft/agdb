@@ -75,10 +75,18 @@ pub struct Db {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DbWithSize {
+    pub name: String,
+    pub db_type: String,
+    pub size: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbWithRole {
     pub name: String,
     pub db_type: String,
     pub role: String,
+    pub size: u64,
 }
 
 #[derive(Serialize, Deserialize)]

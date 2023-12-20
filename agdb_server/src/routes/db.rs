@@ -38,11 +38,19 @@ pub(crate) struct ServerDatabase {
     pub(crate) db_type: DbType,
 }
 
+#[derive(Serialize, Deserialize, ToSchema)]
+pub(crate) struct ServerDatabaseSize {
+    pub(crate) name: String,
+    pub(crate) db_type: DbType,
+    pub(crate) size: u64,
+}
+
 #[derive(Serialize, ToSchema)]
 pub(crate) struct ServerDatabaseWithRole {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
     pub(crate) role: DbUserRole,
+    pub(crate) size: u64,
 }
 
 #[derive(Deserialize, ToSchema, IntoParams)]
@@ -232,15 +240,23 @@ pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabaseWithRole>>)> {
+    let pool = db_pool.get_pool()?;
     let dbs = db_pool
         .find_user_dbs(user.0)?
         .into_iter()
-        .map(|(db, role)| ServerDatabaseWithRole {
-            name: db.name,
-            db_type: db.db_type.as_str().into(),
-            role,
+        .map(|(db, role)| {
+            Ok(ServerDatabaseWithRole {
+                name: db.name.clone(),
+                db_type: db.db_type.as_str().into(),
+                role,
+                size: pool
+                    .get(&db.name)
+                    .ok_or(ErrorCode::DbNotFound)?
+                    .get()?
+                    .size(),
+            })
         })
-        .collect();
+        .collect::<Result<Vec<ServerDatabaseWithRole>, ServerError>>()?;
     Ok((StatusCode::OK, Json(dbs)))
 }
 

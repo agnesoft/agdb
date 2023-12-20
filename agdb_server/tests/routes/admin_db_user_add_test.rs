@@ -34,6 +34,7 @@ async fn add_db_user() -> anyhow::Result<()> {
         name: db,
         db_type: "memory".to_string(),
         role: "write".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())

@@ -56,6 +56,7 @@ async fn other_user() -> anyhow::Result<()> {
         name: db,
         db_type: "mapped".to_string(),
         role: "admin".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())
@@ -88,6 +89,7 @@ async fn with_read_role() -> anyhow::Result<()> {
         name: db,
         db_type: "mapped".to_string(),
         role: "admin".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())
@@ -120,6 +122,7 @@ async fn with_write_role() -> anyhow::Result<()> {
         name: db,
         db_type: "mapped".to_string(),
         role: "admin".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())

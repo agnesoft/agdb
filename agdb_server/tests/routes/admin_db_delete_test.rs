@@ -24,6 +24,7 @@ async fn delete() -> anyhow::Result<()> {
         name: db.clone(),
         db_type: "mapped".to_string(),
         role: "admin".to_string(),
+        size: 2600,
     }));
     let rem = DbName { db: db.clone() };
     assert_eq!(

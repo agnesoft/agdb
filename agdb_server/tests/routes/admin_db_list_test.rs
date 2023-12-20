@@ -1,4 +1,5 @@
 use crate::Db;
+use crate::DbWithSize;
 use crate::TestServer;
 use crate::ADMIN_DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -11,17 +12,19 @@ async fn db_list() -> anyhow::Result<()> {
     let db1 = server.init_db("memory", &user1).await?;
     let db2 = server.init_db("memory", &user2).await?;
     let (status, list) = server
-        .get::<Vec<Db>>(ADMIN_DB_LIST_URI, &server.admin_token)
+        .get::<Vec<DbWithSize>>(ADMIN_DB_LIST_URI, &server.admin_token)
         .await?;
     assert_eq!(status, 200);
     let list = list?;
-    assert!(list.contains(&Db {
+    assert!(list.contains(&DbWithSize {
         name: db1,
         db_type: "memory".to_string(),
+        size: 2600,
     }));
-    assert!(list.contains(&Db {
+    assert!(list.contains(&DbWithSize {
         name: db2,
         db_type: "memory".to_string(),
+        size: 2600,
     }));
 
     Ok(())

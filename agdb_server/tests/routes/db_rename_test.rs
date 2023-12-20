@@ -36,6 +36,7 @@ async fn rename() -> anyhow::Result<()> {
             name: json.new_name.clone(),
             db_type: "mapped".to_string(),
             role: "admin".to_string(),
+            size: 2600,
         }]
     );
     assert!(!Path::new(&server.data_dir).join(db).exists());

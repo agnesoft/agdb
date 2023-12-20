@@ -6,6 +6,8 @@ use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseName;
+use crate::routes::db::ServerDatabaseSize;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use axum::extract::State;
@@ -73,19 +75,30 @@ pub(crate) async fn delete(
     path = "/api/v1/admin/db/list",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "ok", body = Vec<ServerDatabase>),
+         (status = 200, description = "ok", body = Vec<ServerDatabaseSize>),
          (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
+) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabaseSize>>)> {
+    let pool = db_pool.get_pool()?;
     let dbs = db_pool
         .find_dbs()?
         .into_iter()
-        .map(|db| db.into())
-        .collect();
+        .map(|db| {
+            Ok(ServerDatabaseSize {
+                name: db.name.clone(),
+                db_type: db.db_type.as_str().into(),
+                size: pool
+                    .get(&db.name)
+                    .ok_or(ErrorCode::DbNotFound)?
+                    .get()?
+                    .size(),
+            })
+        })
+        .collect::<Result<Vec<ServerDatabaseSize>, ServerError>>()?;
     Ok((StatusCode::OK, Json(dbs)))
 }
 

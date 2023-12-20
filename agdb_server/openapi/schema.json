@@ -169,13 +169,16 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "user must be a db admin / cannot add self"
+            "description": "cannot change role of db owner"
           },
           "464": {
             "description": "user not found"
           },
           "466": {
             "description": "db not found"
+          },
+          "467": {
+            "description": "db invalid"
           }
         },
         "security": [
@@ -243,13 +246,16 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "cannot remove last admin user"
+            "description": "cannot remove db owner"
           },
           "464": {
             "description": "user not found"
           },
           "466": {
             "description": "db not found"
+          },
+          "467": {
+            "description": "db invalid"
           }
         },
         "security": [
@@ -679,13 +685,16 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "user must be a db admin / cannot add self"
+            "description": "user must be a db admin / cannot change role of db owner"
           },
           "464": {
             "description": "user not found"
           },
           "466": {
             "description": "db not found"
+          },
+          "467": {
+            "description": "db invalid"
           }
         },
         "security": [
@@ -753,13 +762,16 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "user must be a db admin / cannot remove last admin user"
+            "description": "must be admin / cannot remove db owner"
           },
           "464": {
             "description": "user not found"
           },
           "466": {
             "description": "db not found"
+          },
+          "467": {
+            "description": "db invalid"
           }
         },
         "security": [

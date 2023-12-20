@@ -1,4 +1,5 @@
 use crate::db_pool::DbPool;
+use crate::error_code::ErrorCode;
 use crate::routes::db::ServerDatabaseName;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
@@ -39,9 +40,10 @@ pub(crate) struct RemoveDbUser {
     responses(
          (status = 201, description = "user added"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "user must be a db admin / cannot add self"),
+         (status = 403, description = "user must be a db admin / cannot change role of db owner"),
          (status = 464, description = "user not found"),
          (status = 466, description = "db not found"),
+         (status = 467, description = "db invalid"),
     )
 )]
 pub(crate) async fn add(
@@ -49,16 +51,28 @@ pub(crate) async fn add(
     State(db_pool): State<DbPool>,
     Json(request): Json<DbUser>,
 ) -> ServerResponse {
-    let db = db_pool.find_db_id(&request.database)?;
-    let db_user = db_pool.find_user_id(&request.user)?;
+    let (owner, _db) = request
+        .database
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
 
-    if !db_pool.is_db_admin(user.0, db)? || db_user == user.0 {
+    if owner == request.user {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
-            "user must be a db admin / cannot add self",
+            "cannot change role of db owner",
         ));
     }
 
+    let db = db_pool.find_db_id(&request.database)?;
+
+    if !db_pool.is_db_admin(user.0, db)? {
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "must be a db admin",
+        ));
+    }
+
+    let db_user = db_pool.find_user_id(&request.user)?;
     db_pool.add_db_user(db, db_user, request.role)?;
 
     Ok(StatusCode::CREATED)
@@ -102,9 +116,10 @@ pub(crate) async fn list(
     responses(
          (status = 204, description = "user removed"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "user must be a db admin / cannot remove last admin user"),
+         (status = 403, description = "must be admin / cannot remove db owner"),
          (status = 464, description = "user not found"),
          (status = 466, description = "db not found"),
+         (status = 467, description = "db invalid"),
     )
 )]
 pub(crate) async fn remove(
@@ -112,14 +127,25 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Json(request): Json<RemoveDbUser>,
 ) -> ServerResponse {
-    let db = db_pool.find_db_id(&request.database)?;
-    let db_user = db_pool.db_user_id(db, &request.user)?;
-    let admins = db_pool.db_admins(db)?;
+    let (owner, _db) = request
+        .database
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
 
-    if (!admins.contains(&user.0) && user.0 != db_user) || admins == vec![db_user] {
+    if owner == request.user {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
-            "user must be a db admin / cannot remove last admin user",
+            "cannot remove db owner",
+        ));
+    }
+
+    let db = db_pool.find_db_id(&request.database)?;
+    let db_user = db_pool.db_user_id(db, &request.user)?;
+
+    if user.0 != db_user && !db_pool.is_db_admin(user.0, db)? {
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "must be a db admin",
         ));
     }
 

@@ -60,6 +60,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         .route("/delete", routing::post(routes::db::delete))
         .route("/exec", routing::post(routes::db::exec))
         .route("/list", routing::get(routes::db::list))
+        .route("/optimize", routing::post(routes::db::optimize))
         .route("/remove", routing::post(routes::db::remove))
         .route("/rename", routing::post(routes::db::rename))
         .nest("/user", db_user_router_v1);

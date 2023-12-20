@@ -2,6 +2,7 @@ use crate::db_pool::DbPool;
 use crate::routes::db::user::DbUser;
 use crate::routes::db::user::RemoveDbUser;
 use crate::routes::db::ServerDatabaseName;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use axum::extract::Query;
@@ -86,7 +87,10 @@ pub(crate) async fn remove(
     let admins = db_pool.db_admins(db)?;
 
     if admins == vec![db_user] {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "removed user must not be the last db admin",
+        ));
     }
 
     db_pool.remove_db_user(db, db_user)?;

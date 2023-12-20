@@ -1,5 +1,6 @@
 use crate::db_pool::DbPool;
 use crate::routes::db::ServerDatabaseName;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use axum::extract::Query;
@@ -52,7 +53,10 @@ pub(crate) async fn add(
     let db_user = db_pool.find_user_id(&request.user)?;
 
     if !db_pool.is_db_admin(user.0, db)? || db_user == user.0 {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "user must be a db admin / cannot add self",
+        ));
     }
 
     db_pool.add_db_user(db, db_user, request.role)?;
@@ -113,7 +117,10 @@ pub(crate) async fn remove(
     let admins = db_pool.db_admins(db)?;
 
     if (!admins.contains(&user.0) && user.0 != db_user) || admins == vec![db_user] {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "user must be a db admin / cannot remove last admin user",
+        ));
     }
 
     db_pool.remove_db_user(db, db_user)?;

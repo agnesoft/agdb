@@ -25,6 +25,7 @@ use utoipa::OpenApi;
         crate::routes::db::delete,
         crate::routes::db::exec,
         crate::routes::db::list,
+        crate::routes::db::optimize,
         crate::routes::db::remove,
         crate::routes::db::rename,
         crate::routes::db::user::add,

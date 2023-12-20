@@ -70,15 +70,6 @@ pub(crate) struct Queries(pub(crate) Vec<QueryType>);
 #[derive(Serialize, ToSchema)]
 pub(crate) struct QueriesResults(pub(crate) Vec<QueryResult>);
 
-impl From<Database> for ServerDatabase {
-    fn from(value: Database) -> Self {
-        Self {
-            name: value.name,
-            db_type: value.db_type.as_str().into(),
-        }
-    }
-}
-
 impl From<&str> for DbType {
     fn from(value: &str) -> Self {
         match value {

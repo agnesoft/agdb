@@ -136,7 +136,7 @@ pub(crate) async fn add(
     responses(
          (status = 204, description = "db deleted"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "user must be a db admin"),
+         (status = 403, description = "user must be a db owner"),
          (status = 466, description = "db not found"),
     )
 )]
@@ -146,15 +146,17 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
-    let db = db_pool.find_user_db(user.0, &request.db)?;
+    let (db_user, _db) = request.db.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+    let name = db_pool.user_name(user.0)?;
 
-    if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
+    if db_user != name {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
-            "user must be a db admin",
+            "user must be a db owner",
         ));
     }
 
+    let db = db_pool.find_user_db(user.0, &request.db)?;
     db_pool.delete_db(db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -260,7 +262,7 @@ pub(crate) async fn list(
     responses(
          (status = 200, description = "ok", body = ServerDatabaseSize),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "permission denied"),
+         (status = 403, description = "permission denied / must have write permissions"),
     )
 )]
 pub(crate) async fn optimize(
@@ -301,7 +303,7 @@ pub(crate) async fn optimize(
     responses(
          (status = 204, description = "db removed"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "user must be a db admin"),
+         (status = 403, description = "user must be a db owner"),
          (status = 466, description = "db not found"),
     )
 )]
@@ -310,15 +312,17 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Json(request): Json<ServerDatabaseName>,
 ) -> ServerResponse {
-    let db = db_pool.find_user_db(user.0, &request.db)?;
+    let (db_user, _db) = request.db.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+    let name = db_pool.user_name(user.0)?;
 
-    if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
+    if db_user != name {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
-            "user must be a db admin",
+            "user must be a db owner",
         ));
     }
 
+    let db = db_pool.find_user_db(user.0, &request.db)?;
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)

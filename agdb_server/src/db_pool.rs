@@ -613,6 +613,21 @@ impl DbPool {
         Ok(())
     }
 
+    pub(crate) fn user_name(&self, id: DbId) -> ServerResult<String> {
+        Ok(self
+            .db()?
+            .exec(
+                &QueryBuilder::select()
+                    .values(vec!["name".into()])
+                    .ids(id)
+                    .query(),
+            )?
+            .elements[0]
+            .values[0]
+            .value
+            .to_string())
+    }
+
     pub(crate) fn get_pool(&self) -> ServerResult<RwLockReadGuard<HashMap<String, ServerDb>>> {
         Ok(self.0.pool.read()?)
     }

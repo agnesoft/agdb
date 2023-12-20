@@ -449,7 +449,7 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "user must be a db admin"
+            "description": "user must be a db owner"
           },
           "466": {
             "description": "db not found"
@@ -568,7 +568,7 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "permission denied"
+            "description": "permission denied / must have write permissions"
           }
         },
         "security": [
@@ -602,7 +602,7 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "user must be a db admin"
+            "description": "user must be a db owner"
           },
           "466": {
             "description": "db not found"

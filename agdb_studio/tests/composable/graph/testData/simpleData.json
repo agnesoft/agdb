@@ -1,0 +1,11 @@
+{
+    "result": 5,
+    "elements": [
+        { "id": 127, "values": [{ "key": "name", "value": "db_user47" }] },
+        { "id": 118, "values": [{ "key": "name", "value": "db_user49" }] },
+        { "id": 235, "values": [{ "key": "post", "value": "Post 1" }] },
+        { "id": -236, "values": [{ "key": "role", "value": "owner" }], "to": 235, "from": 127 },
+        { "id": -235, "values": [{ "key": "role", "value": "reader" }], "to": 235, "from": 118 },
+        { "id": -237, "values": [{ "key": "role", "value": "reader" }], "to": 235, "from": 119 }
+    ]
+}

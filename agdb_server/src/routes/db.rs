@@ -32,13 +32,13 @@ pub(crate) enum DbType {
     File,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
 pub(crate) struct ServerDatabase {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub(crate) struct ServerDatabaseSize {
     pub(crate) name: String,
     pub(crate) db_type: DbType,

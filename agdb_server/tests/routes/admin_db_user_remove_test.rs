@@ -39,6 +39,7 @@ async fn remove() -> anyhow::Result<()> {
         name: db.clone(),
         db_type: "memory".to_string(),
         role: "read".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     let rem = RemoveUser {
@@ -82,6 +83,7 @@ async fn remove_last_admin() -> anyhow::Result<()> {
         name: db,
         db_type: "memory".to_string(),
         role: "admin".to_string(),
+        size: 2600,
     }];
     assert_eq!(list?, expected);
     Ok(())

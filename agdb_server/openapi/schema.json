@@ -94,7 +94,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ServerDatabase"
+                    "$ref": "#/components/schemas/ServerDatabaseSize"
                   }
                 }
               }
@@ -949,12 +949,34 @@
           }
         }
       },
+      "ServerDatabaseSize": {
+        "type": "object",
+        "required": [
+          "name",
+          "db_type",
+          "size"
+        ],
+        "properties": {
+          "db_type": {
+            "$ref": "#/components/schemas/DbType"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "ServerDatabaseWithRole": {
         "type": "object",
         "required": [
           "name",
           "db_type",
-          "role"
+          "role",
+          "size"
         ],
         "properties": {
           "db_type": {
@@ -965,6 +987,11 @@
           },
           "role": {
             "$ref": "#/components/schemas/DbUserRole"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },

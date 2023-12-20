@@ -14,11 +14,13 @@ async fn list() -> anyhow::Result<()> {
             name: db1.clone(),
             db_type: "memory".to_string(),
             role: "admin".to_string(),
+            size: 2600,
         },
         DbWithRole {
             name: db2.clone(),
             db_type: "memory".to_string(),
             role: "admin".to_string(),
+            size: 2600,
         },
     ];
     expected.sort();

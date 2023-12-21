@@ -17,15 +17,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
-pub const DB_DELETE_URI: &str = "/db/delete";
-pub const DB_EXEC_URI: &str = "/db/exec";
 pub const DB_LIST_URI: &str = "/db/list";
-pub const DB_OPTIMIZE_URI: &str = "/db/optimize";
-pub const DB_REMOVE_URI: &str = "/db/remove";
-pub const DB_RENAME_URI: &str = "/db/rename";
-pub const DB_USER_ADD_URI: &str = "/db/user/add";
-pub const DB_USER_LIST_URI: &str = "/db/user/list";
-pub const DB_USER_REMOVE_URI: &str = "/db/user/remove";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
 pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
 pub const SHUTDOWN_URI: &str = "/admin/shutdown";
@@ -55,18 +47,6 @@ static COUNTER: AtomicU16 = AtomicU16::new(1);
 struct DbUser {
     user: String,
     role: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct AddUser<'a> {
-    pub user: &'a str,
-    pub role: &'a str,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Db {
-    pub name: String,
-    pub db_type: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]

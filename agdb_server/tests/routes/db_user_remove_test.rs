@@ -1,6 +1,7 @@
 use crate::DbUser;
 use crate::DbWithRole;
 use crate::TestServer;
+use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
 
 #[tokio::test]
@@ -129,7 +130,7 @@ async fn remove_self() -> anyhow::Result<()> {
         204
     );
     let list = server
-        .get::<Vec<DbWithRole>>("/db/list", &other.token)
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
         .await?
         .1;
     assert_eq!(list?, vec![]);

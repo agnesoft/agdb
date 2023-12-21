@@ -64,10 +64,10 @@ pub(crate) async fn add(
 }
 
 #[utoipa::path(delete,
-    path = "/api/v1/admin/db/{username}/{db}/delete",
+    path = "/api/v1/admin/db/{owner}/{db}/delete",
     security(("Token" = [])),
     params(
-        ("username" = String, Path, description = "user name"),
+        ("owner" = String, Path, description = "user name"),
         ("db" = String, Path, description = "db name"),
     ),
     responses(
@@ -80,20 +80,20 @@ pub(crate) async fn delete(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Path((username, db)): Path<(String, String)>,
+    Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let name = format!("{username}/{db}");
-    let db = db_pool.find_db(&name)?;
+    let db_name = format!("{owner}/{db}");
+    let db = db_pool.find_db(&db_name)?;
     db_pool.delete_db(db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/db/{username}/{db}/exec",
+    path = "/api/v1/admin/db/{owner}/{db}/exec",
     security(("Token" = [])),
     params(
-        ("username" = String, Path, description = "user name"),
+        ("owner" = String, Path, description = "db owner user name"),
         ("db" = String, Path, description = "db name"),
     ),
     request_body = Queries,
@@ -107,11 +107,11 @@ pub(crate) async fn delete(
 pub(crate) async fn exec(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-    Path((username, db)): Path<(String, String)>,
+    Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
     let pool = db_pool.get_pool()?;
-    let db_name = format!("{}/{}", username, db);
+    let db_name = format!("{}/{}", owner, db);
     let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
     let required_role = required_role(&queries);
 
@@ -176,10 +176,10 @@ pub(crate) async fn list(
 }
 
 #[utoipa::path(delete,
-    path = "/api/v1/admin/db/{username}/{db}/remove",
+    path = "/api/v1/admin/db/{owner}/{db}/remove",
     security(("Token" = [])),
     params(
-        ("username" = String, Path, description = "user name"),
+        ("owner" = String, Path, description = "user name"),
         ("db" = String, Path, description = "db name"),
     ),
     responses(
@@ -191,9 +191,9 @@ pub(crate) async fn list(
 pub(crate) async fn remove(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-    Path((username, db)): Path<(String, String)>,
+    Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let name = format!("{username}/{db}");
+    let name = format!("{owner}/{db}");
     let db = db_pool.find_db(&name)?;
     db_pool.remove_db(db)?;
 

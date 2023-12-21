@@ -1,7 +1,5 @@
 mod routes;
 
-use agdb::QueryResult;
-use agdb::QueryType;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use reqwest::Client;
@@ -127,25 +125,6 @@ impl TestServer {
 
     pub async fn delete(&self, uri: &str, token: &Option<String>) -> anyhow::Result<u16> {
         self.server.delete(&self.client, uri, token).await
-    }
-
-    pub async fn exec(
-        &self,
-        db: &str,
-        queries: &Vec<QueryType>,
-        token: &Option<String>,
-    ) -> anyhow::Result<Vec<QueryResult>> {
-        let (status, response) = self
-            .server
-            .post(
-                &self.client,
-                &format!("{DB_EXEC_URI}?db={}", db),
-                &queries,
-                token,
-            )
-            .await?;
-        assert_eq!(status, 200);
-        Ok(serde_json::from_str(&response)?)
     }
 
     pub async fn get<T: DeserializeOwned>(

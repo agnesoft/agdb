@@ -41,7 +41,6 @@ use utoipa::OpenApi;
         crate::routes::db::QueriesResults,
         crate::routes::db::ServerDatabaseSize,
         crate::routes::db::ServerDatabaseWithRole,
-        crate::routes::db::ServerDatabaseName,
         crate::routes::db::ServerDatabaseRename,
         crate::routes::db::user::DbUser,
         crate::routes::db::user::DbUserRole,

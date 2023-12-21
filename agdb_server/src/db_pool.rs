@@ -365,10 +365,7 @@ impl DbPool {
                     .exec(&db_id_query)?
                     .elements
                     .get(0)
-                    .ok_or(ServerError::new(
-                        ErrorCode::DbNotFound.into(),
-                        &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
-                    ))?
+                    .ok_or(db_not_found(db))?
                     .id;
 
                 Ok(t.exec(

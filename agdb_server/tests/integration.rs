@@ -56,6 +56,8 @@ const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 3;
+const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
+const SHUTDOWN_RETRY_ATTEMPTS: u16 = 30;
 
 static MUTEX: OnceLock<Mutex<bool>> = OnceLock::new();
 static SERVER: OnceLock<TestServerImpl> = OnceLock::new();
@@ -422,19 +424,23 @@ impl TestServerImpl {
 
 impl Drop for TestServerImpl {
     fn drop(&mut self) {
-        let shutdown_result = if self.process.try_wait().unwrap().is_none() {
-            Self::shutdown_server(self)
-        } else {
-            anyhow::Ok(())
-        };
+        if self.process.try_wait().unwrap().is_none() {
+            let _ = Self::shutdown_server(self);
+        }
 
-        if shutdown_result.is_err() {
+        for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
+            if self.process.try_wait().unwrap().is_some() {
+                break;
+            }
+            std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+        }
+
+        if self.process.try_wait().unwrap().is_none() {
             let _ = self.process.kill();
         }
 
         let _ = self.process.wait();
 
-        shutdown_result.unwrap();
         Self::remove_dir_if_exists(&self.dir).unwrap();
     }
 }

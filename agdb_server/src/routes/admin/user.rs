@@ -22,7 +22,7 @@ pub(crate) struct UserStatus {
     path = "/api/v1/admin/user/{username}/change_password",
     security(("Token" = [])),
     params(
-        ("username" = String, Path, description = "username"),
+        ("username" = String, Path, description = "user name"),
     ),
     request_body = UserCredentials,
     responses(
@@ -54,7 +54,7 @@ pub(crate) async fn change_password(
     path = "/api/v1/admin/user/{username}/add",
     security(("Token" = [])),
     params(
-        ("username" = String, Path, description = "desired username"),
+        ("username" = String, Path, description = "desired user name"),
     ),
     request_body = UserCredentials,
     responses(
@@ -62,7 +62,7 @@ pub(crate) async fn change_password(
          (status = 401, description = "unauthorized"),
          (status = 461, description = "password too short (<8)"),
          (status = 462, description = "name too short (<3)"),
-         (status = 463, description = "user already exists")
+         (status = 463, description = "user exists"),
     )
 )]
 pub(crate) async fn add(

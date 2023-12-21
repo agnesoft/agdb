@@ -257,10 +257,7 @@ impl DbPool {
             )?
             .elements
             .get(0)
-            .ok_or(ServerError::new(
-                ErrorCode::DbNotFound.into(),
-                &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
-            ))?
+            .ok_or(db_not_found(db))?
             .try_into()?)
     }
 
@@ -281,10 +278,7 @@ impl DbPool {
             )?
             .elements
             .get(0)
-            .ok_or(ServerError::new(
-                ErrorCode::DbNotFound.into(),
-                &format!("{}: {name}", ErrorCode::DbNotFound.as_str()),
-            ))?
+            .ok_or(db_not_found(name))?
             .id)
     }
 
@@ -353,10 +347,7 @@ impl DbPool {
                     .exec(&db_id_query)?
                     .elements
                     .get(0)
-                    .ok_or(ServerError::new(
-                        ErrorCode::DbNotFound.into(),
-                        &format!("{}: {db}", ErrorCode::DbNotFound.as_str()),
-                    ))?
+                    .ok_or(db_not_found(db))?
                     .id;
                 Ok(t.exec(&QueryBuilder::select().ids(db_id).query())?)
             })?
@@ -638,4 +629,8 @@ impl DbPool {
 
 fn user_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
+}
+
+fn db_not_found(name: &str) -> ServerError {
+    ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
 }

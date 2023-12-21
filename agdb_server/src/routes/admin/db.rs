@@ -8,72 +8,82 @@ use crate::routes::db::required_role;
 use crate::routes::db::t_exec;
 use crate::routes::db::t_exec_mut;
 use crate::routes::db::user::DbUserRole;
+use crate::routes::db::DbTypeParam;
 use crate::routes::db::Queries;
 use crate::routes::db::QueriesResults;
-use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseName;
 use crate::routes::db::ServerDatabaseSize;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use agdb::QueryError;
+use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/db/add",
-    request_body = ServerDatabase,
+    path = "/api/v1/admin/db/{username}/{db}/add",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+        DbTypeParam,
+    ),
     responses(
          (status = 201, description = "db added"),
          (status = 401, description = "unauthorized"),
-         (status = 465, description = "db already exists"),
-         (status = 467, description = "db invalid"),
+         (status = 404, description = "user not found"),
+         (status = 465, description = "db exists"),
     )
 )]
 pub(crate) async fn add(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Json(request): Json<ServerDatabase>,
+    Path((username, db)): Path<(String, String)>,
+    request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let (db_user, _db) = request.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-    let db_user_id = db_pool.find_user_id(db_user)?;
+    let user = db_pool.find_user_id(&username)?;
+    let name = format!("{username}/{db}");
 
-    if db_pool.find_db_id(&request.name).is_ok() {
+    if db_pool.find_user_db(user, &name).is_ok() {
         return Err(ErrorCode::DbExists.into());
     }
 
     let db = Database {
         db_id: None,
-        name: request.name,
+        name,
         db_type: request.db_type.to_string(),
     };
 
-    db_pool.add_db(db_user_id, db, &config)?;
+    db_pool.add_db(user, db, &config)?;
 
     Ok(StatusCode::CREATED)
 }
 
-#[utoipa::path(post,
-    path = "/api/v1/admin/db/delete",
-    request_body = ServerDatabaseName,
+#[utoipa::path(delete,
+    path = "/api/v1/admin/db/{username}/{db}/delete",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
     responses(
          (status = 204, description = "db deleted"),
          (status = 401, description = "unauthorized"),
-         (status = 466, description = "db not found"),
+         (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn delete(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Json(request): Json<ServerDatabaseName>,
+    Path((username, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db = db_pool.find_db(&request.db)?;
+    let name = format!("{username}/{db}");
+    let db = db_pool.find_db(&name)?;
     db_pool.delete_db(db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)

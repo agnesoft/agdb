@@ -4,8 +4,8 @@ use axum::http::StatusCode;
 pub(crate) enum ErrorCode {
     PasswordTooShort,
     NameTooShort,
-    UserNotFound,
     UserExists,
+    UserNotFound,
     DbExists,
     DbNotFound,
     DbInvalid,
@@ -43,7 +43,7 @@ impl ErrorCode {
         match self {
             ErrorCode::PasswordTooShort => "password too short (<8)",
             ErrorCode::NameTooShort => "name too short (<3)",
-            ErrorCode::UserExists => "user already exists",
+            ErrorCode::UserExists => "user exists",
             ErrorCode::UserNotFound => "user not found",
             ErrorCode::DbExists => "db already exists",
             ErrorCode::DbNotFound => "db not found",

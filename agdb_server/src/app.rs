@@ -25,7 +25,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         .route("/admin/user/list", routing::get(routes::admin::user::list))
         .route(
             "/admin/user/:user/add",
-            routing::put(routes::admin::user::add),
+            routing::post(routes::admin::user::add),
         )
         .route(
             "/admin/user/:user/change_password",
@@ -38,7 +38,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         )
         .route(
             "/admin/db/:user/:db/delete",
-            routing::post(routes::admin::db::delete),
+            routing::delete(routes::admin::db::delete),
         )
         .route(
             "/admin/db/:user/:db/exec",

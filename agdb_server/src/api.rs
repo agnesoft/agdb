@@ -36,9 +36,9 @@ use utoipa::OpenApi;
     components(schemas(
         crate::routes::admin::user::UserStatus,
         crate::routes::db::DbType,
+        crate::routes::db::DbTypeParam,
         crate::routes::db::Queries,
         crate::routes::db::QueriesResults,
-        crate::routes::db::ServerDatabase,
         crate::routes::db::ServerDatabaseSize,
         crate::routes::db::ServerDatabaseWithRole,
         crate::routes::db::ServerDatabaseName,

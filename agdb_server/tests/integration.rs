@@ -19,7 +19,6 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
-pub const DB_ADD_URI: &str = "/db/add";
 pub const DB_DELETE_URI: &str = "/db/delete";
 pub const DB_EXEC_URI: &str = "/db/exec";
 pub const DB_LIST_URI: &str = "/db/list";
@@ -29,10 +28,8 @@ pub const DB_RENAME_URI: &str = "/db/rename";
 pub const DB_USER_ADD_URI: &str = "/db/user/add";
 pub const DB_USER_LIST_URI: &str = "/db/user/list";
 pub const DB_USER_REMOVE_URI: &str = "/db/user/remove";
-pub const ADMIN_DB_ADD_URI: &str = "/admin/db/add";
 pub const ADMIN_DB_EXEC_URI: &str = "/admin/db/exec";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
-pub const ADMIN_DB_DELETE_URI: &str = "/admin/db/delete";
 pub const ADMIN_DB_REMOVE_URI: &str = "/admin/db/remove";
 pub const ADMIN_DB_USER_ADD_URI: &str = "/admin/db/user/add";
 pub const ADMIN_DB_USER_LIST_URI: &str = "/admin/db/user/list";
@@ -131,6 +128,10 @@ impl TestServer {
             server,
             client: reqwest::Client::new(),
         })
+    }
+
+    pub async fn delete(&self, uri: &str, token: &Option<String>) -> anyhow::Result<u16> {
+        self.server.delete(&self.client, uri, token).await
     }
 
     pub async fn exec(
@@ -296,6 +297,24 @@ impl TestServerImpl {
         Err(error)
     }
 
+    pub async fn delete(
+        &self,
+        client: &Client,
+        uri: &str,
+        token: &Option<String>,
+    ) -> anyhow::Result<u16> {
+        let mut request = client.delete(self.url(uri));
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+        let status = response.status().as_u16();
+
+        Ok(status)
+    }
+
     pub async fn get<T: DeserializeOwned>(
         &self,
         client: &Client,
@@ -318,13 +337,14 @@ impl TestServerImpl {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
         let credentials = UserCredentials { password: &name };
         assert_eq!(
-            self.put(
+            self.post(
                 client,
                 &format!("/admin/user/{name}/add"),
                 &credentials,
                 &self.admin_token
             )
-            .await?,
+            .await?
+            .0,
             201
         );
         let response = self
@@ -348,13 +368,11 @@ impl TestServerImpl {
             server_user.name,
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        let db = Db {
-            name: name.clone(),
-            db_type: db_type.to_string(),
-        };
-        let (status, _) = self
-            .post(client, DB_ADD_URI, &db, &server_user.token)
-            .await?;
+        let uri = format!("/db/{name}/add?db_type={db_type}",);
+        let status = self
+            .post(client, &uri, &String::new(), &server_user.token)
+            .await?
+            .0;
         assert_eq!(status, 201);
         Ok(name)
     }

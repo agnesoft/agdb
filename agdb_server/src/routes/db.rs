@@ -14,6 +14,7 @@ use agdb::QueryResult;
 use agdb::QueryType;
 use agdb::Transaction;
 use agdb::TransactionMut;
+use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -32,9 +33,8 @@ pub(crate) enum DbType {
     File,
 }
 
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct ServerDatabase {
-    pub(crate) name: String,
+#[derive(Serialize, Deserialize, IntoParams, ToSchema)]
+pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbType,
 }
 
@@ -91,36 +91,45 @@ impl Display for DbType {
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/add",
-    request_body = ServerDatabase,
+    path = "/api/v1/db/{username}/{db}/add",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+        DbTypeParam,
+    ),
     responses(
          (status = 201, description = "db added"),
          (status = 401, description = "unauthorized"),
+         (status = 403, description = "cannot add db to another user"),
          (status = 465, description = "db already exists"),
-         (status = 467, description = "db invalid"),
     )
 )]
 pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Json(request): Json<ServerDatabase>,
+    Path((username, db)): Path<(String, String)>,
+    request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let (db_user, _db) = request.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-    let db_user_id = db_pool.find_user_id(db_user)?;
+    let current_username = db_pool.user_name(user.0)?;
 
-    if db_user_id != user.0 {
-        return Err(ErrorCode::DbInvalid.into());
+    if current_username != username {
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "cannot add db to another user",
+        ));
     }
 
-    if db_pool.find_db_id(&request.name).is_ok() {
+    let name = format!("{username}/{db}");
+
+    if db_pool.find_user_db(user.0, &name).is_ok() {
         return Err(ErrorCode::DbExists.into());
     }
 
     let db = Database {
         db_id: None,
-        name: request.name,
+        name,
         db_type: request.db_type.to_string(),
     };
 

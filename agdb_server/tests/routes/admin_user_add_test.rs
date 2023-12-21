@@ -18,6 +18,16 @@ async fn add() -> anyhow::Result<()> {
             .await?,
         201
     );
+    assert_eq!(
+        server
+            .put(
+                "/admin/user/new_user/add",
+                &credentials,
+                &server.admin_token
+            )
+            .await?,
+        463
+    );
     Ok(())
 }
 

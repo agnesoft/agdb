@@ -1,20 +1,21 @@
 use crate::TestServer;
-use crate::User;
-use crate::ADMIN_USER_CREATE_URI;
+use crate::UserCredentials;
 use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn create_user() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = User {
-        name: "create_user",
+    let credentials = UserCredentials {
         password: "password123",
     };
     assert_eq!(
         server
-            .post(ADMIN_USER_CREATE_URI, &user, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                "/admin/user/new_user/add",
+                &credentials,
+                &server.admin_token
+            )
+            .await?,
         201
     );
     Ok(())
@@ -23,15 +24,13 @@ async fn create_user() -> anyhow::Result<()> {
 #[tokio::test]
 async fn name_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = User {
-        name: "a",
+    let user = UserCredentials {
         password: "password123",
     };
     assert_eq!(
         server
-            .post(ADMIN_USER_CREATE_URI, &user, &server.admin_token)
-            .await?
-            .0,
+            .put("/admin/user/a/add", &user, &server.admin_token)
+            .await?,
         462
     );
     Ok(())
@@ -40,15 +39,11 @@ async fn name_too_short() -> anyhow::Result<()> {
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = User {
-        name: "alice",
-        password: "pswd",
-    };
+    let user = UserCredentials { password: "pswd" };
     assert_eq!(
         server
-            .post(ADMIN_USER_CREATE_URI, &user, &server.admin_token)
-            .await?
-            .0,
+            .put("/admin/user/alice/add", &user, &server.admin_token)
+            .await?,
         461
     );
     Ok(())
@@ -58,15 +53,17 @@ async fn password_too_short() -> anyhow::Result<()> {
 async fn user_already_exists() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let user = User {
-        name: &user.name,
+    let credentials = UserCredentials {
         password: "password123",
     };
     assert_eq!(
         server
-            .post(ADMIN_USER_CREATE_URI, &user, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/user/{}/add", user.name),
+                &credentials,
+                &server.admin_token
+            )
+            .await?,
         463
     );
     Ok(())
@@ -75,12 +72,11 @@ async fn user_already_exists() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_admin_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = User {
-        name: "no_token",
+    let user = UserCredentials {
         password: "password123",
     };
     assert_eq!(
-        server.post(ADMIN_USER_CREATE_URI, &user, NO_TOKEN).await?.0,
+        server.put("/admin/user/alice/add", &user, NO_TOKEN).await?,
         401
     );
     Ok(())

@@ -55,7 +55,6 @@ async fn read() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "read",
     };
@@ -79,7 +78,6 @@ async fn write() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let other = server.init_user().await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "write",
     };

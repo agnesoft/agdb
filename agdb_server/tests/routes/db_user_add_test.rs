@@ -12,7 +12,6 @@ async fn add_reader() -> anyhow::Result<()> {
     let reader = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &reader.name,
         role: "read",
     };
@@ -44,7 +43,6 @@ async fn add_writer() -> anyhow::Result<()> {
     let writer = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &writer.name,
         role: "write",
     };
@@ -76,7 +74,6 @@ async fn add_admin() -> anyhow::Result<()> {
     let admin = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &admin.name,
         role: "admin",
     };
@@ -105,9 +102,7 @@ async fn add_admin() -> anyhow::Result<()> {
 async fn add_self() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &user.name,
         role: "read",
     };
@@ -121,12 +116,9 @@ async fn add_self() -> anyhow::Result<()> {
 #[tokio::test]
 async fn add_admin_as_non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = server.init_user().await?;
     let writer = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "write",
     };
@@ -150,9 +142,7 @@ async fn change_user_role() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
     let mut role = AddUser {
-        database: &db,
         user: &other.name,
         role: "write",
     };
@@ -184,7 +174,6 @@ async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let role = AddUser {
-        database: "user/db_not_found",
         user: "some_user",
         role: "read",
     };
@@ -200,7 +189,6 @@ async fn db_invalid() -> anyhow::Result<()> {
     let server: TestServer = TestServer::new().await?;
     let user = server.init_user().await?;
     let role = AddUser {
-        database: "invalid",
         user: "some_user",
         role: "read",
     };
@@ -215,9 +203,7 @@ async fn db_invalid() -> anyhow::Result<()> {
 async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: "user_not_found",
         role: "read",
     };
@@ -232,7 +218,6 @@ async fn user_not_found() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let role = AddUser {
-        database: "my_db",
         user: "bob",
         role: "admin",
     };

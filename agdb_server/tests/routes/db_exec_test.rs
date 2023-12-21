@@ -199,7 +199,6 @@ async fn permission_denied() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "read",
     };

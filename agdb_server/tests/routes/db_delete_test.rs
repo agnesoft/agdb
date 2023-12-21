@@ -64,7 +64,6 @@ async fn with_read_role() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let reader = server.init_user().await?;
     let role = AddUser {
-        database: &db,
         user: &reader.name,
         role: "read",
     };
@@ -98,7 +97,6 @@ async fn with_write_role() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let writer = server.init_user().await?;
     let role = AddUser {
-        database: &db,
         user: &writer.name,
         role: "write",
     };
@@ -132,7 +130,6 @@ async fn with_admin_role() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let writer = server.init_user().await?;
     let role = AddUser {
-        database: &db,
         user: &writer.name,
         role: "admin",
     };

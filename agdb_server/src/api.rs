@@ -17,7 +17,7 @@ use utoipa::OpenApi;
         crate::routes::admin::db::user::list,
         crate::routes::admin::db::user::remove,
         crate::routes::admin::user::change_password,
-        crate::routes::admin::user::create,
+        crate::routes::admin::user::add,
         crate::routes::admin::user::list,
         crate::routes::admin::shutdown,
         crate::routes::user::login,

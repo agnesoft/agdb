@@ -19,7 +19,6 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
-pub const USER_CHANGE_PASSWORD_URI: &str = "/user/change_password";
 pub const DB_ADD_URI: &str = "/db/add";
 pub const DB_DELETE_URI: &str = "/db/delete";
 pub const DB_EXEC_URI: &str = "/db/exec";
@@ -30,7 +29,6 @@ pub const DB_RENAME_URI: &str = "/db/rename";
 pub const DB_USER_ADD_URI: &str = "/db/user/add";
 pub const DB_USER_LIST_URI: &str = "/db/user/list";
 pub const DB_USER_REMOVE_URI: &str = "/db/user/remove";
-pub const ADMIN_USER_CREATE_URI: &str = "/admin/user/create";
 pub const ADMIN_DB_ADD_URI: &str = "/admin/db/add";
 pub const ADMIN_DB_EXEC_URI: &str = "/admin/db/exec";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
@@ -40,8 +38,6 @@ pub const ADMIN_DB_USER_ADD_URI: &str = "/admin/db/user/add";
 pub const ADMIN_DB_USER_LIST_URI: &str = "/admin/db/user/list";
 pub const ADMIN_DB_USER_REMOVE_URI: &str = "/admin/db/user/remove";
 pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
-pub const ADMIN_CHANGE_PASSWORD_URI: &str = "/admin/user/change_password";
-pub const USER_LOGIN_URI: &str = "/user/login";
 pub const SHUTDOWN_URI: &str = "/admin/shutdown";
 pub const STATUS_URI: &str = "/status";
 
@@ -68,7 +64,6 @@ static COUNTER: AtomicU16 = AtomicU16::new(1);
 #[derive(Serialize, Deserialize)]
 pub struct AddUser<'a> {
     pub user: &'a str,
-    pub database: &'a str,
     pub role: &'a str,
 }
 
@@ -94,8 +89,7 @@ pub struct DbWithRole {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct User<'a> {
-    pub name: &'a str,
+pub struct UserCredentials<'a> {
     pub password: &'a str,
 }
 
@@ -106,7 +100,6 @@ pub struct UserStatus {
 
 #[derive(Serialize, Deserialize)]
 pub struct ChangePassword<'a> {
-    pub name: &'a str,
     pub password: &'a str,
     pub new_password: &'a str,
 }
@@ -174,6 +167,15 @@ impl TestServer {
         token: &Option<String>,
     ) -> anyhow::Result<(u16, String)> {
         self.server.post(&self.client, uri, json, token).await
+    }
+
+    pub async fn put<T: Serialize>(
+        &self,
+        uri: &str,
+        json: &T,
+        token: &Option<String>,
+    ) -> anyhow::Result<u16> {
+        self.server.put(&self.client, uri, json, token).await
     }
 
     pub async fn init_user(&self) -> anyhow::Result<ServerUser> {
@@ -262,17 +264,14 @@ impl TestServerImpl {
                 .await
             {
                 Ok(_) => {
-                    let admin = User {
-                        name: ADMIN,
-                        password: ADMIN,
-                    };
+                    let credentials = UserCredentials { password: ADMIN };
                     let response = client
                         .post(format!(
-                            "{}:{}/api/v1{USER_LOGIN_URI}",
+                            "{}:{}/api/v1/user/{ADMIN}/login",
                             Self::url_base(),
                             port
                         ))
-                        .json(&admin)
+                        .json(&credentials)
                         .send()
                         .await?;
                     let admin_token = Some(response.text().await?);
@@ -317,17 +316,20 @@ impl TestServerImpl {
 
     pub async fn init_user(&self, client: &Client) -> anyhow::Result<ServerUser> {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
-        let user = User {
-            name: &name,
-            password: &name,
-        };
+        let credentials = UserCredentials { password: &name };
         assert_eq!(
-            self.post(client, ADMIN_USER_CREATE_URI, &user, &self.admin_token)
-                .await?
-                .0,
+            self.put(
+                client,
+                &format!("/admin/user/{name}/add"),
+                &credentials,
+                &self.admin_token
+            )
+            .await?,
             201
         );
-        let response = self.post(client, USER_LOGIN_URI, &user, &None).await?;
+        let response = self
+            .post(client, &format!("/user/{name}/login"), &credentials, &None)
+            .await?;
         assert_eq!(response.0, 200);
         Ok(ServerUser {
             name,
@@ -375,6 +377,24 @@ impl TestServerImpl {
         Ok((response.status().as_u16(), response.text().await?))
     }
 
+    pub async fn put<T: Serialize>(
+        &self,
+        client: &Client,
+        uri: &str,
+        json: &T,
+        token: &Option<String>,
+    ) -> anyhow::Result<u16> {
+        let mut request = client.put(self.url(uri)).json(&json);
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+
+        Ok(response.status().as_u16())
+    }
+
     fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
         if Path::new(dir).exists() {
             std::fs::remove_dir_all(dir)?;
@@ -393,7 +413,7 @@ impl TestServerImpl {
         std::thread::spawn(move || -> anyhow::Result<()> {
             assert_eq!(
                 reqwest::blocking::Client::new()
-                    .get(format!(
+                    .post(format!(
                         "{}:{}/api/v1{SHUTDOWN_URI}",
                         Self::url_base(),
                         port
@@ -402,7 +422,7 @@ impl TestServerImpl {
                     .send()?
                     .status()
                     .as_u16(),
-                204
+                202
             );
 
             Ok(())

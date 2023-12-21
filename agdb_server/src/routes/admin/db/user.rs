@@ -11,7 +11,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 
-#[utoipa::path(post,
+#[utoipa::path(put,
     path = "/api/v1/admin/db/user/add",
     request_body = AddDatabaseUser,
     security(("Token" = [])),
@@ -21,7 +21,6 @@ use axum::Json;
          (status = 403, description = "cannot change role of db owner"),
          (status = 464, description = "user not found"),
          (status = 466, description = "db not found"),
-         (status = 467, description = "db invalid"),
     )
 )]
 pub(crate) async fn add(

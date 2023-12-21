@@ -6,6 +6,7 @@ use crate::password::Password;
 use crate::routes::user::UserCredentials;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -17,9 +18,12 @@ pub(crate) struct UserStatus {
     pub(crate) name: String,
 }
 
-#[utoipa::path(post,
-    path = "/api/v1/admin/user/change_password",
+#[utoipa::path(put,
+    path = "/api/v1/admin/user/{username}/change_password",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "username"),
+    ),
     request_body = UserCredentials,
     responses(
          (status = 201, description = "password changed"),
@@ -31,12 +35,13 @@ pub(crate) struct UserStatus {
 pub(crate) async fn change_password(
     _admin_id: AdminId,
     State(db_pool): State<DbPool>,
+    Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
     password::validate_password(&request.password)?;
 
-    let mut user = db_pool.find_user(&request.name)?;
-    let pswd = Password::create(&request.name, &request.password);
+    let mut user = db_pool.find_user(&username)?;
+    let pswd = Password::create(&username, &request.password);
     user.password = pswd.password.to_vec();
     user.salt = pswd.user_salt.to_vec();
 
@@ -46,9 +51,12 @@ pub(crate) async fn change_password(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/user/create",
-    request_body = UserCredentials,
+    path = "/api/v1/admin/user/{username}/add",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "desired username"),
+    ),
+    request_body = UserCredentials,
     responses(
          (status = 201, description = "user created"),
          (status = 401, description = "unauthorized"),
@@ -57,23 +65,24 @@ pub(crate) async fn change_password(
          (status = 463, description = "user already exists")
     )
 )]
-pub(crate) async fn create(
+pub(crate) async fn add(
     _admin_id: AdminId,
     State(db_pool): State<DbPool>,
+    Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
-    password::validate_username(&request.name)?;
+    password::validate_username(&username)?;
     password::validate_password(&request.password)?;
 
-    if db_pool.find_user_id(&request.name).is_ok() {
+    if db_pool.find_user_id(&username).is_ok() {
         return Err(ErrorCode::UserExists.into());
     }
 
-    let pswd = Password::create(&request.name, &request.password);
+    let pswd = Password::create(&username, &request.password);
 
     db_pool.create_user(ServerUser {
         db_id: None,
-        name: request.name.clone(),
+        name: username.clone(),
         password: pswd.password.to_vec(),
         salt: pswd.user_salt.to_vec(),
         token: String::new(),

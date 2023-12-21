@@ -20,7 +20,6 @@ async fn remove() -> anyhow::Result<()> {
     let reader = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &reader.name,
         role: "read",
     };
@@ -64,7 +63,6 @@ async fn remove_owner() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "admin",
     };
@@ -91,7 +89,6 @@ async fn remove_user_non_admin() -> anyhow::Result<()> {
     let other2 = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let mut role = AddUser {
-        database: &db,
         user: &other1.name,
         role: "read",
     };
@@ -125,7 +122,6 @@ async fn remove_self() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "read",
     };

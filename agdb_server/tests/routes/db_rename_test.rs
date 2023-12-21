@@ -51,7 +51,6 @@ async fn rename_non_admin() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "read",
     };
@@ -72,7 +71,6 @@ async fn rename_other_user() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let role = AddUser {
-        database: &db,
         user: &other.name,
         role: "admin",
     };

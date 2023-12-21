@@ -1,26 +1,36 @@
 use crate::TestServer;
-use crate::User;
-use crate::ADMIN_CHANGE_PASSWORD_URI;
+use crate::UserCredentials;
 use crate::NO_TOKEN;
-use crate::USER_LOGIN_URI;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let user = User {
-        name: &user.name,
+    let credentials = UserCredentials {
         password: "password456",
     };
     let admin = &server.admin_token;
     assert_eq!(
         server
-            .post(ADMIN_CHANGE_PASSWORD_URI, &user, admin)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/user/{}/change_password", user.name),
+                &credentials,
+                admin
+            )
+            .await?,
         201
     );
-    assert_eq!(server.post(USER_LOGIN_URI, &user, NO_TOKEN).await?.0, 200);
+    assert_eq!(
+        server
+            .post(
+                &format!("/user/{}/login", user.name),
+                &credentials,
+                NO_TOKEN
+            )
+            .await?
+            .0,
+        200
+    );
     Ok(())
 }
 
@@ -28,16 +38,16 @@ async fn change_password() -> anyhow::Result<()> {
 async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let user = User {
-        name: &user.name,
-        password: "pswd",
-    };
+    let credentials = UserCredentials { password: "pswd" };
     let admin = &server.admin_token;
     assert_eq!(
         server
-            .post(ADMIN_CHANGE_PASSWORD_URI, &user, admin)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/user/{}/change_password", user.name),
+                &credentials,
+                admin
+            )
+            .await?,
         461
     );
     Ok(())
@@ -46,32 +56,32 @@ async fn password_too_short() -> anyhow::Result<()> {
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = User {
-        name: "unknown",
+    let credentials = UserCredentials {
         password: "password456",
     };
     assert_eq!(
         server
-            .post(ADMIN_CHANGE_PASSWORD_URI, &user, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                "/admin/user/not_found/change_password",
+                &credentials,
+                &server.admin_token
+            )
+            .await?,
         464
     );
     Ok(())
 }
 
 #[tokio::test]
-async fn no_admin_token() -> anyhow::Result<()> {
+async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = User {
-        name: "some_user",
+    let user = UserCredentials {
         password: "password456",
     };
     assert_eq!(
         server
-            .post(ADMIN_CHANGE_PASSWORD_URI, &user, NO_TOKEN)
-            .await?
-            .0,
+            .put("/admin/user/not_found/change_password", &user, NO_TOKEN)
+            .await?,
         401
     );
     Ok(())

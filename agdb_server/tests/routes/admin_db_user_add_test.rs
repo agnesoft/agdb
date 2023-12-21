@@ -1,7 +1,5 @@
-use crate::AddUser;
 use crate::DbWithRole;
 use crate::TestServer;
-use crate::ADMIN_DB_USER_ADD_URI;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
 
@@ -11,32 +9,29 @@ async fn add_db_user() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: &other.name,
-        role: "write",
-    };
-    let (_, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?;
-    assert_eq!(list?, vec![]);
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_ADD_URI, &role, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
         201
     );
-    let (_, list) = server
+    let list = server
         .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?;
-    let expected = vec![DbWithRole {
-        name: db,
-        db_type: "memory".to_string(),
-        role: "write".to_string(),
-        size: 2600,
-    }];
-    assert_eq!(list?, expected);
+        .await?
+        .1;
+    assert_eq!(
+        list?,
+        vec![DbWithRole {
+            name: db,
+            db_type: "memory".to_string(),
+            role: "write".to_string(),
+            size: 2600,
+        }]
+    );
     Ok(())
 }
 
@@ -46,71 +41,83 @@ async fn change_user_role() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let mut role = AddUser {
-        database: &db,
-        user: &other.name,
-        role: "write",
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_ADD_URI, &role, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
         201
     );
-    role.role = "admin";
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_ADD_URI, &role, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=admin", other.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
         201
     );
-    role.role = "write";
-    role.user = &user.name;
+    let list = server
+        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
+        .await?
+        .1;
+    assert_eq!(
+        list?,
+        vec![DbWithRole {
+            name: db,
+            db_type: "memory".to_string(),
+            role: "admin".to_string(),
+            size: 2600,
+        }]
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn change_owner_role() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_ADD_URI, &role, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=admin", other.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
+        201
+    );
+    assert_eq!(
+        server
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=write", user.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
         403
     );
-
     Ok(())
 }
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let role = AddUser {
-        database: "user/db_not_found",
-        user: "some_user",
-        role: "read",
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_ADD_URI, &role, &server.admin_token)
-            .await?
-            .0,
-        466
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn db_invalid() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let role = AddUser {
-        database: "invalid",
-        user: "some_user",
-        role: "read",
-    };
-    assert_eq!(
-        server
-            .post(ADMIN_DB_USER_ADD_URI, &role, &server.admin_token)
-            .await?
-            .0,
-        467
+            .put(
+                "/admin/db/user/db/user/other/add?db_role=admin",
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
+        404
     );
     Ok(())
 }
@@ -120,17 +127,32 @@ async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: "user_not_found",
-        role: "read",
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_ADD_URI, &role, &server.admin_token)
-            .await?
-            .0,
-        464
+            .put(
+                &format!("/admin/db/{db}/user/other/add?db_role=admin"),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
+        404
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    assert_eq!(
+        server
+            .put(
+                "/admin/db/user/db/user/other/add?db_role=admin",
+                &String::new(),
+                &user.token
+            )
+            .await?,
+        401
     );
     Ok(())
 }
@@ -138,13 +160,14 @@ async fn user_not_found() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let role = AddUser {
-        database: "my_db",
-        user: "bob",
-        role: "admin",
-    };
     assert_eq!(
-        server.post(ADMIN_DB_USER_ADD_URI, &role, NO_TOKEN).await?.0,
+        server
+            .put(
+                "/admin/db/user/db/user/other/add?db_role=admin",
+                &String::new(),
+                NO_TOKEN
+            )
+            .await?,
         401
     );
     Ok(())

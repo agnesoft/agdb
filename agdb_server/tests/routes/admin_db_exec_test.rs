@@ -1,5 +1,4 @@
 use crate::TestServer;
-use crate::ADMIN_DB_EXEC_URI;
 use crate::NO_TOKEN;
 use agdb::DbElement;
 use agdb::DbId;
@@ -23,7 +22,7 @@ async fn read_write() -> anyhow::Result<()> {
     ];
     let (status, responses) = server
         .post(
-            &format!("{ADMIN_DB_EXEC_URI}?db={}", &db),
+            &format!("/admin/db/{db}/exec"),
             &queries,
             &server.admin_token,
         )
@@ -73,7 +72,7 @@ async fn read_only() -> anyhow::Result<()> {
         .into()];
     let (status, _responses) = server
         .post(
-            &format!("{ADMIN_DB_EXEC_URI}?db={}", &db),
+            &format!("/admin/db/{db}/exec"),
             &queries,
             &server.admin_token,
         )
@@ -82,7 +81,7 @@ async fn read_only() -> anyhow::Result<()> {
     let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
     let (status, responses) = server
         .post(
-            &format!("{ADMIN_DB_EXEC_URI}?db={}", &db),
+            &format!("/admin/db/{db}/exec"),
             &queries,
             &server.admin_token,
         )
@@ -122,7 +121,7 @@ async fn query_error() -> anyhow::Result<()> {
     ];
     let (status, response) = server
         .post(
-            &format!("{ADMIN_DB_EXEC_URI}?db={db}"),
+            &format!("/admin/db/{db}/exec"),
             &queries,
             &server.admin_token,
         )
@@ -136,17 +135,26 @@ async fn query_error() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
+    let queries: Vec<QueryType> = vec![];
+    let status = server
+        .post("/admin/db/user/db/exec", &queries, &server.admin_token)
+        .await?
+        .0;
+    assert_eq!(status, 404);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let queries: Vec<QueryType> = vec![];
     let status = server
-        .post(
-            &format!("{ADMIN_DB_EXEC_URI}?db={}/not_found", user.name),
-            &queries,
-            &server.admin_token,
-        )
+        .post("/admin/db/user/db/exec", &queries, &user.token)
         .await?
         .0;
-    assert_eq!(status, 466);
+    assert_eq!(status, 401);
 
     Ok(())
 }
@@ -156,11 +164,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let queries: Vec<QueryType> = vec![];
     let status = server
-        .post(
-            &format!("{ADMIN_DB_EXEC_URI}?db=user/not_found"),
-            &queries,
-            NO_TOKEN,
-        )
+        .post("/admin/db/user/db/exec", &queries, NO_TOKEN)
         .await?
         .0;
     assert_eq!(status, 401);

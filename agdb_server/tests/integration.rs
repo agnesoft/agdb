@@ -1,7 +1,5 @@
 mod routes;
 
-use agdb::QueryResult;
-use agdb::QueryType;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use reqwest::Client;
@@ -19,29 +17,9 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
-pub const USER_CHANGE_PASSWORD_URI: &str = "/user/change_password";
-pub const DB_ADD_URI: &str = "/db/add";
-pub const DB_DELETE_URI: &str = "/db/delete";
-pub const DB_EXEC_URI: &str = "/db/exec";
 pub const DB_LIST_URI: &str = "/db/list";
-pub const DB_OPTIMIZE_URI: &str = "/db/optimize";
-pub const DB_REMOVE_URI: &str = "/db/remove";
-pub const DB_RENAME_URI: &str = "/db/rename";
-pub const DB_USER_ADD_URI: &str = "/db/user/add";
-pub const DB_USER_LIST_URI: &str = "/db/user/list";
-pub const DB_USER_REMOVE_URI: &str = "/db/user/remove";
-pub const ADMIN_USER_CREATE_URI: &str = "/admin/user/create";
-pub const ADMIN_DB_ADD_URI: &str = "/admin/db/add";
-pub const ADMIN_DB_EXEC_URI: &str = "/admin/db/exec";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
-pub const ADMIN_DB_DELETE_URI: &str = "/admin/db/delete";
-pub const ADMIN_DB_REMOVE_URI: &str = "/admin/db/remove";
-pub const ADMIN_DB_USER_ADD_URI: &str = "/admin/db/user/add";
-pub const ADMIN_DB_USER_LIST_URI: &str = "/admin/db/user/list";
-pub const ADMIN_DB_USER_REMOVE_URI: &str = "/admin/db/user/remove";
 pub const ADMIN_USER_LIST_URI: &str = "/admin/user/list";
-pub const ADMIN_CHANGE_PASSWORD_URI: &str = "/admin/user/change_password";
-pub const USER_LOGIN_URI: &str = "/user/login";
 pub const SHUTDOWN_URI: &str = "/admin/shutdown";
 pub const STATUS_URI: &str = "/status";
 
@@ -65,17 +43,10 @@ static INSTANCES: AtomicU16 = AtomicU16::new(0);
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 
-#[derive(Serialize, Deserialize)]
-pub struct AddUser<'a> {
-    pub user: &'a str,
-    pub database: &'a str,
-    pub role: &'a str,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Db {
-    pub name: String,
-    pub db_type: String,
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+struct DbUser {
+    user: String,
+    role: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -94,8 +65,7 @@ pub struct DbWithRole {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct User<'a> {
-    pub name: &'a str,
+pub struct UserCredentials<'a> {
     pub password: &'a str,
 }
 
@@ -106,7 +76,6 @@ pub struct UserStatus {
 
 #[derive(Serialize, Deserialize)]
 pub struct ChangePassword<'a> {
-    pub name: &'a str,
     pub password: &'a str,
     pub new_password: &'a str,
 }
@@ -140,23 +109,8 @@ impl TestServer {
         })
     }
 
-    pub async fn exec(
-        &self,
-        db: &str,
-        queries: &Vec<QueryType>,
-        token: &Option<String>,
-    ) -> anyhow::Result<Vec<QueryResult>> {
-        let (status, response) = self
-            .server
-            .post(
-                &self.client,
-                &format!("{DB_EXEC_URI}?db={}", db),
-                &queries,
-                token,
-            )
-            .await?;
-        assert_eq!(status, 200);
-        Ok(serde_json::from_str(&response)?)
+    pub async fn delete(&self, uri: &str, token: &Option<String>) -> anyhow::Result<u16> {
+        self.server.delete(&self.client, uri, token).await
     }
 
     pub async fn get<T: DeserializeOwned>(
@@ -174,6 +128,15 @@ impl TestServer {
         token: &Option<String>,
     ) -> anyhow::Result<(u16, String)> {
         self.server.post(&self.client, uri, json, token).await
+    }
+
+    pub async fn put<T: Serialize>(
+        &self,
+        uri: &str,
+        json: &T,
+        token: &Option<String>,
+    ) -> anyhow::Result<u16> {
+        self.server.put(&self.client, uri, json, token).await
     }
 
     pub async fn init_user(&self) -> anyhow::Result<ServerUser> {
@@ -262,17 +225,14 @@ impl TestServerImpl {
                 .await
             {
                 Ok(_) => {
-                    let admin = User {
-                        name: ADMIN,
-                        password: ADMIN,
-                    };
+                    let credentials = UserCredentials { password: ADMIN };
                     let response = client
                         .post(format!(
-                            "{}:{}/api/v1{USER_LOGIN_URI}",
+                            "{}:{}/api/v1/user/{ADMIN}/login",
                             Self::url_base(),
                             port
                         ))
-                        .json(&admin)
+                        .json(&credentials)
                         .send()
                         .await?;
                     let admin_token = Some(response.text().await?);
@@ -297,6 +257,24 @@ impl TestServerImpl {
         Err(error)
     }
 
+    pub async fn delete(
+        &self,
+        client: &Client,
+        uri: &str,
+        token: &Option<String>,
+    ) -> anyhow::Result<u16> {
+        let mut request = client.delete(self.url(uri));
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+        let status = response.status().as_u16();
+
+        Ok(status)
+    }
+
     pub async fn get<T: DeserializeOwned>(
         &self,
         client: &Client,
@@ -317,17 +295,21 @@ impl TestServerImpl {
 
     pub async fn init_user(&self, client: &Client) -> anyhow::Result<ServerUser> {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
-        let user = User {
-            name: &name,
-            password: &name,
-        };
+        let credentials = UserCredentials { password: &name };
         assert_eq!(
-            self.post(client, ADMIN_USER_CREATE_URI, &user, &self.admin_token)
-                .await?
-                .0,
+            self.post(
+                client,
+                &format!("/admin/user/{name}/add"),
+                &credentials,
+                &self.admin_token
+            )
+            .await?
+            .0,
             201
         );
-        let response = self.post(client, USER_LOGIN_URI, &user, &None).await?;
+        let response = self
+            .post(client, &format!("/user/{name}/login"), &credentials, &None)
+            .await?;
         assert_eq!(response.0, 200);
         Ok(ServerUser {
             name,
@@ -346,13 +328,11 @@ impl TestServerImpl {
             server_user.name,
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        let db = Db {
-            name: name.clone(),
-            db_type: db_type.to_string(),
-        };
-        let (status, _) = self
-            .post(client, DB_ADD_URI, &db, &server_user.token)
-            .await?;
+        let uri = format!("/db/{name}/add?db_type={db_type}",);
+        let status = self
+            .post(client, &uri, &String::new(), &server_user.token)
+            .await?
+            .0;
         assert_eq!(status, 201);
         Ok(name)
     }
@@ -375,6 +355,24 @@ impl TestServerImpl {
         Ok((response.status().as_u16(), response.text().await?))
     }
 
+    pub async fn put<T: Serialize>(
+        &self,
+        client: &Client,
+        uri: &str,
+        json: &T,
+        token: &Option<String>,
+    ) -> anyhow::Result<u16> {
+        let mut request = client.put(self.url(uri)).json(&json);
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+
+        Ok(response.status().as_u16())
+    }
+
     fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
         if Path::new(dir).exists() {
             std::fs::remove_dir_all(dir)?;
@@ -393,7 +391,7 @@ impl TestServerImpl {
         std::thread::spawn(move || -> anyhow::Result<()> {
             assert_eq!(
                 reqwest::blocking::Client::new()
-                    .get(format!(
+                    .post(format!(
                         "{}:{}/api/v1{SHUTDOWN_URI}",
                         Self::url_base(),
                         port
@@ -402,7 +400,7 @@ impl TestServerImpl {
                     .send()?
                     .status()
                     .as_u16(),
-                204
+                202
             );
 
             Ok(())

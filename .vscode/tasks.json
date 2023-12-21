@@ -13,7 +13,7 @@
       "label": "Coverage Db",
       "type": "cargo",
       "command": "llvm-cov",
-      "args": ["--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--show-missing-lines"],
+      "args": ["--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--show-missing-lines", "--hide-instantiations"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
@@ -21,7 +21,7 @@
       "label": "Coverage Db HTML",
       "type": "cargo",
       "command": "llvm-cov",
-      "args": ["--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--html", "--open"],
+      "args": ["--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--html", "--open", "--hide-instantiations"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
@@ -29,7 +29,7 @@
       "label": "Coverage Server",
       "type": "cargo",
       "command": "llvm-cov",
-      "args": ["--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(\\src|\\\\src|/src|_derive|_benchmarks)|api.rs", "--show-missing-lines"],
+      "args": ["--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(\\src|\\\\src|/src|_derive|_benchmarks)|api.rs", "--show-missing-lines", "--hide-instantiations"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
@@ -37,7 +37,7 @@
       "label": "Coverage Server HTML",
       "type": "cargo",
       "command": "llvm-cov",
-      "args": ["--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(\\src|\\\\src|/src|_derive|_benchmarks)|api.rs", "--html", "--open"],
+      "args": ["--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(\\src|\\\\src|/src|_derive|_benchmarks)|api.rs", "--html", "--open", "--hide-instantiations"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },

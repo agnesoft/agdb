@@ -1,4 +1,3 @@
-use crate::Db;
 use crate::DbWithSize;
 use crate::TestServer;
 use crate::ADMIN_DB_LIST_URI;
@@ -33,7 +32,9 @@ async fn db_list() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_admin_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (status, list) = server.get::<Vec<Db>>(ADMIN_DB_LIST_URI, NO_TOKEN).await?;
+    let (status, list) = server
+        .get::<Vec<DbWithSize>>(ADMIN_DB_LIST_URI, NO_TOKEN)
+        .await?;
     assert_eq!(status, 401);
     assert!(list.is_err());
     Ok(())

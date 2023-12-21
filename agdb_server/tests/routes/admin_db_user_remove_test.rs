@@ -1,62 +1,43 @@
-use crate::AddUser;
-use crate::DbWithRole;
+use crate::DbUser;
 use crate::TestServer;
-use crate::ADMIN_DB_USER_REMOVE_URI;
-use crate::DB_LIST_URI;
-use crate::DB_USER_ADD_URI;
 use crate::NO_TOKEN;
-use serde::Serialize;
-
-#[derive(Serialize)]
-struct RemoveUser {
-    database: String,
-    user: String,
-}
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let reader = server.init_user().await?;
+    let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: &reader.name,
-        role: "read",
-    };
-    let (_, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
-        .await?;
-    assert_eq!(list?, vec![]);
-    assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
-        201
-    );
-    let (_, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
-        .await?;
-    let expected = vec![DbWithRole {
-        name: db.clone(),
-        db_type: "memory".to_string(),
-        role: "read".to_string(),
-        size: 2600,
-    }];
-    assert_eq!(list?, expected);
-    let rem = RemoveUser {
-        database: db,
-        user: reader.name,
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
-            .await?
-            .0,
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
+        201
+    );
+    assert_eq!(
+        server
+            .delete(
+                &format!("/admin/db/{db}/user/{}/remove", other.name),
+                &server.admin_token
+            )
+            .await?,
         204
     );
-    let (_, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &reader.token)
-        .await?;
-    assert_eq!(list?, vec![]);
+    let list = server
+        .get::<Vec<DbUser>>(&format!("/admin/db/{db}/user/list"), &server.admin_token)
+        .await?
+        .1;
+    assert_eq!(
+        list?,
+        vec![DbUser {
+            user: user.name.clone(),
+            role: "admin".to_string(),
+        },]
+    );
     Ok(())
 }
 
@@ -64,26 +45,14 @@ async fn remove() -> anyhow::Result<()> {
 async fn remove_owner() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: &other.name,
-        role: "admin",
-    };
-    assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
-        201
-    );
-    let rem = RemoveUser {
-        database: db.clone(),
-        user: user.name,
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
-            .await?
-            .0,
+            .delete(
+                &format!("/admin/db/{db}/user/{}/remove", user.name),
+                &server.admin_token
+            )
+            .await?,
         403
     );
     Ok(())
@@ -92,34 +61,11 @@ async fn remove_owner() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let rem = RemoveUser {
-        database: format!("{}/db_not_found", user.name),
-        user: String::new(),
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
-            .await?
-            .0,
-        466
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn db_invalid() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let rem = RemoveUser {
-        database: "invalid".to_string(),
-        user: String::new(),
-    };
-    assert_eq!(
-        server
-            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
-            .await?
-            .0,
-        467
+            .delete("/admin/db/user/db/user/another/remove", &server.admin_token)
+            .await?,
+        404
     );
     Ok(())
 }
@@ -129,36 +75,27 @@ async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let rem = RemoveUser {
-        database: db,
-        user: "user_not_found".to_string(),
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
-            .await?
-            .0,
-        464
+            .delete(
+                &format!("/admin/db/{db}/user/other/remove"),
+                &server.admin_token
+            )
+            .await?,
+        404
     );
     Ok(())
 }
 
 #[tokio::test]
-async fn db_user_not_found() -> anyhow::Result<()> {
+async fn non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
-    let rem = RemoveUser {
-        database: db,
-        user: other.name,
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_REMOVE_URI, &rem, &server.admin_token)
-            .await?
-            .0,
-        464
+            .delete("/admin/db/user/db/user/user/remove", &user.token)
+            .await?,
+        401
     );
     Ok(())
 }
@@ -166,15 +103,10 @@ async fn db_user_not_found() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let rem = RemoveUser {
-        database: String::new(),
-        user: String::new(),
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_USER_REMOVE_URI, &rem, NO_TOKEN)
-            .await?
-            .0,
+            .delete("/admin/db/user/db/user/user/remove", NO_TOKEN)
+            .await?,
         401
     );
     Ok(())

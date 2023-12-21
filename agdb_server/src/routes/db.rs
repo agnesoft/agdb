@@ -1,6 +1,7 @@
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::db_pool::db_not_found;
 use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
@@ -14,6 +15,7 @@ use agdb::QueryResult;
 use agdb::QueryType;
 use agdb::Transaction;
 use agdb::TransactionMut;
+use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -21,6 +23,7 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
+use std::path::Path as FilePath;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -32,9 +35,8 @@ pub(crate) enum DbType {
     File,
 }
 
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct ServerDatabase {
-    pub(crate) name: String,
+#[derive(Deserialize, IntoParams, ToSchema)]
+pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbType,
 }
 
@@ -53,14 +55,8 @@ pub(crate) struct ServerDatabaseWithRole {
     pub(crate) size: u64,
 }
 
-#[derive(Deserialize, ToSchema, IntoParams)]
-pub(crate) struct ServerDatabaseName {
-    pub(crate) db: String,
-}
-
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 pub(crate) struct ServerDatabaseRename {
-    pub(crate) db: String,
     pub(crate) new_name: String,
 }
 
@@ -91,12 +87,17 @@ impl Display for DbType {
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/add",
-    request_body = ServerDatabase,
+    path = "/api/v1/db/{username}/{db}/add",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+        DbTypeParam,
+    ),
     responses(
          (status = 201, description = "db added"),
          (status = 401, description = "unauthorized"),
+         (status = 403, description = "cannot add db to another user"),
          (status = 465, description = "db already exists"),
          (status = 467, description = "db invalid"),
     )
@@ -105,22 +106,27 @@ pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Json(request): Json<ServerDatabase>,
+    Path((username, db)): Path<(String, String)>,
+    request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let (db_user, _db) = request.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-    let db_user_id = db_pool.find_user_id(db_user)?;
+    let current_username = db_pool.user_name(user.0)?;
 
-    if db_user_id != user.0 {
-        return Err(ErrorCode::DbInvalid.into());
+    if current_username != username {
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "cannot add db to another user",
+        ));
     }
 
-    if db_pool.find_db_id(&request.name).is_ok() {
+    let name = format!("{username}/{db}");
+
+    if db_pool.find_user_db(user.0, &name).is_ok() {
         return Err(ErrorCode::DbExists.into());
     }
 
     let db = Database {
         db_id: None,
-        name: request.name,
+        name,
         db_type: request.db_type.to_string(),
     };
 
@@ -130,59 +136,64 @@ pub(crate) async fn add(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/delete",
-    request_body = ServerDatabaseName,
+    path = "/api/v1/db/{owner}/{db}/delete",
     security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
     responses(
          (status = 204, description = "db deleted"),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "user must be a db owner"),
-         (status = 466, description = "db not found"),
+         (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn delete(
     user: UserId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Json(request): Json<ServerDatabaseName>,
+    Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let (db_user, _db) = request.db.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-    let name = db_pool.user_name(user.0)?;
+    let username = db_pool.user_name(user.0)?;
 
-    if db_user != name {
+    if owner != username {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
             "user must be a db owner",
         ));
     }
 
-    let db = db_pool.find_user_db(user.0, &request.db)?;
+    let db_name = format!("{}/{}", owner, db);
+    let db = db_pool.find_user_db(user.0, &db_name)?;
     db_pool.delete_db(db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/exec",
-    request_body = Queries,
-    params(
-        ServerDatabaseName,
-    ),
+    path = "/api/v1/db/{owner}/{db}/exec",
     security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    request_body = Queries,
     responses(
          (status = 200, description = "ok", body = QueriesResults),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "permission denied"),
-         (status = 466, description = "db not found"),
+         (status = 403, description = "must have at least write role"),
+         (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn exec(
     user: UserId,
     State(db_pool): State<DbPool>,
-    request: Query<ServerDatabaseName>,
+    Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let role = db_pool.find_user_db_role(user.0, &request.db)?;
+    let db_name = format!("{}/{}", owner, db);
+    let role = db_pool.find_user_db_role(user.0, &db_name)?;
     let required_role = required_role(&queries);
 
     if required_role == DbUserRole::Write && role == DbUserRole::Read {
@@ -193,7 +204,7 @@ pub(crate) async fn exec(
     }
 
     let pool = db_pool.get_pool()?;
-    let db = pool.get(&request.db).ok_or(ErrorCode::DbNotFound)?;
+    let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
 
     let results = if required_role == DbUserRole::Read {
         db.get()?.transaction(|t| {
@@ -247,7 +258,7 @@ pub(crate) async fn list(
                 role,
                 size: pool
                     .get(&db.name)
-                    .ok_or(ErrorCode::DbNotFound)?
+                    .ok_or(db_not_found(&db.name))?
                     .get()?
                     .size(),
             })
@@ -257,21 +268,26 @@ pub(crate) async fn list(
 }
 
 #[utoipa::path(get,
-    path = "/api/v1/db/optimize",
+    path = "/api/v1/db/{owner}/{db}/optimize",
     security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
     responses(
          (status = 200, description = "ok", body = ServerDatabaseSize),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "permission denied / must have write permissions"),
+         (status = 403, description = "must have write permissions"),
     )
 )]
 pub(crate) async fn optimize(
     user: UserId,
     State(db_pool): State<DbPool>,
-    Json(request): Json<ServerDatabaseName>,
+    Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabaseSize>)> {
-    let db = db_pool.find_user_db(user.0, &request.db)?;
-    let role = db_pool.find_user_db_role(user.0, &request.db)?;
+    let db_name = format!("{owner}/{db}");
+    let db = db_pool.find_user_db(user.0, &db_name)?;
+    let role = db_pool.find_user_db_role(user.0, &db_name)?;
 
     if role == DbUserRole::Read {
         return Err(ServerError {
@@ -282,7 +298,7 @@ pub(crate) async fn optimize(
     }
 
     let pool = db_pool.get_pool()?;
-    let server_db = pool.get(&db.name).ok_or(ErrorCode::DbNotFound)?;
+    let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
     server_db.get_mut()?.optimize_storage()?;
     let size = server_db.get()?.size();
 
@@ -297,46 +313,53 @@ pub(crate) async fn optimize(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/remove",
-    request_body = ServerDatabaseName,
+    path = "/api/v1/db/{owner}/{db}/remove",
     security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
     responses(
          (status = 204, description = "db removed"),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "user must be a db owner"),
-         (status = 466, description = "db not found"),
+         (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn remove(
     user: UserId,
     State(db_pool): State<DbPool>,
-    Json(request): Json<ServerDatabaseName>,
+    Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let (db_user, _db) = request.db.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-    let name = db_pool.user_name(user.0)?;
+    let username = db_pool.user_name(user.0)?;
 
-    if db_user != name {
+    if owner != username {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
             "user must be a db owner",
         ));
     }
 
-    let db = db_pool.find_user_db(user.0, &request.db)?;
+    let db_name = format!("{}/{}", owner, db);
+    let db = db_pool.find_user_db(user.0, &db_name)?;
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/rename",
-    request_body = ServerDatabaseRename,
+    path = "/api/v1/db/{owner}/{db}/rename",
     security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+        ServerDatabaseRename
+    ),
     responses(
          (status = 204, description = "db renamed"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "user must be a db admin"),
-         (status = 466, description = "db not found"),
+         (status = 403, description = "user must be a db owner"),
+         (status = 404, description = "user / db not found"),
          (status = 467, description = "invalid db"),
     )
 )]
@@ -344,24 +367,29 @@ pub(crate) async fn rename(
     user: UserId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Json(request): Json<ServerDatabaseRename>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let (db_user, _db) = request.db.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-    let (new_db_user, _db) = request
+    let username = db_pool.user_name(user.0)?;
+
+    if owner != username {
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "user must be a db owner",
+        ));
+    }
+
+    let (new_owner, _new_db) = request
         .new_name
         .split_once('/')
         .ok_or(ErrorCode::DbInvalid)?;
-    let db = db_pool.find_user_db(user.0, &request.db)?;
+    let db_name = format!("{}/{}", owner, db);
+    let db = db_pool.find_user_db(user.0, &db_name)?;
 
-    if db_user != new_db_user {
-        return Err(ErrorCode::DbInvalid.into());
-    }
-
-    if !db_pool.is_db_admin(user.0, db.db_id.unwrap())? {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "user must be a db admin",
-        ));
+    if new_owner != owner {
+        let new_owner_id = db_pool.find_user_id(new_owner)?;
+        std::fs::create_dir_all(FilePath::new(&config.data_dir).join(new_owner))?;
+        db_pool.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
     }
 
     db_pool.rename_db(db, &request.new_name, &config)?;

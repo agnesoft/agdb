@@ -1,7 +1,4 @@
-use crate::AddUser;
 use crate::TestServer;
-use crate::DB_EXEC_URI;
-use crate::DB_USER_ADD_URI;
 use crate::NO_TOKEN;
 use agdb::DbElement;
 use agdb::DbId;
@@ -23,7 +20,11 @@ async fn read_write() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids("root").query().into(),
     ];
-    let responses = server.exec(&db, &queries, &user.token).await?;
+    let (status, responses) = server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?;
+    assert_eq!(status, 200);
+    let responses: Vec<QueryResult> = serde_json::from_str(&responses)?;
     let expected = vec![
         QueryResult {
             result: 1,
@@ -65,14 +66,16 @@ async fn read_only() -> anyhow::Result<()> {
         .values(vec![vec![("key", 1.1).into()]])
         .query()
         .into()];
-    server.exec(&db, &queries, &user.token).await?;
-    let responses = server
-        .exec(
-            &db,
-            &vec![QueryBuilder::select().ids("root").query().into()],
-            &user.token,
-        )
+    let (status, _responses) = server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
+    assert_eq!(status, 200);
+    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let (status, responses) = server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?;
+    assert_eq!(status, 200);
+    let responses: Vec<QueryResult> = serde_json::from_str(&responses)?;
     let expected = vec![QueryResult {
         result: 1,
         elements: vec![DbElement {
@@ -101,7 +104,9 @@ async fn read_queries() -> anyhow::Result<()> {
         .values(vec![vec![("key", "value").into()]])
         .query()
         .into()];
-    server.exec(&db, &queries, &user.token).await?;
+    server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?;
     let queries: Vec<QueryType> = vec![
         QueryBuilder::search().from(1).query().into(),
         QueryBuilder::select().ids(1).query().into(),
@@ -115,7 +120,11 @@ async fn read_queries() -> anyhow::Result<()> {
             .query()
             .into(),
     ];
-    let responses = server.exec(&db, &queries, &user.token).await?;
+    let (status, responses) = server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?;
+    assert_eq!(status, 200);
+    let responses: Vec<QueryResult> = serde_json::from_str(&responses)?;
     assert_eq!(responses.len(), 7);
 
     Ok(())
@@ -163,7 +172,11 @@ async fn write_queries() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::remove().ids("node1").query().into(),
     ];
-    let responses = server.exec(&db, &queries, &user.token).await?;
+    let (status, responses) = server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?;
+    assert_eq!(status, 200);
+    let responses: Vec<QueryResult> = serde_json::from_str(&responses)?;
     assert_eq!(responses.len(), 14);
 
     Ok(())
@@ -184,7 +197,7 @@ async fn query_error() -> anyhow::Result<()> {
         QueryBuilder::select().ids("root").query().into(),
     ];
     let (status, response) = server
-        .post(&format!("{DB_EXEC_URI}?db={db}"), &queries, &user.token)
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     assert_eq!(status, 470);
     assert_eq!(response, "Alias 'root' not found");
@@ -196,16 +209,18 @@ async fn query_error() -> anyhow::Result<()> {
 async fn permission_denied() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        database: &db,
-        user: &other.name,
-        role: "read",
-    };
-
-    server.post(DB_USER_ADD_URI, &role, &user.token).await?;
-
+    let other = server.init_user().await?;
+    assert_eq!(
+        server
+            .put(
+                &format!("/db/{db}/user/{}/add?db_role=read", other.name),
+                &String::new(),
+                &user.token
+            )
+            .await?,
+        201
+    );
     let queries: Vec<QueryType> = vec![
         QueryBuilder::insert()
             .nodes()
@@ -215,9 +230,10 @@ async fn permission_denied() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids("root").query().into(),
     ];
-    let (status, _response) = server
-        .post(&format!("{DB_EXEC_URI}?db={db}"), &queries, &other.token)
-        .await?;
+    let status = server
+        .post(&format!("/db/{db}/exec"), &queries, &other.token)
+        .await?
+        .0;
     assert_eq!(status, 403);
 
     Ok(())
@@ -229,14 +245,10 @@ async fn db_not_found() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let queries: Vec<QueryType> = vec![];
     let status = server
-        .post(
-            &format!("{DB_EXEC_URI}?db={}/not_found", user.name),
-            &queries,
-            &user.token,
-        )
+        .post("/db/user/not_found/exec", &queries, &user.token)
         .await?
         .0;
-    assert_eq!(status, 466);
+    assert_eq!(status, 404);
 
     Ok(())
 }
@@ -246,11 +258,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let queries: Vec<QueryType> = vec![];
     let status = server
-        .post(
-            &format!("{DB_EXEC_URI}?db=user/not_found"),
-            &queries,
-            NO_TOKEN,
-        )
+        .post("/db/user/not_found/exec", &queries, NO_TOKEN)
         .await?
         .0;
     assert_eq!(status, 401);

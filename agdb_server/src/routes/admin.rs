@@ -6,11 +6,11 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use tokio::sync::broadcast::Sender;
 
-#[utoipa::path(get,
+#[utoipa::path(post,
     path = "/api/v1/admin/shutdown",
     security(("Token" = [])),
     responses(
-         (status = 204, description = "server is shutting down"),
+         (status = 202, description = "server is shutting down"),
          (status = 401, description = "unauthorized"),
     )
 )]
@@ -19,7 +19,7 @@ pub(crate) async fn shutdown(
     State(shutdown_sender): State<Sender<()>>,
 ) -> StatusCode {
     match shutdown_sender.send(()) {
-        Ok(_) => StatusCode::NO_CONTENT,
+        Ok(_) => StatusCode::ACCEPTED,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
@@ -35,7 +35,7 @@ mod tests {
 
         let status = shutdown(AdminId(DbId(0)), State(shutdown_sender)).await;
 
-        assert_eq!(status, StatusCode::NO_CONTENT);
+        assert_eq!(status, StatusCode::ACCEPTED);
         Ok(())
     }
 

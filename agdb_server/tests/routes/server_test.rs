@@ -30,7 +30,10 @@ async fn status() -> anyhow::Result<()> {
 #[tokio::test]
 async fn shutdown_no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    assert_eq!(server.get::<()>(SHUTDOWN_URI, NO_TOKEN).await?.0, 401);
+    assert_eq!(
+        server.post(SHUTDOWN_URI, &String::new(), NO_TOKEN).await?.0,
+        401
+    );
     Ok(())
 }
 
@@ -38,7 +41,10 @@ async fn shutdown_no_token() -> anyhow::Result<()> {
 async fn shutdown_bad_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let token = Some("bad".to_string());
-    assert_eq!(server.get::<()>(SHUTDOWN_URI, &token).await?.0, 401);
+    assert_eq!(
+        server.post(SHUTDOWN_URI, &String::new(), &token).await?.0,
+        401
+    );
     Ok(())
 }
 
@@ -59,10 +65,10 @@ async fn db_config_reuse() -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     assert_eq!(
         server
-            .get::<()>(&client, SHUTDOWN_URI, &server.admin_token)
+            .post(&client, SHUTDOWN_URI, &String::new(), &server.admin_token)
             .await?
             .0,
-        204
+        202
     );
     assert!(server.process.wait()?.success());
     server.process = Command::cargo_bin("agdb_server")?

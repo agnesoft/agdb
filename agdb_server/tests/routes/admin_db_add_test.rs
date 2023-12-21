@@ -1,6 +1,4 @@
-use crate::Db;
 use crate::TestServer;
-use crate::ADMIN_DB_ADD_URI;
 use crate::NO_TOKEN;
 use std::path::Path;
 
@@ -8,18 +6,19 @@ use std::path::Path;
 async fn add() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = Db {
-        name: format!("{}/admin_db_add_test", user.name),
-        db_type: "file".to_string(),
-    };
+    let name = format!("{}/admin_db_add_test", user.name);
     assert_eq!(
         server
-            .post(ADMIN_DB_ADD_URI, &db, &server.admin_token)
+            .post(
+                &format!("/admin/db/{name}/add?db_type=file"),
+                &String::new(),
+                &server.admin_token
+            )
             .await?
             .0,
         201
     );
-    assert!(Path::new(&server.data_dir).join(db.name).exists());
+    assert!(Path::new(&server.data_dir).join(name).exists());
     Ok(())
 }
 
@@ -27,20 +26,25 @@ async fn add() -> anyhow::Result<()> {
 async fn db_already_exists() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = Db {
-        name: format!("{}/mydb", user.name),
-        db_type: "memory".to_string(),
-    };
+    let name = format!("{}/mydb", user.name);
     assert_eq!(
         server
-            .post(ADMIN_DB_ADD_URI, &db, &server.admin_token)
+            .post(
+                &format!("/admin/db/{name}/add?db_type=memory"),
+                &String::new(),
+                &server.admin_token
+            )
             .await?
             .0,
         201
     );
     assert_eq!(
         server
-            .post(ADMIN_DB_ADD_URI, &db, &server.admin_token)
+            .post(
+                &format!("/admin/db/{name}/add?db_type=memory"),
+                &String::new(),
+                &server.admin_token
+            )
             .await?
             .0,
         465
@@ -49,19 +53,37 @@ async fn db_already_exists() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn db_invalid() -> anyhow::Result<()> {
+async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = Db {
-        name: format!("{}/", user.name),
-        db_type: "mapped".to_string(),
-    };
     assert_eq!(
         server
-            .post(ADMIN_DB_ADD_URI, &db, &server.admin_token)
+            .post(
+                "/admin/db/not_found/admin_db_add_test/add?db_type=mapped",
+                &String::new(),
+                &server.admin_token
+            )
             .await?
             .0,
-        467
+        404
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let name = format!("{}/admin_db_add_test", user.name);
+    assert_eq!(
+        server
+            .post(
+                &format!("/admin/db/{name}/add?db_type=file"),
+                &String::new(),
+                &user.token
+            )
+            .await?
+            .0,
+        401
     );
     Ok(())
 }
@@ -69,10 +91,16 @@ async fn db_invalid() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let db = Db {
-        name: "user/mydb".to_string(),
-        db_type: "mapped".to_string(),
-    };
-    assert_eq!(server.post(ADMIN_DB_ADD_URI, &db, NO_TOKEN).await?.0, 401);
+    assert_eq!(
+        server
+            .post(
+                "/admin/db/not_found/admin_db_add_test/add?db_type=mapped",
+                &String::new(),
+                NO_TOKEN
+            )
+            .await?
+            .0,
+        401
+    );
     Ok(())
 }

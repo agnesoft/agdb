@@ -35,7 +35,7 @@ mod tests {
 
         let status = shutdown(AdminId(DbId(0)), State(shutdown_sender)).await;
 
-        assert_eq!(status, StatusCode::NO_CONTENT);
+        assert_eq!(status, StatusCode::ACCEPTED);
         Ok(())
     }
 

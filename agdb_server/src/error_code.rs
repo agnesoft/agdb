@@ -6,7 +6,6 @@ pub(crate) enum ErrorCode {
     NameTooShort,
     UserExists,
     DbExists,
-    DbNotFound,
     DbInvalid,
 }
 
@@ -23,7 +22,6 @@ impl From<&ErrorCode> for StatusCode {
             ErrorCode::NameTooShort => 462,
             ErrorCode::UserExists => 463,
             ErrorCode::DbExists => 465,
-            ErrorCode::DbNotFound => 466,
             ErrorCode::DbInvalid => 467,
         })
         .unwrap()
@@ -43,7 +41,6 @@ impl ErrorCode {
             ErrorCode::NameTooShort => "name too short (<3)",
             ErrorCode::UserExists => "user exists",
             ErrorCode::DbExists => "db already exists",
-            ErrorCode::DbNotFound => "db not found",
             ErrorCode::DbInvalid => "db invalid",
         }
     }

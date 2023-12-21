@@ -105,6 +105,24 @@ async fn db_user_mismatch() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn db_type_invalid() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    assert_eq!(
+        server
+            .post(
+                &format!("/db/{}/a\0a/add?db_type=file", user.name),
+                &String::new(),
+                &user.token
+            )
+            .await?
+            .0,
+        467
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(

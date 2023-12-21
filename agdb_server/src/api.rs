@@ -44,6 +44,7 @@ use utoipa::OpenApi;
         crate::routes::db::ServerDatabaseRename,
         crate::routes::db::user::DbUser,
         crate::routes::db::user::DbUserRole,
+        crate::routes::db::user::DbUserRoleParam,
         crate::routes::user::ChangePassword,
         crate::routes::user::UserCredentials,
     )),

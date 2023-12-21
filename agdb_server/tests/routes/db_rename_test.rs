@@ -98,6 +98,24 @@ async fn non_owner() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn invalid() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("mapped", &user).await?;
+    let status = server
+        .post(
+            &format!("/db/{db}/rename?new_name={}/a\0a", user.name),
+            &String::new(),
+            &user.token,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 467);
+    assert!(Path::new(&server.data_dir).join(db).exists());
+    Ok(())
+}
+
+#[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;

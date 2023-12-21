@@ -78,6 +78,35 @@ async fn change_user_role() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn change_owner_role() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let other = server.init_user().await?;
+    let db = server.init_db("memory", &user).await?;
+    assert_eq!(
+        server
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=admin", other.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
+        201
+    );
+    assert_eq!(
+        server
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=write", user.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
+        403
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(

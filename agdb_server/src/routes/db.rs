@@ -1,6 +1,7 @@
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::db_pool::db_not_found;
 use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
@@ -34,7 +35,7 @@ pub(crate) enum DbType {
     File,
 }
 
-#[derive(Serialize, Deserialize, IntoParams, ToSchema)]
+#[derive(Deserialize, IntoParams, ToSchema)]
 pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbType,
 }
@@ -98,6 +99,7 @@ impl Display for DbType {
          (status = 401, description = "unauthorized"),
          (status = 403, description = "cannot add db to another user"),
          (status = 465, description = "db already exists"),
+         (status = 467, description = "db invalid"),
     )
 )]
 pub(crate) async fn add(
@@ -202,7 +204,7 @@ pub(crate) async fn exec(
     }
 
     let pool = db_pool.get_pool()?;
-    let db = pool.get(&db_name).ok_or(ErrorCode::DbNotFound)?;
+    let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
 
     let results = if required_role == DbUserRole::Read {
         db.get()?.transaction(|t| {
@@ -256,7 +258,7 @@ pub(crate) async fn list(
                 role,
                 size: pool
                     .get(&db.name)
-                    .ok_or(ErrorCode::DbNotFound)?
+                    .ok_or(db_not_found(&db.name))?
                     .get()?
                     .size(),
             })
@@ -296,7 +298,7 @@ pub(crate) async fn optimize(
     }
 
     let pool = db_pool.get_pool()?;
-    let server_db = pool.get(&db.name).ok_or(ErrorCode::DbNotFound)?;
+    let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
     server_db.get_mut()?.optimize_storage()?;
     let size = server_db.get()?.size();
 

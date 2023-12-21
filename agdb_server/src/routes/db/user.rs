@@ -25,7 +25,7 @@ pub(crate) struct DbUserRoleParam {
     pub(crate) db_role: DbUserRole,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub(crate) struct DbUser {
     pub(crate) user: String,
     pub(crate) role: DbUserRole,

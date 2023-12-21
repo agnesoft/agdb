@@ -166,7 +166,7 @@ pub(crate) async fn list(
                 db_type: db.db_type.as_str().into(),
                 size: pool
                     .get(&db.name)
-                    .ok_or(ErrorCode::DbNotFound)?
+                    .ok_or(db_not_found(&db.name))?
                     .get()?
                     .size(),
             })

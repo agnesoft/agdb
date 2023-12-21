@@ -9,34 +9,28 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/v1/admin/db/add": {
-      "post": {
+    "/api/v1/admin/db/list": {
+      "get": {
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "add",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabase"
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabaseSize"
+                  }
+                }
               }
             }
           },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "db added"
-          },
           "401": {
             "description": "unauthorized"
-          },
-          "465": {
-            "description": "db already exists"
-          },
-          "467": {
-            "description": "db invalid"
           }
         },
         "security": [
@@ -46,22 +40,32 @@
         ]
       }
     },
-    "/api/v1/admin/db/delete": {
-      "post": {
+    "/api/v1/admin/db/{owner}/{db}/delete": {
+      "delete": {
         "tags": [
           "crate::routes::admin::db"
         ],
         "operationId": "delete",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabaseName"
-              }
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "db deleted"
@@ -69,7 +73,7 @@
           "401": {
             "description": "unauthorized"
           },
-          "466": {
+          "404": {
             "description": "db not found"
           }
         },
@@ -80,7 +84,7 @@
         ]
       }
     },
-    "/api/v1/admin/db/exec": {
+    "/api/v1/admin/db/{owner}/{db}/exec": {
       "post": {
         "tags": [
           "crate::routes::admin::db"
@@ -88,8 +92,18 @@
         "operationId": "exec",
         "parameters": [
           {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "db",
             "in": "path",
+            "description": "db name",
             "required": true,
             "schema": {
               "type": "string"
@@ -123,7 +137,7 @@
           "403": {
             "description": "permission denied"
           },
-          "466": {
+          "404": {
             "description": "db not found"
           }
         },
@@ -134,53 +148,32 @@
         ]
       }
     },
-    "/api/v1/admin/db/list": {
-      "get": {
-        "tags": [
-          "crate::routes::admin::db"
-        ],
-        "operationId": "list",
-        "responses": {
-          "200": {
-            "description": "ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ServerDatabaseSize"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "unauthorized"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/db/remove": {
-      "post": {
+    "/api/v1/admin/db/{owner}/{db}/remove": {
+      "delete": {
         "tags": [
           "crate::routes::admin::db"
         ],
         "operationId": "remove",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabaseName"
-              }
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "db removed"
@@ -188,7 +181,7 @@
           "401": {
             "description": "unauthorized"
           },
-          "466": {
+          "404": {
             "description": "db not found"
           }
         },
@@ -199,50 +192,7 @@
         ]
       }
     },
-    "/api/v1/admin/db/user/add": {
-      "post": {
-        "tags": [
-          "crate::routes::admin::db::user"
-        ],
-        "operationId": "add",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddDatabaseUser"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "user added"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "403": {
-            "description": "cannot change role of db owner"
-          },
-          "464": {
-            "description": "user not found"
-          },
-          "466": {
-            "description": "db not found"
-          },
-          "467": {
-            "description": "db invalid"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/db/user/list": {
+    "/api/v1/admin/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
           "crate::routes::admin::db::user"
@@ -250,8 +200,18 @@
         "operationId": "list",
         "parameters": [
           {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "db",
             "in": "path",
+            "description": "db name",
             "required": true,
             "schema": {
               "type": "string"
@@ -265,7 +225,7 @@
           "401": {
             "description": "unauthorized"
           },
-          "466": {
+          "404": {
             "description": "db not found"
           }
         },
@@ -276,22 +236,105 @@
         ]
       }
     },
-    "/api/v1/admin/db/user/remove": {
-      "post": {
+    "/api/v1/admin/db/{owner}/{db}/user/{username}/add": {
+      "put": {
+        "tags": [
+          "crate::routes::admin::db::user"
+        ],
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot change role of db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/user/{username}/remove": {
+      "delete": {
         "tags": [
           "crate::routes::admin::db::user"
         ],
         "operationId": "remove",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveDbUser"
-              }
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "user removed"
@@ -302,14 +345,63 @@
           "403": {
             "description": "cannot remove db owner"
           },
-          "464": {
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{username}/{db}/add": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
             "description": "user not found"
           },
-          "466": {
-            "description": "db not found"
-          },
-          "467": {
-            "description": "db invalid"
+          "465": {
+            "description": "db exists"
           }
         },
         "security": [
@@ -320,94 +412,17 @@
       }
     },
     "/api/v1/admin/shutdown": {
-      "get": {
+      "post": {
         "tags": [
           "crate::routes::admin"
         ],
         "operationId": "shutdown",
         "responses": {
-          "204": {
+          "202": {
             "description": "server is shutting down"
           },
           "401": {
             "description": "unauthorized"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/user/change_password": {
-      "post": {
-        "tags": [
-          "crate::routes::admin::user"
-        ],
-        "operationId": "change_password",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserCredentials"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "password changed"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "461": {
-            "description": "password too short (<8)"
-          },
-          "464": {
-            "description": "user not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/user/create": {
-      "post": {
-        "tags": [
-          "crate::routes::admin::user"
-        ],
-        "operationId": "create",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserCredentials"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "user created"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "461": {
-            "description": "password too short (<8)"
-          },
-          "462": {
-            "description": "name too short (<3)"
-          },
-          "463": {
-            "description": "user already exists"
           }
         },
         "security": [
@@ -448,90 +463,17 @@
         ]
       }
     },
-    "/api/v1/db/add": {
+    "/api/v1/admin/user/{username}/add": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "crate::routes::admin::user"
         ],
         "operationId": "add",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabase"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "db added"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "465": {
-            "description": "db already exists"
-          },
-          "467": {
-            "description": "db invalid"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/db/delete": {
-      "post": {
-        "tags": [
-          "crate::routes::db"
-        ],
-        "operationId": "delete",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabaseName"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "db deleted"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "403": {
-            "description": "user must be a db owner"
-          },
-          "466": {
-            "description": "db not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/db/exec": {
-      "post": {
-        "tags": [
-          "crate::routes::db"
-        ],
-        "operationId": "exec",
         "parameters": [
           {
-            "name": "db",
+            "name": "username",
             "in": "path",
+            "description": "desired user name",
             "required": true,
             "schema": {
               "type": "string"
@@ -542,31 +484,75 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Queries"
+                "$ref": "#/components/schemas/UserCredentials"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QueriesResults"
-                }
-              }
-            }
+          "201": {
+            "description": "user created"
           },
           "401": {
             "description": "unauthorized"
           },
-          "403": {
-            "description": "permission denied"
+          "461": {
+            "description": "password too short (<8)"
           },
-          "466": {
-            "description": "db not found"
+          "462": {
+            "description": "name too short (<3)"
+          },
+          "463": {
+            "description": "user exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/change_password": {
+      "put": {
+        "tags": [
+          "crate::routes::admin::user"
+        ],
+        "operationId": "change_password",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "password changed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "461": {
+            "description": "password too short (<8)"
+          },
+          "464": {
+            "description": "user not found"
           }
         },
         "security": [
@@ -607,12 +593,143 @@
         ]
       }
     },
-    "/api/v1/db/optimize": {
+    "/api/v1/db/{owner}/{db}/delete": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db deleted"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db owner"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/exec": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "exec",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must have at least write role"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/optimize": {
       "get": {
         "tags": [
           "crate::routes::db"
         ],
         "operationId": "optimize",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "ok",
@@ -628,7 +745,7 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "permission denied / must have write permissions"
+            "description": "must have write permissions"
           }
         },
         "security": [
@@ -638,22 +755,32 @@
         ]
       }
     },
-    "/api/v1/db/remove": {
+    "/api/v1/db/{owner}/{db}/remove": {
       "post": {
         "tags": [
           "crate::routes::db"
         ],
         "operationId": "remove",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabaseName"
-              }
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "db removed"
@@ -664,7 +791,7 @@
           "403": {
             "description": "user must be a db owner"
           },
-          "466": {
+          "404": {
             "description": "db not found"
           }
         },
@@ -675,22 +802,40 @@
         ]
       }
     },
-    "/api/v1/db/rename": {
+    "/api/v1/db/{owner}/{db}/rename": {
       "post": {
         "tags": [
           "crate::routes::db"
         ],
         "operationId": "rename",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ServerDatabaseRename"
-              }
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "db renamed"
@@ -699,10 +844,10 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "user must be a db admin"
+            "description": "user must be a db owner"
           },
-          "466": {
-            "description": "db not found"
+          "404": {
+            "description": "user / db not found"
           },
           "467": {
             "description": "invalid db"
@@ -715,50 +860,7 @@
         ]
       }
     },
-    "/api/v1/db/user/add": {
-      "post": {
-        "tags": [
-          "crate::routes::db::user"
-        ],
-        "operationId": "add",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddDatabaseUser"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "user added"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "403": {
-            "description": "user must be a db admin / cannot change role of db owner"
-          },
-          "464": {
-            "description": "user not found"
-          },
-          "466": {
-            "description": "db not found"
-          },
-          "467": {
-            "description": "db invalid"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/db/user/list": {
+    "/api/v1/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
           "crate::routes::db::user"
@@ -766,8 +868,18 @@
         "operationId": "list",
         "parameters": [
           {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "db",
             "in": "path",
+            "description": "db name",
             "required": true,
             "schema": {
               "type": "string"
@@ -781,7 +893,7 @@
           "401": {
             "description": "unauthorized"
           },
-          "466": {
+          "404": {
             "description": "db not found"
           }
         },
@@ -792,22 +904,105 @@
         ]
       }
     },
-    "/api/v1/db/user/remove": {
+    "/api/v1/db/{owner}/{db}/user/{username}/add": {
+      "post": {
+        "tags": [
+          "crate::routes::db::user"
+        ],
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db admin / cannot change role of db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/user/{username}/remove": {
       "post": {
         "tags": [
           "crate::routes::db::user"
         ],
         "operationId": "remove",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemoveDbUser"
-              }
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           },
-          "required": true
-        },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "user removed"
@@ -818,11 +1013,63 @@
           "403": {
             "description": "must be admin / cannot remove db owner"
           },
-          "464": {
-            "description": "user not found"
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{username}/{db}/add": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           },
-          "466": {
-            "description": "db not found"
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot add db to another user"
+          },
+          "465": {
+            "description": "db already exists"
           },
           "467": {
             "description": "db invalid"
@@ -848,12 +1095,23 @@
         }
       }
     },
-    "/api/v1/user/change_password": {
-      "post": {
+    "/api/v1/user/{username}/change_password": {
+      "put": {
         "tags": [
           "crate::routes::user"
         ],
         "operationId": "change_password",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "username",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -871,11 +1129,11 @@
           "401": {
             "description": "invalid credentials"
           },
+          "404": {
+            "description": "user not found"
+          },
           "461": {
             "description": "password too short (<8)"
-          },
-          "464": {
-            "description": "user not found"
           }
         },
         "security": [
@@ -885,12 +1143,23 @@
         ]
       }
     },
-    "/api/v1/user/login": {
+    "/api/v1/user/{username}/login": {
       "post": {
         "tags": [
           "crate::routes::user"
         ],
         "operationId": "login",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "username",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -915,7 +1184,7 @@
           "401": {
             "description": "invalid credentials"
           },
-          "464": {
+          "404": {
             "description": "user not found"
           }
         }
@@ -927,14 +1196,10 @@
       "ChangePassword": {
         "type": "object",
         "required": [
-          "name",
           "password",
           "new_password"
         ],
         "properties": {
-          "name": {
-            "type": "string"
-          },
           "new_password": {
             "type": "string"
           },
@@ -951,17 +1216,24 @@
           "file"
         ]
       },
+      "DbTypeParam": {
+        "type": "object",
+        "required": [
+          "db_type"
+        ],
+        "properties": {
+          "db_type": {
+            "$ref": "#/components/schemas/DbType"
+          }
+        }
+      },
       "DbUser": {
         "type": "object",
         "required": [
-          "database",
           "user",
           "role"
         ],
         "properties": {
-          "database": {
-            "type": "string"
-          },
           "role": {
             "$ref": "#/components/schemas/DbUserRole"
           },
@@ -978,6 +1250,17 @@
           "read"
         ]
       },
+      "DbUserRoleParam": {
+        "type": "object",
+        "required": [
+          "db_role"
+        ],
+        "properties": {
+          "db_role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          }
+        }
+      },
       "Queries": {
         "type": "array",
         "items": {
@@ -990,57 +1273,12 @@
           "$ref": "#/components/schemas/QueryResult"
         }
       },
-      "RemoveDbUser": {
-        "type": "object",
-        "required": [
-          "database",
-          "user"
-        ],
-        "properties": {
-          "database": {
-            "type": "string"
-          },
-          "user": {
-            "type": "string"
-          }
-        }
-      },
-      "ServerDatabase": {
-        "type": "object",
-        "required": [
-          "name",
-          "db_type"
-        ],
-        "properties": {
-          "db_type": {
-            "$ref": "#/components/schemas/DbType"
-          },
-          "name": {
-            "type": "string"
-          }
-        }
-      },
-      "ServerDatabaseName": {
-        "type": "object",
-        "required": [
-          "db"
-        ],
-        "properties": {
-          "db": {
-            "type": "string"
-          }
-        }
-      },
       "ServerDatabaseRename": {
         "type": "object",
         "required": [
-          "db",
           "new_name"
         ],
         "properties": {
-          "db": {
-            "type": "string"
-          },
           "new_name": {
             "type": "string"
           }
@@ -1095,13 +1333,9 @@
       "UserCredentials": {
         "type": "object",
         "required": [
-          "name",
           "password"
         ],
         "properties": {
-          "name": {
-            "type": "string"
-          },
           "password": {
             "type": "string"
           }

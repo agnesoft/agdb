@@ -63,7 +63,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .delete("/admin/db/user/db/user/user/remove", &server.admin_token)
+            .delete("/admin/db/user/db/user/another/remove", &server.admin_token)
             .await?,
         404
     );

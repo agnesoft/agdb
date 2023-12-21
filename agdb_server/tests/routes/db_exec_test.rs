@@ -2,6 +2,7 @@ use crate::AddUser;
 use crate::TestServer;
 use crate::DB_EXEC_URI;
 use crate::DB_USER_ADD_URI;
+use crate::NO_TOKEN;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -236,6 +237,23 @@ async fn db_not_found() -> anyhow::Result<()> {
         .await?
         .0;
     assert_eq!(status, 466);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn no_token() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let queries: Vec<QueryType> = vec![];
+    let status = server
+        .post(
+            &format!("{DB_EXEC_URI}?db=user/not_found"),
+            &queries,
+            NO_TOKEN,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 401);
 
     Ok(())
 }

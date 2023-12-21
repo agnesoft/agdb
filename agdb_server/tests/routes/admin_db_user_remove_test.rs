@@ -1,12 +1,6 @@
+use crate::DbUser;
 use crate::TestServer;
 use crate::NO_TOKEN;
-use serde::Deserialize;
-
-#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-struct DbUser {
-    user: String,
-    role: String,
-}
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {

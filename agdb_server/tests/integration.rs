@@ -51,6 +51,12 @@ static INSTANCES: AtomicU16 = AtomicU16::new(0);
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+struct DbUser {
+    user: String,
+    role: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AddUser<'a> {
     pub user: &'a str,

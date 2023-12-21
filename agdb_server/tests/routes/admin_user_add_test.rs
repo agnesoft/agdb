@@ -10,22 +10,24 @@ async fn add() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .put(
+            .post(
                 "/admin/user/new_user/add",
                 &credentials,
                 &server.admin_token
             )
-            .await?,
+            .await?
+            .0,
         201
     );
     assert_eq!(
         server
-            .put(
+            .post(
                 "/admin/user/new_user/add",
                 &credentials,
                 &server.admin_token
             )
-            .await?,
+            .await?
+            .0,
         463
     );
     Ok(())
@@ -39,8 +41,9 @@ async fn name_too_short() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .put("/admin/user/a/add", &credentials, &server.admin_token)
-            .await?,
+            .post("/admin/user/a/add", &credentials, &server.admin_token)
+            .await?
+            .0,
         462
     );
     Ok(())
@@ -52,8 +55,9 @@ async fn password_too_short() -> anyhow::Result<()> {
     let credentials = UserCredentials { password: "pswd" };
     assert_eq!(
         server
-            .put("/admin/user/alice/add", &credentials, &server.admin_token)
-            .await?,
+            .post("/admin/user/alice/add", &credentials, &server.admin_token)
+            .await?
+            .0,
         461
     );
     Ok(())
@@ -68,12 +72,13 @@ async fn user_already_exists() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .put(
+            .post(
                 &format!("/admin/user/{}/add", user.name),
                 &credentials,
                 &server.admin_token
             )
-            .await?,
+            .await?
+            .0,
         463
     );
     Ok(())
@@ -88,8 +93,9 @@ async fn no_admin_token() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .put("/admin/user/alice/add", &credentials, &user.token)
-            .await?,
+            .post("/admin/user/alice/add", &credentials, &user.token)
+            .await?
+            .0,
         401
     );
     Ok(())
@@ -103,8 +109,9 @@ async fn no_token() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .put("/admin/user/alice/add", &credentials, NO_TOKEN)
-            .await?,
+            .post("/admin/user/alice/add", &credentials, NO_TOKEN)
+            .await?
+            .0,
         401
     );
     Ok(())

@@ -46,41 +46,41 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         )
         .route(
             "/admin/db/:user/:db/remove",
-            routing::post(routes::admin::db::remove),
+            routing::delete(routes::admin::db::remove),
         )
         .route(
             "/admin/db/:user/:db/user/list",
-            routing::post(routes::admin::db::user::list),
+            routing::get(routes::admin::db::user::list),
         )
         .route(
             "/admin/db/:user/:db/user/:other/add",
-            routing::post(routes::admin::db::user::add),
+            routing::put(routes::admin::db::user::add),
         )
         .route(
             "/admin/db/:user/:db/user/:other/remove",
-            routing::post(routes::admin::db::user::remove),
+            routing::delete(routes::admin::db::user::remove),
         )
         .route("/db/list", routing::get(routes::db::list))
         .route("/db/:user/:db/add", routing::post(routes::db::add))
-        .route("/db/:user/:db/delete", routing::post(routes::db::delete))
+        .route("/db/:user/:db/delete", routing::delete(routes::db::delete))
         .route("/db/:user/:db/exec", routing::post(routes::db::exec))
         .route(
             "/db/:user/:db/optimize",
             routing::post(routes::db::optimize),
         )
-        .route("/db/:user/:db/remove", routing::post(routes::db::remove))
+        .route("/db/:user/:db/remove", routing::delete(routes::db::remove))
         .route("/db/:user/:db/rename", routing::post(routes::db::rename))
         .route(
             "/db/:user/:db/user/list",
-            routing::post(routes::db::user::list),
+            routing::get(routes::db::user::list),
         )
         .route(
             "/db/:user/:db/user/:other/add",
-            routing::post(routes::db::user::add),
+            routing::put(routes::db::user::add),
         )
         .route(
             "/db/:user/:db/user/:other/remove",
-            routing::post(routes::db::user::remove),
+            routing::delete(routes::db::user::remove),
         )
         .route("/user/:user/login", routing::post(routes::user::login))
         .route(

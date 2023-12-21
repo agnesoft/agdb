@@ -1,53 +1,73 @@
-use crate::AddUser;
 use crate::TestServer;
-use crate::ADMIN_DB_USER_LIST_URI;
-use crate::DB_USER_ADD_URI;
 use crate::NO_TOKEN;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 struct DbUser {
-    database: String,
     user: String,
     role: String,
 }
 
 #[tokio::test]
-async fn list_users() -> anyhow::Result<()> {
+async fn list() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let role = AddUser {
-        user: &other.name,
-        role: "read",
-    };
     assert_eq!(
-        server.post(DB_USER_ADD_URI, &role, &user.token).await?.0,
+        server
+            .put(
+                &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
+                &String::new(),
+                &server.admin_token
+            )
+            .await?,
         201
     );
-    let (_, list) = server
-        .get::<Vec<DbUser>>(
-            &format!("{ADMIN_DB_USER_LIST_URI}?db={}", &db),
-            &server.admin_token,
-        )
-        .await?;
-    let mut list = list?;
-    list.sort();
-    let mut expected = vec![
-        DbUser {
-            database: db.clone(),
-            user: user.name,
-            role: "admin".to_string(),
-        },
-        DbUser {
-            database: db,
-            user: other.name,
-            role: "read".to_string(),
-        },
-    ];
-    expected.sort();
-    assert_eq!(list, expected);
+    let list = server
+        .get::<Vec<DbUser>>(&format!("/admin/db/{db}/user/list"), &server.admin_token)
+        .await?
+        .1;
+    assert_eq!(
+        list?,
+        vec![
+            DbUser {
+                user: user.name.clone(),
+                role: "admin".to_string(),
+            },
+            DbUser {
+                user: other.name.clone(),
+                role: "write".to_string(),
+            }
+        ]
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_not_found() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    assert_eq!(
+        server
+            .get::<Vec<DbUser>>("/admin/db/user/db/user/list", &server.admin_token)
+            .await?
+            .0,
+        404
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    assert_eq!(
+        server
+            .get::<Vec<DbUser>>("/admin/db/user/db/user/list", &user.token)
+            .await?
+            .0,
+        401
+    );
     Ok(())
 }
 
@@ -56,7 +76,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .get::<Vec<DbUser>>(&format!("{ADMIN_DB_USER_LIST_URI}?db=some_db"), NO_TOKEN)
+            .get::<Vec<DbUser>>("/admin/db/user/db/user/list", NO_TOKEN)
             .await?
             .0,
         401

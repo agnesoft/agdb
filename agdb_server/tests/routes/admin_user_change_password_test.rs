@@ -68,7 +68,7 @@ async fn user_not_found() -> anyhow::Result<()> {
                 &server.admin_token
             )
             .await?,
-        464
+        404
     );
     Ok(())
 }

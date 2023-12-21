@@ -460,7 +460,7 @@ impl DbPool {
             )?
             .elements
             .get(0)
-            .ok_or(ErrorCode::UserNotFound)?
+            .ok_or(user_not_found(name))?
             .id)
     }
 
@@ -631,6 +631,6 @@ fn user_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
 }
 
-fn db_not_found(name: &str) -> ServerError {
+pub(crate) fn db_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
 }

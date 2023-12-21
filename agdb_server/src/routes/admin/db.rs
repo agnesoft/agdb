@@ -1,6 +1,7 @@
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::db_pool::db_not_found;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
@@ -11,7 +12,6 @@ use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::Queries;
 use crate::routes::db::QueriesResults;
-use crate::routes::db::ServerDatabaseName;
 use crate::routes::db::ServerDatabaseSize;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
@@ -90,27 +90,29 @@ pub(crate) async fn delete(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/db/exec",
-    request_body = Queries,
-    params(
-        ServerDatabaseName,
-    ),
+    path = "/api/v1/admin/db/{username}/{db}/exec",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    request_body = Queries,
     responses(
          (status = 200, description = "ok", body = QueriesResults),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "permission denied"),
-         (status = 466, description = "db not found"),
+         (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn exec(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-    request: Query<ServerDatabaseName>,
+    Path((username, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
     let pool = db_pool.get_pool()?;
-    let db = pool.get(&request.db).ok_or(ErrorCode::DbNotFound)?;
+    let db_name = format!("{}/{}", username, db);
+    let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
     let required_role = required_role(&queries);
 
     let results = if required_role == DbUserRole::Read {
@@ -173,22 +175,26 @@ pub(crate) async fn list(
     Ok((StatusCode::OK, Json(dbs)))
 }
 
-#[utoipa::path(post,
-    path = "/api/v1/admin/db/remove",
-    request_body = ServerDatabaseName,
+#[utoipa::path(delete,
+    path = "/api/v1/admin/db/{username}/{db}/remove",
     security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
     responses(
          (status = 204, description = "db removed"),
          (status = 401, description = "unauthorized"),
-         (status = 466, description = "db not found"),
+         (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn remove(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-    Json(request): Json<ServerDatabaseName>,
+    Path((username, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db = db_pool.find_db(&request.db)?;
+    let name = format!("{username}/{db}");
+    let db = db_pool.find_db(&name)?;
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)

@@ -22,6 +22,7 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
+use std::path::Path as FilePath;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -385,6 +386,7 @@ pub(crate) async fn rename(
 
     if new_owner != owner {
         let new_owner_id = db_pool.find_user_id(new_owner)?;
+        std::fs::create_dir_all(FilePath::new(&config.data_dir).join(new_owner))?;
         db_pool.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
     }
 

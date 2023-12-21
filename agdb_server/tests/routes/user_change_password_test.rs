@@ -16,13 +16,12 @@ async fn change_password() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .post(
+            .put(
                 &format!("/user/{}/change_password", user.name),
                 &change,
                 NO_TOKEN
             )
-            .await?
-            .0,
+            .await?,
         201
     );
     assert_eq!(
@@ -50,13 +49,12 @@ async fn invalid_credentials() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .post(
+            .put(
                 &format!("/user/{}/change_password", user.name),
                 &change,
                 NO_TOKEN
             )
-            .await?
-            .0,
+            .await?,
         401
     );
 
@@ -73,13 +71,12 @@ async fn password_too_short() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .post(
+            .put(
                 &format!("/user/{}/change_password", user.name),
                 &change,
                 NO_TOKEN
             )
-            .await?
-            .0,
+            .await?,
         461
     );
 
@@ -95,10 +92,9 @@ async fn user_not_found() -> anyhow::Result<()> {
     };
     assert_eq!(
         server
-            .post("/user/not_found/change_password", &change, NO_TOKEN)
-            .await?
-            .0,
-        464
+            .put("/user/not_found/change_password", &change, NO_TOKEN)
+            .await?,
+        404
     );
 
     Ok(())

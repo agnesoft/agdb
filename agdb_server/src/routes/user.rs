@@ -30,7 +30,7 @@ pub(crate) struct ChangePassword {
     responses(
          (status = 200, description = "login successful", body = String),
          (status = 401, description = "invalid credentials"),
-         (status = 464, description = "user not found")
+         (status = 404, description = "user not found")
     )
 )]
 pub(crate) async fn login(
@@ -62,8 +62,8 @@ pub(crate) async fn login(
     responses(
          (status = 201, description = "password changed"),
          (status = 401, description = "invalid credentials"),
+         (status = 404, description = "user not found"),
          (status = 461, description = "password too short (<8)"),
-         (status = 464, description = "user not found"),
     )
 )]
 pub(crate) async fn change_password(

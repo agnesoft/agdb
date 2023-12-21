@@ -17,6 +17,7 @@ use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::SearchQuery;
 use agdb::UserValue;
+use axum::http::StatusCode;
 use server_db::ServerDb;
 use server_db::ServerDbImpl;
 use std::collections::HashMap;
@@ -427,10 +428,7 @@ impl DbPool {
             )?
             .elements
             .get(0)
-            .ok_or(ServerError::new(
-                ErrorCode::UserNotFound.into(),
-                &format!("{}: {name}", ErrorCode::UserNotFound.as_str()),
-            ))?
+            .ok_or(user_not_found(name))?
             .id)
     }
 
@@ -636,4 +634,8 @@ impl DbPool {
     fn db_mut(&self) -> ServerResult<RwLockWriteGuard<ServerDbImpl>> {
         self.0.server_db.get_mut()
     }
+}
+
+fn user_not_found(name: &str) -> ServerError {
+    ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
 }

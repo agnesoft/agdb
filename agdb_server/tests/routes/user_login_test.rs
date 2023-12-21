@@ -51,7 +51,7 @@ async fn user_not_found() -> anyhow::Result<()> {
     let (status, _) = server
         .post("/user/not_found/login", &user, NO_TOKEN)
         .await?;
-    assert_eq!(status, 464);
+    assert_eq!(status, 404);
 
     Ok(())
 }

@@ -3,7 +3,7 @@ use crate::UserCredentials;
 use crate::NO_TOKEN;
 
 #[tokio::test]
-async fn create_user() -> anyhow::Result<()> {
+async fn add() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let credentials = UserCredentials {
         password: "password123",
@@ -24,12 +24,12 @@ async fn create_user() -> anyhow::Result<()> {
 #[tokio::test]
 async fn name_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = UserCredentials {
+    let credentials = UserCredentials {
         password: "password123",
     };
     assert_eq!(
         server
-            .put("/admin/user/a/add", &user, &server.admin_token)
+            .put("/admin/user/a/add", &credentials, &server.admin_token)
             .await?,
         462
     );
@@ -39,10 +39,10 @@ async fn name_too_short() -> anyhow::Result<()> {
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = UserCredentials { password: "pswd" };
+    let credentials = UserCredentials { password: "pswd" };
     assert_eq!(
         server
-            .put("/admin/user/alice/add", &user, &server.admin_token)
+            .put("/admin/user/alice/add", &credentials, &server.admin_token)
             .await?,
         461
     );
@@ -72,11 +72,29 @@ async fn user_already_exists() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_admin_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = UserCredentials {
+    let user = server.init_user().await?;
+    let credentials = UserCredentials {
         password: "password123",
     };
     assert_eq!(
-        server.put("/admin/user/alice/add", &user, NO_TOKEN).await?,
+        server
+            .put("/admin/user/alice/add", &credentials, &user.token)
+            .await?,
+        401
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn no_token() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let credentials = UserCredentials {
+        password: "password123",
+    };
+    assert_eq!(
+        server
+            .put("/admin/user/alice/add", &credentials, NO_TOKEN)
+            .await?,
         401
     );
     Ok(())

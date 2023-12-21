@@ -9,13 +9,13 @@ async fn change_password() -> anyhow::Result<()> {
     let credentials = UserCredentials {
         password: "password456",
     };
-    let admin = &server.admin_token;
+
     assert_eq!(
         server
             .put(
                 &format!("/admin/user/{}/change_password", user.name),
                 &credentials,
-                admin
+                &server.admin_token
             )
             .await?,
         201
@@ -39,13 +39,13 @@ async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = UserCredentials { password: "pswd" };
-    let admin = &server.admin_token;
+
     assert_eq!(
         server
             .put(
                 &format!("/admin/user/{}/change_password", user.name),
                 &credentials,
-                admin
+                &server.admin_token
             )
             .await?,
         461
@@ -59,6 +59,7 @@ async fn user_not_found() -> anyhow::Result<()> {
     let credentials = UserCredentials {
         password: "password456",
     };
+
     assert_eq!(
         server
             .put(
@@ -73,14 +74,38 @@ async fn user_not_found() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn no_token() -> anyhow::Result<()> {
+async fn non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = UserCredentials {
+    let user = server.init_user().await?;
+    let credentials = UserCredentials {
         password: "password456",
     };
     assert_eq!(
         server
-            .put("/admin/user/not_found/change_password", &user, NO_TOKEN)
+            .put(
+                "/admin/user/not_found/change_password",
+                &credentials,
+                &user.token
+            )
+            .await?,
+        401
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn no_token() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let credentials = UserCredentials {
+        password: "password456",
+    };
+    assert_eq!(
+        server
+            .put(
+                "/admin/user/not_found/change_password",
+                &credentials,
+                NO_TOKEN
+            )
             .await?,
         401
     );

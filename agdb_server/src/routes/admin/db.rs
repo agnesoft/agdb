@@ -4,12 +4,20 @@ use crate::config::Config;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
+use crate::routes::db::required_role;
+use crate::routes::db::t_exec;
+use crate::routes::db::t_exec_mut;
+use crate::routes::db::user::DbUserRole;
+use crate::routes::db::Queries;
+use crate::routes::db::QueriesResults;
 use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseName;
 use crate::routes::db::ServerDatabaseSize;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use agdb::QueryError;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -69,6 +77,59 @@ pub(crate) async fn delete(
     db_pool.delete_db(db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/exec",
+    request_body = Queries,
+    params(
+        ServerDatabaseName,
+    ),
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "ok", body = QueriesResults),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "permission denied"),
+         (status = 466, description = "db not found"),
+    )
+)]
+pub(crate) async fn exec(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    request: Query<ServerDatabaseName>,
+    Json(queries): Json<Queries>,
+) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
+    let pool = db_pool.get_pool()?;
+    let db = pool.get(&request.db).ok_or(ErrorCode::DbNotFound)?;
+    let required_role = required_role(&queries);
+
+    let results = if required_role == DbUserRole::Read {
+        db.get()?.transaction(|t| {
+            let mut results = vec![];
+
+            for q in &queries.0 {
+                results.push(t_exec(t, q)?);
+            }
+
+            Ok(results)
+        })
+    } else {
+        db.get_mut()?.transaction_mut(|t| {
+            let mut results = vec![];
+
+            for q in &queries.0 {
+                results.push(t_exec_mut(t, q)?);
+            }
+
+            Ok(results)
+        })
+    }
+    .map_err(|e: QueryError| ServerError {
+        description: e.to_string(),
+        status: StatusCode::from_u16(470).unwrap(),
+    })?;
+
+    Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
 
 #[utoipa::path(get,

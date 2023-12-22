@@ -175,6 +175,40 @@ pub(crate) async fn list(
     Ok((StatusCode::OK, Json(dbs)))
 }
 
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/optimize",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    responses(
+         (status = 200, description = "ok", body = ServerDatabaseSize),
+         (status = 401, description = "unauthorized"),
+    )
+)]
+pub(crate) async fn optimize(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse<(StatusCode, Json<ServerDatabaseSize>)> {
+    let db_name = format!("{owner}/{db}");
+    let db = db_pool.find_db(&db_name)?;
+    let pool = db_pool.get_pool()?;
+    let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
+    server_db.get_mut()?.optimize_storage()?;
+    let size = server_db.get()?.size();
+
+    Ok((
+        StatusCode::OK,
+        Json(ServerDatabaseSize {
+            name: db.name,
+            db_type: db.db_type.as_str().into(),
+            size,
+        }),
+    ))
+}
+
 #[utoipa::path(delete,
     path = "/api/v1/admin/db/{owner}/{db}/remove",
     security(("Token" = [])),

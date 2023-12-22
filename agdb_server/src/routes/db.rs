@@ -267,7 +267,7 @@ pub(crate) async fn list(
     Ok((StatusCode::OK, Json(dbs)))
 }
 
-#[utoipa::path(get,
+#[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/optimize",
     security(("Token" = [])),
     params(

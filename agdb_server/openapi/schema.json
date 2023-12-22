@@ -148,6 +148,54 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/optimize": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "optimize",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabaseSize"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/remove": {
       "delete": {
         "tags": [
@@ -705,7 +753,7 @@
       }
     },
     "/api/v1/db/{owner}/{db}/optimize": {
-      "get": {
+      "post": {
         "tags": [
           "crate::routes::db"
         ],

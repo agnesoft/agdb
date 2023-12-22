@@ -21,7 +21,11 @@ async fn optimize() -> anyhow::Result<()> {
         .1?[0]
         .size;
     let (status, response) = server
-        .post(&format!("/db/{db}/optimize"), &String::new(), &user.token)
+        .post(
+            &format!("/admin/db/{db}/optimize"),
+            &String::new(),
+            &server.admin_token,
+        )
         .await?;
     assert_eq!(status, 200);
     let optimized_size = serde_json::from_str::<DbWithSize>(&response)?.size;
@@ -31,36 +35,14 @@ async fn optimize() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn permission_denied() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    assert_eq!(
-        server
-            .put(
-                &format!("/db/{db}/user/{}/add?db_role=read", other.name),
-                &String::new(),
-                &user.token
-            )
-            .await?,
-        201
-    );
-    let status = server
-        .post(&format!("/db/{db}/optimize"), &String::new(), &other.token)
-        .await?
-        .0;
-    assert_eq!(status, 403);
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = server.init_user().await?;
     let status = server
-        .post("/db/user/not_found/optimize", &String::new(), &user.token)
+        .post(
+            "/db/user/not_found/optimize",
+            &String::new(),
+            &server.admin_token,
+        )
         .await?
         .0;
     assert_eq!(status, 404);
@@ -68,10 +50,30 @@ async fn db_not_found() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let status = server
+        .post(
+            "/admin/db/user/not_found/optimize",
+            &String::new(),
+            &user.token,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 401);
+    Ok(())
+}
+
+#[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post("/db/user/not_found/optimize", &String::new(), NO_TOKEN)
+        .post(
+            "/admin/db/user/not_found/optimize",
+            &String::new(),
+            NO_TOKEN,
+        )
         .await?
         .0;
     assert_eq!(status, 401);

@@ -45,6 +45,10 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
             routing::post(routes::admin::db::exec),
         )
         .route(
+            "/admin/db/:user/:db/optimize",
+            routing::post(routes::admin::db::optimize),
+        )
+        .route(
             "/admin/db/:user/:db/remove",
             routing::delete(routes::admin::db::remove),
         )

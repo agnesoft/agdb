@@ -425,7 +425,7 @@ impl TestServerImpl {
 impl Drop for TestServerImpl {
     fn drop(&mut self) {
         if self.process.try_wait().unwrap().is_none() {
-            let _ = Self::shutdown_server(self);
+            Self::shutdown_server(self).unwrap();
         }
 
         for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
@@ -436,10 +436,10 @@ impl Drop for TestServerImpl {
         }
 
         if self.process.try_wait().unwrap().is_none() {
-            let _ = self.process.kill();
+            self.process.kill().unwrap();
         }
 
-        let _ = self.process.wait();
+        self.process.wait().unwrap();
 
         Self::remove_dir_if_exists(&self.dir).unwrap();
     }

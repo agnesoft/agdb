@@ -30,6 +30,7 @@ async fn add_db_user() -> anyhow::Result<()> {
             db_type: "memory".to_string(),
             role: "write".to_string(),
             size: 2600,
+            backup: 0,
         }]
     );
     Ok(())
@@ -72,6 +73,7 @@ async fn change_user_role() -> anyhow::Result<()> {
             db_type: "memory".to_string(),
             role: "read".to_string(),
             size: 2600,
+            backup: 0,
         }]
     );
     Ok(())

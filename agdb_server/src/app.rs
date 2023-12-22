@@ -66,6 +66,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         )
         .route("/db/list", routing::get(routes::db::list))
         .route("/db/:user/:db/add", routing::post(routes::db::add))
+        .route("/db/:user/:db/backup", routing::post(routes::db::backup))
         .route("/db/:user/:db/delete", routing::delete(routes::db::delete))
         .route("/db/:user/:db/exec", routing::post(routes::db::exec))
         .route(
@@ -74,6 +75,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         )
         .route("/db/:user/:db/remove", routing::delete(routes::db::remove))
         .route("/db/:user/:db/rename", routing::post(routes::db::rename))
+        .route("/db/:user/:db/restore", routing::post(routes::db::restore))
         .route(
             "/db/:user/:db/user/list",
             routing::get(routes::db::user::list),

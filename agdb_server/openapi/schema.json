@@ -40,6 +40,61 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/add": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          },
+          "465": {
+            "description": "db exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/delete": {
       "delete": {
         "tags": [
@@ -404,61 +459,6 @@
         ]
       }
     },
-    "/api/v1/admin/db/{username}/{db}/add": {
-      "post": {
-        "tags": [
-          "crate::routes::admin::db"
-        ],
-        "operationId": "add",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "db",
-            "in": "path",
-            "description": "db name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "db_type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/DbType"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "db added"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "404": {
-            "description": "user not found"
-          },
-          "465": {
-            "description": "db exists"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
     "/api/v1/admin/shutdown": {
       "post": {
         "tags": [
@@ -632,6 +632,111 @@
           },
           "401": {
             "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/add": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot add db to another user"
+          },
+          "465": {
+            "description": "db already exists"
+          },
+          "467": {
+            "description": "db invalid"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/backup": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "backup",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "backup created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin / memory db cannot have backup"
+          },
+          "404": {
+            "description": "db not found"
           }
         },
         "security": [
@@ -908,6 +1013,53 @@
         ]
       }
     },
+    "/api/v1/db/{owner}/{db}/restore": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
@@ -1063,64 +1215,6 @@
           },
           "404": {
             "description": "user / db not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/db/{username}/{db}/add": {
-      "post": {
-        "tags": [
-          "crate::routes::db"
-        ],
-        "operationId": "add",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "db",
-            "in": "path",
-            "description": "db name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "db_type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/DbType"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "db added"
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "403": {
-            "description": "cannot add db to another user"
-          },
-          "465": {
-            "description": "db already exists"
-          },
-          "467": {
-            "description": "db invalid"
           }
         },
         "security": [
@@ -1337,9 +1431,15 @@
         "required": [
           "name",
           "db_type",
-          "size"
+          "size",
+          "backup"
         ],
         "properties": {
+          "backup": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
           "db_type": {
             "$ref": "#/components/schemas/DbType"
           },
@@ -1359,9 +1459,15 @@
           "name",
           "db_type",
           "role",
-          "size"
+          "size",
+          "backup"
         ],
         "properties": {
+          "backup": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
           "db_type": {
             "$ref": "#/components/schemas/DbType"
           },

@@ -11,6 +11,7 @@ mod admin_user_add_test;
 mod admin_user_change_password_test;
 mod admin_user_list_test;
 mod db_add_test;
+mod db_backup_restore_test;
 mod db_delete_test;
 mod db_exec_test;
 mod db_list_test;

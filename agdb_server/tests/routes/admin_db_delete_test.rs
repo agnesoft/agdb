@@ -19,6 +19,35 @@ async fn delete() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn delete_with_backup() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("mapped", &user).await?;
+    server
+        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .await?;
+    assert!(Path::new(&server.data_dir)
+        .join(&user.name)
+        .join("backups")
+        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .exists());
+    assert!(Path::new(&server.data_dir).join(&db).exists());
+    assert_eq!(
+        server
+            .delete(&format!("/admin/db/{db}/delete"), &server.admin_token)
+            .await?,
+        204
+    );
+    assert!(!Path::new(&server.data_dir).join(&db).exists());
+    assert!(!Path::new(&server.data_dir)
+        .join(user.name)
+        .join("backups")
+        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .exists());
+    Ok(())
+}
+
+#[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;

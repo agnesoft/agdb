@@ -61,6 +61,58 @@ async fn backup() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn backup_overwrite() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("mapped", &user).await?;
+    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+        .nodes()
+        .aliases(vec!["root"])
+        .query()
+        .into()];
+    server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?;
+    let status = server
+        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .await?
+        .0;
+    assert_eq!(status, 201);
+    assert!(Path::new(&server.data_dir)
+        .join(&user.name)
+        .join("backups")
+        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .exists());
+    let queries: Vec<QueryType> = vec![QueryBuilder::remove().ids("root").query().into()];
+    server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?;
+    let status = server
+        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .await?
+        .0;
+    assert_eq!(status, 201);
+    assert!(Path::new(&server.data_dir)
+        .join(user.name)
+        .join("backups")
+        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .exists());
+    let status = server
+        .post(&format!("/db/{db}/restore"), &String::new(), &user.token)
+        .await?
+        .0;
+    assert_eq!(status, 201);
+    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let responses = server
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .await?
+        .1;
+    assert_eq!(responses, "Alias 'root' not found");
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn backup_of_backup() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
@@ -153,6 +205,11 @@ async fn non_admin() -> anyhow::Result<()> {
     );
     let status = server
         .post(&format!("/db/{db}/backup"), &String::new(), &other.token)
+        .await?
+        .0;
+    assert_eq!(status, 403);
+    let status = server
+        .post(&format!("/db/{db}/restore"), &String::new(), &other.token)
         .await?
         .0;
     assert_eq!(status, 403);

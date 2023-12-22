@@ -490,6 +490,15 @@ pub(crate) async fn restore(
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
     let db_name = format!("{}/{}", owner, db);
+    let database = db_pool.find_user_db(user.0, &db_name)?;
+
+    if !db_pool.is_db_admin(user.0, database.db_id.unwrap())? {
+        return Err(ServerError {
+            description: "must be a db admin".to_string(),
+            status: StatusCode::FORBIDDEN,
+        });
+    }
+
     let backup_path = FilePath::new(&config.data_dir)
         .join(&owner)
         .join("backups")
@@ -499,15 +508,6 @@ pub(crate) async fn restore(
         return Err(ServerError {
             description: "backup not found".to_string(),
             status: StatusCode::NOT_FOUND,
-        });
-    }
-
-    let database = db_pool.find_user_db(user.0, &db_name)?;
-
-    if !db_pool.is_db_admin(user.0, database.db_id.unwrap())? {
-        return Err(ServerError {
-            description: "must be a db admin".to_string(),
-            status: StatusCode::FORBIDDEN,
         });
     }
 

@@ -2,20 +2,16 @@ mod routes;
 
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
-use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::ops::Deref;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
 use std::sync::atomic::Ordering;
-use std::sync::OnceLock;
 use std::time::Duration;
-use tokio::sync::Mutex;
 
 pub const DB_LIST_URI: &str = "/db/list";
 pub const ADMIN_DB_LIST_URI: &str = "/admin/db/list";
@@ -37,9 +33,6 @@ const RETRY_ATTEMPS: u16 = 3;
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 
-static MUTEX: OnceLock<Mutex<bool>> = OnceLock::new();
-static SERVER: OnceLock<TestServerImpl> = OnceLock::new();
-static INSTANCES: AtomicU16 = AtomicU16::new(0);
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 
@@ -82,9 +75,10 @@ pub struct ChangePassword<'a> {
     pub new_password: &'a str,
 }
 
-pub struct TestServerImpl {
+pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
+    pub client: reqwest::Client,
     pub port: u16,
     pub process: Child,
     pub admin: String,
@@ -97,103 +91,8 @@ pub struct ServerUser {
     pub token: Option<String>,
 }
 
-pub struct TestServer {
-    server: &'static TestServerImpl,
-    client: Client,
-}
-
 impl TestServer {
     pub async fn new() -> anyhow::Result<Self> {
-        let server = TestServerImpl::new().await?;
-        Ok(Self {
-            server,
-            client: reqwest::Client::new(),
-        })
-    }
-
-    pub async fn delete(&self, uri: &str, token: &Option<String>) -> anyhow::Result<u16> {
-        self.server.delete(&self.client, uri, token).await
-    }
-
-    pub async fn get<T: DeserializeOwned>(
-        &self,
-        uri: &str,
-        token: &Option<String>,
-    ) -> anyhow::Result<(u16, anyhow::Result<T>)> {
-        self.server.get(&self.client, uri, token).await
-    }
-
-    pub async fn post<T: Serialize>(
-        &self,
-        uri: &str,
-        json: &T,
-        token: &Option<String>,
-    ) -> anyhow::Result<(u16, String)> {
-        self.server.post(&self.client, uri, json, token).await
-    }
-
-    pub async fn put<T: Serialize>(
-        &self,
-        uri: &str,
-        json: &T,
-        token: &Option<String>,
-    ) -> anyhow::Result<u16> {
-        self.server.put(&self.client, uri, json, token).await
-    }
-
-    pub async fn init_user(&self) -> anyhow::Result<ServerUser> {
-        self.server.init_user(&self.client).await
-    }
-
-    pub async fn init_db(&self, db_type: &str, server_user: &ServerUser) -> anyhow::Result<String> {
-        self.server
-            .init_db(&self.client, db_type, server_user)
-            .await
-    }
-}
-
-impl Deref for TestServer {
-    type Target = TestServerImpl;
-
-    fn deref(&self) -> &Self::Target {
-        self.server
-    }
-}
-
-impl Drop for TestServer {
-    fn drop(&mut self) {
-        let remaining = INSTANCES.fetch_sub(1, Ordering::Relaxed);
-
-        if remaining == 1 {
-            self.server.shutdown_server().unwrap();
-
-            for _ in 0..RETRY_ATTEMPS {
-                if TestServerImpl::remove_dir_if_exists(&self.dir).is_ok() {
-                    break;
-                } else {
-                    std::thread::sleep(RETRY_TIMEOUT);
-                }
-            }
-        }
-    }
-}
-
-impl TestServerImpl {
-    pub async fn new() -> anyhow::Result<&'static Self> {
-        let mutex = MUTEX.get_or_init(|| Mutex::new(true));
-        let _lock = mutex.lock().await;
-
-        INSTANCES.fetch_add(1, Ordering::Relaxed);
-
-        Ok(if let Some(server) = SERVER.get() {
-            server
-        } else {
-            let server = Self::init().await?;
-            SERVER.get_or_init(|| server)
-        })
-    }
-
-    pub async fn init() -> anyhow::Result<Self> {
         let port = PORT.fetch_add(1, Ordering::Relaxed);
         let dir = format!("{BINARY}.{port}.test");
         let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
@@ -241,6 +140,7 @@ impl TestServerImpl {
                     let server = Self {
                         dir,
                         data_dir,
+                        client,
                         port,
                         process,
                         admin: ADMIN.to_string(),
@@ -259,13 +159,8 @@ impl TestServerImpl {
         Err(error)
     }
 
-    pub async fn delete(
-        &self,
-        client: &Client,
-        uri: &str,
-        token: &Option<String>,
-    ) -> anyhow::Result<u16> {
-        let mut request = client.delete(self.url(uri));
+    pub async fn delete(&self, uri: &str, token: &Option<String>) -> anyhow::Result<u16> {
+        let mut request = self.client.delete(self.url(uri));
 
         if let Some(token) = token {
             request = request.bearer_auth(token);
@@ -279,11 +174,10 @@ impl TestServerImpl {
 
     pub async fn get<T: DeserializeOwned>(
         &self,
-        client: &Client,
         uri: &str,
         token: &Option<String>,
     ) -> anyhow::Result<(u16, anyhow::Result<T>)> {
-        let mut request = client.get(self.url(uri));
+        let mut request = self.client.get(self.url(uri));
 
         if let Some(token) = token {
             request = request.bearer_auth(token);
@@ -295,12 +189,11 @@ impl TestServerImpl {
         Ok((status, response.json().await.map_err(|e| anyhow!(e))))
     }
 
-    pub async fn init_user(&self, client: &Client) -> anyhow::Result<ServerUser> {
+    pub async fn init_user(&self) -> anyhow::Result<ServerUser> {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
         let credentials = UserCredentials { password: &name };
         assert_eq!(
             self.post(
-                client,
                 &format!("/admin/user/{name}/add"),
                 &credentials,
                 &self.admin_token
@@ -310,7 +203,7 @@ impl TestServerImpl {
             201
         );
         let response = self
-            .post(client, &format!("/user/{name}/login"), &credentials, &None)
+            .post(&format!("/user/{name}/login"), &credentials, &None)
             .await?;
         assert_eq!(response.0, 200);
         Ok(ServerUser {
@@ -319,34 +212,25 @@ impl TestServerImpl {
         })
     }
 
-    pub async fn init_db(
-        &self,
-        client: &Client,
-        db_type: &str,
-        server_user: &ServerUser,
-    ) -> anyhow::Result<String> {
+    pub async fn init_db(&self, db_type: &str, server_user: &ServerUser) -> anyhow::Result<String> {
         let name = format!(
             "{}/db{}",
             server_user.name,
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );
         let uri = format!("/db/{name}/add?db_type={db_type}",);
-        let status = self
-            .post(client, &uri, &String::new(), &server_user.token)
-            .await?
-            .0;
+        let status = self.post(&uri, &String::new(), &server_user.token).await?.0;
         assert_eq!(status, 201);
         Ok(name)
     }
 
     pub async fn post<T: Serialize>(
         &self,
-        client: &Client,
         uri: &str,
         json: &T,
         token: &Option<String>,
     ) -> anyhow::Result<(u16, String)> {
-        let mut request = client.post(self.url(uri)).json(&json);
+        let mut request = self.client.post(self.url(uri)).json(&json);
 
         if let Some(token) = token {
             request = request.bearer_auth(token);
@@ -359,12 +243,11 @@ impl TestServerImpl {
 
     pub async fn put<T: Serialize>(
         &self,
-        client: &Client,
         uri: &str,
         json: &T,
         token: &Option<String>,
     ) -> anyhow::Result<u16> {
-        let mut request = client.put(self.url(uri)).json(&json);
+        let mut request = self.client.put(self.url(uri)).json(&json);
 
         if let Some(token) = token {
             request = request.bearer_auth(token);
@@ -383,12 +266,16 @@ impl TestServerImpl {
         Ok(())
     }
 
-    fn shutdown_server(&self) -> anyhow::Result<()> {
+    fn shutdown_server(&mut self) -> anyhow::Result<()> {
+        if self.process.try_wait()?.is_some() {
+            return Ok(());
+        }
+
         let port = self.port;
         let mut admin = HashMap::<&str, String>::new();
         admin.insert("name", self.admin.clone());
         admin.insert("password", self.admin_password.clone());
-        let admin_token = self.admin_token.clone().unwrap();
+        let admin_token = self.admin_token.clone().unwrap_or_default();
 
         std::thread::spawn(move || -> anyhow::Result<()> {
             assert_eq!(
@@ -410,6 +297,16 @@ impl TestServerImpl {
         .join()
         .map_err(|e| anyhow!("{:?}", e))??;
 
+        for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
+            if self.process.try_wait()?.is_some() {
+                return Ok(());
+            }
+            std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+        }
+
+        self.process.kill()?;
+        self.process.wait()?;
+
         Ok(())
     }
 
@@ -422,25 +319,9 @@ impl TestServerImpl {
     }
 }
 
-impl Drop for TestServerImpl {
+impl Drop for TestServer {
     fn drop(&mut self) {
-        if self.process.try_wait().unwrap().is_none() {
-            Self::shutdown_server(self).unwrap();
-        }
-
-        for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if self.process.try_wait().unwrap().is_some() {
-                break;
-            }
-            std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
-        }
-
-        if self.process.try_wait().unwrap().is_none() {
-            self.process.kill().unwrap();
-        }
-
-        self.process.wait().unwrap();
-
+        Self::shutdown_server(self).unwrap();
         Self::remove_dir_if_exists(&self.dir).unwrap();
     }
 }

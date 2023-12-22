@@ -1,5 +1,4 @@
 use crate::TestServer;
-use crate::TestServerImpl;
 use crate::NO_TOKEN;
 use crate::SHUTDOWN_URI;
 use crate::STATUS_URI;
@@ -61,11 +60,10 @@ async fn openapi() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_config_reuse() -> anyhow::Result<()> {
-    let mut server = TestServerImpl::init().await?;
-    let client = reqwest::Client::new();
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server
-            .post(&client, SHUTDOWN_URI, &String::new(), &server.admin_token)
+            .post(SHUTDOWN_URI, &String::new(), &server.admin_token)
             .await?
             .0,
         202

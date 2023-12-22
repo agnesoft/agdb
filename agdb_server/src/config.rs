@@ -31,3 +31,34 @@ pub(crate) fn new() -> ServerResult<Config> {
 
     Ok(Config::new(config))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config;
+    use std::path::Path;
+
+    struct TestFile {}
+
+    impl TestFile {
+        fn new() -> Self {
+            let _ = std::fs::remove_file(CONFIG_FILE);
+            Self {}
+        }
+    }
+
+    impl Drop for TestFile {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(CONFIG_FILE);
+        }
+    }
+
+    #[test]
+    fn default_values() {
+        let _test_file = TestFile::new();
+        assert!(!Path::new(CONFIG_FILE).exists());
+        let _config = config::new().unwrap();
+        assert!(Path::new(CONFIG_FILE).exists());
+        let _config = config::new().unwrap();
+    }
+}

@@ -93,26 +93,24 @@ pub struct ServerUser {
 
 impl TestServer {
     pub async fn new() -> anyhow::Result<Self> {
-        let port = PORT.fetch_add(1, Ordering::Relaxed);
+        let port = PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16;
         let dir = format!("{BINARY}.{port}.test");
         let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
 
         Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
 
-        if port != DEFAULT_PORT {
-            let mut config = HashMap::<&str, serde_yaml::Value>::new();
-            config.insert("host", HOST.into());
-            config.insert("port", port.into());
-            config.insert("admin", ADMIN.into());
-            config.insert("data_dir", SERVER_DATA_DIR.into());
+        let mut config = HashMap::<&str, serde_yaml::Value>::new();
+        config.insert("host", HOST.into());
+        config.insert("port", port.into());
+        config.insert("admin", ADMIN.into());
+        config.insert("data_dir", SERVER_DATA_DIR.into());
 
-            let file = std::fs::File::options()
-                .create_new(true)
-                .write(true)
-                .open(Path::new(&dir).join(CONFIG_FILE))?;
-            serde_yaml::to_writer(file, &config)?;
-        }
+        let file = std::fs::File::options()
+            .create_new(true)
+            .write(true)
+            .open(Path::new(&dir).join(CONFIG_FILE))?;
+        serde_yaml::to_writer(file, &config)?;
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let client = reqwest::Client::new();

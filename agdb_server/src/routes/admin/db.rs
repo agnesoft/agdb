@@ -55,7 +55,7 @@ pub(crate) async fn add(
     let db = Database {
         db_id: None,
         name,
-        db_type: request.db_type.to_string(),
+        db_type: request.db_type,
     };
 
     db_pool.add_db(user, db, &config)?;
@@ -163,7 +163,7 @@ pub(crate) async fn list(
         .map(|db| {
             Ok(ServerDatabaseSize {
                 name: db.name.clone(),
-                db_type: db.db_type.as_str().into(),
+                db_type: db.db_type,
                 size: pool
                     .get(&db.name)
                     .ok_or(db_not_found(&db.name))?
@@ -203,7 +203,7 @@ pub(crate) async fn optimize(
         StatusCode::OK,
         Json(ServerDatabaseSize {
             name: db.name,
-            db_type: db.db_type.as_str().into(),
+            db_type: db.db_type,
             size,
         }),
     ))

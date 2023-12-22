@@ -2,6 +2,7 @@ pub(crate) mod user;
 
 use crate::config::Config;
 use crate::db_pool::db_not_found;
+use crate::db_pool::server_db::ServerDb;
 use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
@@ -10,6 +11,7 @@ use crate::routes::db::user::DbUserRole;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use agdb::DbError;
 use agdb::QueryError;
 use agdb::QueryResult;
 use agdb::QueryType;
@@ -27,9 +29,10 @@ use std::path::Path as FilePath;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Clone, Default, Serialize, Deserialize, ToSchema, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbType {
+    #[default]
     Memory,
     Mapped,
     File,
@@ -73,6 +76,20 @@ impl From<&str> for DbType {
             "file" => DbType::File,
             _ => DbType::Memory,
         }
+    }
+}
+
+impl TryFrom<agdb::DbValue> for DbType {
+    type Error = DbError;
+
+    fn try_from(value: agdb::DbValue) -> Result<Self, Self::Error> {
+        Ok(Self::from(value.to_string().as_str()))
+    }
+}
+
+impl From<DbType> for agdb::DbValue {
+    fn from(value: DbType) -> Self {
+        value.to_string().into()
     }
 }
 
@@ -127,10 +144,65 @@ pub(crate) async fn add(
     let db = Database {
         db_id: None,
         name,
-        db_type: request.db_type.to_string(),
+        db_type: request.db_type,
     };
 
     db_pool.add_db(user.0, db, &config)?;
+
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/db/{owner}/{db}/backup",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    responses(
+         (status = 201, description = "backup created"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "must be a db admin / memory db cannot have backup"),
+         (status = 404, description = "db not found"),
+    )
+)]
+pub(crate) async fn backup(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse {
+    let db_name = format!("{}/{}", owner, db);
+    let database = db_pool.find_user_db(user.0, &db_name)?;
+
+    if database.db_type == DbType::Memory {
+        return Err(ServerError {
+            description: "memory db cannot have backup".to_string(),
+            status: StatusCode::FORBIDDEN,
+        });
+    }
+
+    if !db_pool.is_db_admin(user.0, database.db_id.unwrap())? {
+        return Err(ServerError {
+            description: "must be a db admin".to_string(),
+            status: StatusCode::FORBIDDEN,
+        });
+    }
+
+    let pool = db_pool.get_pool()?;
+    let server_db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
+    let backup_dir = FilePath::new(&config.data_dir).join(owner).join("backups");
+    let backup_path = backup_dir.join(format!("{db}.bak"));
+
+    if backup_path.exists() {
+        std::fs::remove_file(&backup_path)?;
+    }
+
+    std::fs::create_dir_all(backup_dir)?;
+
+    server_db
+        .get_mut()?
+        .backup(backup_path.to_string_lossy().as_ref())?;
 
     Ok(StatusCode::CREATED)
 }
@@ -254,7 +326,7 @@ pub(crate) async fn list(
         .map(|(db, role)| {
             Ok(ServerDatabaseWithRole {
                 name: db.name.clone(),
-                db_type: db.db_type.as_str().into(),
+                db_type: db.db_type,
                 role,
                 size: pool
                     .get(&db.name)
@@ -306,7 +378,7 @@ pub(crate) async fn optimize(
         StatusCode::OK,
         Json(ServerDatabaseSize {
             name: db.name,
-            db_type: db.db_type.as_str().into(),
+            db_type: db.db_type,
             size,
         }),
     ))
@@ -395,6 +467,68 @@ pub(crate) async fn rename(
     db_pool.rename_db(db, &request.new_name, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/db/{owner}/{db}/restore",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    responses(
+         (status = 201, description = "db restored"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "must be a db admin"),
+         (status = 404, description = "backup not found"),
+    )
+)]
+pub(crate) async fn restore(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse {
+    let db_name = format!("{}/{}", owner, db);
+    let backup_path = FilePath::new(&config.data_dir)
+        .join(&owner)
+        .join("backups")
+        .join(format!("{db}.bak"));
+
+    if !backup_path.exists() {
+        return Err(ServerError {
+            description: "backup not found".to_string(),
+            status: StatusCode::NOT_FOUND,
+        });
+    }
+
+    let database = db_pool.find_user_db(user.0, &db_name)?;
+
+    if !db_pool.is_db_admin(user.0, database.db_id.unwrap())? {
+        return Err(ServerError {
+            description: "must be a db admin".to_string(),
+            status: StatusCode::FORBIDDEN,
+        });
+    }
+
+    let current_path = FilePath::new(&config.data_dir).join(&db_name);
+    let backup_temp = FilePath::new(&config.data_dir)
+        .join(owner)
+        .join("backups")
+        .join(db);
+
+    db_pool.get_pool_mut()?.remove(&db_name);
+    std::fs::rename(&current_path, &backup_temp)?;
+    std::fs::rename(&backup_path, &current_path)?;
+    std::fs::rename(backup_temp, backup_path)?;
+    let server_db = ServerDb::new(&format!(
+        "{}:{}",
+        database.db_type,
+        current_path.to_string_lossy()
+    ))?;
+    db_pool.get_pool_mut()?.insert(db_name, server_db);
+
+    Ok(StatusCode::CREATED)
 }
 
 pub(crate) fn required_role(queries: &Queries) -> DbUserRole {

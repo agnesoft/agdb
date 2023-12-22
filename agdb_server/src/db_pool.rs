@@ -5,6 +5,7 @@ use crate::config::Config;
 use crate::error_code::ErrorCode;
 use crate::password::Password;
 use crate::routes::db::user::DbUserRole;
+use crate::routes::db::DbType;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::Comparison;
@@ -42,7 +43,7 @@ pub(crate) struct ServerUser {
 pub(crate) struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
-    pub(crate) db_type: String,
+    pub(crate) db_type: DbType,
 }
 
 #[allow(dead_code)]
@@ -598,6 +599,10 @@ impl DbPool {
         Ok(self.0.pool.read()?)
     }
 
+    pub(crate) fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {
+        Ok(self.0.pool.write()?)
+    }
+
     fn find_user_db_id_query(&self, user: DbId, db: &str) -> SearchQuery {
         QueryBuilder::search()
             .depth_first()
@@ -609,10 +614,6 @@ impl DbPool {
             .key("name")
             .value(Comparison::Equal(db.into()))
             .query()
-    }
-
-    fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {
-        Ok(self.0.pool.write()?)
     }
 
     fn db(&self) -> ServerResult<RwLockReadGuard<ServerDbImpl>> {

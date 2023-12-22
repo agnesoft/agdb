@@ -1,6 +1,10 @@
 pub(crate) mod user;
 
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
+
 use crate::config::Config;
+use crate::db_pool::db_backup_file;
 use crate::db_pool::db_not_found;
 use crate::db_pool::Database;
 use crate::db_pool::DbPool;
@@ -24,10 +28,10 @@ use axum::http::StatusCode;
 use axum::Json;
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/db/{username}/{db}/add",
+    path = "/api/v1/admin/db/{owner}/{db}/add",
     security(("Token" = [])),
     params(
-        ("username" = String, Path, description = "user name"),
+        ("owner" = String, Path, description = "user name"),
         ("db" = String, Path, description = "db name"),
         DbTypeParam,
     ),
@@ -42,20 +46,27 @@ pub(crate) async fn add(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Path((username, db)): Path<(String, String)>,
+    Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let user = db_pool.find_user_id(&username)?;
-    let name = format!("{username}/{db}");
+    let user = db_pool.find_user_id(&owner)?;
+    let name = format!("{owner}/{db}");
 
     if db_pool.find_user_db(user, &name).is_ok() {
         return Err(ErrorCode::DbExists.into());
     }
 
+    let backup = if db_backup_file(&config, &name).exists() {
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
+    } else {
+        0
+    };
+
     let db = Database {
         db_id: None,
         name,
         db_type: request.db_type,
+        backup,
     };
 
     db_pool.add_db(user, db, &config)?;
@@ -169,6 +180,7 @@ pub(crate) async fn list(
                     .ok_or(db_not_found(&db.name))?
                     .get()?
                     .size(),
+                backup: db.backup,
             })
         })
         .collect::<Result<Vec<ServerDatabaseSize>, ServerError>>()?;
@@ -198,6 +210,7 @@ pub(crate) async fn optimize(
     let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
     server_db.get_mut()?.optimize_storage()?;
     let size = server_db.get()?.size();
+    let backup = db.backup;
 
     Ok((
         StatusCode::OK,
@@ -205,6 +218,7 @@ pub(crate) async fn optimize(
             name: db.name,
             db_type: db.db_type,
             size,
+            backup,
         }),
     ))
 }

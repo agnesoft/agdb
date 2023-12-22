@@ -59,6 +59,7 @@ async fn transfer() -> anyhow::Result<()> {
             db_type: "mapped".to_string(),
             role: "admin".to_string(),
             size: 2600,
+            backup: 0,
         }]
     );
     assert!(!Path::new(&server.data_dir).join(db).exists());

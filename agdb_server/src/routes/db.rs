@@ -1,6 +1,7 @@
 pub(crate) mod user;
 
 use crate::config::Config;
+use crate::db_pool::db_backup_file;
 use crate::db_pool::db_not_found;
 use crate::db_pool::server_db::ServerDb;
 use crate::db_pool::server_db_storage::ServerDbStorage;
@@ -26,6 +27,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
 use std::path::Path as FilePath;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -48,6 +51,7 @@ pub(crate) struct ServerDatabaseSize {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
     pub(crate) size: u64,
+    pub(crate) backup: u64,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -56,6 +60,7 @@ pub(crate) struct ServerDatabaseWithRole {
     pub(crate) db_type: DbType,
     pub(crate) role: DbUserRole,
     pub(crate) size: u64,
+    pub(crate) backup: u64,
 }
 
 #[derive(Deserialize, IntoParams, ToSchema)]
@@ -104,10 +109,10 @@ impl Display for DbType {
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/{username}/{db}/add",
+    path = "/api/v1/db/{owner}/{db}/add",
     security(("Token" = [])),
     params(
-        ("username" = String, Path, description = "user name"),
+        ("owner" = String, Path, description = "user name"),
         ("db" = String, Path, description = "db name"),
         DbTypeParam,
     ),
@@ -123,28 +128,35 @@ pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
-    Path((username, db)): Path<(String, String)>,
+    Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
     let current_username = db_pool.user_name(user.0)?;
 
-    if current_username != username {
+    if current_username != owner {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
             "cannot add db to another user",
         ));
     }
 
-    let name = format!("{username}/{db}");
+    let name = format!("{owner}/{db}");
 
     if db_pool.find_user_db(user.0, &name).is_ok() {
         return Err(ErrorCode::DbExists.into());
     }
 
+    let backup = if db_backup_file(&config, &name).exists() {
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
+    } else {
+        0
+    };
+
     let db = Database {
         db_id: None,
         name,
         db_type: request.db_type,
+        backup,
     };
 
     db_pool.add_db(user.0, db, &config)?;
@@ -173,7 +185,7 @@ pub(crate) async fn backup(
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
     let db_name = format!("{}/{}", owner, db);
-    let database = db_pool.find_user_db(user.0, &db_name)?;
+    let mut database = db_pool.find_user_db(user.0, &db_name)?;
 
     if database.db_type == DbType::Memory {
         return Err(ServerError {
@@ -191,8 +203,8 @@ pub(crate) async fn backup(
 
     let pool = db_pool.get_pool()?;
     let server_db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
-    let backup_dir = FilePath::new(&config.data_dir).join(owner).join("backups");
-    let backup_path = backup_dir.join(format!("{db}.bak"));
+    let backup_path = db_backup_file(&config, &db_name);
+    let backup_dir = backup_path.parent().unwrap();
 
     if backup_path.exists() {
         std::fs::remove_file(&backup_path)?;
@@ -203,6 +215,8 @@ pub(crate) async fn backup(
     server_db
         .get_mut()?
         .backup(backup_path.to_string_lossy().as_ref())?;
+    database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    db_pool.save_db(database)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -333,6 +347,7 @@ pub(crate) async fn list(
                     .ok_or(db_not_found(&db.name))?
                     .get()?
                     .size(),
+                backup: db.backup,
             })
         })
         .collect::<Result<Vec<ServerDatabaseWithRole>, ServerError>>()?;
@@ -380,6 +395,7 @@ pub(crate) async fn optimize(
             name: db.name,
             db_type: db.db_type,
             size,
+            backup: db.backup,
         }),
     ))
 }
@@ -490,7 +506,7 @@ pub(crate) async fn restore(
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
     let db_name = format!("{}/{}", owner, db);
-    let database = db_pool.find_user_db(user.0, &db_name)?;
+    let mut database = db_pool.find_user_db(user.0, &db_name)?;
 
     if !db_pool.is_db_admin(user.0, database.db_id.unwrap())? {
         return Err(ServerError {
@@ -499,10 +515,7 @@ pub(crate) async fn restore(
         });
     }
 
-    let backup_path = FilePath::new(&config.data_dir)
-        .join(&owner)
-        .join("backups")
-        .join(format!("{db}.bak"));
+    let backup_path = db_backup_file(&config, &db_name);
 
     if !backup_path.exists() {
         return Err(ServerError {
@@ -512,10 +525,7 @@ pub(crate) async fn restore(
     }
 
     let current_path = FilePath::new(&config.data_dir).join(&db_name);
-    let backup_temp = FilePath::new(&config.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(db);
+    let backup_temp = backup_path.parent().unwrap().join(db);
 
     db_pool.get_pool_mut()?.remove(&db_name);
     std::fs::rename(&current_path, &backup_temp)?;
@@ -527,6 +537,8 @@ pub(crate) async fn restore(
         current_path.to_string_lossy()
     ))?;
     db_pool.get_pool_mut()?.insert(db_name, server_db);
+    database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    db_pool.save_db(database)?;
 
     Ok(StatusCode::CREATED)
 }

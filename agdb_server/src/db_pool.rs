@@ -23,6 +23,7 @@ use server_db::ServerDb;
 use server_db::ServerDbImpl;
 use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
@@ -44,6 +45,7 @@ pub(crate) struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
     pub(crate) db_type: DbType,
+    pub(crate) backup: u64,
 }
 
 #[allow(dead_code)]
@@ -200,6 +202,7 @@ impl DbPool {
 
     pub(crate) fn delete_db(&self, db: Database, config: &Config) -> ServerResult {
         let path = Path::new(&config.data_dir).join(&db.name);
+        let backup_file = db_backup_file(config, &db.name);
         self.remove_db(db)?;
 
         if path.exists() {
@@ -213,6 +216,10 @@ impl DbPool {
                 .ok_or(ErrorCode::DbInvalid)?
                 .join(format!(".{main_file_name}"));
             std::fs::remove_file(dot_file)?;
+
+            if backup_file.exists() {
+                std::fs::remove_file(backup_file)?;
+            }
         }
 
         Ok(())
@@ -574,6 +581,12 @@ impl DbPool {
         Ok(())
     }
 
+    pub(crate) fn save_db(&self, db: Database) -> ServerResult {
+        self.db_mut()?
+            .exec_mut(&QueryBuilder::insert().element(&db).query())?;
+        Ok(())
+    }
+
     pub(crate) fn save_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut()?
             .exec_mut(&QueryBuilder::insert().element(&user).query())?;
@@ -631,4 +644,12 @@ fn user_not_found(name: &str) -> ServerError {
 
 pub(crate) fn db_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
+}
+
+pub(crate) fn db_backup_file(config: &Config, db: &str) -> PathBuf {
+    let (owner, db_name) = db.split_once('/').unwrap();
+    Path::new(&config.data_dir)
+        .join(owner)
+        .join("backups")
+        .join(format!("{db_name}.bak"))
 }

@@ -467,10 +467,11 @@ pub(crate) async fn rename(
         ));
     }
 
-    let (new_owner, _new_db) = request
+    let new_owner = request
         .new_name
         .split_once('/')
-        .ok_or(ErrorCode::DbInvalid)?;
+        .ok_or(ErrorCode::DbInvalid)?
+        .0;
     let db_name = format!("{}/{}", owner, db);
     let db = db_pool.find_user_db(user.0, &db_name)?;
 
@@ -478,6 +479,14 @@ pub(crate) async fn rename(
         let new_owner_id = db_pool.find_user_id(new_owner)?;
         std::fs::create_dir_all(FilePath::new(&config.data_dir).join(new_owner))?;
         db_pool.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
+    }
+
+    let backup_path = db_backup_file(&config, &db_name);
+    if backup_path.exists() {
+        let new_backup_path = db_backup_file(&config, &request.new_name);
+        let backups_dir = new_backup_path.parent().unwrap();
+        std::fs::create_dir_all(backups_dir)?;
+        std::fs::rename(backup_path, new_backup_path)?;
     }
 
     db_pool.rename_db(db, &request.new_name, &config)?;

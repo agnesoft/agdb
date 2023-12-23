@@ -51,7 +51,7 @@ pub(crate) struct ServerUser {
     pub(crate) token: String,
 }
 
-#[derive(Default, UserValue)]
+#[derive(UserValue)]
 struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
@@ -466,7 +466,7 @@ impl DbPool {
                         ..Default::default()
                     });
                 } else {
-                    let db = Database::from_db_element(&e).unwrap_or_default();
+                    let db = Database::from_db_element(&e)?;
                     let server_db = dbs.last_mut().unwrap();
                     server_db.db_type = db.db_type;
                     server_db.backup = db.backup;

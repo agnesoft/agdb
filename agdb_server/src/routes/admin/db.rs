@@ -68,7 +68,8 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.delete_db(&owner, &db, &config)?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.delete_db(&owner, &db, owner_id, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -162,24 +163,10 @@ pub(crate) async fn optimize(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
-    let db_name = format!("{owner}/{db}");
-    let db = db_pool.find_db(&db_name)?;
-    let pool = db_pool.get_pool()?;
-    let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
-    server_db.get_mut()?.optimize_storage()?;
-    let size = server_db.get()?.size();
-    let backup = db.backup;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    let db = db_pool.optimize_db(&owner, &db, owner_id)?;
 
-    Ok((
-        StatusCode::OK,
-        Json(ServerDatabase {
-            name: db.name,
-            db_type: db.db_type,
-            role: DbUserRole::Admin,
-            size,
-            backup,
-        }),
-    ))
+    Ok((StatusCode::OK, Json(db)))
 }
 
 #[utoipa::path(delete,
@@ -200,7 +187,8 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.remove_db(&owner, &db)?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.remove_db(&owner, &db, owner_id)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -227,8 +215,8 @@ pub(crate) async fn rename(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let db_name = format!("{}/{}", owner, db);
-    db_pool.rename_db(&db_name, &request.new_name, &config)?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.rename_db(&owner, &db, &request.new_name, owner_id, &config)?;
 
     Ok(StatusCode::CREATED)
 }

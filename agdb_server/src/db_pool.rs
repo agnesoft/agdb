@@ -232,10 +232,23 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn backup_db(&self, owner: &str, db: &str, config: &Config) -> ServerResult {
-        let owner_id = self.find_user_id(owner)?;
+    pub(crate) fn backup_db(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+        config: &Config,
+    ) -> ServerResult {
         let db_name = db_name(owner, db);
-        let mut database = self.find_user_db(owner_id, &db_name)?;
+        let mut database = self.find_user_db(user, &db_name)?;
+        let role = self.find_user_db_role(user, &db_name)?;
+
+        if role != DbUserRole::Admin {
+            return Err(ServerError {
+                description: "permission denied: admin permissions required".to_string(),
+                status: StatusCode::FORBIDDEN,
+            });
+        }
 
         if database.db_type == DbType::Memory {
             return Err(ServerError {
@@ -264,8 +277,14 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn delete_db(&self, owner: &str, db: &str, config: &Config) -> ServerResult {
-        self.remove_db(owner, db)?;
+    pub(crate) fn delete_db(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+        config: &Config,
+    ) -> ServerResult {
+        self.remove_db(owner, db, user)?;
 
         let main_file = db_file(owner, db, config);
         if main_file.exists() {
@@ -618,6 +637,37 @@ impl DbPool {
             == 1)
     }
 
+    pub(crate) fn optimize_db(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+    ) -> ServerResult<ServerDatabase> {
+        let db_name = db_name(owner, db);
+        let db = self.find_user_db(user, &db_name)?;
+        let role = self.find_user_db_role(user, &db_name)?;
+
+        if role == DbUserRole::Read {
+            return Err(ServerError {
+                description: "permission denied: write permissions required".to_string(),
+                status: StatusCode::FORBIDDEN,
+            });
+        }
+
+        let pool = self.get_pool()?;
+        let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
+        server_db.get_mut()?.optimize_storage()?;
+        let size = server_db.get()?.size();
+
+        Ok(ServerDatabase {
+            name: db.name,
+            db_type: db.db_type,
+            role,
+            size,
+            backup: db.backup,
+        })
+    }
+
     pub(crate) fn remove_db_user(&self, db: DbId, user: DbId) -> ServerResult {
         self.db_mut()?.exec_mut(
             &QueryBuilder::remove()
@@ -635,10 +685,18 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn remove_db(&self, owner: &str, db: &str) -> ServerResult<ServerDb> {
-        let owner_id = self.find_user_id(owner)?;
+    pub(crate) fn remove_db(&self, owner: &str, db: &str, user: DbId) -> ServerResult<ServerDb> {
+        let user_name = self.user_name(user)?;
+
+        if owner != user_name {
+            return Err(ServerError::new(
+                StatusCode::FORBIDDEN,
+                "permission denied: user must be a db owner",
+            ));
+        }
+
         let db_name = db_name(owner, db);
-        let db_id = self.find_user_db_id(owner_id, &db_name)?;
+        let db_id = self.find_user_db_id(user, &db_name)?;
 
         self.db_mut()?
             .exec_mut(&QueryBuilder::remove().ids(db_id).query())?;
@@ -646,20 +704,35 @@ impl DbPool {
         Ok(self.get_pool_mut()?.remove(&db_name).unwrap())
     }
 
-    pub(crate) fn rename_db(&self, db_name: &str, new_name: &str, config: &Config) -> ServerResult {
-        let mut pool = self.get_pool_mut()?;
+    pub(crate) fn rename_db(
+        &self,
+        owner: &str,
+        db: &str,
+        new_name: &str,
+        user: DbId,
+        config: &Config,
+    ) -> ServerResult {
+        let (new_owner, new_db) = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+        let username = self.user_name(user)?;
 
-        let owner = db_name.split_once('/').ok_or(ErrorCode::DbInvalid)?.0;
-        let new_owner = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?.0;
-        let mut db = self.find_db(db_name)?;
+        if owner != username {
+            return Err(ServerError::new(
+                StatusCode::FORBIDDEN,
+                "user must be a db owner",
+            ));
+        }
+
+        let db_name = db_name(owner, db);
+        let mut database = self.find_db(&db_name)?;
 
         if new_owner != owner {
             let new_owner_id = self.find_user_id(new_owner)?;
             std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
-            self.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
+            self.add_db_user(database.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
         }
 
-        let server_db = pool.remove(&db.name).unwrap();
+        let mut pool = self.get_pool_mut()?;
+        let server_db = pool.remove(&db_name).unwrap();
         server_db
             .get_mut()?
             .rename(
@@ -670,19 +743,19 @@ impl DbPool {
             )
             .map_err(|_| ErrorCode::DbInvalid)?;
         pool.insert(new_name.to_string(), server_db);
-        db.name = new_name.to_string();
+        database.name = new_name.to_string();
 
-        let backup_path = db_backup_file2(config, db_name);
+        let backup_path = db_backup_file(owner, db, config);
 
         if backup_path.exists() {
-            let new_backup_path = db_backup_file2(config, new_name);
+            let new_backup_path = db_backup_file(new_owner, new_db, config);
             let backups_dir = new_backup_path.parent().unwrap();
             std::fs::create_dir_all(backups_dir)?;
             std::fs::rename(backup_path, new_backup_path)?;
         }
 
         self.db_mut()?
-            .exec_mut(&QueryBuilder::insert().element(&db).query())?;
+            .exec_mut(&QueryBuilder::insert().element(&database).query())?;
 
         Ok(())
     }
@@ -782,6 +855,6 @@ fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join(db)
 }
 
-pub(crate) fn db_name(owner: &str, db: &str) -> String {
+fn db_name(owner: &str, db: &str) -> String {
     format!("{owner}/{db}")
 }

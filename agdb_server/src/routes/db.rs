@@ -2,7 +2,6 @@ pub(crate) mod user;
 
 use crate::config::Config;
 use crate::db_pool::db_backup_file2;
-use crate::db_pool::db_name;
 use crate::db_pool::db_not_found;
 use crate::db_pool::server_db::ServerDb;
 use crate::db_pool::server_db_storage::ServerDbStorage;
@@ -156,18 +155,7 @@ pub(crate) async fn backup(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let user_id = db_pool.find_user_id(&owner)?;
-    let db_name = db_name(&owner, &db);
-    let db_id = db_pool.find_user_db_id(user_id, &db_name)?;
-
-    if !db_pool.is_db_admin(user.0, db_id)? {
-        return Err(ServerError {
-            description: "must be a db admin".to_string(),
-            status: StatusCode::FORBIDDEN,
-        });
-    }
-
-    db_pool.backup_db(&owner, &db, &config)?;
+    db_pool.backup_db(&owner, &db, user.0, &config)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -192,16 +180,7 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let username = db_pool.user_name(user.0)?;
-
-    if owner != username {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "user must be a db owner",
-        ));
-    }
-
-    db_pool.delete_db(&owner, &db, &config)?;
+    db_pool.delete_db(&owner, &db, user.0, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -305,33 +284,9 @@ pub(crate) async fn optimize(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
-    let db_name = format!("{owner}/{db}");
-    let db = db_pool.find_user_db(user.0, &db_name)?;
-    let role = db_pool.find_user_db_role(user.0, &db_name)?;
+    let db = db_pool.optimize_db(&owner, &db, user.0)?;
 
-    if role == DbUserRole::Read {
-        return Err(ServerError {
-            description: "Permission denied: optimization can only be done with write permissions"
-                .to_string(),
-            status: StatusCode::FORBIDDEN,
-        });
-    }
-
-    let pool = db_pool.get_pool()?;
-    let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
-    server_db.get_mut()?.optimize_storage()?;
-    let size = server_db.get()?.size();
-
-    Ok((
-        StatusCode::OK,
-        Json(ServerDatabase {
-            name: db.name,
-            db_type: db.db_type,
-            role,
-            size,
-            backup: db.backup,
-        }),
-    ))
+    Ok((StatusCode::OK, Json(db)))
 }
 
 #[utoipa::path(post,
@@ -353,16 +308,7 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let username = db_pool.user_name(user.0)?;
-
-    if owner != username {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "user must be a db owner",
-        ));
-    }
-
-    db_pool.remove_db(&owner, &db)?;
+    db_pool.remove_db(&owner, &db, user.0)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -390,17 +336,7 @@ pub(crate) async fn rename(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let username = db_pool.user_name(user.0)?;
-
-    if owner != username {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "user must be a db owner",
-        ));
-    }
-
-    let db_name = format!("{}/{}", owner, db);
-    db_pool.rename_db(&db_name, &request.new_name, &config)?;
+    db_pool.rename_db(&owner, &db, &request.new_name, user.0, &config)?;
 
     Ok(StatusCode::CREATED)
 }

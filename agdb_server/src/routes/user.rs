@@ -1,5 +1,4 @@
 use crate::db_pool::DbPool;
-use crate::password;
 use crate::password::Password;
 use crate::server_error::ServerResponse;
 use axum::extract::Path;
@@ -71,20 +70,14 @@ pub(crate) async fn change_password(
     Path(username): Path<String>,
     Json(request): Json<ChangePassword>,
 ) -> ServerResponse {
-    password::validate_password(&request.new_password)?;
-
-    let mut user = db_pool.find_user(&username)?;
+    let user = db_pool.find_user(&username)?;
     let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {
         return Ok(StatusCode::UNAUTHORIZED);
     }
 
-    let new_pswd = Password::create(&user.name, &request.new_password);
-    user.password = new_pswd.password.to_vec();
-    user.salt = new_pswd.user_salt.to_vec();
-
-    db_pool.save_user(user)?;
+    db_pool.change_password(user, &request.new_password)?;
 
     Ok(StatusCode::CREATED)
 }

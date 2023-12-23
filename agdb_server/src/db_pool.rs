@@ -4,6 +4,7 @@ mod server_db_storage;
 use crate::config::Config;
 use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::error_code::ErrorCode;
+use crate::password;
 use crate::password::Password;
 use crate::routes::db::user::DbUser;
 use crate::routes::db::user::DbUserRole;
@@ -293,6 +294,16 @@ impl DbPool {
 
         database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         self.save_db(database)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn change_password(&self, mut user: ServerUser, new_password: &str) -> ServerResult {
+        password::validate_password(new_password)?;
+        let pswd = Password::create(&user.name, new_password);
+        user.password = pswd.password.to_vec();
+        user.salt = pswd.user_salt.to_vec();
+        self.save_user(user)?;
 
         Ok(())
     }

@@ -95,6 +95,53 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/backup": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "backup",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "backup created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "memory db cannot have backup"
+          },
+          "404": {
+            "description": "db / user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/delete": {
       "delete": {
         "tags": [
@@ -665,6 +712,50 @@
         ]
       }
     },
+    "/api/v1/db/admin/{owner}/{db}/restore": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/list": {
       "get": {
         "tags": [
@@ -791,7 +882,7 @@
             "description": "must be a db admin / memory db cannot have backup"
           },
           "404": {
-            "description": "db not found"
+            "description": "user / db not found"
           }
         },
         "security": [

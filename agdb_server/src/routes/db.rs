@@ -136,7 +136,7 @@ pub(crate) async fn add(
          (status = 201, description = "backup created"),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "must be a db admin / memory db cannot have backup"),
-         (status = 404, description = "db not found"),
+         (status = 404, description = "user / db not found"),
     )
 )]
 pub(crate) async fn backup(

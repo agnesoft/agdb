@@ -1,4 +1,4 @@
-use crate::DbWithRole;
+use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -76,13 +76,10 @@ async fn transfer() -> anyhow::Result<()> {
         .await?
         .0;
     assert_eq!(status, 201);
-    let list = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?
-        .1?;
+    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1?;
     assert_eq!(
         list,
-        vec![DbWithRole {
+        vec![Db {
             name: format!("{}/renamed_db", other.name),
             db_type: "mapped".to_string(),
             role: "admin".to_string(),

@@ -1,7 +1,8 @@
 pub(crate) mod user;
 
 use crate::config::Config;
-use crate::db_pool::db_backup_file;
+use crate::db_pool::db_backup_file2;
+use crate::db_pool::db_name;
 use crate::db_pool::db_not_found;
 use crate::db_pool::server_db::ServerDb;
 use crate::db_pool::server_db_storage::ServerDbStorage;
@@ -44,16 +45,8 @@ pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbType,
 }
 
-#[derive(Serialize, ToSchema)]
-pub(crate) struct ServerDatabaseSize {
-    pub(crate) name: String,
-    pub(crate) db_type: DbType,
-    pub(crate) size: u64,
-    pub(crate) backup: u64,
-}
-
-#[derive(Serialize, ToSchema)]
-pub(crate) struct ServerDatabaseWithRole {
+#[derive(Default, Serialize, ToSchema)]
+pub(crate) struct ServerDatabase {
     pub(crate) name: String,
     pub(crate) db_type: DbType,
     pub(crate) role: DbUserRole,
@@ -163,39 +156,18 @@ pub(crate) async fn backup(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db_name = format!("{}/{}", owner, db);
-    let mut database = db_pool.find_user_db(user.0, &db_name)?;
+    let user_id = db_pool.find_user_id(&owner)?;
+    let db_name = db_name(&owner, &db);
+    let db_id = db_pool.find_user_db_id(user_id, &db_name)?;
 
-    if database.db_type == DbType::Memory {
-        return Err(ServerError {
-            description: "memory db cannot have backup".to_string(),
-            status: StatusCode::FORBIDDEN,
-        });
-    }
-
-    if !db_pool.is_db_admin(user.0, database.db_id.unwrap())? {
+    if !db_pool.is_db_admin(user.0, db_id)? {
         return Err(ServerError {
             description: "must be a db admin".to_string(),
             status: StatusCode::FORBIDDEN,
         });
     }
 
-    let pool = db_pool.get_pool()?;
-    let server_db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
-    let backup_path = db_backup_file(&config, &db_name);
-    let backup_dir = backup_path.parent().unwrap();
-
-    if backup_path.exists() {
-        std::fs::remove_file(&backup_path)?;
-    }
-
-    std::fs::create_dir_all(backup_dir)?;
-
-    server_db
-        .get_mut()?
-        .backup(backup_path.to_string_lossy().as_ref())?;
-    database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-    db_pool.save_db(database)?;
+    db_pool.backup_db(&owner, &db, &config)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -229,9 +201,7 @@ pub(crate) async fn delete(
         ));
     }
 
-    let db_name = format!("{}/{}", owner, db);
-    let db = db_pool.find_user_db(user.0, &db_name)?;
-    db_pool.delete_db(db, &config)?;
+    db_pool.delete_db(&owner, &db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -304,32 +274,16 @@ pub(crate) async fn exec(
     path = "/api/v1/db/list",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "ok", body = Vec<ServerDatabaseWithRole>),
+         (status = 200, description = "ok", body = Vec<ServerDatabase>),
          (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
-) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabaseWithRole>>)> {
-    let pool = db_pool.get_pool()?;
-    let dbs = db_pool
-        .find_user_dbs(user.0)?
-        .into_iter()
-        .map(|(db, role)| {
-            Ok(ServerDatabaseWithRole {
-                name: db.name.clone(),
-                db_type: db.db_type,
-                role,
-                size: pool
-                    .get(&db.name)
-                    .ok_or(db_not_found(&db.name))?
-                    .get()?
-                    .size(),
-                backup: db.backup,
-            })
-        })
-        .collect::<Result<Vec<ServerDatabaseWithRole>, ServerError>>()?;
+) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
+    let dbs = db_pool.find_user_dbs(user.0)?;
+
     Ok((StatusCode::OK, Json(dbs)))
 }
 
@@ -341,7 +295,7 @@ pub(crate) async fn list(
         ("db" = String, Path, description = "db name"),
     ),
     responses(
-         (status = 200, description = "ok", body = ServerDatabaseSize),
+         (status = 200, description = "ok", body = ServerDatabase),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "must have write permissions"),
     )
@@ -350,7 +304,7 @@ pub(crate) async fn optimize(
     user: UserId,
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<(StatusCode, Json<ServerDatabaseSize>)> {
+) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
     let db_name = format!("{owner}/{db}");
     let db = db_pool.find_user_db(user.0, &db_name)?;
     let role = db_pool.find_user_db_role(user.0, &db_name)?;
@@ -370,9 +324,10 @@ pub(crate) async fn optimize(
 
     Ok((
         StatusCode::OK,
-        Json(ServerDatabaseSize {
+        Json(ServerDatabase {
             name: db.name,
             db_type: db.db_type,
+            role,
             size,
             backup: db.backup,
         }),
@@ -407,9 +362,7 @@ pub(crate) async fn remove(
         ));
     }
 
-    let db_name = format!("{}/{}", owner, db);
-    let db = db_pool.find_user_db(user.0, &db_name)?;
-    db_pool.remove_db(db)?;
+    db_pool.remove_db(&owner, &db)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -482,7 +435,7 @@ pub(crate) async fn restore(
         });
     }
 
-    let backup_path = db_backup_file(&config, &db_name);
+    let backup_path = db_backup_file2(&config, &db_name);
 
     if !backup_path.exists() {
         return Err(ServerError {

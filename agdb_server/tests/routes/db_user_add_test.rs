@@ -1,4 +1,4 @@
-use crate::DbWithRole;
+use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -19,13 +19,10 @@ async fn add_db_user() -> anyhow::Result<()> {
             .await?,
         201
     );
-    let list = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?
-        .1;
+    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
     assert_eq!(
         list?,
-        vec![DbWithRole {
+        vec![Db {
             name: db,
             db_type: "memory".to_string(),
             role: "write".to_string(),
@@ -62,13 +59,10 @@ async fn change_user_role() -> anyhow::Result<()> {
             .await?,
         201
     );
-    let list = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?
-        .1;
+    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
     assert_eq!(
         list?,
-        vec![DbWithRole {
+        vec![Db {
             name: db,
             db_type: "memory".to_string(),
             role: "read".to_string(),

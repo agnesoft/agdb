@@ -10,8 +10,8 @@ use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::Queries;
 use crate::routes::db::QueriesResults;
+use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseRename;
-use crate::routes::db::ServerDatabaseSize;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
@@ -68,9 +68,7 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db_name = format!("{owner}/{db}");
-    let db = db_pool.find_db(&db_name)?;
-    db_pool.delete_db(db, &config)?;
+    db_pool.delete_db(&owner, &db, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -134,31 +132,16 @@ pub(crate) async fn exec(
     path = "/api/v1/admin/db/list",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "ok", body = Vec<ServerDatabaseSize>),
+         (status = 200, description = "ok", body = Vec<ServerDatabase>),
          (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabaseSize>>)> {
-    let pool = db_pool.get_pool()?;
-    let dbs = db_pool
-        .find_dbs()?
-        .into_iter()
-        .map(|db| {
-            Ok(ServerDatabaseSize {
-                name: db.name.clone(),
-                db_type: db.db_type,
-                size: pool
-                    .get(&db.name)
-                    .ok_or(db_not_found(&db.name))?
-                    .get()?
-                    .size(),
-                backup: db.backup,
-            })
-        })
-        .collect::<Result<Vec<ServerDatabaseSize>, ServerError>>()?;
+) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
+    let dbs = db_pool.find_dbs()?;
+
     Ok((StatusCode::OK, Json(dbs)))
 }
 
@@ -178,7 +161,7 @@ pub(crate) async fn optimize(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<(StatusCode, Json<ServerDatabaseSize>)> {
+) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
     let db_name = format!("{owner}/{db}");
     let db = db_pool.find_db(&db_name)?;
     let pool = db_pool.get_pool()?;
@@ -189,9 +172,10 @@ pub(crate) async fn optimize(
 
     Ok((
         StatusCode::OK,
-        Json(ServerDatabaseSize {
+        Json(ServerDatabase {
             name: db.name,
             db_type: db.db_type,
+            role: DbUserRole::Admin,
             size,
             backup,
         }),
@@ -216,9 +200,7 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db_name = format!("{owner}/{db}");
-    let db = db_pool.find_db(&db_name)?;
-    db_pool.remove_db(db)?;
+    db_pool.remove_db(&owner, &db)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

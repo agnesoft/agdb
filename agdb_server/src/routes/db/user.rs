@@ -12,9 +12,10 @@ use serde::Serialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbUserRole {
+    #[default]
     Admin,
     Write,
     Read,

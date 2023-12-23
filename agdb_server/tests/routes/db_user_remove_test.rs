@@ -1,5 +1,5 @@
+use crate::Db;
 use crate::DbUser;
-use crate::DbWithRole;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -129,10 +129,7 @@ async fn remove_self() -> anyhow::Result<()> {
             .await?,
         204
     );
-    let list = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &other.token)
-        .await?
-        .1;
+    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
     assert_eq!(list?, vec![]);
     Ok(())
 }

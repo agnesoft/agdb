@@ -6,6 +6,7 @@ use crate::error_code::ErrorCode;
 use crate::password::Password;
 use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbType;
+use crate::routes::db::ServerDatabase;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::Comparison;
@@ -132,10 +133,10 @@ impl DbPool {
         db_type: DbType,
         config: &Config,
     ) -> ServerResult {
-        let user = self.find_user_id(owner)?;
-        let db_name = format!("{owner}/{db}");
+        let owner_id = self.find_user_id(owner)?;
+        let db_name = db_name(owner, db);
 
-        if self.find_user_db(user, &db_name).is_ok() {
+        if self.find_user_db(owner_id, &db_name).is_ok() {
             return Err(ErrorCode::DbExists.into());
         }
 
@@ -149,7 +150,7 @@ impl DbPool {
             e
         })?;
 
-        let backup = if db_backup_file(config, &db_name).exists() {
+        let backup = if db_backup_file2(config, &db_name).exists() {
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
         } else {
             0
@@ -172,7 +173,7 @@ impl DbPool {
             t.exec_mut(
                 &QueryBuilder::insert()
                     .edges()
-                    .from(vec![QueryId::from(user), "dbs".into()])
+                    .from(vec![QueryId::from(owner_id), "dbs".into()])
                     .to(db)
                     .values(vec![vec![("role", DbUserRole::Admin).into()], vec![]])
                     .query(),
@@ -231,33 +232,61 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn delete_db(&self, db: Database, config: &Config) -> ServerResult {
-        let path = Path::new(&config.data_dir).join(&db.name);
-        let backup_file = db_backup_file(config, &db.name);
-        self.remove_db(db)?;
+    pub(crate) fn backup_db(&self, owner: &str, db: &str, config: &Config) -> ServerResult {
+        let owner_id = self.find_user_id(owner)?;
+        let db_name = db_name(owner, db);
+        let mut database = self.find_user_db(owner_id, &db_name)?;
 
-        if path.exists() {
-            let main_file_name = path
-                .file_name()
-                .ok_or(ErrorCode::DbInvalid)?
-                .to_string_lossy();
-            std::fs::remove_file(&path)?;
-            let dot_file = path
-                .parent()
-                .ok_or(ErrorCode::DbInvalid)?
-                .join(format!(".{main_file_name}"));
-            std::fs::remove_file(dot_file)?;
+        if database.db_type == DbType::Memory {
+            return Err(ServerError {
+                description: "memory db cannot have backup".to_string(),
+                status: StatusCode::FORBIDDEN,
+            });
+        }
 
-            if backup_file.exists() {
-                std::fs::remove_file(backup_file)?;
-            }
+        let backup_path = db_backup_file(owner, db, config);
+
+        if backup_path.exists() {
+            std::fs::remove_file(&backup_path)?;
+        } else {
+            std::fs::create_dir_all(db_backup_dir(owner, config))?;
+        }
+
+        self.get_pool()?
+            .get(&db_name)
+            .ok_or(db_not_found(&db_name))?
+            .get_mut()?
+            .backup(backup_path.to_string_lossy().as_ref())?;
+
+        database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        self.save_db(database)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn delete_db(&self, owner: &str, db: &str, config: &Config) -> ServerResult {
+        self.remove_db(owner, db)?;
+
+        let main_file = db_file(owner, db, config);
+        if main_file.exists() {
+            std::fs::remove_file(&main_file)?;
+        }
+
+        let wal_file = db_file(owner, &format!(".{db}"), config);
+        if wal_file.exists() {
+            std::fs::remove_file(wal_file)?;
+        }
+
+        let backup_file = db_backup_file(owner, db, config);
+        if backup_file.exists() {
+            std::fs::remove_file(backup_file)?;
         }
 
         Ok(())
     }
 
-    pub(crate) fn find_dbs(&self) -> ServerResult<Vec<Database>> {
-        Ok(self
+    pub(crate) fn find_dbs(&self) -> ServerResult<Vec<ServerDatabase>> {
+        let dbs: Vec<Database> = self
             .db()?
             .exec(
                 &QueryBuilder::select()
@@ -270,7 +299,24 @@ impl DbPool {
                     )
                     .query(),
             )?
-            .try_into()?)
+            .try_into()?;
+
+        dbs.into_iter()
+            .map(|db| {
+                Ok(ServerDatabase {
+                    db_type: db.db_type,
+                    role: DbUserRole::Admin,
+                    size: self
+                        .get_pool()?
+                        .get(&db.name)
+                        .ok_or(db_not_found(&db.name))?
+                        .get()?
+                        .size(),
+                    backup: db.backup,
+                    name: db.name,
+                })
+            })
+            .collect::<ServerResult<Vec<ServerDatabase>>>()
     }
 
     pub(crate) fn find_db(&self, db: &str) -> ServerResult<Database> {
@@ -342,7 +388,7 @@ impl DbPool {
             .collect())
     }
 
-    pub(crate) fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<(Database, DbUserRole)>> {
+    pub(crate) fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<ServerDatabase>> {
         let mut dbs = vec![];
 
         self.db()?
@@ -362,15 +408,40 @@ impl DbPool {
             )?
             .elements
             .into_iter()
-            .for_each(|e| {
+            .try_for_each(|e| -> ServerResult {
                 if e.id.0 < 0 {
-                    dbs.push((Database::default(), (&e.values[0].value).into()));
+                    dbs.push(ServerDatabase {
+                        role: (&e.values[0].value).into(),
+                        ..Default::default()
+                    });
                 } else {
-                    dbs.last_mut().unwrap().0 = Database::from_db_element(&e).unwrap_or_default();
+                    let db = Database::from_db_element(&e).unwrap_or_default();
+                    let server_db = dbs.last_mut().unwrap();
+                    server_db.db_type = db.db_type;
+                    server_db.backup = db.backup;
+                    server_db.size = self
+                        .get_pool()?
+                        .get(&db.name)
+                        .ok_or(db_not_found(&db.name))?
+                        .get()?
+                        .size();
+                    server_db.name = db.name;
                 }
-            });
+                Ok(())
+            })?;
 
         Ok(dbs)
+    }
+
+    pub(crate) fn find_user_db_id(&self, user: DbId, db: &str) -> ServerResult<DbId> {
+        let db_id_query = self.find_user_db_id_query(user, db);
+        Ok(self
+            .db()?
+            .exec(&db_id_query)?
+            .elements
+            .get(0)
+            .ok_or(db_not_found(db))?
+            .id)
     }
 
     pub(crate) fn find_user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
@@ -564,11 +635,15 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn remove_db(&self, db: Database) -> ServerResult<ServerDb> {
-        self.db_mut()?
-            .exec_mut(&QueryBuilder::remove().ids(db.db_id.unwrap()).query())?;
+    pub(crate) fn remove_db(&self, owner: &str, db: &str) -> ServerResult<ServerDb> {
+        let owner_id = self.find_user_id(owner)?;
+        let db_name = db_name(owner, db);
+        let db_id = self.find_user_db_id(owner_id, &db_name)?;
 
-        Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
+        self.db_mut()?
+            .exec_mut(&QueryBuilder::remove().ids(db_id).query())?;
+
+        Ok(self.get_pool_mut()?.remove(&db_name).unwrap())
     }
 
     pub(crate) fn rename_db(&self, db_name: &str, new_name: &str, config: &Config) -> ServerResult {
@@ -597,10 +672,10 @@ impl DbPool {
         pool.insert(new_name.to_string(), server_db);
         db.name = new_name.to_string();
 
-        let backup_path = db_backup_file(config, db_name);
+        let backup_path = db_backup_file2(config, db_name);
 
         if backup_path.exists() {
-            let new_backup_path = db_backup_file(config, new_name);
+            let new_backup_path = db_backup_file2(config, new_name);
             let backups_dir = new_backup_path.parent().unwrap();
             std::fs::create_dir_all(backups_dir)?;
             std::fs::rename(backup_path, new_backup_path)?;
@@ -687,10 +762,26 @@ pub(crate) fn db_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
 }
 
-pub(crate) fn db_backup_file(config: &Config, db: &str) -> PathBuf {
+pub(crate) fn db_backup_file2(config: &Config, db: &str) -> PathBuf {
     let (owner, db_name) = db.split_once('/').unwrap();
     Path::new(&config.data_dir)
         .join(owner)
         .join("backups")
         .join(format!("{db_name}.bak"))
+}
+
+fn db_backup_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+    db_backup_dir(owner, config).join(format!("{db}.bak"))
+}
+
+fn db_backup_dir(owner: &str, config: &Config) -> PathBuf {
+    Path::new(&config.data_dir).join(owner).join("backups")
+}
+
+fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+    Path::new(&config.data_dir).join(owner).join(db)
+}
+
+pub(crate) fn db_name(owner: &str, db: &str) -> String {
+    format!("{owner}/{db}")
 }

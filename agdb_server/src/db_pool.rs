@@ -2,10 +2,12 @@ pub(crate) mod server_db;
 pub(crate) mod server_db_storage;
 
 use crate::config::Config;
+use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::error_code::ErrorCode;
 use crate::password::Password;
 use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbType;
+use crate::routes::db::Queries;
 use crate::routes::db::ServerDatabase;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
@@ -15,9 +17,13 @@ use agdb::DbId;
 use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
+use agdb::QueryError;
 use agdb::QueryId;
 use agdb::QueryResult;
+use agdb::QueryType;
 use agdb::SearchQuery;
+use agdb::Transaction;
+use agdb::TransactionMut;
 use agdb::UserValue;
 use axum::http::StatusCode;
 use server_db::ServerDb;
@@ -150,7 +156,7 @@ impl DbPool {
             e
         })?;
 
-        let backup = if db_backup_file2(config, &db_name).exists() {
+        let backup = if db_backup_file(owner, db, config).exists() {
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
         } else {
             0
@@ -241,9 +247,8 @@ impl DbPool {
     ) -> ServerResult {
         let db_name = db_name(owner, db);
         let mut database = self.find_user_db(user, &db_name)?;
-        let role = self.find_user_db_role(user, &db_name)?;
 
-        if role != DbUserRole::Admin {
+        if !self.is_db_admin(user, database.db_id.unwrap())? {
             return Err(ServerError {
                 description: "permission denied: admin permissions required".to_string(),
                 status: StatusCode::FORBIDDEN,
@@ -302,6 +307,56 @@ impl DbPool {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn exec(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+        queries: &Queries,
+    ) -> ServerResult<Vec<QueryResult>> {
+        let db_name = db_name(owner, db);
+        let role = self.find_user_db_role(user, &db_name)?;
+        let required_role = required_role(queries);
+
+        if required_role == DbUserRole::Write && role == DbUserRole::Read {
+            return Err(ServerError {
+                description: "permission denied: write permissions required".to_string(),
+                status: StatusCode::FORBIDDEN,
+            });
+        }
+
+        let pool = self.get_pool()?;
+        let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
+
+        let results = if required_role == DbUserRole::Read {
+            db.get()?.transaction(|t| {
+                let mut results = vec![];
+
+                for q in &queries.0 {
+                    results.push(t_exec(t, q)?);
+                }
+
+                Ok(results)
+            })
+        } else {
+            db.get_mut()?.transaction_mut(|t| {
+                let mut results = vec![];
+
+                for q in &queries.0 {
+                    results.push(t_exec_mut(t, q)?);
+                }
+
+                Ok(results)
+            })
+        }
+        .map_err(|e: QueryError| ServerError {
+            description: e.to_string(),
+            status: StatusCode::from_u16(470).unwrap(),
+        })?;
+
+        Ok(results)
     }
 
     pub(crate) fn find_dbs(&self) -> ServerResult<Vec<ServerDatabase>> {
@@ -731,8 +786,7 @@ impl DbPool {
             self.add_db_user(database.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
         }
 
-        let mut pool = self.get_pool_mut()?;
-        let server_db = pool.remove(&db_name).unwrap();
+        let server_db = self.get_pool_mut()?.remove(&db_name).unwrap();
         server_db
             .get_mut()?
             .rename(
@@ -742,7 +796,7 @@ impl DbPool {
                     .as_ref(),
             )
             .map_err(|_| ErrorCode::DbInvalid)?;
-        pool.insert(new_name.to_string(), server_db);
+        self.get_pool_mut()?.insert(new_name.to_string(), server_db);
         database.name = new_name.to_string();
 
         let backup_path = db_backup_file(owner, db, config);
@@ -756,6 +810,51 @@ impl DbPool {
 
         self.db_mut()?
             .exec_mut(&QueryBuilder::insert().element(&database).query())?;
+
+        Ok(())
+    }
+
+    pub(crate) fn restore_db(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+        config: &Config,
+    ) -> ServerResult {
+        let db_name = db_name(owner, db);
+        let mut database = self.find_user_db(user, &db_name)?;
+
+        if !self.is_db_admin(user, database.db_id.unwrap())? {
+            return Err(ServerError {
+                description: "permission denied: must be a db admin".to_string(),
+                status: StatusCode::FORBIDDEN,
+            });
+        }
+
+        let backup_path = db_backup_file(owner, db, config);
+
+        if !backup_path.exists() {
+            return Err(ServerError {
+                description: "backup not found".to_string(),
+                status: StatusCode::NOT_FOUND,
+            });
+        }
+
+        let current_path = db_file(owner, db, config);
+        let backup_temp = db_backup_dir(owner, config).join(db);
+
+        self.get_pool_mut()?.remove(&db_name);
+        std::fs::rename(&current_path, &backup_temp)?;
+        std::fs::rename(&backup_path, &current_path)?;
+        std::fs::rename(backup_temp, backup_path)?;
+        let server_db = ServerDb::new(&format!(
+            "{}:{}",
+            database.db_type,
+            current_path.to_string_lossy()
+        ))?;
+        self.get_pool_mut()?.insert(db_name, server_db);
+        database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        self.save_db(database)?;
 
         Ok(())
     }
@@ -831,16 +930,8 @@ fn user_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
 }
 
-pub(crate) fn db_not_found(name: &str) -> ServerError {
+fn db_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
-}
-
-pub(crate) fn db_backup_file2(config: &Config, db: &str) -> PathBuf {
-    let (owner, db_name) = db.split_once('/').unwrap();
-    Path::new(&config.data_dir)
-        .join(owner)
-        .join("backups")
-        .join(format!("{db_name}.bak"))
 }
 
 fn db_backup_file(owner: &str, db: &str, config: &Config) -> PathBuf {
@@ -857,4 +948,75 @@ fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
 
 fn db_name(owner: &str, db: &str) -> String {
     format!("{owner}/{db}")
+}
+
+fn required_role(queries: &Queries) -> DbUserRole {
+    for q in &queries.0 {
+        match q {
+            QueryType::InsertAlias(_)
+            | QueryType::InsertEdges(_)
+            | QueryType::InsertNodes(_)
+            | QueryType::InsertValues(_)
+            | QueryType::Remove(_)
+            | QueryType::RemoveAliases(_)
+            | QueryType::RemoveValues(_) => {
+                return DbUserRole::Write;
+            }
+            _ => {}
+        }
+    }
+
+    DbUserRole::Read
+}
+
+fn t_exec(t: &Transaction<ServerDbStorage>, q: &QueryType) -> Result<QueryResult, QueryError> {
+    match q {
+        QueryType::Search(q) => t.exec(q),
+        QueryType::Select(q) => t.exec(q),
+        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectKeys(q) => t.exec(q),
+        QueryType::SelectKeyCount(q) => t.exec(q),
+        QueryType::SelectValues(q) => t.exec(q),
+        _ => unreachable!(),
+    }
+}
+
+fn t_exec_mut(
+    t: &mut TransactionMut<ServerDbStorage>,
+    q: &QueryType,
+) -> Result<QueryResult, QueryError> {
+    match q {
+        QueryType::Search(q) => t.exec(q),
+        QueryType::Select(q) => t.exec(q),
+        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectKeys(q) => t.exec(q),
+        QueryType::SelectKeyCount(q) => t.exec(q),
+        QueryType::SelectValues(q) => t.exec(q),
+        QueryType::InsertAlias(q) => t.exec_mut(q),
+        QueryType::InsertEdges(q) => t.exec_mut(q),
+        QueryType::InsertNodes(q) => t.exec_mut(q),
+        QueryType::InsertValues(q) => t.exec_mut(q),
+        QueryType::Remove(q) => t.exec_mut(q),
+        QueryType::RemoveAliases(q) => t.exec_mut(q),
+        QueryType::RemoveValues(q) => t.exec_mut(q),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db_pool::server_db::ServerDb;
+    use agdb::QueryBuilder;
+
+    #[test]
+    #[should_panic]
+    fn unreachable() {
+        let db = ServerDb::new("memory:test").unwrap();
+        db.get()
+            .unwrap()
+            .transaction(|t| t_exec(t, &QueryType::Remove(QueryBuilder::remove().ids(1).query())))
+            .unwrap();
+    }
 }

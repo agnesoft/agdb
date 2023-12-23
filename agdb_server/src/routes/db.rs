@@ -1,21 +1,14 @@
 pub(crate) mod user;
 
 use crate::config::Config;
-use crate::db_pool::db_backup_file2;
-use crate::db_pool::db_not_found;
-use crate::db_pool::server_db::ServerDb;
-use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::db_pool::DbPool;
 use crate::routes::db::user::DbUserRole;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use agdb::DbError;
-use agdb::QueryError;
 use agdb::QueryResult;
 use agdb::QueryType;
-use agdb::Transaction;
-use agdb::TransactionMut;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
@@ -24,9 +17,6 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
-use std::path::Path as FilePath;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
@@ -206,45 +196,7 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let db_name = format!("{}/{}", owner, db);
-    let role = db_pool.find_user_db_role(user.0, &db_name)?;
-    let required_role = required_role(&queries);
-
-    if required_role == DbUserRole::Write && role == DbUserRole::Read {
-        return Err(ServerError {
-            description: "Permission denied: mutable queries require at least 'write' role (current role: 'read')".to_string(),
-            status: StatusCode::FORBIDDEN,
-        });
-    }
-
-    let pool = db_pool.get_pool()?;
-    let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
-
-    let results = if required_role == DbUserRole::Read {
-        db.get()?.transaction(|t| {
-            let mut results = vec![];
-
-            for q in &queries.0 {
-                results.push(t_exec(t, q)?);
-            }
-
-            Ok(results)
-        })
-    } else {
-        db.get_mut()?.transaction_mut(|t| {
-            let mut results = vec![];
-
-            for q in &queries.0 {
-                results.push(t_exec_mut(t, q)?);
-            }
-
-            Ok(results)
-        })
-    }
-    .map_err(|e: QueryError| ServerError {
-        description: e.to_string(),
-        status: StatusCode::from_u16(470).unwrap(),
-    })?;
+    let results = db_pool.exec(&owner, &db, user.0, &queries)?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
@@ -361,114 +313,7 @@ pub(crate) async fn restore(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db_name = format!("{}/{}", owner, db);
-    let mut database = db_pool.find_user_db(user.0, &db_name)?;
-
-    if !db_pool.is_db_admin(user.0, database.db_id.unwrap())? {
-        return Err(ServerError {
-            description: "must be a db admin".to_string(),
-            status: StatusCode::FORBIDDEN,
-        });
-    }
-
-    let backup_path = db_backup_file2(&config, &db_name);
-
-    if !backup_path.exists() {
-        return Err(ServerError {
-            description: "backup not found".to_string(),
-            status: StatusCode::NOT_FOUND,
-        });
-    }
-
-    let current_path = FilePath::new(&config.data_dir).join(&db_name);
-    let backup_temp = backup_path.parent().unwrap().join(db);
-
-    db_pool.get_pool_mut()?.remove(&db_name);
-    std::fs::rename(&current_path, &backup_temp)?;
-    std::fs::rename(&backup_path, &current_path)?;
-    std::fs::rename(backup_temp, backup_path)?;
-    let server_db = ServerDb::new(&format!(
-        "{}:{}",
-        database.db_type,
-        current_path.to_string_lossy()
-    ))?;
-    db_pool.get_pool_mut()?.insert(db_name, server_db);
-    database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-    db_pool.save_db(database)?;
+    db_pool.restore_db(&owner, &db, user.0, &config)?;
 
     Ok(StatusCode::CREATED)
-}
-
-pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
-    for q in &queries.0 {
-        match q {
-            QueryType::InsertAlias(_)
-            | QueryType::InsertEdges(_)
-            | QueryType::InsertNodes(_)
-            | QueryType::InsertValues(_)
-            | QueryType::Remove(_)
-            | QueryType::RemoveAliases(_)
-            | QueryType::RemoveValues(_) => {
-                return DbUserRole::Write;
-            }
-            _ => {}
-        }
-    }
-
-    DbUserRole::Read
-}
-
-pub(crate) fn t_exec(
-    t: &Transaction<ServerDbStorage>,
-    q: &QueryType,
-) -> Result<QueryResult, QueryError> {
-    match q {
-        QueryType::Search(q) => t.exec(q),
-        QueryType::Select(q) => t.exec(q),
-        QueryType::SelectAliases(q) => t.exec(q),
-        QueryType::SelectAllAliases(q) => t.exec(q),
-        QueryType::SelectKeys(q) => t.exec(q),
-        QueryType::SelectKeyCount(q) => t.exec(q),
-        QueryType::SelectValues(q) => t.exec(q),
-        _ => unreachable!(),
-    }
-}
-
-pub(crate) fn t_exec_mut(
-    t: &mut TransactionMut<ServerDbStorage>,
-    q: &QueryType,
-) -> Result<QueryResult, QueryError> {
-    match q {
-        QueryType::Search(q) => t.exec(q),
-        QueryType::Select(q) => t.exec(q),
-        QueryType::SelectAliases(q) => t.exec(q),
-        QueryType::SelectAllAliases(q) => t.exec(q),
-        QueryType::SelectKeys(q) => t.exec(q),
-        QueryType::SelectKeyCount(q) => t.exec(q),
-        QueryType::SelectValues(q) => t.exec(q),
-        QueryType::InsertAlias(q) => t.exec_mut(q),
-        QueryType::InsertEdges(q) => t.exec_mut(q),
-        QueryType::InsertNodes(q) => t.exec_mut(q),
-        QueryType::InsertValues(q) => t.exec_mut(q),
-        QueryType::Remove(q) => t.exec_mut(q),
-        QueryType::RemoveAliases(q) => t.exec_mut(q),
-        QueryType::RemoveValues(q) => t.exec_mut(q),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db_pool::server_db::ServerDb;
-    use agdb::QueryBuilder;
-
-    #[test]
-    #[should_panic]
-    fn unreachable() {
-        let db = ServerDb::new("memory:test").unwrap();
-        db.get()
-            .unwrap()
-            .transaction(|t| t_exec(t, &QueryType::Remove(QueryBuilder::remove().ids(1).query())))
-            .unwrap();
-    }
 }

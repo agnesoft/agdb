@@ -1,21 +1,14 @@
 pub(crate) mod user;
 
 use crate::config::Config;
-use crate::db_pool::db_not_found;
 use crate::db_pool::DbPool;
-use crate::routes::db::required_role;
-use crate::routes::db::t_exec;
-use crate::routes::db::t_exec_mut;
-use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::Queries;
 use crate::routes::db::QueriesResults;
 use crate::routes::db::ServerDatabase;
 use crate::routes::db::ServerDatabaseRename;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
-use agdb::QueryError;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
@@ -95,36 +88,8 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let pool = db_pool.get_pool()?;
-    let db_name = format!("{}/{}", owner, db);
-    let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
-    let required_role = required_role(&queries);
-
-    let results = if required_role == DbUserRole::Read {
-        db.get()?.transaction(|t| {
-            let mut results = vec![];
-
-            for q in &queries.0 {
-                results.push(t_exec(t, q)?);
-            }
-
-            Ok(results)
-        })
-    } else {
-        db.get_mut()?.transaction_mut(|t| {
-            let mut results = vec![];
-
-            for q in &queries.0 {
-                results.push(t_exec_mut(t, q)?);
-            }
-
-            Ok(results)
-        })
-    }
-    .map_err(|e: QueryError| ServerError {
-        description: e.to_string(),
-        status: StatusCode::from_u16(470).unwrap(),
-    })?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    let results = db_pool.exec(&owner, &db, owner_id, &queries)?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }

@@ -42,6 +42,32 @@ pub(crate) async fn add(
     Ok(StatusCode::CREATED)
 }
 
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/backup",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    responses(
+         (status = 201, description = "backup created"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "memory db cannot have backup"),
+         (status = 404, description = "db / user not found"),
+    )
+)]
+pub(crate) async fn backup(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse {
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.backup_db(&owner, &db, owner_id, &config)?;
+
+    Ok(StatusCode::CREATED)
+}
+
 #[utoipa::path(delete,
     path = "/api/v1/admin/db/{owner}/{db}/delete",
     security(("Token" = [])),
@@ -182,6 +208,31 @@ pub(crate) async fn rename(
 ) -> ServerResponse {
     let owner_id = db_pool.find_user_id(&owner)?;
     db_pool.rename_db(&owner, &db, &request.new_name, owner_id, &config)?;
+
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/db/admin/{owner}/{db}/restore",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    responses(
+         (status = 201, description = "db restored"),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "backup not found"),
+    )
+)]
+pub(crate) async fn restore(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse {
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.restore_db(&owner, &db, owner_id, &config)?;
 
     Ok(StatusCode::CREATED)
 }

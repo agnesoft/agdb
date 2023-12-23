@@ -28,6 +28,8 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 
@@ -123,21 +125,49 @@ impl DbPool {
         Ok(db_pool)
     }
 
-    pub(crate) fn add_db(&self, user: DbId, database: Database, config: &Config) -> ServerResult {
-        let db_path = Path::new(&config.data_dir).join(&database.name);
-        let user_dir = db_path.parent().ok_or(ErrorCode::DbInvalid)?;
-        std::fs::create_dir_all(user_dir)?;
+    pub(crate) fn add_db(
+        &self,
+        owner: &str,
+        db: &str,
+        db_type: DbType,
+        config: &Config,
+    ) -> ServerResult {
+        let user = self.find_user_id(owner)?;
+        let db_name = format!("{owner}/{db}");
+
+        if self.find_user_db(user, &db_name).is_ok() {
+            return Err(ErrorCode::DbExists.into());
+        }
+
+        let db_path = Path::new(&config.data_dir).join(&db_name);
+        std::fs::create_dir_all(Path::new(&config.data_dir).join(owner))?;
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
-        let db = ServerDb::new(&format!("{}:{}", database.db_type, path)).map_err(|mut e| {
+        let server_db = ServerDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
         })?;
-        self.get_pool_mut()?.insert(database.name.clone(), db);
 
+        let backup = if db_backup_file(config, &db_name).exists() {
+            SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
+        } else {
+            0
+        };
+
+        self.get_pool_mut()?.insert(db_name.clone(), server_db);
         self.db_mut()?.transaction_mut(|t| {
-            let db = t.exec_mut(&QueryBuilder::insert().nodes().values(&database).query())?;
+            let db = t.exec_mut(
+                &QueryBuilder::insert()
+                    .nodes()
+                    .values(&Database {
+                        db_id: None,
+                        name: db_name.clone(),
+                        db_type,
+                        backup,
+                    })
+                    .query(),
+            )?;
 
             t.exec_mut(
                 &QueryBuilder::insert()
@@ -148,6 +178,7 @@ impl DbPool {
                     .query(),
             )
         })?;
+
         Ok(())
     }
 
@@ -185,7 +216,7 @@ impl DbPool {
         })
     }
 
-    pub(crate) fn create_user(&self, user: ServerUser) -> ServerResult {
+    pub(crate) fn add_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut()?.transaction_mut(|t| {
             let user = t.exec_mut(&QueryBuilder::insert().nodes().values(&user).query())?;
 
@@ -244,9 +275,7 @@ impl DbPool {
 
     pub(crate) fn find_db(&self, db: &str) -> ServerResult<Database> {
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .exec(
                 &QueryBuilder::select()
                     .ids(
@@ -347,9 +376,7 @@ impl DbPool {
     pub(crate) fn find_user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
         let db_id_query = self.find_user_db_id_query(user, db);
         Ok(self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
                     .exec(&db_id_query)?
@@ -365,9 +392,7 @@ impl DbPool {
     pub(crate) fn find_user_db_role(&self, user: DbId, db: &str) -> ServerResult<DbUserRole> {
         let db_id_query = self.find_user_db_id_query(user, db);
         Ok((&self
-            .0
-            .server_db
-            .get()?
+            .db()?
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
                     .exec(&db_id_query)?
@@ -546,13 +571,19 @@ impl DbPool {
         Ok(self.get_pool_mut()?.remove(&db.name).unwrap())
     }
 
-    pub(crate) fn rename_db(
-        &self,
-        mut db: Database,
-        new_name: &str,
-        config: &Config,
-    ) -> ServerResult {
+    pub(crate) fn rename_db(&self, db_name: &str, new_name: &str, config: &Config) -> ServerResult {
         let mut pool = self.get_pool_mut()?;
+
+        let owner = db_name.split_once('/').ok_or(ErrorCode::DbInvalid)?.0;
+        let new_owner = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?.0;
+        let mut db = self.find_db(db_name)?;
+
+        if new_owner != owner {
+            let new_owner_id = self.find_user_id(new_owner)?;
+            std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
+            self.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
+        }
+
         let server_db = pool.remove(&db.name).unwrap();
         server_db
             .get_mut()?
@@ -565,6 +596,16 @@ impl DbPool {
             .map_err(|_| ErrorCode::DbInvalid)?;
         pool.insert(new_name.to_string(), server_db);
         db.name = new_name.to_string();
+
+        let backup_path = db_backup_file(config, db_name);
+
+        if backup_path.exists() {
+            let new_backup_path = db_backup_file(config, new_name);
+            let backups_dir = new_backup_path.parent().unwrap();
+            std::fs::create_dir_all(backups_dir)?;
+            std::fs::rename(backup_path, new_backup_path)?;
+        }
+
         self.db_mut()?
             .exec_mut(&QueryBuilder::insert().element(&db).query())?;
 

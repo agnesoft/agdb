@@ -5,9 +5,7 @@ use crate::db_pool::db_backup_file;
 use crate::db_pool::db_not_found;
 use crate::db_pool::server_db::ServerDb;
 use crate::db_pool::server_db_storage::ServerDbStorage;
-use crate::db_pool::Database;
 use crate::db_pool::DbPool;
-use crate::error_code::ErrorCode;
 use crate::routes::db::user::DbUserRole;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
@@ -140,26 +138,7 @@ pub(crate) async fn add(
         ));
     }
 
-    let name = format!("{owner}/{db}");
-
-    if db_pool.find_user_db(user.0, &name).is_ok() {
-        return Err(ErrorCode::DbExists.into());
-    }
-
-    let backup = if db_backup_file(&config, &name).exists() {
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
-    } else {
-        0
-    };
-
-    let db = Database {
-        db_id: None,
-        name,
-        db_type: request.db_type,
-        backup,
-    };
-
-    db_pool.add_db(user.0, db, &config)?;
+    db_pool.add_db(&owner, &db, request.db_type, &config)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -467,29 +446,8 @@ pub(crate) async fn rename(
         ));
     }
 
-    let new_owner = request
-        .new_name
-        .split_once('/')
-        .ok_or(ErrorCode::DbInvalid)?
-        .0;
     let db_name = format!("{}/{}", owner, db);
-    let db = db_pool.find_user_db(user.0, &db_name)?;
-
-    if new_owner != owner {
-        let new_owner_id = db_pool.find_user_id(new_owner)?;
-        std::fs::create_dir_all(FilePath::new(&config.data_dir).join(new_owner))?;
-        db_pool.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
-    }
-
-    let backup_path = db_backup_file(&config, &db_name);
-    if backup_path.exists() {
-        let new_backup_path = db_backup_file(&config, &request.new_name);
-        let backups_dir = new_backup_path.parent().unwrap();
-        std::fs::create_dir_all(backups_dir)?;
-        std::fs::rename(backup_path, new_backup_path)?;
-    }
-
-    db_pool.rename_db(db, &request.new_name, &config)?;
+    db_pool.rename_db(&db_name, &request.new_name, &config)?;
 
     Ok(StatusCode::CREATED)
 }

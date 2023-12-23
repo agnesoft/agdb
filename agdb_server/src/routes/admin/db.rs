@@ -1,11 +1,8 @@
 pub(crate) mod user;
 
 use crate::config::Config;
-use crate::db_pool::db_backup_file;
 use crate::db_pool::db_not_found;
-use crate::db_pool::Database;
 use crate::db_pool::DbPool;
-use crate::error_code::ErrorCode;
 use crate::routes::db::required_role;
 use crate::routes::db::t_exec;
 use crate::routes::db::t_exec_mut;
@@ -24,9 +21,6 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use std::path::Path as FilePath;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/add",
@@ -50,27 +44,7 @@ pub(crate) async fn add(
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let user = db_pool.find_user_id(&owner)?;
-    let name = format!("{owner}/{db}");
-
-    if db_pool.find_user_db(user, &name).is_ok() {
-        return Err(ErrorCode::DbExists.into());
-    }
-
-    let backup = if db_backup_file(&config, &name).exists() {
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
-    } else {
-        0
-    };
-
-    let db = Database {
-        db_id: None,
-        name,
-        db_type: request.db_type,
-        backup,
-    };
-
-    db_pool.add_db(user, db, &config)?;
+    db_pool.add_db(&owner, &db, request.db_type, &config)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -242,8 +216,8 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let name = format!("{owner}/{db}");
-    let db = db_pool.find_db(&name)?;
+    let db_name = format!("{owner}/{db}");
+    let db = db_pool.find_db(&db_name)?;
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -271,29 +245,8 @@ pub(crate) async fn rename(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let new_owner = request
-        .new_name
-        .split_once('/')
-        .ok_or(ErrorCode::DbInvalid)?
-        .0;
     let db_name = format!("{}/{}", owner, db);
-    let db = db_pool.find_db(&db_name)?;
-
-    if new_owner != owner {
-        let new_owner_id = db_pool.find_user_id(new_owner)?;
-        std::fs::create_dir_all(FilePath::new(&config.data_dir).join(new_owner))?;
-        db_pool.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
-    }
-
-    let backup_path = db_backup_file(&config, &db_name);
-    if backup_path.exists() {
-        let new_backup_path = db_backup_file(&config, &request.new_name);
-        let backups_dir = new_backup_path.parent().unwrap();
-        std::fs::create_dir_all(backups_dir)?;
-        std::fs::rename(backup_path, new_backup_path)?;
-    }
-
-    db_pool.rename_db(db, &request.new_name, &config)?;
+    db_pool.rename_db(&db_name, &request.new_name, &config)?;
 
     Ok(StatusCode::CREATED)
 }

@@ -80,7 +80,7 @@ pub(crate) async fn add(
 
     let pswd = Password::create(&username, &request.password);
 
-    db_pool.create_user(ServerUser {
+    db_pool.add_user(ServerUser {
         db_id: None,
         name: username.clone(),
         password: pswd.password.to_vec(),

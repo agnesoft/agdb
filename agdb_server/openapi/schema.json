@@ -295,6 +295,61 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/rename": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "rename",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db renamed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
@@ -990,7 +1045,7 @@
           }
         ],
         "responses": {
-          "204": {
+          "201": {
             "description": "db renamed"
           },
           "401": {

@@ -1,26 +1,14 @@
 pub(crate) mod user;
 
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
-
 use crate::config::Config;
-use crate::db_pool::db_backup_file;
-use crate::db_pool::db_not_found;
-use crate::db_pool::Database;
 use crate::db_pool::DbPool;
-use crate::error_code::ErrorCode;
-use crate::routes::db::required_role;
-use crate::routes::db::t_exec;
-use crate::routes::db::t_exec_mut;
-use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::Queries;
 use crate::routes::db::QueriesResults;
-use crate::routes::db::ServerDatabaseSize;
-use crate::server_error::ServerError;
+use crate::routes::db::ServerDatabase;
+use crate::routes::db::ServerDatabaseRename;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
-use agdb::QueryError;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
@@ -49,27 +37,7 @@ pub(crate) async fn add(
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let user = db_pool.find_user_id(&owner)?;
-    let name = format!("{owner}/{db}");
-
-    if db_pool.find_user_db(user, &name).is_ok() {
-        return Err(ErrorCode::DbExists.into());
-    }
-
-    let backup = if db_backup_file(&config, &name).exists() {
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
-    } else {
-        0
-    };
-
-    let db = Database {
-        db_id: None,
-        name,
-        db_type: request.db_type,
-        backup,
-    };
-
-    db_pool.add_db(user, db, &config)?;
+    db_pool.add_db(&owner, &db, request.db_type, &config)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -93,9 +61,8 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db_name = format!("{owner}/{db}");
-    let db = db_pool.find_db(&db_name)?;
-    db_pool.delete_db(db, &config)?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.delete_db(&owner, &db, owner_id, &config)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -121,36 +88,8 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let pool = db_pool.get_pool()?;
-    let db_name = format!("{}/{}", owner, db);
-    let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
-    let required_role = required_role(&queries);
-
-    let results = if required_role == DbUserRole::Read {
-        db.get()?.transaction(|t| {
-            let mut results = vec![];
-
-            for q in &queries.0 {
-                results.push(t_exec(t, q)?);
-            }
-
-            Ok(results)
-        })
-    } else {
-        db.get_mut()?.transaction_mut(|t| {
-            let mut results = vec![];
-
-            for q in &queries.0 {
-                results.push(t_exec_mut(t, q)?);
-            }
-
-            Ok(results)
-        })
-    }
-    .map_err(|e: QueryError| ServerError {
-        description: e.to_string(),
-        status: StatusCode::from_u16(470).unwrap(),
-    })?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    let results = db_pool.exec(&owner, &db, owner_id, &queries)?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
@@ -159,31 +98,16 @@ pub(crate) async fn exec(
     path = "/api/v1/admin/db/list",
     security(("Token" = [])),
     responses(
-         (status = 200, description = "ok", body = Vec<ServerDatabaseSize>),
+         (status = 200, description = "ok", body = Vec<ServerDatabase>),
          (status = 401, description = "unauthorized"),
     )
 )]
 pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
-) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabaseSize>>)> {
-    let pool = db_pool.get_pool()?;
-    let dbs = db_pool
-        .find_dbs()?
-        .into_iter()
-        .map(|db| {
-            Ok(ServerDatabaseSize {
-                name: db.name.clone(),
-                db_type: db.db_type,
-                size: pool
-                    .get(&db.name)
-                    .ok_or(db_not_found(&db.name))?
-                    .get()?
-                    .size(),
-                backup: db.backup,
-            })
-        })
-        .collect::<Result<Vec<ServerDatabaseSize>, ServerError>>()?;
+) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
+    let dbs = db_pool.find_dbs()?;
+
     Ok((StatusCode::OK, Json(dbs)))
 }
 
@@ -203,24 +127,11 @@ pub(crate) async fn optimize(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<(StatusCode, Json<ServerDatabaseSize>)> {
-    let db_name = format!("{owner}/{db}");
-    let db = db_pool.find_db(&db_name)?;
-    let pool = db_pool.get_pool()?;
-    let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
-    server_db.get_mut()?.optimize_storage()?;
-    let size = server_db.get()?.size();
-    let backup = db.backup;
+) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
+    let owner_id = db_pool.find_user_id(&owner)?;
+    let db = db_pool.optimize_db(&owner, &db, owner_id)?;
 
-    Ok((
-        StatusCode::OK,
-        Json(ServerDatabaseSize {
-            name: db.name,
-            db_type: db.db_type,
-            size,
-            backup,
-        }),
-    ))
+    Ok((StatusCode::OK, Json(db)))
 }
 
 #[utoipa::path(delete,
@@ -241,9 +152,36 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let name = format!("{owner}/{db}");
-    let db = db_pool.find_db(&name)?;
-    db_pool.remove_db(db)?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.remove_db(&owner, &db, owner_id)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/rename",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+        ServerDatabaseRename
+    ),
+    responses(
+         (status = 201, description = "db renamed"),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "user / db not found"),
+         (status = 467, description = "invalid db"),
+    )
+)]
+pub(crate) async fn rename(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<ServerDatabaseRename>,
+) -> ServerResponse {
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.rename_db(&owner, &db, &request.new_name, owner_id, &config)?;
+
+    Ok(StatusCode::CREATED)
 }

@@ -1,4 +1,4 @@
-use crate::DbWithRole;
+use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -46,9 +46,7 @@ async fn add_with_backup() -> anyhow::Result<()> {
             .0,
         201
     );
-    let (status, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
-        .await?;
+    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(status, 200);
     assert_ne!(list?[0].backup, 0);
     Ok(())

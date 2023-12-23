@@ -4,6 +4,7 @@ mod admin_db_exec_test;
 mod admin_db_list_test;
 mod admin_db_optimize_test;
 mod admin_db_remove_test;
+mod admin_db_rename_test;
 mod admin_db_user_add_test;
 mod admin_db_user_list_test;
 mod admin_db_user_remove_test;

@@ -23,7 +23,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ServerDatabaseSize"
+                    "$ref": "#/components/schemas/ServerDatabase"
                   }
                 }
               }
@@ -286,6 +286,61 @@
           },
           "404": {
             "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/rename": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "rename",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db renamed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "467": {
+            "description": "invalid db"
           }
         },
         "security": [
@@ -624,7 +679,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ServerDatabaseWithRole"
+                    "$ref": "#/components/schemas/ServerDatabase"
                   }
                 }
               }
@@ -889,7 +944,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServerDatabaseSize"
+                  "$ref": "#/components/schemas/ServerDatabase"
                 }
               }
             }
@@ -990,7 +1045,7 @@
           }
         ],
         "responses": {
-          "204": {
+          "201": {
             "description": "db renamed"
           },
           "401": {
@@ -1415,45 +1470,7 @@
           "$ref": "#/components/schemas/QueryResult"
         }
       },
-      "ServerDatabaseRename": {
-        "type": "object",
-        "required": [
-          "new_name"
-        ],
-        "properties": {
-          "new_name": {
-            "type": "string"
-          }
-        }
-      },
-      "ServerDatabaseSize": {
-        "type": "object",
-        "required": [
-          "name",
-          "db_type",
-          "size",
-          "backup"
-        ],
-        "properties": {
-          "backup": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          },
-          "db_type": {
-            "$ref": "#/components/schemas/DbType"
-          },
-          "name": {
-            "type": "string"
-          },
-          "size": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
-          }
-        }
-      },
-      "ServerDatabaseWithRole": {
+      "ServerDatabase": {
         "type": "object",
         "required": [
           "name",
@@ -1481,6 +1498,17 @@
             "type": "integer",
             "format": "int64",
             "minimum": 0
+          }
+        }
+      },
+      "ServerDatabaseRename": {
+        "type": "object",
+        "required": [
+          "new_name"
+        ],
+        "properties": {
+          "new_name": {
+            "type": "string"
           }
         }
       },

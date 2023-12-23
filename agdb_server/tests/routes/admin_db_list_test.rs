@@ -1,4 +1,4 @@
-use crate::DbWithSize;
+use crate::Db;
 use crate::TestServer;
 use crate::ADMIN_DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -11,19 +11,21 @@ async fn db_list() -> anyhow::Result<()> {
     let db1 = server.init_db("memory", &user1).await?;
     let db2 = server.init_db("memory", &user2).await?;
     let (status, list) = server
-        .get::<Vec<DbWithSize>>(ADMIN_DB_LIST_URI, &server.admin_token)
+        .get::<Vec<Db>>(ADMIN_DB_LIST_URI, &server.admin_token)
         .await?;
     assert_eq!(status, 200);
     let list = list?;
-    assert!(list.contains(&DbWithSize {
+    assert!(list.contains(&Db {
         name: db1,
         db_type: "memory".to_string(),
+        role: "admin".to_string(),
         size: 2600,
         backup: 0,
     }));
-    assert!(list.contains(&DbWithSize {
+    assert!(list.contains(&Db {
         name: db2,
         db_type: "memory".to_string(),
+        role: "admin".to_string(),
         size: 2600,
         backup: 0,
     }));
@@ -40,7 +42,7 @@ async fn with_backup() -> anyhow::Result<()> {
         .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
         .await?;
     let (status, list) = server
-        .get::<Vec<DbWithSize>>(ADMIN_DB_LIST_URI, &server.admin_token)
+        .get::<Vec<Db>>(ADMIN_DB_LIST_URI, &server.admin_token)
         .await?;
     assert_eq!(status, 200);
     let list = list?;
@@ -53,9 +55,7 @@ async fn with_backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_admin_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (status, list) = server
-        .get::<Vec<DbWithSize>>(ADMIN_DB_LIST_URI, NO_TOKEN)
-        .await?;
+    let (status, list) = server.get::<Vec<Db>>(ADMIN_DB_LIST_URI, NO_TOKEN).await?;
     assert_eq!(status, 401);
     assert!(list.is_err());
     Ok(())

@@ -1,4 +1,4 @@
-use crate::DbWithRole;
+use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -15,9 +15,7 @@ async fn remove() -> anyhow::Result<()> {
             .await?,
         204
     );
-    let (status, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
-        .await?;
+    let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(status, 200);
     assert!(list?.is_empty());
     assert!(Path::new(&server.data_dir).join(db).exists());

@@ -1,5 +1,4 @@
-use crate::DbWithRole;
-use crate::DbWithSize;
+use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -15,11 +14,7 @@ async fn optimize() -> anyhow::Result<()> {
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
-    let original_size = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
-        .await?
-        .1?[0]
-        .size;
+    let original_size = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?.1?[0].size;
     let (status, response) = server
         .post(
             &format!("/admin/db/{db}/optimize"),
@@ -28,7 +23,7 @@ async fn optimize() -> anyhow::Result<()> {
         )
         .await?;
     assert_eq!(status, 200);
-    let optimized_size = serde_json::from_str::<DbWithSize>(&response)?.size;
+    let optimized_size = serde_json::from_str::<Db>(&response)?.size;
     assert!(optimized_size < original_size);
 
     Ok(())

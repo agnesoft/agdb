@@ -43,15 +43,7 @@ struct DbUser {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DbWithSize {
-    pub name: String,
-    pub db_type: String,
-    pub size: u64,
-    pub backup: u64,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DbWithRole {
+pub struct Db {
     pub name: String,
     pub db_type: String,
     pub role: String,

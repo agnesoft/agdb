@@ -1,4 +1,4 @@
-use crate::DbWithRole;
+use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
@@ -38,9 +38,7 @@ async fn in_memory_db() -> anyhow::Result<()> {
             .await?,
         204
     );
-    let (_, list) = server
-        .get::<Vec<DbWithRole>>(DB_LIST_URI, &user.token)
-        .await?;
+    let (_, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(list?, vec![]);
     Ok(())
 }

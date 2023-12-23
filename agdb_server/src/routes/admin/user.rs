@@ -18,38 +18,6 @@ pub(crate) struct UserStatus {
     pub(crate) name: String,
 }
 
-#[utoipa::path(put,
-    path = "/api/v1/admin/user/{username}/change_password",
-    security(("Token" = [])),
-    params(
-        ("username" = String, Path, description = "user name"),
-    ),
-    request_body = UserCredentials,
-    responses(
-         (status = 201, description = "password changed"),
-         (status = 401, description = "unauthorized"),
-         (status = 461, description = "password too short (<8)"),
-         (status = 464, description = "user not found"),
-    )
-)]
-pub(crate) async fn change_password(
-    _admin_id: AdminId,
-    State(db_pool): State<DbPool>,
-    Path(username): Path<String>,
-    Json(request): Json<UserCredentials>,
-) -> ServerResponse {
-    password::validate_password(&request.password)?;
-
-    let mut user = db_pool.find_user(&username)?;
-    let pswd = Password::create(&username, &request.password);
-    user.password = pswd.password.to_vec();
-    user.salt = pswd.user_salt.to_vec();
-
-    db_pool.save_user(user)?;
-
-    Ok(StatusCode::CREATED)
-}
-
 #[utoipa::path(post,
     path = "/api/v1/admin/user/{username}/add",
     security(("Token" = [])),
@@ -80,13 +48,39 @@ pub(crate) async fn add(
 
     let pswd = Password::create(&username, &request.password);
 
-    db_pool.create_user(ServerUser {
+    db_pool.add_user(ServerUser {
         db_id: None,
         name: username.clone(),
         password: pswd.password.to_vec(),
         salt: pswd.user_salt.to_vec(),
         token: String::new(),
     })?;
+
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(put,
+    path = "/api/v1/admin/user/{username}/change_password",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+    ),
+    request_body = UserCredentials,
+    responses(
+         (status = 201, description = "password changed"),
+         (status = 401, description = "unauthorized"),
+         (status = 461, description = "password too short (<8)"),
+         (status = 464, description = "user not found"),
+    )
+)]
+pub(crate) async fn change_password(
+    _admin_id: AdminId,
+    State(db_pool): State<DbPool>,
+    Path(username): Path<String>,
+    Json(request): Json<UserCredentials>,
+) -> ServerResponse {
+    let user = db_pool.find_user(&username)?;
+    db_pool.change_password(user, &request.password)?;
 
     Ok(StatusCode::CREATED)
 }

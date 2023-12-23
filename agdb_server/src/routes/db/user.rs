@@ -1,5 +1,4 @@
 use crate::db_pool::DbPool;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use axum::extract::Path;
@@ -12,9 +11,10 @@ use serde::Serialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
 
-#[derive(Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DbUserRole {
+    #[default]
     Admin,
     Write,
     Read,
@@ -53,25 +53,7 @@ pub(crate) async fn add(
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
 ) -> ServerResponse {
-    if owner == username {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "cannot change role of db owner",
-        ));
-    }
-
-    let db_name = format!("{}/{}", owner, db);
-    let db_id = db_pool.find_db_id(&db_name)?;
-
-    if !db_pool.is_db_admin(user.0, db_id)? {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "must be a db admin",
-        ));
-    }
-
-    let db_user = db_pool.find_user_id(&username)?;
-    db_pool.add_db_user(db_id, db_user, request.0.db_role)?;
+    db_pool.add_db_user(&owner, &db, &username, request.0.db_role, user.0)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -94,13 +76,7 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let name = format!("{}/{}", owner, db);
-    let database = db_pool.find_user_db(user.0, &name)?;
-    let users = db_pool
-        .db_users(database.db_id.unwrap())?
-        .into_iter()
-        .map(|(user, role)| DbUser { user, role })
-        .collect();
+    let users = db_pool.db_users(&owner, &db, user.0)?;
 
     Ok((StatusCode::OK, Json(users)))
 }
@@ -125,25 +101,7 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db, username)): Path<(String, String, String)>,
 ) -> ServerResponse {
-    if owner == username {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "cannot remove db owner",
-        ));
-    }
-
-    let db_name = format!("{}/{}", owner, db);
-    let db_id = db_pool.find_db_id(&db_name)?;
-    let db_user = db_pool.db_user_id(db_id, &username)?;
-
-    if user.0 != db_user && !db_pool.is_db_admin(user.0, db_id)? {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "must be a db admin",
-        ));
-    }
-
-    db_pool.remove_db_user(db_id, db_user)?;
+    db_pool.remove_db_user(&owner, &db, &username, user.0)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

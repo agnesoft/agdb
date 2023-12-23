@@ -1,10 +1,11 @@
-pub(crate) mod server_db;
-pub(crate) mod server_db_storage;
+mod server_db;
+mod server_db_storage;
 
 use crate::config::Config;
 use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::error_code::ErrorCode;
 use crate::password::Password;
+use crate::routes::db::user::DbUser;
 use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbType;
 use crate::routes::db::Queries;
@@ -50,7 +51,7 @@ pub(crate) struct ServerUser {
 }
 
 #[derive(Default, UserValue)]
-pub(crate) struct Database {
+struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
     pub(crate) db_type: DbType,
@@ -404,52 +405,6 @@ impl DbPool {
             .collect::<ServerResult<Vec<ServerDatabase>>>()
     }
 
-    pub(crate) fn find_db(&self, db: &str) -> ServerResult<Database> {
-        Ok(self
-            .db()?
-            .exec(
-                &QueryBuilder::select()
-                    .ids(
-                        QueryBuilder::search()
-                            .depth_first()
-                            .from("dbs")
-                            .limit(1)
-                            .where_()
-                            .distance(CountComparison::Equal(2))
-                            .and()
-                            .key("name")
-                            .value(Comparison::Equal(db.into()))
-                            .query(),
-                    )
-                    .query(),
-            )?
-            .elements
-            .get(0)
-            .ok_or(db_not_found(db))?
-            .try_into()?)
-    }
-
-    pub(crate) fn find_db_id(&self, name: &str) -> ServerResult<DbId> {
-        Ok(self
-            .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .depth_first()
-                    .from("dbs")
-                    .limit(1)
-                    .where_()
-                    .distance(CountComparison::Equal(2))
-                    .and()
-                    .key("name")
-                    .value(Comparison::Equal(name.into()))
-                    .query(),
-            )?
-            .elements
-            .get(0)
-            .ok_or(db_not_found(name))?
-            .id)
-    }
-
     pub(crate) fn find_users(&self) -> ServerResult<Vec<String>> {
         Ok(self
             .db()?
@@ -518,68 +473,6 @@ impl DbPool {
         Ok(dbs)
     }
 
-    pub(crate) fn find_user_db_id(&self, user: DbId, db: &str) -> ServerResult<DbId> {
-        let db_id_query = self.find_user_db_id_query(user, db);
-        Ok(self
-            .db()?
-            .exec(&db_id_query)?
-            .elements
-            .get(0)
-            .ok_or(db_not_found(db))?
-            .id)
-    }
-
-    pub(crate) fn find_user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
-        let db_id_query = self.find_user_db_id_query(user, db);
-        Ok(self
-            .db()?
-            .transaction(|t| -> Result<QueryResult, ServerError> {
-                let db_id = t
-                    .exec(&db_id_query)?
-                    .elements
-                    .get(0)
-                    .ok_or(db_not_found(db))?
-                    .id;
-                Ok(t.exec(&QueryBuilder::select().ids(db_id).query())?)
-            })?
-            .try_into()?)
-    }
-
-    pub(crate) fn find_user_db_role(&self, user: DbId, db: &str) -> ServerResult<DbUserRole> {
-        let db_id_query = self.find_user_db_id_query(user, db);
-        Ok((&self
-            .db()?
-            .transaction(|t| -> Result<QueryResult, ServerError> {
-                let db_id = t
-                    .exec(&db_id_query)?
-                    .elements
-                    .get(0)
-                    .ok_or(db_not_found(db))?
-                    .id;
-
-                Ok(t.exec(
-                    &QueryBuilder::select()
-                        .ids(
-                            QueryBuilder::search()
-                                .depth_first()
-                                .from(user)
-                                .to(db_id)
-                                .limit(1)
-                                .where_()
-                                .distance(CountComparison::LessThanOrEqual(2))
-                                .and()
-                                .keys(vec!["role".into()])
-                                .query(),
-                        )
-                        .query(),
-                )?)
-            })?
-            .elements[0]
-            .values[0]
-            .value)
-            .into())
-    }
-
     pub(crate) fn find_user(&self, name: &str) -> ServerResult<ServerUser> {
         let user_id = self.find_user_id(name)?;
         Ok(self
@@ -630,27 +523,8 @@ impl DbPool {
             .id)
     }
 
-    pub(crate) fn db_user_id(&self, db: DbId, name: &str) -> ServerResult<DbId> {
-        Ok(self
-            .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .depth_first()
-                    .to(db)
-                    .where_()
-                    .distance(CountComparison::Equal(2))
-                    .and()
-                    .key("name")
-                    .value(Comparison::Equal(name.into()))
-                    .query(),
-            )?
-            .elements
-            .get(0)
-            .ok_or(user_not_found(name))?
-            .id)
-    }
-
-    pub(crate) fn db_users(&self, db: DbId) -> ServerResult<Vec<(String, DbUserRole)>> {
+    pub(crate) fn db_users(&self, owner: &str, db: &str, user: DbId) -> ServerResult<Vec<DbUser>> {
+        let db_id = self.find_user_db_id(user, &db_name(owner, db))?;
         let mut users = vec![];
 
         self.db()?
@@ -659,7 +533,7 @@ impl DbPool {
                     .ids(
                         QueryBuilder::search()
                             .depth_first()
-                            .to(db)
+                            .to(db_id)
                             .where_()
                             .distance(CountComparison::LessThanOrEqual(2))
                             .and()
@@ -675,32 +549,16 @@ impl DbPool {
             .into_iter()
             .for_each(|e| {
                 if e.id.0 < 0 {
-                    users.push((String::new(), (&e.values[0].value).into()));
+                    users.push(DbUser {
+                        user: String::new(),
+                        role: (&e.values[0].value).into(),
+                    });
                 } else {
-                    users.last_mut().unwrap().0 = e.values[0].value.to_string();
+                    users.last_mut().unwrap().user = e.values[0].value.to_string();
                 }
             });
 
         Ok(users)
-    }
-
-    pub(crate) fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
-        Ok(self
-            .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .from(user)
-                    .to(db)
-                    .limit(1)
-                    .where_()
-                    .distance(CountComparison::LessThanOrEqual(2))
-                    .and()
-                    .key("role")
-                    .value(Comparison::Equal(DbUserRole::Admin.into()))
-                    .query(),
-            )?
-            .result
-            == 1)
     }
 
     pub(crate) fn optimize_db(
@@ -731,16 +589,33 @@ impl DbPool {
         })
     }
 
-    pub(crate) fn remove_db_user(&self, db: DbId, user: DbId) -> ServerResult {
+    pub(crate) fn remove_db_user(
+        &self,
+        owner: &str,
+        db: &str,
+        username: &str,
+        user: DbId,
+    ) -> ServerResult {
+        if owner == username {
+            return Err(permission_denied("cannot remove owner"));
+        }
+
+        let db_id = self.find_user_db_id(user, &db_name(owner, db))?;
+        let user_id = self.find_db_user_id(db_id, username)?;
+
+        if user != user_id && !self.is_db_admin(user, db_id)? {
+            return Err(permission_denied("admin only"));
+        }
+
         self.db_mut()?.exec_mut(
             &QueryBuilder::remove()
                 .ids(
                     QueryBuilder::search()
-                        .from(user)
-                        .to(db)
+                        .from(user_id)
+                        .to(db_id)
                         .limit(1)
                         .where_()
-                        .edge()
+                        .keys(vec!["role".into()])
                         .query(),
                 )
                 .query(),
@@ -780,7 +655,7 @@ impl DbPool {
         }
 
         let db_name = db_name(owner, db);
-        let mut database = self.find_db(&db_name)?;
+        let mut database = self.find_user_db(user, &db_name)?;
 
         if new_owner != owner {
             std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
@@ -867,12 +742,6 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn save_db(&self, db: Database) -> ServerResult {
-        self.db_mut()?
-            .exec_mut(&QueryBuilder::insert().element(&db).query())?;
-        Ok(())
-    }
-
     pub(crate) fn save_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut()?
             .exec_mut(&QueryBuilder::insert().element(&user).query())?;
@@ -894,12 +763,32 @@ impl DbPool {
             .to_string())
     }
 
-    pub(crate) fn get_pool(&self) -> ServerResult<RwLockReadGuard<HashMap<String, ServerDb>>> {
-        Ok(self.0.pool.read()?)
+    fn db(&self) -> ServerResult<RwLockReadGuard<ServerDbImpl>> {
+        self.0.server_db.get()
     }
 
-    pub(crate) fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {
-        Ok(self.0.pool.write()?)
+    fn db_mut(&self) -> ServerResult<RwLockWriteGuard<ServerDbImpl>> {
+        self.0.server_db.get_mut()
+    }
+
+    fn find_db_user_id(&self, db: DbId, name: &str) -> ServerResult<DbId> {
+        Ok(self
+            .db()?
+            .exec(
+                &QueryBuilder::search()
+                    .depth_first()
+                    .to(db)
+                    .where_()
+                    .distance(CountComparison::Equal(2))
+                    .and()
+                    .key("name")
+                    .value(Comparison::Equal(name.into()))
+                    .query(),
+            )?
+            .elements
+            .get(0)
+            .ok_or(user_not_found(name))?
+            .id)
     }
 
     fn find_user_db_id_query(&self, user: DbId, db: &str) -> SearchQuery {
@@ -915,12 +804,99 @@ impl DbPool {
             .query()
     }
 
-    fn db(&self) -> ServerResult<RwLockReadGuard<ServerDbImpl>> {
-        self.0.server_db.get()
+    fn find_user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
+        let db_id_query = self.find_user_db_id_query(user, db);
+        Ok(self
+            .db()?
+            .transaction(|t| -> Result<QueryResult, ServerError> {
+                let db_id = t
+                    .exec(&db_id_query)?
+                    .elements
+                    .get(0)
+                    .ok_or(db_not_found(db))?
+                    .id;
+                Ok(t.exec(&QueryBuilder::select().ids(db_id).query())?)
+            })?
+            .try_into()?)
     }
 
-    fn db_mut(&self) -> ServerResult<RwLockWriteGuard<ServerDbImpl>> {
-        self.0.server_db.get_mut()
+    fn find_user_db_id(&self, user: DbId, db: &str) -> ServerResult<DbId> {
+        let db_id_query = self.find_user_db_id_query(user, db);
+        Ok(self
+            .db()?
+            .exec(&db_id_query)?
+            .elements
+            .get(0)
+            .ok_or(db_not_found(db))?
+            .id)
+    }
+
+    fn find_user_db_role(&self, user: DbId, db: &str) -> ServerResult<DbUserRole> {
+        let db_id_query = self.find_user_db_id_query(user, db);
+        Ok((&self
+            .db()?
+            .transaction(|t| -> Result<QueryResult, ServerError> {
+                let db_id = t
+                    .exec(&db_id_query)?
+                    .elements
+                    .get(0)
+                    .ok_or(db_not_found(db))?
+                    .id;
+
+                Ok(t.exec(
+                    &QueryBuilder::select()
+                        .ids(
+                            QueryBuilder::search()
+                                .depth_first()
+                                .from(user)
+                                .to(db_id)
+                                .limit(1)
+                                .where_()
+                                .distance(CountComparison::LessThanOrEqual(2))
+                                .and()
+                                .keys(vec!["role".into()])
+                                .query(),
+                        )
+                        .query(),
+                )?)
+            })?
+            .elements[0]
+            .values[0]
+            .value)
+            .into())
+    }
+
+    fn get_pool(&self) -> ServerResult<RwLockReadGuard<HashMap<String, ServerDb>>> {
+        Ok(self.0.pool.read()?)
+    }
+
+    fn get_pool_mut(&self) -> ServerResult<RwLockWriteGuard<HashMap<String, ServerDb>>> {
+        Ok(self.0.pool.write()?)
+    }
+
+    fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {
+        Ok(self
+            .db()?
+            .exec(
+                &QueryBuilder::search()
+                    .from(user)
+                    .to(db)
+                    .limit(1)
+                    .where_()
+                    .distance(CountComparison::LessThanOrEqual(2))
+                    .and()
+                    .key("role")
+                    .value(Comparison::Equal(DbUserRole::Admin.into()))
+                    .query(),
+            )?
+            .result
+            == 1)
+    }
+
+    fn save_db(&self, db: Database) -> ServerResult {
+        self.db_mut()?
+            .exec_mut(&QueryBuilder::insert().element(&db).query())?;
+        Ok(())
     }
 }
 

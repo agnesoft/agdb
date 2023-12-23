@@ -1,7 +1,6 @@
 use crate::db_pool::DbPool;
 use crate::routes::db::user::DbUser;
 use crate::routes::db::user::DbUserRoleParam;
-use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use axum::extract::Path;
@@ -56,13 +55,8 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let db_name = format!("{}/{}", owner, db);
-    let db_id = db_pool.find_db_id(&db_name)?;
-    let users = db_pool
-        .db_users(db_id)?
-        .into_iter()
-        .map(|(user, role)| DbUser { user, role })
-        .collect();
+    let owner_id = db_pool.find_user_id(&owner)?;
+    let users = db_pool.db_users(&owner, &db, owner_id)?;
 
     Ok((StatusCode::OK, Json(users)))
 }
@@ -87,17 +81,8 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db, username)): Path<(String, String, String)>,
 ) -> ServerResponse {
-    if owner == username {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "cannot remove db owner",
-        ));
-    }
-
-    let db_name = format!("{}/{}", owner, db);
-    let db_id = db_pool.find_db_id(&db_name)?;
-    let db_user = db_pool.db_user_id(db_id, &username)?;
-    db_pool.remove_db_user(db_id, db_user)?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.remove_db_user(&owner, &db, &username, owner_id)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

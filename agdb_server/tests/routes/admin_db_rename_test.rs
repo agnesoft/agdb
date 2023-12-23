@@ -11,9 +11,9 @@ async fn rename() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let status = server
         .post(
-            &format!("/db/{db}/rename?new_name={}/renamed_db", user.name),
+            &format!("/admin/db/{db}/rename?new_name={}/renamed_db", user.name),
             &String::new(),
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -36,9 +36,9 @@ async fn rename_with_backup() -> anyhow::Result<()> {
         .await?;
     let status = server
         .post(
-            &format!("/db/{db}/rename?new_name={}/renamed_db", user.name),
+            &format!("/admin/db/{db}/rename?new_name={}/renamed_db", user.name),
             &String::new(),
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -69,9 +69,9 @@ async fn transfer() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let status = server
         .post(
-            &format!("/db/{db}/rename?new_name={}/renamed_db", other.name),
+            &format!("/admin/db/{db}/rename?new_name={}/renamed_db", other.name),
             &String::new(),
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -99,43 +99,15 @@ async fn transfer() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn non_owner() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    assert_eq!(
-        server
-            .put(
-                &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &String::new(),
-                &user.token
-            )
-            .await?,
-        201
-    );
-    let status = server
-        .post(
-            &format!("/db/{db}/rename?new_name={}/renamed_db", user.name),
-            &String::new(),
-            &other.token,
-        )
-        .await?
-        .0;
-    assert_eq!(status, 403);
-    Ok(())
-}
-
-#[tokio::test]
 async fn invalid() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
         .post(
-            &format!("/db/{db}/rename?new_name={}/a\0a", user.name),
+            &format!("/admin/db/{db}/rename?new_name={}/a\0a", user.name),
             &String::new(),
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -147,12 +119,11 @@ async fn invalid() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let user = server.init_user().await?;
     let status = server
         .post(
-            &format!("/db/{}/db/rename?new_name=user/renamed_db", user.name),
+            "/admin/db/user/db/rename?new_name=user/renamed_db",
             &String::new(),
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -161,11 +132,27 @@ async fn db_not_found() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let status = server
+        .post(
+            "/admin/db/user/db/rename?new_name=user/renamed_db",
+            &String::new(),
+            &user.token,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 401);
+    Ok(())
+}
+
+#[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .post(
-            "/db/user/db/rename?new_name=user/renamed_db",
+            "/admin/db/user/db/rename?new_name=user/renamed_db",
             &String::new(),
             NO_TOKEN,
         )

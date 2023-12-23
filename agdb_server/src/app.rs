@@ -53,6 +53,10 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
             routing::delete(routes::admin::db::remove),
         )
         .route(
+            "/admin/db/:user/:db/rename",
+            routing::post(routes::admin::db::rename),
+        )
+        .route(
             "/admin/db/:user/:db/user/list",
             routing::get(routes::admin::db::user::list),
         )

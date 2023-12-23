@@ -24,3 +24,4 @@ mod db_user_remove_test;
 mod server_test;
 mod user_change_password_test;
 mod user_login_test;
+mod admin_db_rename_test;

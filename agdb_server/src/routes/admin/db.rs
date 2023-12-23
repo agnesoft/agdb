@@ -1,8 +1,5 @@
 pub(crate) mod user;
 
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
-
 use crate::config::Config;
 use crate::db_pool::db_backup_file;
 use crate::db_pool::db_not_found;
@@ -16,6 +13,7 @@ use crate::routes::db::user::DbUserRole;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::Queries;
 use crate::routes::db::QueriesResults;
+use crate::routes::db::ServerDatabaseRename;
 use crate::routes::db::ServerDatabaseSize;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
@@ -26,6 +24,9 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+use std::path::Path as FilePath;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/add",
@@ -246,4 +247,53 @@ pub(crate) async fn remove(
     db_pool.remove_db(db)?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/rename",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+        ServerDatabaseRename
+    ),
+    responses(
+         (status = 201, description = "db renamed"),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "user / db not found"),
+         (status = 467, description = "invalid db"),
+    )
+)]
+pub(crate) async fn rename(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<ServerDatabaseRename>,
+) -> ServerResponse {
+    let new_owner = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?
+        .0;
+    let db_name = format!("{}/{}", owner, db);
+    let db = db_pool.find_db(&db_name)?;
+
+    if new_owner != owner {
+        let new_owner_id = db_pool.find_user_id(new_owner)?;
+        std::fs::create_dir_all(FilePath::new(&config.data_dir).join(new_owner))?;
+        db_pool.add_db_user(db.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
+    }
+
+    let backup_path = db_backup_file(&config, &db_name);
+    if backup_path.exists() {
+        let new_backup_path = db_backup_file(&config, &request.new_name);
+        let backups_dir = new_backup_path.parent().unwrap();
+        std::fs::create_dir_all(backups_dir)?;
+        std::fs::rename(backup_path, new_backup_path)?;
+    }
+
+    db_pool.rename_db(db, &request.new_name, &config)?;
+
+    Ok(StatusCode::CREATED)
 }

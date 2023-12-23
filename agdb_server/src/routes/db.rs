@@ -444,7 +444,7 @@ pub(crate) async fn remove(
         ServerDatabaseRename
     ),
     responses(
-         (status = 204, description = "db renamed"),
+         (status = 201, description = "db renamed"),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "user must be a db owner"),
          (status = 404, description = "user / db not found"),
@@ -491,7 +491,7 @@ pub(crate) async fn rename(
 
     db_pool.rename_db(db, &request.new_name, &config)?;
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(post,

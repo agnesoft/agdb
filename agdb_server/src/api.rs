@@ -13,6 +13,7 @@ use utoipa::OpenApi;
         crate::routes::admin::db::exec,
         crate::routes::admin::db::list,
         crate::routes::admin::db::optimize,
+        crate::routes::admin::db::rename,
         crate::routes::admin::db::remove,
         crate::routes::admin::db::user::add,
         crate::routes::admin::db::user::list,

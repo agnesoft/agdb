@@ -189,12 +189,32 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn add_db_user(&self, db: DbId, user: DbId, role: DbUserRole) -> ServerResult {
+    pub(crate) fn add_db_user(
+        &self,
+        owner: &str,
+        db: &str,
+        username: &str,
+        role: DbUserRole,
+        user: DbId,
+    ) -> ServerResult {
+        if owner == username {
+            return Err(permission_denied("cannot change role of db owner"));
+        }
+
+        let db_name = db_name(owner, db);
+        let db_id = self.find_user_db_id(user, &db_name)?;
+
+        if !self.is_db_admin(user, db_id)? {
+            return Err(permission_denied("admin only"));
+        }
+
+        let user_id = self.find_user_id(username)?;
+
         self.db_mut()?.transaction_mut(|t| {
             let existing_role = t.exec(
                 &QueryBuilder::search()
-                    .from(user)
-                    .to(db)
+                    .from(user_id)
+                    .to(db_id)
                     .limit(1)
                     .where_()
                     .keys(vec!["role".into()])
@@ -212,8 +232,8 @@ impl DbPool {
                 t.exec_mut(
                     &QueryBuilder::insert()
                         .edges()
-                        .from(user)
-                        .to(db)
+                        .from(user_id)
+                        .to(db_id)
                         .values_uniform(vec![("role", role).into()])
                         .query(),
                 )?;
@@ -249,17 +269,11 @@ impl DbPool {
         let mut database = self.find_user_db(user, &db_name)?;
 
         if !self.is_db_admin(user, database.db_id.unwrap())? {
-            return Err(ServerError {
-                description: "permission denied: admin permissions required".to_string(),
-                status: StatusCode::FORBIDDEN,
-            });
+            return Err(permission_denied("admin only"));
         }
 
         if database.db_type == DbType::Memory {
-            return Err(ServerError {
-                description: "memory db cannot have backup".to_string(),
-                status: StatusCode::FORBIDDEN,
-            });
+            return Err(permission_denied("memory db cannot have backup"));
         }
 
         let backup_path = db_backup_file(owner, db, config);
@@ -321,10 +335,7 @@ impl DbPool {
         let required_role = required_role(queries);
 
         if required_role == DbUserRole::Write && role == DbUserRole::Read {
-            return Err(ServerError {
-                description: "permission denied: write permissions required".to_string(),
-                status: StatusCode::FORBIDDEN,
-            });
+            return Err(permission_denied("write rights required"));
         }
 
         let pool = self.get_pool()?;
@@ -703,10 +714,7 @@ impl DbPool {
         let role = self.find_user_db_role(user, &db_name)?;
 
         if role == DbUserRole::Read {
-            return Err(ServerError {
-                description: "permission denied: write permissions required".to_string(),
-                status: StatusCode::FORBIDDEN,
-            });
+            return Err(permission_denied("write rights required"));
         }
 
         let pool = self.get_pool()?;
@@ -744,10 +752,7 @@ impl DbPool {
         let user_name = self.user_name(user)?;
 
         if owner != user_name {
-            return Err(ServerError::new(
-                StatusCode::FORBIDDEN,
-                "permission denied: user must be a db owner",
-            ));
+            return Err(permission_denied("owner only"));
         }
 
         let db_name = db_name(owner, db);
@@ -771,19 +776,15 @@ impl DbPool {
         let username = self.user_name(user)?;
 
         if owner != username {
-            return Err(ServerError::new(
-                StatusCode::FORBIDDEN,
-                "user must be a db owner",
-            ));
+            return Err(permission_denied("owner only"));
         }
 
         let db_name = db_name(owner, db);
         let mut database = self.find_db(&db_name)?;
 
         if new_owner != owner {
-            let new_owner_id = self.find_user_id(new_owner)?;
             std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
-            self.add_db_user(database.db_id.unwrap(), new_owner_id, DbUserRole::Admin)?;
+            self.add_db_user(owner, db, new_owner, DbUserRole::Admin, user)?;
         }
 
         let server_db = self.get_pool_mut()?.remove(&db_name).unwrap();
@@ -825,10 +826,7 @@ impl DbPool {
         let mut database = self.find_user_db(user, &db_name)?;
 
         if !self.is_db_admin(user, database.db_id.unwrap())? {
-            return Err(ServerError {
-                description: "permission denied: must be a db admin".to_string(),
-                status: StatusCode::FORBIDDEN,
-            });
+            return Err(permission_denied("admin only"));
         }
 
         let backup_path = db_backup_file(owner, db, config);
@@ -948,6 +946,13 @@ fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
 
 fn db_name(owner: &str, db: &str) -> String {
     format!("{owner}/{db}")
+}
+
+fn permission_denied(message: &str) -> ServerError {
+    ServerError::new(
+        StatusCode::FORBIDDEN,
+        &format!("permission denied: {}", message),
+    )
 }
 
 fn required_role(queries: &Queries) -> DbUserRole {

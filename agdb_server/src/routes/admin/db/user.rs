@@ -32,17 +32,8 @@ pub(crate) async fn add(
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
 ) -> ServerResponse {
-    if owner == username {
-        return Err(ServerError::new(
-            StatusCode::FORBIDDEN,
-            "cannot change role of db owner",
-        ));
-    }
-
-    let db_name = format!("{}/{}", owner, db);
-    let db_id = db_pool.find_db_id(&db_name)?;
-    let db_user = db_pool.find_user_id(&username)?;
-    db_pool.add_db_user(db_id, db_user, request.0.db_role)?;
+    let owner_id = db_pool.find_user_id(&owner)?;
+    db_pool.add_db_user(&owner, &db, &username, request.0.db_role, owner_id)?;
 
     Ok(StatusCode::CREATED)
 }

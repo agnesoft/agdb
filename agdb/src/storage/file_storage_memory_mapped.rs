@@ -19,8 +19,15 @@ pub struct FileStorageMemoryMapped {
 }
 
 impl StorageData for FileStorageMemoryMapped {
-    fn backup(&mut self, name: &str) -> Result<(), DbError> {
+    fn backup(&self, name: &str) -> Result<(), DbError> {
         self.file.backup(name)
+    }
+
+    fn copy(&self, name: &str) -> Result<Self, DbError> {
+        Ok(Self {
+            file: self.file.copy(name)?,
+            memory: self.memory.copy(name)?,
+        })
     }
 
     fn flush(&mut self) -> Result<(), DbError> {

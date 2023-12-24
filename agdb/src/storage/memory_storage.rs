@@ -23,6 +23,13 @@ impl MemoryStorage {
 }
 
 impl StorageData for MemoryStorage {
+    fn copy(&self, name: &str) -> Result<Self, DbError> {
+        Ok(Self {
+            buffer: self.buffer.clone(),
+            name: name.to_string(),
+        })
+    }
+
     fn len(&self) -> u64 {
         self.buffer.len() as u64
     }
@@ -78,7 +85,7 @@ mod tests {
 
     #[test]
     fn backup_does_nothing() {
-        let mut storage = Storage::<MemoryStorage>::new("storage").unwrap();
+        let storage = Storage::<MemoryStorage>::new("storage").unwrap();
         assert!(storage.backup("storage2").is_ok())
     }
 

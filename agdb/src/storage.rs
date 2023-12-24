@@ -46,9 +46,11 @@ pub trait StorageData: Sized {
     /// Copy the underlying data storage to a new `name`. The
     /// default implementation does nothing. File implementations
     /// might need to copy the underlying file(s).
-    fn backup(&mut self, _name: &str) -> Result<(), DbError> {
+    fn backup(&self, _name: &str) -> Result<(), DbError> {
         Ok(())
     }
+
+    fn copy(&self, name: &str) -> Result<Self, DbError>;
 
     /// Flushes any buffers to the underlying storage (e.g. file). The
     /// default implementation does nothing.
@@ -108,12 +110,20 @@ impl<D: StorageData> Storage<D> {
         Ok(storage)
     }
 
-    pub fn backup(&mut self, name: &str) -> Result<(), DbError> {
+    pub fn backup(&self, name: &str) -> Result<(), DbError> {
         self.data.backup(name)
     }
 
     pub fn commit(&mut self, id: u64) -> Result<(), DbError> {
         self.end_transaction(id)
+    }
+
+    pub fn copy(&self, name: &str) -> Result<Self, DbError> {
+        Ok(Self {
+            data: self.data.copy(name)?,
+            records: self.records.clone(),
+            transactions: 0,
+        })
     }
 
     pub fn insert<T: Serialize>(&mut self, value: &T) -> Result<StorageIndex, DbError> {

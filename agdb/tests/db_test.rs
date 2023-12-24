@@ -431,3 +431,55 @@ fn rename_file() {
         1
     );
 }
+
+#[test]
+fn copy_memory() {
+    let mut db = DbMemory::new("memdb").unwrap();
+    db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+    let other = db.copy("mydb").unwrap();
+    assert_eq!(other.filename(), "mydb");
+    assert_eq!(
+        other
+            .exec(&QueryBuilder::select().ids("root").query())
+            .unwrap()
+            .result,
+        1
+    );
+}
+
+#[test]
+fn copy_mapped() {
+    let test_file = TestFile::new();
+    let test_file2 = TestFile::new();
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+    let other = db.copy(test_file2.file_name()).unwrap();
+    assert_eq!(other.filename(), test_file2.file_name());
+    assert_eq!(
+        other
+            .exec(&QueryBuilder::select().ids("root").query())
+            .unwrap()
+            .result,
+        1
+    );
+}
+
+#[test]
+fn copy_file() {
+    let test_file = TestFile::new();
+    let test_file2 = TestFile::new();
+    let mut db = DbFile::new(test_file.file_name()).unwrap();
+    db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query())
+        .unwrap();
+    let other = db.copy(test_file2.file_name()).unwrap();
+    assert_eq!(other.filename(), test_file2.file_name());
+    assert_eq!(
+        other
+            .exec(&QueryBuilder::select().ids("root").query())
+            .unwrap()
+            .result,
+        1
+    );
+}

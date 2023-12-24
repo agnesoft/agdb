@@ -11,9 +11,9 @@ async fn add() -> anyhow::Result<()> {
     let name = format!("{}/admin_db_add_test", user.name);
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 &format!("/admin/db/{name}/add?db_type=file"),
-                &String::new(),
+                &None,
                 &server.admin_token
             )
             .await?
@@ -30,16 +30,16 @@ async fn add_with_backup() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     server
-        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
     server
         .delete(&format!("/db/{db}/remove"), &user.token)
         .await?;
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 &format!("/admin/db/{db}/add?db_type=mapped"),
-                &String::new(),
+                &None,
                 &server.admin_token
             )
             .await?
@@ -59,9 +59,9 @@ async fn db_already_exists() -> anyhow::Result<()> {
     let name = format!("{}/mydb", user.name);
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 &format!("/admin/db/{name}/add?db_type=memory"),
-                &String::new(),
+                &None,
                 &server.admin_token
             )
             .await?
@@ -70,9 +70,9 @@ async fn db_already_exists() -> anyhow::Result<()> {
     );
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 &format!("/admin/db/{name}/add?db_type=memory"),
-                &String::new(),
+                &None,
                 &server.admin_token
             )
             .await?
@@ -87,9 +87,9 @@ async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 "/admin/db/not_found/admin_db_add_test/add?db_type=mapped",
-                &String::new(),
+                &None,
                 &server.admin_token
             )
             .await?
@@ -106,9 +106,9 @@ async fn non_admin() -> anyhow::Result<()> {
     let name = format!("{}/admin_db_add_test", user.name);
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 &format!("/admin/db/{name}/add?db_type=file"),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?
@@ -123,9 +123,9 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 "/admin/db/not_found/admin_db_add_test/add?db_type=mapped",
-                &String::new(),
+                &None,
                 NO_TOKEN
             )
             .await?

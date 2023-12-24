@@ -11,9 +11,9 @@ async fn add_db_user() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -41,9 +41,9 @@ async fn change_user_role() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -51,9 +51,9 @@ async fn change_user_role() -> anyhow::Result<()> {
     );
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=read", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -79,9 +79,9 @@ async fn db_not_found() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 "/db/user/db/user/other/add?db_role=admin",
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -97,9 +97,9 @@ async fn user_not_found() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/other/add?db_role=admin"),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -116,9 +116,9 @@ async fn change_owner_role() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -126,9 +126,9 @@ async fn change_owner_role() -> anyhow::Result<()> {
     );
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=read", user.name),
-                &String::new(),
+                &None,
                 &other.token
             )
             .await?,
@@ -146,9 +146,9 @@ async fn non_admin() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -156,9 +156,9 @@ async fn non_admin() -> anyhow::Result<()> {
     );
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=admin", another.name),
-                &String::new(),
+                &None,
                 &other.token
             )
             .await?,
@@ -172,11 +172,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .put(
-                "/db/user/db/user/other/add?db_role=admin",
-                &String::new(),
-                NO_TOKEN
-            )
+            .put::<()>("/db/user/db/user/other/add?db_role=admin", &None, NO_TOKEN)
             .await?,
         401
     );

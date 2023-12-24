@@ -6,9 +6,9 @@ use crate::NO_TOKEN;
 async fn change_password() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password456",
-    };
+    });
 
     assert_eq!(
         server
@@ -38,7 +38,7 @@ async fn change_password() -> anyhow::Result<()> {
 async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let credentials = UserCredentials { password: "pswd" };
+    let credentials = Some(UserCredentials { password: "pswd" });
 
     assert_eq!(
         server
@@ -56,9 +56,9 @@ async fn password_too_short() -> anyhow::Result<()> {
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password456",
-    };
+    });
 
     assert_eq!(
         server
@@ -77,9 +77,9 @@ async fn user_not_found() -> anyhow::Result<()> {
 async fn non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password456",
-    };
+    });
     assert_eq!(
         server
             .put(
@@ -96,9 +96,9 @@ async fn non_admin() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password456",
-    };
+    });
     assert_eq!(
         server
             .put(

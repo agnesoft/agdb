@@ -16,9 +16,9 @@ async fn list() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=read", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,

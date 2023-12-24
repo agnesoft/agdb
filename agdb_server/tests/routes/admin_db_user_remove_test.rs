@@ -10,9 +10,9 @@ async fn remove() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
-                &String::new(),
+                &None,
                 &server.admin_token
             )
             .await?,

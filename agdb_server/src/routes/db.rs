@@ -278,6 +278,7 @@ pub(crate) async fn remove(
          (status = 401, description = "unauthorized"),
          (status = 403, description = "user must be a db owner"),
          (status = 404, description = "user / db not found"),
+         (status = 465, description = "target db exists"),
          (status = 467, description = "invalid db"),
     )
 )]

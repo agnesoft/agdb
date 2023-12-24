@@ -196,6 +196,7 @@ pub(crate) async fn remove(
          (status = 201, description = "db renamed"),
          (status = 401, description = "unauthorized"),
          (status = 404, description = "user / db not found"),
+         (status = 465, description = "target db exists"),
          (status = 467, description = "invalid db"),
     )
 )]

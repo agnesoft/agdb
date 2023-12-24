@@ -181,7 +181,7 @@ impl TestServer {
 
     pub async fn init_user(&self) -> anyhow::Result<ServerUser> {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
-        let credentials = UserCredentials { password: &name };
+        let credentials = Some(UserCredentials { password: &name });
         assert_eq!(
             self.post(
                 &format!("/admin/user/{name}/add"),
@@ -209,7 +209,7 @@ impl TestServer {
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );
         let uri = format!("/db/{name}/add?db_type={db_type}",);
-        let status = self.post(&uri, &String::new(), &server_user.token).await?.0;
+        let status = self.post::<()>(&uri, &None, &server_user.token).await?.0;
         assert_eq!(status, 201);
         Ok(name)
     }
@@ -217,10 +217,14 @@ impl TestServer {
     pub async fn post<T: Serialize>(
         &self,
         uri: &str,
-        json: &T,
+        json: &Option<T>,
         token: &Option<String>,
     ) -> anyhow::Result<(u16, String)> {
-        let mut request = self.client.post(self.url(uri)).json(&json);
+        let mut request = self.client.post(self.url(uri));
+
+        if let Some(json) = json {
+            request = request.json(json);
+        }
 
         if let Some(token) = token {
             request = request.bearer_auth(token);
@@ -234,10 +238,14 @@ impl TestServer {
     pub async fn put<T: Serialize>(
         &self,
         uri: &str,
-        json: &T,
+        json: &Option<T>,
         token: &Option<String>,
     ) -> anyhow::Result<u16> {
-        let mut request = self.client.put(self.url(uri)).json(&json);
+        let mut request = self.client.put(self.url(uri));
+
+        if let Some(json) = json {
+            request = request.json(json);
+        }
 
         if let Some(token) = token {
             request = request.bearer_auth(token);

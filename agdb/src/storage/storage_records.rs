@@ -18,6 +18,7 @@ impl StorageRecord {
     }
 }
 
+#[derive(Clone)]
 pub struct StorageRecords {
     records: Vec<StorageRecord>,
 }

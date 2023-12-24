@@ -246,8 +246,28 @@ impl<Store: StorageData> DbImpl<Store> {
     /// prior to this function to reduce the size of the storage
     /// file. If speed is of the essence you may omit that operation
     /// at expense of the file size.
-    pub fn backup(&mut self, filename: &str) -> Result<(), DbError> {
+    pub fn backup(&self, filename: &str) -> Result<(), DbError> {
         self.storage.backup(filename)
+    }
+
+    /// Copies the database to `filename` path.  Consider calling
+    /// `optimize_storage()` prior to this function to reduce the
+    /// size of the storage file to be copied.
+    pub fn copy(&self, filename: &str) -> Result<Self, DbError> {
+        let storage = self.storage.copy(filename)?;
+        let index = storage.value::<DbStorageIndex>(StorageIndex(1))?;
+
+        let graph = DbGraph::from_storage(&storage, index.graph)?;
+        let aliases = DbIndexedMap::from_storage(&storage, index.aliases)?;
+        let values = MultiMapStorage::from_storage(&storage, index.values)?;
+
+        Ok(Self {
+            storage,
+            graph,
+            aliases,
+            values,
+            undo_stack: vec![],
+        })
     }
 
     /// Executes immutable query:

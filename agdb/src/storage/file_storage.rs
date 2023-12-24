@@ -65,9 +65,14 @@ impl FileStorage {
 }
 
 impl StorageData for FileStorage {
-    fn backup(&mut self, name: &str) -> Result<(), DbError> {
+    fn backup(&self, name: &str) -> Result<(), DbError> {
         std::fs::copy(&self.filename, name)?;
         Ok(())
+    }
+
+    fn copy(&self, name: &str) -> Result<Self, DbError> {
+        self.backup(name)?;
+        Self::new(name)
     }
 
     fn flush(&mut self) -> Result<(), DbError> {

@@ -895,6 +895,67 @@
         ]
       }
     },
+    "/api/v1/db/{owner}/{db}/copy": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "copy",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db copied"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot copy db to another user"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/{owner}/{db}/delete": {
       "post": {
         "tags": [

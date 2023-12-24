@@ -174,7 +174,7 @@ pub(crate) async fn copy(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    db_pool.copy_db(&owner, &db, &request.new_name, user.0, &config)?;
+    db_pool.copy_db(&owner, &db, &request.new_name, user.0, &config, false)?;
 
     Ok(StatusCode::CREATED)
 }

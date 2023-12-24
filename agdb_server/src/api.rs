@@ -10,6 +10,7 @@ use utoipa::OpenApi;
         crate::routes::status,
         crate::routes::admin::db::add,
         crate::routes::admin::db::backup,
+        crate::routes::admin::db::copy,
         crate::routes::admin::db::delete,
         crate::routes::admin::db::exec,
         crate::routes::admin::db::list,

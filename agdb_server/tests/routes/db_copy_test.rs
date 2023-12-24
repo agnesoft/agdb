@@ -12,18 +12,18 @@ async fn copy() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()];
+        .into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/copy?new_name={}/new_name", user.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -33,7 +33,8 @@ async fn copy() -> anyhow::Result<()> {
         .join(&user.name)
         .join("new_name")
         .exists());
-    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let responses = server
         .post(
             &format!("/db/{}/new_name/exec", user.name),
@@ -64,28 +65,28 @@ async fn copy_other() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let other = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()];
+        .into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &other.token)
         .await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
         201
     );
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/copy?new_name={}/new_name", other.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -95,7 +96,8 @@ async fn copy_other() -> anyhow::Result<()> {
         .join(&other.name)
         .join("new_name")
         .exists());
-    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let responses = server
         .post(
             &format!("/db/{}/new_name/exec", other.name),
@@ -126,9 +128,9 @@ async fn copy_to_other_user() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/copy?new_name=other/new_name"),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -144,11 +146,7 @@ async fn copy_target_exists() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post(
-            &format!("/db/{db}/copy?new_name={db}"),
-            &String::new(),
-            &user.token,
-        )
+        .post::<()>(&format!("/db/{db}/copy?new_name={db}"), &None, &user.token)
         .await?
         .0;
     assert_eq!(status, 403);
@@ -162,9 +160,9 @@ async fn invalid() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/copy?new_name={}/a\0a", user.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -178,9 +176,9 @@ async fn not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{}/not_found/copy?new_name=user/not_found", user.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -194,9 +192,9 @@ async fn not_found() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post(
+        .post::<()>(
             "/db/user/not_found/copy?new_name=user/not_found",
-            &String::new(),
+            &None,
             NO_TOKEN,
         )
         .await?

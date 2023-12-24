@@ -22,9 +22,9 @@ async fn copy() -> anyhow::Result<()> {
         .await?;
     let status = server
         .post::<()>(
-            &format!("/db/{db}/copy?new_name={}/copy", user.name),
+            &format!("/admin/db/{db}/copy?new_name={}/copy", user.name),
             &None,
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -73,21 +73,11 @@ async fn copy_other() -> anyhow::Result<()> {
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=read", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
     let status = server
         .post::<()>(
-            &format!("/db/{db}/copy?new_name={}/copy_other", other.name),
+            &format!("/admin/db/{db}/copy?new_name={}/copy_other", other.name),
             &None,
-            &other.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -123,31 +113,16 @@ async fn copy_other() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn copy_to_other_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let status = server
-        .post::<()>(
-            &format!("/db/{db}/copy?new_name={}/new_name", other.name),
-            &None,
-            &user.token,
-        )
-        .await?
-        .0;
-    assert_eq!(status, 403);
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn copy_target_exists() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post::<()>(&format!("/db/{db}/copy?new_name={db}"), &None, &user.token)
+        .post::<()>(
+            &format!("/admin/db/{db}/copy?new_name={db}"),
+            &None,
+            &server.admin_token,
+        )
         .await?
         .0;
     assert_eq!(status, 465);
@@ -161,7 +136,11 @@ async fn target_self() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post::<()>(&format!("/db/{db}/copy?new_name={db}"), &None, &user.token)
+        .post::<()>(
+            &format!("/admin/db/{db}/copy?new_name={db}"),
+            &None,
+            &server.admin_token,
+        )
         .await?
         .0;
     assert_eq!(status, 465);
@@ -175,7 +154,11 @@ async fn target_exists() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let db2 = server.init_db("mapped", &user).await?;
     let status = server
-        .post::<()>(&format!("/db/{db}/copy?new_name={db2}"), &None, &user.token)
+        .post::<()>(
+            &format!("/admin/db/{db}/copy?new_name={db2}"),
+            &None,
+            &server.admin_token,
+        )
         .await?
         .0;
     assert_eq!(status, 465);
@@ -189,9 +172,9 @@ async fn invalid() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     let status = server
         .post::<()>(
-            &format!("/db/{db}/copy?new_name={}/a\0a", user.name),
+            &format!("/admin/db/{db}/copy?new_name={}/a\0a", user.name),
             &None,
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -206,11 +189,11 @@ async fn db_not_found() -> anyhow::Result<()> {
     let status = server
         .post::<()>(
             &format!(
-                "/db/{}/not_found/copy?new_name={}/not_found",
+                "/admin/db/{}/not_found/copy?new_name={}/not_found",
                 user.name, user.name
             ),
             &None,
-            &user.token,
+            &server.admin_token,
         )
         .await?
         .0;
@@ -220,11 +203,28 @@ async fn db_not_found() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let status = server
+        .post::<()>(
+            "/admin/db/user/not_found/copy?new_name=user/not_found",
+            &None,
+            &user.token,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 401);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .post::<()>(
-            "/db/user/not_found/copy?new_name=user/not_found",
+            "/admin/db/user/not_found/copy?new_name=user/not_found",
             &None,
             NO_TOKEN,
         )

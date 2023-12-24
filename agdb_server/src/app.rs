@@ -41,6 +41,10 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
             routing::post(routes::admin::db::backup),
         )
         .route(
+            "/admin/db/:user/:db/copy",
+            routing::post(routes::admin::db::copy),
+        )
+        .route(
             "/admin/db/:user/:db/delete",
             routing::delete(routes::admin::db::delete),
         )

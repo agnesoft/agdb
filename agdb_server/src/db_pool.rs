@@ -313,18 +313,24 @@ impl DbPool {
         owner: &str,
         db: &str,
         new_name: &str,
-        user: DbId,
+        mut user: DbId,
         config: &Config,
+        admin: bool,
     ) -> ServerResult {
         let (new_owner, new_db) = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-        let username = self.user_name(user)?;
-
-        if new_owner != username {
-            return Err(permission_denied("cannot copy db to another user"));
-        }
-
         let source_db = db_name(owner, db);
         let database = self.find_user_db(user, &source_db)?;
+
+        if admin {
+            user = self.find_user_id(new_owner)?;
+        } else {
+            let username = self.user_name(user)?;
+
+            if new_owner != username {
+                return Err(permission_denied("cannot copy db to another user"));
+            }
+        };
+
         let target_name = db_name(new_owner, new_db);
         let target_file = db_file(new_owner, new_db, config);
 

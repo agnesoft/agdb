@@ -11,11 +11,7 @@ async fn add() -> anyhow::Result<()> {
     let db = format!("{}/db_add_test", user.name);
     assert_eq!(
         server
-            .post(
-                &format!("/db/{db}/add?db_type=file"),
-                &String::new(),
-                &user.token
-            )
+            .post::<()>(&format!("/db/{db}/add?db_type=file"), &None, &user.token)
             .await?
             .0,
         201
@@ -30,18 +26,14 @@ async fn add_with_backup() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     server
-        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
     server
         .delete(&format!("/db/{db}/remove"), &user.token)
         .await?;
     assert_eq!(
         server
-            .post(
-                &format!("/db/{db}/add?db_type=mapped"),
-                &String::new(),
-                &user.token
-            )
+            .post::<()>(&format!("/db/{db}/add?db_type=mapped"), &None, &user.token)
             .await?
             .0,
         201
@@ -60,11 +52,7 @@ async fn add_same_name_different_user() -> anyhow::Result<()> {
     let db1 = format!("{}/add_same_name_different_user", user.name);
     assert_eq!(
         server
-            .post(
-                &format!("/db/{db1}/add?db_type=file"),
-                &String::new(),
-                &user.token
-            )
+            .post::<()>(&format!("/db/{db1}/add?db_type=file"), &None, &user.token)
             .await?
             .0,
         201
@@ -73,9 +61,9 @@ async fn add_same_name_different_user() -> anyhow::Result<()> {
     let db2 = format!("{}/add_same_name_different_user", other.name);
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 &format!("/db/{db2}/add?db_type=mapped"),
-                &String::new(),
+                &None,
                 &other.token
             )
             .await?
@@ -93,22 +81,14 @@ async fn db_already_exists() -> anyhow::Result<()> {
     let db = format!("{}/db_add_test", user.name);
     assert_eq!(
         server
-            .post(
-                &format!("/db/{db}/add?db_type=file"),
-                &String::new(),
-                &user.token
-            )
+            .post::<()>(&format!("/db/{db}/add?db_type=file"), &None, &user.token)
             .await?
             .0,
         201
     );
     assert_eq!(
         server
-            .post(
-                &format!("/db/{db}/add?db_type=file"),
-                &String::new(),
-                &user.token
-            )
+            .post::<()>(&format!("/db/{db}/add?db_type=file"), &None, &user.token)
             .await?
             .0,
         465
@@ -122,11 +102,7 @@ async fn db_user_mismatch() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     assert_eq!(
         server
-            .post(
-                "/db/some_user/db/add?db_type=file",
-                &String::new(),
-                &user.token
-            )
+            .post::<()>("/db/some_user/db/add?db_type=file", &None, &user.token)
             .await?
             .0,
         403
@@ -140,9 +116,9 @@ async fn db_type_invalid() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     assert_eq!(
         server
-            .post(
+            .post::<()>(
                 &format!("/db/{}/a\0a/add?db_type=file", user.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?
@@ -157,11 +133,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     assert_eq!(
         server
-            .post(
-                "/db/some_user/db/add?db_type=file",
-                &String::new(),
-                NO_TOKEN
-            )
+            .post::<()>("/db/some_user/db/add?db_type=file", &None, NO_TOKEN)
             .await?
             .0,
         401

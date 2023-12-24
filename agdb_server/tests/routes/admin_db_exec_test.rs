@@ -11,7 +11,7 @@ async fn read_write() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![
+    let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -19,7 +19,7 @@ async fn read_write() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
-    ];
+    ]);
     let (status, responses) = server
         .post(
             &format!("/admin/db/{db}/exec"),
@@ -64,12 +64,12 @@ async fn read_only() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases("root")
         .values(vec![vec![("key", 1.1).into()]])
         .query()
-        .into()];
+        .into()]);
     let (status, _responses) = server
         .post(
             &format!("/admin/db/{db}/exec"),
@@ -78,7 +78,8 @@ async fn read_only() -> anyhow::Result<()> {
         )
         .await?;
     assert_eq!(status, 200);
-    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let (status, responses) = server
         .post(
             &format!("/admin/db/{db}/exec"),
@@ -110,7 +111,7 @@ async fn query_error() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![
+    let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert()
             .nodes()
             .aliases("")
@@ -118,7 +119,7 @@ async fn query_error() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
-    ];
+    ]);
     let (status, response) = server
         .post(
             &format!("/admin/db/{db}/exec"),
@@ -135,7 +136,7 @@ async fn query_error() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let queries: Vec<QueryType> = vec![];
+    let queries: Option<Vec<QueryType>> = Some(vec![]);
     let status = server
         .post("/admin/db/user/db/exec", &queries, &server.admin_token)
         .await?
@@ -149,7 +150,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 async fn non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let queries: Vec<QueryType> = vec![];
+    let queries: Option<Vec<QueryType>> = Some(vec![]);
     let status = server
         .post("/admin/db/user/db/exec", &queries, &user.token)
         .await?
@@ -162,7 +163,7 @@ async fn non_admin() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let queries: Vec<QueryType> = vec![];
+    let queries: Option<Vec<QueryType>> = Some(vec![]);
     let status = server
         .post("/admin/db/user/db/exec", &queries, NO_TOKEN)
         .await?

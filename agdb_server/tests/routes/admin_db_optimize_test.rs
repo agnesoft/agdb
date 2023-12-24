@@ -10,15 +10,19 @@ async fn optimize() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert().nodes().count(100).query().into()];
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
+        .nodes()
+        .count(100)
+        .query()
+        .into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let original_size = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?.1?[0].size;
     let (status, response) = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/optimize"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?;
@@ -33,11 +37,7 @@ async fn optimize() -> anyhow::Result<()> {
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post(
-            "/db/user/not_found/optimize",
-            &String::new(),
-            &server.admin_token,
-        )
+        .post::<()>("/db/user/not_found/optimize", &None, &server.admin_token)
         .await?
         .0;
     assert_eq!(status, 404);
@@ -49,11 +49,7 @@ async fn non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
-        .post(
-            "/admin/db/user/not_found/optimize",
-            &String::new(),
-            &user.token,
-        )
+        .post::<()>("/admin/db/user/not_found/optimize", &None, &user.token)
         .await?
         .0;
     assert_eq!(status, 401);
@@ -64,11 +60,7 @@ async fn non_admin() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post(
-            "/admin/db/user/not_found/optimize",
-            &String::new(),
-            NO_TOKEN,
-        )
+        .post::<()>("/admin/db/user/not_found/optimize", &None, NO_TOKEN)
         .await?
         .0;
     assert_eq!(status, 401);

@@ -12,9 +12,9 @@ async fn remove() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -48,9 +48,9 @@ async fn remove_owner() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -74,9 +74,9 @@ async fn non_admin() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -84,9 +84,9 @@ async fn non_admin() -> anyhow::Result<()> {
     );
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=write", another.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -112,9 +112,9 @@ async fn remove_self() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
@@ -142,9 +142,9 @@ async fn remove_self_owner() -> anyhow::Result<()> {
     let db = server.init_db("memory", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,

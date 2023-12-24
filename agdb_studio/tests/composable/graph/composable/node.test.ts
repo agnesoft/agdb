@@ -1,31 +1,19 @@
-import { Node } from "@/composables/graph/prototype/node";
+import useNode, { type Node } from "@/composables/graph/composable/node";
 import { describe, it, expect, beforeEach } from "vitest";
 
-describe("Node", () => {
+describe("useNode", () => {
     let node: Node;
 
     beforeEach(() => {
-        node = new (Node as any)({
-            id: 1,
-            coordinates: { x: 0, y: 0, z: 0 },
-            values: { foo: "bar" },
-        });
+        node = useNode({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: { foo: "bar" } });
     });
 
-    it("should set the velocity correctly", () => {
-        const vx = 1;
-        const vy = 2;
-        const vz = 3;
-        node.setVelocity(vx, vy, vz);
-        expect(node.getVelocity()).toEqual({ x: vx, y: vy, z: vz });
-    });
-
-    it("should get the correct ID", () => {
+    it("should return the correct ID", () => {
         const id = 1;
         expect(node.getId()).toBe(id);
     });
 
-    it("should get the correct coordinates", () => {
+    it("should return the correct coordinates", () => {
         const coordinates = { x: 0, y: 0, z: 0 };
         expect(node.getCoordinates()).toEqual(coordinates);
     });
@@ -34,15 +22,24 @@ describe("Node", () => {
         const x = 1;
         const y = 2;
         const z = 3;
+        const node = useNode({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: {} });
         node.setCoordinates(x, y, z);
         expect(node.getCoordinates()).toEqual({ x, y, z });
     });
 
-    it("should get the correct values entries", () => {
+    it("should return the correct values entries", () => {
         expect(node.getValuesEntries().next().value).toEqual(["foo", "bar"]);
     });
 
-    it("should get the correct velocity length", () => {
+    it("should return the correct velocity", () => {
+        const vx = 1;
+        const vy = 2;
+        const vz = 3;
+        node.setVelocity(vx, vy, vz);
+        expect(node.getVelocity()).toEqual({ x: vx, y: vy, z: vz });
+    });
+
+    it("should return the correct velocity length", () => {
         const vx = 1;
         const vy = 2;
         const vz = 3;
@@ -53,7 +50,7 @@ describe("Node", () => {
 
     it("should move the node correctly", () => {
         const damper = 0.5;
-        const initialCoordinates = node.getCoordinates();
+        const initialCoordinates = { x: 0, y: 0, z: 0 };
         const vx = 1;
         const vy = 2;
         const vz = 3;
@@ -78,10 +75,11 @@ describe("Node", () => {
     });
 
     it("should add velocity correctly", () => {
-        const initialVelocity = node.getVelocity();
+        const initialVelocity = { x: 1, y: 2, z: 3 };
         const vx = 1;
         const vy = 2;
         const vz = 3;
+        node.setVelocity(initialVelocity.x, initialVelocity.y, initialVelocity.z);
         node.addVelocity(vx, vy, vz);
         node.addVelocity(vx, vy, vz);
         const finalVelocity = {
@@ -92,27 +90,27 @@ describe("Node", () => {
         expect(node.getVelocity()).toEqual(finalVelocity);
     });
 
-    it("should get the correct X coordinate", () => {
+    it("should return the correct X coordinate", () => {
         const x = 1;
         node.setCoordinates(x, 0, 0);
         expect(node.getX()).toBe(x);
     });
 
-    it("should get the correct Y coordinate", () => {
+    it("should return the correct Y coordinate", () => {
         const y = 1;
         node.setCoordinates(0, y, 0);
         expect(node.getY()).toBe(y);
     });
 
-    it("should get the correct Z coordinate", () => {
+    it("should return the correct Z coordinate", () => {
         const z = 1;
         node.setCoordinates(0, 0, z);
         expect(node.getZ()).toBe(z);
     });
 
     it("should calculate the correct distance between two nodes", () => {
-        const node1 = new (Node as any)({ id: 2, coordinates: { x: 1, y: 2, z: 3 }, values: {} });
-        const node2 = new (Node as any)({ id: 3, coordinates: { x: 4, y: 5, z: 6 }, values: {} });
+        const node1 = useNode({ id: 2, coordinates: { x: 1, y: 2, z: 3 }, values: {} });
+        const node2 = useNode({ id: 3, coordinates: { x: 4, y: 5, z: 6 }, values: {} });
         const distance = Math.sqrt((4 - 1) ** 2 + (5 - 2) ** 2 + (6 - 3) ** 2);
         expect(node1.dist(node2)).toBe(distance);
     });

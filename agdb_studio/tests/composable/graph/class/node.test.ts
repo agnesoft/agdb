@@ -5,7 +5,7 @@ describe("Node", () => {
     let node: Node;
 
     beforeEach(() => {
-        node = new Node({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: {} });
+        node = new Node({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: { foo: "bar" } });
     });
 
     it("should set the velocity correctly", () => {
@@ -35,8 +35,7 @@ describe("Node", () => {
     });
 
     it("should get the correct values entries", () => {
-        const values = new Map<string, string>();
-        expect(node.getValuesEntries()).toEqual(values.entries());
+        expect(node.getValuesEntries().next().value).toEqual(["foo", "bar"]);
     });
 
     it("should get the correct velocity length", () => {

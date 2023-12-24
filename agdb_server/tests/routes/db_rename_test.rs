@@ -172,7 +172,7 @@ async fn target_exists() -> anyhow::Result<()> {
         )
         .await?
         .0;
-    assert_eq!(status, 467);
+    assert_eq!(status, 465);
     Ok(())
 }
 

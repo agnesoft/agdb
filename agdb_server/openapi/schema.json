@@ -386,6 +386,9 @@
           "404": {
             "description": "user / db not found"
           },
+          "465": {
+            "description": "target db exists"
+          },
           "467": {
             "description": "invalid db"
           }
@@ -1147,6 +1150,9 @@
           },
           "404": {
             "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
           },
           "467": {
             "description": "invalid db"

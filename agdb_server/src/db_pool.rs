@@ -655,6 +655,12 @@ impl DbPool {
         user: DbId,
         config: &Config,
     ) -> ServerResult {
+        let db_name = db_name(owner, db);
+
+        if db_name == new_name {
+            return Ok(());
+        }
+
         let (new_owner, new_db) = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
         let username = self.user_name(user)?;
 
@@ -662,8 +668,12 @@ impl DbPool {
             return Err(permission_denied("owner only"));
         }
 
-        let db_name = db_name(owner, db);
         let mut database = self.find_user_db(user, &db_name)?;
+        let target_name = db_file(new_owner, new_db, config);
+
+        if target_name.exists() {
+            return Err(ErrorCode::DbExists.into());
+        }
 
         if new_owner != owner {
             std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
@@ -673,12 +683,7 @@ impl DbPool {
         let server_db = self.get_pool_mut()?.remove(&db_name).unwrap();
         server_db
             .get_mut()?
-            .rename(
-                Path::new(&config.data_dir)
-                    .join(new_name)
-                    .to_string_lossy()
-                    .as_ref(),
-            )
+            .rename(target_name.to_string_lossy().as_ref())
             .map_err(|e| {
                 ServerError::new(
                     ErrorCode::DbInvalid.into(),

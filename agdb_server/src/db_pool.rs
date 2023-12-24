@@ -308,6 +308,69 @@ impl DbPool {
         Ok(())
     }
 
+    pub(crate) fn copy_db(
+        &self,
+        owner: &str,
+        db: &str,
+        new_name: &str,
+        user: DbId,
+        config: &Config,
+    ) -> ServerResult {
+        let (new_owner, new_db) = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+        let username = self.user_name(user)?;
+
+        if new_owner != username {
+            return Err(permission_denied("cannot copy db to another user"));
+        }
+
+        let source_db = db_name(owner, db);
+        let database = self.find_user_db(user, &source_db)?;
+        let target_name = db_name(new_owner, new_db);
+        let target_file = db_file(new_owner, new_db, config);
+
+        if target_file.exists() {
+            return Err(ErrorCode::DbExists.into());
+        }
+
+        std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
+        let server_db = self
+            .get_pool()?
+            .get(&source_db)
+            .ok_or(db_not_found(&source_db))?
+            .copy(target_file.to_string_lossy().as_ref())
+            .map_err(|e| {
+                ServerError::new(
+                    ErrorCode::DbInvalid.into(),
+                    &format!("db copy error: {}", e.description),
+                )
+            })?;
+        self.get_pool_mut()?.insert(target_name.clone(), server_db);
+        self.db_mut()?.transaction_mut(|t| {
+            let db = t.exec_mut(
+                &QueryBuilder::insert()
+                    .nodes()
+                    .values(&Database {
+                        db_id: None,
+                        name: target_name.clone(),
+                        db_type: database.db_type,
+                        backup: 0,
+                    })
+                    .query(),
+            )?;
+
+            t.exec_mut(
+                &QueryBuilder::insert()
+                    .edges()
+                    .from(vec![QueryId::from(user), "dbs".into()])
+                    .to(db)
+                    .values(vec![vec![("role", DbUserRole::Admin).into()], vec![]])
+                    .query(),
+            )
+        })?;
+
+        Ok(())
+    }
+
     pub(crate) fn delete_db(
         &self,
         owner: &str,

@@ -151,6 +151,35 @@ pub(crate) async fn backup(
 }
 
 #[utoipa::path(post,
+    path = "/api/v1/db/{owner}/{db}/copy",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+        ServerDatabaseRename
+    ),
+    responses(
+         (status = 201, description = "db copied"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "cannot copy db to another user"),
+         (status = 404, description = "user / db not found"),
+         (status = 465, description = "target db exists"),
+         (status = 467, description = "invalid db"),
+    )
+)]
+pub(crate) async fn copy(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<ServerDatabaseRename>,
+) -> ServerResponse {
+    db_pool.copy_db(&owner, &db, &request.new_name, user.0, &config)?;
+
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/delete",
     security(("Token" = [])),
     params(

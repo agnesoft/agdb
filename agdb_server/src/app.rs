@@ -79,6 +79,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
         .route("/db/list", routing::get(routes::db::list))
         .route("/db/:user/:db/add", routing::post(routes::db::add))
         .route("/db/:user/:db/backup", routing::post(routes::db::backup))
+        .route("/db/:user/:db/copy", routing::post(routes::db::copy))
         .route("/db/:user/:db/delete", routing::delete(routes::db::delete))
         .route("/db/:user/:db/exec", routing::post(routes::db::exec))
         .route(

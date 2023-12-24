@@ -28,6 +28,7 @@ use utoipa::OpenApi;
         crate::routes::user::change_password,
         crate::routes::db::add,
         crate::routes::db::backup,
+        crate::routes::db::copy,
         crate::routes::db::delete,
         crate::routes::db::exec,
         crate::routes::db::list,

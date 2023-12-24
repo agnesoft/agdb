@@ -14,6 +14,10 @@ impl ServerDb {
         Ok(Self(Arc::new(RwLock::new(ServerDbImpl::new(name)?))))
     }
 
+    pub(crate) fn copy(&self, name: &str) -> ServerResult<Self> {
+        Ok(Self(Arc::new(RwLock::new(self.get()?.copy(name)?))))
+    }
+
     pub(crate) fn get(&self) -> ServerResult<RwLockReadGuard<ServerDbImpl>> {
         Ok(self.0.read()?)
     }

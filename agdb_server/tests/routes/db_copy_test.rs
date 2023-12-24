@@ -22,7 +22,7 @@ async fn copy() -> anyhow::Result<()> {
         .await?;
     let status = server
         .post::<()>(
-            &format!("/db/{db}/copy?new_name={}/new_name", user.name),
+            &format!("/db/{db}/copy?new_name={}/copy", user.name),
             &None,
             &user.token,
         )
@@ -31,13 +31,13 @@ async fn copy() -> anyhow::Result<()> {
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
         .join(&user.name)
-        .join("new_name")
+        .join("copy")
         .exists());
     let queries: Option<Vec<QueryType>> =
         Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let responses = server
         .post(
-            &format!("/db/{}/new_name/exec", user.name),
+            &format!("/db/{}/copy/exec", user.name),
             &queries,
             &user.token,
         )
@@ -71,12 +71,12 @@ async fn copy_other() -> anyhow::Result<()> {
         .query()
         .into()]);
     server
-        .post(&format!("/db/{db}/exec"), &queries, &other.token)
+        .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     assert_eq!(
         server
             .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=write", other.name),
+                &format!("/db/{db}/user/{}/add?db_role=read", other.name),
                 &None,
                 &user.token
             )
@@ -85,22 +85,22 @@ async fn copy_other() -> anyhow::Result<()> {
     );
     let status = server
         .post::<()>(
-            &format!("/db/{db}/copy?new_name={}/new_name", other.name),
+            &format!("/db/{db}/copy?new_name={}/copy_other", other.name),
             &None,
-            &user.token,
+            &other.token,
         )
         .await?
         .0;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
         .join(&other.name)
-        .join("new_name")
+        .join("copy_other")
         .exists());
     let queries: Option<Vec<QueryType>> =
         Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let responses = server
         .post(
-            &format!("/db/{}/new_name/exec", other.name),
+            &format!("/db/{}/copy_other/exec", other.name),
             &queries,
             &other.token,
         )
@@ -149,8 +149,35 @@ async fn copy_target_exists() -> anyhow::Result<()> {
         .post::<()>(&format!("/db/{db}/copy?new_name={db}"), &None, &user.token)
         .await?
         .0;
-    assert_eq!(status, 403);
+    assert_eq!(status, 465);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn target_self() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("mapped", &user).await?;
+    let status = server
+        .post::<()>(&format!("/db/{db}/copy?new_name={db}"), &None, &user.token)
+        .await?
+        .0;
+    assert_eq!(status, 465);
+    Ok(())
+}
+
+#[tokio::test]
+async fn target_exists() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("mapped", &user).await?;
+    let db2 = server.init_db("mapped", &user).await?;
+    let status = server
+        .post::<()>(&format!("/db/{db}/copy?new_name={db2}"), &None, &user.token)
+        .await?
+        .0;
+    assert_eq!(status, 465);
     Ok(())
 }
 
@@ -172,12 +199,15 @@ async fn invalid() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn not_found() -> anyhow::Result<()> {
+async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
         .post::<()>(
-            &format!("/db/{}/not_found/copy?new_name=user/not_found", user.name),
+            &format!(
+                "/db/{}/not_found/copy?new_name={}/not_found",
+                user.name, user.name
+            ),
             &None,
             &user.token,
         )

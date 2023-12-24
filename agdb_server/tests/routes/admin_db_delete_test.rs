@@ -24,7 +24,7 @@ async fn delete_with_backup() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     server
-        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
     assert!(Path::new(&server.data_dir)
         .join(&user.name)

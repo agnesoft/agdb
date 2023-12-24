@@ -5,9 +5,9 @@ use crate::NO_TOKEN;
 #[tokio::test]
 async fn add() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password123",
-    };
+    });
     assert_eq!(
         server
             .post(
@@ -36,9 +36,9 @@ async fn add() -> anyhow::Result<()> {
 #[tokio::test]
 async fn name_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password123",
-    };
+    });
     assert_eq!(
         server
             .post("/admin/user/a/add", &credentials, &server.admin_token)
@@ -52,7 +52,7 @@ async fn name_too_short() -> anyhow::Result<()> {
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let credentials = UserCredentials { password: "pswd" };
+    let credentials = Some(UserCredentials { password: "pswd" });
     assert_eq!(
         server
             .post("/admin/user/alice/add", &credentials, &server.admin_token)
@@ -67,9 +67,9 @@ async fn password_too_short() -> anyhow::Result<()> {
 async fn user_already_exists() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password123",
-    };
+    });
     assert_eq!(
         server
             .post(
@@ -88,9 +88,9 @@ async fn user_already_exists() -> anyhow::Result<()> {
 async fn no_admin_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password123",
-    };
+    });
     assert_eq!(
         server
             .post("/admin/user/alice/add", &credentials, &user.token)
@@ -104,9 +104,9 @@ async fn no_admin_token() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let credentials = UserCredentials {
+    let credentials = Some(UserCredentials {
         password: "password123",
-    };
+    });
     assert_eq!(
         server
             .post("/admin/user/alice/add", &credentials, NO_TOKEN)

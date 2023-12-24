@@ -374,10 +374,7 @@ impl DbPool {
                 Ok(results)
             })
         }
-        .map_err(|e: QueryError| ServerError {
-            description: e.to_string(),
-            status: StatusCode::from_u16(470).unwrap(),
-        })?;
+        .map_err(|e: QueryError| ServerError::new(ErrorCode::QueryError.into(), &e.description))?;
 
         Ok(results)
     }
@@ -682,7 +679,12 @@ impl DbPool {
                     .to_string_lossy()
                     .as_ref(),
             )
-            .map_err(|_| ErrorCode::DbInvalid)?;
+            .map_err(|e| {
+                ServerError::new(
+                    ErrorCode::DbInvalid.into(),
+                    &format!("db rename error: {}", e.description),
+                )
+            })?;
         self.get_pool_mut()?.insert(new_name.to_string(), server_db);
         database.name = new_name.to_string();
 

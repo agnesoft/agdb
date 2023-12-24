@@ -11,7 +11,7 @@ async fn read_write() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![
+    let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -19,7 +19,7 @@ async fn read_write() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
-    ];
+    ]);
     let (status, responses) = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
@@ -60,17 +60,21 @@ async fn read_only() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
-        .nodes()
-        .aliases("root")
-        .values(vec![vec![("key", 1.1).into()]])
-        .query()
-        .into()];
+    let queries: Option<Vec<QueryType>> = Some(vec![
+        // Wrap the queries vector with Some()
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .values(vec![vec![("key", 1.1).into()]])
+            .query()
+            .into(),
+    ]);
     let (status, _responses) = server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
+        .post(&format!("/db/{db}/exec"), &queries, &user.token) // Pass queries as &queries instead of &queries
         .await?;
     assert_eq!(status, 200);
-    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let (status, responses) = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
@@ -98,16 +102,16 @@ async fn read_queries() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases("node1")
         .values(vec![vec![("key", "value").into()]])
         .query()
-        .into()];
+        .into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
-    let queries: Vec<QueryType> = vec![
+    let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::search().from(1).query().into(),
         QueryBuilder::select().ids(1).query().into(),
         QueryBuilder::select().aliases().ids(1).query().into(),
@@ -119,7 +123,7 @@ async fn read_queries() -> anyhow::Result<()> {
             .ids(1)
             .query()
             .into(),
-    ];
+    ]);
     let (status, responses) = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
@@ -135,7 +139,7 @@ async fn write_queries() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![
+    let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert().nodes().count(2).query().into(),
         QueryBuilder::insert()
             .aliases(vec!["node1", "node2"])
@@ -171,7 +175,7 @@ async fn write_queries() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::remove().ids("node1").query().into(),
-    ];
+    ]);
     let (status, responses) = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
@@ -187,7 +191,7 @@ async fn query_error() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
-    let queries: Vec<QueryType> = vec![
+    let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert()
             .nodes()
             .aliases("")
@@ -195,7 +199,7 @@ async fn query_error() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
-    ];
+    ]);
     let (status, response) = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
@@ -213,15 +217,15 @@ async fn permission_denied() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=read", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
         201
     );
-    let queries: Vec<QueryType> = vec![
+    let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
@@ -229,7 +233,7 @@ async fn permission_denied() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
-    ];
+    ]);
     let status = server
         .post(&format!("/db/{db}/exec"), &queries, &other.token)
         .await?
@@ -243,7 +247,7 @@ async fn permission_denied() -> anyhow::Result<()> {
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let queries: Vec<QueryType> = vec![];
+    let queries: Option<Vec<QueryType>> = Some(vec![]);
     let status = server
         .post("/db/user/not_found/exec", &queries, &user.token)
         .await?
@@ -256,7 +260,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let queries: Vec<QueryType> = vec![];
+    let queries: Option<Vec<QueryType>> = Some(vec![]);
     let status = server
         .post("/db/user/not_found/exec", &queries, NO_TOKEN)
         .await?

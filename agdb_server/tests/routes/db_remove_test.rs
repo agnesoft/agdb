@@ -46,9 +46,9 @@ async fn non_owner() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,

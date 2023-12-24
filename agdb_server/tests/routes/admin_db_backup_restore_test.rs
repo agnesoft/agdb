@@ -12,18 +12,18 @@ async fn backup() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()];
+        .into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/backup"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
@@ -34,20 +34,22 @@ async fn backup() -> anyhow::Result<()> {
         .join("backups")
         .join(format!("{}.bak", db.split_once('/').unwrap().1))
         .exists());
-    let queries: Vec<QueryType> = vec![QueryBuilder::remove().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::remove().ids("root").query().into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/restore"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
         .0;
     assert_eq!(status, 201);
-    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let responses = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?
@@ -73,18 +75,18 @@ async fn backup_overwrite() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()];
+        .into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/backup"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
@@ -95,14 +97,15 @@ async fn backup_overwrite() -> anyhow::Result<()> {
         .join("backups")
         .join(format!("{}.bak", db.split_once('/').unwrap().1))
         .exists());
-    let queries: Vec<QueryType> = vec![QueryBuilder::remove().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::remove().ids("root").query().into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/backup"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
@@ -114,15 +117,16 @@ async fn backup_overwrite() -> anyhow::Result<()> {
         .join(format!("{}.bak", db.split_once('/').unwrap().1))
         .exists());
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/restore"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
         .0;
     assert_eq!(status, 201);
-    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let responses = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?
@@ -137,18 +141,18 @@ async fn backup_of_backup() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
-    let queries: Vec<QueryType> = vec![QueryBuilder::insert()
+    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()];
+        .into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/backup"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
@@ -159,29 +163,31 @@ async fn backup_of_backup() -> anyhow::Result<()> {
         .join("backups")
         .join(format!("{}.bak", db.split_once('/').unwrap().1))
         .exists());
-    let queries: Vec<QueryType> = vec![QueryBuilder::remove().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::remove().ids("root").query().into()]);
     server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/restore"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
         .0;
     assert_eq!(status, 201);
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/restore"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
         .0;
     assert_eq!(status, 201);
-    let queries: Vec<QueryType> = vec![QueryBuilder::select().ids("root").query().into()];
+    let queries: Option<Vec<QueryType>> =
+        Some(vec![QueryBuilder::select().ids("root").query().into()]);
     let responses = server
         .post(&format!("/db/{db}/exec"), &queries, &user.token)
         .await?
@@ -197,9 +203,9 @@ async fn restore_no_backup() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/restore"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
@@ -215,9 +221,9 @@ async fn in_memory() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("memory", &user).await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/admin/db/{db}/backup"),
-            &String::new(),
+            &None,
             &server.admin_token,
         )
         .await?
@@ -232,12 +238,12 @@ async fn non_admin() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
-        .post("/admin/db/user/db/backup", &String::new(), &user.token)
+        .post::<()>("/admin/db/user/db/backup", &None, &user.token)
         .await?
         .0;
     assert_eq!(status, 401);
     let status = server
-        .post("/admin/db/user/db/restore", &String::new(), &user.token)
+        .post::<()>("/admin/db/user/db/restore", &None, &user.token)
         .await?
         .0;
     assert_eq!(status, 401);
@@ -249,12 +255,12 @@ async fn non_admin() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post("/admin/db/user/not_found/backup", &String::new(), NO_TOKEN)
+        .post::<()>("/admin/db/user/not_found/backup", &None, NO_TOKEN)
         .await?
         .0;
     assert_eq!(status, 401);
     let status = server
-        .post("/admin/db/user/not_found/restore", &String::new(), NO_TOKEN)
+        .post::<()>("/admin/db/user/not_found/restore", &None, NO_TOKEN)
         .await?
         .0;
     assert_eq!(status, 401);

@@ -40,7 +40,7 @@ async fn with_backup() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     server
-        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
     let (status, list) = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?;
     assert_eq!(status, 200);

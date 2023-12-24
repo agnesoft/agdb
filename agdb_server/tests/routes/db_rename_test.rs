@@ -10,9 +10,9 @@ async fn rename() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/rename?new_name={}/renamed_db", user.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -32,12 +32,12 @@ async fn rename_with_backup() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     server
-        .post(&format!("/db/{db}/backup"), &String::new(), &user.token)
+        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/rename?new_name={}/renamed_db", user.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -68,9 +68,9 @@ async fn transfer() -> anyhow::Result<()> {
     let other = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/rename?new_name={}/renamed_db", other.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -103,18 +103,18 @@ async fn non_owner() -> anyhow::Result<()> {
     let db = server.init_db("mapped", &user).await?;
     assert_eq!(
         server
-            .put(
+            .put::<()>(
                 &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &String::new(),
+                &None,
                 &user.token
             )
             .await?,
         201
     );
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/rename?new_name={}/renamed_db", user.name),
-            &String::new(),
+            &None,
             &other.token,
         )
         .await?
@@ -129,9 +129,9 @@ async fn invalid() -> anyhow::Result<()> {
     let user = server.init_user().await?;
     let db = server.init_db("mapped", &user).await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{db}/rename?new_name={}/a\0a", user.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -142,13 +142,48 @@ async fn invalid() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn target_self() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("mapped", &user).await?;
+    let status = server
+        .post::<()>(
+            &format!("/db/{db}/rename?new_name={db}"),
+            &None,
+            &user.token,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 201);
+    Ok(())
+}
+
+#[tokio::test]
+async fn target_exists() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let db = server.init_db("mapped", &user).await?;
+    let db2 = server.init_db("mapped", &user).await?;
+    let status = server
+        .post::<()>(
+            &format!("/db/{db}/rename?new_name={db2}"),
+            &None,
+            &user.token,
+        )
+        .await?
+        .0;
+    assert_eq!(status, 467);
+    Ok(())
+}
+
+#[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
-        .post(
+        .post::<()>(
             &format!("/db/{}/db/rename?new_name=user/renamed_db", user.name),
-            &String::new(),
+            &None,
             &user.token,
         )
         .await?
@@ -161,9 +196,9 @@ async fn db_not_found() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post(
+        .post::<()>(
             "/db/user/db/rename?new_name=user/renamed_db",
-            &String::new(),
+            &None,
             NO_TOKEN,
         )
         .await?

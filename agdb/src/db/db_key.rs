@@ -1,18 +1,15 @@
 use crate::DbValue;
 
-/// Alias to [`DbValue`]
-pub type DbKey = DbValue;
-
 /// Ordering for search queries
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum DbKeyOrder {
     /// Ascending order (from smallest)
-    Asc(DbKey),
+    Asc(DbValue),
 
     /// Descending order (from largest)
-    Desc(DbKey),
+    Desc(DbValue),
 }
 
 #[cfg(test)]
@@ -21,7 +18,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", DbKeyOrder::Asc(DbKey::default()));
+        format!("{:?}", DbKeyOrder::Asc(DbValue::default()));
     }
 
     #[test]
@@ -36,8 +33,8 @@ mod tests {
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
-            DbKeyOrder::Asc(DbKey::default()),
-            DbKeyOrder::Asc(DbKey::default())
+            DbKeyOrder::Asc(DbValue::default()),
+            DbKeyOrder::Asc(DbValue::default())
         );
     }
 }

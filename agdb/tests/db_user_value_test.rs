@@ -3,7 +3,6 @@ mod test_db;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
-use agdb::DbKey;
 use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
@@ -85,7 +84,7 @@ fn db_user_value() {
         vec_string: vec!["world".to_string()],
         custom_enum: Status::Active,
     };
-    let keys: Vec<DbKey> = vec![
+    let keys: Vec<DbValue> = vec![
         "bytes".into(),
         "u64".into(),
         "u32".into(),

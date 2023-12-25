@@ -6,7 +6,7 @@ use crate::query::query_condition::QueryConditionModifier;
 use crate::query::query_values::QueryKeys;
 use crate::query::search_query::SearchQuery;
 use crate::Comparison;
-use crate::DbKey;
+use crate::DbValue;
 use crate::QueryIds;
 
 /// Condition builder
@@ -19,7 +19,7 @@ pub struct Where {
 
 /// Condition builder for `key` condition.
 pub struct WhereKey {
-    key: DbKey,
+    key: DbValue,
     where_: Where,
 }
 
@@ -196,7 +196,7 @@ impl Where {
     /// // Includes only elements with property `String("k") == 1_i64`
     /// QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
     /// ```
-    pub fn key<T: Into<DbKey>>(self, key: T) -> WhereKey {
+    pub fn key<T: Into<DbValue>>(self, key: T) -> WhereKey {
         WhereKey {
             key: key.into(),
             where_: self,

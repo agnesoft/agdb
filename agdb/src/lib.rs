@@ -43,7 +43,6 @@ pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
 pub use db::db_f64::DbF64;
 pub use db::db_id::DbId;
-pub use db::db_key::DbKey;
 pub use db::db_key::DbKeyOrder;
 pub use db::db_key_value::DbKeyValue;
 pub use db::db_user_value::DbUserValue;

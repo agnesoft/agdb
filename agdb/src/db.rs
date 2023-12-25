@@ -38,7 +38,6 @@ use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::DbId;
-use crate::DbKey;
 use crate::DbKeyValue;
 use crate::DbValue;
 use crate::QueryError;
@@ -762,7 +761,7 @@ impl<Store: StorageData> DbImpl<Store> {
     pub(crate) fn values_by_keys(
         &self,
         db_id: DbId,
-        keys: &[DbKey],
+        keys: &[DbValue],
     ) -> Result<Vec<DbKeyValue>, DbError> {
         Ok(self
             .values
@@ -857,7 +856,7 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(())
     }
 
-    pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbKey]) -> Result<i64, QueryError> {
+    pub(crate) fn remove_keys(&mut self, db_id: DbId, keys: &[DbValue]) -> Result<i64, QueryError> {
         let mut result = 0;
 
         for key_value in self.values.values(&self.storage, &db_id)? {
@@ -987,7 +986,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     .values
                     .iter_key(&self.storage, &DbId(index.0))
                     .map(|(_, kv)| kv.key)
-                    .collect::<Vec<DbKey>>();
+                    .collect::<Vec<DbValue>>();
                 Ok(SearchControl::Continue(
                     values.iter().all(|k| keys.contains(k)),
                 ))

@@ -14,6 +14,7 @@ use crate::StorageData;
 /// tuple of types that are convertible to `DbValue`.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DbKeyValue {
     /// Key of the property
     pub key: DbKey,

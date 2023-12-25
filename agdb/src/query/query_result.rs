@@ -11,6 +11,7 @@ use crate::DbUserValue;
 /// with database ids and properties (key-value pairs).
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct QueryResult {
     /// Query result
     pub result: i64,

@@ -1,3 +1,5 @@
+#[cfg(feature = "openapi")]
+mod openapi_feature_test;
 #[cfg(feature = "serde")]
 mod serde_feature_test;
 mod test_db;

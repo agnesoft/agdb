@@ -16,10 +16,12 @@ categories = ["database", "database-implementations"]
 [features]
 default = ["derive"]
 derive = ["dep:agdb_derive"]
+openapi = ["dep:utoipa"]
 serde = ["dep:serde"]
 
 [dependencies]
 agdb_derive = { version = "0.5.2", path = "../agdb_derive", optional = true }
+utoipa = { version = "4", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]

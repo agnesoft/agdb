@@ -118,10 +118,11 @@ For database concepts and primitive data types see [concepts](docs/concepts.md).
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
-| Feature | Default | Description                                                                             |
-| ------- | ------- | --------------------------------------------------------------------------------------- |
-| derive  | yes     | Enables derive macro to enable custom user types to be directly used with the database. |
-| serde   | no      | Enables serialiation/deserialization of queries and QueryResult using `serde`.          |
+| Feature  | Default | Description                                                                                        |
+| -------- | ------- | -------------------------------------------------------------------------------------------------- |
+| derive   | yes     | Enables derive macro to enable custom user types to be directly used with the database.            |
+| opeanapi | no      | Enables `ToSchema` macro on query structs so they can be exported to json OpeanAPI/Swagger schema. |
+| serde    | no      | Enables serialiation/deserialization of queries and QueryResult using `serde`.                     |
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 

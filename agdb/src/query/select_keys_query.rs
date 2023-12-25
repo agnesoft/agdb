@@ -12,6 +12,7 @@ use crate::StorageData;
 /// The result will be number of elements returned and the list
 /// of elements with all properties except all values will be empty.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct SelectKeysQuery(pub QueryIds);
 
 impl Query for SelectKeysQuery {

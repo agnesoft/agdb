@@ -16,6 +16,7 @@ use crate::StorageData;
 ///
 /// NOTE: The result is NOT number of affected elements but individual properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct InsertValuesQuery {
     /// Ids whose properties should be updated
     pub ids: QueryIds,

@@ -14,6 +14,7 @@ use std::cmp::Ordering;
 /// Search algorithm to be used
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum SearchQueryAlgorithm {
     /// Examines each distance level from the search origin in full
     /// before continuing with the next level. E.g. when starting at
@@ -30,6 +31,7 @@ pub enum SearchQueryAlgorithm {
 /// Query to search for ids in the database following the graph.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct SearchQuery {
     /// Search algorithm to be used. Will be bypassed for path
     /// searches that unconditionally use A*.

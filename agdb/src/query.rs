@@ -40,7 +40,7 @@ pub trait QueryMut {
     ) -> Result<QueryResult, QueryError>;
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 use crate::{
     InsertAliasesQuery, InsertEdgesQuery, InsertNodesQuery, InsertValuesQuery, RemoveAliasesQuery,
     RemoveQuery, RemoveValuesQuery, SearchQuery, SelectAliasesQuery, SelectAllAliasesQuery,
@@ -48,8 +48,9 @@ use crate::{
 };
 
 /// Convenience enum for serializing/deserializing queries.
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum QueryType {
     InsertAlias(InsertAliasesQuery),
     InsertEdges(InsertEdgesQuery),
@@ -67,98 +68,98 @@ pub enum QueryType {
     SelectValues(SelectValuesQuery),
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<InsertAliasesQuery> for QueryType {
     fn from(value: InsertAliasesQuery) -> Self {
         QueryType::InsertAlias(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<InsertEdgesQuery> for QueryType {
     fn from(value: InsertEdgesQuery) -> Self {
         QueryType::InsertEdges(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<InsertNodesQuery> for QueryType {
     fn from(value: InsertNodesQuery) -> Self {
         QueryType::InsertNodes(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<InsertValuesQuery> for QueryType {
     fn from(value: InsertValuesQuery) -> Self {
         QueryType::InsertValues(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<RemoveQuery> for QueryType {
     fn from(value: RemoveQuery) -> Self {
         QueryType::Remove(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<RemoveAliasesQuery> for QueryType {
     fn from(value: RemoveAliasesQuery) -> Self {
         QueryType::RemoveAliases(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<RemoveValuesQuery> for QueryType {
     fn from(value: RemoveValuesQuery) -> Self {
         QueryType::RemoveValues(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SearchQuery> for QueryType {
     fn from(value: SearchQuery) -> Self {
         QueryType::Search(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectQuery> for QueryType {
     fn from(value: SelectQuery) -> Self {
         QueryType::Select(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectAliasesQuery> for QueryType {
     fn from(value: SelectAliasesQuery) -> Self {
         QueryType::SelectAliases(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectAllAliasesQuery> for QueryType {
     fn from(value: SelectAllAliasesQuery) -> Self {
         QueryType::SelectAllAliases(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectKeyCountQuery> for QueryType {
     fn from(value: SelectKeyCountQuery) -> Self {
         QueryType::SelectKeyCount(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectKeysQuery> for QueryType {
     fn from(value: SelectKeysQuery) -> Self {
         QueryType::SelectKeys(value)
     }
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectValuesQuery> for QueryType {
     fn from(value: SelectValuesQuery) -> Self {
         QueryType::SelectValues(value)

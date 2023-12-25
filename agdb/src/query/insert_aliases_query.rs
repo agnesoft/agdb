@@ -14,6 +14,7 @@ use crate::StorageData;
 ///
 /// The result will contain number of aliases inserted/updated but no elements.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct InsertAliasesQuery {
     /// Ids to be aliased
     pub ids: QueryIds,

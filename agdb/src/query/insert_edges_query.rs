@@ -21,6 +21,7 @@ use crate::StorageData;
 /// The result will contain number of edges inserted and elements with
 /// their ids but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct InsertEdgesQuery {
     /// Origins
     pub from: QueryIds,

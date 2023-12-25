@@ -6,6 +6,7 @@ use crate::QueryId;
 /// Logical operator for query conditions
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum QueryConditionLogic {
     /// Logical AND (&&)
     And,
@@ -17,6 +18,7 @@ pub enum QueryConditionLogic {
 /// Query condition modifier
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum QueryConditionModifier {
     /// No modifier
     None,
@@ -36,6 +38,7 @@ pub enum QueryConditionModifier {
 /// Query condition data
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum QueryConditionData {
     /// Distance from the search origin. Takes count comparison
     /// (e.g. Equal, GreaterThan).
@@ -87,6 +90,7 @@ pub enum QueryConditionData {
 /// `data`, logic operator and a modifier.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct QueryCondition {
     /// Logic operator (e.g. And, Or)
     pub logic: QueryConditionLogic,
@@ -104,6 +108,7 @@ pub struct QueryCondition {
 /// the usual set of named comparisons: `==, !=, <, <=, >, =>`.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum CountComparison {
     /// property == this
     Equal(u64),
@@ -134,6 +139,7 @@ pub enum CountComparison {
 /// where the "contains" makes little sense (i.e. does 3 contain 1?).
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum Comparison {
     /// property == this
     Equal(DbValue),

@@ -2,7 +2,7 @@ use crate::db::db_key::DbKeyOrder;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
-use crate::DbKey;
+use crate::DbValue;
 use crate::Query;
 use crate::QueryCondition;
 use crate::QueryError;
@@ -136,7 +136,7 @@ impl SearchQuery {
             .map(|key_order| match key_order {
                 DbKeyOrder::Asc(key) | DbKeyOrder::Desc(key) => key.clone(),
             })
-            .collect::<Vec<DbKey>>();
+            .collect::<Vec<DbValue>>();
 
         ids.sort_by(|left, right| {
             let left_values = db.values_by_keys(*left, &keys).unwrap_or_default();

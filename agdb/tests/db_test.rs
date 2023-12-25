@@ -28,7 +28,6 @@ fn public_types() {
     use agdb::DbFileTransaction;
     use agdb::DbFileTransactionMut;
     use agdb::DbId;
-    use agdb::DbKey;
     use agdb::DbKeyOrder;
     use agdb::DbKeyValue;
     use agdb::DbTransaction;

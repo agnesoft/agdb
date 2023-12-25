@@ -1,6 +1,6 @@
 use crate::DbElement;
 use crate::DbImpl;
-use crate::DbKey;
+use crate::DbValue;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryIds;
@@ -16,7 +16,7 @@ use crate::StorageData;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct SelectValuesQuery {
-    pub keys: Vec<DbKey>,
+    pub keys: Vec<DbValue>,
     pub ids: QueryIds,
 }
 

@@ -1,6 +1,6 @@
-use crate::DbKey;
 use crate::DbKeyValue;
 use crate::DbUserValue;
+use crate::DbValue;
 
 /// Helper type distinguishing uniform (`Single`) values
 /// and multiple (`Multi`) values in database queries.
@@ -29,7 +29,7 @@ pub struct MultiValues(pub Vec<Vec<DbKeyValue>>);
 /// Convenient wrapper for the [`QueryBuilder`] to
 /// allow properties conversions. Represents list
 /// of property keys.
-pub struct QueryKeys(pub Vec<DbKey>);
+pub struct QueryKeys(pub Vec<DbValue>);
 
 impl From<Vec<DbKeyValue>> for SingleValues {
     fn from(values: Vec<DbKeyValue>) -> Self {
@@ -43,8 +43,8 @@ impl From<Vec<Vec<DbKeyValue>>> for MultiValues {
     }
 }
 
-impl From<Vec<DbKey>> for QueryKeys {
-    fn from(value: Vec<DbKey>) -> Self {
+impl From<Vec<DbValue>> for QueryKeys {
+    fn from(value: Vec<DbValue>) -> Self {
         QueryKeys(value)
     }
 }

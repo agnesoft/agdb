@@ -68,7 +68,7 @@ The `DbUserValue` trait is an interface that can be implemented for user defined
 ```Rust
 pub trait DbUserValue: Sized {
     fn db_id(&self) -> Option<DbId>;
-    fn db_keys() -> Vec<DbKey>;
+    fn db_keys() -> Vec<DbValue>;
     fn from_db_element(element: &DbElement) -> Result<Self, DbError>;
     fn to_db_values(&self) -> Vec<DbKeyValue>;
 }
@@ -131,12 +131,12 @@ The values are `key-value` pairs (properties) associated with the given element:
 
 ```Rust
 pub struct DbKeyValue {
-    pub key: DbKey,
+    pub key: DbValue,
     pub value: DbValue,
 }
 ```
 
-The `DbKey` is an alias of `DbValue` and the value itself is an enum of valid types:
+Where `DbValue` is:
 
 ```Rust
 pub enum DbValue {
@@ -485,7 +485,7 @@ The result will contain:
 
 ```Rust
 pub struct SelectValuesQuery {
-    pub keys: Vec<DbKey>,
+    pub keys: Vec<DbValue>,
     pub ids: QueryIds,
 }
 ```
@@ -607,8 +607,8 @@ pub enum SearchQueryAlgorithm {
 }
 
 pub enum DbKeyOrder {
-    Asc(DbKey),
-    Desc(DbKey),
+    Asc(DbValue),
+    Desc(DbValue),
 }
 ```
 
@@ -691,8 +691,8 @@ pub enum QueryConditionData {
     EdgeCountFrom(CountComparison),
     EdgeCountTo(CountComparison),
     Ids(Vec<QueryId>),
-    KeyValue { key: DbKey, value: Comparison },
-    Keys(Vec<DbKey>),
+    KeyValue { key: DbValue, value: Comparison },
+    Keys(Vec<DbValue>),
     Node,
     Where(Vec<QueryCondition>),
 }

@@ -5,7 +5,6 @@ use crate::storage::StorageIndex;
 use crate::utilities::serialize::Serialize;
 use crate::utilities::serialize::SerializeStatic;
 use crate::DbError;
-use crate::DbKey;
 use crate::DbValue;
 use crate::StorageData;
 
@@ -17,7 +16,7 @@ use crate::StorageData;
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DbKeyValue {
     /// Key of the property
-    pub key: DbKey,
+    pub key: DbValue,
 
     /// Value of the property
     pub value: DbValue,
@@ -25,7 +24,7 @@ pub struct DbKeyValue {
 
 impl<K, T> From<(K, T)> for DbKeyValue
 where
-    K: Into<DbKey>,
+    K: Into<DbValue>,
     T: Into<DbValue>,
 {
     fn from(value: (K, T)) -> Self {
@@ -81,8 +80,8 @@ mod tests {
         format!(
             "{:?}",
             DbKeyValue {
-                key: DbKey::I64(0),
-                value: DbKey::I64(0)
+                key: DbValue::I64(0),
+                value: DbValue::I64(0)
             }
         );
     }
@@ -90,12 +89,12 @@ mod tests {
     fn derived_from_partial_eq() {
         assert_eq!(
             DbKeyValue {
-                key: DbKey::I64(0),
-                value: DbKey::I64(0)
+                key: DbValue::I64(0),
+                value: DbValue::I64(0)
             },
             DbKeyValue {
-                key: DbKey::I64(0),
-                value: DbKey::I64(0)
+                key: DbValue::I64(0),
+                value: DbValue::I64(0)
             }
         );
     }

@@ -1,8 +1,8 @@
 use crate::DbElement;
 use crate::DbError;
 use crate::DbId;
-use crate::DbKey;
 use crate::DbKeyValue;
+use crate::DbValue;
 
 /// Trait that allows use of user defined values
 /// directly by facilitating translation from/to
@@ -40,7 +40,7 @@ pub trait DbUserValue: Sized {
 
     /// Returns the list of database keys of
     /// this type.
-    fn db_keys() -> Vec<DbKey>;
+    fn db_keys() -> Vec<DbValue>;
 
     /// Constructs the user value from the `element`
     /// extracting the values from element `values`

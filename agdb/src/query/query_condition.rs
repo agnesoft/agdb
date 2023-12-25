@@ -1,5 +1,4 @@
 use crate::graph_search::SearchControl;
-use crate::DbKey;
 use crate::DbValue;
 use crate::QueryId;
 
@@ -70,14 +69,14 @@ pub enum QueryConditionData {
     /// with a value that evaluates true against `comparison`.
     KeyValue {
         /// Property key
-        key: DbKey,
+        key: DbValue,
 
         /// Comparison operator (e.g. Equal, GreaterThan etc.)
         value: Comparison,
     },
 
     /// Test if the current element has **all** of the keys listed.
-    Keys(Vec<DbKey>),
+    Keys(Vec<DbValue>),
 
     /// Is the current element a node? I.e. `0 < id`.
     Node,

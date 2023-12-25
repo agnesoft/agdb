@@ -221,9 +221,9 @@ export interface components {
     DbId: number;
     /** @description Ordering for search queries */
     DbKeyOrder: OneOf<[{
-      Asc: components["schemas"]["DbKey"];
+      Asc: components["schemas"]["DbValue"];
     }, {
-      Desc: components["schemas"]["DbKey"];
+      Desc: components["schemas"]["DbValue"];
     }]>;
     /**
      * @description Database key-value pair (aka property) attached to
@@ -231,7 +231,7 @@ export interface components {
      * tuple of types that are convertible to `DbValue`.
      */
     DbKeyValue: {
-      key: components["schemas"]["DbKey"];
+      key: components["schemas"]["DbValue"];
       value: components["schemas"]["DbValue"];
     };
     /** @enum {string} */
@@ -400,12 +400,12 @@ export interface components {
        * with a value that evaluates true against `comparison`.
        */
       KeyValue: {
-        key: components["schemas"]["DbKey"];
+        key: components["schemas"]["DbValue"];
         value: components["schemas"]["Comparison"];
       };
     } | {
       /** @description Test if the current element has **all** of the keys listed. */
-      Keys: components["schemas"]["DbKey"][];
+      Keys: components["schemas"]["DbValue"][];
     } | "Node" | {
       /** @description Nested list of conditions (equivalent to brackets). */
       Where: components["schemas"]["QueryCondition"][];
@@ -579,7 +579,7 @@ export interface components {
      */
     SelectValuesQuery: {
       ids: components["schemas"]["QueryIds"];
-      keys: components["schemas"]["DbKey"][];
+      keys: components["schemas"]["DbValue"][];
     };
     ServerDatabase: {
       /** Format: int64 */

@@ -1892,7 +1892,7 @@
             ],
             "properties": {
               "Asc": {
-                "$ref": "#/components/schemas/DbKey"
+                "$ref": "#/components/schemas/DbValue"
               }
             }
           },
@@ -1903,7 +1903,7 @@
             ],
             "properties": {
               "Desc": {
-                "$ref": "#/components/schemas/DbKey"
+                "$ref": "#/components/schemas/DbValue"
               }
             }
           }
@@ -1919,7 +1919,7 @@
         ],
         "properties": {
           "key": {
-            "$ref": "#/components/schemas/DbKey"
+            "$ref": "#/components/schemas/DbValue"
           },
           "value": {
             "$ref": "#/components/schemas/DbValue"
@@ -2313,7 +2313,7 @@
                 ],
                 "properties": {
                   "key": {
-                    "$ref": "#/components/schemas/DbKey"
+                    "$ref": "#/components/schemas/DbValue"
                   },
                   "value": {
                     "$ref": "#/components/schemas/Comparison"
@@ -2331,7 +2331,7 @@
               "Keys": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/DbKey"
+                  "$ref": "#/components/schemas/DbValue"
                 },
                 "description": "Test if the current element has **all** of the keys listed."
               }
@@ -2759,7 +2759,7 @@
           "keys": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/DbKey"
+              "$ref": "#/components/schemas/DbValue"
             }
           }
         }

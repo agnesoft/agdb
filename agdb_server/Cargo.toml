@@ -11,7 +11,7 @@ keywords = ["graph", "database", "api"]
 categories = ["database", "database-interfaces"]
 
 [dependencies]
-agdb = { version = "0.5.2", path = "../agdb", features = ["serde"] }
+agdb = { version = "0.5.2", path = "../agdb", features = ["serde", "openapi"] }
 axum = { version = "0.7", features = ["http2"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 http-body-util = "0.1"

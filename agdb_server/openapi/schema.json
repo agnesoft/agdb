@@ -773,6 +773,51 @@
         ]
       }
     },
+    "/api/v1/admin/user/{username}/remove": {
+      "post": {
+        "tags": [
+          "crate::routes::admin::user"
+        ],
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/admin/{owner}/{db}/restore": {
       "post": {
         "tags": [

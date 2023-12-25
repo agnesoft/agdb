@@ -7,6 +7,22 @@ export type EdgeOptions = {
     values: { [key: string]: string };
 };
 
+class Property {
+
+}
+
+class InsertNodes {
+    public count: number;
+    public values: [DataType, DataType] | Property[][];
+    public aliases: string[];
+
+    constructor(count: number, values: [DataType, DataType] | Property[][], aliases: string[]) {
+        this.count = count;
+        this.values = values;
+        this.aliases = aliases;
+    }   
+}
+
 export default class Edge {
     private id: number;
     private from: Node | undefined;

@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::db_pool::ServerUser;
 use crate::error_code::ErrorCode;
@@ -103,4 +104,27 @@ pub(crate) async fn list(
         .map(|name| UserStatus { name })
         .collect();
     Ok((StatusCode::OK, Json(users)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/user/{username}/remove",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+    ),
+    responses(
+         (status = 204, description = "user removed", body = Vec<UserStatus>),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "user not found"),
+    )
+)]
+pub(crate) async fn remove(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path(username): Path<String>,
+) -> ServerResponse {
+    db_pool.remove_user(&username, &config)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

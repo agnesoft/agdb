@@ -5,6 +5,7 @@ use crate::DbId;
 /// id or a string alias.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum QueryId {
     /// Numerical id as [`DbId`]
     Id(DbId),

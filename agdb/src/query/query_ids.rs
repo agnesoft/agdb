@@ -11,6 +11,7 @@ use crate::SearchQuery;
 /// select queries.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub enum QueryIds {
     /// List of [`QueryId`]s
     Ids(Vec<QueryId>),

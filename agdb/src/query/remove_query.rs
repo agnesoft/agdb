@@ -13,6 +13,7 @@ use crate::StorageData;
 /// If removing nodes all of its incoming and outgoing edges are
 /// also removed along with their properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct RemoveQuery(pub QueryIds);
 
 impl QueryMut for RemoveQuery {

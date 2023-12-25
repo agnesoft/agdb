@@ -11,6 +11,7 @@ use crate::StorageData;
 /// The result will be a negative number signifying how
 /// many aliases have been actually removed.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct RemoveAliasesQuery(pub Vec<String>);
 
 impl QueryMut for RemoveAliasesQuery {

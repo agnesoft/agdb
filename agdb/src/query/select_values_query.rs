@@ -14,6 +14,7 @@ use crate::StorageData;
 /// The result will be number of elements and the
 /// list of elements with the requested properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct SelectValuesQuery {
     pub keys: Vec<DbKey>,
     pub ids: QueryIds,

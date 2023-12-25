@@ -159,7 +159,7 @@ mod tests {
         let value = vec![1_u8; 16];
         assert!(!index.set_value(&value));
 
-        assert_eq!(index.value(), vec![]);
+        assert_eq!(index.value(), Vec::<u8>::new());
         assert_eq!(index.size(), 0);
         assert!(index.is_value());
     }
@@ -169,7 +169,7 @@ mod tests {
         let mut index = DbValueIndex::default();
         index.set_index(10_u64);
 
-        assert_eq!(index.value(), vec![]);
+        assert_eq!(index.value(), Vec::<u8>::new());
         assert_eq!(index.size(), 0);
         assert_eq!(index.index(), 10_u64);
         assert!(!index.is_value());

@@ -11,6 +11,7 @@ use crate::StorageData;
 /// of elements with a single property `String("alias")` holding
 /// the value `String`.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct SelectAllAliasesQuery {}
 
 impl Query for SelectAllAliasesQuery {

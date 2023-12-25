@@ -33,7 +33,7 @@ mod utilities;
 #[cfg(test)]
 pub mod test_utilities;
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 pub use query::QueryType;
 
 #[cfg(feature = "derive")]
@@ -41,6 +41,7 @@ pub use agdb_derive::UserValue;
 
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
+pub use db::db_f64::DbF64;
 pub use db::db_id::DbId;
 pub use db::db_key::DbKey;
 pub use db::db_key::DbKeyOrder;

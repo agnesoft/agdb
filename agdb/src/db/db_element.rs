@@ -5,6 +5,7 @@ use crate::DbKeyValue;
 /// that represents a node or an edge.
 #[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DbElement {
     /// Element id.
     pub id: DbId,

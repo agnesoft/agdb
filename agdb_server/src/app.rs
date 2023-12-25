@@ -31,6 +31,10 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
             "/admin/user/:user/change_password",
             routing::put(routes::admin::user::change_password),
         )
+        .route(
+            "/admin/user/:user/remove",
+            routing::post(routes::admin::user::remove),
+        )
         .route("/admin/db/list", routing::get(routes::admin::db::list))
         .route(
             "/admin/db/:user/:db/add",

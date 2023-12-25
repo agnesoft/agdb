@@ -716,6 +716,27 @@ impl DbPool {
         Ok(self.get_pool_mut()?.remove(&db_name).unwrap())
     }
 
+    pub(crate) fn remove_user(&self, username: &str, config: &Config) -> ServerResult {
+        let user_id = self.find_user_id(username)?;
+        let dbs = self.find_user_databases(user_id)?;
+        for db in dbs.iter() {
+            self.get_pool_mut()?.remove(&db.name);
+        }
+        let mut ids = dbs
+            .into_iter()
+            .map(|db| db.db_id.unwrap())
+            .collect::<Vec<DbId>>();
+        ids.push(user_id);
+        self.db_mut()?
+            .exec_mut(&QueryBuilder::remove().ids(ids).query())?;
+        let user_dir = Path::new(&config.data_dir).join(username);
+        if user_dir.exists() {
+            std::fs::remove_dir_all(user_dir)?;
+        }
+
+        Ok(())
+    }
+
     pub(crate) fn rename_db(
         &self,
         owner: &str,
@@ -904,6 +925,24 @@ impl DbPool {
                     .id;
                 Ok(t.exec(&QueryBuilder::select().ids(db_id).query())?)
             })?
+            .try_into()?)
+    }
+
+    fn find_user_databases(&self, user: DbId) -> ServerResult<Vec<Database>> {
+        Ok(self
+            .db()?
+            .exec(
+                &QueryBuilder::select()
+                    .ids(
+                        QueryBuilder::search()
+                            .depth_first()
+                            .from(user)
+                            .where_()
+                            .distance(CountComparison::Equal(2))
+                            .query(),
+                    )
+                    .query(),
+            )?
             .try_into()?)
     }
 

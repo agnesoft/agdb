@@ -2,11 +2,17 @@ import useForceDirectedGraph, {
     type ForceDirectedGraph,
 } from "@/composables/graph/composable/forceDirectedGraph";
 import { describe, it, expect, beforeEach } from "vitest";
-import simpleData from "../testData/simpleData.json" assert { type: "json" };
+import simpleData from "@/testData/simpleData.json" assert { type: "json" };
 
 describe("useForceDirectedGraph 2D", () => {
     let graph: ForceDirectedGraph;
     const graphData = JSON.parse(JSON.stringify(simpleData));
+    const results = {
+        iterations: 63,
+        x: -0.000735,
+        y: 0.005062,
+        z: 0,
+    };
 
     beforeEach(() => {
         graph = useForceDirectedGraph({ is2d: true });
@@ -30,13 +36,14 @@ describe("useForceDirectedGraph 2D", () => {
         graph.loadGraph(graphData);
         graph.simulate();
 
-        expect(graph.getIterations()).toBe(12);
+        expect(graph.getIterations()).toBe(results.iterations);
 
         // position of third node
         const node3 = graph.getNodes()[2];
-        expect(node3.getCoordinates().x).toBeCloseTo(6.538923, 6);
-        expect(node3.getCoordinates().y).toBeCloseTo(15.775091, 6);
-        expect(node3.getCoordinates().z).toBe(0);
+        console.log(node3.getCoordinates());
+        expect(node3.getCoordinates().x).toBeCloseTo(results.x, 6);
+        expect(node3.getCoordinates().y).toBeCloseTo(results.y, 6);
+        expect(node3.getCoordinates().z).toBe(results.z);
     });
 
     it("should calculate the performance", () => {
@@ -51,6 +58,29 @@ describe("useForceDirectedGraph 2D", () => {
         graph.loadGraph(graphData);
         const foundNode = graph.findNode(118);
         expect(foundNode?.getId()).toBe(118);
+    });
+
+    it("should process empty data correctly", () => {
+        graph.loadGraph({
+            result: 0,
+            elements: [],
+        });
+        expect(graph.getNodes().length).toBe(0);
+        expect(graph.getEdges().length).toBe(0);
+    });
+
+    it("should process data with only nodes correctly", () => {
+        graph.loadGraph({
+            result: 1,
+            elements: [
+                {
+                    id: 1,
+                    values: {},
+                },
+            ],
+        });
+        expect(graph.getNodes().length).toBe(1);
+        expect(graph.getEdges().length).toBe(0);
     });
 });
 

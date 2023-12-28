@@ -18,6 +18,8 @@ export type Edge = {
     setFrom: (fromNode: Node) => void;
     getTo: () => Node | undefined;
     setTo: (toNode: Node) => void;
+    getValues: () => Map<string, string>;
+    getValuesObject: () => { [key: string]: string };
 };
 
 const useEdge = function (options: EdgeOptions): Edge {
@@ -62,6 +64,18 @@ const useEdge = function (options: EdgeOptions): Edge {
         return to.getZ() - from.getZ();
     };
 
+    const getValues = (): Map<string, string> => {
+        return values;
+    };
+
+    const getValuesObject = (): { [key: string]: string } => {
+        const result: { [key: string]: string } = {};
+        for (const [key, value] of values.entries()) {
+            result[key] = value;
+        }
+        return result;
+    };
+
     const getValuesEntries = (): IterableIterator<[string, string]> => {
         return values.entries();
     };
@@ -93,6 +107,8 @@ const useEdge = function (options: EdgeOptions): Edge {
         setFrom,
         getTo,
         setTo,
+        getValues,
+        getValuesObject,
     };
 };
 

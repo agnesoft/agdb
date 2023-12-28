@@ -16,6 +16,10 @@ export interface Edge {
 
     getDz(): number;
 
+    getValues(): Map<string, string>;
+
+    getValuesObject(): { [key: string]: string };
+
     getValuesEntries(): IterableIterator<[string, string]>;
 
     getFrom(): Node | undefined;
@@ -83,6 +87,18 @@ export const Edge = (function () {
         }
 
         return to.getZ() - from.getZ();
+    };
+
+    Edge.prototype.getValues = function (): Map<string, string> {
+        return this[symbol].values;
+    };
+
+    Edge.prototype.getValuesObject = function (): { [key: string]: string } {
+        const result: { [key: string]: string } = {};
+        for (const [key, value] of this[symbol].values.entries()) {
+            result[key] = value;
+        }
+        return result;
     };
 
     Edge.prototype.getValuesEntries = function (): IterableIterator<[string, string]> {

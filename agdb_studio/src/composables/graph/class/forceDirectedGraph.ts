@@ -7,9 +7,10 @@ export type ForceDirectedGraphOptions = {
 
 const ITERATION_COUNT = 500;
 const ATTRACTION_CONSTANT = 0.1;
-const REPULSION_CONSTANT = 1000.0;
+const REPULSION_CONSTANT = 100000.0;
 const SPRING_LENGTH = 100.0;
 const GRAVITY = 0.1;
+const DAMPER = 0.5;
 
 export default class ForceDirectedGraph {
     private nodes: Node[] = [];
@@ -18,8 +19,6 @@ export default class ForceDirectedGraph {
 
     private angle1 = 0.1;
     private angle2 = 0.1;
-
-    private damper = 0.5;
 
     private startTimestamp = 0;
     private endTimestamp = 0;
@@ -63,6 +62,7 @@ export default class ForceDirectedGraph {
         while (this.step() && this.iterations < ITERATION_COUNT) {
             this.iterations++;
         }
+        this.normalizeNodes();
         this.endTimestamp = Date.now();
     }
 
@@ -80,6 +80,42 @@ export default class ForceDirectedGraph {
 
     public getEdges(): Edge[] {
         return this.edges;
+    }
+
+    private normalizeNodes(): void {
+        let minX = Infinity;
+        let minY = Infinity;
+        let minZ = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        let maxZ = -Infinity;
+
+        for (const node of this.nodes) {
+            const coordinates = node.getCoordinates();
+            minX = Math.min(minX, coordinates.x);
+            minY = Math.min(minY, coordinates.y);
+            minZ = Math.min(minZ, coordinates.z);
+            maxX = Math.max(maxX, coordinates.x);
+            maxY = Math.max(maxY, coordinates.y);
+            maxZ = Math.max(maxZ, coordinates.z);
+        }
+
+        const centerX = (minX + maxX) / 2.0;
+        const centerY = (minY + maxY) / 2.0;
+        const centerZ = (minZ + maxZ) / 2.0;
+
+        const scaleX = 1.0 / (maxX - minX);
+        const scaleY = 1.0 / (maxY - minY);
+        const scaleZ = maxZ !== minZ ? 1.0 / (maxZ - minZ) : 0.0;
+
+        for (const node of this.nodes) {
+            const coordinates = node.getCoordinates();
+            node.setCoordinates(
+                (coordinates.x - centerX) * scaleX,
+                (coordinates.y - centerY) * scaleY,
+                (coordinates.z - centerZ) * scaleZ,
+            );
+        }
     }
 
     private nextPos(): Coordinates {
@@ -105,13 +141,8 @@ export default class ForceDirectedGraph {
         return this.nodes.find((node) => node.getId() === id);
     }
 
-    private damperIncrease(): void {
-        this.damper += 0.1;
-    }
-
     private step(): boolean {
         this.applyForces();
-        this.damperIncrease();
         return this.moveNodes();
     }
 
@@ -125,7 +156,7 @@ export default class ForceDirectedGraph {
         let totalMovement = 0.0;
         for (const node of this.nodes) {
             totalMovement += node.getVelocityLength();
-            node.move(this.damper);
+            node.move(DAMPER);
         }
         return totalMovement >= 10.0;
     }

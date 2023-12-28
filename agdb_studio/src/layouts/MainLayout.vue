@@ -3,7 +3,7 @@ import { RouterLink, RouterView } from "vue-router";
 </script>
 
 <template>
-    <div>
+    <div class="main-layout">
         <header>
             <img alt="agdb logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
@@ -22,9 +22,29 @@ import { RouterLink, RouterView } from "vue-router";
 </template>
 
 <style lang="css" scoped>
+.main-layout {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: max-content 1fr max-content;
+    grid-template-areas:
+        "header"
+        "main"
+        "footer";
+}
+
 header {
+    grid-area: header;
     line-height: 1.5;
-    max-height: 100vh;
+}
+
+main {
+    grid-area: main;
+    flex-grow: 1;
+}
+
+footer {
+    grid-area: footer;
 }
 
 .logo {

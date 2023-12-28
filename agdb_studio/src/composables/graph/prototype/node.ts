@@ -17,6 +17,10 @@ export interface Node {
 
     setCoordinates(x: number, y: number, z?: number): Node;
 
+    getValues(): Map<string, string>;
+
+    getValuesObject(): { [key: string]: string };
+
     getValuesEntries(): IterableIterator<[string, string]>;
 
     getVelocity(): Coordinates;
@@ -77,6 +81,18 @@ export const Node = (function () {
         this[symbol].y = _y;
         this[symbol].z = _z;
         return this[symbol];
+    };
+
+    Node.prototype.getValues = function (): Map<string, string> {
+        return this[symbol].values;
+    };
+
+    Node.prototype.getValuesObject = function (): { [key: string]: string } {
+        const result: { [key: string]: string } = {};
+        for (const [key, value] of this[symbol].values.entries()) {
+            result[key] = value;
+        }
+        return result;
     };
 
     Node.prototype.getValuesEntries = function (): IterableIterator<[string, string]> {

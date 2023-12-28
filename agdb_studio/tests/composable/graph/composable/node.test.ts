@@ -27,6 +27,14 @@ describe("useNode", () => {
         expect(node.getCoordinates()).toEqual({ x, y, z });
     });
 
+    it("should return the correct values", () => {
+        expect(node.getValues().get("foo")).toBe("bar");
+    });
+
+    it("should return the correct values object", () => {
+        expect(node.getValuesObject()).toEqual({ foo: "bar" });
+    });
+
     it("should return the correct values entries", () => {
         expect(node.getValuesEntries().next().value).toEqual(["foo", "bar"]);
     });

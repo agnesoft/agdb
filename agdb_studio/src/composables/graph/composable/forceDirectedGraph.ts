@@ -7,9 +7,10 @@ export type ForceDirectedGraphOptions = {
 
 const ITERATION_COUNT = 500;
 const ATTRACTION_CONSTANT = 0.1;
-const REPULSION_CONSTANT = 1000.0;
+const REPULSION_CONSTANT = 100000.0;
 const SPRING_LENGTH = 100.0;
 const GRAVITY = 0.1;
+const DAMPER = 0.5;
 
 export type ForceDirectedGraph = {
     loadGraph: (graph: Graph) => void;
@@ -20,7 +21,6 @@ export type ForceDirectedGraph = {
     getEdges: () => Edge[];
     findNode: (id: number) => Node | undefined;
     nextPos: () => Coordinates;
-    damperIncrease: () => void;
     step: () => boolean;
     applyForces: () => void;
     moveNodes: () => boolean;
@@ -36,8 +36,6 @@ const useForceDirectedGraph = function (options: ForceDirectedGraphOptions): For
 
     let angle1 = 0.1;
     let angle2 = 0.1;
-
-    let damper = 0.5;
 
     let startTimestamp = 0;
     let endTimestamp = 0;
@@ -71,12 +69,49 @@ const useForceDirectedGraph = function (options: ForceDirectedGraphOptions): For
         }
     };
 
+    const normalizeNodes = (): void => {
+        let minX = Infinity;
+        let minY = Infinity;
+        let minZ = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        let maxZ = -Infinity;
+
+        for (const node of nodes) {
+            const coordinates = node.getCoordinates();
+            minX = Math.min(minX, coordinates.x);
+            minY = Math.min(minY, coordinates.y);
+            minZ = Math.min(minZ, coordinates.z);
+            maxX = Math.max(maxX, coordinates.x);
+            maxY = Math.max(maxY, coordinates.y);
+            maxZ = Math.max(maxZ, coordinates.z);
+        }
+
+        const centerX = (minX + maxX) / 2.0;
+        const centerY = (minY + maxY) / 2.0;
+        const centerZ = (minZ + maxZ) / 2.0;
+
+        const scaleX = 1.0 / (maxX - minX);
+        const scaleY = 1.0 / (maxY - minY);
+        const scaleZ = maxZ !== minZ ? 1.0 / (maxZ - minZ) : 0.0;
+
+        for (const node of nodes) {
+            const coordinates = node.getCoordinates();
+            node.setCoordinates(
+                (coordinates.x - centerX) * scaleX,
+                (coordinates.y - centerY) * scaleY,
+                (coordinates.z - centerZ) * scaleZ,
+            );
+        }
+    };
+
     const simulate = (): void => {
         startTimestamp = Date.now();
         iterations = 0;
         while (step() && iterations < ITERATION_COUNT) {
             iterations++;
         }
+        normalizeNodes();
         endTimestamp = Date.now();
     };
 
@@ -119,13 +154,8 @@ const useForceDirectedGraph = function (options: ForceDirectedGraphOptions): For
         };
     };
 
-    const damperIncrease = (): void => {
-        damper += 0.1;
-    };
-
     const step = (): boolean => {
         applyForces();
-        damperIncrease();
         return moveNodes();
     };
 
@@ -139,7 +169,7 @@ const useForceDirectedGraph = function (options: ForceDirectedGraphOptions): For
         let totalMovement = 0.0;
         for (const node of nodes) {
             totalMovement += node.getVelocityLength();
-            node.move(damper);
+            node.move(DAMPER);
         }
         return totalMovement >= 10.0;
     };
@@ -216,7 +246,6 @@ const useForceDirectedGraph = function (options: ForceDirectedGraphOptions): For
         getEdges,
         findNode,
         nextPos,
-        damperIncrease,
         step,
         applyForces,
         moveNodes,

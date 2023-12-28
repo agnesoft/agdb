@@ -25,6 +25,8 @@ export type Node = {
     getY: () => number;
     getZ: () => number;
     dist: (v: Node) => number;
+    getValues: () => Map<string, string>;
+    getValuesObject: () => { [key: string]: string };
 };
 
 function useNode(options: NodeOptions): Node {
@@ -43,6 +45,18 @@ function useNode(options: NodeOptions): Node {
 
     const getCoordinates = (): Coordinates => {
         return { x, y, z };
+    };
+
+    const getValues = (): Map<string, string> => {
+        return values;
+    };
+
+    const getValuesObject = (): { [key: string]: string } => {
+        const result: { [key: string]: string } = {};
+        for (const [key, value] of values.entries()) {
+            result[key] = value;
+        }
+        return result;
     };
 
     const getValuesEntries = (): IterableIterator<[string, string]> => {
@@ -119,6 +133,8 @@ function useNode(options: NodeOptions): Node {
         getY,
         getZ,
         dist,
+        getValues,
+        getValuesObject,
     };
 }
 

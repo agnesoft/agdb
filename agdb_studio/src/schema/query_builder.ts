@@ -404,6 +404,168 @@ class RemoveBuilder {
     }
 }
 
+class SelectAliasesIdsBuilder {
+    private data: components["schemas"]["SelectAliasesQuery"];
+
+    constructor(data: components["schemas"]["SelectAliasesQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["SelectAliasesQuery"] {
+        return this.data;
+    }
+}
+
+class SelectAliasesBuilder {
+    private data: components["schemas"]["SelectAliasesQuery"];
+
+    constructor() {
+        this.data = {
+            Ids: [],
+        };
+    }
+
+    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectAliasesIdsBuilder {
+        if (Array.isArray(ids)) {
+            return new SelectAliasesIdsBuilder({ Ids: intoQueryIds(ids) });
+        } else {
+            return new SelectAliasesIdsBuilder({ Search: ids });
+        }
+    }
+
+    query(): components["schemas"]["SelectAllAliasesQuery"] {
+        return {};
+    }
+}
+
+class SelectIdsBuilder {
+    private data: components["schemas"]["SelectQuery"];
+
+    constructor(data: components["schemas"]["SelectQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["SelectQuery"] {
+        return this.data;
+    }
+}
+
+class SelectValuesIdsBuilder {
+    private data: components["schemas"]["SelectValuesQuery"];
+
+    constructor(data: components["schemas"]["SelectValuesQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["SelectValuesQuery"] {
+        return this.data;
+    }
+}
+
+class SelectValuesBuilder {
+    private data: components["schemas"]["SelectValuesQuery"];
+
+    constructor(data: components["schemas"]["SelectValuesQuery"]) {
+        this.data = data;
+    }
+
+    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectValuesIdsBuilder {
+        if (Array.isArray(ids)) {
+            this.data.ids.Ids = intoQueryIds(ids);
+        } else {
+            this.data.ids.Search = ids;
+        }
+
+        return new SelectValuesIdsBuilder(this.data);
+    }
+}
+
+class SelectKeysIdsBuilder {
+    private data: components["schemas"]["SelectKeysQuery"];
+
+    constructor(data: components["schemas"]["SelectKeysQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["SelectKeysQuery"] {
+        return this.data;
+    }
+}
+
+class SelectKeysBuilder {
+    private data: components["schemas"]["SelectKeysQuery"];
+
+    constructor(data: components["schemas"]["SelectKeysQuery"]) {
+        this.data = data;
+    }
+
+    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectKeysIdsBuilder {
+        if (Array.isArray(ids)) {
+            this.data.Ids = intoQueryIds(ids);
+        } else {
+            this.data.Search = ids;
+        }
+
+        return new SelectKeysIdsBuilder(this.data);
+    }
+}
+
+class SelectKeyCountIdsBuilder {
+    private data: components["schemas"]["SelectKeyCountQuery"];
+
+    constructor(data: components["schemas"]["SelectKeyCountQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["SelectKeyCountQuery"] {
+        return this.data;
+    }
+}
+
+class SelectKeyCountBuilder {
+    private data: components["schemas"]["SelectKeyCountQuery"];
+
+    constructor(data: components["schemas"]["SelectKeyCountQuery"]) {
+        this.data = data;
+    }
+
+    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectKeyCountIdsBuilder {
+        if (Array.isArray(ids)) {
+            this.data.Ids = intoQueryIds(ids);
+        } else {
+            this.data.Search = ids;
+        }
+
+        return new SelectKeyCountIdsBuilder(this.data);
+    }
+}
+
+class SelectBuilder {
+    aliases(): SelectAliasesBuilder {
+        return new SelectAliasesBuilder();
+    }
+
+    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectIdsBuilder {
+        if (Array.isArray(ids)) {
+            return new SelectIdsBuilder({ Ids: intoQueryIds(ids) });
+        } else {
+            return new SelectIdsBuilder({ Search: ids });
+        }
+    }
+
+    keys(): SelectKeysBuilder {
+        return new SelectKeysBuilder({ Ids: [] });
+    }
+
+    key_count(): SelectKeyCountBuilder {
+        return new SelectKeyCountBuilder({ Ids: [] });
+    }
+
+    values(values: components["schemas"]["DbValue"][]): SelectValuesBuilder {
+        return new SelectValuesBuilder({ ids: { Ids: [] }, keys: values });
+    }
+}
+
 export class QueryBuilder {
     constructor() {
         return new QueryBuilder();
@@ -415,5 +577,9 @@ export class QueryBuilder {
 
     static remove(): RemoveBuilder {
         return new RemoveBuilder();
+    }
+
+    static select(): SelectBuilder {
+        return new SelectBuilder();
     }
 }

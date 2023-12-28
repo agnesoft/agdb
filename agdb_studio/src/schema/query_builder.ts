@@ -332,6 +332,78 @@ class InsertBuilder {
     }
 }
 
+class RemoveIdsBuilder {
+    private data: components["schemas"]["RemoveQuery"];
+
+    constructor(data: components["schemas"]["RemoveQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["RemoveQuery"] {
+        return this.data;
+    }
+}
+
+class RemoveAliasesBuilder {
+    private data: components["schemas"]["RemoveAliasesQuery"];
+
+    constructor(data: components["schemas"]["RemoveAliasesQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["RemoveAliasesQuery"] {
+        return this.data;
+    }
+}
+
+class RemoveValuesIdsBuilder {
+    private data: components["schemas"]["RemoveValuesQuery"];
+
+    constructor(data: components["schemas"]["RemoveValuesQuery"]) {
+        this.data = data;
+    }
+
+    query(): components["schemas"]["RemoveValuesQuery"] {
+        return this.data;
+    }
+}
+
+class RemoveValuesBuilder {
+    private data: components["schemas"]["RemoveValuesQuery"];
+
+    constructor(data: components["schemas"]["RemoveValuesQuery"]) {
+        this.data = data;
+    }
+
+    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): RemoveValuesIdsBuilder {
+        if (Array.isArray(ids)) {
+            this.data.ids.Ids = intoQueryIds(ids);
+        } else {
+            this.data.ids.Search = ids;
+        }
+
+        return new RemoveValuesIdsBuilder(this.data);
+    }
+}
+
+class RemoveBuilder {
+    aliases(aliases: string[]): RemoveAliasesBuilder {
+        return new RemoveAliasesBuilder(aliases);
+    }
+
+    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): RemoveIdsBuilder {
+        if (Array.isArray(ids)) {
+            return new RemoveIdsBuilder({ Ids: intoQueryIds(ids) });
+        } else {
+            return new RemoveIdsBuilder({ Search: ids });
+        }
+    }
+
+    values(values: components["schemas"]["DbValue"][]): RemoveValuesBuilder {
+        return new RemoveValuesBuilder({ ids: { Ids: [] }, keys: values });
+    }
+}
+
 export class QueryBuilder {
     constructor() {
         return new QueryBuilder();
@@ -339,5 +411,9 @@ export class QueryBuilder {
 
     static insert(): InsertBuilder {
         return new InsertBuilder();
+    }
+
+    static remove(): RemoveBuilder {
+        return new RemoveBuilder();
     }
 }

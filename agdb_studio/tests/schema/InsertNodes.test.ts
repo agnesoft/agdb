@@ -1,8 +1,7 @@
-import { QueryBuilder } from "./openapi_schema";
-import { describe, it, expect, beforeEach } from "vitest";
-import { components } from "./schema";
+import { QueryBuilder } from "../../src/schema/query_builder.js";
+import { describe, it } from "vitest";
 
-describe("agdb query", () => {
+describe("insert nodes", () => {
     it("insert().nodes().aliases().query()", () => {
         QueryBuilder.insert().nodes().aliases(["alias1", "alias2"]).query();
     });

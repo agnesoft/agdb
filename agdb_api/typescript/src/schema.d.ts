@@ -1116,6 +1116,8 @@ declare namespace Paths {
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
             new_name: Parameters.NewName;
         }
         namespace Responses {
@@ -1218,6 +1220,8 @@ declare namespace Paths {
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
             new_name: Parameters.NewName;
         }
         namespace Responses {
@@ -1262,6 +1266,8 @@ declare namespace Paths {
             owner: Parameters.Owner;
             db: Parameters.Db;
             username: Parameters.Username;
+        }
+        export interface QueryParameters {
             db_role: Parameters.DbRole;
         }
         namespace Responses {
@@ -1440,6 +1446,8 @@ declare namespace Paths {
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
             new_name: Parameters.NewName;
         }
         namespace Responses {
@@ -1550,6 +1558,8 @@ declare namespace Paths {
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
             new_name: Parameters.NewName;
         }
         namespace Responses {
@@ -1598,6 +1608,8 @@ declare namespace Paths {
             owner: Parameters.Owner;
             db: Parameters.Db;
             username: Parameters.Username;
+        }
+        export interface QueryParameters {
             db_role: Parameters.DbRole;
         }
         namespace Responses {
@@ -1723,7 +1735,7 @@ export interface OperationMethods {
    * admin_db_copy
    */
   'admin_db_copy'(
-    parameters?: Parameters<Paths.AdminDbCopy.PathParameters> | null,
+    parameters?: Parameters<Paths.AdminDbCopy.PathParameters & Paths.AdminDbCopy.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbCopy.Responses.$201>
@@ -1763,7 +1775,7 @@ export interface OperationMethods {
    * admin_db_rename
    */
   'admin_db_rename'(
-    parameters?: Parameters<Paths.AdminDbRename.PathParameters> | null,
+    parameters?: Parameters<Paths.AdminDbRename.PathParameters & Paths.AdminDbRename.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbRename.Responses.$201>
@@ -1779,7 +1791,7 @@ export interface OperationMethods {
    * admin_db_user_add
    */
   'admin_db_user_add'(
-    parameters?: Parameters<Paths.AdminDbUserAdd.PathParameters> | null,
+    parameters?: Parameters<Paths.AdminDbUserAdd.PathParameters & Paths.AdminDbUserAdd.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbUserAdd.Responses.$201>
@@ -1867,7 +1879,7 @@ export interface OperationMethods {
    * db_copy
    */
   'db_copy'(
-    parameters?: Parameters<Paths.DbCopy.PathParameters> | null,
+    parameters?: Parameters<Paths.DbCopy.PathParameters & Paths.DbCopy.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbCopy.Responses.$201>
@@ -1907,7 +1919,7 @@ export interface OperationMethods {
    * db_rename
    */
   'db_rename'(
-    parameters?: Parameters<Paths.DbRename.PathParameters> | null,
+    parameters?: Parameters<Paths.DbRename.PathParameters & Paths.DbRename.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbRename.Responses.$201>
@@ -1931,7 +1943,7 @@ export interface OperationMethods {
    * db_user_add
    */
   'db_user_add'(
-    parameters?: Parameters<Paths.DbUserAdd.PathParameters> | null,
+    parameters?: Parameters<Paths.DbUserAdd.PathParameters & Paths.DbUserAdd.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbUserAdd.Responses.$201>
@@ -2005,7 +2017,7 @@ export interface PathsDictionary {
      * admin_db_copy
      */
     'post'(
-      parameters?: Parameters<Paths.AdminDbCopy.PathParameters> | null,
+      parameters?: Parameters<Paths.AdminDbCopy.PathParameters & Paths.AdminDbCopy.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbCopy.Responses.$201>
@@ -2055,7 +2067,7 @@ export interface PathsDictionary {
      * admin_db_rename
      */
     'post'(
-      parameters?: Parameters<Paths.AdminDbRename.PathParameters> | null,
+      parameters?: Parameters<Paths.AdminDbRename.PathParameters & Paths.AdminDbRename.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbRename.Responses.$201>
@@ -2075,7 +2087,7 @@ export interface PathsDictionary {
      * admin_db_user_add
      */
     'put'(
-      parameters?: Parameters<Paths.AdminDbUserAdd.PathParameters> | null,
+      parameters?: Parameters<Paths.AdminDbUserAdd.PathParameters & Paths.AdminDbUserAdd.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbUserAdd.Responses.$201>
@@ -2185,7 +2197,7 @@ export interface PathsDictionary {
      * db_copy
      */
     'post'(
-      parameters?: Parameters<Paths.DbCopy.PathParameters> | null,
+      parameters?: Parameters<Paths.DbCopy.PathParameters & Paths.DbCopy.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbCopy.Responses.$201>
@@ -2235,7 +2247,7 @@ export interface PathsDictionary {
      * db_rename
      */
     'post'(
-      parameters?: Parameters<Paths.DbRename.PathParameters> | null,
+      parameters?: Parameters<Paths.DbRename.PathParameters & Paths.DbRename.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbRename.Responses.$201>
@@ -2265,7 +2277,7 @@ export interface PathsDictionary {
      * db_user_add
      */
     'post'(
-      parameters?: Parameters<Paths.DbUserAdd.PathParameters> | null,
+      parameters?: Parameters<Paths.DbUserAdd.PathParameters & Paths.DbUserAdd.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbUserAdd.Responses.$201>

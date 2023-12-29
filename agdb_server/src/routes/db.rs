@@ -45,6 +45,7 @@ pub(crate) struct ServerDatabase {
 }
 
 #[derive(Deserialize, IntoParams, ToSchema)]
+#[into_params(parameter_in = Query)]
 pub(crate) struct ServerDatabaseRename {
     pub(crate) new_name: String,
 }

@@ -21,6 +21,7 @@ pub(crate) enum DbUserRole {
 }
 
 #[derive(Deserialize, IntoParams, ToSchema)]
+#[into_params(parameter_in = Query)]
 pub(crate) struct DbUserRoleParam {
     pub(crate) db_role: DbUserRole,
 }

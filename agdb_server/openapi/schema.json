@@ -175,7 +175,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -433,7 +433,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -544,7 +544,7 @@
           },
           {
             "name": "db_role",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbUserRole"
@@ -1031,7 +1031,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -1301,7 +1301,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -1462,7 +1462,7 @@
           },
           {
             "name": "db_role",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbUserRole"

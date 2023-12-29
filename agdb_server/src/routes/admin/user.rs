@@ -21,6 +21,7 @@ pub(crate) struct UserStatus {
 
 #[utoipa::path(post,
     path = "/api/v1/admin/user/{username}/add",
+    operation_id = "admin_user_add",
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "desired user name"),
@@ -62,6 +63,7 @@ pub(crate) async fn add(
 
 #[utoipa::path(put,
     path = "/api/v1/admin/user/{username}/change_password",
+    operation_id = "admin_user_change_password",
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "user name"),
@@ -88,6 +90,7 @@ pub(crate) async fn change_password(
 
 #[utoipa::path(get,
     path = "/api/v1/admin/user/list",
+    operation_id = "admin_user_list",
     security(("Token" = [])),
     responses(
          (status = 200, description = "ok", body = Vec<UserStatus>),
@@ -108,6 +111,7 @@ pub(crate) async fn list(
 
 #[utoipa::path(post,
     path = "/api/v1/admin/user/{username}/remove",
+    operation_id = "admin_user_remove",
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "user name"),

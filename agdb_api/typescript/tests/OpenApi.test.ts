@@ -5,20 +5,16 @@ import { Api } from "./client";
 describe("openapi test", () => {
     it("insert node", async () => {
         let client = await Api.client();
-        let admin_token = await client.paths["/api/v1/admin/login"].post({ password: "admin" });
-        Api.setToken(admin_token);
+        let admin_token = await client.user_login("admin", { password: "admin" });
+        Api.setToken(admin_token.data);
 
-        client.paths["/api/v1/admin/user/{username}/add"].post("user1", {
-            password: "password123",
-        });
+        await client.admin_user_add("user1", { password: "password123" });
+        let token = await client.user_login("user1", { password: "password123" });
+        Api.setToken(token.data);
 
-        let token = await client.paths["/api/v1/{username}/login"].post({
-            password: "password123",
-        });
+        await client.db_add({ owner: "user1", db: "db1", db_type: "memory" });
 
-        Api.setToken(token);
         let query = QueryBuilder.insert().aliases(["alias1", "alias2"]).ids([1, 2]).query();
-
-        client.paths["/api/v1/db/{owner}/{db}/exec"].post({ owner: "user1", db: "db1" }, [query]);
+        await client.db_exec({ owner: "user1", db: "db1" }, [query]);
     });
 });

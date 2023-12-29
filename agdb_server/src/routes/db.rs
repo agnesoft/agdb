@@ -90,6 +90,7 @@ impl Display for DbType {
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/add",
+    operation_id = "db_add",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -127,6 +128,7 @@ pub(crate) async fn add(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/backup",
+    operation_id = "db_backup",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -152,6 +154,7 @@ pub(crate) async fn backup(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/copy",
+    operation_id = "db_copy",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -181,6 +184,7 @@ pub(crate) async fn copy(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/delete",
+    operation_id = "db_delete",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -206,6 +210,7 @@ pub(crate) async fn delete(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/exec",
+    operation_id = "db_exec",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -232,6 +237,7 @@ pub(crate) async fn exec(
 
 #[utoipa::path(get,
     path = "/api/v1/db/list",
+    operation_id = "db_list",
     security(("Token" = [])),
     responses(
          (status = 200, description = "ok", body = Vec<ServerDatabase>),
@@ -249,6 +255,7 @@ pub(crate) async fn list(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/optimize",
+    operation_id = "db_optimize",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -272,6 +279,7 @@ pub(crate) async fn optimize(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/remove",
+    operation_id = "db_remove",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -296,6 +304,7 @@ pub(crate) async fn remove(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/rename",
+    operation_id = "db_rename",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -325,6 +334,7 @@ pub(crate) async fn rename(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/restore",
+    operation_id = "db_restore",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),

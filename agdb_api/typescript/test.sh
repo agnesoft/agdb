@@ -1,4 +1,7 @@
 cd ../../agdb_server
+rm -f agdb_server.yaml
+rm -f .agdb_server.agdb
+rm -f agdb_server.agdb
 cargo run --release &
 cd ../agdb_api/typescript
 npx vitest run --coverage

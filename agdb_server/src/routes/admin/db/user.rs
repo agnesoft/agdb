@@ -11,6 +11,7 @@ use axum::Json;
 
 #[utoipa::path(put,
     path = "/api/v1/admin/db/{owner}/{db}/user/{username}/add",
+    operation_id = "admin_db_user_add",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -39,6 +40,7 @@ pub(crate) async fn add(
 
 #[utoipa::path(get,
     path = "/api/v1/admin/db/{owner}/{db}/user/list",
+    operation_id = "admin_db_user_list",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -63,6 +65,7 @@ pub(crate) async fn list(
 
 #[utoipa::path(delete,
     path = "/api/v1/admin/db/{owner}/{db}/user/{username}/remove",
+    operation_id = "admin_db_user_remove",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),

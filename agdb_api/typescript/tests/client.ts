@@ -11,13 +11,13 @@ export class Api {
             Api.api = new OpenAPIClientAxios({
                 definition: `http://localhost:3000/api/v1/openapi.json`,
             });
+            Api.c = await Api.api.init<Client>();
             Api.c.interceptors.request.use((config) => {
                 if (Api.token !== "") {
                     config.headers.Authorization = `Bearer ${Api.token}`;
                 }
                 return config;
             });
-            Api.c = await Api.api.init<Client>();
         }
 
         return Api.c as Client;

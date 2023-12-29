@@ -34,6 +34,14 @@ describe("useEdge", () => {
     });
 
     it("should return the correct values", () => {
+        expect(edge.getValues().get("foo")).toBe("bar");
+    });
+
+    it("should return the correct values object", () => {
+        expect(edge.getValuesObject()).toEqual({ foo: "bar" });
+    });
+
+    it("should return the correct values", () => {
         expect(edge.getValuesEntries().next().value).toEqual(["foo", "bar"]);
     });
 

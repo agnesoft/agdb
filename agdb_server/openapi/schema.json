@@ -8,6 +8,12 @@
     },
     "version": "0.1.0"
   },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local server"
+    }
+  ],
   "paths": {
     "/api/v1/admin/db/list": {
       "get": {
@@ -340,7 +346,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServerDatabaseSize"
+                  "$ref": "#/components/schemas/ServerDatabase"
                 }
               }
             }

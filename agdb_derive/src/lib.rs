@@ -122,7 +122,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
                 use agdb::DbUserValue;
                 value
                     .elements
-                    .get(0)
+                    .first()
                     .ok_or(Self::Error::from("No element found"))?
                     .try_into()
             }

@@ -6,6 +6,9 @@ use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
+    servers(
+        (url = "http://localhost:3000", description = "Local server"),
+    ),
     paths(
         crate::routes::status,
         crate::routes::admin::db::add,

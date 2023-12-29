@@ -56,6 +56,18 @@ export default class Edge {
         return this.to.getZ() - this.from.getZ();
     }
 
+    public getValues(): Map<string, string> {
+        return this.values;
+    }
+
+    public getValuesObject(): { [key: string]: string } {
+        const result: { [key: string]: string } = {};
+        for (const [key, value] of this.values.entries()) {
+            result[key] = value;
+        }
+        return result;
+    }
+
     public getValuesEntries(): IterableIterator<[string, string]> {
         return this.values.entries();
     }

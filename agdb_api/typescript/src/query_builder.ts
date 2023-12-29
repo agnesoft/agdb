@@ -29,8 +29,8 @@ class InsertNodesAliasesBuilder {
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    query(): Components.Schemas.InsertNodesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertNodes: this.data };
     }
 }
 
@@ -80,8 +80,8 @@ class InsertNodesCountBuilder {
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    query(): Components.Schemas.InsertNodesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertNodes: this.data };
     }
 }
 
@@ -92,8 +92,8 @@ class InsertNodesValuesBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.InsertNodesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertNodes: this.data };
     }
 }
 
@@ -104,8 +104,8 @@ class InsertEdgesValuesBuilder {
         this.data = query;
     }
 
-    query(): Components.Schemas.InsertEdgesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertEdges: this.data };
     }
 }
 
@@ -126,8 +126,8 @@ class InsertEdgesToEachBuilder {
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    query(): Components.Schemas.InsertEdgesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertEdges: this.data };
     }
 }
 
@@ -153,8 +153,8 @@ class InsertEdgesToBuilder {
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    query(): Components.Schemas.InsertEdgesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertEdges: this.data };
     }
 }
 
@@ -206,8 +206,8 @@ class InsertAliasesIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.InsertAliasesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertAlias: this.data };
     }
 }
 
@@ -235,8 +235,8 @@ class InsertValuesIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.InsertValuesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { InsertValues: this.data };
     }
 }
 
@@ -329,8 +329,8 @@ class RemoveIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.RemoveQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { Remove: this.data };
     }
 }
 
@@ -341,8 +341,8 @@ class RemoveAliasesBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.RemoveAliasesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { RemoveAliases: this.data };
     }
 }
 
@@ -353,8 +353,8 @@ class RemoveValuesIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.RemoveValuesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { RemoveValues: this.data };
     }
 }
 
@@ -401,8 +401,8 @@ class SelectAliasesIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.SelectAliasesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { SelectAliases: this.data };
     }
 }
 
@@ -423,8 +423,8 @@ class SelectAliasesBuilder {
         }
     }
 
-    query(): Components.Schemas.SelectAllAliasesQuery {
-        return {};
+    query(): Components.Schemas.QueryType {
+        return { SelectAllAliases: {} };
     }
 }
 
@@ -435,8 +435,8 @@ class SelectIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.SelectQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { Select: this.data };
     }
 }
 
@@ -447,8 +447,8 @@ class SelectValuesIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.SelectValuesQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { SelectValues: this.data };
     }
 }
 
@@ -477,8 +477,8 @@ class SelectKeysIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.SelectKeysQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { SelectKeys: this.data };
     }
 }
 
@@ -507,8 +507,8 @@ class SelectKeyCountIdsBuilder {
         this.data = data;
     }
 
-    query(): Components.Schemas.SelectKeyCountQuery {
-        return this.data;
+    query(): Components.Schemas.QueryType {
+        return { SelectKeyCount: this.data };
     }
 }
 

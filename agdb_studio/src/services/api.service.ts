@@ -4,6 +4,7 @@ import OpenAPIClientAxios from "openapi-client-axios";
 export class Api {
     private static api: OpenAPIClientAxios | undefined = undefined;
     private static c: Client | undefined = undefined;
+    private static token: string = "";
 
     static async client(): Promise<Client> {
         if (Api.c === undefined) {
@@ -12,6 +13,12 @@ export class Api {
             });
 
             Api.c = await Api.api.init<Client>();
+            Api.c.interceptors.request.use((config) => {
+                if (Api.token !== "") {
+                    config.headers.Authorization = `Bearer ${Api.token}`;
+                }
+                return config;
+            });
             Api.c.interceptors.response.use(
                 (response) => {
                     return response.data;
@@ -43,5 +50,9 @@ export class Api {
         }
 
         return Api.c as Client;
+    }
+
+    static setToken(token: string) {
+        Api.token = token;
     }
 }

@@ -1,5 +1,5 @@
 import { QueryBuilder } from "../src/query_builder";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Api } from "./client";
 
 describe("openapi test", () => {
@@ -20,6 +20,8 @@ describe("openapi test", () => {
 
         let query1 = QueryBuilder.insert().nodes().count(2).query();
         let query2 = QueryBuilder.insert().aliases(["alias1", "alias2"]).ids([1, 2]).query();
-        await client.db_exec({ owner: "user1", db: "db1" }, [query1, query2]);
+        let res = await client.db_exec({ owner: "user1", db: "db1" }, [query1, query2]);
+
+        expect(res.status).toEqual(200);
     });
 });

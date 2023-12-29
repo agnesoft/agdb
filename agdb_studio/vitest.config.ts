@@ -16,7 +16,7 @@ export default mergeConfig(
                     "playwright.config.ts",
                     ".eslintrc.cjs",
                     "env.d.ts",
-                    "src/openapi/schema.d.ts",
+                    "src/services/api.service.ts",
                 ],
             },
         },

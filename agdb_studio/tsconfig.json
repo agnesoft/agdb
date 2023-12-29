@@ -9,6 +9,9 @@
         },
         {
             "path": "./tsconfig.vitest.json"
+        },
+        {
+            "path": "../agdb_api/typescript"
         }
     ]
 }

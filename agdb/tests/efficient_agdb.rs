@@ -214,7 +214,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
         .elements;
 
     let user = result
-        .get(0)
+        .first()
         .ok_or(QueryError::from(format!("Username '{username}' not found")))?;
 
     let pswd = user.values[0].value.to_string();

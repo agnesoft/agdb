@@ -174,7 +174,7 @@ pub(crate) async fn list(
         ("db" = String, Path, description = "db name"),
     ),
     responses(
-         (status = 200, description = "ok", body = ServerDatabaseSize),
+         (status = 200, description = "ok", body = ServerDatabase),
          (status = 401, description = "unauthorized"),
     )
 )]

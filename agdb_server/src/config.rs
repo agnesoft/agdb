@@ -21,7 +21,7 @@ pub(crate) fn new() -> ServerResult<Config> {
     }
 
     let config = ConfigImpl {
-        host: "127.0.0.1".to_string(),
+        host: "localhost".to_string(),
         port: 3000,
         admin: "admin".to_string(),
         data_dir: "agdb_server_data".to_string(),

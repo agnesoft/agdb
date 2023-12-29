@@ -133,7 +133,7 @@ impl<S: StorageData> Writer<S> {
                     .query(),
             )?
             .elements
-            .get(0)
+            .first()
         {
             Ok(Some(post.id))
         } else {

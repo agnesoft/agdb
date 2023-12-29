@@ -99,7 +99,7 @@ impl<S: StorageData> Reader<S> {
                     .query(),
             )?
             .elements
-            .get(0)
+            .first()
         {
             Ok(Some(post.id))
         } else {

@@ -1,6 +1,5 @@
 import { QueryBuilder } from "../src/query_builder";
 import { describe, it } from "vitest";
-import { Api } from "./client";
 
 describe("insert aliases", () => {
     it("insert().aliases().ids().query()", () => {

@@ -1,4 +1,4 @@
-import { mergeConfig, defineConfig, configDefaults } from "vitest/config";
+import { mergeConfig, defineConfig } from "vitest/config";
 import viteConfig from "./vite.config";
 
 export default mergeConfig(
@@ -10,5 +10,5 @@ export default mergeConfig(
                 exclude: [".eslintrc.cjs", "src/schema.d.ts"],
             },
         },
-    })
+    }),
 );

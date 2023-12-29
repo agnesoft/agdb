@@ -1,4 +1,4 @@
-import type { Components, Paths } from "./schema";
+import type { Components } from "./schema";
 
 type QueryId = number | string;
 
@@ -603,7 +603,9 @@ class SearchWhereLogicBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        while (collapse_conditions(this.data.conditions)) {}
+        while (collapse_conditions(this.data.conditions)) {
+            /* intentionally empty */
+        }
         this.data.data.conditions = this.data.conditions[0];
         return { Search: this.data.data };
     }
@@ -911,13 +913,13 @@ class SearchBuilder {
 
     from(id: QueryId): SearchFromBuilder {
         let data = SearchBuilder.new_data();
-        data.origin = { Id: 0 };
+        data.origin = intoQueryId(id);
         return new SearchFromBuilder(data);
     }
 
     to(id: QueryId): SearchToBuilder {
         let data = SearchBuilder.new_data();
-        data.destination = { Id: 0 };
+        data.destination = intoQueryId(id);
         return new SearchToBuilder(data);
     }
 }

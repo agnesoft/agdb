@@ -1,8 +1,8 @@
-import type { components } from "./schema";
+import type { Components, Paths } from "./schema";
 
 type QueryId = number | string;
 
-function intoQueryIds(ids: QueryId[]): components["schemas"]["QueryId"][] {
+function intoQueryIds(ids: QueryId[]): Components.Schemas.QueryId[] {
     return ids.map((id) => {
         if (typeof id === "number") {
             return { Id: id };

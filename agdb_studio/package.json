@@ -14,10 +14,11 @@
         "format": "prettier --write src/ e2e/ tests/",
         "format:check": "prettier --check src/ e2e/ tests/",
         "before-commit": "npm run format && npm run lint && npm run test:unit && npm run test:e2e",
-        "openapi": "npx openapi-typescript ../agdb_server/openapi/schema.json -o openapi/schema.d.ts"
+        "openapi": "npx openapicmd typegen ../agdb_server/openapi/schema.json > src/openapi/schema.d.ts"
     },
     "dependencies": {
-        "axios": "^1.6.2",
+        "axios": "^1.6.3",
+        "openapi-client-axios": "^7.5.1",
         "pinia": "^2.1.7",
         "vue": "^3.3.4",
         "vue-router": "^4.2.5"

@@ -1,4 +1,4 @@
-import { QueryBuilder } from "../../src/schema/query_builder.js";
+import { QueryBuilder } from "../../src/openapi/query_builder.js";
 import { describe, it } from "vitest";
 
 describe("remove", () => {

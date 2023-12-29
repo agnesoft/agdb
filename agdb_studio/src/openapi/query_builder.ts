@@ -13,31 +13,29 @@ function intoQueryIds(ids: QueryId[]): Components.Schemas.QueryId[] {
 }
 
 class InsertNodesAliasesBuilder {
-    private data: components["schemas"]["InsertNodesQuery"];
+    private data: Components.Schemas.InsertNodesQuery;
 
-    constructor(data: components["schemas"]["InsertNodesQuery"]) {
+    constructor(data: Components.Schemas.InsertNodesQuery) {
         this.data = data;
     }
 
-    values_uniform(
-        values: components["schemas"]["QueryValues"]["Single"],
-    ): InsertNodesValuesBuilder {
-        this.data.values.Single = values;
+    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertNodesValuesBuilder {
+        this.data.values = { Single: values };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    values(values: components["schemas"]["QueryValues"]["Multi"]): InsertNodesValuesBuilder {
-        this.data.values.Multi = values;
+    values(values: Components.Schemas.DbKeyValue[][]): InsertNodesValuesBuilder {
+        this.data.values = { Multi: values };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    query(): components["schemas"]["InsertNodesQuery"] {
+    query(): Components.Schemas.InsertNodesQuery {
         return this.data;
     }
 }
 
 class InsertNodesBuilder {
-    private data: components["schemas"]["InsertNodesQuery"];
+    private data: Components.Schemas.InsertNodesQuery;
 
     constructor() {
         this.data = {
@@ -59,90 +57,84 @@ class InsertNodesBuilder {
         return new InsertNodesCountBuilder(this.data);
     }
 
-    values_uniform(
-        values: components["schemas"]["QueryValues"]["Single"],
-    ): InsertNodesValuesBuilder {
-        this.data.values.Single = values;
+    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertNodesValuesBuilder {
+        this.data.values = { Single: values };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    values(values: components["schemas"]["QueryValues"]["Multi"]): InsertNodesValuesBuilder {
-        this.data.values.Multi = values;
+    values(values: Components.Schemas.DbKeyValue[][]): InsertNodesValuesBuilder {
+        this.data.values = { Multi: values };
         return new InsertNodesValuesBuilder(this.data);
     }
 }
 
 class InsertNodesCountBuilder {
-    private data: components["schemas"]["InsertNodesQuery"];
+    private data: Components.Schemas.InsertNodesQuery;
 
-    constructor(data: components["schemas"]["InsertNodesQuery"]) {
+    constructor(data: Components.Schemas.InsertNodesQuery) {
         this.data = data;
     }
 
-    values_uniform(
-        values: components["schemas"]["QueryValues"]["Single"],
-    ): InsertNodesValuesBuilder {
-        this.data.values.Single = values;
+    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertNodesValuesBuilder {
+        this.data.values = { Single: values };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    query(): components["schemas"]["InsertNodesQuery"] {
+    query(): Components.Schemas.InsertNodesQuery {
         return this.data;
     }
 }
 
 class InsertNodesValuesBuilder {
-    private data: components["schemas"]["InsertNodesQuery"];
+    private data: Components.Schemas.InsertNodesQuery;
 
-    constructor(data: components["schemas"]["InsertNodesQuery"]) {
+    constructor(data: Components.Schemas.InsertNodesQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["InsertNodesQuery"] {
+    query(): Components.Schemas.InsertNodesQuery {
         return this.data;
     }
 }
 
 class InsertEdgesValuesBuilder {
-    private data: components["schemas"]["InsertEdgesQuery"];
+    private data: Components.Schemas.InsertEdgesQuery;
 
-    constructor(query: components["schemas"]["InsertEdgesQuery"]) {
+    constructor(query: Components.Schemas.InsertEdgesQuery) {
         this.data = query;
     }
 
-    query(): components["schemas"]["InsertEdgesQuery"] {
+    query(): Components.Schemas.InsertEdgesQuery {
         return this.data;
     }
 }
 
 class InsertEdgesToEachBuilder {
-    private data: components["schemas"]["InsertEdgesQuery"];
+    private data: Components.Schemas.InsertEdgesQuery;
 
-    constructor(query: components["schemas"]["InsertEdgesQuery"]) {
+    constructor(query: Components.Schemas.InsertEdgesQuery) {
         this.data = query;
     }
 
-    values(values: components["schemas"]["QueryValues"]["Multi"]): InsertEdgesValuesBuilder {
-        this.data.values.Multi = values;
+    values(values: Components.Schemas.DbKeyValue[][]): InsertEdgesValuesBuilder {
+        this.data.values = { Multi: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    values_uniform(
-        values: components["schemas"]["QueryValues"]["Single"],
-    ): InsertEdgesValuesBuilder {
-        this.data.values.Single = values;
+    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertEdgesValuesBuilder {
+        this.data.values = { Single: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    query(): components["schemas"]["InsertEdgesQuery"] {
+    query(): Components.Schemas.InsertEdgesQuery {
         return this.data;
     }
 }
 
 class InsertEdgesToBuilder {
-    private data: components["schemas"]["InsertEdgesQuery"];
+    private data: Components.Schemas.InsertEdgesQuery;
 
-    constructor(query: components["schemas"]["InsertEdgesQuery"]) {
+    constructor(query: Components.Schemas.InsertEdgesQuery) {
         this.data = query;
     }
 
@@ -151,35 +143,33 @@ class InsertEdgesToBuilder {
         return new InsertEdgesToEachBuilder(this.data);
     }
 
-    values(values: components["schemas"]["QueryValues"]["Multi"]): InsertEdgesValuesBuilder {
-        this.data.values.Multi = values;
+    values(values: Components.Schemas.DbKeyValue[][]): InsertEdgesValuesBuilder {
+        this.data.values = { Multi: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    values_uniform(
-        values: components["schemas"]["QueryValues"]["Single"],
-    ): InsertEdgesValuesBuilder {
-        this.data.values.Single = values;
+    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertEdgesValuesBuilder {
+        this.data.values = { Single: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    query(): components["schemas"]["InsertEdgesQuery"] {
+    query(): Components.Schemas.InsertEdgesQuery {
         return this.data;
     }
 }
 
 class InsertEdgesFromBuilder {
-    private data: components["schemas"]["InsertEdgesQuery"];
+    private data: Components.Schemas.InsertEdgesQuery;
 
-    constructor(query: components["schemas"]["InsertEdgesQuery"]) {
+    constructor(query: Components.Schemas.InsertEdgesQuery) {
         this.data = query;
     }
 
-    to(ids: QueryId[] | components["schemas"]["SearchQuery"]): InsertEdgesToBuilder {
+    to(ids: QueryId[] | Components.Schemas.SearchQuery): InsertEdgesToBuilder {
         if (Array.isArray(ids)) {
-            this.data.from.Ids = intoQueryIds(ids);
+            this.data.from = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.from.Search = ids;
+            this.data.from = { Search: ids };
         }
 
         return new InsertEdgesToBuilder(this.data);
@@ -187,7 +177,7 @@ class InsertEdgesFromBuilder {
 }
 
 class InsertEdgesBuilder {
-    private data: components["schemas"]["InsertEdgesQuery"];
+    private data: Components.Schemas.InsertEdgesQuery;
 
     constructor() {
         this.data = {
@@ -198,11 +188,11 @@ class InsertEdgesBuilder {
         };
     }
 
-    from(ids: QueryId[] | components["schemas"]["SearchQuery"]): InsertEdgesFromBuilder {
+    from(ids: QueryId[] | Components.Schemas.SearchQuery): InsertEdgesFromBuilder {
         if (Array.isArray(ids)) {
-            this.data.from.Ids = intoQueryIds(ids);
+            this.data.from = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.from.Search = ids;
+            this.data.from = { Search: ids };
         }
 
         return new InsertEdgesFromBuilder(this.data);
@@ -210,58 +200,58 @@ class InsertEdgesBuilder {
 }
 
 class InsertAliasesIdsBuilder {
-    private data: components["schemas"]["InsertAliasesQuery"];
+    private data: Components.Schemas.InsertAliasesQuery;
 
-    constructor(data: components["schemas"]["InsertAliasesQuery"]) {
+    constructor(data: Components.Schemas.InsertAliasesQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["InsertAliasesQuery"] {
+    query(): Components.Schemas.InsertAliasesQuery {
         return this.data;
     }
 }
 
 class InsertAliasesBuilder {
-    private data: components["schemas"]["InsertAliasesQuery"];
+    private data: Components.Schemas.InsertAliasesQuery;
 
     constructor(aliases: string[]) {
         this.data = { aliases: aliases, ids: { Ids: [] } };
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): InsertAliasesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): InsertAliasesIdsBuilder {
         if (Array.isArray(ids)) {
-            this.data.ids.Ids = intoQueryIds(ids);
+            this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids.Search = ids;
+            this.data.ids = { Search: ids };
         }
         return new InsertAliasesIdsBuilder(this.data);
     }
 }
 
 class InsertValuesIdsBuilder {
-    private data: components["schemas"]["InsertValuesQuery"];
+    private data: Components.Schemas.InsertValuesQuery;
 
-    constructor(data: components["schemas"]["InsertValuesQuery"]) {
+    constructor(data: Components.Schemas.InsertValuesQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["InsertValuesQuery"] {
+    query(): Components.Schemas.InsertValuesQuery {
         return this.data;
     }
 }
 
 class InsertValuesBuilder {
-    private data: components["schemas"]["InsertValuesQuery"];
+    private data: Components.Schemas.InsertValuesQuery;
 
-    constructor(data: components["schemas"]["InsertValuesQuery"]) {
+    constructor(data: Components.Schemas.InsertValuesQuery) {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): InsertValuesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): InsertValuesIdsBuilder {
         if (Array.isArray(ids)) {
-            this.data.ids.Ids = intoQueryIds(ids);
+            this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids.Search = ids;
+            this.data.ids = { Search: ids };
         }
         return new InsertValuesIdsBuilder(this.data);
     }
@@ -277,11 +267,11 @@ class InsertBuilder {
     }
 
     elements(elems: any[]): InsertValuesIdsBuilder {
-        let data: components["schemas"]["InsertValuesQuery"] = {
+        let data: Components.Schemas.InsertValuesQuery = {
             ids: { Ids: [] },
             values: { Single: [] },
         };
-        data.ids.Ids = [];
+        data.ids = { Ids: [] };
         data.values = {
             Multi: [],
         };
@@ -317,69 +307,69 @@ class InsertBuilder {
         return new InsertNodesBuilder();
     }
 
-    values(values: components["schemas"]["QueryValues"]["Multi"]): InsertValuesBuilder {
+    values(values: Components.Schemas.DbKeyValue[][]): InsertValuesBuilder {
         return new InsertValuesBuilder({
             ids: { Ids: [] },
-            values: { Multi: values as components["schemas"]["DbKeyValue"][][] },
+            values: { Multi: values as Components.Schemas.DbKeyValue[][] },
         });
     }
 
-    values_uniform(vals: components["schemas"]["QueryValues"]["Single"]): InsertValuesBuilder {
+    values_uniform(vals: Components.Schemas.DbKeyValue[]): InsertValuesBuilder {
         return new InsertValuesBuilder({
             ids: { Ids: [] },
-            values: { Single: vals as components["schemas"]["DbKeyValue"][] },
+            values: { Single: vals as Components.Schemas.DbKeyValue[] },
         });
     }
 }
 
 class RemoveIdsBuilder {
-    private data: components["schemas"]["RemoveQuery"];
+    private data: Components.Schemas.RemoveQuery;
 
-    constructor(data: components["schemas"]["RemoveQuery"]) {
+    constructor(data: Components.Schemas.RemoveQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["RemoveQuery"] {
+    query(): Components.Schemas.RemoveQuery {
         return this.data;
     }
 }
 
 class RemoveAliasesBuilder {
-    private data: components["schemas"]["RemoveAliasesQuery"];
+    private data: Components.Schemas.RemoveAliasesQuery;
 
-    constructor(data: components["schemas"]["RemoveAliasesQuery"]) {
+    constructor(data: Components.Schemas.RemoveAliasesQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["RemoveAliasesQuery"] {
+    query(): Components.Schemas.RemoveAliasesQuery {
         return this.data;
     }
 }
 
 class RemoveValuesIdsBuilder {
-    private data: components["schemas"]["RemoveValuesQuery"];
+    private data: Components.Schemas.RemoveValuesQuery;
 
-    constructor(data: components["schemas"]["RemoveValuesQuery"]) {
+    constructor(data: Components.Schemas.RemoveValuesQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["RemoveValuesQuery"] {
+    query(): Components.Schemas.RemoveValuesQuery {
         return this.data;
     }
 }
 
 class RemoveValuesBuilder {
-    private data: components["schemas"]["RemoveValuesQuery"];
+    private data: Components.Schemas.RemoveValuesQuery;
 
-    constructor(data: components["schemas"]["RemoveValuesQuery"]) {
+    constructor(data: Components.Schemas.RemoveValuesQuery) {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): RemoveValuesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): RemoveValuesIdsBuilder {
         if (Array.isArray(ids)) {
-            this.data.ids.Ids = intoQueryIds(ids);
+            this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids.Search = ids;
+            this.data.ids = { Search: ids };
         }
 
         return new RemoveValuesIdsBuilder(this.data);
@@ -391,7 +381,7 @@ class RemoveBuilder {
         return new RemoveAliasesBuilder(aliases);
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): RemoveIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): RemoveIdsBuilder {
         if (Array.isArray(ids)) {
             return new RemoveIdsBuilder({ Ids: intoQueryIds(ids) });
         } else {
@@ -399,25 +389,25 @@ class RemoveBuilder {
         }
     }
 
-    values(values: components["schemas"]["DbValue"][]): RemoveValuesBuilder {
+    values(values: Components.Schemas.DbValue[]): RemoveValuesBuilder {
         return new RemoveValuesBuilder({ ids: { Ids: [] }, keys: values });
     }
 }
 
 class SelectAliasesIdsBuilder {
-    private data: components["schemas"]["SelectAliasesQuery"];
+    private data: Components.Schemas.SelectAliasesQuery;
 
-    constructor(data: components["schemas"]["SelectAliasesQuery"]) {
+    constructor(data: Components.Schemas.SelectAliasesQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["SelectAliasesQuery"] {
+    query(): Components.Schemas.SelectAliasesQuery {
         return this.data;
     }
 }
 
 class SelectAliasesBuilder {
-    private data: components["schemas"]["SelectAliasesQuery"];
+    private data: Components.Schemas.SelectAliasesQuery;
 
     constructor() {
         this.data = {
@@ -425,7 +415,7 @@ class SelectAliasesBuilder {
         };
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectAliasesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectAliasesIdsBuilder {
         if (Array.isArray(ids)) {
             return new SelectAliasesIdsBuilder({ Ids: intoQueryIds(ids) });
         } else {
@@ -433,47 +423,47 @@ class SelectAliasesBuilder {
         }
     }
 
-    query(): components["schemas"]["SelectAllAliasesQuery"] {
+    query(): Components.Schemas.SelectAllAliasesQuery {
         return {};
     }
 }
 
 class SelectIdsBuilder {
-    private data: components["schemas"]["SelectQuery"];
+    private data: Components.Schemas.SelectQuery;
 
-    constructor(data: components["schemas"]["SelectQuery"]) {
+    constructor(data: Components.Schemas.SelectQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["SelectQuery"] {
+    query(): Components.Schemas.SelectQuery {
         return this.data;
     }
 }
 
 class SelectValuesIdsBuilder {
-    private data: components["schemas"]["SelectValuesQuery"];
+    private data: Components.Schemas.SelectValuesQuery;
 
-    constructor(data: components["schemas"]["SelectValuesQuery"]) {
+    constructor(data: Components.Schemas.SelectValuesQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["SelectValuesQuery"] {
+    query(): Components.Schemas.SelectValuesQuery {
         return this.data;
     }
 }
 
 class SelectValuesBuilder {
-    private data: components["schemas"]["SelectValuesQuery"];
+    private data: Components.Schemas.SelectValuesQuery;
 
-    constructor(data: components["schemas"]["SelectValuesQuery"]) {
+    constructor(data: Components.Schemas.SelectValuesQuery) {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectValuesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectValuesIdsBuilder {
         if (Array.isArray(ids)) {
-            this.data.ids.Ids = intoQueryIds(ids);
+            this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids.Search = ids;
+            this.data.ids = { Search: ids };
         }
 
         return new SelectValuesIdsBuilder(this.data);
@@ -481,29 +471,29 @@ class SelectValuesBuilder {
 }
 
 class SelectKeysIdsBuilder {
-    private data: components["schemas"]["SelectKeysQuery"];
+    private data: Components.Schemas.SelectKeysQuery;
 
-    constructor(data: components["schemas"]["SelectKeysQuery"]) {
+    constructor(data: Components.Schemas.SelectKeysQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["SelectKeysQuery"] {
+    query(): Components.Schemas.SelectKeysQuery {
         return this.data;
     }
 }
 
 class SelectKeysBuilder {
-    private data: components["schemas"]["SelectKeysQuery"];
+    private data: Components.Schemas.SelectKeysQuery;
 
-    constructor(data: components["schemas"]["SelectKeysQuery"]) {
+    constructor(data: Components.Schemas.SelectKeysQuery) {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectKeysIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectKeysIdsBuilder {
         if (Array.isArray(ids)) {
-            this.data.Ids = intoQueryIds(ids);
+            this.data = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.Search = ids;
+            this.data = { Search: ids };
         }
 
         return new SelectKeysIdsBuilder(this.data);
@@ -511,29 +501,29 @@ class SelectKeysBuilder {
 }
 
 class SelectKeyCountIdsBuilder {
-    private data: components["schemas"]["SelectKeyCountQuery"];
+    private data: Components.Schemas.SelectKeyCountQuery;
 
-    constructor(data: components["schemas"]["SelectKeyCountQuery"]) {
+    constructor(data: Components.Schemas.SelectKeyCountQuery) {
         this.data = data;
     }
 
-    query(): components["schemas"]["SelectKeyCountQuery"] {
+    query(): Components.Schemas.SelectKeyCountQuery {
         return this.data;
     }
 }
 
 class SelectKeyCountBuilder {
-    private data: components["schemas"]["SelectKeyCountQuery"];
+    private data: Components.Schemas.SelectKeyCountQuery;
 
-    constructor(data: components["schemas"]["SelectKeyCountQuery"]) {
+    constructor(data: Components.Schemas.SelectKeyCountQuery) {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectKeyCountIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectKeyCountIdsBuilder {
         if (Array.isArray(ids)) {
-            this.data.Ids = intoQueryIds(ids);
+            this.data = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.Search = ids;
+            this.data = { Search: ids };
         }
 
         return new SelectKeyCountIdsBuilder(this.data);
@@ -545,7 +535,7 @@ class SelectBuilder {
         return new SelectAliasesBuilder();
     }
 
-    ids(ids: QueryId[] | components["schemas"]["SearchQuery"]): SelectIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectIdsBuilder {
         if (Array.isArray(ids)) {
             return new SelectIdsBuilder({ Ids: intoQueryIds(ids) });
         } else {
@@ -561,7 +551,7 @@ class SelectBuilder {
         return new SelectKeyCountBuilder({ Ids: [] });
     }
 
-    values(values: components["schemas"]["DbValue"][]): SelectValuesBuilder {
+    values(values: Components.Schemas.DbValue[]): SelectValuesBuilder {
         return new SelectValuesBuilder({ ids: { Ids: [] }, keys: values });
     }
 }

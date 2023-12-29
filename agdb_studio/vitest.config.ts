@@ -12,7 +12,12 @@ export default mergeConfig(
             root: fileURLToPath(new URL("./", import.meta.url)),
             coverage: {
                 all: true,
-                exclude: ["playwright.config.ts", ".eslintrc.cjs", "env.d.ts"],
+                exclude: [
+                    "playwright.config.ts",
+                    ".eslintrc.cjs",
+                    "env.d.ts",
+                    "src/openapi/schema.d.ts",
+                ],
             },
         },
         resolve: {

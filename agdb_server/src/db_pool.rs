@@ -574,7 +574,7 @@ impl DbPool {
                     .query(),
             )?
             .elements
-            .get(0)
+            .first()
             .ok_or(user_not_found(name))?
             .id)
     }
@@ -595,7 +595,7 @@ impl DbPool {
                     .query(),
             )?
             .elements
-            .get(0)
+            .first()
             .ok_or(format!("No user found for token '{token}'"))?
             .id)
     }
@@ -894,7 +894,7 @@ impl DbPool {
                     .query(),
             )?
             .elements
-            .get(0)
+            .first()
             .ok_or(user_not_found(name))?
             .id)
     }
@@ -920,7 +920,7 @@ impl DbPool {
                 let db_id = t
                     .exec(&db_id_query)?
                     .elements
-                    .get(0)
+                    .first()
                     .ok_or(db_not_found(db))?
                     .id;
                 Ok(t.exec(&QueryBuilder::select().ids(db_id).query())?)
@@ -952,7 +952,7 @@ impl DbPool {
             .db()?
             .exec(&db_id_query)?
             .elements
-            .get(0)
+            .first()
             .ok_or(db_not_found(db))?
             .id)
     }
@@ -965,7 +965,7 @@ impl DbPool {
                 let db_id = t
                     .exec(&db_id_query)?
                     .elements
-                    .get(0)
+                    .first()
                     .ok_or(db_not_found(db))?
                     .id;
 

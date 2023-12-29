@@ -8,6 +8,12 @@
     },
     "version": "0.1.0"
   },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local server"
+    }
+  ],
   "paths": {
     "/api/v1/admin/db/list": {
       "get": {
@@ -340,7 +346,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServerDatabaseSize"
+                  "$ref": "#/components/schemas/ServerDatabase"
                 }
               }
             }
@@ -1892,7 +1898,7 @@
             ],
             "properties": {
               "Asc": {
-                "$ref": "#/components/schemas/DbKey"
+                "$ref": "#/components/schemas/DbValue"
               }
             }
           },
@@ -1903,7 +1909,7 @@
             ],
             "properties": {
               "Desc": {
-                "$ref": "#/components/schemas/DbKey"
+                "$ref": "#/components/schemas/DbValue"
               }
             }
           }
@@ -1919,7 +1925,7 @@
         ],
         "properties": {
           "key": {
-            "$ref": "#/components/schemas/DbKey"
+            "$ref": "#/components/schemas/DbValue"
           },
           "value": {
             "$ref": "#/components/schemas/DbValue"
@@ -2313,7 +2319,7 @@
                 ],
                 "properties": {
                   "key": {
-                    "$ref": "#/components/schemas/DbKey"
+                    "$ref": "#/components/schemas/DbValue"
                   },
                   "value": {
                     "$ref": "#/components/schemas/Comparison"
@@ -2331,7 +2337,7 @@
               "Keys": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/DbKey"
+                  "$ref": "#/components/schemas/DbValue"
                 },
                 "description": "Test if the current element has **all** of the keys listed."
               }
@@ -2759,7 +2765,7 @@
           "keys": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/DbKey"
+              "$ref": "#/components/schemas/DbValue"
             }
           }
         }

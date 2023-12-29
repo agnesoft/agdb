@@ -12,9 +12,14 @@ describe("openapi test", () => {
         let token = await client.user_login("user1", { password: "password123" });
         Api.setToken(token.data);
 
-        await client.db_add({ owner: "user1", db: "db1", db_type: "memory" });
+        await client.db_add({
+            owner: "user1",
+            db: "db1",
+            db_type: "memory",
+        });
 
-        let query = QueryBuilder.insert().aliases(["alias1", "alias2"]).ids([1, 2]).query();
-        await client.db_exec({ owner: "user1", db: "db1" }, [query]);
+        let query1 = QueryBuilder.insert().nodes().count(2).query();
+        let query2 = QueryBuilder.insert().aliases(["alias1", "alias2"]).ids([1, 2]).query();
+        await client.db_exec({ owner: "user1", db: "db1" }, [query1, query2]);
     });
 });

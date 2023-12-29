@@ -1072,6 +1072,8 @@ declare namespace Paths {
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
             db_type: Parameters.DbType;
         }
         namespace Responses {
@@ -1392,6 +1394,8 @@ declare namespace Paths {
         export interface PathParameters {
             owner: Parameters.Owner;
             db: Parameters.Db;
+        }
+        export interface QueryParameters {
             db_type: Parameters.DbType;
         }
         namespace Responses {
@@ -1703,7 +1707,7 @@ export interface OperationMethods {
    * admin_db_add
    */
   'admin_db_add'(
-    parameters?: Parameters<Paths.AdminDbAdd.PathParameters> | null,
+    parameters?: Parameters<Paths.AdminDbAdd.PathParameters & Paths.AdminDbAdd.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbAdd.Responses.$201>
@@ -1847,7 +1851,7 @@ export interface OperationMethods {
    * db_add
    */
   'db_add'(
-    parameters?: Parameters<Paths.DbAdd.PathParameters> | null,
+    parameters?: Parameters<Paths.DbAdd.PathParameters & Paths.DbAdd.QueryParameters> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbAdd.Responses.$201>
@@ -1981,7 +1985,7 @@ export interface PathsDictionary {
      * admin_db_add
      */
     'post'(
-      parameters?: Parameters<Paths.AdminDbAdd.PathParameters> | null,
+      parameters?: Parameters<Paths.AdminDbAdd.PathParameters & Paths.AdminDbAdd.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbAdd.Responses.$201>
@@ -2161,7 +2165,7 @@ export interface PathsDictionary {
      * db_add
      */
     'post'(
-      parameters?: Parameters<Paths.DbAdd.PathParameters> | null,
+      parameters?: Parameters<Paths.DbAdd.PathParameters & Paths.DbAdd.QueryParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbAdd.Responses.$201>

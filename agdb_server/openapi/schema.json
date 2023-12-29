@@ -73,7 +73,7 @@
           },
           {
             "name": "db_type",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbType"
@@ -926,7 +926,7 @@
           },
           {
             "name": "db_type",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbType"

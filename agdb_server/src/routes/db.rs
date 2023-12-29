@@ -30,6 +30,7 @@ pub(crate) enum DbType {
 }
 
 #[derive(Deserialize, IntoParams, ToSchema)]
+#[into_params(parameter_in = Query)]
 pub(crate) struct DbTypeParam {
     pub(crate) db_type: DbType,
 }

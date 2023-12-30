@@ -3,10 +3,6 @@ name: agdb
 on:
   pull_request:
     branches: ["main"]
-    paths:
-      - agdb/**
-      - agdb_derive/**
-      - .github/workflows/agdb.yaml
 
 jobs:
   diff:

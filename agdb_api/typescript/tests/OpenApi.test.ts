@@ -5,7 +5,7 @@ import { Api } from "./client";
 describe("openapi test", () => {
     it("insert node", async () => {
         let client = await Api.client();
-        let admin_token = await client.user_login({ username: "admin", password: "admin" });
+        let admin_token = await client.user_login(null, { username: "admin", password: "admin" });
         Api.setToken(admin_token.data);
 
         await client.admin_user_add("user1", { password: "password123" });

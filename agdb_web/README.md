@@ -1,6 +1,6 @@
 # agdb webpage
 
-Look at the [Content documentation](https://content.nuxt.com/) to learn more.
+**Note: This project is still under construction.**
 
 ## Recommended IDE Setup
 
@@ -20,7 +20,6 @@ If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has a
 ## Customize configuration
 
 See [Vite Configuration Reference](https://vitejs.dev/config/).
-
 
 ## Project Setup
 

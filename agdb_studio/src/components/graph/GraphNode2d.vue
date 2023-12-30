@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { defineProps, type PropType, computed } from "vue";
+import { type PropType, computed } from "vue";
 import { type Node } from "@/composables/graph/composable/node";
 
 const props = defineProps({

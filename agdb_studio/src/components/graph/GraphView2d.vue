@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { defineProps, type PropType, computed, ref } from "vue";
+import { type PropType, computed, ref } from "vue";
 import GraphEdge2d from "@/components/graph/GraphEdge2d.vue";
 import GraphNode2d from "@/components/graph/GraphNode2d.vue";
 import useForceDirectedGraph from "@/composables/graph/composable/forceDirectedGraph";

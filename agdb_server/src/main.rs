@@ -14,13 +14,21 @@ mod utilities;
 use crate::db_pool::DbPool;
 use server_error::ServerResult;
 use tokio::signal;
+use tokio::sync::broadcast;
 use tracing::Level;
+
+async fn shutdown_signal(mut shutdown_receiver: broadcast::Receiver<()>) {
+    tokio::select! {
+        _ = signal::ctrl_c() => {},
+        _ = shutdown_receiver.recv() => {},
+    }
+}
 
 #[tokio::main]
 async fn main() -> ServerResult {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    let (shutdown_sender, mut shutdown_receiver) = tokio::sync::broadcast::channel::<()>(1);
+    let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let config = config::new()?;
     let db_pool = DbPool::new(&config)?;
     let address = format!("{}:{}", config.host, config.port);
@@ -28,12 +36,9 @@ async fn main() -> ServerResult {
     tracing::info!("Listening at {address}");
     let listener = tokio::net::TcpListener::bind(address).await?;
 
-    // Use actual graceful shutdown once it becomes available again...
-    tokio::select! {
-        _ = signal::ctrl_c() => {},
-        _ = shutdown_receiver.recv() => {},
-        _ = async { axum::serve(listener, app).await } => {},
-    };
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal(shutdown_receiver))
+        .await?;
 
     Ok(())
 }

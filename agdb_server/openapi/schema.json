@@ -20,7 +20,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "list",
+        "operationId": "admin_db_list",
         "responses": {
           "200": {
             "description": "ok",
@@ -51,7 +51,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "add",
+        "operationId": "admin_db_add",
         "parameters": [
           {
             "name": "owner",
@@ -73,7 +73,7 @@
           },
           {
             "name": "db_type",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbType"
@@ -106,7 +106,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "backup",
+        "operationId": "admin_db_backup",
         "parameters": [
           {
             "name": "owner",
@@ -153,7 +153,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "copy",
+        "operationId": "admin_db_copy",
         "parameters": [
           {
             "name": "owner",
@@ -175,7 +175,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -211,7 +211,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "delete",
+        "operationId": "admin_db_delete",
         "parameters": [
           {
             "name": "owner",
@@ -255,7 +255,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "exec",
+        "operationId": "admin_db_exec",
         "parameters": [
           {
             "name": "owner",
@@ -319,7 +319,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "optimize",
+        "operationId": "admin_db_optimize",
         "parameters": [
           {
             "name": "owner",
@@ -367,7 +367,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "remove",
+        "operationId": "admin_db_remove",
         "parameters": [
           {
             "name": "owner",
@@ -411,7 +411,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "rename",
+        "operationId": "admin_db_rename",
         "parameters": [
           {
             "name": "owner",
@@ -433,7 +433,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -469,7 +469,7 @@
         "tags": [
           "crate::routes::admin::db::user"
         ],
-        "operationId": "list",
+        "operationId": "admin_db_user_list",
         "parameters": [
           {
             "name": "owner",
@@ -513,7 +513,7 @@
         "tags": [
           "crate::routes::admin::db::user"
         ],
-        "operationId": "add",
+        "operationId": "admin_db_user_add",
         "parameters": [
           {
             "name": "owner",
@@ -544,7 +544,7 @@
           },
           {
             "name": "db_role",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbUserRole"
@@ -577,7 +577,7 @@
         "tags": [
           "crate::routes::admin::db::user"
         ],
-        "operationId": "remove",
+        "operationId": "admin_db_user_remove",
         "parameters": [
           {
             "name": "owner",
@@ -633,7 +633,7 @@
         "tags": [
           "crate::routes::admin"
         ],
-        "operationId": "shutdown",
+        "operationId": "admin_shutdown",
         "responses": {
           "202": {
             "description": "server is shutting down"
@@ -654,7 +654,7 @@
         "tags": [
           "crate::routes::admin::user"
         ],
-        "operationId": "list",
+        "operationId": "admin_user_list",
         "responses": {
           "200": {
             "description": "ok",
@@ -685,7 +685,7 @@
         "tags": [
           "crate::routes::admin::user"
         ],
-        "operationId": "add",
+        "operationId": "admin_user_add",
         "parameters": [
           {
             "name": "username",
@@ -736,7 +736,7 @@
         "tags": [
           "crate::routes::admin::user"
         ],
-        "operationId": "change_password",
+        "operationId": "admin_user_change_password",
         "parameters": [
           {
             "name": "username",
@@ -784,7 +784,7 @@
         "tags": [
           "crate::routes::admin::user"
         ],
-        "operationId": "remove",
+        "operationId": "admin_user_remove",
         "parameters": [
           {
             "name": "username",
@@ -829,7 +829,7 @@
         "tags": [
           "crate::routes::admin::db"
         ],
-        "operationId": "restore",
+        "operationId": "admin_db_restore",
         "parameters": [
           {
             "name": "owner",
@@ -873,7 +873,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "list",
+        "operationId": "db_list",
         "responses": {
           "200": {
             "description": "ok",
@@ -904,7 +904,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "add",
+        "operationId": "db_add",
         "parameters": [
           {
             "name": "owner",
@@ -926,7 +926,7 @@
           },
           {
             "name": "db_type",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbType"
@@ -962,7 +962,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "backup",
+        "operationId": "db_backup",
         "parameters": [
           {
             "name": "owner",
@@ -1009,7 +1009,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "copy",
+        "operationId": "db_copy",
         "parameters": [
           {
             "name": "owner",
@@ -1031,7 +1031,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -1070,7 +1070,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "delete",
+        "operationId": "db_delete",
         "parameters": [
           {
             "name": "owner",
@@ -1117,7 +1117,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "exec",
+        "operationId": "db_exec",
         "parameters": [
           {
             "name": "owner",
@@ -1181,7 +1181,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "optimize",
+        "operationId": "db_optimize",
         "parameters": [
           {
             "name": "owner",
@@ -1232,7 +1232,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "remove",
+        "operationId": "db_remove",
         "parameters": [
           {
             "name": "owner",
@@ -1279,7 +1279,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "rename",
+        "operationId": "db_rename",
         "parameters": [
           {
             "name": "owner",
@@ -1301,7 +1301,7 @@
           },
           {
             "name": "new_name",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -1340,7 +1340,7 @@
         "tags": [
           "crate::routes::db"
         ],
-        "operationId": "restore",
+        "operationId": "db_restore",
         "parameters": [
           {
             "name": "owner",
@@ -1387,7 +1387,7 @@
         "tags": [
           "crate::routes::db::user"
         ],
-        "operationId": "list",
+        "operationId": "db_user_list",
         "parameters": [
           {
             "name": "owner",
@@ -1431,7 +1431,7 @@
         "tags": [
           "crate::routes::db::user"
         ],
-        "operationId": "add",
+        "operationId": "db_user_add",
         "parameters": [
           {
             "name": "owner",
@@ -1462,7 +1462,7 @@
           },
           {
             "name": "db_role",
-            "in": "path",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/DbUserRole"
@@ -1495,7 +1495,7 @@
         "tags": [
           "crate::routes::db::user"
         ],
-        "operationId": "remove",
+        "operationId": "db_user_remove",
         "parameters": [
           {
             "name": "owner",
@@ -1564,7 +1564,7 @@
         "tags": [
           "crate::routes::user"
         ],
-        "operationId": "change_password",
+        "operationId": "user_change_password",
         "parameters": [
           {
             "name": "username",
@@ -1612,7 +1612,7 @@
         "tags": [
           "crate::routes::user"
         ],
-        "operationId": "login",
+        "operationId": "user_login",
         "parameters": [
           {
             "name": "username",

@@ -22,6 +22,7 @@ pub(crate) struct ChangePassword {
 
 #[utoipa::path(post,
     path = "/api/v1/user/{username}/login",
+    operation_id = "user_login",
     params(
         ("username" = String, Path, description = "username"),
     ),
@@ -53,6 +54,7 @@ pub(crate) async fn login(
 
 #[utoipa::path(put,
     path = "/api/v1/user/{username}/change_password",
+    operation_id = "user_change_password",
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "username"),

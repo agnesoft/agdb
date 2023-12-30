@@ -8,17 +8,30 @@
         "preview": "nuxt preview",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
-        "lint": "eslint --max-warnings=0 . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
+        "lint": "eslint --max-warnings=0 . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+        "test:unit": "vitest run --coverage"
     },
     "devDependencies": {
         "@nuxt/content": "^2.10.0",
+        "@nuxt/test-utils": "^3.9.0",
         "@nuxtjs/eslint-config-typescript": "^12.1.0",
+        "@tsconfig/node18": "^18.2.2",
+        "@types/jsdom": "^21.1.6",
+        "@types/node": "^20.10.6",
         "@typescript-eslint/parser": "^6.16.0",
+        "@vitejs/plugin-vue": "^5.0.2",
+        "@vitest/coverage-v8": "^1.1.0",
+        "@vue/test-utils": "^2.4.3",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.1.2",
+        "eslint-plugin-vitest": "^0.3.20",
+        "happy-dom": "^12.10.3",
+        "jsdom": "^23.0.1",
         "nuxt": "^3.9.0",
+        "playwright-core": "^1.40.1",
         "prettier": "3.1.1",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "vitest": "^1.1.0"
     }
 }

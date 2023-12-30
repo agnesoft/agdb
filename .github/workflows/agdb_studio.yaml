@@ -3,12 +3,6 @@ name: agdb_studio
 on:
   pull_request:
     branches: ["main"]
-    paths:
-      - agdb_studio/**
-      - agdb_api/typescript/src/**
-      - agdb_api/typescript/package.json
-      - agdb_server/openapi/schema.json
-      - .github/workflows/agdb_studio.yaml
 
 jobs:
   diff:

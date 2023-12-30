@@ -1,5 +1,6 @@
 import type { Client } from "../../../agdb_api/typescript/src/schema";
 import OpenAPIClientAxios from "openapi-client-axios";
+import { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 export class Api {
     private static api: OpenAPIClientAxios | undefined = undefined;
@@ -13,14 +14,14 @@ export class Api {
             });
 
             Api.c = await Api.api.init<Client>();
-            Api.c.interceptors.request.use((config) => {
+            Api.c.interceptors.request.use((config: InternalAxiosRequestConfig) => {
                 if (Api.token !== "") {
                     config.headers.Authorization = `Bearer ${Api.token}`;
                 }
                 return config;
             });
             Api.c.interceptors.response.use(
-                (response) => {
+                (response: AxiosResponse) => {
                     return response.data;
                 },
                 (error: any) => {

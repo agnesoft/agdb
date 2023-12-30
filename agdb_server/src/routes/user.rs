@@ -1,5 +1,6 @@
 use crate::db_pool::DbPool;
 use crate::password::Password;
+use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use axum::extract::Path;
 use axum::extract::State;
@@ -15,34 +16,37 @@ pub(crate) struct UserCredentials {
 }
 
 #[derive(Deserialize, ToSchema)]
+pub(crate) struct UserLogin {
+    pub(crate) username: String,
+    pub(crate) password: String,
+}
+
+#[derive(Deserialize, ToSchema)]
 pub(crate) struct ChangePassword {
     pub(crate) password: String,
     pub(crate) new_password: String,
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/user/{username}/login",
+    path = "/api/v1/user/login",
     operation_id = "user_login",
-    params(
-        ("username" = String, Path, description = "username"),
-    ),
-    request_body = UserCredentials,
+    request_body = UserLogin,
     responses(
          (status = 200, description = "login successful", body = String),
          (status = 401, description = "invalid credentials"),
-         (status = 404, description = "user not found")
     )
 )]
 pub(crate) async fn login(
     State(db_pool): State<DbPool>,
-    Path(username): Path<String>,
-    Json(request): Json<UserCredentials>,
+    Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, String)> {
-    let user = db_pool.find_user(&username)?;
+    let user = db_pool
+        .find_user(&request.username)
+        .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
     let pswd = Password::new(&user.name, &user.password, &user.salt)?;
 
     if !pswd.verify_password(&request.password) {
-        return Ok((StatusCode::UNAUTHORIZED, String::new()));
+        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
     let token_uuid = Uuid::new_v4();
@@ -76,7 +80,7 @@ pub(crate) async fn change_password(
     let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {
-        return Ok(StatusCode::UNAUTHORIZED);
+        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
     db_pool.change_password(user, &request.new_password)?;

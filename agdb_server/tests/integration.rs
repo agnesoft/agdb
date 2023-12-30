@@ -56,6 +56,12 @@ pub struct UserCredentials<'a> {
     pub password: &'a str,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct UserLogin<'a> {
+    pub username: &'a str,
+    pub password: &'a str,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserStatus {
     pub name: String,
@@ -116,13 +122,12 @@ impl TestServer {
                 .await
             {
                 Ok(_) => {
-                    let credentials = UserCredentials { password: ADMIN };
+                    let credentials = UserLogin {
+                        username: ADMIN,
+                        password: ADMIN,
+                    };
                     let response = client
-                        .post(format!(
-                            "{}:{}/api/v1/user/{ADMIN}/login",
-                            Self::url_base(),
-                            port
-                        ))
+                        .post(format!("{}:{}/api/v1/user/login", Self::url_base(), port))
                         .json(&credentials)
                         .send()
                         .await?;
@@ -193,7 +198,14 @@ impl TestServer {
             201
         );
         let response = self
-            .post(&format!("/user/{name}/login"), &credentials, &None)
+            .post(
+                "/user/login",
+                &Some(UserLogin {
+                    username: &name,
+                    password: &name,
+                }),
+                &None,
+            )
             .await?;
         assert_eq!(response.0, 200);
         Ok(ServerUser {

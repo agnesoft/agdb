@@ -8,6 +8,7 @@ use tokio::sync::broadcast::Sender;
 
 #[utoipa::path(post,
     path = "/api/v1/admin/shutdown",
+    operation_id = "admin_shutdown",
     security(("Token" = [])),
     responses(
          (status = 202, description = "server is shutting down"),

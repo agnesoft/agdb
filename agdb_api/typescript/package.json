@@ -1,0 +1,28 @@
+{
+  "name": "agdb_openapi",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "bash test.sh",
+    "lint": "eslint --max-warnings=0 . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "format": "prettier --write src/ tests/",
+    "openapi": "npx openapicmd typegen ../../agdb_server/openapi/schema.json > src/schema.d.ts",
+    "before-commit": "npm run openapi && npm run format && npm run lint && npm run test"
+  },
+  "dependencies": {
+    "openapi-client-axios": "^7.5.1"
+  },
+  "devDependencies": {
+    "@rushstack/eslint-patch": "^1.6.1",
+    "@types/node": "^20.10.5",
+    "@typescript-eslint/parser": "^6.16.0",
+    "@vitest/coverage-v8": "^1.1.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.0"
+  }
+}

@@ -3,14 +3,25 @@ name: agdb_api_typescript
 on:
   pull_request:
     branches: ["main"]
-    paths:
-      - agdb_api/typescript/**
-      - agdb_server/openapi/schema.json
-      - .github/workflows/agdb_api_typescript.yaml
 
 jobs:
+  diff:
+    runs-on: ubuntu-latest
+    outputs:
+      diff: ${{ steps.diff.outputs.diff }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - id: diff
+        shell: bash
+        run: |
+          if [[ "$(git diff origin/main --name-only -- agdb_api/typescript/ agdb_server/openapi/schema.json .github/workflows/agdb_api_typescript.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
+
   agdb_api_typescript_analyse:
     runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
         working-directory: agdb_api/typescript
@@ -21,6 +32,8 @@ jobs:
 
   agdb_api_typescript_coverage:
     runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
         working-directory: agdb_api/typescript
@@ -37,6 +50,8 @@ jobs:
 
   agdb_api_typescript_format:
     runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
         working-directory: agdb_api/typescript

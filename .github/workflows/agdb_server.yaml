@@ -1,0 +1,33 @@
+name: agdb_server
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - agdb_server/**
+      - agdb/src/**
+      - agdb/Cargo.toml
+      - agdb_derive/src/**
+      - agdb_derive/Cargo.toml
+      - .github/workflows/agdb_server.yaml
+
+jobs:
+  agdb_server_analyse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo clippy --package agdb_server --all-targets --all-features -- -D warnings
+
+  agdb_server_coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - run: rustup component add llvm-tools-preview
+      - run: cargo llvm-cov --package agdb_server --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive|api.rs" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
+
+  agdb_server_format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo fmt --package agdb_server --check

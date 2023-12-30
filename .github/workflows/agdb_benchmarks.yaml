@@ -1,0 +1,31 @@
+name: agdb_benchmarks
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - agdb_benchmarks/**
+      - agdb/src/**
+      - agdb/src/Cargo.toml
+      - agdb_derive/src/**
+      - agdb_derive/Cargo.toml
+      - .github/workflows/agdb_benchmarks.yaml
+
+jobs:
+  agdb_benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo run --release --package agdb_benchmarks
+
+  agdb_benchmarks_analyse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo clippy --package agdb_benchmarks --all-targets --all-features -- -D warnings
+
+  agdb_benchmarks_format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo fmt --package agdb_benchmarks --check

@@ -7,6 +7,7 @@ on:
       - agdb/**
       - agdb_derive/**
       - agdb_server/**
+      - .github/workflows/coverage.yaml
 
 env:
   CARGO_TERM_COLOR: always

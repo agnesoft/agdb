@@ -84,7 +84,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            db_name: "db.agdb".to_string(),
+            db_name: "agdb_benchmarks.agdb".to_string(),
             db_type: DbType::FileMapped,
             locale: Locale::cs,
             padding: 20,

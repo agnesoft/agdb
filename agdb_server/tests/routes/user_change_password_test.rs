@@ -1,13 +1,14 @@
 use crate::ChangePassword;
 use crate::TestServer;
-use crate::UserCredentials;
+use crate::UserLogin;
 use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let credentials = Some(UserCredentials {
+    let credentials = Some(UserLogin {
+        username: &user.name,
         password: "password456",
     });
     let change: Option<ChangePassword> = Some(ChangePassword {
@@ -25,14 +26,7 @@ async fn change_password() -> anyhow::Result<()> {
         201
     );
     assert_eq!(
-        server
-            .post(
-                &format!("/user/{}/login", user.name),
-                &credentials,
-                NO_TOKEN
-            )
-            .await?
-            .0,
+        server.post("/user/login", &credentials, NO_TOKEN).await?.0,
         200
     );
 

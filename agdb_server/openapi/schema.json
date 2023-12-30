@@ -1559,6 +1559,39 @@
         }
       }
     },
+    "/api/v1/user/login": {
+      "post": {
+        "tags": [
+          "crate::routes::user"
+        ],
+        "operationId": "user_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "login successful",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        }
+      }
+    },
     "/api/v1/user/{username}/change_password": {
       "put": {
         "tags": [
@@ -1605,53 +1638,6 @@
             "Token": []
           }
         ]
-      }
-    },
-    "/api/v1/user/{username}/login": {
-      "post": {
-        "tags": [
-          "crate::routes::user"
-        ],
-        "operationId": "user_login",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "username",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserCredentials"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "login successful",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "invalid credentials"
-          },
-          "404": {
-            "description": "user not found"
-          }
-        }
       }
     }
   },
@@ -2819,6 +2805,21 @@
         ],
         "properties": {
           "password": {
+            "type": "string"
+          }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
             "type": "string"
           }
         }

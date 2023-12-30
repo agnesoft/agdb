@@ -57,6 +57,7 @@ use utoipa::OpenApi;
         crate::routes::db::user::DbUserRole,
         crate::routes::db::user::DbUserRoleParam,
         crate::routes::user::ChangePassword,
+        crate::routes::user::UserLogin,
         crate::routes::user::UserCredentials,
         agdb::QueryResult,
         agdb::DbElement,

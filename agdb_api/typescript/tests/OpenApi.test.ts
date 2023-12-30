@@ -5,11 +5,11 @@ import { Api } from "./client";
 describe("openapi test", () => {
     it("insert node", async () => {
         let client = await Api.client();
-        let admin_token = await client.user_login("admin", { password: "admin" });
+        let admin_token = await client.user_login({ username: "admin", password: "admin" });
         Api.setToken(admin_token.data);
 
         await client.admin_user_add("user1", { password: "password123" });
-        let token = await client.user_login("user1", { password: "password123" });
+        let token = await client.user_login(null, { username: "user1", password: "password123" });
         Api.setToken(token.data);
 
         await client.db_add({

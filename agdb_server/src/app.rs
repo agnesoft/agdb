@@ -109,7 +109,7 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
             "/db/:user/:db/user/:other/remove",
             routing::delete(routes::db::user::remove),
         )
-        .route("/user/:user/login", routing::post(routes::user::login))
+        .route("/user/login", routing::post(routes::user::login))
         .route(
             "/user/:user/change_password",
             routing::put(routes::user::change_password),

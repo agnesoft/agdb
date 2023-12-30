@@ -1,0 +1,30 @@
+name: pr-rust
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - agdb/**
+      - agdb_derive/**
+      - .github/workflows/agdb_pr.yaml
+
+jobs:
+  agdb-analyse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo clippy --package agdb --package agdb_derive --all-targets --all-features -- -D warnings
+
+  agdb-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - run: rustup component add llvm-tools-preview
+      - run: cargo llvm-cov --package agdb --package agdb_derive --all-features --ignore-filename-regex "agdb_derive" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
+
+  agdb-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo fmt --package agdb --package agdb_derive --check

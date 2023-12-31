@@ -17,11 +17,7 @@ async fn change_password() -> anyhow::Result<()> {
     });
     assert_eq!(
         server
-            .put(
-                &format!("/user/{}/change_password", user.name),
-                &change,
-                NO_TOKEN
-            )
+            .put("/user/change_password", &change, &user.token)
             .await?,
         201
     );
@@ -43,11 +39,7 @@ async fn invalid_credentials() -> anyhow::Result<()> {
     });
     assert_eq!(
         server
-            .put(
-                &format!("/user/{}/change_password", user.name),
-                &change,
-                NO_TOKEN
-            )
+            .put("/user/change_password", &change, &user.token)
             .await?,
         401
     );
@@ -65,11 +57,7 @@ async fn password_too_short() -> anyhow::Result<()> {
     });
     assert_eq!(
         server
-            .put(
-                &format!("/user/{}/change_password", user.name),
-                &change,
-                NO_TOKEN
-            )
+            .put("/user/change_password", &change, &user.token)
             .await?,
         461
     );
@@ -78,7 +66,7 @@ async fn password_too_short() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn user_not_found() -> anyhow::Result<()> {
+async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let change = Some(ChangePassword {
         password: "password123",
@@ -86,9 +74,9 @@ async fn user_not_found() -> anyhow::Result<()> {
     });
     assert_eq!(
         server
-            .put("/user/not_found/change_password", &change, NO_TOKEN)
+            .put("/user/change_password", &change, NO_TOKEN)
             .await?,
-        404
+        401
     );
 
     Ok(())

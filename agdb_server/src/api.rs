@@ -30,6 +30,7 @@ use utoipa::OpenApi;
         crate::routes::admin::user::remove,
         crate::routes::admin::shutdown,
         crate::routes::user::login,
+        crate::routes::user::logout,
         crate::routes::user::change_password,
         crate::routes::db::add,
         crate::routes::db::backup,

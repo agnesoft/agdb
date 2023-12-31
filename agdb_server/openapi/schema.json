@@ -1559,6 +1559,40 @@
         }
       }
     },
+    "/api/v1/user/change_password": {
+      "put": {
+        "tags": [
+          "crate::routes::user"
+        ],
+        "operationId": "user_change_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "password changed"
+          },
+          "401": {
+            "description": "invalid credentials"
+          },
+          "461": {
+            "description": "password too short (<8)"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/user/login": {
       "post": {
         "tags": [
@@ -1592,45 +1626,21 @@
         }
       }
     },
-    "/api/v1/user/{username}/change_password": {
-      "put": {
+    "/api/v1/user/logout": {
+      "post": {
         "tags": [
           "crate::routes::user"
         ],
-        "operationId": "user_change_password",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "username",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangePassword"
-              }
-            }
-          },
-          "required": true
-        },
+        "operationId": "user_logout",
         "responses": {
           "201": {
-            "description": "password changed"
+            "description": "user logged out"
           },
           "401": {
             "description": "invalid credentials"
           },
           "404": {
             "description": "user not found"
-          },
-          "461": {
-            "description": "password too short (<8)"
           }
         },
         "security": [

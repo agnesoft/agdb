@@ -600,6 +600,13 @@ impl DbPool {
             .id)
     }
 
+    pub(crate) fn get_user(&self, user: DbId) -> ServerResult<ServerUser> {
+        Ok(self
+            .db()?
+            .exec(&QueryBuilder::select().ids(user).query())?
+            .try_into()?)
+    }
+
     pub(crate) fn db_users(&self, owner: &str, db: &str, user: DbId) -> ServerResult<Vec<DbUser>> {
         let db_id = self.find_user_db_id(user, &db_name(owner, db))?;
         let mut users = vec![];

@@ -1674,19 +1674,11 @@ declare namespace Paths {
         }
     }
     namespace UserChangePassword {
-        namespace Parameters {
-            export type Username = string;
-        }
-        export interface PathParameters {
-            username: Parameters.Username;
-        }
         export type RequestBody = Components.Schemas.ChangePassword;
         namespace Responses {
             export interface $201 {
             }
             export interface $401 {
-            }
-            export interface $404 {
             }
             export interface $461 {
             }
@@ -1697,6 +1689,16 @@ declare namespace Paths {
         namespace Responses {
             export type $200 = string;
             export interface $401 {
+            }
+        }
+    }
+    namespace UserLogout {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
             }
         }
     }
@@ -1960,6 +1962,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.Status.Responses.$200>
   /**
+   * user_change_password
+   */
+  'user_change_password'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.UserChangePassword.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UserChangePassword.Responses.$201>
+  /**
    * user_login
    */
   'user_login'(
@@ -1968,13 +1978,13 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UserLogin.Responses.$200>
   /**
-   * user_change_password
+   * user_logout
    */
-  'user_change_password'(
-    parameters?: Parameters<Paths.UserChangePassword.PathParameters> | null,
-    data?: Paths.UserChangePassword.RequestBody,
+  'user_logout'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
     config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.UserChangePassword.Responses.$201>
+  ): OperationResponse<Paths.UserLogout.Responses.$201>
 }
 
 export interface PathsDictionary {
@@ -2298,6 +2308,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.Status.Responses.$200>
   }
+  ['/api/v1/user/change_password']: {
+    /**
+     * user_change_password
+     */
+    'put'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.UserChangePassword.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UserChangePassword.Responses.$201>
+  }
   ['/api/v1/user/login']: {
     /**
      * user_login
@@ -2308,15 +2328,15 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserLogin.Responses.$200>
   }
-  ['/api/v1/user/{username}/change_password']: {
+  ['/api/v1/user/logout']: {
     /**
-     * user_change_password
+     * user_logout
      */
-    'put'(
-      parameters?: Parameters<Paths.UserChangePassword.PathParameters> | null,
-      data?: Paths.UserChangePassword.RequestBody,
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
       config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.UserChangePassword.Responses.$201>
+    ): OperationResponse<Paths.UserLogout.Responses.$201>
   }
 }
 

@@ -18,6 +18,25 @@ async fn login() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn repeated_login() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let user = server.init_user().await?;
+    let credentials = Some(UserLogin {
+        password: &user.name,
+        username: &user.name,
+    });
+    let (status, token) = server.post("/user/login", &credentials, NO_TOKEN).await?;
+    assert_eq!(status, 200);
+    assert!(!token.is_empty());
+
+    let (status2, token2) = server.post("/user/login", &credentials, NO_TOKEN).await?;
+    assert_eq!(status2, 200);
+    assert_eq!(token, token2);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let user = server.init_user().await?;

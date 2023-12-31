@@ -2,7 +2,7 @@ use crate::db_pool::DbPool;
 use crate::password::Password;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
-use axum::extract::Path;
+use crate::user_id::UserId;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -49,34 +49,53 @@ pub(crate) async fn login(
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
-    let token_uuid = Uuid::new_v4();
-    let token = token_uuid.to_string();
-    db_pool.save_token(user.db_id.unwrap(), &token)?;
+    let token = if user.token.is_empty() {
+        let token_uuid = Uuid::new_v4();
+        let token = token_uuid.to_string();
+        db_pool.save_token(user.db_id.unwrap(), &token)?;
+        token
+    } else {
+        user.token
+    };
 
     Ok((StatusCode::OK, token))
 }
 
+#[utoipa::path(post,
+    path = "/api/v1/user/logout",
+    operation_id = "user_logout",
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "user logged out"),
+         (status = 401, description = "invalid credentials"),
+         (status = 404, description = "user not found"),
+    )
+)]
+pub(crate) async fn logout(user: UserId, State(db_pool): State<DbPool>) -> ServerResponse {
+    let mut user = db_pool.get_user(user.0)?;
+    user.token = String::new();
+    db_pool.save_user(user)?;
+
+    Ok(StatusCode::CREATED)
+}
+
 #[utoipa::path(put,
-    path = "/api/v1/user/{username}/change_password",
+    path = "/api/v1/user/change_password",
     operation_id = "user_change_password",
     security(("Token" = [])),
-    params(
-        ("username" = String, Path, description = "username"),
-    ),
     request_body = ChangePassword,
     responses(
          (status = 201, description = "password changed"),
          (status = 401, description = "invalid credentials"),
-         (status = 404, description = "user not found"),
          (status = 461, description = "password too short (<8)"),
     )
 )]
 pub(crate) async fn change_password(
+    user: UserId,
     State(db_pool): State<DbPool>,
-    Path(username): Path<String>,
     Json(request): Json<ChangePassword>,
 ) -> ServerResponse {
-    let user = db_pool.find_user(&username)?;
+    let user = db_pool.get_user(user.0)?;
     let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {

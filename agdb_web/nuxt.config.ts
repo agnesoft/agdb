@@ -2,6 +2,9 @@ import { fileURLToPath, URL } from "node:url";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+    devServer: {
+        port: 4000,
+    },
     devtools: { enabled: true },
     modules: ["@nuxt/content", "@nuxt/test-utils/module"],
     vite: {

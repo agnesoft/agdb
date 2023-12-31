@@ -9,12 +9,15 @@
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "lint": "eslint --max-warnings=0 . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-        "test:unit": "vitest run --coverage"
+        "test:unit": "vitest run --coverage",
+        "test:e2e": "playwright test",
+        "before-commit": "npm run format && npm run lint && npm run test:unit && npm run test:e2e"
     },
     "devDependencies": {
         "@nuxt/content": "^2.10.0",
         "@nuxt/test-utils": "^3.9.0",
         "@nuxtjs/eslint-config-typescript": "^12.1.0",
+        "@playwright/test": "^1.40.1",
         "@tsconfig/node18": "^18.2.2",
         "@types/jsdom": "^21.1.6",
         "@types/node": "^20.10.6",

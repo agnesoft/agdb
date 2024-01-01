@@ -1,11 +1,11 @@
-name: agdb_studio
+name: agdb_web
 
 on:
   pull_request:
     branches: ["main"]
 
 env:
-  PROJECT: agdb_studio
+  PROJECT: agdb_web
 
 jobs:
   diff:
@@ -19,9 +19,9 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb_api/typescript/src/ agdb_api/typescript/package.json agdb_server/openapi/schema.json .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
+          if [[ "$(git diff origin/main --name-only -- agdb_web/ .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
 
-  agdb_studio_analyse:
+  agdb_web_analyse:
     runs-on: ubuntu-latest
     needs: diff
     if: needs.diff.outputs.diff == 'true'
@@ -31,9 +31,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: npm ci
+      - run: npx nuxt prepare
       - run: npm run lint
 
-  agdb_studio_coverage:
+  agdb_web_coverage:
     runs-on: ubuntu-latest
     needs: diff
     if: needs.diff.outputs.diff == 'true'
@@ -51,7 +52,7 @@ jobs:
           path: ${{ env.PROJECT }}/coverage/
           retention-days: 30
 
-  agdb_studio_e2e:
+  agdb_web_e2e:
     runs-on: ubuntu-latest
     needs: diff
     if: needs.diff.outputs.diff == 'true'
@@ -71,7 +72,7 @@ jobs:
           path: ${{ env.PROJECT }}/playwright-report/
           retention-days: 30
 
-  agdb_studio_format:
+  agdb_web_format:
     runs-on: ubuntu-latest
     needs: diff
     if: needs.diff.outputs.diff == 'true'

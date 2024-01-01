@@ -31,6 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: npm ci
+      - run: npx nuxt prepare
       - run: npm run lint
 
   agdb_web_coverage:

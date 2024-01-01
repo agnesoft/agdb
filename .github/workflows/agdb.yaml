@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: ["main"]
 
+env:
+  PROJECT: agdb
+
 jobs:
   diff:
     runs-on: ubuntu-latest
@@ -16,7 +19,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- agdb/ agdb_derive/ .github/workflows/agdb.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
+          if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb_derive/ .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
 
   agdb_analyse:
     runs-on: ubuntu-latest
@@ -24,7 +27,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     steps:
       - uses: actions/checkout@v3
-      - run: cargo clippy --package agdb --package agdb_derive --all-targets --all-features -- -D warnings
+      - run: cargo clippy --package ${{ env.PROJECT }} --package agdb_derive --all-targets --all-features -- -D warnings
 
   agdb_coverage:
     runs-on: ubuntu-latest
@@ -34,7 +37,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --package agdb --package agdb_derive --all-features --ignore-filename-regex "agdb_derive" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
+      - run: cargo llvm-cov --package ${{ env.PROJECT }} --package agdb_derive --all-features --ignore-filename-regex "agdb_derive" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
 
   agdb_format:
     runs-on: ubuntu-latest
@@ -42,4 +45,4 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     steps:
       - uses: actions/checkout@v3
-      - run: cargo fmt --package agdb --package agdb_derive --check
+      - run: cargo fmt --package ${{ env.PROJECT }} --package agdb_derive --check

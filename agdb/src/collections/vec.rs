@@ -13,6 +13,7 @@ where
     fn capacity(&self) -> u64;
     fn len(&self) -> u64;
     fn reallocate(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), E>;
+    fn remove_from_storage(self, storage: &mut Storage<D>) -> Result<(), E>;
     fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E>;
     fn replace(&mut self, storage: &mut Storage<D>, index: u64, value: &T) -> Result<T, E>;
     fn resize(&mut self, storage: &mut Storage<D>, new_len: u64, value: &T) -> Result<(), E>;
@@ -150,6 +151,21 @@ where
         storage.commit(id)?;
 
         Ok(value)
+    }
+
+    fn remove_from_storage(self, storage: &mut Storage<D>) -> Result<(), E> {
+        let id = storage.transaction();
+
+        for index in 0..self.len() {
+            let bytes = storage
+                .value_as_bytes_at_size(self.storage_index, Self::offset(index), T::storage_len())?
+                .to_vec();
+            T::remove(storage, &bytes)?;
+        }
+
+        storage.remove(self.storage_index)?;
+        storage.commit(id)?;
+        Ok(())
     }
 
     fn replace(&mut self, storage: &mut Storage<D>, index: u64, value: &T) -> Result<T, E> {
@@ -299,6 +315,10 @@ where
         self.data.resize(storage, self.data.len() + 1, value)
     }
 
+    pub fn remove_from_storage(self, storage: &mut Storage<D>) -> Result<(), E> {
+        self.data.remove_from_storage(storage)
+    }
+
     #[allow(dead_code)]
     pub fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E> {
         self.validate_index(index)?;
@@ -407,7 +427,7 @@ mod tests {
     use super::*;
     use crate::{
         storage::file_storage_memory_mapped::FileStorageMemoryMapped,
-        test_utilities::test_file::TestFile,
+        test_utilities::test_file::TestFile, MemoryStorage,
     };
 
     #[test]
@@ -879,5 +899,24 @@ mod tests {
             vec.value(&storage, 0),
             Err(DbError::from("Index (0) out of bounds (0)"))
         );
+    }
+
+    #[test]
+    fn remove_from_storage() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut vec = DbVec::<String, MemoryStorage>::new(&mut storage).unwrap();
+        vec.push(
+            &mut storage,
+            &"This is a long string that does not fit into small value".to_string(),
+        )
+        .unwrap();
+
+        vec.remove_from_storage(&mut storage).unwrap();
+
+        assert_ne!(storage.len(), 0);
+
+        storage.shrink_to_fit().unwrap();
+
+        assert_eq!(storage.len(), 0)
     }
 }

@@ -2,6 +2,7 @@ pub mod db_element;
 pub mod db_error;
 pub mod db_f64;
 pub mod db_id;
+pub mod db_index;
 pub mod db_key;
 pub mod db_key_value;
 pub mod db_user_value;

@@ -281,6 +281,10 @@ where
         self.data.commit(storage, id)
     }
 
+    pub fn remove_from_storage(self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        self.data.remove_from_storage(storage)
+    }
+
     pub fn reserve(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError> {
         if self.capacity() < capacity {
             self.rehash(storage, capacity)?;
@@ -567,10 +571,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
-        test_utilities::test_file::TestFile,
-    };
+    use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
+    use crate::test_utilities::test_file::TestFile;
+    use crate::MemoryStorage;
 
     #[test]
     fn new() {
@@ -782,5 +785,33 @@ mod tests {
                 (1, "World".to_string())
             ]
         );
+    }
+
+    #[test]
+    fn remove_from_storage() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<String, String, MemoryStorage>::new(&mut storage).unwrap();
+
+        map.insert(
+            &mut storage,
+            &"key".to_string(),
+            &"This is a long string that does not fit into small value".to_string(),
+        )
+        .unwrap();
+
+        map.insert(
+            &mut storage,
+            &"key".to_string(),
+            &"Some other value that is also longish".to_string(),
+        )
+        .unwrap();
+
+        map.remove_from_storage(&mut storage).unwrap();
+
+        assert_ne!(storage.len(), 0);
+
+        storage.shrink_to_fit().unwrap();
+
+        assert_eq!(storage.len(), 0)
     }
 }

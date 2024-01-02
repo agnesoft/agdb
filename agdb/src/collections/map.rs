@@ -75,6 +75,7 @@ where
     fn commit(&mut self, storage: &mut Storage<D>, id: u64) -> Result<(), DbError>;
     fn len(&self) -> u64;
     fn key(&self, storage: &Storage<D>, index: u64) -> Result<K, DbError>;
+    fn remove_from_storage(self, storage: &mut Storage<D>) -> Result<(), DbError>;
     fn resize(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError>;
     fn set_len(&mut self, storage: &mut Storage<D>, len: u64) -> Result<(), DbError>;
     fn set_state(
@@ -229,6 +230,15 @@ where
 
     fn key(&self, storage: &Storage<D>, index: u64) -> Result<K, DbError> {
         self.keys.value(storage, index)
+    }
+
+    fn remove_from_storage(self, storage: &mut Storage<D>) -> Result<(), DbError> {
+        let id = storage.transaction();
+        self.states.remove_from_storage(storage)?;
+        self.values.remove_from_storage(storage)?;
+        self.keys.remove_from_storage(storage)?;
+        storage.remove(self.storage_index)?;
+        storage.commit(id)
     }
 
     fn resize(&mut self, storage: &mut Storage<D>, capacity: u64) -> Result<(), DbError> {
@@ -442,10 +452,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        storage::file_storage_memory_mapped::FileStorageMemoryMapped,
-        test_utilities::test_file::TestFile,
-    };
+    use crate::storage::file_storage_memory_mapped::FileStorageMemoryMapped;
+    use crate::test_utilities::test_file::TestFile;
 
     #[test]
     fn derived_from_clone() {

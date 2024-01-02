@@ -1,5 +1,6 @@
 pub mod insert_aliases_query;
 pub mod insert_edges_query;
+pub mod insert_index_query;
 pub mod insert_nodes_query;
 pub mod insert_values_query;
 pub mod query_aliases;
@@ -10,6 +11,7 @@ pub mod query_ids;
 pub mod query_result;
 pub mod query_values;
 pub mod remove_aliases_query;
+pub mod remove_index_query;
 pub mod remove_query;
 pub mod remove_values_query;
 pub mod search_query;
@@ -42,9 +44,10 @@ pub trait QueryMut {
 
 #[cfg(any(feature = "serde", feature = "opeanapi"))]
 use crate::{
-    InsertAliasesQuery, InsertEdgesQuery, InsertNodesQuery, InsertValuesQuery, RemoveAliasesQuery,
-    RemoveQuery, RemoveValuesQuery, SearchQuery, SelectAliasesQuery, SelectAllAliasesQuery,
-    SelectKeyCountQuery, SelectKeysQuery, SelectQuery, SelectValuesQuery,
+    InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
+    RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
+    SelectAliasesQuery, SelectAllAliasesQuery, SelectKeyCountQuery, SelectKeysQuery, SelectQuery,
+    SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.
@@ -54,10 +57,12 @@ use crate::{
 pub enum QueryType {
     InsertAlias(InsertAliasesQuery),
     InsertEdges(InsertEdgesQuery),
+    InsertIndex(InsertIndexQuery),
     InsertNodes(InsertNodesQuery),
     InsertValues(InsertValuesQuery),
     Remove(RemoveQuery),
     RemoveAliases(RemoveAliasesQuery),
+    RemoveIndex(RemoveIndexQuery),
     RemoveValues(RemoveValuesQuery),
     Search(SearchQuery),
     Select(SelectQuery),
@@ -72,6 +77,13 @@ pub enum QueryType {
 impl From<InsertAliasesQuery> for QueryType {
     fn from(value: InsertAliasesQuery) -> Self {
         QueryType::InsertAlias(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<InsertIndexQuery> for QueryType {
+    fn from(value: InsertIndexQuery) -> Self {
+        QueryType::InsertIndex(value)
     }
 }
 

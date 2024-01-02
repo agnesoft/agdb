@@ -1113,7 +1113,9 @@ fn t_exec_mut(
         QueryType::InsertNodes(q) => t.exec_mut(q),
         QueryType::InsertValues(q) => t.exec_mut(q),
         QueryType::Remove(q) => t.exec_mut(q),
+        QueryType::InsertIndex(_) => todo!(),
         QueryType::RemoveAliases(q) => t.exec_mut(q),
+        QueryType::RemoveIndex(_) => todo!(),
         QueryType::RemoveValues(q) => t.exec_mut(q),
     }
 }

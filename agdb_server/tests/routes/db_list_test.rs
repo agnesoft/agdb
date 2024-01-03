@@ -14,14 +14,14 @@ async fn list() -> anyhow::Result<()> {
             name: db1.clone(),
             db_type: "memory".to_string(),
             role: "admin".to_string(),
-            size: 2600,
+            size: 2632,
             backup: 0,
         },
         Db {
             name: db2.clone(),
             db_type: "mapped".to_string(),
             role: "admin".to_string(),
-            size: 2600,
+            size: 2632,
             backup: 0,
         },
     ];

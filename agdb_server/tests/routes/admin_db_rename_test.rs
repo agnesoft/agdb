@@ -83,7 +83,7 @@ async fn transfer() -> anyhow::Result<()> {
             name: format!("{}/renamed_db", other.name),
             db_type: "mapped".to_string(),
             role: "admin".to_string(),
-            size: 2600,
+            size: 2632,
             backup: 0,
         }]
     );

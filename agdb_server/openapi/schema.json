@@ -2490,6 +2490,17 @@
           {
             "type": "object",
             "required": [
+              "InsertIndex"
+            ],
+            "properties": {
+              "InsertIndex": {
+                "$ref": "#/components/schemas/InsertIndexQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
               "InsertNodes"
             ],
             "properties": {
@@ -2528,6 +2539,17 @@
             "properties": {
               "RemoveAliases": {
                 "$ref": "#/components/schemas/RemoveAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "RemoveIndex"
+            ],
+            "properties": {
+              "RemoveIndex": {
+                "$ref": "#/components/schemas/RemoveIndexQuery"
               }
             }
           },
@@ -2583,6 +2605,17 @@
             "properties": {
               "SelectAllAliases": {
                 "$ref": "#/components/schemas/SelectAllAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "SelectIndexes"
+            ],
+            "properties": {
+              "SelectIndexes": {
+                "$ref": "#/components/schemas/SelectIndexesQuery"
               }
             }
           },
@@ -2728,7 +2761,8 @@
         "description": "Search algorithm to be used",
         "enum": [
           "BreadthFirst",
-          "DepthFirst"
+          "DepthFirst",
+          "Index"
         ]
       },
       "SelectAliasesQuery": {

@@ -34,7 +34,7 @@ fn insert_existing_index() {
     db.exec_mut(QueryBuilder::insert().index("username").query(), 0);
     db.exec_mut_error(
         QueryBuilder::insert().index("username").query(),
-        "Index for 'username' already exists",
+        "Index 'username' already exists",
     );
 }
 
@@ -57,6 +57,7 @@ fn insert_index_rollback() {
             t.exec_mut(&QueryBuilder::insert().index("username").query())?;
             Ok(())
         },
-        QueryError::from("Index for 'username' already exists"),
+        QueryError::from("Index 'username' already exists"),
     );
+    db.exec(QueryBuilder::select().indexes().query(), 0);
 }

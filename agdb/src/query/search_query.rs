@@ -90,11 +90,13 @@ impl SearchQuery {
         db: &DbImpl<Store>,
     ) -> Result<Vec<DbId>, QueryError> {
         if self.algorithm == SearchQueryAlgorithm::Index {
-            if let Some(condition) = self.conditions.first() {
-                if let QueryConditionData::KeyValue { key, value } = &condition.data {
-                    let ids = db.search_index(key, value.value())?;
-                    return Ok(ids);
-                }
+            let condition = self.conditions.first().ok_or("Index condition missing")?;
+
+            if let QueryConditionData::KeyValue { key, value } = &condition.data {
+                let ids = db.search_index(key, value.value())?;
+                return Ok(ids);
+            } else {
+                return Err("Index condition must be key value".into());
             }
         }
 

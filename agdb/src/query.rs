@@ -125,6 +125,13 @@ impl From<RemoveAliasesQuery> for QueryType {
 }
 
 #[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<RemoveIndexQuery> for QueryType {
+    fn from(value: RemoveIndexQuery) -> Self {
+        QueryType::RemoveIndex(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<RemoveValuesQuery> for QueryType {
     fn from(value: RemoveValuesQuery) -> Self {
         QueryType::RemoveValues(value)
@@ -156,6 +163,13 @@ impl From<SelectAliasesQuery> for QueryType {
 impl From<SelectAllAliasesQuery> for QueryType {
     fn from(value: SelectAllAliasesQuery) -> Self {
         QueryType::SelectAllAliases(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<SelectIndexesQuery> for QueryType {
+    fn from(value: SelectIndexesQuery) -> Self {
+        QueryType::SelectIndexes(value)
     }
 }
 

@@ -550,9 +550,7 @@ impl<Store: StorageData> DbImpl<Store> {
 
     pub(crate) fn insert_index(&mut self, key: &DbValue) -> Result<u64, QueryError> {
         if self.indexes.index(key).is_some() {
-            return Err(QueryError::from(format!(
-                "Index for '{key}' already exists"
-            )));
+            return Err(QueryError::from(format!("Index '{key}' already exists")));
         }
 
         let values = self
@@ -753,7 +751,7 @@ impl<Store: StorageData> DbImpl<Store> {
         if let Some(index) = self.indexes.index(key) {
             Ok(index.ids().values(&self.storage, value)?)
         } else {
-            Ok(vec![])
+            Err(QueryError::from(format!("Index '{key}' not found")))
         }
     }
 

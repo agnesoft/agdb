@@ -50,10 +50,12 @@ fn query_type() {
     let queries: Vec<QueryType> = vec![
         QueryBuilder::insert().aliases("").ids(1).query().into(),
         QueryBuilder::insert().edges().from(1).to(1).query().into(),
+        QueryBuilder::insert().index("").query().into(),
         QueryBuilder::insert().nodes().count(1).query().into(),
         QueryBuilder::insert().values(vec![]).ids(1).query().into(),
         QueryBuilder::remove().ids(1).query().into(),
         QueryBuilder::remove().aliases("").query().into(),
+        QueryBuilder::remove().index("").query().into(),
         QueryBuilder::remove().values(vec![]).ids(1).query().into(),
         QueryBuilder::search().from(1).query().into(),
         QueryBuilder::select().ids(1).query().into(),
@@ -62,6 +64,7 @@ fn query_type() {
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
         QueryBuilder::select().values(vec![]).ids(1).query().into(),
+        QueryBuilder::select().indexes().query().into(),
     ];
 
     let as_str = serde_json::to_string(&queries).unwrap();

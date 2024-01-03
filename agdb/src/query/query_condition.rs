@@ -400,4 +400,33 @@ mod tests {
 
         assert!(!Comparison::Contains("abc".into()).compare(&1.into()));
     }
+
+    #[test]
+    fn value() {
+        assert_eq!(Comparison::Equal(DbValue::I64(0)).value(), &DbValue::I64(0));
+        assert_eq!(
+            Comparison::GreaterThan(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::GreaterThanOrEqual(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::LessThan(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::LessThanOrEqual(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::NotEqual(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::Contains(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+    }
 }

@@ -1,5 +1,6 @@
 import { QueryBuilder } from "../src/query_builder";
-import { describe, it } from "vitest";
+import { describe, it, expect } from "vitest";
+import { Components } from "../src/schema";
 
 describe("insert edges", () => {
     it("insert().edges().from().to().query()", () => {
@@ -70,5 +71,23 @@ describe("insert edges", () => {
                 },
             ])
             .query();
+    });
+
+    it("nested queries", () => {
+        QueryBuilder.insert()
+            .edges()
+            .from(QueryBuilder.search().from(1).query())
+            .to(QueryBuilder.search().from(2).query())
+            .query();
+    });
+
+    it("invalid nested queries", () => {
+        expect(() =>
+            QueryBuilder.insert()
+                .edges()
+                .from(QueryBuilder.insert().nodes().count(1).query())
+                .to(QueryBuilder.search().from(2).query())
+                .query(),
+        ).toThrowError("invalid search query");
     });
 });

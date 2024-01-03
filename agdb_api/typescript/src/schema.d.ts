@@ -456,6 +456,19 @@ declare namespace Components {
              */
             QueryValues;
         }
+        export type InsertIndexQuery = /**
+         * Database value is a strongly types value.
+         *
+         * It is an enum of limited number supported types
+         * that are universal across all platforms
+         * and programming languages.
+         *
+         * The value is constructible from large number of
+         * raw types or associated types (e.g. i32, &str, etc.).
+         * Getting the raw value back as string can be done
+         * with `to_string()` but otherwise requires a `match`.
+         */
+        DbValue;
         /**
          * Query to insert nodes to the database. Only one of
          * `count`, `values` or `aliases` need to be given as the
@@ -744,6 +757,20 @@ declare namespace Components {
              */
             InsertEdgesQuery;
         } | {
+            InsertIndex: /**
+             * Database value is a strongly types value.
+             *
+             * It is an enum of limited number supported types
+             * that are universal across all platforms
+             * and programming languages.
+             *
+             * The value is constructible from large number of
+             * raw types or associated types (e.g. i32, &str, etc.).
+             * Getting the raw value back as string can be done
+             * with `to_string()` but otherwise requires a `match`.
+             */
+            DbValue;
+        } | {
             InsertNodes: /**
              * Query to insert nodes to the database. Only one of
              * `count`, `values` or `aliases` need to be given as the
@@ -791,6 +818,20 @@ declare namespace Components {
              */
             RemoveAliasesQuery;
         } | {
+            RemoveIndex: /**
+             * Database value is a strongly types value.
+             *
+             * It is an enum of limited number supported types
+             * that are universal across all platforms
+             * and programming languages.
+             *
+             * The value is constructible from large number of
+             * raw types or associated types (e.g. i32, &str, etc.).
+             * Getting the raw value back as string can be done
+             * with `to_string()` but otherwise requires a `match`.
+             */
+            DbValue;
+        } | {
             RemoveValues: /**
              * Query to select elements with only certain properties of
              * given ids. All ids must exist in the database and all
@@ -831,6 +872,16 @@ declare namespace Components {
              * the value `String`.
              */
             SelectAllAliasesQuery;
+        } | {
+            SelectIndexes: /**
+             * Query to select all indexes in the database.
+             *
+             * The result will be number of returned indexes and single element
+             * with index 0 and the properties corresponding to the names of the indexes
+             * (keys) with `u64` values representing number of indexed values in each
+             * index.
+             */
+            SelectIndexesQuery;
         } | {
             SelectKeys: /**
              * List of database ids used in queries. It
@@ -904,6 +955,19 @@ declare namespace Components {
          * many aliases have been actually removed.
          */
         export type RemoveAliasesQuery = string[];
+        export type RemoveIndexQuery = /**
+         * Database value is a strongly types value.
+         *
+         * It is an enum of limited number supported types
+         * that are universal across all platforms
+         * and programming languages.
+         *
+         * The value is constructible from large number of
+         * raw types or associated types (e.g. i32, &str, etc.).
+         * Getting the raw value back as string can be done
+         * with `to_string()` but otherwise requires a `match`.
+         */
+        DbValue;
         export type RemoveQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s
@@ -966,7 +1030,7 @@ declare namespace Components {
         /**
          * Search algorithm to be used
          */
-        export type SearchQueryAlgorithm = "BreadthFirst" | "DepthFirst";
+        export type SearchQueryAlgorithm = "BreadthFirst" | "DepthFirst" | "Index";
         export type SelectAliasesQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s
@@ -984,6 +1048,16 @@ declare namespace Components {
          * the value `String`.
          */
         export interface SelectAllAliasesQuery {
+        }
+        /**
+         * Query to select all indexes in the database.
+         *
+         * The result will be number of returned indexes and single element
+         * with index 0 and the properties corresponding to the names of the indexes
+         * (keys) with `u64` values representing number of indexed values in each
+         * index.
+         */
+        export interface SelectIndexesQuery {
         }
         export type SelectKeyCountQuery = /**
          * List of database ids used in queries. It

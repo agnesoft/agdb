@@ -2157,6 +2157,9 @@
           }
         }
       },
+      "InsertIndexQuery": {
+        "$ref": "#/components/schemas/DbValue"
+      },
       "InsertNodesQuery": {
         "type": "object",
         "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nThe result will contain number of nodes inserted and elements with\ntheir ids but no properties.",
@@ -2700,6 +2703,9 @@
         },
         "description": "Query to remove aliases from the database. It\nis not an error if an alias to be removed already\ndoes not exist.\n\nThe result will be a negative number signifying how\nmany aliases have been actually removed."
       },
+      "RemoveIndexQuery": {
+        "$ref": "#/components/schemas/DbValue"
+      },
       "RemoveQuery": {
         "$ref": "#/components/schemas/QueryIds"
       },
@@ -2771,6 +2777,10 @@
       "SelectAllAliasesQuery": {
         "type": "object",
         "description": "Query to select all aliases in the database.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
+      },
+      "SelectIndexesQuery": {
+        "type": "object",
+        "description": "Query to select all indexes in the database.\n\nThe result will be number of returned indexes and single element\nwith index 0 and the properties corresponding to the names of the indexes\n(keys) with `u64` values representing number of indexed values in each\nindex."
       },
       "SelectKeyCountQuery": {
         "$ref": "#/components/schemas/QueryIds"

@@ -10,6 +10,10 @@ describe("select", () => {
         QueryBuilder.select().aliases().ids([1, 2]).query();
     });
 
+    it("select().indexes().query()", () => {
+        QueryBuilder.select().indexes().query();
+    });
+
     it("select().ids().query()", () => {
         QueryBuilder.select().ids([1, 2]).query();
     });
@@ -27,5 +31,28 @@ describe("select", () => {
             .values([{ String: "key" }, { U64: 100 }])
             .ids([1, 2])
             .query();
+    });
+
+    it("select aliases - nested queries", () => {
+        QueryBuilder.select().aliases().ids(QueryBuilder.search().from(1).query()).query();
+    });
+
+    it("select ids - nested queries", () => {
+        QueryBuilder.select().ids(QueryBuilder.search().from(1).query()).query();
+    });
+
+    it("select keys - nested queries", () => {
+        QueryBuilder.select().keys().ids(QueryBuilder.search().from(1).query()).query();
+    });
+
+    it("select values - nested queries", () => {
+        QueryBuilder.select()
+            .values([{ String: "key" }, { U64: 100 }])
+            .ids(QueryBuilder.search().from(1).query())
+            .query();
+    });
+
+    it("select key count - nested queries", () => {
+        QueryBuilder.select().key_count().ids(QueryBuilder.search().from(1).query()).query();
     });
 });

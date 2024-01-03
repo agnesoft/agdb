@@ -249,6 +249,18 @@ impl Comparison {
             },
         }
     }
+
+    pub(crate) fn value(&self) -> &DbValue {
+        match self {
+            Comparison::Equal(value)
+            | Comparison::GreaterThan(value)
+            | Comparison::GreaterThanOrEqual(value)
+            | Comparison::LessThan(value)
+            | Comparison::LessThanOrEqual(value)
+            | Comparison::NotEqual(value)
+            | Comparison::Contains(value) => value,
+        }
+    }
 }
 
 #[cfg(test)]

@@ -2,7 +2,9 @@ use crate::query::query_aliases::QueryAliases;
 use crate::query::query_values::QueryKeys;
 use crate::query_builder::remove_aliases::RemoveAliases;
 use crate::query_builder::remove_ids::RemoveIds;
+use crate::query_builder::remove_index::RemoveIndex;
 use crate::query_builder::remove_values::RemoveValues;
+use crate::DbValue;
 use crate::QueryIds;
 use crate::RemoveAliasesQuery;
 use crate::RemoveQuery;
@@ -29,6 +31,11 @@ impl Remove {
     /// It is not an error if not all of the ids exist in the database.
     pub fn ids<T: Into<QueryIds>>(self, ids: T) -> RemoveIds {
         RemoveIds(RemoveQuery(ids.into()))
+    }
+
+    /// Index to be removed from the database.
+    pub fn index<T: Into<DbValue>>(self, key: T) -> RemoveIndex {
+        RemoveIndex(key.into())
     }
 
     /// List of keys to delete from ids selected in the next step. It is not an

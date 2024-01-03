@@ -5,6 +5,7 @@ use crate::DbImpl;
 use crate::DbValue;
 use crate::Query;
 use crate::QueryCondition;
+use crate::QueryConditionData;
 use crate::QueryError;
 use crate::QueryId;
 use crate::QueryResult;
@@ -26,6 +27,10 @@ pub enum SearchQueryAlgorithm {
     /// E.g. when starting at anode it will go `edge -> node -> edge -> node`
     /// until it reaches dead end or encounters already visited element.
     DepthFirst,
+
+    /// Bypasses the graph traversal and inspects only the index specified
+    /// as the first condition (key).
+    Index,
 }
 
 /// Query to search for ids in the database following the graph.
@@ -84,6 +89,15 @@ impl SearchQuery {
         &self,
         db: &DbImpl<Store>,
     ) -> Result<Vec<DbId>, QueryError> {
+        if self.algorithm == SearchQueryAlgorithm::Index {
+            if let Some(condition) = self.conditions.first() {
+                if let QueryConditionData::KeyValue { key, value } = &condition.data {
+                    let ids = db.search_index(key, value.value())?;
+                    return Ok(ids);
+                }
+            }
+        }
+
         if self.destination == QueryId::Id(DbId(0)) {
             let origin = db.db_id(&self.origin)?;
 

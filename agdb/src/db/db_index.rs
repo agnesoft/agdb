@@ -119,6 +119,10 @@ where
         self.indexes.iter_mut().find(|index| index.key() == key)
     }
 
+    pub fn indexes(&self) -> &[DbIndex<D>] {
+        self.indexes.as_slice()
+    }
+
     pub fn insert(
         &mut self,
         storage: &mut Storage<D>,

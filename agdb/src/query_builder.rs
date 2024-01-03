@@ -1,11 +1,13 @@
 mod insert;
 mod insert_aliases;
 mod insert_edge;
+mod insert_index;
 mod insert_nodes;
 mod insert_values;
 mod remove;
 mod remove_aliases;
 mod remove_ids;
+mod remove_index;
 mod remove_values;
 mod search;
 mod select;
@@ -52,6 +54,7 @@ impl QueryBuilder {
     /// QueryBuilder::insert().aliases(vec!["a", "b"]);
     /// QueryBuilder::insert().element(&MyValue { db_id: Some(DbId(1)), key: "a".to_string(), });
     /// QueryBuilder::insert().elements(&[MyValue { db_id: Some(DbId(1)), key: "a".to_string(), }]);
+    /// QueryBuilder::insert().index("k");
     /// QueryBuilder::insert().values(vec![vec![("k", 1).into()]]);
     /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]);
     /// ```
@@ -69,6 +72,7 @@ impl QueryBuilder {
     /// QueryBuilder::remove().ids(1);
     /// QueryBuilder::remove().ids(vec![1, 2]);
     /// QueryBuilder::remove().ids(QueryBuilder::search().from(1).query());
+    /// QueryBuilder::remove().index("k");
     /// QueryBuilder::remove().aliases("a");
     /// QueryBuilder::remove().aliases(vec!["a", "b"]);
     /// QueryBuilder::remove().values(vec!["k".into()]);

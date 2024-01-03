@@ -512,6 +512,17 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    pub(crate) fn indexes(&self) -> Vec<DbKeyValue> {
+        self.indexes
+            .indexes()
+            .iter()
+            .map(|index| DbKeyValue {
+                key: index.key().clone(),
+                value: index.ids().len().into(),
+            })
+            .collect()
+    }
+
     pub(crate) fn insert_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
         if let Some(old_alias) = self.aliases.key(&self.storage, &db_id)? {
             self.undo_stack.push(Command::InsertAlias {
@@ -734,6 +745,18 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    pub(crate) fn search_index(
+        &self,
+        key: &DbValue,
+        value: &DbValue,
+    ) -> Result<Vec<DbId>, QueryError> {
+        if let Some(index) = self.indexes.index(key) {
+            Ok(index.ids().values(&self.storage, value)?)
+        } else {
+            Ok(vec![])
+        }
+    }
+
     pub(crate) fn search_from(
         &self,
         from: DbId,
@@ -750,7 +773,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     DefaultHandler::new(self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     DefaultHandler::new(self, conditions),
                 )?,
@@ -761,7 +784,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
@@ -772,7 +795,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
@@ -783,7 +806,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
@@ -809,7 +832,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     DefaultHandler::new(self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     DefaultHandler::new(self, conditions),
                 )?,
@@ -820,7 +843,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
@@ -831,7 +854,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
@@ -842,7 +865,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,

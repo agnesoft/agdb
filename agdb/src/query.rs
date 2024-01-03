@@ -17,6 +17,7 @@ pub mod remove_values_query;
 pub mod search_query;
 pub mod select_aliases_query;
 pub mod select_all_aliases_query;
+pub mod select_indexes_query;
 pub mod select_key_count_query;
 pub mod select_keys_query;
 pub mod select_query;
@@ -46,8 +47,8 @@ pub trait QueryMut {
 use crate::{
     InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
     RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
-    SelectAliasesQuery, SelectAllAliasesQuery, SelectKeyCountQuery, SelectKeysQuery, SelectQuery,
-    SelectValuesQuery,
+    SelectAliasesQuery, SelectAllAliasesQuery, SelectIndexesQuery, SelectKeyCountQuery,
+    SelectKeysQuery, SelectQuery, SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.
@@ -68,6 +69,7 @@ pub enum QueryType {
     Select(SelectQuery),
     SelectAliases(SelectAliasesQuery),
     SelectAllAliases(SelectAllAliasesQuery),
+    SelectIndexes(SelectIndexesQuery),
     SelectKeys(SelectKeysQuery),
     SelectKeyCount(SelectKeyCountQuery),
     SelectValues(SelectValuesQuery),

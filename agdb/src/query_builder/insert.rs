@@ -4,10 +4,12 @@ use crate::query::query_values::QueryValues;
 use crate::query::query_values::SingleValues;
 use crate::query_builder::insert_aliases::InsertAliases;
 use crate::query_builder::insert_edge::InsertEdges;
+use crate::query_builder::insert_index::InsertIndex;
 use crate::query_builder::insert_nodes::InsertNodes;
 use crate::query_builder::insert_values::InsertValues;
 use crate::query_builder::insert_values::InsertValuesIds;
 use crate::DbUserValue;
+use crate::DbValue;
 use crate::InsertAliasesQuery;
 use crate::InsertEdgesQuery;
 use crate::InsertNodesQuery;
@@ -88,6 +90,11 @@ impl Insert {
             ids: QueryIds::Ids(ids),
             values: QueryValues::Multi(values),
         })
+    }
+
+    /// Key to index on all elements in the database.
+    pub fn index<T: Into<DbValue>>(self, key: T) -> InsertIndex {
+        InsertIndex(key.into())
     }
 
     /// Inserts nodes into the database:

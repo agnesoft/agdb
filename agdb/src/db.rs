@@ -449,20 +449,23 @@ impl<Store: StorageData> DbImpl<Store> {
                     self.graph.remove_node(&mut self.storage, *index)?
                 }
                 Command::ReplaceKeyValue { id, key_value } => {
-                    if let Some(old) = self.values.insert_or_replace(
-                        &mut self.storage,
-                        id,
-                        |v| v.key == key_value.key,
-                        key_value,
-                    )? {
-                        if let Some(index) = self.indexes.index_mut(&old.key) {
-                            index
-                                .ids_mut()
-                                .remove_value(&mut self.storage, &old.value, id)?;
-                            index
-                                .ids_mut()
-                                .insert(&mut self.storage, &key_value.value, id)?;
-                        }
+                    let old = self
+                        .values
+                        .insert_or_replace(
+                            &mut self.storage,
+                            id,
+                            |v| v.key == key_value.key,
+                            key_value,
+                        )?
+                        .expect("old value not found during rollback");
+
+                    if let Some(index) = self.indexes.index_mut(&old.key) {
+                        index
+                            .ids_mut()
+                            .remove_value(&mut self.storage, &old.value, id)?;
+                        index
+                            .ids_mut()
+                            .insert(&mut self.storage, &key_value.value, id)?;
                     }
 
                     return Ok(());

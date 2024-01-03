@@ -1,5 +1,9 @@
 use super::where_::Where;
+use crate::Comparison;
 use crate::DbKeyOrder;
+use crate::DbValue;
+use crate::QueryCondition;
+use crate::QueryConditionData;
 use crate::QueryId;
 use crate::SearchQuery;
 use crate::SearchQueryAlgorithm;
@@ -14,6 +18,14 @@ pub struct SearchFrom(pub SearchQuery);
 /// Search builder query that lets you choose search destination
 /// and other parameters.
 pub struct SearchTo(pub SearchQuery);
+
+/// Search builder query that lets you choose an index to search
+/// instead of the graph search entirely.
+pub struct SearchIndex(pub DbValue);
+
+/// Search builder query that lets you choose a a value to find
+/// in the index.
+pub struct SearchIndexValue(pub (DbValue, DbValue));
 
 /// Search builder query that lets you choose limit and offset.
 pub struct SearchOrderBy(pub SearchQuery);
@@ -77,6 +89,10 @@ impl Search {
             order_by: vec![],
             conditions: vec![],
         })
+    }
+
+    pub fn index<T: Into<DbValue>>(self, key: T) -> SearchIndex {
+        SearchIndex(key.into())
     }
 
     /// Sets the origin of the search.
@@ -525,5 +541,34 @@ impl SelectOffset {
     /// ```
     pub fn where_(self) -> Where {
         Where::new(self.0)
+    }
+}
+
+impl SearchIndex {
+    /// Sets the value to be searched in the index.
+    pub fn value<T: Into<DbValue>>(self, value: T) -> SearchIndexValue {
+        SearchIndexValue((self.0, value.into()))
+    }
+}
+
+impl SearchIndexValue {
+    /// Returns the built `SearchQuery` object.
+    pub fn query(self) -> SearchQuery {
+        SearchQuery {
+            algorithm: SearchQueryAlgorithm::Index,
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![QueryCondition {
+                logic: crate::QueryConditionLogic::And,
+                modifier: crate::QueryConditionModifier::None,
+                data: QueryConditionData::KeyValue {
+                    key: self.0 .0,
+                    value: Comparison::Equal(self.0 .1),
+                },
+            }],
+        }
     }
 }

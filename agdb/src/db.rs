@@ -20,6 +20,7 @@ use self::db_search_handlers::PathHandler;
 use crate::collections::indexed_map::DbIndexedMap;
 use crate::collections::multi_map::MultiMapStorage;
 use crate::command::Command;
+use crate::db::db_index::DbIndexes;
 use crate::graph::DbGraph;
 use crate::graph::GraphIndex;
 use crate::graph_search::GraphSearch;
@@ -52,6 +53,7 @@ use crate::TransactionMut;
 struct DbStorageIndex {
     graph: StorageIndex,
     aliases: (StorageIndex, StorageIndex),
+    indexes: StorageIndex,
     values: StorageIndex,
 }
 
@@ -61,6 +63,7 @@ impl Serialize for DbStorageIndex {
             self.graph.serialize(),
             self.aliases.0.serialize(),
             self.aliases.1.serialize(),
+            self.indexes.serialize(),
             self.values.serialize(),
         ]
         .concat()
@@ -72,17 +75,19 @@ impl Serialize for DbStorageIndex {
         let graph = StorageIndex::deserialize(bytes)?;
         let aliases_1 = StorageIndex::deserialize(&bytes[size..])?;
         let aliases_2 = StorageIndex::deserialize(&bytes[size * 2..])?;
-        let values = StorageIndex::deserialize(&bytes[size * 3..])?;
+        let indexes = StorageIndex::deserialize(&bytes[size * 3..])?;
+        let values = StorageIndex::deserialize(&bytes[size * 4..])?;
 
         Ok(Self {
             graph,
             aliases: (aliases_1, aliases_2),
+            indexes,
             values,
         })
     }
 
     fn serialized_size(&self) -> u64 {
-        i64::serialized_size_static() * 4
+        i64::serialized_size_static() * 5
     }
 }
 
@@ -185,6 +190,7 @@ pub struct DbImpl<Store: StorageData> {
     storage: Storage<Store>,
     graph: DbGraph<Store>,
     aliases: DbIndexedMap<String, DbId, Store>,
+    indexes: DbIndexes<Store>,
     values: MultiMapStorage<DbId, DbKeyValue, Store>,
     undo_stack: Vec<Command>,
 }
@@ -259,12 +265,14 @@ impl<Store: StorageData> DbImpl<Store> {
 
         let graph = DbGraph::from_storage(&storage, index.graph)?;
         let aliases = DbIndexedMap::from_storage(&storage, index.aliases)?;
+        let indexes = DbIndexes::from_storage(&storage, index.indexes)?;
         let values = MultiMapStorage::from_storage(&storage, index.values)?;
 
         Ok(Self {
             storage,
             graph,
             aliases,
+            indexes,
             values,
             undo_stack: vec![],
         })
@@ -404,7 +412,21 @@ impl<Store: StorageData> DbImpl<Store> {
                     .graph
                     .insert_edge(&mut self.storage, *from, *to)
                     .map(|_| ())?,
+                Command::InsertIndex { key } => {
+                    self.indexes.insert(&mut self.storage, key.clone())?;
+                }
+                Command::InsertToIndex { key, value, id } => self
+                    .indexes
+                    .index_mut(key)
+                    .expect("index not found during rollback")
+                    .ids_mut()
+                    .insert(&mut self.storage, value, id)?,
                 Command::InsertKeyValue { id, key_value } => {
+                    if let Some(index) = self.indexes.index_mut(&key_value.key) {
+                        index
+                            .ids_mut()
+                            .insert(&mut self.storage, &key_value.value, id)?;
+                    }
                     self.values.insert(&mut self.storage, id, key_value)?
                 }
                 Command::InsertNode => self.graph.insert_node(&mut self.storage).map(|_| ())?,
@@ -414,19 +436,38 @@ impl<Store: StorageData> DbImpl<Store> {
                 Command::RemoveEdge { index } => {
                     self.graph.remove_edge(&mut self.storage, *index)?
                 }
+                Command::RemoveIndex { key } => self.indexes.remove(&mut self.storage, key)?,
                 Command::RemoveKeyValue { id, key_value } => {
+                    if let Some(index) = self.indexes.index_mut(&key_value.key) {
+                        index
+                            .ids_mut()
+                            .remove_value(&mut self.storage, &key_value.value, id)?;
+                    }
                     self.values.remove_value(&mut self.storage, id, key_value)?
                 }
                 Command::RemoveNode { index } => {
                     self.graph.remove_node(&mut self.storage, *index)?
                 }
                 Command::ReplaceKeyValue { id, key_value } => {
-                    self.values.insert_or_replace(
-                        &mut self.storage,
-                        id,
-                        |v| v.key == key_value.key,
-                        key_value,
-                    )?;
+                    let old = self
+                        .values
+                        .insert_or_replace(
+                            &mut self.storage,
+                            id,
+                            |v| v.key == key_value.key,
+                            key_value,
+                        )?
+                        .expect("old value not found during rollback");
+
+                    if let Some(index) = self.indexes.index_mut(&old.key) {
+                        index
+                            .ids_mut()
+                            .remove_value(&mut self.storage, &old.value, id)?;
+                        index
+                            .ids_mut()
+                            .insert(&mut self.storage, &key_value.value, id)?;
+                    }
+
                     return Ok(());
                 }
             }
@@ -474,6 +515,17 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    pub(crate) fn indexes(&self) -> Vec<DbKeyValue> {
+        self.indexes
+            .indexes()
+            .iter()
+            .map(|index| DbKeyValue {
+                key: index.key().clone(),
+                value: index.ids().len().into(),
+            })
+            .collect()
+    }
+
     pub(crate) fn insert_alias(&mut self, db_id: DbId, alias: &String) -> Result<(), DbError> {
         if let Some(old_alias) = self.aliases.key(&self.storage, &db_id)? {
             self.undo_stack.push(Command::InsertAlias {
@@ -497,6 +549,34 @@ impl<Store: StorageData> DbImpl<Store> {
         self.undo_stack.push(Command::RemoveEdge { index });
 
         Ok(DbId(index.0))
+    }
+
+    pub(crate) fn insert_index(&mut self, key: &DbValue) -> Result<u64, QueryError> {
+        if self.indexes.index(key).is_some() {
+            return Err(QueryError::from(format!("Index '{key}' already exists")));
+        }
+
+        let values = self
+            .values
+            .iter(&self.storage)
+            .filter_map(|(id, kv)| {
+                if kv.key == *key {
+                    Some((id, kv.value))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<(DbId, DbValue)>>();
+
+        self.undo_stack
+            .push(Command::RemoveIndex { key: key.clone() });
+        let index = self.indexes.insert(&mut self.storage, key.clone())?;
+
+        for (id, value) in values {
+            index.ids_mut().insert(&mut self.storage, &value, &id)?;
+        }
+
+        Ok(index.ids().len())
     }
 
     pub(crate) fn insert_new_alias(
@@ -531,6 +611,12 @@ impl<Store: StorageData> DbImpl<Store> {
         db_id: DbId,
         key_value: &DbKeyValue,
     ) -> Result<(), QueryError> {
+        if let Some(index) = self.indexes.index_mut(&key_value.key) {
+            index
+                .ids_mut()
+                .insert(&mut self.storage, &key_value.value, &db_id)?;
+        }
+
         self.undo_stack.push(Command::RemoveKeyValue {
             id: db_id,
             key_value: key_value.clone(),
@@ -550,11 +636,26 @@ impl<Store: StorageData> DbImpl<Store> {
             |kv| kv.key == key_value.key,
             key_value,
         )? {
+            if let Some(index) = self.indexes.index_mut(&old.key) {
+                index
+                    .ids_mut()
+                    .remove_value(&mut self.storage, &old.value, &db_id)?;
+                index
+                    .ids_mut()
+                    .insert(&mut self.storage, &key_value.value, &db_id)?;
+            }
+
             self.undo_stack.push(Command::ReplaceKeyValue {
                 id: db_id,
                 key_value: old,
             });
         } else {
+            if let Some(index) = self.indexes.index_mut(&key_value.key) {
+                index
+                    .ids_mut()
+                    .insert(&mut self.storage, &key_value.value, &db_id)?;
+            }
+
             self.undo_stack.push(Command::RemoveKeyValue {
                 id: db_id,
                 key_value: key_value.clone(),
@@ -620,6 +721,43 @@ impl<Store: StorageData> DbImpl<Store> {
         Ok(false)
     }
 
+    pub(crate) fn remove_index(&mut self, key: &DbValue) -> Result<u64, QueryError> {
+        let mut count = None;
+
+        if let Some(index) = self.indexes.index(key) {
+            for (value, id) in index.ids().iter(&self.storage) {
+                self.undo_stack.push(Command::InsertToIndex {
+                    key: key.clone(),
+                    value: value.clone(),
+                    id,
+                });
+            }
+
+            count = Some(index.ids().len());
+        }
+
+        if let Some(count) = count {
+            self.undo_stack
+                .push(Command::InsertIndex { key: key.clone() });
+            self.indexes.remove(&mut self.storage, key)?;
+            Ok(count)
+        } else {
+            Ok(0)
+        }
+    }
+
+    pub(crate) fn search_index(
+        &self,
+        key: &DbValue,
+        value: &DbValue,
+    ) -> Result<Vec<DbId>, QueryError> {
+        if let Some(index) = self.indexes.index(key) {
+            Ok(index.ids().values(&self.storage, value)?)
+        } else {
+            Err(QueryError::from(format!("Index '{key}' not found")))
+        }
+    }
+
     pub(crate) fn search_from(
         &self,
         from: DbId,
@@ -636,7 +774,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     DefaultHandler::new(self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     DefaultHandler::new(self, conditions),
                 )?,
@@ -647,7 +785,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
@@ -658,7 +796,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
@@ -669,7 +807,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
+                _ => search.depth_first_search(
                     GraphIndex(from.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
@@ -695,7 +833,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     DefaultHandler::new(self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     DefaultHandler::new(self, conditions),
                 )?,
@@ -706,7 +844,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
@@ -717,7 +855,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
@@ -728,7 +866,7 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(to.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
-                SearchQueryAlgorithm::DepthFirst => search.depth_first_search_reverse(
+                _ => search.depth_first_search_reverse(
                     GraphIndex(to.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
@@ -862,12 +1000,17 @@ impl<Store: StorageData> DbImpl<Store> {
 
         for key_value in self.values.values(&self.storage, &db_id)? {
             if keys.contains(&key_value.key) {
-                self.undo_stack.push(Command::InsertKeyValue {
-                    id: db_id,
-                    key_value: key_value.clone(),
-                });
+                if let Some(index) = self.indexes.index_mut(&key_value.key) {
+                    index
+                        .ids_mut()
+                        .remove_value(&mut self.storage, &key_value.value, &db_id)?;
+                }
                 self.values
                     .remove_value(&mut self.storage, &db_id, &key_value)?;
+                self.undo_stack.push(Command::InsertKeyValue {
+                    id: db_id,
+                    key_value,
+                });
                 result -= 1;
             }
         }
@@ -877,6 +1020,12 @@ impl<Store: StorageData> DbImpl<Store> {
 
     fn remove_all_values(&mut self, db_id: DbId) -> Result<(), DbError> {
         for key_value in self.values.values(&self.storage, &db_id)? {
+            if let Some(index) = self.indexes.index_mut(&key_value.key) {
+                index
+                    .ids_mut()
+                    .remove_value(&mut self.storage, &key_value.value, &db_id)?;
+            }
+
             self.undo_stack.push(Command::InsertKeyValue {
                 id: db_id,
                 key_value,
@@ -892,6 +1041,7 @@ impl<Store: StorageData> DbImpl<Store> {
         let mut storage = Storage::new(filename)?;
         let graph_storage;
         let aliases_storage;
+        let indexes_storage;
         let values_storage;
         let len = storage.len();
         let index = storage.value::<DbStorageIndex>(StorageIndex(1));
@@ -899,15 +1049,18 @@ impl<Store: StorageData> DbImpl<Store> {
         if let Ok(index) = index {
             graph_storage = DbGraph::from_storage(&storage, index.graph)?;
             aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
+            indexes_storage = DbIndexes::from_storage(&storage, index.indexes)?;
             values_storage = MultiMapStorage::from_storage(&storage, index.values)?;
         } else if len == 0 {
             storage.insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(&mut storage)?;
             aliases_storage = DbIndexedMap::new(&mut storage)?;
+            indexes_storage = DbIndexes::new(&mut storage)?;
             values_storage = MultiMapStorage::new(&mut storage)?;
             let db_storage_index = DbStorageIndex {
                 graph: graph_storage.storage_index(),
                 aliases: aliases_storage.storage_index(),
+                indexes: indexes_storage.storage_index(),
                 values: values_storage.storage_index(),
             };
             storage.insert_at(StorageIndex(1), 0, &db_storage_index)?;
@@ -921,6 +1074,7 @@ impl<Store: StorageData> DbImpl<Store> {
             storage,
             graph: graph_storage,
             aliases: aliases_storage,
+            indexes: indexes_storage,
             values: values_storage,
             undo_stack: vec![],
         })
@@ -1052,7 +1206,7 @@ mod tests {
 
     #[test]
     fn db_storage_index_serialized_size() {
-        assert_eq!(DbStorageIndex::default().serialized_size(), 32);
+        assert_eq!(DbStorageIndex::default().serialized_size(), 40);
     }
 
     #[test]

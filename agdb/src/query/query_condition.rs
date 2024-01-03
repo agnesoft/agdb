@@ -249,6 +249,18 @@ impl Comparison {
             },
         }
     }
+
+    pub(crate) fn value(&self) -> &DbValue {
+        match self {
+            Comparison::Equal(value)
+            | Comparison::GreaterThan(value)
+            | Comparison::GreaterThanOrEqual(value)
+            | Comparison::LessThan(value)
+            | Comparison::LessThanOrEqual(value)
+            | Comparison::NotEqual(value)
+            | Comparison::Contains(value) => value,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -387,5 +399,34 @@ mod tests {
         assert!(!condition.compare(&vec!["123".to_string()].into()));
 
         assert!(!Comparison::Contains("abc".into()).compare(&1.into()));
+    }
+
+    #[test]
+    fn value() {
+        assert_eq!(Comparison::Equal(DbValue::I64(0)).value(), &DbValue::I64(0));
+        assert_eq!(
+            Comparison::GreaterThan(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::GreaterThanOrEqual(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::LessThan(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::LessThanOrEqual(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::NotEqual(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
+        assert_eq!(
+            Comparison::Contains(DbValue::I64(0)).value(),
+            &DbValue::I64(0)
+        );
     }
 }

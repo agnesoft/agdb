@@ -19,14 +19,14 @@ async fn db_list() -> anyhow::Result<()> {
         name: db1,
         db_type: "memory".to_string(),
         role: "admin".to_string(),
-        size: 2600,
+        size: 2632,
         backup: 0,
     }));
     assert!(list.contains(&Db {
         name: db2,
         db_type: "memory".to_string(),
         role: "admin".to_string(),
-        size: 2600,
+        size: 2632,
         backup: 0,
     }));
 

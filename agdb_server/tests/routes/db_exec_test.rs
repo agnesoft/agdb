@@ -116,6 +116,7 @@ async fn read_queries() -> anyhow::Result<()> {
         QueryBuilder::select().ids(1).query().into(),
         QueryBuilder::select().aliases().ids(1).query().into(),
         QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().indexes().query().into(),
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
         QueryBuilder::select()
@@ -129,7 +130,7 @@ async fn read_queries() -> anyhow::Result<()> {
         .await?;
     assert_eq!(status, 200);
     let responses: Vec<QueryResult> = serde_json::from_str(&responses)?;
-    assert_eq!(responses.len(), 7);
+    assert_eq!(responses.len(), 8);
 
     Ok(())
 }
@@ -157,10 +158,12 @@ async fn write_queries() -> anyhow::Result<()> {
             .ids("node1")
             .query()
             .into(),
+        QueryBuilder::insert().index("key").query().into(),
         QueryBuilder::search().from(1).query().into(),
         QueryBuilder::select().ids(1).query().into(),
         QueryBuilder::select().aliases().ids(1).query().into(),
         QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().indexes().query().into(),
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
         QueryBuilder::select()
@@ -169,6 +172,7 @@ async fn write_queries() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::remove().aliases("node2").query().into(),
+        QueryBuilder::remove().index("key").query().into(),
         QueryBuilder::remove()
             .values(vec!["key".into()])
             .ids(1)
@@ -181,7 +185,7 @@ async fn write_queries() -> anyhow::Result<()> {
         .await?;
     assert_eq!(status, 200);
     let responses: Vec<QueryResult> = serde_json::from_str(&responses)?;
-    assert_eq!(responses.len(), 14);
+    assert_eq!(responses.len(), 17);
 
     Ok(())
 }

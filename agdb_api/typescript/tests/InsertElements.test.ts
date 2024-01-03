@@ -1,5 +1,5 @@
 import { QueryBuilder } from "../src/query_builder";
-import { describe, it } from "vitest";
+import { describe, it, expect } from "vitest";
 
 class MyClass {
     db_id: number | undefined;
@@ -24,5 +24,14 @@ describe("insert elements", () => {
             age: 30,
         };
         QueryBuilder.insert().elements([e]).query();
+    });
+
+    it("invalid db_id", () => {
+        let e: MyClass = {
+            db_id: undefined,
+            name: "John",
+            age: 30,
+        };
+        expect(() => QueryBuilder.insert().elements([e]).query()).toThrowError("invalid db_id");
     });
 });

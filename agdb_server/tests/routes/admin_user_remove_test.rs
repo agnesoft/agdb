@@ -49,7 +49,7 @@ async fn remove_with_other() -> anyhow::Result<()> {
             name: db,
             db_type: "mapped".to_string(),
             role: "write".to_string(),
-            size: 2600,
+            size: 2632,
             backup: 0,
         }]
     );

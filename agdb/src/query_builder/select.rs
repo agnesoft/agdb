@@ -1,6 +1,7 @@
 use crate::query::query_values::QueryKeys;
 use crate::query_builder::select_aliases::SelectAliases;
 use crate::query_builder::select_ids::SelectIds;
+use crate::query_builder::select_indexes::SelectIndexes;
 use crate::query_builder::select_key_count::SelectKeyCount;
 use crate::query_builder::select_keys::SelectKeys;
 use crate::query_builder::select_values::SelectValues;
@@ -30,6 +31,13 @@ impl Select {
     /// All ids specified must exist in the database.
     pub fn ids<T: Into<QueryIds>>(self, ids: T) -> SelectIds {
         SelectIds(SelectQuery(ids.into()))
+    }
+
+    /// Select all indexes in the database. The returned result
+    /// will contain single element with each value representing
+    /// index name and number of indexed values in that index.
+    pub fn indexes(self) -> SelectIndexes {
+        SelectIndexes {}
     }
 
     /// Select keys only (values will be empty).

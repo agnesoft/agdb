@@ -14,6 +14,14 @@ function intoQueryId(id: QueryId): Components.Schemas.QueryId {
     }
 }
 
+function intoSearchQuery(query: Components.Schemas.QueryType): Components.Schemas.SearchQuery {
+    if ("Search" in query) {
+        return query as unknown as Components.Schemas.SearchQuery;
+    } else {
+        throw new Error("invalid search query");
+    }
+}
+
 class InsertNodesAliasesBuilder {
     private data: Components.Schemas.InsertNodesQuery;
 
@@ -167,11 +175,11 @@ class InsertEdgesFromBuilder {
         this.data = query;
     }
 
-    to(ids: QueryId[] | Components.Schemas.SearchQuery): InsertEdgesToBuilder {
+    to(ids: QueryId[] | Components.Schemas.QueryType): InsertEdgesToBuilder {
         if (Array.isArray(ids)) {
             this.data.from = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.from = { Search: ids };
+            this.data.from = { Search: intoSearchQuery(ids) };
         }
 
         return new InsertEdgesToBuilder(this.data);
@@ -190,11 +198,13 @@ class InsertEdgesBuilder {
         };
     }
 
-    from(ids: QueryId[] | Components.Schemas.SearchQuery): InsertEdgesFromBuilder {
+    from(ids: QueryId[] | Components.Schemas.QueryType): InsertEdgesFromBuilder {
         if (Array.isArray(ids)) {
             this.data.from = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.from = { Search: ids };
+            this.data.from = {
+                Search: intoSearchQuery(ids),
+            };
         }
 
         return new InsertEdgesFromBuilder(this.data);
@@ -220,11 +230,11 @@ class InsertAliasesBuilder {
         this.data = { aliases: aliases, ids: { Ids: [] } };
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): InsertAliasesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): InsertAliasesIdsBuilder {
         if (Array.isArray(ids)) {
             this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids = { Search: ids };
+            this.data.ids = { Search: intoSearchQuery(ids) };
         }
         return new InsertAliasesIdsBuilder(this.data);
     }
@@ -249,13 +259,25 @@ class InsertValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): InsertValuesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): InsertValuesIdsBuilder {
         if (Array.isArray(ids)) {
             this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids = { Search: ids };
+            this.data.ids = { Search: intoSearchQuery(ids) };
         }
         return new InsertValuesIdsBuilder(this.data);
+    }
+}
+
+class InsertIndexBuilder {
+    private key: Components.Schemas.DbValue;
+
+    constructor(key: Components.Schemas.DbValue) {
+        this.key = key;
+    }
+
+    query(): Components.Schemas.QueryType {
+        return { InsertIndex: this.key };
     }
 }
 
@@ -279,13 +301,13 @@ class InsertBuilder {
         };
 
         for (const elem of elems) {
-            for (const key in Object.keys(elem)) {
+            for (const key of Object.keys(elem)) {
                 if (key === "db_id") {
                     let id = elem[key];
                     if (typeof id === "number") {
                         data.ids.Ids.push({ Id: id });
                     } else {
-                        data.ids.Ids.push({ Alias: id });
+                        throw new Error("invalid db_id");
                     }
                 } else {
                     data.values.Multi.push([
@@ -303,6 +325,10 @@ class InsertBuilder {
 
     edges(): InsertEdgesBuilder {
         return new InsertEdgesBuilder();
+    }
+
+    index(key: Components.Schemas.DbValue): InsertIndexBuilder {
+        return new InsertIndexBuilder(key);
     }
 
     nodes(): InsertNodesBuilder {
@@ -367,14 +393,26 @@ class RemoveValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): RemoveValuesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): RemoveValuesIdsBuilder {
         if (Array.isArray(ids)) {
             this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids = { Search: ids };
+            this.data.ids = { Search: intoSearchQuery(ids) };
         }
 
         return new RemoveValuesIdsBuilder(this.data);
+    }
+}
+
+class RemoveIndexBuilder {
+    private key: Components.Schemas.DbValue;
+
+    constructor(key: Components.Schemas.DbValue) {
+        this.key = key;
+    }
+
+    query(): Components.Schemas.QueryType {
+        return { RemoveIndex: this.key };
     }
 }
 
@@ -383,12 +421,16 @@ class RemoveBuilder {
         return new RemoveAliasesBuilder(aliases);
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): RemoveIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): RemoveIdsBuilder {
         if (Array.isArray(ids)) {
             return new RemoveIdsBuilder({ Ids: intoQueryIds(ids) });
         } else {
-            return new RemoveIdsBuilder({ Search: ids });
+            return new RemoveIdsBuilder({ Search: intoSearchQuery(ids) });
         }
+    }
+
+    index(key: Components.Schemas.DbValue): RemoveIndexBuilder {
+        return new RemoveIndexBuilder(key);
     }
 
     values(values: Components.Schemas.DbValue[]): RemoveValuesBuilder {
@@ -417,11 +459,11 @@ class SelectAliasesBuilder {
         };
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectAliasesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectAliasesIdsBuilder {
         if (Array.isArray(ids)) {
             return new SelectAliasesIdsBuilder({ Ids: intoQueryIds(ids) });
         } else {
-            return new SelectAliasesIdsBuilder({ Search: ids });
+            return new SelectAliasesIdsBuilder({ Search: intoSearchQuery(ids) });
         }
     }
 
@@ -461,11 +503,11 @@ class SelectValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectValuesIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectValuesIdsBuilder {
         if (Array.isArray(ids)) {
             this.data.ids = { Ids: intoQueryIds(ids) };
         } else {
-            this.data.ids = { Search: ids };
+            this.data.ids = { Search: intoSearchQuery(ids) };
         }
 
         return new SelectValuesIdsBuilder(this.data);
@@ -491,11 +533,11 @@ class SelectKeysBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectKeysIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectKeysIdsBuilder {
         if (Array.isArray(ids)) {
             this.data = { Ids: intoQueryIds(ids) };
         } else {
-            this.data = { Search: ids };
+            this.data = { Search: intoSearchQuery(ids) };
         }
 
         return new SelectKeysIdsBuilder(this.data);
@@ -521,14 +563,20 @@ class SelectKeyCountBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectKeyCountIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectKeyCountIdsBuilder {
         if (Array.isArray(ids)) {
             this.data = { Ids: intoQueryIds(ids) };
         } else {
-            this.data = { Search: ids };
+            this.data = { Search: intoSearchQuery(ids) };
         }
 
         return new SelectKeyCountIdsBuilder(this.data);
+    }
+}
+
+class SelectIndexesBuilder {
+    query(): Components.Schemas.QueryType {
+        return { SelectIndexes: {} };
     }
 }
 
@@ -537,12 +585,16 @@ class SelectBuilder {
         return new SelectAliasesBuilder();
     }
 
-    ids(ids: QueryId[] | Components.Schemas.SearchQuery): SelectIdsBuilder {
+    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectIdsBuilder {
         if (Array.isArray(ids)) {
             return new SelectIdsBuilder({ Ids: intoQueryIds(ids) });
         } else {
-            return new SelectIdsBuilder({ Search: ids });
+            return new SelectIdsBuilder({ Search: intoSearchQuery(ids) });
         }
+    }
+
+    indexes(): SelectIndexesBuilder {
+        return new SelectIndexesBuilder();
     }
 
     keys(): SelectKeysBuilder {
@@ -886,8 +938,39 @@ class SearchAlgorithmBuilder {
     }
 }
 
+class SearchIndexValueBuilder {
+    private data: Components.Schemas.SearchQuery;
+
+    constructor(data: Components.Schemas.SearchQuery) {
+        this.data = data;
+    }
+
+    query(): Components.Schemas.QueryType {
+        return { Search: this.data };
+    }
+}
+
+class SearchIndexBuilder {
+    private key: Components.Schemas.DbValue;
+
+    constructor(key: Components.Schemas.DbValue) {
+        this.key = key;
+    }
+
+    value(value: Components.Schemas.DbValue): SearchIndexValueBuilder {
+        let data = SearchBuilder.new_data();
+        data.algorithm = "Index";
+        data.conditions.push({
+            data: { KeyValue: { key: this.key, value: { Equal: value } } },
+            logic: "And",
+            modifier: "None",
+        });
+        return new SearchIndexValueBuilder(data);
+    }
+}
+
 class SearchBuilder {
-    private static new_data(): Components.Schemas.SearchQuery {
+    static new_data(): Components.Schemas.SearchQuery {
         return {
             algorithm: "BreadthFirst",
             conditions: [],
@@ -917,6 +1000,10 @@ class SearchBuilder {
         return new SearchFromBuilder(data);
     }
 
+    index(key: Components.Schemas.DbValue): SearchIndexBuilder {
+        return new SearchIndexBuilder(key);
+    }
+
     to(id: QueryId): SearchToBuilder {
         let data = SearchBuilder.new_data();
         data.destination = intoQueryId(id);
@@ -925,10 +1012,6 @@ class SearchBuilder {
 }
 
 export class QueryBuilder {
-    constructor() {
-        return new QueryBuilder();
-    }
-
     static insert(): InsertBuilder {
         return new InsertBuilder();
     }

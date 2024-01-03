@@ -1089,6 +1089,7 @@ fn t_exec(t: &Transaction<ServerDbStorage>, q: &QueryType) -> Result<QueryResult
         QueryType::Select(q) => t.exec(q),
         QueryType::SelectAliases(q) => t.exec(q),
         QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectIndexes(q) => t.exec(q),
         QueryType::SelectKeys(q) => t.exec(q),
         QueryType::SelectKeyCount(q) => t.exec(q),
         QueryType::SelectValues(q) => t.exec(q),
@@ -1105,6 +1106,7 @@ fn t_exec_mut(
         QueryType::Select(q) => t.exec(q),
         QueryType::SelectAliases(q) => t.exec(q),
         QueryType::SelectAllAliases(q) => t.exec(q),
+        QueryType::SelectIndexes(q) => t.exec(q),
         QueryType::SelectKeys(q) => t.exec(q),
         QueryType::SelectKeyCount(q) => t.exec(q),
         QueryType::SelectValues(q) => t.exec(q),
@@ -1113,7 +1115,9 @@ fn t_exec_mut(
         QueryType::InsertNodes(q) => t.exec_mut(q),
         QueryType::InsertValues(q) => t.exec_mut(q),
         QueryType::Remove(q) => t.exec_mut(q),
+        QueryType::InsertIndex(q) => t.exec_mut(q),
         QueryType::RemoveAliases(q) => t.exec_mut(q),
+        QueryType::RemoveIndex(q) => t.exec_mut(q),
         QueryType::RemoveValues(q) => t.exec_mut(q),
     }
 }

@@ -1,5 +1,6 @@
 pub mod insert_aliases_query;
 pub mod insert_edges_query;
+pub mod insert_index_query;
 pub mod insert_nodes_query;
 pub mod insert_values_query;
 pub mod query_aliases;
@@ -10,11 +11,13 @@ pub mod query_ids;
 pub mod query_result;
 pub mod query_values;
 pub mod remove_aliases_query;
+pub mod remove_index_query;
 pub mod remove_query;
 pub mod remove_values_query;
 pub mod search_query;
 pub mod select_aliases_query;
 pub mod select_all_aliases_query;
+pub mod select_indexes_query;
 pub mod select_key_count_query;
 pub mod select_keys_query;
 pub mod select_query;
@@ -42,9 +45,10 @@ pub trait QueryMut {
 
 #[cfg(any(feature = "serde", feature = "opeanapi"))]
 use crate::{
-    InsertAliasesQuery, InsertEdgesQuery, InsertNodesQuery, InsertValuesQuery, RemoveAliasesQuery,
-    RemoveQuery, RemoveValuesQuery, SearchQuery, SelectAliasesQuery, SelectAllAliasesQuery,
-    SelectKeyCountQuery, SelectKeysQuery, SelectQuery, SelectValuesQuery,
+    InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
+    RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
+    SelectAliasesQuery, SelectAllAliasesQuery, SelectIndexesQuery, SelectKeyCountQuery,
+    SelectKeysQuery, SelectQuery, SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.
@@ -54,15 +58,18 @@ use crate::{
 pub enum QueryType {
     InsertAlias(InsertAliasesQuery),
     InsertEdges(InsertEdgesQuery),
+    InsertIndex(InsertIndexQuery),
     InsertNodes(InsertNodesQuery),
     InsertValues(InsertValuesQuery),
     Remove(RemoveQuery),
     RemoveAliases(RemoveAliasesQuery),
+    RemoveIndex(RemoveIndexQuery),
     RemoveValues(RemoveValuesQuery),
     Search(SearchQuery),
     Select(SelectQuery),
     SelectAliases(SelectAliasesQuery),
     SelectAllAliases(SelectAllAliasesQuery),
+    SelectIndexes(SelectIndexesQuery),
     SelectKeys(SelectKeysQuery),
     SelectKeyCount(SelectKeyCountQuery),
     SelectValues(SelectValuesQuery),
@@ -72,6 +79,13 @@ pub enum QueryType {
 impl From<InsertAliasesQuery> for QueryType {
     fn from(value: InsertAliasesQuery) -> Self {
         QueryType::InsertAlias(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<InsertIndexQuery> for QueryType {
+    fn from(value: InsertIndexQuery) -> Self {
+        QueryType::InsertIndex(value)
     }
 }
 
@@ -111,6 +125,13 @@ impl From<RemoveAliasesQuery> for QueryType {
 }
 
 #[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<RemoveIndexQuery> for QueryType {
+    fn from(value: RemoveIndexQuery) -> Self {
+        QueryType::RemoveIndex(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<RemoveValuesQuery> for QueryType {
     fn from(value: RemoveValuesQuery) -> Self {
         QueryType::RemoveValues(value)
@@ -142,6 +163,13 @@ impl From<SelectAliasesQuery> for QueryType {
 impl From<SelectAllAliasesQuery> for QueryType {
     fn from(value: SelectAllAliasesQuery) -> Self {
         QueryType::SelectAllAliases(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<SelectIndexesQuery> for QueryType {
+    fn from(value: SelectIndexesQuery) -> Self {
+        QueryType::SelectIndexes(value)
     }
 }
 

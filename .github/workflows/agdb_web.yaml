@@ -44,6 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: npm ci
+      - run: npx nuxt prepare
       - run: npm run test:unit
       - uses: actions/upload-artifact@v3
         if: always()

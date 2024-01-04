@@ -12,10 +12,12 @@
     - [Insert nodes](#insert-nodes)
     - [Insert edges](#insert-edges)
     - [Insert aliases](#insert-aliases)
+    - [Insert index](#insert-index)
     - [Insert values](#insert-values)
   - [Remove](#remove)
     - [Remove elements](#remove-elements)
     - [Remove aliases](#remove-aliases)
+    - [Remove index](#remove-index)
     - [Remove values](#remove-values)
 - [Immutable queries](#immutable-queries)
   - [Select](#select)
@@ -23,6 +25,7 @@
     - [Select values](#select-values)
     - [Select keys](#select-keys)
     - [Select key count](#select-key-count)
+    - [Select indexes](#select-indexes)
     - [Select aliases](#select-aliases)
     - [Select all aliases](#select-all-aliases)
   - [Search](#search)
@@ -244,11 +247,12 @@ The `insert` queries are used for both insert and updating data while `remove` q
 
 ## Insert
 
-There are 4 distinct insert queries:
+There are 5 distinct insert queries:
 
 - insert nodes
 - insert edges
 - insert aliases
+- insert index
 - insert values
 
 ### Insert nodes
@@ -338,6 +342,25 @@ The result will contain:
 - number of aliases inserted or updated
 - empty list of elements
 
+### Insert query
+
+```Rust
+pub struct InsertIndexQuery(pub DbValue);
+```
+
+Builder pattern:
+
+```Rust
+QueryBuilder::insert().index("key").query();
+```
+
+Creates an index for a key. The index is valid for the entire database including any and all existing values in the database. The purpose of the index is to provide faster lookup for data that is not modelled on the graph itself. Example can be looking up users by their username or token.
+
+The result will contain:
+
+- number of indexed values (0 for empty indexes)
+- empty list of elements
+
 ### Insert values
 
 ```Rust
@@ -416,6 +439,25 @@ The aliases listed will be removed from the database if they exist. It is NOT an
 The result will contain:
 
 - negative number of aliases removed
+- empty list of elements
+
+### Remove index
+
+```Rust
+pub struct RemoveIndexQuery(pub DbValue);
+```
+
+Builder pattern:
+
+```Rust
+QueryBuilder::remove().index("key").query()
+```
+
+Removes an index from the database. It is NOT an error if the index does not exist in the database.
+
+The result will contain:
+
+- negative number of removed indexed values
 - empty list of elements
 
 ### Remove values
@@ -547,6 +589,25 @@ The result will contain:
 - number of returned elements
 - list of elements each with a single property (`String("key_count")`: `u64`)
 
+### Select indexes
+
+```Rust
+pub struct SelectIndexesQuery {};
+```
+
+Builder pattern:
+
+```Rust
+QueryBuilder::select().indexes().query();
+```
+
+Selects all indexes in the database.
+
+The result will contain:
+
+- number of indexes
+- single element with id 0 and list of properties representing each index (`DbValue`: `u64`) where the key is the indexed key and the value is number of indexed values in the index.
+
 ### Select aliases
 
 ```Rust
@@ -588,7 +649,7 @@ The result will contain:
 
 ## Search
 
-There is only a single search query that provides the ability to search the graph examining connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used.
+There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`.
 
 ```Rust
 pub struct SearchQuery {
@@ -604,6 +665,7 @@ pub struct SearchQuery {
 pub enum SearchQueryAlgorithm {
     BreadthFirst,
     DepthFirst,
+    Index,
 }
 
 pub enum DbKeyOrder {
@@ -622,6 +684,8 @@ QueryBuilder::search().from("a").to("b").query(); //path search, A*
 QueryBuilder::search().breadth_first().from("a").query(); //breadth first is the default and can be omitted however
 QueryBuilder::search().depth_first().from("a").query();
 
+QueryBuilder::search().index("age").value(20).query();
+
 //limit, offset and order_by can be applied similarly to all the search variants
 QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()
 QueryBuilder::search().from(1).offset(10).query();
@@ -632,7 +696,9 @@ QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).offs
 QueryBuilder::search().from(1).offset(10).limit(5).query();
 ```
 
-The search query is made up of the `origin` and `destination` of the search and the algorithm. Specifying only `origin` (from) will result in a search along `from->to` edges. Specifying only `destination` (to) will result in the reverse search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm used will be `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element ids. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
+If the index search is done the graph traversal is skipped entirely as are most of the parameters including like limit, offset, ordering and conditions.
+
+The graph search query is made up of the `origin` and `destination` of the search and the algorithm. Specifying only `origin` (from) will result in a search along `from->to` edges. Specifying only `destination` (to) will result in the reverse search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm used will be `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element ids. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
 
 Finally the list of `conditions` that each examined graph element must satisfy to be included in the result (and subjected to the `limit` and `offset`).
 

@@ -1,0 +1,11 @@
+{
+    "urls": {
+        "about": "/about",
+        "contact": "/contact"
+    },
+    "menu": {
+        "home": "Home",
+        "about": "About",
+        "contact": "Contact"
+    }
+}

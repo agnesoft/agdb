@@ -1,0 +1,11 @@
+{
+    "urls": {
+        "about": "/o-agdb",
+        "contact": "/kontakt"
+    },
+    "menu": {
+        "home": "Domů",
+        "about": "O agdb",
+        "contact": "Kontakt"
+    }
+}

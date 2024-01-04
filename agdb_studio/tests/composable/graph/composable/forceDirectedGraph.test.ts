@@ -40,7 +40,6 @@ describe("useForceDirectedGraph 2D", () => {
 
         // position of third node
         const node3 = graph.getNodes()[2];
-        console.log(node3.getCoordinates());
         expect(node3.getCoordinates().x).toBeCloseTo(results.x, 6);
         expect(node3.getCoordinates().y).toBeCloseTo(results.y, 6);
         expect(node3.getCoordinates().z).toBe(results.z);

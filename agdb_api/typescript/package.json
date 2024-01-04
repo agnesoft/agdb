@@ -1,5 +1,5 @@
 {
-  "name": "agdb_openapi",
+  "name": "agdb_api",
   "version": "0.0.0",
   "private": true,
   "type": "module",

@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "agdb",
+    "agdb", 
     "agdb_benchmarks",
     "agdb_derive",
     "agdb_server",
+    "agdb_api/rust",
 ]

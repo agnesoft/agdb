@@ -12,6 +12,7 @@ categories = ["database", "database-interfaces"]
 
 [dependencies]
 agdb = { version = "0.5.2", path = "../agdb", features = ["serde", "openapi"] }
+agdb_api = { version = "0.5.2", path = "../agdb_api/rust" }
 axum = { version = "0.7", features = ["http2"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 http-body-util = "0.1"

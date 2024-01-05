@@ -1,35 +1,21 @@
 use crate::db_pool::DbPool;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use agdb_api::DbUser;
+use agdb_api::DbUserRole;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
-use serde::Serialize;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
-
-#[derive(Clone, Copy, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum DbUserRole {
-    #[default]
-    Admin,
-    Write,
-    Read,
-}
 
 #[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct DbUserRoleParam {
     pub(crate) db_role: DbUserRole,
-}
-
-#[derive(Serialize, ToSchema)]
-pub(crate) struct DbUser {
-    pub(crate) user: String,
-    pub(crate) role: DbUserRole,
 }
 
 #[utoipa::path(post,

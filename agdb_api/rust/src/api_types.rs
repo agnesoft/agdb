@@ -1,8 +1,11 @@
+use std::fmt::Display;
+
+use agdb::DbError;
+use agdb::DbValue;
 use agdb::QueryResult;
 use agdb::QueryType;
 use serde::Deserialize;
 use serde::Serialize;
-use utoipa::IntoParams;
 use utoipa::ToSchema;
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize, ToSchema, PartialEq)]
@@ -14,13 +17,10 @@ pub enum DbType {
     File,
 }
 
-#[derive(Default, Deserialize, Serialize, ToSchema)]
-pub struct ServerDatabase {
-    pub(crate) name: String,
-    pub(crate) db_type: DbType,
-    pub(crate) role: DbUserRole,
-    pub(crate) size: u64,
-    pub(crate) backup: u64,
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct DbUser {
+    pub user: String,
+    pub role: DbUserRole,
 }
 
 #[derive(Clone, Copy, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
@@ -32,17 +32,42 @@ pub enum DbUserRole {
     Read,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
-#[into_params(parameter_in = Query)]
-pub(crate) struct ServerDatabaseRename {
-    pub(crate) new_name: String,
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct ChangePassword {
+    pub password: String,
+    pub new_password: String,
 }
 
 #[derive(Deserialize, ToSchema)]
-pub(crate) struct Queries(pub(crate) Vec<QueryType>);
+pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]
-pub(crate) struct QueriesResults(pub(crate) Vec<QueryResult>);
+pub struct QueriesResults(pub Vec<QueryResult>);
+
+#[derive(Default, Deserialize, Serialize, ToSchema)]
+pub struct ServerDatabase {
+    pub name: String,
+    pub db_type: DbType,
+    pub role: DbUserRole,
+    pub size: u64,
+    pub backup: u64,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct UserCredentials {
+    pub password: String,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct UserLogin {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct UserStatus {
+    pub name: String,
+}
 
 impl From<&str> for DbType {
     fn from(value: &str) -> Self {
@@ -54,12 +79,56 @@ impl From<&str> for DbType {
     }
 }
 
-impl std::fmt::Display for DbType {
+impl TryFrom<DbValue> for DbType {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(Self::from(value.to_string().as_str()))
+    }
+}
+
+impl From<DbType> for DbValue {
+    fn from(value: DbType) -> Self {
+        value.to_string().into()
+    }
+}
+
+impl Display for DbType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             DbType::File => f.write_str("file"),
             DbType::Mapped => f.write_str("mapped"),
             DbType::Memory => f.write_str("memory"),
+        }
+    }
+}
+
+impl From<&DbValue> for DbUserRole {
+    fn from(value: &DbValue) -> Self {
+        match value.to_u64().unwrap_or_default() {
+            1 => Self::Admin,
+            2 => Self::Write,
+            _ => Self::Read,
+        }
+    }
+}
+
+impl From<DbUserRole> for DbValue {
+    fn from(value: DbUserRole) -> Self {
+        match value {
+            DbUserRole::Admin => 1_u64.into(),
+            DbUserRole::Write => 2_u64.into(),
+            DbUserRole::Read => 3_u64.into(),
+        }
+    }
+}
+
+impl Display for DbUserRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DbUserRole::Admin => f.write_str("admin"),
+            DbUserRole::Read => f.write_str("read"),
+            DbUserRole::Write => f.write_str("write"),
         }
     }
 }

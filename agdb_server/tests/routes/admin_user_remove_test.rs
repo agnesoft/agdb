@@ -11,13 +11,11 @@ async fn remove() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post::<()>(
+            .delete(
                 &format!("/admin/user/{}/remove", user.name),
-                &None,
                 &server.admin_token
             )
-            .await?
-            .0,
+            .await?,
         204
     );
 
@@ -58,13 +56,11 @@ async fn remove_with_other() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post::<()>(
+            .delete(
                 &format!("/admin/user/{}/remove", user.name),
-                &None,
                 &server.admin_token
             )
-            .await?
-            .0,
+            .await?,
         204
     );
 
@@ -82,9 +78,8 @@ async fn user_not_found() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post::<()>("/admin/user/not_found/remove", &None, &server.admin_token)
-            .await?
-            .0,
+            .delete("/admin/user/not_found/remove", &server.admin_token)
+            .await?,
         404
     );
 
@@ -98,9 +93,8 @@ async fn non_admin() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post::<()>("/admin/user/not_found/remove", &None, &user.token)
-            .await?
-            .0,
+            .delete("/admin/user/not_found/remove", &user.token)
+            .await?,
         401
     );
 
@@ -113,9 +107,8 @@ async fn no_token() -> anyhow::Result<()> {
 
     assert_eq!(
         server
-            .post::<()>("/admin/user/not_found/remove", &None, NO_TOKEN)
-            .await?
-            .0,
+            .delete("/admin/user/not_found/remove", NO_TOKEN)
+            .await?,
         401
     );
 

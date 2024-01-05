@@ -6,18 +6,12 @@ use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
-use crate::routes::db::user::DbUser;
-use crate::routes::db::user::DbUserRole;
-use crate::routes::db::DbType;
-use crate::routes::db::Queries;
-use crate::routes::db::ServerDatabase;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbId;
 use agdb::DbUserValue;
-use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryId;
@@ -27,6 +21,11 @@ use agdb::SearchQuery;
 use agdb::Transaction;
 use agdb::TransactionMut;
 use agdb::UserValue;
+use agdb_api::DbType;
+use agdb_api::DbUser;
+use agdb_api::DbUserRole;
+use agdb_api::Queries;
+use agdb_api::ServerDatabase;
 use axum::http::StatusCode;
 use server_db::ServerDb;
 use server_db::ServerDbImpl;
@@ -63,26 +62,6 @@ struct Database {
 pub(crate) struct DbPoolImpl {
     server_db: ServerDb,
     pool: RwLock<HashMap<String, ServerDb>>,
-}
-
-impl From<&DbValue> for DbUserRole {
-    fn from(value: &DbValue) -> Self {
-        match value.to_u64().unwrap_or_default() {
-            1 => Self::Admin,
-            2 => Self::Write,
-            _ => Self::Read,
-        }
-    }
-}
-
-impl From<DbUserRole> for DbValue {
-    fn from(value: DbUserRole) -> Self {
-        match value {
-            DbUserRole::Admin => 1_u64.into(),
-            DbUserRole::Write => 2_u64.into(),
-            DbUserRole::Read => 3_u64.into(),
-        }
-    }
 }
 
 #[derive(Clone)]

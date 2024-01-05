@@ -3,29 +3,12 @@ use crate::password::Password;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use agdb_api::ChangePassword;
+use agdb_api::UserLogin;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use serde::Deserialize;
-use utoipa::ToSchema;
 use uuid::Uuid;
-
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct UserCredentials {
-    pub(crate) password: String,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct UserLogin {
-    pub(crate) username: String,
-    pub(crate) password: String,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub(crate) struct ChangePassword {
-    pub(crate) password: String,
-    pub(crate) new_password: String,
-}
 
 #[utoipa::path(post,
     path = "/api/v1/user/login",

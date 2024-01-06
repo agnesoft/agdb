@@ -1,32 +1,32 @@
-use crate::Db;
 use crate::TestServer;
-use crate::DB_LIST_URI;
-use crate::NO_TOKEN;
+use crate::ADMIN;
 use agdb_api::DbType;
+use agdb_api::DbUserRole;
+use agdb_api::ServerDatabase;
 
 #[tokio::test]
 async fn add_db_user() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Write)
+        .await?;
+    assert_eq!(status, 201);
+    server.api.user_login(user, user).await?;
+    let list = server.api.db_list().await?.1;
     assert_eq!(
-        server
-            .put::<()>(
-                &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        201
-    );
-    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
-    assert_eq!(
-        list?,
-        vec![Db {
-            name: db,
-            db_type: "memory".to_string(),
-            role: "write".to_string(),
+        list,
+        vec![ServerDatabase {
+            name: format!("{}/{}", owner, db),
+            db_type: DbType::Mapped,
+            role: DbUserRole::Write,
             size: 2632,
             backup: 0,
         }]
@@ -37,36 +37,31 @@ async fn add_db_user() -> anyhow::Result<()> {
 #[tokio::test]
 async fn change_user_role() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Write)
+        .await?;
+    assert_eq!(status, 201);
+    let status = server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Read)
+        .await?;
+    assert_eq!(status, 201);
+    server.api.user_login(user, user).await?;
+    let list = server.api.db_list().await?.1;
     assert_eq!(
-        server
-            .put::<()>(
-                &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/admin/db/{db}/user/{}/add?db_role=admin", other.name),
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        201
-    );
-    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
-    assert_eq!(
-        list?,
-        vec![Db {
-            name: db,
-            db_type: "memory".to_string(),
-            role: "admin".to_string(),
+        list,
+        vec![ServerDatabase {
+            name: format!("{}/{}", owner, db),
+            db_type: DbType::Mapped,
+            role: DbUserRole::Read,
             size: 2632,
             backup: 0,
         }]
@@ -77,95 +72,83 @@ async fn change_user_role() -> anyhow::Result<()> {
 #[tokio::test]
 async fn change_owner_role() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/admin/db/{}/user/{}/add?db_role=admin", db, other.name),
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/admin/db/{}/user/{}/add?db_role=write", db, user.name),
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        403
-    );
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server
+        .api
+        .admin_db_user_add(owner, db, owner, DbUserRole::Write)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 403);
     Ok(())
 }
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                "/admin/db/user/db/user/other/add?db_role=admin",
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        404
-    );
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    let status = server
+        .api
+        .admin_db_user_add(owner, "db", user, DbUserRole::Write)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/admin/db/{db}/user/other/add?db_role=admin"),
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        404
-    );
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server
+        .api
+        .admin_db_user_add(owner, db, "user", DbUserRole::Write)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                "/admin/db/user/db/user/other/add?db_role=admin",
-                &None,
-                &user.token
-            )
-            .await?,
-        401
-    );
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .admin_db_user_add(owner, "db", "user", DbUserRole::Write)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                "/admin/db/user/db/user/other/add?db_role=admin",
-                &None,
-                NO_TOKEN
-            )
-            .await?,
-        401
-    );
+    let server = TestServer::new().await?;
+    let status = server
+        .api
+        .admin_db_user_add("owner", "db", "user", DbUserRole::Write)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }

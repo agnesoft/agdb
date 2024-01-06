@@ -5,7 +5,7 @@ use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserLogin {
         username: &user.name,
@@ -31,7 +31,7 @@ async fn change_password() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let change = Some(ChangePassword {
         password: "bad_password",
@@ -49,7 +49,7 @@ async fn invalid_credentials() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let change = Some(ChangePassword {
         password: &user.name,
@@ -67,7 +67,7 @@ async fn password_too_short() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let change = Some(ChangePassword {
         password: "password123",
         new_password: "password456",

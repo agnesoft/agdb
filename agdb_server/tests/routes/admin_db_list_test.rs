@@ -2,14 +2,15 @@ use crate::Db;
 use crate::TestServer;
 use crate::ADMIN_DB_LIST_URI;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 
 #[tokio::test]
 async fn db_list() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user1 = server.init_user().await?;
     let user2 = server.init_user().await?;
-    let db1 = server.init_db("memory", &user1).await?;
-    let db2 = server.init_db("memory", &user2).await?;
+    let db1 = server.init_db(DbType::Memory, &user1).await?;
+    let db2 = server.init_db(DbType::Memory, &user2).await?;
     let (status, list) = server
         .get::<Vec<Db>>(ADMIN_DB_LIST_URI, &server.admin_token)
         .await?;
@@ -35,9 +36,9 @@ async fn db_list() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn with_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     server
         .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
@@ -54,7 +55,7 @@ async fn with_backup() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_admin_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let (status, list) = server.get::<Vec<Db>>(ADMIN_DB_LIST_URI, NO_TOKEN).await?;
     assert_eq!(status, 401);
     assert!(list.is_err());

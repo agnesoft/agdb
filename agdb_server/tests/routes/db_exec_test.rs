@@ -5,12 +5,13 @@ use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
 use agdb::QueryType;
+use agdb_api::DbType;
 
 #[tokio::test]
 async fn read_write() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert()
             .nodes()
@@ -57,9 +58,9 @@ async fn read_write() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn read_only() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![
         // Wrap the queries vector with Some()
         QueryBuilder::insert()
@@ -99,9 +100,9 @@ async fn read_only() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn read_queries() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases("node1")
@@ -137,9 +138,9 @@ async fn read_queries() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn write_queries() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert().nodes().count(2).query().into(),
         QueryBuilder::insert()
@@ -192,9 +193,9 @@ async fn write_queries() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn query_error() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![
         QueryBuilder::insert()
             .nodes()
@@ -215,9 +216,9 @@ async fn query_error() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn permission_denied() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let other = server.init_user().await?;
     assert_eq!(
         server
@@ -249,7 +250,7 @@ async fn permission_denied() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let queries: Option<Vec<QueryType>> = Some(vec![]);
     let status = server
@@ -263,7 +264,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let queries: Option<Vec<QueryType>> = Some(vec![]);
     let status = server
         .post("/db/user/not_found/exec", &queries, NO_TOKEN)

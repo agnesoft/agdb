@@ -5,13 +5,14 @@ use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
 use agdb::QueryType;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
@@ -64,9 +65,9 @@ async fn backup() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn backup_overwrite() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
@@ -118,9 +119,9 @@ async fn backup_overwrite() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn backup_of_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
@@ -167,9 +168,9 @@ async fn backup_of_backup() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn restore_no_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let status = server
         .post::<()>(&format!("/db/{db}/restore"), &None, &user.token)
         .await?
@@ -181,9 +182,9 @@ async fn restore_no_backup() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn in_memory() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     let status = server
         .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?
@@ -195,10 +196,10 @@ async fn in_memory() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -225,7 +226,7 @@ async fn non_admin() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let status = server
         .post::<()>("/db/user/not_found/backup", &None, NO_TOKEN)
         .await?

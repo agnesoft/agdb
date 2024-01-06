@@ -4,7 +4,7 @@ use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn login() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserLogin {
         password: &user.name,
@@ -19,7 +19,7 @@ async fn login() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn repeated_login() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserLogin {
         password: &user.name,
@@ -38,7 +38,7 @@ async fn repeated_login() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserLogin {
         username: &user.name,
@@ -53,7 +53,7 @@ async fn invalid_credentials() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = Some(UserLogin {
         password: "password456",
         username: "some_user",

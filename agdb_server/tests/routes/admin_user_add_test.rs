@@ -4,7 +4,7 @@ use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn add() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let credentials = Some(UserCredentials {
         password: "password123",
     });
@@ -35,7 +35,7 @@ async fn add() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn name_too_short() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let credentials = Some(UserCredentials {
         password: "password123",
     });
@@ -51,7 +51,7 @@ async fn name_too_short() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let credentials = Some(UserCredentials { password: "pswd" });
     assert_eq!(
         server
@@ -65,7 +65,7 @@ async fn password_too_short() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_already_exists() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserCredentials {
         password: "password123",
@@ -86,7 +86,7 @@ async fn user_already_exists() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_admin_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserCredentials {
         password: "password123",
@@ -103,7 +103,7 @@ async fn no_admin_token() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let credentials = Some(UserCredentials {
         password: "password123",
     });

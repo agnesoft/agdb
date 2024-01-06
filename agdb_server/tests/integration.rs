@@ -1,5 +1,8 @@
 mod routes;
 
+use agdb_api::AgdbApi;
+use agdb_api::DbType;
+use agdb_api::ReqwestClient;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use serde::de::DeserializeOwned;
@@ -77,6 +80,7 @@ pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
     pub client: reqwest::Client,
+    pub api: AgdbApi<ReqwestClient>,
     pub port: u16,
     pub process: Child,
     pub admin: String,
@@ -112,6 +116,7 @@ impl TestServer {
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let client = reqwest::Client::new();
+        let api = AgdbApi::new(ReqwestClient::new(), &Self::url_base(), port);
 
         let mut error = anyhow!("Failed to start server");
 
@@ -131,11 +136,12 @@ impl TestServer {
                         .json(&credentials)
                         .send()
                         .await?;
-                    let admin_token = Some(response.text().await?);
+                    let admin_token = Some(response.json::<String>().await?);
                     let server = Self {
                         dir,
                         data_dir,
                         client,
+                        api,
                         port,
                         process,
                         admin: ADMIN.to_string(),
@@ -184,46 +190,36 @@ impl TestServer {
         Ok((status, response.json().await.map_err(|e| anyhow!(e))))
     }
 
-    pub async fn init_user(&self) -> anyhow::Result<ServerUser> {
+    pub fn next_user_name(&mut self) -> String {
+        format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+
+    pub fn next_db_name(&mut self) -> String {
+        format!("db{}", COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+
+    pub async fn init_user(&mut self) -> anyhow::Result<ServerUser> {
         let name = format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed));
-        let credentials = Some(UserCredentials { password: &name });
-        assert_eq!(
-            self.post(
-                &format!("/admin/user/{name}/add"),
-                &credentials,
-                &self.admin_token
-            )
-            .await?
-            .0,
-            201
-        );
-        let response = self
-            .post(
-                "/user/login",
-                &Some(UserLogin {
-                    username: &name,
-                    password: &name,
-                }),
-                &None,
-            )
-            .await?;
-        assert_eq!(response.0, 200);
+        self.api.token = self.admin_token.clone();
+        self.api.admin_user_add(&name, &name).await?;
+        self.api.user_login(&name, &name).await?;
         Ok(ServerUser {
             name,
-            token: Some(response.1),
+            token: self.api.token.clone(),
         })
     }
 
-    pub async fn init_db(&self, db_type: &str, server_user: &ServerUser) -> anyhow::Result<String> {
-        let name = format!(
-            "{}/db{}",
-            server_user.name,
-            COUNTER.fetch_add(1, Ordering::Relaxed)
-        );
-        let uri = format!("/db/{name}/add?db_type={db_type}",);
-        let status = self.post::<()>(&uri, &None, &server_user.token).await?.0;
-        assert_eq!(status, 201);
-        Ok(name)
+    pub async fn init_db(
+        &mut self,
+        db_type: DbType,
+        server_user: &ServerUser,
+    ) -> anyhow::Result<String> {
+        let old_token = self.api.token.clone();
+        self.api.token = server_user.token.clone();
+        let db = format!("db{}", COUNTER.fetch_add(1, Ordering::Relaxed));
+        self.api.db_add(&server_user.name, &db, db_type).await?;
+        self.api.token = old_token;
+        Ok(db)
     }
 
     pub async fn post<T: Serialize>(

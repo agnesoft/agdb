@@ -2,13 +2,14 @@ use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn rename() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(
             &format!("/admin/db/{db}/rename?new_name={}/renamed_db", user.name),
@@ -28,9 +29,9 @@ async fn rename() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn rename_with_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     server
         .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
@@ -63,10 +64,10 @@ async fn rename_with_backup() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn transfer() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(
             &format!("/admin/db/{db}/rename?new_name={}/renamed_db", other.name),
@@ -97,9 +98,9 @@ async fn transfer() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn invalid() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(
             &format!("/admin/db/{db}/rename?new_name={}/a\0a", user.name),
@@ -115,7 +116,7 @@ async fn invalid() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let status = server
         .post::<()>(
             "/admin/db/user/db/rename?new_name=user/renamed_db",
@@ -130,9 +131,9 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn target_self() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(
             &format!("/admin/db/{db}/rename?new_name={db}"),
@@ -147,10 +148,10 @@ async fn target_self() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn target_exists() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let db2 = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
+    let db2 = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(
             &format!("/admin/db/{db}/rename?new_name={db2}"),
@@ -165,7 +166,7 @@ async fn target_exists() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
         .post::<()>(
@@ -181,7 +182,7 @@ async fn non_admin() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let status = server
         .post::<()>(
             "/admin/db/user/db/rename?new_name=user/renamed_db",

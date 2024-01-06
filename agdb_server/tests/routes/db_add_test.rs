@@ -2,11 +2,12 @@ use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn add() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = format!("{}/db_add_test", user.name);
     assert_eq!(
@@ -22,9 +23,9 @@ async fn add() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn add_with_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     server
         .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
@@ -46,7 +47,7 @@ async fn add_with_backup() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn add_same_name_different_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
     let db1 = format!("{}/add_same_name_different_user", user.name);
@@ -76,7 +77,7 @@ async fn add_same_name_different_user() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_already_exists() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let db = format!("{}/db_add_test", user.name);
     assert_eq!(
@@ -98,7 +99,7 @@ async fn db_already_exists() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_user_mismatch() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -112,7 +113,7 @@ async fn db_user_mismatch() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_type_invalid() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -130,7 +131,7 @@ async fn db_type_invalid() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server
             .post::<()>("/db/some_user/db/add?db_type=file", &None, NO_TOKEN)

@@ -3,13 +3,14 @@ use crate::DbUser;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -42,10 +43,10 @@ async fn remove() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn remove_owner() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -67,11 +68,11 @@ async fn remove_owner() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
     let another = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -106,10 +107,10 @@ async fn non_admin() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn remove_self() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -136,10 +137,10 @@ async fn remove_self() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn remove_self_owner() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -161,7 +162,7 @@ async fn remove_self_owner() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -177,9 +178,9 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .delete(&format!("/db/{db}/user/other/remove"), &user.token)
@@ -191,7 +192,7 @@ async fn user_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server
             .delete("/db/user/db/user/user/remove", NO_TOKEN)

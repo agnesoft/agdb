@@ -16,7 +16,7 @@ pub struct AgdbApi<T: HttpClient> {
     client: T,
     host: String,
     port: u16,
-    token: Option<String>,
+    pub token: Option<String>,
 }
 
 impl<T: HttpClient> AgdbApi<T> {
@@ -44,14 +44,16 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn admin_db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, ())> {
-        self.client
+    pub async fn admin_db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!("/admin/db/{owner}/{db}/backup")),
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn admin_db_copy(
@@ -60,8 +62,9 @@ impl<T: HttpClient> AgdbApi<T> {
         db: &str,
         new_owner: &str,
         new_db: &str,
-    ) -> AgdbApiResult<(u16, ())> {
-        self.client
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!(
                     "/admin/db/{owner}/{db}/copy?new_name={new_owner}/{new_db}"
@@ -69,7 +72,8 @@ impl<T: HttpClient> AgdbApi<T> {
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn admin_db_delete(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
@@ -143,14 +147,16 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn admin_db_restore(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, ())> {
-        self.client
+    pub async fn admin_db_restore(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!("/admin/db/{owner}/{db}/restore")),
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn admin_db_user_add(
@@ -386,6 +392,18 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
+    pub async fn shutdown(&self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(&self.url("/admin/shutdown"), &None, &self.token)
+            .await?
+            .0)
+    }
+
+    pub async fn status(&self) -> AgdbApiResult<u16> {
+        Ok(self.client.get::<()>(&self.url("/status"), &None).await?.0)
+    }
+
     pub async fn user_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {
         let (status, token) = self
             .client
@@ -403,11 +421,13 @@ impl<T: HttpClient> AgdbApi<T> {
     }
 
     pub async fn user_logout(&mut self) -> AgdbApiResult<u16> {
-        Ok(self
+        let status = self
             .client
-            .post::<UserLogin, String>(&self.url("/user/logout"), &None, &self.token)
+            .post::<(), ()>(&self.url("/user/logout"), &None, &self.token)
             .await?
-            .0)
+            .0;
+        self.token = None;
+        Ok(status)
     }
 
     pub async fn user_change_password(

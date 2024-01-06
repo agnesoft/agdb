@@ -2,13 +2,14 @@ use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 
 #[tokio::test]
 async fn add_db_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -35,10 +36,10 @@ async fn add_db_user() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn change_user_role() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -75,7 +76,7 @@ async fn change_user_role() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -92,9 +93,9 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -110,10 +111,10 @@ async fn user_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn change_owner_role() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -139,11 +140,11 @@ async fn change_owner_role() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
     let another = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -169,7 +170,7 @@ async fn non_admin() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server
             .put::<()>("/db/user/db/user/other/add?db_role=admin", &None, NO_TOKEN)

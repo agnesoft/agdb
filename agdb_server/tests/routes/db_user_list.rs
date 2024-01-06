@@ -1,5 +1,6 @@
 use crate::TestServer;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -10,10 +11,10 @@ struct DbUser {
 
 #[tokio::test]
 async fn list() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -46,10 +47,10 @@ async fn list() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let db = server.init_db(DbType::Memory, &user).await?;
     assert_eq!(
         server
             .get::<Vec<DbUser>>(&format!("/db/{db}/user/list"), &other.token)
@@ -62,7 +63,7 @@ async fn non_user() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server
             .get::<Vec<DbUser>>("/db/user/db/user/list", NO_TOKEN)

@@ -22,7 +22,7 @@ use uuid::Uuid;
 pub(crate) async fn login(
     State(db_pool): State<DbPool>,
     Json(request): Json<UserLogin>,
-) -> ServerResponse<(StatusCode, String)> {
+) -> ServerResponse<(StatusCode, Json<String>)> {
     let user = db_pool
         .find_user(&request.username)
         .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
@@ -41,7 +41,7 @@ pub(crate) async fn login(
         user.token
     };
 
-    Ok((StatusCode::OK, token))
+    Ok((StatusCode::OK, Json(token)))
 }
 
 #[utoipa::path(post,

@@ -5,13 +5,14 @@ use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
 use agdb::QueryType;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn copy() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
@@ -61,10 +62,10 @@ async fn copy() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn copy_other() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
@@ -124,10 +125,10 @@ async fn copy_other() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn copy_to_other_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(
             &format!("/db/{db}/copy?new_name={}/new_name", other.name),
@@ -143,9 +144,9 @@ async fn copy_to_other_user() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn copy_target_exists() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(&format!("/db/{db}/copy?new_name={db}"), &None, &user.token)
         .await?
@@ -157,9 +158,9 @@ async fn copy_target_exists() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn target_self() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(&format!("/db/{db}/copy?new_name={db}"), &None, &user.token)
         .await?
@@ -170,10 +171,10 @@ async fn target_self() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn target_exists() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let db2 = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
+    let db2 = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(&format!("/db/{db}/copy?new_name={db2}"), &None, &user.token)
         .await?
@@ -184,9 +185,9 @@ async fn target_exists() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn invalid() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let status = server
         .post::<()>(
             &format!("/db/{db}/copy?new_name={}/a\0a", user.name),
@@ -201,7 +202,7 @@ async fn invalid() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
         .post::<()>(
@@ -221,7 +222,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let status = server
         .post::<()>(
             "/db/user/not_found/copy?new_name=user/not_found",

@@ -5,7 +5,7 @@ use crate::NO_TOKEN;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserCredentials {
         password: "password456",
@@ -33,7 +33,7 @@ async fn change_password() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserCredentials { password: "pswd" });
 
@@ -52,7 +52,7 @@ async fn password_too_short() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let credentials = Some(UserCredentials {
         password: "password456",
     });
@@ -72,7 +72,7 @@ async fn user_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let credentials = Some(UserCredentials {
         password: "password456",
@@ -92,7 +92,7 @@ async fn non_admin() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let credentials = Some(UserCredentials {
         password: "password456",
     });

@@ -4,12 +4,13 @@ use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
 use agdb::QueryBuilder;
 use agdb::QueryType;
+use agdb_api::DbType;
 
 #[tokio::test]
 async fn optimize() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
         .nodes()
         .count(100)
@@ -31,10 +32,10 @@ async fn optimize() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn permission_denied() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     assert_eq!(
         server
             .put::<()>(
@@ -56,7 +57,7 @@ async fn permission_denied() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     let status = server
         .post::<()>("/db/user/not_found/optimize", &None, &user.token)
@@ -68,7 +69,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let status = server
         .post::<()>("/db/user/not_found/optimize", &None, NO_TOKEN)
         .await?

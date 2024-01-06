@@ -298,6 +298,7 @@ impl DbPool {
     ) -> ServerResult {
         let (new_owner, new_db) = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
         let source_db = db_name(owner, db);
+        let target_db = db_name(new_owner, new_db);
         let database = self.find_user_db(user, &source_db)?;
 
         if admin {
@@ -310,7 +311,10 @@ impl DbPool {
             }
         };
 
-        let target_name = db_name(new_owner, new_db);
+        if self.find_user_db(user, &target_db).is_ok() {
+            return Err(ErrorCode::DbExists.into());
+        }
+
         let target_file = db_file(new_owner, new_db, config);
 
         if target_file.exists() {
@@ -329,14 +333,14 @@ impl DbPool {
                     &format!("db copy error: {}", e.description),
                 )
             })?;
-        self.get_pool_mut()?.insert(target_name.clone(), server_db);
+        self.get_pool_mut()?.insert(target_db.clone(), server_db);
         self.db_mut()?.transaction_mut(|t| {
             let db = t.exec_mut(
                 &QueryBuilder::insert()
                     .nodes()
                     .values(&Database {
                         db_id: None,
-                        name: target_name.clone(),
+                        name: target_db.clone(),
                         db_type: database.db_type,
                         backup: 0,
                     })

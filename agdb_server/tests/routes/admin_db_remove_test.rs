@@ -2,13 +2,14 @@ use crate::Db;
 use crate::TestServer;
 use crate::DB_LIST_URI;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     assert_eq!(
         server
             .delete(&format!("/admin/db/{db}/remove"), &server.admin_token)
@@ -24,7 +25,7 @@ async fn remove() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -40,7 +41,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server
             .delete("/admin/db/not_found/db/remove", &server.admin_token)
@@ -52,7 +53,7 @@ async fn user_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -65,7 +66,7 @@ async fn non_admin() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server.delete("/admin/db/user/db/remove", NO_TOKEN).await?,
         401

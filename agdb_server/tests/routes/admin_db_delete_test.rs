@@ -1,12 +1,13 @@
 use crate::TestServer;
 use crate::NO_TOKEN;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn delete() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     assert!(Path::new(&server.data_dir).join(&db).exists());
     assert_eq!(
         server
@@ -20,9 +21,9 @@ async fn delete() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn delete_with_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let db = server.init_db(DbType::Mapped, &user).await?;
     server
         .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
         .await?;
@@ -49,7 +50,7 @@ async fn delete_with_backup() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -65,7 +66,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server
             .delete("/admin/db/not_found/db/delete", &server.admin_token)
@@ -77,7 +78,7 @@ async fn user_not_found() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     let user = server.init_user().await?;
     assert_eq!(
         server
@@ -90,7 +91,7 @@ async fn non_admin() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
     assert_eq!(
         server.delete("/admin/db/user/db/delete", NO_TOKEN).await?,
         401

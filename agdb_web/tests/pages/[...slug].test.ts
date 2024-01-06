@@ -6,7 +6,7 @@ import i18nConfig from "@/i18n.config";
 import slug from "@/pages/[...slug].vue";
 
 describe("[...slug]", () => {
-    it("renders the correct message", () => {
+    it("renders content", () => {
         const i18n = createI18n(i18nConfig);
         const wrapper = shallowMount(slug, {
             route: "/about",
@@ -14,6 +14,6 @@ describe("[...slug]", () => {
                 plugins: [i18n, useRouter()],
             },
         });
-        expect(wrapper.text()).toContain("agdb");
+        expect(wrapper.getComponent("content-doc-stub")).toBeTruthy();
     });
 });

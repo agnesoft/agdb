@@ -4,11 +4,11 @@ import i18nConfig from "./i18n.config";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     devServer: {
-        port: 4000,
+        port: 5001,
     },
     devtools: { enabled: true },
     modules: [
-        "@nuxt/content",
+        ["@nuxt/content", { documentDriven: true }],
         "@nuxt/test-utils/module",
         ["@nuxtjs/i18n", i18nConfig],
     ],

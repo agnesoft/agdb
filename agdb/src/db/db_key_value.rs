@@ -11,7 +11,7 @@ use crate::StorageData;
 /// Database key-value pair (aka property) attached to
 /// database elements. It can be constructed from a
 /// tuple of types that are convertible to `DbValue`.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DbKeyValue {

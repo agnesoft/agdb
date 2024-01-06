@@ -9,7 +9,7 @@ use crate::DbUserValue;
 /// representation of the result while the
 /// `elements` are the list of `DbElement`s
 /// with database ids and properties (key-value pairs).
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Eq, PartialOrd, Ord, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct QueryResult {

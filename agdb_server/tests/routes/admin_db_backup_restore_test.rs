@@ -3,6 +3,7 @@ use crate::ADMIN;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
+use agdb::QueryResult;
 use agdb_api::DbType;
 use std::path::Path;
 
@@ -33,15 +34,16 @@ async fn backup() -> anyhow::Result<()> {
     assert_eq!(status, 201);
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
     let results = server.api.admin_db_exec(owner, db, queries).await?.1;
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0].result, 1);
     assert_eq!(
-        results[0].elements,
-        vec![DbElement {
-            id: DbId(1),
-            from: None,
-            to: None,
-            values: vec![]
+        results,
+        vec![QueryResult {
+            result: 1,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![]
+            }]
         }]
     );
     Ok(())

@@ -3,7 +3,7 @@ use crate::DbKeyValue;
 
 /// Database element used in [`QueryResult`]
 /// that represents a node or an edge.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DbElement {

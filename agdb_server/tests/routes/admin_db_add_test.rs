@@ -8,9 +8,9 @@ use std::path::Path;
 async fn add() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     let status = server.api.admin_db_add(owner, db, DbType::File).await?;
     assert_eq!(status.0, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
@@ -21,9 +21,9 @@ async fn add() -> anyhow::Result<()> {
 async fn add_same_name_with_previous_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     let status = server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     assert_eq!(status.0, 201);
     server.api.admin_db_backup(owner, db).await?;
@@ -40,9 +40,9 @@ async fn add_same_name_with_previous_backup() -> anyhow::Result<()> {
 async fn db_already_exists() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     let status = server.api.admin_db_add(owner, db, DbType::File).await?;
     assert_eq!(status.0, 201);
     let status = server
@@ -72,11 +72,11 @@ async fn user_not_found() -> anyhow::Result<()> {
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
-    let db = &server.next_db_name();
     let status = server
         .api
         .admin_db_add(owner, db, DbType::Mapped)

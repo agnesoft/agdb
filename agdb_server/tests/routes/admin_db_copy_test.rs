@@ -10,9 +10,10 @@ use std::path::Path;
 async fn copy() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db2 = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
@@ -20,7 +21,6 @@ async fn copy() -> anyhow::Result<()> {
         .query()
         .into()];
     server.api.admin_db_exec(owner, db, queries).await?;
-    let db2 = &server.next_db_name();
     let status = server.api.admin_db_copy(owner, db, owner, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
@@ -44,9 +44,11 @@ async fn copy() -> anyhow::Result<()> {
 async fn copy_other() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let owner2 = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db2 = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
@@ -54,9 +56,7 @@ async fn copy_other() -> anyhow::Result<()> {
         .query()
         .into()];
     server.api.admin_db_exec(owner, db, queries).await?;
-    let owner2 = &server.next_user_name();
     server.api.admin_user_add(owner2, owner2).await?;
-    let db2 = &server.next_db_name();
     let status = server.api.admin_db_copy(owner, db, owner2, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner2).join(db2).exists());
@@ -80,10 +80,10 @@ async fn copy_other() -> anyhow::Result<()> {
 async fn copy_target_exists() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
     let db = &server.next_db_name();
     let db2 = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Memory).await?;
     server.api.admin_db_add(owner, db2, DbType::Memory).await?;
     let status = server
@@ -100,9 +100,9 @@ async fn copy_target_exists() -> anyhow::Result<()> {
 async fn target_self() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Memory).await?;
     let status = server
         .api
@@ -118,9 +118,9 @@ async fn target_self() -> anyhow::Result<()> {
 async fn invalid() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::File).await?;
     let status = server
         .api
@@ -136,10 +136,10 @@ async fn invalid() -> anyhow::Result<()> {
 async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
     let db = &server.next_db_name();
     let db2 = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
         .admin_db_copy(owner, db, owner, db2)
@@ -155,11 +155,11 @@ async fn db_not_found() -> anyhow::Result<()> {
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db2 = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Memory).await?;
-    let db2 = &server.next_db_name();
     server.api.user_login(owner, owner).await?;
     let status = server
         .api

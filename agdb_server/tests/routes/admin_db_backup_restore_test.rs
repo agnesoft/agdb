@@ -10,9 +10,9 @@ use std::path::Path;
 async fn backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
@@ -51,9 +51,9 @@ async fn backup() -> anyhow::Result<()> {
 async fn backup_overwrite() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
@@ -94,9 +94,9 @@ async fn backup_overwrite() -> anyhow::Result<()> {
 async fn backup_of_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
@@ -133,9 +133,9 @@ async fn backup_of_backup() -> anyhow::Result<()> {
 async fn restore_no_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let status = server
         .api
@@ -151,9 +151,9 @@ async fn restore_no_backup() -> anyhow::Result<()> {
 async fn in_memory() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Memory).await?;
     let status = server
         .api
@@ -169,9 +169,9 @@ async fn in_memory() -> anyhow::Result<()> {
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
+    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let db = &server.next_db_name();
     server.api.admin_db_add(owner, db, DbType::Memory).await?;
     server.api.user_login(owner, owner).await?;
     let status = server

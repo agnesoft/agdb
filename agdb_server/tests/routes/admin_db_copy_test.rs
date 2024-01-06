@@ -159,7 +159,6 @@ async fn non_admin() -> anyhow::Result<()> {
     let db2 = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
     server.api.user_login(owner, owner).await?;
     let status = server
         .api

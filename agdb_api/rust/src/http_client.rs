@@ -51,7 +51,15 @@ impl HttpClient for ReqwestClient {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
         let response = request.send().await?;
-        Ok(response.status().as_u16())
+        let status = response.status().as_u16();
+        if response.status().is_success() {
+            Ok(status)
+        } else {
+            Err(AgdbApiError {
+                status,
+                description: response.text().await?,
+            })
+        }
     }
 
     async fn get<T: DeserializeOwned>(
@@ -65,8 +73,14 @@ impl HttpClient for ReqwestClient {
         }
         let response = request.send().await?;
         let status = response.status().as_u16();
-        let body = response.json::<T>().await?;
-        Ok((status, body))
+        if response.status().is_success() {
+            Ok((status, response.json::<T>().await?))
+        } else {
+            Err(AgdbApiError {
+                status,
+                description: response.text().await?,
+            })
+        }
     }
 
     async fn post<T: Serialize, R: DeserializeOwned>(
@@ -91,7 +105,6 @@ impl HttpClient for ReqwestClient {
             } else {
                 serde_json::from_value(serde_json::Value::default())?
             };
-
             Ok((status, body))
         } else {
             Err(AgdbApiError {
@@ -116,6 +129,13 @@ impl HttpClient for ReqwestClient {
         }
         let response = request.send().await?;
         let status = response.status().as_u16();
-        Ok(status)
+        if response.status().is_success() {
+            Ok(status)
+        } else {
+            Err(AgdbApiError {
+                status,
+                description: response.text().await?,
+            })
+        }
     }
 }

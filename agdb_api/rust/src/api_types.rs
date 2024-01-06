@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-#[derive(Copy, Clone, Default, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum DbType {
     #[default]
@@ -23,7 +23,7 @@ pub struct DbUser {
     pub role: DbUserRole,
 }
 
-#[derive(Clone, Copy, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
     #[default]
@@ -44,7 +44,7 @@ pub struct Queries(pub Vec<QueryType>);
 #[derive(Serialize, ToSchema)]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
-#[derive(Default, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq)]
 pub struct ServerDatabase {
     pub name: String,
     pub db_type: DbType,

@@ -56,7 +56,7 @@ async fn password_too_short() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn no_admin_token() -> anyhow::Result<()> {
+async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let user = &server.next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;

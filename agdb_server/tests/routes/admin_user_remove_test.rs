@@ -1,117 +1,84 @@
-use crate::Db;
 use crate::TestServer;
-use crate::DB_LIST_URI;
-use crate::NO_TOKEN;
+use crate::ADMIN;
 use agdb_api::DbType;
+use agdb_api::DbUserRole;
 use std::path::Path;
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-
-    assert_eq!(
-        server
-            .delete(
-                &format!("/admin/user/{}/remove", user.name),
-                &server.admin_token
-            )
-            .await?,
-        204
-    );
-
+    let user = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(user, user).await?;
+    let status = server.api.admin_user_remove(user).await?;
+    assert_eq!(status, 204);
+    assert!(!server
+        .api
+        .admin_user_list()
+        .await?
+        .1
+        .iter()
+        .any(|u| u.name == *user));
     Ok(())
 }
 
 #[tokio::test]
 async fn remove_with_other() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Mapped, &user).await?;
-
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/admin/db/{db}/user/{}/add?db_role=write", other.name),
-                &None,
-                &server.admin_token
-            )
-            .await?,
-        201
-    );
-
-    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
-    assert_eq!(
-        list?,
-        vec![Db {
-            name: db,
-            db_type: "mapped".to_string(),
-            role: "write".to_string(),
-            size: 2632,
-            backup: 0,
-        }]
-    );
-
-    assert!(Path::new(&server.data_dir).join(&user.name).exists());
-
-    assert_eq!(
-        server
-            .delete(
-                &format!("/admin/user/{}/remove", user.name),
-                &server.admin_token
-            )
-            .await?,
-        204
-    );
-
-    assert!(!Path::new(&server.data_dir).join(user.name).exists());
-
-    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
-    assert_eq!(list?, vec![]);
-
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::File).await?;
+    server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Write)
+        .await?;
+    server.api.admin_user_remove(owner).await?;
+    assert!(server.api.admin_db_list().await?.1.is_empty());
+    assert!(!Path::new(&server.data_dir).join(owner).exists());
+    server.api.user_login(user, user).await?;
+    assert!(server.api.db_list().await?.1.is_empty());
     Ok(())
 }
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-
-    assert_eq!(
-        server
-            .delete("/admin/user/not_found/remove", &server.admin_token)
-            .await?,
-        404
-    );
-
+    server.api.user_login(ADMIN, ADMIN).await?;
+    let status = server
+        .api
+        .admin_user_remove("not_found")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-
-    assert_eq!(
-        server
-            .delete("/admin/user/not_found/remove", &user.token)
-            .await?,
-        401
-    );
-
+    let user = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.user_login(user, user).await?;
+    let status = server.api.admin_user_remove(user).await.unwrap_err().status;
+    assert_eq!(status, 401);
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-
-    assert_eq!(
-        server
-            .delete("/admin/user/not_found/remove", NO_TOKEN)
-            .await?,
-        401
-    );
-
+    let server = TestServer::new().await?;
+    let status = server
+        .api
+        .admin_user_remove("user")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }

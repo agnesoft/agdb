@@ -17,7 +17,7 @@ pub enum DbType {
     File,
 }
 
-#[derive(Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
 pub struct DbUser {
     pub user: String,
     pub role: DbUserRole,

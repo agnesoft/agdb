@@ -64,7 +64,7 @@ pub struct UserLogin {
     pub password: String,
 }
 
-#[derive(Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
 pub struct UserStatus {
     pub name: String,
 }

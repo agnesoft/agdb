@@ -135,16 +135,18 @@ impl<T: HttpClient> AgdbApi<T> {
         db: &str,
         new_owner: &str,
         new_db: &str,
-    ) -> AgdbApiResult<(u16, ())> {
-        self.client
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!(
-                    "/admin/db/{owner}/{db}/reename?new_name={new_owner}/{new_db}"
+                    "/admin/db/{owner}/{db}/rename?new_name={new_owner}/{new_db}"
                 )),
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn admin_db_restore(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {

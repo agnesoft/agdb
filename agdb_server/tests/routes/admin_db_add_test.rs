@@ -1,7 +1,6 @@
-use agdb_api::DbType;
-
 use crate::TestServer;
 use crate::ADMIN;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]

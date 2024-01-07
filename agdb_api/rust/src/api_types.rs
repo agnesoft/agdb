@@ -136,3 +136,109 @@ impl Display for DbUserRole {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!("{:?}", DbType::Memory);
+        format!("{:?}", DbUserRole::Admin);
+        format!(
+            "{:?}",
+            DbUser {
+                user: "user".to_string(),
+                role: DbUserRole::Admin
+            }
+        );
+        format!(
+            "{:?}",
+            ServerDatabase {
+                name: "db".to_string(),
+                db_type: DbType::Memory,
+                role: DbUserRole::Admin,
+                size: 0,
+                backup: 0
+            }
+        );
+        format!(
+            "{:?}",
+            UserStatus {
+                name: "user".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn derived_from_parital_ord() {
+        assert!(DbType::Memory < DbType::File);
+        assert!(DbUserRole::Admin < DbUserRole::Write);
+        let user = DbUser {
+            user: "user".to_string(),
+            role: DbUserRole::Admin,
+        };
+        let other = DbUser {
+            user: "user2".to_string(),
+            role: DbUserRole::Admin,
+        };
+        assert!(user < other);
+        let db = ServerDatabase {
+            name: "db".to_string(),
+            db_type: DbType::Memory,
+            role: DbUserRole::Admin,
+            size: 0,
+            backup: 0,
+        };
+        let other = ServerDatabase {
+            name: "db2".to_string(),
+            db_type: DbType::Memory,
+            role: DbUserRole::Admin,
+            size: 0,
+            backup: 0,
+        };
+        assert!(db < other);
+        let status = UserStatus {
+            name: "user".to_string(),
+        };
+        let other = UserStatus {
+            name: "user2".to_string(),
+        };
+        assert!(status < other);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        assert_eq!(
+            DbType::Memory.cmp(&DbType::Memory),
+            std::cmp::Ordering::Equal
+        );
+        assert_eq!(
+            DbUserRole::Admin.cmp(&DbUserRole::Admin),
+            std::cmp::Ordering::Equal
+        );
+
+        let user = DbUser {
+            user: "user".to_string(),
+            role: DbUserRole::Admin,
+        };
+
+        assert_eq!(user.cmp(&user), std::cmp::Ordering::Equal);
+
+        let db = ServerDatabase {
+            name: "db".to_string(),
+            db_type: DbType::Memory,
+            role: DbUserRole::Admin,
+            size: 0,
+            backup: 0,
+        };
+
+        assert_eq!(db.cmp(&db), std::cmp::Ordering::Equal);
+
+        let status = UserStatus {
+            name: "user".to_string(),
+        };
+
+        assert_eq!(status.cmp(&status), std::cmp::Ordering::Equal);
+    }
+}

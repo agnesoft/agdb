@@ -34,3 +34,54 @@ impl From<serde_json::Error> for AgdbApiError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derived_from_debug() {
+        format!(
+            "{:?}",
+            AgdbApiError {
+                status: 0,
+                description: "test".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(
+            format!(
+                "{}",
+                AgdbApiError {
+                    status: 0,
+                    description: "test".to_string(),
+                }
+            ),
+            "0: test"
+        );
+    }
+
+    #[test]
+    fn from_reqwest_error() {
+        let error = reqwest::ClientBuilder::new()
+            .user_agent("\0")
+            .build()
+            .unwrap_err();
+        assert_eq!(
+            AgdbApiError::from(error).description,
+            "builder error: failed to parse header value"
+        );
+    }
+
+    #[test]
+    fn from_serde_json_eror() {
+        let error = serde_json::from_str::<()>("").unwrap_err();
+        assert_eq!(
+            AgdbApiError::from(error).description,
+            "EOF while parsing a value at line 1 column 0"
+        );
+    }
+}

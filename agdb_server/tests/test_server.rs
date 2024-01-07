@@ -60,17 +60,19 @@ impl TestServer {
         let api = AgdbApi::new(ReqwestClient::new(), &Self::url_base(), port);
 
         for _ in 0..RETRY_ATTEMPS {
-            if api.status().await? != 200 {
-                std::thread::sleep(RETRY_TIMEOUT);
-            } else {
-                return Ok(Self {
-                    dir,
-                    data_dir,
-                    api,
-                    port,
-                    process,
-                });
+            if let Ok(status) = api.status().await {
+                if status == 200 {
+                    return Ok(Self {
+                        dir,
+                        data_dir,
+                        api,
+                        port,
+                        process,
+                    });
+                }
             }
+
+            std::thread::sleep(RETRY_TIMEOUT);
         }
 
         anyhow::bail!("Failed to start server")

@@ -1,203 +1,177 @@
-use crate::Db;
-use crate::DbUser;
 use crate::TestServer;
-use crate::DB_LIST_URI;
-use crate::NO_TOKEN;
+use crate::ADMIN;
 use agdb_api::DbType;
+use agdb_api::DbUserRole;
 
 #[tokio::test]
 async fn remove() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .delete(&format!("/db/{db}/user/{}/remove", other.name), &user.token)
-            .await?,
-        204
-    );
-    let list = server
-        .get::<Vec<DbUser>>(&format!("/db/{db}/user/list"), &user.token)
-        .await?
-        .1;
-    assert_eq!(
-        list?,
-        vec![DbUser {
-            user: user.name.clone(),
-            role: "admin".to_string(),
-        },]
-    );
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server
+        .api
+        .db_user_add(owner, db, user, DbUserRole::Write)
+        .await?;
+    let list = server.api.db_user_list(owner, db).await?.1;
+    assert_eq!(list.len(), 2);
+    let status = server.api.db_user_remove(owner, db, user).await?;
+    assert_eq!(status, 204);
+    let list = server.api.db_user_list(owner, db).await?.1;
+    assert_eq!(list.len(), 1);
     Ok(())
 }
 
 #[tokio::test]
 async fn remove_owner() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .delete(&format!("/db/{db}/user/{}/remove", user.name), &other.token)
-            .await?,
-        403
-    );
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Admin)
+        .await?;
+    server.api.user_login(user, user).await?;
+    let status = server
+        .api
+        .db_user_remove(owner, db, owner)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 403);
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let another = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=write", another.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .delete(
-                &format!("/db/{db}/user/{}/remove", other.name),
-                &another.token
-            )
-            .await?,
-        403
-    );
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let other = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_user_add(other, other).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Write)
+        .await?;
+    server
+        .api
+        .admin_db_user_add(owner, db, other, DbUserRole::Write)
+        .await?;
+    server.api.user_login(user, user).await?;
+    let status = server
+        .api
+        .db_user_remove(owner, db, other)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 403);
     Ok(())
 }
 
 #[tokio::test]
 async fn remove_self() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .delete(
-                &format!("/db/{db}/user/{}/remove", other.name),
-                &other.token
-            )
-            .await?,
-        204
-    );
-    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1;
-    assert_eq!(list?, vec![]);
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Read)
+        .await?;
+    server.api.user_login(user, user).await?;
+    let status = server.api.db_user_remove(owner, db, user).await?;
+    assert_eq!(status, 204);
+    let list = server.api.db_list().await?.1;
+    assert!(list.is_empty());
     Ok(())
 }
 
 #[tokio::test]
 async fn remove_self_owner() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=admin", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
-    assert_eq!(
-        server
-            .delete(&format!("/db/{db}/user/{}/remove", user.name), &user.token)
-            .await?,
-        403
-    );
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .db_user_remove(owner, db, owner)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 403);
     Ok(())
 }
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    assert_eq!(
-        server
-            .delete(
-                &format!("/db/{}/db/user/user/remove", user.name),
-                &user.token
-            )
-            .await?,
-        404
-    );
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .db_user_remove(owner, "db", user)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db(DbType::Memory, &user).await?;
-    assert_eq!(
-        server
-            .delete(&format!("/db/{db}/user/other/remove"), &user.token)
-            .await?,
-        404
-    );
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let status = server
+        .api
+        .db_user_remove(owner, db, "user")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    assert_eq!(
-        server
-            .delete("/db/user/db/user/user/remove", NO_TOKEN)
-            .await?,
-        401
-    );
+    let server = TestServer::new().await?;
+    let status = server
+        .api
+        .db_user_remove("owner", "db", "user")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }

@@ -409,10 +409,6 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn openapi(&self) -> AgdbApiResult<(u16, String)> {
-        self.client.get(&self.url("/openapi.json"), &None).await
-    }
-
     pub async fn status(&self) -> AgdbApiResult<u16> {
         Ok(self.client.get::<()>(&self.url("/status"), &None).await?.0)
     }

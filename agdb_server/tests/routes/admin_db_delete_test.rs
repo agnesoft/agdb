@@ -45,12 +45,11 @@ async fn delete_with_backup() -> anyhow::Result<()> {
 async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
-    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
-        .admin_db_delete(owner, db)
+        .admin_db_delete(owner, "db")
         .await
         .unwrap_err()
         .status;

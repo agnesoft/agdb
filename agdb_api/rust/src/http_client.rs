@@ -4,29 +4,26 @@ use crate::AgdbApiError;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+#[allow(async_fn_in_trait)]
 pub trait HttpClient {
-    fn delete(
+    async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16>;
+    async fn get<T: DeserializeOwned>(
         &self,
         uri: &str,
         token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<u16>>;
-    fn get<T: DeserializeOwned>(
-        &self,
-        uri: &str,
-        token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<(u16, T)>>;
-    fn post<T: Serialize, R: DeserializeOwned>(
+    ) -> AgdbApiResult<(u16, T)>;
+    async fn post<T: Serialize, R: DeserializeOwned>(
         &self,
         uri: &str,
         json: &Option<T>,
         token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<(u16, R)>>;
-    fn put<T: Serialize>(
+    ) -> AgdbApiResult<(u16, R)>;
+    async fn put<T: Serialize>(
         &self,
         uri: &str,
         json: &Option<T>,
         token: &Option<String>,
-    ) -> impl std::future::Future<Output = AgdbApiResult<u16>>;
+    ) -> AgdbApiResult<u16>;
 }
 
 #[cfg(feature = "reqwest")]

@@ -9,11 +9,11 @@ env:
 
 jobs:
   diff:
-    runs-on: rust
+    runs-on: ubuntu-latest
     outputs:
       diff: ${{ steps.diff.outputs.diff }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - id: diff
@@ -22,25 +22,28 @@ jobs:
           if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb/src/ agdb/src/Cargo.toml agdb_derive/src/ agdb_derive/Cargo.toml .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
 
   agdb_benchmarks:
-    runs-on: rust
+    runs-on: ubuntu-latest
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo run --release --package ${{ env.PROJECT }}
 
   agdb_benchmarks_analyse:
-    runs-on: rust
+    runs-on: ubuntu-latest
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo clippy --package ${{ env.PROJECT }} --all-targets --all-features -- -D warnings
 
   agdb_benchmarks_format:
-    runs-on: rust
+    runs-on: ubuntu-latest
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo fmt --package ${{ env.PROJECT }} --check

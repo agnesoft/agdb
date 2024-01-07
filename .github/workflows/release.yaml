@@ -12,17 +12,19 @@ env:
 
 jobs:
   build:
-    runs-on: rust
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo build --package agdb_derive --package agdb --all-features --release
 
   new_version:
-    runs-on: rust
+    runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.new_version.outputs.new_version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - id: new_version
         run: |
           PUBLISHED_VERSION=$(cargo search ^agdb$ --limit 1 -q | head -n 1 | cut -d '"' -f 2)
@@ -32,11 +34,12 @@ jobs:
           echo "Current version: ${CURRENT_VERSION}"
 
   release:
-    runs-on: rust
+    runs-on: ubuntu-latest
     needs: [build, new_version]
     if: needs.new_version.outputs.new_version != ''
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
@@ -48,11 +51,12 @@ jobs:
           generate_release_notes: true
 
   publish:
-    runs-on: rust
+    runs-on: ubuntu-latest
     needs: [release, new_version]
     if: needs.new_version.outputs.new_version != ''
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           cargo publish --package agdb_derive --token ${CRATES_IO_TOKEN}
           cargo publish --package agdb --token ${CRATES_IO_TOKEN}

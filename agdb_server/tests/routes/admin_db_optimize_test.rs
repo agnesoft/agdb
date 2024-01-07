@@ -1,57 +1,60 @@
-use crate::Db;
 use crate::TestServer;
-use crate::DB_LIST_URI;
-use crate::NO_TOKEN;
+use crate::ADMIN;
 use agdb::QueryBuilder;
-use agdb::QueryType;
+use agdb_api::DbType;
 
 #[tokio::test]
 async fn optimize() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
-        .nodes()
-        .count(100)
-        .query()
-        .into()]);
-    server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?;
-    let original_size = server.get::<Vec<Db>>(DB_LIST_URI, &user.token).await?.1?[0].size;
-    let (status, response) = server
-        .post::<()>(
-            &format!("/admin/db/{db}/optimize"),
-            &None,
-            &server.admin_token,
-        )
-        .await?;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
+    server.api.admin_db_exec(owner, db, queries).await?;
+    let original_size = server
+        .api
+        .admin_db_list()
+        .await?
+        .1
+        .iter()
+        .find(|d| d.name == format!("{}/{}", owner, db))
+        .unwrap()
+        .size;
+    let (status, db) = server.api.admin_db_optimize(owner, db).await?;
     assert_eq!(status, 200);
-    let optimized_size = serde_json::from_str::<Db>(&response)?.size;
-    assert!(optimized_size < original_size);
-
+    assert!(db.size < original_size);
     Ok(())
 }
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
-        .post::<()>("/db/user/not_found/optimize", &None, &server.admin_token)
-        .await?
-        .0;
+        .api
+        .admin_db_optimize("owner", "db")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server
-        .post::<()>("/admin/db/user/not_found/optimize", &None, &user.token)
-        .await?
-        .0;
+        .api
+        .admin_db_optimize(owner, "db")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 401);
     Ok(())
 }
@@ -60,9 +63,11 @@ async fn non_admin() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post::<()>("/admin/db/user/not_found/optimize", &None, NO_TOKEN)
-        .await?
-        .0;
+        .api
+        .admin_db_optimize("owner", "db")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 401);
     Ok(())
 }

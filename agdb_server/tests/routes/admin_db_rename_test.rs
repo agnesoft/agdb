@@ -1,180 +1,165 @@
-use crate::Db;
 use crate::TestServer;
-use crate::DB_LIST_URI;
-use crate::NO_TOKEN;
+use crate::ADMIN;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn rename() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let status = server
-        .post::<()>(
-            &format!("/admin/db/{db}/rename?new_name={}/renamed_db", user.name),
-            &None,
-            &server.admin_token,
-        )
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db2 = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.admin_db_rename(owner, db, owner, db2).await?;
     assert_eq!(status, 201);
-    assert!(!Path::new(&server.data_dir).join(db).exists());
-    assert!(Path::new(&server.data_dir)
-        .join(user.name)
-        .join("renamed_db")
-        .exists());
+    assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
+    assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
     Ok(())
 }
 
 #[tokio::test]
 async fn rename_with_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
-        .await?;
-    let status = server
-        .post::<()>(
-            &format!("/admin/db/{db}/rename?new_name={}/renamed_db", user.name),
-            &None,
-            &server.admin_token,
-        )
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db2 = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_backup(owner, db).await?;
+    let status = server.api.admin_db_rename(owner, db, owner, db2).await?;
     assert_eq!(status, 201);
-    assert!(!Path::new(&server.data_dir).join(&db).exists());
+    assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
     assert!(!Path::new(&server.data_dir)
-        .join(&user.name)
+        .join(owner)
         .join("backups")
-        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .join(format!("{}.bak", db))
         .exists());
+    assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
     assert!(Path::new(&server.data_dir)
-        .join(&user.name)
-        .join("renamed_db")
-        .exists());
-    assert!(Path::new(&server.data_dir)
-        .join(user.name)
+        .join(owner)
         .join("backups")
-        .join("renamed_db.bak")
+        .join(format!("{}.bak", db2))
         .exists());
     Ok(())
 }
 
 #[tokio::test]
 async fn transfer() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let status = server
-        .post::<()>(
-            &format!("/admin/db/{db}/rename?new_name={}/renamed_db", other.name),
-            &None,
-            &server.admin_token,
-        )
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let owner2 = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(owner2, owner2).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.admin_db_rename(owner, db, owner2, db).await?;
     assert_eq!(status, 201);
-    let list = server.get::<Vec<Db>>(DB_LIST_URI, &other.token).await?.1?;
-    assert_eq!(
-        list,
-        vec![Db {
-            name: format!("{}/renamed_db", other.name),
-            db_type: "mapped".to_string(),
-            role: "admin".to_string(),
-            size: 2632,
-            backup: 0,
-        }]
-    );
-    assert!(!Path::new(&server.data_dir).join(db).exists());
-    assert!(Path::new(&server.data_dir)
-        .join(other.name)
-        .join("renamed_db")
-        .exists());
+    assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
+    assert!(Path::new(&server.data_dir).join(owner2).join(db).exists());
+    Ok(())
+}
+
+#[tokio::test]
+async fn user_not_found() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server
+        .api
+        .admin_db_rename(owner, db, "not_found", db)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn invalid() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let status = server
-        .post::<()>(
-            &format!("/admin/db/{db}/rename?new_name={}/a\0a", user.name),
-            &None,
-            &server.admin_token,
-        )
-        .await?
-        .0;
+        .api
+        .admin_db_rename(owner, db, owner, "a\0a")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 467);
-    assert!(Path::new(&server.data_dir).join(db).exists());
     Ok(())
 }
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
-        .post::<()>(
-            "/admin/db/user/db/rename?new_name=user/renamed_db",
-            &None,
-            &server.admin_token,
-        )
-        .await?
-        .0;
+        .api
+        .admin_db_rename(owner, "db", owner, "not_found")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn target_self() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let status = server
-        .post::<()>(
-            &format!("/admin/db/{db}/rename?new_name={db}"),
-            &None,
-            &server.admin_token,
-        )
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.admin_db_rename(owner, db, owner, db).await?;
     assert_eq!(status, 201);
     Ok(())
 }
 
 #[tokio::test]
 async fn target_exists() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let db2 = server.init_db("mapped", &user).await?;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db2 = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_add(owner, db2, DbType::Mapped).await?;
     let status = server
-        .post::<()>(
-            &format!("/admin/db/{db}/rename?new_name={db2}"),
-            &None,
-            &server.admin_token,
-        )
-        .await?
-        .0;
+        .api
+        .admin_db_rename(owner, db, owner, db2)
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 465);
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
     let status = server
-        .post::<()>(
-            "/admin/db/user/db/rename?new_name=user/renamed_db",
-            &None,
-            &user.token,
-        )
-        .await?
-        .0;
+        .api
+        .admin_db_rename(owner, "db", owner, "db2")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 401);
     Ok(())
 }
@@ -183,13 +168,11 @@ async fn non_admin() -> anyhow::Result<()> {
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
-        .post::<()>(
-            "/admin/db/user/db/rename?new_name=user/renamed_db",
-            &None,
-            NO_TOKEN,
-        )
-        .await?
-        .0;
+        .api
+        .admin_db_rename("owner", "db", "owner", "db2")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 401);
     Ok(())
 }

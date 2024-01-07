@@ -1,99 +1,105 @@
 use crate::TestServer;
-use crate::NO_TOKEN;
+use crate::ADMIN;
+use agdb_api::DbType;
 use std::path::Path;
 
 #[tokio::test]
 async fn delete() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    assert!(Path::new(&server.data_dir).join(&db).exists());
-    assert_eq!(
-        server
-            .delete(&format!("/admin/db/{db}/delete"), &server.admin_token)
-            .await?,
-        204
-    );
-    assert!(!Path::new(&server.data_dir).join(db).exists());
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
+    let status = server.api.admin_db_delete(owner, db).await?;
+    assert_eq!(status, 204);
+    assert!(!Path::new(&server.data_dir).join(owner).join(db).exists());
     Ok(())
 }
 
 #[tokio::test]
 async fn delete_with_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
-        .await?;
-    assert!(Path::new(&server.data_dir)
-        .join(&user.name)
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db_path = Path::new(&server.data_dir).join(owner).join(db);
+    let db_backup_path = Path::new(&server.data_dir)
+        .join(owner)
         .join("backups")
-        .join(format!("{}.bak", db.split_once('/').unwrap().1))
-        .exists());
-    assert!(Path::new(&server.data_dir).join(&db).exists());
-    assert_eq!(
-        server
-            .delete(&format!("/admin/db/{db}/delete"), &server.admin_token)
-            .await?,
-        204
-    );
-    assert!(!Path::new(&server.data_dir).join(&db).exists());
-    assert!(!Path::new(&server.data_dir)
-        .join(user.name)
-        .join("backups")
-        .join(format!("{}.bak", db.split_once('/').unwrap().1))
-        .exists());
+        .join(format!("{}.bak", db));
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Mapped).await?;
+    server.api.admin_db_backup(owner, db).await?;
+    assert!(db_path.exists());
+    assert!(db_backup_path.exists());
+    let status = server.api.admin_db_delete(owner, db).await?;
+    assert_eq!(status, 204);
+    assert!(!db_path.exists());
+    assert!(!db_backup_path.exists());
     Ok(())
 }
 
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    assert_eq!(
-        server
-            .delete(
-                &format!("/admin/db/{}/not_found/delete", user.name),
-                &server.admin_token
-            )
-            .await?,
-        404
-    );
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    let status = server
+        .api
+        .admin_db_delete(owner, "db")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn user_not_found() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    assert_eq!(
-        server
-            .delete("/admin/db/not_found/db/delete", &server.admin_token)
-            .await?,
-        404
-    );
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    let status = server
+        .api
+        .admin_db_delete(owner, db)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    assert_eq!(
-        server
-            .delete("/admin/db/user/db/delete", &user.token)
-            .await?,
-        401
-    );
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .admin_db_delete(owner, db)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    assert_eq!(
-        server.delete("/admin/db/user/db/delete", NO_TOKEN).await?,
-        401
-    );
+    let status = server
+        .api
+        .admin_db_delete("owner", "db")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }

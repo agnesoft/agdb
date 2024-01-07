@@ -1,8 +1,8 @@
 use crate::db_pool::DbPool;
-use crate::routes::db::user::DbUser;
 use crate::routes::db::user::DbUserRoleParam;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use agdb_api::DbUser;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
@@ -47,7 +47,7 @@ pub(crate) async fn add(
         ("db" = String, Path, description = "db name"),
     ),
     responses(
-         (status = 200, description = "ok"),
+         (status = 200, description = "ok", body = Vec<DbUser>),
          (status = 401, description = "unauthorized"),
          (status = 404, description = "db not found"),
     )

@@ -1,45 +1,45 @@
 use crate::TestServer;
-use crate::UserStatus;
-use crate::ADMIN_USER_LIST_URI;
-use crate::NO_TOKEN;
+use crate::ADMIN;
+use agdb_api::UserStatus;
 
 #[tokio::test]
 async fn user_list() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user1 = server.init_user().await?;
-    let user2 = server.init_user().await?;
-    let (status, list) = server
-        .get::<Vec<UserStatus>>(ADMIN_USER_LIST_URI, &server.admin_token)
-        .await?;
+    let mut server = TestServer::new().await?;
+    let user1 = &server.next_user_name();
+    let user2 = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(user1, user1).await?;
+    server.api.admin_user_add(user2, user2).await?;
+    let (status, list) = server.api.admin_user_list().await?;
     assert_eq!(status, 200);
-    let list = list?;
     assert!(list.contains(&UserStatus {
         name: "admin".to_string()
     }));
-    assert!(list.contains(&UserStatus { name: user1.name }));
-    assert!(list.contains(&UserStatus { name: user2.name }));
+    assert!(list.contains(&UserStatus {
+        name: user1.to_string()
+    }));
+    assert!(list.contains(&UserStatus {
+        name: user2.to_string()
+    }));
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let (status, list) = server
-        .get::<Vec<UserStatus>>(ADMIN_USER_LIST_URI, &user.token)
-        .await?;
+    let mut server = TestServer::new().await?;
+    let user = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.user_login(user, user).await?;
+    let status = server.api.admin_user_list().await.unwrap_err().status;
     assert_eq!(status, 401);
-    assert!(list.is_err());
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let (status, list) = server
-        .get::<Vec<UserStatus>>(ADMIN_USER_LIST_URI, NO_TOKEN)
-        .await?;
+    let status = server.api.admin_user_list().await.unwrap_err().status;
     assert_eq!(status, 401);
-    assert!(list.is_err());
     Ok(())
 }

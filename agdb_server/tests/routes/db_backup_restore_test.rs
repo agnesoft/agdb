@@ -1,241 +1,201 @@
 use crate::TestServer;
-use crate::NO_TOKEN;
+use crate::ADMIN;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
-use agdb::QueryType;
+use agdb_api::DbType;
+use agdb_api::DbUserRole;
 use std::path::Path;
 
 #[tokio::test]
 async fn backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()]);
-    server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
-        .await?
-        .0;
+        .into()];
+    server.api.db_exec(owner, db, queries).await?;
+    let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
-        .join(user.name)
+        .join(owner)
         .join("backups")
-        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .join(format!("{}.bak", db))
         .exists());
-    let queries: Option<Vec<QueryType>> =
-        Some(vec![QueryBuilder::remove().ids("root").query().into()]);
-    server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/restore"), &None, &user.token)
-        .await?
-        .0;
+    let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
+    server.api.db_exec(owner, db, queries).await?;
+    let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries: Option<Vec<QueryType>> =
-        Some(vec![QueryBuilder::select().ids("root").query().into()]);
-    let responses = server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?
-        .1;
-    let responses: Vec<QueryResult> = serde_json::from_str(&responses)?;
-    assert_eq!(responses.len(), 1);
-    assert_eq!(responses[0].result, 1);
+    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let results = server.api.db_exec(owner, db, queries).await?.1;
     assert_eq!(
-        responses[0].elements,
-        vec![DbElement {
-            id: DbId(1),
-            from: None,
-            to: None,
-            values: vec![]
+        results,
+        vec![QueryResult {
+            result: 1,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![]
+            }]
         }]
     );
-
     Ok(())
 }
 
 #[tokio::test]
 async fn backup_overwrite() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()]);
-    server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
-        .await?
-        .0;
+        .into()];
+    server.api.db_exec(owner, db, queries).await?;
+    let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
-        .join(&user.name)
+        .join(owner)
         .join("backups")
-        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .join(format!("{}.bak", db))
         .exists());
-    let queries: Option<Vec<QueryType>> =
-        Some(vec![QueryBuilder::remove().ids("root").query().into()]);
-    server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
-        .await?
-        .0;
+    let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
+    server.api.db_exec(owner, db, queries).await?;
+    let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
-        .join(user.name)
+        .join(owner)
         .join("backups")
-        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .join(format!("{}.bak", db))
         .exists());
-    let status = server
-        .post::<()>(&format!("/db/{db}/restore"), &None, &user.token)
-        .await?
-        .0;
+    let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries: Option<Vec<QueryType>> =
-        Some(vec![QueryBuilder::select().ids("root").query().into()]);
-    let responses = server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?
-        .1;
-    assert_eq!(responses, "Alias 'root' not found");
-
+    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let results = server
+        .api
+        .db_exec(owner, db, queries)
+        .await
+        .unwrap_err()
+        .description;
+    assert_eq!(results, "Alias 'root' not found");
     Ok(())
 }
 
 #[tokio::test]
 async fn backup_of_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    let queries: Option<Vec<QueryType>> = Some(vec![QueryBuilder::insert()
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![QueryBuilder::insert()
         .nodes()
         .aliases(vec!["root"])
         .query()
-        .into()]);
-    server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
-        .await?
-        .0;
+        .into()];
+    server.api.db_exec(owner, db, queries).await?;
+    let status = server.api.db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
-        .join(user.name)
+        .join(owner)
         .join("backups")
-        .join(format!("{}.bak", db.split_once('/').unwrap().1))
+        .join(format!("{}.bak", db))
         .exists());
-    let queries: Option<Vec<QueryType>> =
-        Some(vec![QueryBuilder::remove().ids("root").query().into()]);
-    server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/restore"), &None, &user.token)
-        .await?
-        .0;
+    let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
+    server.api.db_exec(owner, db, queries).await?;
+    let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let status = server
-        .post::<()>(&format!("/db/{db}/restore"), &None, &user.token)
-        .await?
-        .0;
+    let status = server.api.db_restore(owner, db).await?;
     assert_eq!(status, 201);
-    let queries: Option<Vec<QueryType>> =
-        Some(vec![QueryBuilder::select().ids("root").query().into()]);
-    let responses = server
-        .post(&format!("/db/{db}/exec"), &queries, &user.token)
-        .await?
-        .1;
-    assert_eq!(responses, "Alias 'root' not found");
+    let queries = &vec![QueryBuilder::select().ids("root").query().into()];
+    let results = server
+        .api
+        .db_exec(owner, db, queries)
+        .await
+        .unwrap_err()
+        .description;
+    assert_eq!(results, "Alias 'root' not found");
 
     Ok(())
 }
 
 #[tokio::test]
 async fn restore_no_backup() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/restore"), &None, &user.token)
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let status = server.api.db_restore(owner, db).await.unwrap_err().status;
     assert_eq!(status, 404);
-
     Ok(())
 }
 
 #[tokio::test]
 async fn in_memory() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
-    let status = server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &user.token)
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Memory).await?;
+    let status = server.api.db_backup(owner, db).await.unwrap_err().status;
     assert_eq!(status, 403);
-
     Ok(())
 }
 
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("mapped", &user).await?;
-    assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=write", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
-    );
-    let status = server
-        .post::<()>(&format!("/db/{db}/backup"), &None, &other.token)
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server
+        .api
+        .admin_db_user_add(owner, db, user, DbUserRole::Write)
+        .await?;
+    server.api.user_login(user, user).await?;
+    let status = server.api.db_backup(owner, db).await.unwrap_err().status;
     assert_eq!(status, 403);
-    let status = server
-        .post::<()>(&format!("/db/{db}/restore"), &None, &other.token)
-        .await?
-        .0;
+    let status = server.api.db_restore(owner, db).await.unwrap_err().status;
     assert_eq!(status, 403);
-
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let status = server
-        .post::<()>("/db/user/not_found/backup", &None, NO_TOKEN)
-        .await?
-        .0;
+    let status = server.api.db_backup("user", "db").await.unwrap_err().status;
     assert_eq!(status, 401);
     let status = server
-        .post::<()>("/db/user/not_found/restore", &None, NO_TOKEN)
-        .await?
-        .0;
+        .api
+        .db_restore("owner", "db")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 401);
-
     Ok(())
 }

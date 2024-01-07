@@ -11,7 +11,7 @@ use crate::StorageData;
 /// Database key-value pair (aka property) attached to
 /// database elements. It can be constructed from a
 /// tuple of types that are convertible to `DbValue`.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DbKeyValue {
@@ -85,6 +85,7 @@ mod tests {
             }
         );
     }
+
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
@@ -97,5 +98,27 @@ mod tests {
                 value: DbValue::I64(0)
             }
         );
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
+        let element = DbKeyValue {
+            key: DbValue::I64(0),
+            value: DbValue::I64(0),
+        };
+        let other = DbKeyValue {
+            key: DbValue::I64(0),
+            value: DbValue::I64(0),
+        };
+        assert!(element <= other);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        let element = DbKeyValue {
+            key: DbValue::I64(0),
+            value: DbValue::I64(0),
+        };
+        assert_eq!(element.cmp(&element), std::cmp::Ordering::Equal);
     }
 }

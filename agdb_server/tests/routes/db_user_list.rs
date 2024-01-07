@@ -1,74 +1,67 @@
 use crate::TestServer;
-use crate::NO_TOKEN;
-use serde::Deserialize;
-
-#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-struct DbUser {
-    user: String,
-    role: String,
-}
+use crate::ADMIN;
+use agdb_api::DbType;
+use agdb_api::DbUser;
+use agdb_api::DbUserRole;
 
 #[tokio::test]
 async fn list() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server
+        .api
+        .db_user_add(owner, db, user, DbUserRole::Write)
+        .await?;
+    let (status, list) = server.api.db_user_list(owner, db).await?;
+    assert_eq!(status, 200);
     assert_eq!(
-        server
-            .put::<()>(
-                &format!("/db/{db}/user/{}/add?db_role=read", other.name),
-                &None,
-                &user.token
-            )
-            .await?,
-        201
+        list,
+        vec![
+            DbUser {
+                user: owner.to_string(),
+                role: DbUserRole::Admin,
+            },
+            DbUser {
+                user: user.to_string(),
+                role: DbUserRole::Write,
+            }
+        ]
     );
-    let mut list = server
-        .get::<Vec<DbUser>>(&format!("/db/{db}/user/list"), &other.token)
-        .await?
-        .1?;
-    list.sort();
-    let mut expected = vec![
-        DbUser {
-            user: user.name,
-            role: "admin".to_string(),
-        },
-        DbUser {
-            user: other.name,
-            role: "read".to_string(),
-        },
-    ];
-    expected.sort();
-    assert_eq!(list, expected);
     Ok(())
 }
 
 #[tokio::test]
-async fn non_user() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let other = server.init_user().await?;
-    let db = server.init_db("memory", &user).await?;
-    assert_eq!(
-        server
-            .get::<Vec<DbUser>>(&format!("/db/{db}/user/list"), &other.token)
-            .await?
-            .0,
-        404
-    );
+async fn non_db_user() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let user = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.user_login(user, user).await?;
+    let status = server.api.db_user_list(owner, db).await.unwrap_err().status;
+    assert_eq!(status, 404);
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    assert_eq!(
-        server
-            .get::<Vec<DbUser>>("/db/user/db/user/list", NO_TOKEN)
-            .await?
-            .0,
-        401
-    );
+    let status = server
+        .api
+        .db_user_list("owner", "db")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }

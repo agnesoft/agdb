@@ -3,7 +3,7 @@ use crate::DbKeyValue;
 
 /// Database element used in [`QueryResult`]
 /// that represents a node or an edge.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct DbElement {
@@ -51,5 +51,45 @@ mod tests {
                 values: vec![]
             }
         );
+    }
+
+    #[test]
+    fn derived_from_clone() {
+        let element = DbElement {
+            id: DbId(0),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        let other = element.clone();
+        assert_eq!(element, other);
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
+        let element = DbElement {
+            id: DbId(0),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        let other = DbElement {
+            id: DbId(1),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        assert!(element < other);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        let element = DbElement {
+            id: DbId(0),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        assert_eq!(element.cmp(&element), std::cmp::Ordering::Equal);
     }
 }

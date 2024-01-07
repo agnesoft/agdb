@@ -4,20 +4,14 @@ use crate::db_pool::ServerUser;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
-use crate::routes::user::UserCredentials;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use agdb_api::UserCredentials;
+use agdb_api::UserStatus;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use serde::Serialize;
-use utoipa::ToSchema;
-
-#[derive(Serialize, ToSchema)]
-pub(crate) struct UserStatus {
-    pub(crate) name: String,
-}
 
 #[utoipa::path(post,
     path = "/api/v1/admin/user/{username}/add",
@@ -109,7 +103,7 @@ pub(crate) async fn list(
     Ok((StatusCode::OK, Json(users)))
 }
 
-#[utoipa::path(post,
+#[utoipa::path(delete,
     path = "/api/v1/admin/user/{username}/remove",
     operation_id = "admin_user_remove",
     security(("Token" = [])),

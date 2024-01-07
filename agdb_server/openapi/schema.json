@@ -492,7 +492,17 @@
         ],
         "responses": {
           "200": {
-            "description": "ok"
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbUser"
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "unauthorized"
@@ -780,7 +790,7 @@
       }
     },
     "/api/v1/admin/user/{username}/remove": {
-      "post": {
+      "delete": {
         "tags": [
           "crate::routes::admin::user"
         ],

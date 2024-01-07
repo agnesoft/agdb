@@ -1369,8 +1369,7 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.DbUser[];
             export interface $401 {
             }
             export interface $404 {
@@ -2226,7 +2225,7 @@ export interface PathsDictionary {
     /**
      * admin_user_remove
      */
-    'post'(
+    'delete'(
       parameters?: Parameters<Paths.AdminUserRemove.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  

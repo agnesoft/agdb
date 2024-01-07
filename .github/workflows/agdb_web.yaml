@@ -13,7 +13,7 @@ jobs:
     outputs:
       diff: ${{ steps.diff.outputs.diff }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - id: diff
@@ -29,7 +29,7 @@ jobs:
       run:
         working-directory: ${{ env.PROJECT }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci
       - run: npx nuxt prepare
       - run: npm run lint
@@ -42,7 +42,7 @@ jobs:
       run:
         working-directory: ${{ env.PROJECT }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci
       - run: npx nuxt prepare
       - run: npm run test:unit
@@ -61,7 +61,7 @@ jobs:
       run:
         working-directory: ${{ env.PROJECT }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci
       - run: npx playwright install --with-deps
       - run: npm run build
@@ -81,6 +81,6 @@ jobs:
       run:
         working-directory: ${{ env.PROJECT }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci
       - run: npm run format:check

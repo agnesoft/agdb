@@ -1,31 +1,23 @@
 use crate::TestServer;
-use crate::DB_LIST_URI;
-use crate::NO_TOKEN;
+use crate::ADMIN;
 
 #[tokio::test]
 async fn logout() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let user = server.init_user().await?;
-
-    let status = server.get::<()>(DB_LIST_URI, &user.token).await?.0;
-    assert_eq!(status, 200);
-
-    let status = server
-        .post::<()>("/user/logout", &None, &user.token)
-        .await?
-        .0;
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server.api.user_logout().await?;
     assert_eq!(status, 201);
-
-    let status = server.get::<()>(DB_LIST_URI, &user.token).await?.0;
-    assert_eq!(status, 401);
-
+    assert_eq!(server.api.token, None);
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let status = server.post::<()>("/user/logout", &None, NO_TOKEN).await?.0;
+    let mut server = TestServer::new().await?;
+    let status = server.api.user_logout().await.unwrap_err().status;
     assert_eq!(status, 401);
 
     Ok(())

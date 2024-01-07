@@ -1,6 +1,5 @@
 use crate::TestServer;
 use crate::ADMIN;
-use crate::NO_TOKEN;
 use agdb_api::DbType;
 use std::path::Path;
 

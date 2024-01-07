@@ -13,7 +13,6 @@ categories = ["database", "api-bindings"]
 [lib]
 
 [features]
-default = ["reqwest"]
 reqwest = ["dep:reqwest"]
 
 [dependencies]

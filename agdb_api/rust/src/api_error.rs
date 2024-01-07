@@ -1,5 +1,3 @@
-use reqwest::StatusCode;
-
 #[derive(Debug)]
 pub struct AgdbApiError {
     pub status: u16,
@@ -14,12 +12,13 @@ impl std::fmt::Display for AgdbApiError {
     }
 }
 
+#[cfg(feature = "reqwest")]
 impl From<reqwest::Error> for AgdbApiError {
     fn from(error: reqwest::Error) -> Self {
         Self {
             status: error
                 .status()
-                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
+                .unwrap_or(reqwest::StatusCode::INTERNAL_SERVER_ERROR)
                 .as_u16(),
             description: error.to_string(),
         }
@@ -64,6 +63,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "reqwest")]
     #[test]
     fn from_reqwest_error() {
         let error = reqwest::ClientBuilder::new()

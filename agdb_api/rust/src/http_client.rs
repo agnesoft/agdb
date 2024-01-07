@@ -1,4 +1,5 @@
 use crate::api_result::AgdbApiResult;
+#[cfg(feature = "reqwest")]
 use crate::AgdbApiError;
 use serde::de::DeserializeOwned;
 use serde::Serialize;

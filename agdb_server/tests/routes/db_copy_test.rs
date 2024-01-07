@@ -84,6 +84,28 @@ async fn copy_from_different_user() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn copy_to_removed() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    let db2 = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server.api.db_add(owner, db2, DbType::Mapped).await?;
+    server.api.db_remove(owner, db2).await?;
+    let status = server
+        .api
+        .db_copy(owner, db, owner, db2)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 465);
+    Ok(())
+}
+
+#[tokio::test]
 async fn copy_to_other_user() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();

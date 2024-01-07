@@ -29,13 +29,13 @@ pub trait HttpClient {
 }
 
 #[cfg(feature = "reqwest")]
-#[derive(Default)]
 pub struct ReqwestClient {
     client: reqwest::Client,
 }
 
 #[cfg(feature = "reqwest")]
 impl ReqwestClient {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),

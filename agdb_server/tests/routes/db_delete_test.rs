@@ -21,6 +21,20 @@ async fn delete() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn delete_in_memory() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Memory).await?;
+    let status = server.api.db_delete(owner, db).await?;
+    assert_eq!(status, 204);
+    Ok(())
+}
+
+#[tokio::test]
 async fn delete_with_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();

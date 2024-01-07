@@ -29,7 +29,7 @@ impl From<reqwest::Error> for AgdbApiError {
 impl From<serde_json::Error> for AgdbApiError {
     fn from(value: serde_json::Error) -> Self {
         Self {
-            status: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            status: 0,
             description: value.to_string(),
         }
     }

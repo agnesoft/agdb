@@ -203,6 +203,14 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
+    pub async fn admin_shutdown(&self) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(&self.url("/admin/shutdown"), &None, &self.token)
+            .await?
+            .0)
+    }
+
     pub async fn admin_user_add(&self, user: &str, password: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
@@ -401,12 +409,8 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn shutdown(&self) -> AgdbApiResult<u16> {
-        Ok(self
-            .client
-            .post::<(), ()>(&self.url("/admin/shutdown"), &None, &self.token)
-            .await?
-            .0)
+    pub async fn openapi(&self) -> AgdbApiResult<(u16, String)> {
+        self.client.get(&self.url("/openapi.json"), &None).await
     }
 
     pub async fn status(&self) -> AgdbApiResult<u16> {

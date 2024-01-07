@@ -1,70 +1,72 @@
 use crate::TestServer;
-use crate::NO_TOKEN;
-use crate::SHUTDOWN_URI;
-use crate::STATUS_URI;
+use crate::ADMIN;
 use assert_cmd::cargo::CommandCargoExt;
+use reqwest::StatusCode;
 use std::process::Command;
 
 #[tokio::test]
 async fn error() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    assert_eq!(server.get::<()>("/test_error", NO_TOKEN).await?.0, 500);
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+    let status = client.get(server.url("/test_error")).send().await?.status();
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     Ok(())
 }
 
 #[tokio::test]
 async fn missing() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    assert_eq!(server.get::<()>("/missing", NO_TOKEN).await?.0, 404);
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+    let status = client.get(server.url("/missing")).send().await?.status();
+    assert_eq!(status, StatusCode::NOT_FOUND);
     Ok(())
 }
 
 #[tokio::test]
 async fn status() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    assert_eq!(server.get::<()>(STATUS_URI, NO_TOKEN).await?.0, 200);
+    let server = TestServer::new().await?;
+    let status = server.api.status().await?;
+    assert_eq!(status, 200);
     Ok(())
 }
 
 #[tokio::test]
 async fn shutdown_no_token() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    assert_eq!(
-        server.post::<()>(SHUTDOWN_URI, &None, NO_TOKEN).await?.0,
-        401
-    );
+    let server = TestServer::new().await?;
+    let status = server.api.admin_shutdown().await.unwrap_err().status;
+    assert_eq!(status, 401);
     Ok(())
 }
 
 #[tokio::test]
 async fn shutdown_bad_token() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let token = Some("bad".to_string());
-    assert_eq!(server.post::<()>(SHUTDOWN_URI, &None, &token).await?.0, 401);
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+    let status = client
+        .get(server.url("/admin/shutdown"))
+        .bearer_auth("bad")
+        .send()
+        .await?
+        .status();
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
     Ok(())
 }
 
 #[tokio::test]
 async fn openapi() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    assert_eq!(server.get::<()>("", NO_TOKEN).await?.0, 200);
-    assert_eq!(
-        server.get::<String>("/openapi.json", NO_TOKEN).await?.0,
-        200
-    );
+    let server = TestServer::new().await?;
+    let (status, spec) = server.api.openapi().await?;
+    assert_eq!(status, 200);
+    assert!(!spec.is_empty());
     Ok(())
 }
 
 #[tokio::test]
 async fn db_config_reuse() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    assert_eq!(
-        server
-            .post::<()>(SHUTDOWN_URI, &None, &server.admin_token)
-            .await?
-            .0,
-        202
-    );
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_shutdown().await?;
+
     assert!(server.process.wait()?.success());
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)

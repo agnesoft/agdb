@@ -41,7 +41,7 @@ async fn copy() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn copy_other() -> anyhow::Result<()> {
+async fn copy_to_different_user() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
     let owner2 = &server.next_user_name();
@@ -49,6 +49,7 @@ async fn copy_other() -> anyhow::Result<()> {
     let db2 = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(owner2, owner2).await?;
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
@@ -56,7 +57,6 @@ async fn copy_other() -> anyhow::Result<()> {
         .query()
         .into()];
     server.api.admin_db_exec(owner, db, queries).await?;
-    server.api.admin_user_add(owner2, owner2).await?;
     let status = server.api.admin_db_copy(owner, db, owner2, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner2).join(db2).exists());
@@ -136,18 +136,15 @@ async fn invalid() -> anyhow::Result<()> {
 async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
-    let db = &server.next_db_name();
-    let db2 = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
         .api
-        .admin_db_copy(owner, db, owner, db2)
+        .admin_db_copy(owner, "db", owner, "db2")
         .await
         .unwrap_err()
         .status;
     assert_eq!(status, 404);
-
     Ok(())
 }
 
@@ -180,6 +177,5 @@ async fn no_token() -> anyhow::Result<()> {
         .unwrap_err()
         .status;
     assert_eq!(status, 401);
-
     Ok(())
 }

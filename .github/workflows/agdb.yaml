@@ -22,7 +22,7 @@ jobs:
           if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb_derive/ .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
 
   agdb_analyse:
-    runs-on: ubuntu-latest
+    runs-on: rust
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     steps:
@@ -30,7 +30,7 @@ jobs:
       - run: cargo clippy --package ${{ env.PROJECT }} --package agdb_derive --all-targets --all-features -- -D warnings
 
   agdb_coverage:
-    runs-on: ubuntu-latest
+    runs-on: rust
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     steps:
@@ -40,7 +40,7 @@ jobs:
       - run: cargo llvm-cov --package ${{ env.PROJECT }} --package agdb_derive --all-features --ignore-filename-regex "agdb_derive" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
 
   agdb_format:
-    runs-on: ubuntu-latest
+    runs-on: rust
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     steps:

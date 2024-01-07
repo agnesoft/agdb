@@ -12,13 +12,13 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: rust
     steps:
       - uses: actions/checkout@v3
       - run: cargo build --package agdb_derive --package agdb --all-features --release
 
   new_version:
-    runs-on: ubuntu-latest
+    runs-on: rust
     outputs:
       new_version: ${{ steps.new_version.outputs.new_version }}
     steps:
@@ -32,7 +32,7 @@ jobs:
           echo "Current version: ${CURRENT_VERSION}"
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: rust
     needs: [build, new_version]
     if: needs.new_version.outputs.new_version != ''
     steps:
@@ -48,7 +48,7 @@ jobs:
           generate_release_notes: true
 
   publish:
-    runs-on: ubuntu-latest
+    runs-on: rust
     needs: [release, new_version]
     if: needs.new_version.outputs.new_version != ''
     steps:

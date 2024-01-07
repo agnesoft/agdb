@@ -29,19 +29,16 @@ impl<T: HttpClient> AgdbApi<T> {
         }
     }
 
-    pub async fn admin_db_add(
-        &self,
-        owner: &str,
-        db: &str,
-        db_type: DbType,
-    ) -> AgdbApiResult<(u16, ())> {
-        self.client
+    pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!("/admin/db/{owner}/{db}/add?db_type={db_type}")),
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn admin_db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
@@ -251,24 +248,28 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<(u16, ())> {
-        self.client
+    pub async fn db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!("/db/{owner}/{db}/add?db_type={db_type}")),
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
-    pub async fn db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, ())> {
-        self.client
+    pub async fn db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!("/db/{owner}/{db}/backup")),
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn db_copy(
@@ -277,8 +278,9 @@ impl<T: HttpClient> AgdbApi<T> {
         db: &str,
         new_owner: &str,
         new_db: &str,
-    ) -> AgdbApiResult<(u16, ())> {
-        self.client
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!(
                     "/db/{owner}/{db}/copy?new_name={new_owner}/{new_db}"
@@ -286,7 +288,8 @@ impl<T: HttpClient> AgdbApi<T> {
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn db_delete(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
@@ -336,8 +339,9 @@ impl<T: HttpClient> AgdbApi<T> {
         db: &str,
         new_owner: &str,
         new_db: &str,
-    ) -> AgdbApiResult<(u16, ())> {
-        self.client
+    ) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!(
                     "/db/{owner}/{db}/reename?new_name={new_owner}/{new_db}"
@@ -345,17 +349,20 @@ impl<T: HttpClient> AgdbApi<T> {
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
-    pub async fn db_restore(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, ())> {
-        self.client
+    pub async fn db_restore(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
             .post::<(), ()>(
                 &self.url(&format!("/db/{owner}/{db}/restore")),
                 &None,
                 &self.token,
             )
-            .await
+            .await?
+            .0)
     }
 
     pub async fn db_user_add(

@@ -11,7 +11,7 @@ async fn add() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server.api.admin_db_add(owner, db, DbType::File).await?;
-    assert_eq!(status.0, 201);
+    assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     Ok(())
 }
@@ -24,11 +24,11 @@ async fn add_same_name_with_previous_backup() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server.api.admin_db_add(owner, db, DbType::Mapped).await?;
-    assert_eq!(status.0, 201);
+    assert_eq!(status, 201);
     server.api.admin_db_backup(owner, db).await?;
     server.api.admin_db_delete(owner, db).await?;
     let status = server.api.admin_db_add(owner, db, DbType::Mapped).await?;
-    assert_eq!(status.0, 201);
+    assert_eq!(status, 201);
     server.api.user_login(owner, owner).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list[0].backup, 0);
@@ -43,7 +43,7 @@ async fn db_already_exists() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server.api.admin_db_add(owner, db, DbType::File).await?;
-    assert_eq!(status.0, 201);
+    assert_eq!(status, 201);
     let status = server
         .api
         .admin_db_add(owner, db, DbType::File)

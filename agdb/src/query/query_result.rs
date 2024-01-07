@@ -45,8 +45,43 @@ impl<T: DbUserValue> TryInto<Vec<T>> for QueryResult {
 #[cfg(test)]
 mod test {
     use super::*;
+
     #[test]
     fn derived_from_debug() {
         format!("{:?}", QueryResult::default());
+    }
+
+    #[test]
+    fn derived_from_clone() {
+        let result = QueryResult::default();
+        let other = result.clone();
+        assert_eq!(result, other);
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        assert_eq!(QueryResult::default(), QueryResult::default());
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
+        let result = QueryResult {
+            result: 0,
+            elements: vec![],
+        };
+        let other = QueryResult {
+            result: 1,
+            elements: vec![],
+        };
+
+        assert!(result < other);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        assert_eq!(
+            QueryResult::default().cmp(&QueryResult::default()),
+            std::cmp::Ordering::Equal
+        );
     }
 }

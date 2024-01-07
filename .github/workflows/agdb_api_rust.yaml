@@ -37,7 +37,6 @@ jobs:
       - uses: actions/checkout@v3
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo --version
       - run: cargo llvm-cov --package ${{ env.PROJECT }} --package agdb_server --all-features --ignore-filename-regex "agdb(.|..)src|agdb_server|agdb_derive" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
 
   agdb_api_rust_format:

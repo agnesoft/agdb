@@ -85,6 +85,7 @@ mod tests {
             }
         );
     }
+
     #[test]
     fn derived_from_partial_eq() {
         assert_eq!(
@@ -97,5 +98,27 @@ mod tests {
                 value: DbValue::I64(0)
             }
         );
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
+        let element = DbKeyValue {
+            key: DbValue::I64(0),
+            value: DbValue::I64(0),
+        };
+        let other = DbKeyValue {
+            key: DbValue::I64(0),
+            value: DbValue::I64(0),
+        };
+        assert!(element <= other);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        let element = DbKeyValue {
+            key: DbValue::I64(0),
+            value: DbValue::I64(0),
+        };
+        assert_eq!(element.cmp(&element), std::cmp::Ordering::Equal);
     }
 }

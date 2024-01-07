@@ -52,4 +52,44 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn derived_from_clone() {
+        let element = DbElement {
+            id: DbId(0),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        let other = element.clone();
+        assert_eq!(element, other);
+    }
+
+    #[test]
+    fn derived_from_partial_ord() {
+        let element = DbElement {
+            id: DbId(0),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        let other = DbElement {
+            id: DbId(1),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        assert!(element < other);
+    }
+
+    #[test]
+    fn derived_from_ord() {
+        let element = DbElement {
+            id: DbId(0),
+            from: None,
+            to: None,
+            values: vec![],
+        };
+        assert_eq!(element.cmp(&element), std::cmp::Ordering::Equal);
+    }
 }

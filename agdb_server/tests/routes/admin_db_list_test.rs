@@ -32,7 +32,6 @@ async fn db_list() -> anyhow::Result<()> {
         size: 2632,
         backup: 0,
     }));
-
     Ok(())
 }
 

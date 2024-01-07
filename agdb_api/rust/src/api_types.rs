@@ -8,7 +8,9 @@ use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(
+    Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum DbType {
     #[default]
@@ -17,13 +19,15 @@ pub enum DbType {
     File,
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbUser {
     pub user: String,
     pub role: DbUserRole,
 }
 
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[derive(
+    Clone, Copy, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
     #[default]
@@ -44,7 +48,7 @@ pub struct Queries(pub Vec<QueryType>);
 #[derive(Serialize, ToSchema)]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
-#[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ServerDatabase {
     pub name: String,
     pub db_type: DbType,
@@ -64,7 +68,7 @@ pub struct UserLogin {
     pub password: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserStatus {
     pub name: String,
 }

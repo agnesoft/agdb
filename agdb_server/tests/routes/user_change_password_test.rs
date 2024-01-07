@@ -1,83 +1,66 @@
-use crate::ChangePassword;
 use crate::TestServer;
-use crate::UserLogin;
-use crate::NO_TOKEN;
+use crate::ADMIN;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let credentials = Some(UserLogin {
-        username: &user.name,
-        password: "password456",
-    });
-    let change: Option<ChangePassword> = Some(ChangePassword {
-        password: &user.name,
-        new_password: "password456",
-    });
-    assert_eq!(
-        server
-            .put("/user/change_password", &change, &user.token)
-            .await?,
-        201
-    );
-    assert_eq!(
-        server.post("/user/login", &credentials, NO_TOKEN).await?.0,
-        200
-    );
-
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .user_change_password(owner, "password123")
+        .await?;
+    assert_eq!(status, 201);
+    let status = server.api.user_login(owner, "password123").await?;
+    assert_eq!(status, 200);
     Ok(())
 }
 
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let change = Some(ChangePassword {
-        password: "bad_password",
-        new_password: "password456",
-    });
-    assert_eq!(
-        server
-            .put("/user/change_password", &change, &user.token)
-            .await?,
-        401
-    );
-
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .user_change_password("bad_password", "password123")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }
 
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = server.init_user().await?;
-    let change = Some(ChangePassword {
-        password: &user.name,
-        new_password: "pswd",
-    });
-    assert_eq!(
-        server
-            .put("/user/change_password", &change, &user.token)
-            .await?,
-        461
-    );
-
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .user_change_password(owner, "pswd")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 461);
     Ok(())
 }
 
 #[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let change = Some(ChangePassword {
-        password: "password123",
-        new_password: "password456",
-    });
-    assert_eq!(
-        server
-            .put("/user/change_password", &change, NO_TOKEN)
-            .await?,
-        401
-    );
-
+    let server = TestServer::new().await?;
+    let status = server
+        .api
+        .user_change_password("pswd", "pswd")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
     Ok(())
 }

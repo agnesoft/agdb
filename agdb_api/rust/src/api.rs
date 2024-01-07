@@ -344,7 +344,7 @@ impl<T: HttpClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!(
-                    "/db/{owner}/{db}/reename?new_name={new_owner}/{new_db}"
+                    "/db/{owner}/{db}/rename?new_name={new_owner}/{new_db}"
                 )),
                 &None,
                 &self.token,

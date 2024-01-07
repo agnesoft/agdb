@@ -103,11 +103,10 @@ async fn invalid() -> anyhow::Result<()> {
 async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
-    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
-        .admin_db_rename(owner, db, owner, "not_found")
+        .admin_db_rename(owner, "db", owner, "not_found")
         .await
         .unwrap_err()
         .status;

@@ -830,14 +830,31 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn save_token(&self, user: DbId, token: &str) -> ServerResult {
-        self.db_mut()?.exec_mut(
-            &QueryBuilder::insert()
-                .values_uniform(vec![("token", token).into()])
-                .ids(user)
-                .query(),
-        )?;
-        Ok(())
+    pub(crate) fn save_token(&self, user: DbId, token: String) -> ServerResult<String> {
+        self.db_mut()?.transaction_mut(|t| {
+            let existing = t
+                .exec(
+                    &QueryBuilder::select()
+                        .values(vec!["token".into()])
+                        .ids(user)
+                        .query(),
+                )?
+                .elements[0]
+                .values[0]
+                .value
+                .to_string();
+            if existing.is_empty() {
+                t.exec_mut(
+                    &QueryBuilder::insert()
+                        .values_uniform(vec![("token", &token).into()])
+                        .ids(user)
+                        .query(),
+                )?;
+                Ok(token.clone())
+            } else {
+                Ok(existing)
+            }
+        })
     }
 
     pub(crate) fn save_user(&self, user: ServerUser) -> ServerResult {

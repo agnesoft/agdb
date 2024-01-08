@@ -1,8 +1,5 @@
 use crate::TestServer;
-use crate::ADMIN;
-use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
-use std::process::Command;
 
 #[tokio::test]
 async fn error() -> anyhow::Result<()> {
@@ -68,12 +65,6 @@ async fn openapi() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_config_reuse() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_shutdown().await?;
-
-    assert!(server.process.wait()?.success());
-    server.process = Command::cargo_bin("agdb_server")?
-        .current_dir(&server.dir)
-        .spawn()?;
+    server.restart().await?;
     Ok(())
 }

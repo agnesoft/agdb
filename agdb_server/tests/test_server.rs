@@ -10,6 +10,7 @@ use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
 use std::sync::atomic::Ordering;
+use std::sync::RwLock;
 use std::time::Duration;
 
 const BINARY: &str = "agdb_server";
@@ -26,16 +27,25 @@ const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
+static MUTEX: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+static INSTANCES: AtomicU16 = AtomicU16::new(0);
+static SERVER: RwLock<Option<TestServerImpl>> = RwLock::new(None);
 
 pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
+    pub port: u16,
     pub api: AgdbApi<ReqwestClient>,
+}
+
+struct TestServerImpl {
+    pub dir: String,
+    pub data_dir: String,
     pub port: u16,
     pub process: Child,
 }
 
-impl TestServer {
+impl TestServerImpl {
     pub async fn new() -> anyhow::Result<Self> {
         let port = PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16;
         let dir = format!("{BINARY}.{port}.test");
@@ -57,7 +67,7 @@ impl TestServer {
         serde_yaml::to_writer(file, &config)?;
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
-        let api = AgdbApi::new(ReqwestClient::new(), &Self::url_base(), port);
+        let api = AgdbApi::new(ReqwestClient::new(), &TestServer::url_base(), port);
 
         for _ in 0..RETRY_ATTEMPS {
             if let Ok(status) = api.status().await {
@@ -65,7 +75,6 @@ impl TestServer {
                     return Ok(Self {
                         dir,
                         data_dir,
-                        api,
                         port,
                         process,
                     });
@@ -76,26 +85,6 @@ impl TestServer {
         }
 
         anyhow::bail!("Failed to start server")
-    }
-
-    pub fn next_user_name(&mut self) -> String {
-        format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed))
-    }
-
-    pub fn next_db_name(&mut self) -> String {
-        format!("db{}", COUNTER.fetch_add(1, Ordering::Relaxed))
-    }
-
-    pub fn url(&self, uri: &str) -> String {
-        format!("{}:{}/api/v1{uri}", Self::url_base(), self.port)
-    }
-
-    fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
-        if Path::new(dir).exists() {
-            std::fs::remove_dir_all(dir)?;
-        }
-
-        Ok(())
     }
 
     fn shutdown_server(&mut self) -> anyhow::Result<()> {
@@ -111,7 +100,11 @@ impl TestServer {
         std::thread::spawn(move || -> anyhow::Result<()> {
             let client = reqwest::blocking::Client::new();
             let token: String = client
-                .post(format!("{}:{}/api/v1/user/login", Self::url_base(), port))
+                .post(format!(
+                    "{}:{}/api/v1/user/login",
+                    TestServer::url_base(),
+                    port
+                ))
                 .json(&admin)
                 .send()?
                 .json()?;
@@ -119,7 +112,7 @@ impl TestServer {
             client
                 .post(format!(
                     "{}:{}/api/v1/admin/shutdown",
-                    Self::url_base(),
+                    TestServer::url_base(),
                     port
                 ))
                 .bearer_auth(token)
@@ -142,14 +135,85 @@ impl TestServer {
         Ok(())
     }
 
+    fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
+        if Path::new(dir).exists() {
+            std::fs::remove_dir_all(dir)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl TestServer {
+    pub async fn new() -> anyhow::Result<Self> {
+        let _guard = MUTEX
+            .get_or_init(|| tokio::sync::Mutex::new(()))
+            .lock()
+            .await;
+        INSTANCES.fetch_add(1, Ordering::Relaxed);
+
+        if SERVER.read().unwrap().is_none() {
+            println!("CREATING");
+            *SERVER.write().unwrap() = Some(TestServerImpl::new().await?);
+        }
+
+        let read_lock = SERVER.read().unwrap();
+        let server = read_lock.as_ref().unwrap();
+
+        Ok(Self {
+            api: AgdbApi::new(ReqwestClient::new(), &Self::url_base(), server.port),
+            dir: server.dir.clone(),
+            port: server.port,
+            data_dir: server.data_dir.clone(),
+        })
+    }
+
+    pub fn next_user_name(&mut self) -> String {
+        format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+
+    pub fn next_db_name(&mut self) -> String {
+        format!("db{}", COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+
+    pub async fn restart(&mut self) -> anyhow::Result<()> {
+        let _guard = MUTEX
+            .get_or_init(|| tokio::sync::Mutex::new(()))
+            .lock()
+            .await;
+        *SERVER.write().unwrap() = Some(TestServerImpl::new().await?);
+        Ok(())
+    }
+
+    pub fn url(&self, uri: &str) -> String {
+        format!("{}:{}/api/v1{uri}", Self::url_base(), self.port)
+    }
+
     fn url_base() -> String {
         format!("{PROTOCOL}://{HOST}")
     }
 }
 
-impl Drop for TestServer {
+impl Drop for TestServerImpl {
     fn drop(&mut self) {
         Self::shutdown_server(self).unwrap();
         Self::remove_dir_if_exists(&self.dir).unwrap();
+    }
+}
+
+impl Drop for TestServer {
+    fn drop(&mut self) {
+        let mutex = MUTEX.get_or_init(|| tokio::sync::Mutex::new(()));
+        let _guard = loop {
+            if let Ok(g) = mutex.try_lock() {
+                break g;
+            }
+        };
+        let instances = INSTANCES.fetch_sub(1, Ordering::Relaxed) - 1;
+
+        if instances == 0 {
+            println!("DROPPING");
+            *SERVER.write().unwrap() = None;
+        }
     }
 }

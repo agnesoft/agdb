@@ -35,8 +35,7 @@ pub(crate) async fn login(
     let token = if user.token.is_empty() {
         let token_uuid = Uuid::new_v4();
         let token = token_uuid.to_string();
-        db_pool.save_token(user.db_id.unwrap(), &token)?;
-        token
+        db_pool.save_token(user.db_id.unwrap(), token)?
     } else {
         user.token
     };

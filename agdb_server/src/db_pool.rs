@@ -709,16 +709,18 @@ impl DbPool {
     pub(crate) fn remove_user(&self, username: &str, config: &Config) -> ServerResult {
         let user_id = self.find_user_id(username)?;
         let dbs = self.find_user_databases(user_id)?;
-        for db in dbs.iter() {
-            self.get_pool_mut()?.remove(&db.name);
-        }
         let mut ids = dbs
-            .into_iter()
+            .iter()
             .map(|db| db.db_id.unwrap())
             .collect::<Vec<DbId>>();
         ids.push(user_id);
         self.db_mut()?
             .exec_mut(&QueryBuilder::remove().ids(ids).query())?;
+
+        for db in dbs.into_iter() {
+            self.get_pool_mut()?.remove(&db.name);
+        }
+
         let user_dir = Path::new(&config.data_dir).join(username);
         if user_dir.exists() {
             std::fs::remove_dir_all(user_dir)?;
@@ -760,7 +762,14 @@ impl DbPool {
             self.add_db_user(owner, db, new_owner, DbUserRole::Admin, user)?;
         }
 
-        let server_db = self.get_pool_mut()?.remove(&db_name).unwrap();
+        let server_db = ServerDb(
+            self.get_pool()?
+                .get(&db_name)
+                .ok_or(db_not_found(&db_name))?
+                .0
+                .clone(),
+        );
+
         server_db
             .get_mut()?
             .rename(target_name.to_string_lossy().as_ref())
@@ -770,11 +779,8 @@ impl DbPool {
                     &format!("db rename error: {}", e.description),
                 )
             })?;
-        self.get_pool_mut()?.insert(new_name.to_string(), server_db);
-        database.name = new_name.to_string();
 
         let backup_path = db_backup_file(owner, db, config);
-
         if backup_path.exists() {
             let new_backup_path = db_backup_file(new_owner, new_db, config);
             let backups_dir = new_backup_path.parent().unwrap();
@@ -782,8 +788,13 @@ impl DbPool {
             std::fs::rename(backup_path, new_backup_path)?;
         }
 
+        self.get_pool_mut()?.insert(new_name.to_string(), server_db);
+
+        database.name = new_name.to_string();
         self.db_mut()?
             .exec_mut(&QueryBuilder::insert().element(&database).query())?;
+
+        self.get_pool_mut()?.remove(&db_name).unwrap();
 
         Ok(())
     }

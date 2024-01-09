@@ -1,5 +1,11 @@
 use crate::TestServer;
+use crate::TestServerImpl;
+use crate::ADMIN;
+use agdb_api::AgdbApi;
+use agdb_api::ReqwestClient;
+use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
+use std::process::Command;
 
 #[tokio::test]
 async fn error() -> anyhow::Result<()> {
@@ -64,7 +70,13 @@ async fn openapi() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn db_config_reuse() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    server.restart().await?;
+    let mut server = TestServerImpl::new().await?;
+    let mut client = AgdbApi::new(ReqwestClient::new(), &TestServer::url_base(), server.port);
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_shutdown().await?;
+    assert!(server.process.wait()?.success());
+    server.process = Command::cargo_bin("agdb_server")?
+        .current_dir(&server.dir)
+        .spawn()?;
     Ok(())
 }

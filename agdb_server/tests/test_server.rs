@@ -10,7 +10,6 @@ use std::process::Child;
 use std::process::Command;
 use std::sync::atomic::AtomicU16;
 use std::sync::atomic::Ordering;
-use std::sync::RwLock;
 use std::time::Duration;
 
 const BINARY: &str = "agdb_server";
@@ -28,8 +27,8 @@ const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 static MUTEX: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
-static INSTANCES: AtomicU16 = AtomicU16::new(0);
-static SERVER: RwLock<Option<TestServerImpl>> = RwLock::new(None);
+static SERVER: std::sync::OnceLock<tokio::sync::RwLock<Option<TestServerImpl>>> =
+    std::sync::OnceLock::new();
 
 pub struct TestServer {
     pub dir: String,
@@ -43,6 +42,7 @@ struct TestServerImpl {
     pub data_dir: String,
     pub port: u16,
     pub process: Child,
+    pub instances: u16,
 }
 
 impl TestServerImpl {
@@ -77,6 +77,7 @@ impl TestServerImpl {
                         data_dir,
                         port,
                         process,
+                        instances: 1,
                     });
                 }
             }
@@ -150,15 +151,16 @@ impl TestServer {
             .get_or_init(|| tokio::sync::Mutex::new(()))
             .lock()
             .await;
-        INSTANCES.fetch_add(1, Ordering::Relaxed);
+        let global_server = SERVER.get_or_init(|| tokio::sync::RwLock::new(None));
+        let mut server_guard = global_server.try_write().unwrap();
 
-        if SERVER.read().unwrap().is_none() {
-            println!("CREATING");
-            *SERVER.write().unwrap() = Some(TestServerImpl::new().await?);
+        if server_guard.is_none() {
+            *server_guard = Some(TestServerImpl::new().await?);
+        } else {
+            server_guard.as_mut().unwrap().instances += 1;
         }
 
-        let read_lock = SERVER.read().unwrap();
-        let server = read_lock.as_ref().unwrap();
+        let server = server_guard.as_ref().unwrap();
 
         Ok(Self {
             api: AgdbApi::new(ReqwestClient::new(), &Self::url_base(), server.port),
@@ -169,21 +171,21 @@ impl TestServer {
     }
 
     pub fn next_user_name(&mut self) -> String {
-        format!("db_user{}", COUNTER.fetch_add(1, Ordering::Relaxed))
+        format!("db_user{}", COUNTER.fetch_add(1, Ordering::SeqCst))
     }
 
     pub fn next_db_name(&mut self) -> String {
-        format!("db{}", COUNTER.fetch_add(1, Ordering::Relaxed))
+        format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
     }
 
-    pub async fn restart(&mut self) -> anyhow::Result<()> {
-        let _guard = MUTEX
-            .get_or_init(|| tokio::sync::Mutex::new(()))
-            .lock()
-            .await;
-        *SERVER.write().unwrap() = Some(TestServerImpl::new().await?);
-        Ok(())
-    }
+    // pub async fn restart(&mut self) -> anyhow::Result<()> {
+    //     let _guard = MUTEX
+    //         .get_or_init(|| tokio::sync::Mutex::new(()))
+    //         .lock()
+    //         .await;
+    //     *SERVER.write().await = Some(TestServerImpl::new().await?);
+    //     Ok(())
+    // }
 
     pub fn url(&self, uri: &str) -> String {
         format!("{}:{}/api/v1{uri}", Self::url_base(), self.port)
@@ -203,17 +205,20 @@ impl Drop for TestServerImpl {
 
 impl Drop for TestServer {
     fn drop(&mut self) {
-        let mutex = MUTEX.get_or_init(|| tokio::sync::Mutex::new(()));
+        let mutex = MUTEX.get().unwrap();
         let _guard = loop {
             if let Ok(g) = mutex.try_lock() {
                 break g;
             }
         };
-        let instances = INSTANCES.fetch_sub(1, Ordering::Relaxed) - 1;
+        let global_server = SERVER.get().unwrap();
+        let mut server_guard = global_server.try_write().unwrap();
+        let server = server_guard.as_mut().unwrap();
 
-        if instances == 0 {
-            println!("DROPPING");
-            *SERVER.write().unwrap() = None;
+        if server.instances == 1 {
+            *server_guard = None;
+        } else {
+            server.instances -= 1;
         }
     }
 }

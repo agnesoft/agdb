@@ -37,6 +37,13 @@ async fn remove_with_other() -> anyhow::Result<()> {
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
         .await?;
     server.api.admin_user_remove(owner).await?;
+    assert!(!server
+        .api
+        .admin_user_list()
+        .await?
+        .1
+        .iter()
+        .any(|u| u.name == *owner));
     assert!(!Path::new(&server.data_dir).join(owner).exists());
     server.api.user_login(user, user).await?;
     assert!(server.api.db_list().await?.1.is_empty());

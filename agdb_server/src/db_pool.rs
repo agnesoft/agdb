@@ -825,7 +825,8 @@ impl DbPool {
         let current_path = db_file(owner, db, config);
         let backup_temp = db_backup_dir(owner, config).join(db);
 
-        self.get_pool_mut()?.remove(&db_name);
+        let mut pool = self.get_pool_mut()?;
+        pool.remove(&db_name);
         std::fs::rename(&current_path, &backup_temp)?;
         std::fs::rename(&backup_path, &current_path)?;
         std::fs::rename(backup_temp, backup_path)?;
@@ -834,7 +835,7 @@ impl DbPool {
             database.db_type,
             current_path.to_string_lossy()
         ))?;
-        self.get_pool_mut()?.insert(db_name, server_db);
+        pool.insert(db_name, server_db);
         database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         self.save_db(database)?;
 

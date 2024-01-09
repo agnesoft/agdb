@@ -178,15 +178,6 @@ impl TestServer {
         format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
     }
 
-    // pub async fn restart(&mut self) -> anyhow::Result<()> {
-    //     let _guard = MUTEX
-    //         .get_or_init(|| tokio::sync::Mutex::new(()))
-    //         .lock()
-    //         .await;
-    //     *SERVER.write().await = Some(TestServerImpl::new().await?);
-    //     Ok(())
-    // }
-
     pub fn url(&self, uri: &str) -> String {
         format!("{}:{}/api/v1{uri}", Self::url_base(), self.port)
     }

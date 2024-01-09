@@ -26,7 +26,7 @@ mod db_rename_test;
 mod db_user_add_test;
 mod db_user_list;
 mod db_user_remove_test;
-mod server_test;
+mod misc_routes;
 mod user_change_password_test;
 mod user_login_test;
 mod user_logout_test;

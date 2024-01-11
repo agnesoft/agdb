@@ -7,5 +7,6 @@ members = [
     "agdb_server",
     "agdb_api/rust",
     "examples/app_db",
+    "examples/indexes",
     "examples/strongly_typed",
 ]

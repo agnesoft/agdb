@@ -5,7 +5,7 @@ on:
     branches: ["main"]
 
 env:
-  RUST_PROJECTS: "-p examples_app_db -p examples_strongly_typed"
+  RUST_PROJECTS: "-p examples_app_db -p examples_indexes -p examples_strongly_typed"
 
 jobs:
   diff:

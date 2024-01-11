@@ -1,0 +1,7 @@
+[package]
+name = "examples_app_db_derived"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+agdb = { version = "0.5.2", path = "../../agdb" }

@@ -1,5 +1,5 @@
 [package]
-name = "examples_app_db_derived"
+name = "examples_strongly_typed"
 edition = "2021"
 license = "Apache-2.0"
 

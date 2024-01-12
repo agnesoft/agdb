@@ -17,7 +17,8 @@ fn main() -> Result<(), QueryError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
 
-    // Create two indexes, one for username and one for token.
+    // Create two indexes, one for username and one for token. They can just as well
+    // be craeted later and will index all existing data as well.
     db.exec_mut(&QueryBuilder::insert().index("username").query())?;
     db.exec_mut(&QueryBuilder::insert().index("token").query())?;
 

@@ -10,5 +10,6 @@ members = [
     "examples/indexes",
     "examples/joins",
     "examples/schema_migration",
+    "examples/server_client",
     "examples/strong_types",
 ]

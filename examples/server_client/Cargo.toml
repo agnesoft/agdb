@@ -1,0 +1,10 @@
+[package]
+name = "examples_server_client"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+agdb = { version = "0.5.2", path = "../../agdb" }
+agdb_api = { path = "../../agdb_api/rust", features = ["reqwest"] }
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0"

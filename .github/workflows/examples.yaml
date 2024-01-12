@@ -19,7 +19,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- agdb/ agdb_derive/ agdb_server/ agdb_api/ .github/workflows/examples.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
+          if [[ "$(git diff origin/main --name-only -- agdb/ agdb_derive/ agdb_server/ agdb_api/ examples/ .github/workflows/examples.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
 
   agdb_examples_analyse:
     runs-on: ubuntu-latest

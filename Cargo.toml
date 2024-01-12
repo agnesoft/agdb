@@ -9,5 +9,6 @@ members = [
     "examples/app_db",
     "examples/indexes",
     "examples/joins",
-    "examples/strongly_typed",
+    "examples/schema_migration",
+    "examples/strong_types",
 ]

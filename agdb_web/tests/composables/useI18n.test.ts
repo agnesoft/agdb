@@ -3,8 +3,8 @@ import useI18n from "@/composables/useI18n";
 
 describe("useI18n", () => {
     const i18n = useI18n();
-    beforeAll(async () => {
-        await i18n.initI18n();
+    beforeAll(() => {
+        i18n.initI18n();
     });
 
     beforeEach(() => {
@@ -20,8 +20,8 @@ describe("useI18n", () => {
         expect(i18n.localeExists("fr")).toBe(false);
     });
 
-    it("returns the correct current locale", async () => {
-        await i18n.setLocaleCode("cs");
+    it("returns the correct current locale", () => {
+        i18n.setLocaleCode("cs");
         expect(i18n.currentLocale.value?.iso).toEqual("cs-CZ");
     });
 
@@ -40,21 +40,21 @@ describe("useI18n", () => {
         expect(i18n.getLocalePath("/en/about")).toBe("/about");
     });
 
-    it("returns the correct locale path for cs lang", async () => {
-        await i18n.setLocaleCode("cs");
+    it("returns the correct locale path for cs lang", () => {
+        i18n.setLocaleCode("cs");
         expect(i18n.getLocalePath("/")).toBe("/cs/");
         expect(i18n.getLocalePath("/about")).toBe("/cs/about");
         expect(i18n.getLocalePath("/cs")).toBe("/cs");
         expect(i18n.getLocalePath("/cs/about")).toBe("/cs/about");
     });
 
-    it("does not change the locale code if it is the same", async () => {
-        await i18n.setLocaleCode("en");
+    it("does not change the locale code if it is the same", () => {
+        i18n.setLocaleCode("en");
         expect(i18n.localeCode.value).toBe("en");
     });
 
-    it("does not change the locale code if it does not exist", async () => {
-        await i18n.setLocaleCode("fr");
+    it("does not change the locale code if it does not exist", () => {
+        i18n.setLocaleCode("fr");
         expect(i18n.localeCode.value).toBe("en");
     });
 
@@ -62,8 +62,8 @@ describe("useI18n", () => {
         expect(i18n.t("url.about")).toBe("/about");
     });
 
-    it("loads the correct messages for cs lang", async () => {
-        await i18n.setLocaleCode("cs");
+    it("loads the correct messages for cs lang", () => {
+        i18n.setLocaleCode("cs");
         expect(i18n.t("url.about")).toBe("/o-agdb");
     });
 

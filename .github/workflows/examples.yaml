@@ -29,6 +29,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo clippy ${{ env.RUST_PROJECTS }} --all-targets --all-features -- -D warnings
+      - run: |
+        cd ../../examples/server_client_typescript
+        npm ci
+        npm run lint
 
   agdb_examples_build:
     runs-on: ubuntu-latest
@@ -54,3 +58,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo fmt ${{ env.RUST_PROJECTS }} --check
+      - run: |
+        cd ../../examples/server_client_typescript
+        npm ci
+        npm run format:check

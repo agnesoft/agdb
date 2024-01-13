@@ -1,6 +1,5 @@
 import { shallowMount } from "@vue/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-// import { useRoute } from "nuxt/app";
 import slug from "@/pages/[...slug].vue";
 
 describe("[...slug]", () => {

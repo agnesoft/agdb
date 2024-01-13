@@ -14,7 +14,4 @@ export default {
             name: "Čeština",
         },
     ],
-    langDir: "locales/",
-    fallbackLocale: "en",
-    strategy: "prefix_and_default",
 };

@@ -1,10 +1,14 @@
 {
   "name": "agdb_api",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npx copyfiles -f src/schema.d.ts dist/",
     "test": "bash test.sh",
     "lint": "eslint --max-warnings=0 . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "format": "prettier --write src/ tests/",
@@ -20,6 +24,7 @@
     "@types/node": "^20.10.5",
     "@typescript-eslint/parser": "^6.16.0",
     "@vitest/coverage-v8": "^1.1.0",
+    "copyfiles": "^2.4.1",
     "eslint": "^8.56.0",
     "prettier": "^3.1.1",
     "typescript": "^5.3.3",

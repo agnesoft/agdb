@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "agdb_server",
-    "description": "",
+    "description": "Agnesoft Graph Database Server",
     "license": {
       "name": "Apache-2.0"
     },

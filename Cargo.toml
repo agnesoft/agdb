@@ -6,4 +6,10 @@ members = [
     "agdb_derive",
     "agdb_server",
     "agdb_api/rust",
+    "examples/app_db",
+    "examples/indexes",
+    "examples/joins",
+    "examples/schema_migration",
+    "examples/server_client_rust",
+    "examples/strong_types",
 ]

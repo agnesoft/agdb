@@ -1,0 +1,22 @@
+{
+  "name": "examples_server_client",
+  "version": "0.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier main.ts --write",
+    "format:check": "prettier --check main.ts",
+    "lint": "eslint --max-warnings=0 main.ts",
+    "start": "node main.js"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^6.16.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "agdb_api": "file:../../agdb_api/typescript"
+  }
+}

@@ -2,8 +2,22 @@ import type { Components } from "./schema";
 
 type QueryId = number | string;
 
-function intoQueryIds(ids: QueryId[]): Components.Schemas.QueryId[] {
-    return ids.map((id) => intoQueryId(id));
+function intoQueryIds(
+    ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+): Components.Schemas.QueryIds {
+    if ("Search" in ids) {
+        return ids;
+    } else if (Array.isArray(ids)) {
+        return { Ids: ids.map((id) => intoQueryId(id)) };
+    } else if ("result" in ids) {
+        return {
+            Ids: ids.elements.map((elem) => {
+                return { Id: elem.id };
+            }),
+        };
+    } else {
+        throw new Error("invalid search query");
+    }
 }
 
 function intoQueryId(id: QueryId): Components.Schemas.QueryId {
@@ -11,14 +25,6 @@ function intoQueryId(id: QueryId): Components.Schemas.QueryId {
         return { Id: id };
     } else {
         return { Alias: id };
-    }
-}
-
-function intoSearchQuery(query: Components.Schemas.QueryType): Components.Schemas.SearchQuery {
-    if ("Search" in query) {
-        return query as unknown as Components.Schemas.SearchQuery;
-    } else {
-        throw new Error("invalid search query");
     }
 }
 
@@ -175,13 +181,10 @@ class InsertEdgesFromBuilder {
         this.data = query;
     }
 
-    to(ids: QueryId[] | Components.Schemas.QueryType): InsertEdgesToBuilder {
-        if (Array.isArray(ids)) {
-            this.data.from = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data.from = { Search: intoSearchQuery(ids) };
-        }
-
+    to(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): InsertEdgesToBuilder {
+        this.data.to = intoQueryIds(ids);
         return new InsertEdgesToBuilder(this.data);
     }
 }
@@ -198,15 +201,10 @@ class InsertEdgesBuilder {
         };
     }
 
-    from(ids: QueryId[] | Components.Schemas.QueryType): InsertEdgesFromBuilder {
-        if (Array.isArray(ids)) {
-            this.data.from = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data.from = {
-                Search: intoSearchQuery(ids),
-            };
-        }
-
+    from(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): InsertEdgesFromBuilder {
+        this.data.from = intoQueryIds(ids);
         return new InsertEdgesFromBuilder(this.data);
     }
 }
@@ -230,12 +228,10 @@ class InsertAliasesBuilder {
         this.data = { aliases: aliases, ids: { Ids: [] } };
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): InsertAliasesIdsBuilder {
-        if (Array.isArray(ids)) {
-            this.data.ids = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data.ids = { Search: intoSearchQuery(ids) };
-        }
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): InsertAliasesIdsBuilder {
+        this.data.ids = intoQueryIds(ids);
         return new InsertAliasesIdsBuilder(this.data);
     }
 }
@@ -259,12 +255,10 @@ class InsertValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): InsertValuesIdsBuilder {
-        if (Array.isArray(ids)) {
-            this.data.ids = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data.ids = { Search: intoSearchQuery(ids) };
-        }
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): InsertValuesIdsBuilder {
+        this.data.ids = intoQueryIds(ids);
         return new InsertValuesIdsBuilder(this.data);
     }
 }
@@ -393,13 +387,10 @@ class RemoveValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): RemoveValuesIdsBuilder {
-        if (Array.isArray(ids)) {
-            this.data.ids = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data.ids = { Search: intoSearchQuery(ids) };
-        }
-
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): RemoveValuesIdsBuilder {
+        this.data.ids = intoQueryIds(ids);
         return new RemoveValuesIdsBuilder(this.data);
     }
 }
@@ -421,11 +412,13 @@ class RemoveBuilder {
         return new RemoveAliasesBuilder(aliases);
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): RemoveIdsBuilder {
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): RemoveIdsBuilder {
         if (Array.isArray(ids)) {
-            return new RemoveIdsBuilder({ Ids: intoQueryIds(ids) });
+            return new RemoveIdsBuilder(intoQueryIds(ids));
         } else {
-            return new RemoveIdsBuilder({ Search: intoSearchQuery(ids) });
+            return new RemoveIdsBuilder(intoQueryIds(ids));
         }
     }
 
@@ -459,11 +452,13 @@ class SelectAliasesBuilder {
         };
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectAliasesIdsBuilder {
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): SelectAliasesIdsBuilder {
         if (Array.isArray(ids)) {
-            return new SelectAliasesIdsBuilder({ Ids: intoQueryIds(ids) });
+            return new SelectAliasesIdsBuilder(intoQueryIds(ids));
         } else {
-            return new SelectAliasesIdsBuilder({ Search: intoSearchQuery(ids) });
+            return new SelectAliasesIdsBuilder(intoQueryIds(ids));
         }
     }
 
@@ -503,13 +498,10 @@ class SelectValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectValuesIdsBuilder {
-        if (Array.isArray(ids)) {
-            this.data.ids = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data.ids = { Search: intoSearchQuery(ids) };
-        }
-
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): SelectValuesIdsBuilder {
+        this.data.ids = intoQueryIds(ids);
         return new SelectValuesIdsBuilder(this.data);
     }
 }
@@ -533,13 +525,10 @@ class SelectKeysBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectKeysIdsBuilder {
-        if (Array.isArray(ids)) {
-            this.data = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data = { Search: intoSearchQuery(ids) };
-        }
-
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): SelectKeysIdsBuilder {
+        this.data = intoQueryIds(ids);
         return new SelectKeysIdsBuilder(this.data);
     }
 }
@@ -563,13 +552,10 @@ class SelectKeyCountBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectKeyCountIdsBuilder {
-        if (Array.isArray(ids)) {
-            this.data = { Ids: intoQueryIds(ids) };
-        } else {
-            this.data = { Search: intoSearchQuery(ids) };
-        }
-
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): SelectKeyCountIdsBuilder {
+        this.data = intoQueryIds(ids);
         return new SelectKeyCountIdsBuilder(this.data);
     }
 }
@@ -585,12 +571,10 @@ class SelectBuilder {
         return new SelectAliasesBuilder();
     }
 
-    ids(ids: QueryId[] | Components.Schemas.QueryType): SelectIdsBuilder {
-        if (Array.isArray(ids)) {
-            return new SelectIdsBuilder({ Ids: intoQueryIds(ids) });
-        } else {
-            return new SelectIdsBuilder({ Search: intoSearchQuery(ids) });
-        }
+    ids(
+        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ): SelectIdsBuilder {
+        return new SelectIdsBuilder(intoQueryIds(ids));
     }
 
     indexes(): SelectIndexesBuilder {
@@ -741,7 +725,7 @@ class SearchWhereBuilder {
 
     ids(ids: QueryId[]): SearchWhereLogicBuilder {
         return push_condition(this, {
-            data: { Ids: intoQueryIds(ids) },
+            data: { Ids: ids.map((id) => intoQueryId(id)) },
             logic: this.logic,
             modifier: this.modifier,
         });

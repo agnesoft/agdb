@@ -7,12 +7,12 @@ use serde::Serialize;
 #[allow(async_fn_in_trait)]
 pub trait HttpClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16>;
-    async fn get<T: DeserializeOwned>(
+    async fn get<T: DeserializeOwned + Send>(
         &self,
         uri: &str,
         token: &Option<String>,
     ) -> AgdbApiResult<(u16, T)>;
-    async fn post<T: Serialize, R: DeserializeOwned>(
+    async fn post<T: Serialize, R: DeserializeOwned + Send>(
         &self,
         uri: &str,
         json: &Option<T>,

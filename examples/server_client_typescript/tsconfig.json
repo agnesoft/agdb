@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "sourceMap": true,
+    "lib": ["ES2015", "DOM"],
+    "moduleResolution": "node",
+    "allowJs": true,
+    "esModuleInterop": true,
+  }
+}

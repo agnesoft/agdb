@@ -1,14 +1,13 @@
 {
-  "include": ["src/**/*", "tests/client.ts"],
   "compilerOptions": {
-      "lib": ["ES2015"],
-      "composite": true,
-      "baseUrl": ".",
-      "module": "ESNext",
-      "moduleResolution": "Bundler",
-      "types": ["node"],
-      "paths": {
-          "@/*": ["./src/*"]
-      }
-  }
+    "target": "ES5",
+    "module": "ESNext",
+    "declaration": true,
+    "outDir": "./dist",
+    "moduleResolution": "node",
+    "baseUrl": "."
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

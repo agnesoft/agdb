@@ -15,7 +15,7 @@ async fn main() -> Result<(), anyhow::Error> {
     // Requires the server to be running. Run it with `cargo run -p agdb_server`
     // from the root.
 
-    // Creates a client for the server connecting to the remote server.
+    // Creates a client connecting to the remote server.
     let mut client = agdb_api::AgdbApi::new(ReqwestClient::new(), "http://localhost", 3000);
 
     // Creates a user using default admin credentials.
@@ -51,7 +51,7 @@ async fn main() -> Result<(), anyhow::Error> {
     // Execute the first batch of queries.
     let results = client.db_exec("client", "db", &queries).await?.1;
 
-    // Prepare the second batch using result of the previous batch.
+    // Prepare the second batch using the result of the previous batch.
     let queries = vec![
         QueryBuilder::insert()
             .edges()
@@ -76,8 +76,8 @@ async fn main() -> Result<(), anyhow::Error> {
     // Execute the second batch of queries.
     let results = client.db_exec("client", "db", &queries).await?.1;
 
+    // Print the result of the second query.
     println!("User: {:?}", results[1].elements[0].id);
-
     for key_value in results[1].elements[0].values.iter() {
         println!("  {}: {}", key_value.key, key_value.value);
     }

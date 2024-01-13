@@ -1,16 +1,16 @@
-import { QueryBuilder } from "../src/query_builder";
+import { QueryBuilder } from "../src/index";
 import { describe, expect, it } from "vitest";
-import { Api } from "./client";
+import { AgdbApi } from "../src/index";
 
 describe("openapi test", () => {
-    it("insert node", async () => {
-        let client = await Api.client();
+    it("insert nodes with edges", async () => {
+        let client = await AgdbApi.client("http://localhost", 3000);
         let admin_token = await client.user_login(null, { username: "admin", password: "admin" });
-        Api.setToken(admin_token.data);
+        AgdbApi.setToken(admin_token.data);
 
         await client.admin_user_add("user1", { password: "password123" });
         let token = await client.user_login(null, { username: "user1", password: "password123" });
-        Api.setToken(token.data);
+        AgdbApi.setToken(token.data);
 
         await client.db_add({
             owner: "user1",
@@ -18,10 +18,17 @@ describe("openapi test", () => {
             db_type: "memory",
         });
 
-        let query1 = QueryBuilder.insert().nodes().count(2).query();
-        let query2 = QueryBuilder.insert().aliases(["alias1", "alias2"]).ids([1, 2]).query();
-        let res = await client.db_exec({ owner: "user1", db: "db1" }, [query1, query2]);
+        let res = await client.db_exec({ owner: "user1", db: "db1" }, [
+            QueryBuilder.insert().nodes().aliases(["alias"]).query(),
+            QueryBuilder.insert().nodes().count(2).query(),
+        ]);
 
         expect(res.status).toEqual(200);
+
+        let res2 = await client.db_exec({ owner: "user1", db: "db1" }, [
+            QueryBuilder.insert().edges().from(["alias"]).to(res.data[1]).query(),
+        ]);
+
+        expect(res2.status).toEqual(200);
     });
 });

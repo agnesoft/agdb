@@ -1,4 +1,4 @@
-import { QueryBuilder } from "../src/query_builder";
+import { QueryBuilder } from "../src/index";
 import { describe, it, expect } from "vitest";
 
 describe("insert edges", () => {

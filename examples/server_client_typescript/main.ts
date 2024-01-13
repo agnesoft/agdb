@@ -59,7 +59,7 @@ async function main() {
           .where()
           .key({ String: "username" })
           .value({ Equal: { String: "user1" } })
-          .query()
+          .query(),
       )
       .query(),
   ];

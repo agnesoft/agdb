@@ -8,11 +8,17 @@
     The graph database.
 </h3>
 <p align="center">
+    <a href="https://github.com/agnesoft/agdb/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
     <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>
     <a href="https://github.com/agnesoft/agdb/actions/workflows/release.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg" alt="release"></a>
     <a href="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg" alt="coverage"></a>
     <a href="https://codecov.io/gh/agnesoft/agdb"><img src="https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU" alt="codecov"></a>
 </p>
+<p align="center"><a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md">DB &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a> | <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; API &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a> | <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SERVER &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a> | <a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CLOUD</a></p>
+<p align="center">
+<a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="100" src="./docs/images/db.png" alt="db"></a> <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a>
+</p>
+<p align="center"><b>Full guides & bindings</b><br/><img width="40" src="./docs/images/rust.png" alt="db"> <img width="40" src="./docs/images/ts.png" alt="db"> <img width="40" src="./docs/images/js.png" alt="db"> <img width="40" src="./docs/images/python.png" alt="db"> <img width="40" src="./docs/images/java.png" alt="db"> <img width="40" src="./docs/images/c.png" alt="db"> <img width="40" src="./docs/images/cpp.png" alt="db"> <img width="40" src="./docs/images/csharp.png" alt="db"></p>
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 

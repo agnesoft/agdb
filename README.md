@@ -9,12 +9,6 @@
 </h3>
 
 <p align="center">
-<a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="100" src="./docs/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a>
-</p>
-
-<p align="center"><a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md">DB</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md">API</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md">SERVER</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md">CLOUD</a></p>
-
-<p align="center">
     <br/>
     <a href="https://github.com/agnesoft/agdb/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
     <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>
@@ -24,6 +18,12 @@
 </p>
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
+
+<p align="center">
+<a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="100" src="./docs/images/db.png" alt="db"></a> <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a>  <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a> <a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a>
+</p>
+
+<p align="center"><a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md">DB</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md">API</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md">SERVER</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md">CLOUD</a></p>
 
 <p align="center"><img width="40" src="./docs/images/rust.png" alt="db"> <img width="40" src="./docs/images/ts.png" alt="db"> <img width="40" src="./docs/images/js.png" alt="db"> <img width="40" src="./docs/images/python.png" alt="db"> <img width="40" src="./docs/images/java.png" alt="db"> <img width="40" src="./docs/images/c.png" alt="db"> <img width="40" src="./docs/images/cpp.png" alt="db"> <img width="40" src="./docs/images/csharp.png" alt="db"></p>
 

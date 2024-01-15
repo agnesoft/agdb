@@ -1,8 +1,5 @@
-<p align="center">
-    <img width="200" src="./docs/images/logo.svg" alt="agdb logo">
-</p>
 <h1 align="center">
-    agdb
+    <img width="50" src="./docs/images/logo.svg" alt="agdb logo"> agdb <img width="50" src="./docs/images/logo.svg" alt="agdb logo">
 </h1>
 <h3 align="center">
     The graph database.

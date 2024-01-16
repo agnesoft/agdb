@@ -167,14 +167,13 @@ For database concepts and primitive data types see [concepts](docs/db/concepts.m
 graph TD;
     A[Embedded or server?] --> B
     A --> C
-    B[Embedded] --> E(<a href="https://github.com/agnesoft/agdb/blob/main/docs/db/queries.md">Queries</a>)
+    B[Embedded] --> E(Queries)
     C[Client or hosting?] --> F
     C --> G
-    F[Client] --> J(<a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md">API</a>)
+    F[Client] --> J(API)
     F --> E
-    G[Hosting] --> H(<a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md">Server</a>)
-    G --> I(<a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md">Cloud</a>)
-  
+    G[Hosting] --> H(Server)
+    G --> I(Cloud)
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

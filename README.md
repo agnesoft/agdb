@@ -165,10 +165,10 @@ For database concepts and primitive data types see [concepts](docs/db/concepts.m
 
 ```mermaid
 graph TD;
-    A-->B;
+    A[Embedded or Server database?]-->B;
     A-->C;
-    B-->D;
-    C-->D;
+    B[Embedded]-->D;
+    C[Server]-->D;
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

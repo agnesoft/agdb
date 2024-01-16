@@ -164,11 +164,17 @@ For database concepts and primitive data types see [concepts](docs/db/concepts.m
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
 ```mermaid
-graph TD;
-    A[Embedded or Server database?]-->B;
-    A-->C;
-    B[Embedded]-->D;
-    C[Server]-->D;
+flowchart TD
+    A[Embedded or server?] --> B
+    A --> C
+    B[Embedded] --> E(<a href="https://github.com/agnesoft/agdb/blob/main/docs/db/queries.md">Queries</a>)
+    C[Client or hosting?] --> F
+    C --> G
+    F[Client] --> J(<a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md">API</a>)
+    F --> E
+    G[Hosting] --> H(<a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md">Server</a>)
+    G --> I(<a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md">Cloud</a>)
+  
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

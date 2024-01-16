@@ -9,6 +9,7 @@
 </h3>
 
 <p align="center">
+    <br/>
     <a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="75" src="./docs/images/db.png" alt="db"></a> 
     <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="75" src="./docs/images/api.png" alt="api"></a> 
     <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="75" src="./docs/images/server.png" alt="server"></a>

@@ -168,12 +168,13 @@ graph TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
     Embedded --> Queries[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/queries.md'>Queries</a>]
+    Embedded --> Studio[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/studio.md'>Studio</a>]
     B --> Client
     B --> Hosting
-    Client --> API
-    Client --> Queries
-    Hosting --> Server
-    Hosting --> Cloud
+    Client --> API[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/api.md'>API</a>]
+    Client --> Studio
+    Hosting --> Server[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/server.md'>Server</a>]
+    Hosting --> Cloud[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/server.md'>Cloud</a>]
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

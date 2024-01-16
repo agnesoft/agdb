@@ -10,10 +10,11 @@
 
 <p align="center">
     <br/>
-    <img width="25" src="./docs/images/reddit.png" alt="reddit"> &nbsp;&nbsp;
-    <img width="25" src="./docs/images/twitter.png" alt="twitter"> &nbsp;&nbsp;
-    <img width="25" src="./docs/images/linkedin.png" alt="lkinkedin"> &nbsp;&nbsp;
-    <img width="25" src="./docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;&nbsp;
+    <img width="25" src="./docs/images/reddit.png" alt="reddit"> &nbsp;
+    <img width="25" src="./docs/images/twitter.png" alt="twitter"> &nbsp;
+    <img width="25" src="./docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
+    <img width="25" src="./docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
+    <br/>
     <br/>
     <a href="https://github.com/agnesoft/agdb/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
     <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>

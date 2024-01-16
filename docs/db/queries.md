@@ -884,4 +884,4 @@ Path search (`from().to()`) uses A\* algorithm. Every element (node or edge) has
 
 ---
 
-For further examples and use cases see the [efficient agdb](docs/efficient_agdb.md).
+For further examples and use cases see the [efficient agdb](docs/db/efficient_agdb.md).

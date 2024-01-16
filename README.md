@@ -10,28 +10,11 @@
 
 <p align="center">
     <br/>
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="75" src="./docs/images/db.png" alt="db"></a> 
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="75" src="./docs/images/api.png" alt="api"></a> 
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="75" src="./docs/images/server.png" alt="server"></a>
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="75" src="./docs/images/cloud.png" alt="cloud"></a> 
+    <a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="100" src="./docs/images/db.png" alt="db"></a> 
+    <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> 
+    <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a>
+    <a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 
 </p>
-
-<p align="center">
-    <br/>
-    <a href="https://github.com/agnesoft/agdb/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
-    <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>
-    <a href="https://github.com/agnesoft/agdb/actions/workflows/release.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg" alt="release"></a>
-    <a href="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg" alt="coverage"></a>
-    <a href="https://codecov.io/gh/agnesoft/agdb"><img src="https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU" alt="codecov"></a>
-    <br/>
-    <br/>
-    <img width="25" src="./docs/images/reddit.png" alt="reddit"> &nbsp;
-    <img width="25" src="./docs/images/twitter.png" alt="twitter"> &nbsp;
-    <img width="25" src="./docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
-    <img width="25" src="./docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
-</p>
-
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
     <img width="25" src="./docs/images/rust.png" alt="db"> 
@@ -44,36 +27,54 @@
     <img width="25" src="./docs/images/csharp.png" alt="db">
 </p>
 
-The Agnesoft Graph Database (aka _agdb_) is persistent memory mapped graph database using object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern (or directly as objects) with no special language or text parsing.
+<p align="center">
+    <a href="https://github.com/agnesoft/agdb/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
+    <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>
+    <a href="https://github.com/agnesoft/agdb/actions/workflows/release.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg" alt="release"></a>
+    <a href="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg" alt="coverage"></a>
+    <a href="https://codecov.io/gh/agnesoft/agdb"><img src="https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU" alt="codecov"></a>
+</p>
+
+<p align="center">
+    <img width="25" src="./docs/images/reddit.png" alt="reddit"> &nbsp;
+    <img width="25" src="./docs/images/twitter.png" alt="twitter"> &nbsp;
+    <img width="25" src="./docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
+    <img width="25" src="./docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
+</p>
+
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
+
+The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
+
+Please use the [Decision Tree](#decision-tree) to navigate to the right part of the documentation for your use case or interest.
 
 - [Key Features](#key-features)
-- [Quickstart](#quickstart)
+- [At a glance](#at-a-glance)
 - [Crate Features](#crate-features)
+- [Decision Tree](#decision-tree)
 - [Roadmap](#roadmap)
 - [Reference](#reference)
-  - [Efficient agdb](docs/efficient_agdb.md)
-  - [Performance](docs/performance.md)
-  - [Concepts](docs/concepts.md)
-  - [Queries](docs/queries.md)
-  - [But why?](docs/but_why.md)
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
 - Data plotted on a graph
-- Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
+- Typed [key-value properties](docs/db/concepts.md#data-types) attached to graph elements (nodes & edges)
 - Persistent file based storage
 - ACID compliant
-- [Object queries](docs/queries.md) with builder pattern (no text, no query language)
+- [Object queries](docs/db/queries.md) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
-- _No dependencies_
+- [Server mode](docs/server.md)
+- [OpenAPI clients](docs/api.md) in any programming language
+- [Cloud](docs/cloud.md) hosted SaaS database
+- _Db itself has no dependencies_
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Quickstart
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
 
 ```
 cargo add agdb
 ```
 
-Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](docs/queries.md#queryerror) error types for operator `?` to work:
+Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](docs/db/queries.md#queryerror) error types for operator `?` to work:
 
 ```Rust
 use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
@@ -142,15 +143,33 @@ println!("{:?}", user);
 // User { db_id: Some(DbId(3)), username: "Bob" }
 ```
 
-For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
+For database concepts and primitive data types see [concepts](docs/db/concepts.md). For comprehensive overview of all queries see the [queries](docs/db/queries.md) reference or continue with more in-depth [efficient agdb](docs/db/efficient_agdb.md).
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
-| Feature  | Default | Description                                                                                        |
-| -------- | ------- | -------------------------------------------------------------------------------------------------- |
-| derive   | yes     | Enables derive macro to enable custom user types to be directly used with the database.            |
-| opeanapi | no      | Enables `ToSchema` macro on query structs so they can be exported to json OpeanAPI/Swagger schema. |
-| serde    | no      | Enables serialiation/deserialization of queries and QueryResult using `serde`.                     |
+### agdb
+
+| Feature  | Default | Description                                                                                                         |
+| -------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| derive   | yes     | Enables derive macro to enable custom user types to be directly used with the database.                             |
+| opeanapi | no      | Enables `ToSchema` macro on query structs so they can be exported to json OpeanAPI/Swagger schema.                  |
+| serde    | no      | Enables serialiation/deserialization of queries and QueryResult using [`serde`](https://github.com/serde-rs/serde). |
+
+### agdb_api
+
+| Feature | Default | Description                                                                                                                                 |
+| ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| reqwest | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
+
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
+
+```mermaid
+graph TD;
+    A-->B;
+    A-->C;
+    B-->D;
+    C-->D;
+```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 
@@ -159,17 +178,24 @@ The following are planned features in no particular order:
 | Feature                          | Description                                                                                                                                      |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Data replication & RAFT protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                                            |
-| Data sharding                    | Allow sharding single database data set across multiple nodes to allow super large databases.                                                    |
 | #\[no_std]                       | Since `agdb` does not require any dependencies it should be (in theory) `no_std` friendly but it will likely require some development & testing. |
+| Agdb Studio                      | Graphical interface to `agdb`                                                                                                                    |
+| Python Client                    | Convenience client using bindings genereated from OpenAPI.                                                                                       |
+| Java Client                      | Convenience client using bindings genereated from OpenAPI.                                                                                       |
+| C# Client                        | Convenience client using bindings genereated from OpenAPI.                                                                                       |
+| C Client                         | Convenience client using bindings genereated from OpenAPI.                                                                                       |
+| C++ Client                       | Convenience client using bindings genereated from OpenAPI.                                                                                       |
+| Agdb Playground                  | Free public cloud-based playground to tinker with `agdb`.                                                                                        |
+| Public Cloud Offering            | Commercial & supported `agdb` hosted in a public cloud.                                                                                          |
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
-- [Efficient agdb](docs/efficient_agdb.md)
+- [Efficient agdb](docs/db/efficient_agdb.md)
 
-- [Performance](docs/performance.md)
+- [Performance](docs/db/performance.md)
 
-- [Concepts](docs/concepts.md)
+- [Concepts](docs/db/concepts.md)
 
-- [Queries](docs/queries.md)
+- [Queries](docs/db/queries.md)
 
-- [But why?](docs/but_why.md)
+- [But why?](docs/db/but_why.md)

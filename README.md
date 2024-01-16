@@ -24,10 +24,10 @@
 </p>
 
 <p align="center">
-<a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="100" src="./docs/images/db.png" alt="db"></a> 
-<a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> 
-<a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a>
-<a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 
+<a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="75" src="./docs/images/db.png" alt="db"></a> 
+<a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="75" src="./docs/images/api.png" alt="api"></a> 
+<a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="75" src="./docs/images/server.png" alt="server"></a>
+<a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="75" src="./docs/images/cloud.png" alt="cloud"></a> 
 </p>
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database

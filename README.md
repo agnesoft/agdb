@@ -167,7 +167,7 @@ For database concepts and primitive data types see [concepts](docs/db/concepts.m
 graph TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
-    Embedded --> Queries[<a href="https://github.com/skoblenick/skoblenick/blob/main/docs/queries.md">Queries</a>]
+    Embedded --> Queries[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/queries.md'>Queries</a>]
     B --> Client
     B --> Hosting
     Client --> API

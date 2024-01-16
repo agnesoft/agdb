@@ -164,7 +164,7 @@ For database concepts and primitive data types see [concepts](docs/db/concepts.m
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
 ```mermaid
-class TD;
+graph TD;
     A[Embedded or server?] --> B
     A --> C
     B[Embedded] --> E(<a href="https://github.com/agnesoft/agdb/blob/main/docs/db/queries.md">Queries</a>)

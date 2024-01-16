@@ -10,11 +10,11 @@
 
 <p align="center">
     <br/>
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/queries.md"><img width="100" src="./docs/images/db.png" alt="db"></a> 
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> 
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/studio.md"><img width="100" src="./docs/images/studio.png" alt="studio"></a> 
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a>
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 
+    <a href="./docs/queries.md"><img width="100" src="./docs/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/studio.md"><img width="100" src="./docs/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/agnesoft/agdb/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
     <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>
     <a href="https://github.com/agnesoft/agdb/actions/workflows/release.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg" alt="release"></a>
     <a href="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg" alt="coverage"></a>
@@ -46,7 +46,7 @@
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
-<a href="#decision-tree">Decision Tree</a> | <a href="./docs/why_not_sql.md">Why not SQL?</a> | <a href="./docs/troubleshooting.md">Troubleshooting</a>
+<a href="#decision-tree">Decision Tree</a> | <a href="./docs/but_why.md">Why not SQL?</a> | <a href="./docs/troubleshooting.md">Troubleshooting</a>
 </p>
 
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
@@ -170,14 +170,14 @@ For database concepts and primitive data types see [concepts](docs/concepts.md).
 graph TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
-    Embedded --> Queries[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/queries.md'>Queries</a>]
-    Embedded --> Studio[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/studio.md'>Studio</a>]
+    Embedded --> Queries[<a href='./docs/queries.md'>Queries</a>]
+    Embedded --> Studio[<a href='./docs/studio.md'>Studio</a>]
     B --> Client
     B --> Hosting
-    Client --> API[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/api.md'>API</a>]
+    Client --> API[<a href='./docs/api.md'>API</a>]
     Client --> Studio
-    Hosting --> Server[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/server.md'>Server</a>]
-    Hosting --> Cloud[<a href='https://github.com/skoblenick/skoblenick/blob/main/docs/server.md'>Cloud</a>]
+    Hosting --> Server[<a href='./docs/server.md'>Server</a>]
+    Hosting --> Cloud[<a href='./docs/server.md'>Cloud</a>]
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
@@ -216,3 +216,5 @@ The following are planned features in no particular order:
 - [API](docs/api.md)
 
 - [Cloud](docs/cloud.md)
+
+- [Troubleshooting](docs/troubleshooting.md)

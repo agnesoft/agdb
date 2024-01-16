@@ -167,15 +167,13 @@ For database concepts and primitive data types see [concepts](docs/db/concepts.m
 graph TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
-    Embedded --> Queries
+    Embedded --> Queries[<a href="https://github.com/skoblenick/skoblenick/blob/main/docs/queries.md">Queries</a>]
     B --> Client
     B --> Hosting
     Client --> API
     Client --> Queries
     Hosting --> Server
     Hosting --> Cloud
-
-    click Queries "https://github.com/skoblenick/skoblenick/blob/main/docs/api.md" _blank
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

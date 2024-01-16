@@ -165,15 +165,17 @@ For database concepts and primitive data types see [concepts](docs/db/concepts.m
 
 ```mermaid
 graph TD;
-    A[Embedded or server?] --> B
-    A --> C
-    B[Embedded] --> E(Queries)
-    C[Client or hosting?] --> F
-    C --> G
-    F[Client] --> J(API)
-    F --> E
-    G[Hosting] --> H(Server)
-    G --> I(Cloud)
+    A[Embedded or server?] --> Embedded
+    A --> B[Client or hosting?]
+    Embedded --> Queries
+    B --> Client
+    B --> Hosting
+    Client --> API
+    Client --> Queries
+    Hosting --> Server
+    Hosting --> Cloud
+
+    click Queries "https://github.com/skoblenick/skoblenick/blob/main/docs/api.md" _blank
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

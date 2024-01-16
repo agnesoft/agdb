@@ -10,8 +10,9 @@
 
 <p align="center">
     <br/>
-    <a href="https://github.com/agnesoft/agdb/blob/main/docs/db.md"><img width="100" src="./docs/images/db.png" alt="db"></a> 
+    <a href="https://github.com/agnesoft/agdb/blob/main/docs/queries.md"><img width="100" src="./docs/images/db.png" alt="db"></a> 
     <a href="https://github.com/agnesoft/agdb/blob/main/docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> 
+    <a href="https://github.com/agnesoft/agdb/blob/main/docs/studio.md"><img width="100" src="./docs/images/studio.png" alt="studio"></a> 
     <a href="https://github.com/agnesoft/agdb/blob/main/docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a>
     <a href="https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 
 </p>
@@ -58,10 +59,10 @@ Please use the [Decision Tree](#decision-tree) to navigate to the right part of 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
 - Data plotted on a graph
-- Typed [key-value properties](docs/db/concepts.md#data-types) attached to graph elements (nodes & edges)
+- Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
 - Persistent file based storage
 - ACID compliant
-- [Object queries](docs/db/queries.md) with builder pattern (no text, no query language)
+- [Object queries](docs/queries.md) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
 - [Server mode](docs/server.md)
 - [OpenAPI clients](docs/api.md) in any programming language
@@ -74,7 +75,7 @@ Please use the [Decision Tree](#decision-tree) to navigate to the right part of 
 cargo add agdb
 ```
 
-Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](docs/db/queries.md#queryerror) error types for operator `?` to work:
+Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](docs/queries.md#queryerror) error types for operator `?` to work:
 
 ```Rust
 use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
@@ -143,7 +144,7 @@ println!("{:?}", user);
 // User { db_id: Some(DbId(3)), username: "Bob" }
 ```
 
-For database concepts and primitive data types see [concepts](docs/db/concepts.md). For comprehensive overview of all queries see the [queries](docs/db/queries.md) reference or continue with more in-depth [efficient agdb](docs/db/efficient_agdb.md).
+For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
@@ -196,12 +197,20 @@ The following are planned features in no particular order:
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
-- [Efficient agdb](docs/db/efficient_agdb.md)
+- [But why?](docs/but_why.md)
 
-- [Performance](docs/db/performance.md)
+- [Concepts](docs/concepts.md)
 
-- [Concepts](docs/db/concepts.md)
+- [Efficient agdb](docs/efficient_agdb.md)
 
-- [Queries](docs/db/queries.md)
+- [Performance](docs/performance.md)
 
-- [But why?](docs/db/but_why.md)
+- [Queries](docs/queries.md)
+
+- [Server](docs/server.md)
+
+- [Studio](docs/studio.md)
+
+- [API](docs/api.md)
+
+- [Cloud](docs/cloud.md)

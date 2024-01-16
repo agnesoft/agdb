@@ -170,36 +170,40 @@ For database concepts and primitive data types see [concepts](docs/concepts.md).
 graph TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
-    Embedded --> Queries[<a href='./docs/queries.md'>Queries</a>]
-    Embedded --> Studio[<a href='./docs/studio.md'>Studio</a>]
+    Embedded --> Queries[<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md'>Queries</a>]
+    Embedded --> Studio[<a href='https://github.com/agnesoft/agdb/blob/main/docs/studio.md'>Studio</a>]
     B --> Client
     B --> Hosting
-    Client --> API[<a href='./docs/api.md'>API</a>]
+    Client --> API[<a href='https://github.com/agnesoft/agdb/blob/main/docs/api.md'>API</a>]
     Client --> Studio
-    Hosting --> Server[<a href='./docs/server.md'>Server</a>]
-    Hosting --> Cloud[<a href='./docs/server.md'>Cloud</a>]
+    Hosting --> Server[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Server</a>]
+    Hosting --> Cloud[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Cloud</a>]
 ```
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 
 The following are planned features in no particular order:
 
-| Feature                          | Description                                                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Data replication & RAFT protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                                            |
-| #\[no_std]                       | Since `agdb` does not require any dependencies it should be (in theory) `no_std` friendly but it will likely require some development & testing. |
-| Agdb Studio                      | Graphical interface to `agdb`                                                                                                                    |
-| Python Client                    | Convenience client using bindings genereated from OpenAPI.                                                                                       |
-| Java Client                      | Convenience client using bindings genereated from OpenAPI.                                                                                       |
-| C# Client                        | Convenience client using bindings genereated from OpenAPI.                                                                                       |
-| C Client                         | Convenience client using bindings genereated from OpenAPI.                                                                                       |
-| C++ Client                       | Convenience client using bindings genereated from OpenAPI.                                                                                       |
-| Agdb Playground                  | Free public cloud-based playground to tinker with `agdb`.                                                                                        |
-| Public Cloud Offering            | Commercial & supported `agdb` hosted in a public cloud.                                                                                          |
+| Feature                          | Description                                                                                                                                          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data replication & RAFT protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                                                |
+| #\[no_std]                       | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. |
+| Agdb Studio                      | Graphical interface to `agdb`                                                                                                                        |
+| Python Client                    | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| Java Client                      | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C# Client                        | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C Client                         | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C++ Client                       | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| Agdb Playground                  | Free public cloud-based playground to tinker with `agdb`.                                                                                            |
+| Public Cloud Offering            | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     |
 
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
+- [API](docs/api.md)
+
 - [But why?](docs/but_why.md)
+
+- [Cloud](docs/cloud.md)
 
 - [Concepts](docs/concepts.md)
 
@@ -212,9 +216,5 @@ The following are planned features in no particular order:
 - [Server](docs/server.md)
 
 - [Studio](docs/studio.md)
-
-- [API](docs/api.md)
-
-- [Cloud](docs/cloud.md)
 
 - [Troubleshooting](docs/troubleshooting.md)

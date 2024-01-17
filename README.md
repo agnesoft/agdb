@@ -18,14 +18,14 @@
 </p>
 
 <p align="center">
-    <img width="25" src="./docs/images/rust.png" alt="db"> 
-    <img width="25" src="./docs/images/ts.png" alt="db"> 
-    <img width="25" src="./docs/images/js.png" alt="db"> 
-    <img width="25" src="./docs/images/python.png" alt="db"> 
-    <img width="25" src="./docs/images/java.png" alt="db"> 
-    <img width="25" src="./docs/images/c.png" alt="db"> 
-    <img width="25" src="./docs/images/cpp.png" alt="db"> 
-    <img width="25" src="./docs/images/csharp.png" alt="db">
+    <img width="25" src="./docs/images/rust.png" alt="rust"> 
+    <img width="25" src="./docs/images/ts.png" alt="ts"> 
+    <img width="25" src="./docs/images/js.png" alt="js"> 
+    <img width="25" src="./docs/images/python.png" alt="python"> 
+    <img width="25" src="./docs/images/java.png" alt="java"> 
+    <img width="25" src="./docs/images/c.png" alt="c"> 
+    <img width="25" src="./docs/images/cpp.png" alt="cpp"> 
+    <img width="25" src="./docs/images/csharp.png" alt="csharp">
 </p>
 
 <p align="center">

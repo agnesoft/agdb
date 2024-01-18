@@ -12,7 +12,7 @@
     - [Insert nodes](#insert-nodes)
     - [Insert edges](#insert-edges)
     - [Insert aliases](#insert-aliases)
-    - [Insert index](#insert-index)
+    - [Insert indexes](#insert-indexes)
     - [Insert values](#insert-values)
   - [Remove](#remove)
     - [Remove elements](#remove-elements)
@@ -342,7 +342,7 @@ The result will contain:
 - number of aliases inserted or updated
 - empty list of elements
 
-### Insert query
+### Insert indexes
 
 ```Rust
 pub struct InsertIndexQuery(pub DbValue);

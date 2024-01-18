@@ -38,7 +38,7 @@
 
 <p align="center">
     <img width="25" src="./docs/images/reddit.png" alt="reddit"> &nbsp;
-    <img width="25" src="./docs/images/twitter.png" alt="twitter"> &nbsp;
+    <img width="25" src="./docs/images/x.png" alt="x"> &nbsp;
     <img width="25" src="./docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
     <img width="25" src="./docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
 </p>

@@ -862,10 +862,10 @@ impl DbPool {
                         .ids(user)
                         .query(),
                 )?;
-                Ok(token.clone())
-            } else {
-                Ok(existing)
+                return Ok(token.clone());
             }
+
+            Ok(existing)
         })
     }
 

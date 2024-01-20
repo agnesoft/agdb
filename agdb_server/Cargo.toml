@@ -26,7 +26,7 @@ tower = "0.4"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 utoipa = "4"
-utoipa-rapidoc = { version = "2", features = ["axum"] }
+utoipa-rapidoc = { version = "3", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]

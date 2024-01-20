@@ -3,10 +3,10 @@
 ```mermaid
 flowchart LR
 
-    QueryBuilder --> insert
-    QueryBuilder --> remove
-    QueryBuilder --> select
-    QueryBuilder --> search
+    QueryBuilder --> insert("insert")
+    QueryBuilder --> remove("remove")
+    QueryBuilder --> select("select")
+    QueryBuilder --> search("search")
 
     insert --> i_aliases("aliases") --> i_a_ids("ids") --> InsertAliasesQuery
     insert --> i_edges("edges") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery
@@ -39,44 +39,43 @@ flowchart LR
     select --> s_ids("ids") --> SelectQuery
     select --> s_indexes("indexes") --> SelectIndexesQuery
     select --> s_keys("keys") --> s_k_ids("ids") --> SelectKeysQuery
-    select --> key_count --> s_k_c_ids("ids") --> SelectKeyCountQuery
-    select --> values --> s_v_ids("ids") --> SelectValuesQuery
+    select --> key_count("key_count") --> s_k_c_ids("ids") --> SelectKeyCountQuery
+    select --> values("values") --> s_v_ids("ids") --> SelectValuesQuery
 
-    search --> index --> s_i_value("value") --> SearchQuery
-    search --> from --> SearchQuery
-    from --> limit --> SearchQuery
-    from --> offset
+    search --> index("index") --> s_i_value("value") --> SearchQuery
+    search --> from("from") --> SearchQuery
+    from --> limit("limit") --> SearchQuery
+    from --> offset("offset")
     offset --> limit
-    from --> order_by
+    from --> order_by("order_by")
     order_by --> offset
     order_by --> limit
     order_by --> SearchQuery
     from --> where --> SearchQuery
-    from --> to
+    from --> to("to")
     to --> order_by
     to --> offset
     to --> limit
-    search --> breadth_first --> from
-    search --> depth_first --> from
+    search --> breadth_first("breadth_first") --> from
+    search --> depth_first("depth_first") --> from
     search --> to
     depth_first --> to
     breadth_first --> to
-    to --> where
+    to --> where(("where"))
     order_by --> where
     offset --> where
     limit --> where
 
     condition --> SearchQuery
-    end_where --> SearchQuery
+    end_where("end_where") --> SearchQuery
     where --> condition
     modifier --> where
     condition --> end_where
     end_where --> logic
     where --> modifier("not/beyond")
-    modifier --> condition("distance<br/>edge<br/>edge_count<br/>edge_count_from<br/>edge_count_to<br/>key.value<br/>keys<br/>node")
+    modifier --> condition[["distance<br/>edge<br/>edge_count<br/>edge_count_from<br/>edge_count_to<br/>key.value<br/>keys<br/>node"]]
     condition --> logic("and/or")
     logic --> where
-
 ```
 
 - [Queries](#queries)

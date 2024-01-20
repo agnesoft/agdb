@@ -73,11 +73,11 @@ flowchart LR
     condition --> end_where
     end_where --> logic
     where --> modifier("not/beyond")
-    modifier --> condition{"condition*"}
+    modifier --> condition("distance<br/>edge<br/>edge_count<br/>edge_count_from<br/>edge_count_to<br/>key.value<br/>keys<br/>node")
     condition --> logic("and/or")
     logic --> where
+
 ```
-\* *Available conditions: `distance, edge, edge_count, edge_count_from, edge_count_to, key, keys, node`*
 
 - [Queries](#queries)
 - [DbUserValue](#dbuservalue)

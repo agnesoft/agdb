@@ -41,7 +41,14 @@ describe("search", () => {
     });
 
     it("nested where", () => {
-        QueryBuilder.search().from(1).where().node().and().where().edge().query();
+        QueryBuilder.search()
+            .from(1)
+            .where()
+            .node()
+            .and()
+            .where()
+            .edge()
+            .query();
     });
 
     it("search().depth_first().from()", () => {
@@ -49,15 +56,33 @@ describe("search", () => {
     });
 
     it("search().depth_first().from().limit().where()", () => {
-        QueryBuilder.search().depth_first().from(1).limit(10).where().node().query();
+        QueryBuilder.search()
+            .depth_first()
+            .from(1)
+            .limit(10)
+            .where()
+            .node()
+            .query();
     });
 
     it("search().depth_first().from().offset().limit()", () => {
-        QueryBuilder.search().depth_first().from(1).offset(10).limit(10).query();
+        QueryBuilder.search()
+            .depth_first()
+            .from(1)
+            .offset(10)
+            .limit(10)
+            .query();
     });
 
     it("search().depth_first().from().offset().limit().where()", () => {
-        QueryBuilder.search().depth_first().from(1).offset(10).limit(10).where().node().query();
+        QueryBuilder.search()
+            .depth_first()
+            .from(1)
+            .offset(10)
+            .limit(10)
+            .where()
+            .node()
+            .query();
     });
 
     it("search().depth_first().from().limit()", () => {
@@ -69,7 +94,13 @@ describe("search", () => {
     });
 
     it("search().depth_first().from().offset().where()", () => {
-        QueryBuilder.search().depth_first().from(1).offset(10).where().node().query();
+        QueryBuilder.search()
+            .depth_first()
+            .from(1)
+            .offset(10)
+            .where()
+            .node()
+            .query();
     });
 
     it("search().depth_first().from().order_by()", () => {
@@ -153,7 +184,10 @@ describe("search", () => {
     });
 
     it("search().index()", () => {
-        QueryBuilder.search().index({ String: "key" }).value({ U64: 20 }).query();
+        QueryBuilder.search()
+            .index({ String: "key" })
+            .value({ U64: 20 })
+            .query();
     });
 
     it("search().to()", () => {

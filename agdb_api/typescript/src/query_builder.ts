@@ -3,7 +3,10 @@ import type { Components } from "./schema";
 type QueryId = number | string;
 
 function intoQueryIds(
-    ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+    ids:
+        | QueryId[]
+        | Components.Schemas.QueryType
+        | Components.Schemas.QueryResult,
 ): Components.Schemas.QueryIds {
     if ("Search" in ids) {
         return ids;
@@ -35,12 +38,16 @@ class InsertNodesAliasesBuilder {
         this.data = data;
     }
 
-    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertNodesValuesBuilder {
+    values_uniform(
+        values: Components.Schemas.DbKeyValue[],
+    ): InsertNodesValuesBuilder {
         this.data.values = { Single: values };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    values(values: Components.Schemas.DbKeyValue[][]): InsertNodesValuesBuilder {
+    values(
+        values: Components.Schemas.DbKeyValue[][],
+    ): InsertNodesValuesBuilder {
         this.data.values = { Multi: values };
         return new InsertNodesValuesBuilder(this.data);
     }
@@ -73,12 +80,16 @@ class InsertNodesBuilder {
         return new InsertNodesCountBuilder(this.data);
     }
 
-    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertNodesValuesBuilder {
+    values_uniform(
+        values: Components.Schemas.DbKeyValue[],
+    ): InsertNodesValuesBuilder {
         this.data.values = { Single: values };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    values(values: Components.Schemas.DbKeyValue[][]): InsertNodesValuesBuilder {
+    values(
+        values: Components.Schemas.DbKeyValue[][],
+    ): InsertNodesValuesBuilder {
         this.data.values = { Multi: values };
         return new InsertNodesValuesBuilder(this.data);
     }
@@ -91,7 +102,9 @@ class InsertNodesCountBuilder {
         this.data = data;
     }
 
-    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertNodesValuesBuilder {
+    values_uniform(
+        values: Components.Schemas.DbKeyValue[],
+    ): InsertNodesValuesBuilder {
         this.data.values = { Single: values };
         return new InsertNodesValuesBuilder(this.data);
     }
@@ -132,12 +145,16 @@ class InsertEdgesToEachBuilder {
         this.data = query;
     }
 
-    values(values: Components.Schemas.DbKeyValue[][]): InsertEdgesValuesBuilder {
+    values(
+        values: Components.Schemas.DbKeyValue[][],
+    ): InsertEdgesValuesBuilder {
         this.data.values = { Multi: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertEdgesValuesBuilder {
+    values_uniform(
+        values: Components.Schemas.DbKeyValue[],
+    ): InsertEdgesValuesBuilder {
         this.data.values = { Single: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
@@ -159,12 +176,16 @@ class InsertEdgesToBuilder {
         return new InsertEdgesToEachBuilder(this.data);
     }
 
-    values(values: Components.Schemas.DbKeyValue[][]): InsertEdgesValuesBuilder {
+    values(
+        values: Components.Schemas.DbKeyValue[][],
+    ): InsertEdgesValuesBuilder {
         this.data.values = { Multi: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    values_uniform(values: Components.Schemas.DbKeyValue[]): InsertEdgesValuesBuilder {
+    values_uniform(
+        values: Components.Schemas.DbKeyValue[],
+    ): InsertEdgesValuesBuilder {
         this.data.values = { Single: values };
         return new InsertEdgesValuesBuilder(this.data);
     }
@@ -182,7 +203,10 @@ class InsertEdgesFromBuilder {
     }
 
     to(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): InsertEdgesToBuilder {
         this.data.to = intoQueryIds(ids);
         return new InsertEdgesToBuilder(this.data);
@@ -202,7 +226,10 @@ class InsertEdgesBuilder {
     }
 
     from(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): InsertEdgesFromBuilder {
         this.data.from = intoQueryIds(ids);
         return new InsertEdgesFromBuilder(this.data);
@@ -229,7 +256,10 @@ class InsertAliasesBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): InsertAliasesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertAliasesIdsBuilder(this.data);
@@ -256,7 +286,10 @@ class InsertValuesBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): InsertValuesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertValuesIdsBuilder(this.data);
@@ -388,7 +421,10 @@ class RemoveValuesBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): RemoveValuesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new RemoveValuesIdsBuilder(this.data);
@@ -413,7 +449,10 @@ class RemoveBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): RemoveIdsBuilder {
         if (Array.isArray(ids)) {
             return new RemoveIdsBuilder(intoQueryIds(ids));
@@ -453,7 +492,10 @@ class SelectAliasesBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): SelectAliasesIdsBuilder {
         if (Array.isArray(ids)) {
             return new SelectAliasesIdsBuilder(intoQueryIds(ids));
@@ -499,7 +541,10 @@ class SelectValuesBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): SelectValuesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new SelectValuesIdsBuilder(this.data);
@@ -526,7 +571,10 @@ class SelectKeysBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): SelectKeysIdsBuilder {
         this.data = intoQueryIds(ids);
         return new SelectKeysIdsBuilder(this.data);
@@ -553,7 +601,10 @@ class SelectKeyCountBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): SelectKeyCountIdsBuilder {
         this.data = intoQueryIds(ids);
         return new SelectKeyCountIdsBuilder(this.data);
@@ -572,7 +623,10 @@ class SelectBuilder {
     }
 
     ids(
-        ids: QueryId[] | Components.Schemas.QueryType | Components.Schemas.QueryResult,
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
     ): SelectIdsBuilder {
         return new SelectIdsBuilder(intoQueryIds(ids));
     }
@@ -594,7 +648,9 @@ class SelectBuilder {
     }
 }
 
-function collapse_conditions(conditions: Components.Schemas.QueryCondition[][]): boolean {
+function collapse_conditions(
+    conditions: Components.Schemas.QueryCondition[][],
+): boolean {
     if (conditions.length > 1) {
         let last = conditions.pop();
         let current = conditions[conditions.length - 1];
@@ -683,7 +739,9 @@ class SearchWhereBuilder {
         return this;
     }
 
-    distance(distance: Components.Schemas.CountComparison): SearchWhereLogicBuilder {
+    distance(
+        distance: Components.Schemas.CountComparison,
+    ): SearchWhereLogicBuilder {
         return push_condition(this, {
             data: { Distance: distance },
             logic: this.logic,
@@ -699,7 +757,9 @@ class SearchWhereBuilder {
         });
     }
 
-    edge_count(count: Components.Schemas.CountComparison): SearchWhereLogicBuilder {
+    edge_count(
+        count: Components.Schemas.CountComparison,
+    ): SearchWhereLogicBuilder {
         return push_condition(this, {
             data: { EdgeCount: count },
             logic: this.logic,
@@ -707,7 +767,9 @@ class SearchWhereBuilder {
         });
     }
 
-    edge_count_from(count: Components.Schemas.CountComparison): SearchWhereLogicBuilder {
+    edge_count_from(
+        count: Components.Schemas.CountComparison,
+    ): SearchWhereLogicBuilder {
         return push_condition(this, {
             data: { EdgeCountFrom: count },
             logic: this.logic,
@@ -715,7 +777,9 @@ class SearchWhereBuilder {
         });
     }
 
-    edge_count_to(count: Components.Schemas.CountComparison): SearchWhereLogicBuilder {
+    edge_count_to(
+        count: Components.Schemas.CountComparison,
+    ): SearchWhereLogicBuilder {
         return push_condition(this, {
             data: { EdgeCountTo: count },
             logic: this.logic,

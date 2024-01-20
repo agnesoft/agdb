@@ -5,7 +5,11 @@ describe("useNode", () => {
     let node: Node;
 
     beforeEach(() => {
-        node = useNode({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: { foo: "bar" } });
+        node = useNode({
+            id: 1,
+            coordinates: { x: 0, y: 0, z: 0 },
+            values: { foo: "bar" },
+        });
     });
 
     it("should return the correct ID", () => {
@@ -22,7 +26,11 @@ describe("useNode", () => {
         const x = 1;
         const y = 2;
         const z = 3;
-        const node = useNode({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: {} });
+        const node = useNode({
+            id: 1,
+            coordinates: { x: 0, y: 0, z: 0 },
+            values: {},
+        });
         node.setCoordinates(x, y, z);
         expect(node.getCoordinates()).toEqual({ x, y, z });
     });
@@ -87,7 +95,11 @@ describe("useNode", () => {
         const vx = 1;
         const vy = 2;
         const vz = 3;
-        node.setVelocity(initialVelocity.x, initialVelocity.y, initialVelocity.z);
+        node.setVelocity(
+            initialVelocity.x,
+            initialVelocity.y,
+            initialVelocity.z,
+        );
         node.addVelocity(vx, vy, vz);
         node.addVelocity(vx, vy, vz);
         const finalVelocity = {
@@ -117,8 +129,16 @@ describe("useNode", () => {
     });
 
     it("should calculate the correct distance between two nodes", () => {
-        const node1 = useNode({ id: 2, coordinates: { x: 1, y: 2, z: 3 }, values: {} });
-        const node2 = useNode({ id: 3, coordinates: { x: 4, y: 5, z: 6 }, values: {} });
+        const node1 = useNode({
+            id: 2,
+            coordinates: { x: 1, y: 2, z: 3 },
+            values: {},
+        });
+        const node2 = useNode({
+            id: 3,
+            coordinates: { x: 4, y: 5, z: 6 },
+            values: {},
+        });
         const distance = Math.sqrt((4 - 1) ** 2 + (5 - 2) ** 2 + (6 - 3) ** 2);
         expect(node1.dist(node2)).toBe(distance);
     });

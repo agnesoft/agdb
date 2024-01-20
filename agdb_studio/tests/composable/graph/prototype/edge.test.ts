@@ -8,9 +8,22 @@ describe("Edge", () => {
     let toNode: Node;
 
     beforeEach(() => {
-        fromNode = new (Node as any)({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: {} });
-        toNode = new (Node as any)({ id: 2, coordinates: { x: 3, y: 4, z: 5 }, values: {} });
-        edge = new (Edge as any)({ id: 1, from: fromNode, to: toNode, values: { foo: "bar" } });
+        fromNode = new (Node as any)({
+            id: 1,
+            coordinates: { x: 0, y: 0, z: 0 },
+            values: {},
+        });
+        toNode = new (Node as any)({
+            id: 2,
+            coordinates: { x: 3, y: 4, z: 5 },
+            values: {},
+        });
+        edge = new (Edge as any)({
+            id: 1,
+            from: fromNode,
+            to: toNode,
+            values: { foo: "bar" },
+        });
     });
 
     it("should return the correct id", () => {
@@ -78,46 +91,90 @@ describe("Edge with undefined from or to", () => {
     let node: Node;
 
     beforeEach(() => {
-        node = new (Node as any)({ id: 2, coordinates: { x: 3, y: 4, z: 5 }, values: {} });
+        node = new (Node as any)({
+            id: 2,
+            coordinates: { x: 3, y: 4, z: 5 },
+            values: {},
+        });
     });
 
     it("should return zero length if the from node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: undefined, to: node, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: undefined,
+            to: node,
+            values: {},
+        });
         expect(edge.getLength()).toBe(0);
     });
 
     it("should return zero length if the to node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: node, to: undefined, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: node,
+            to: undefined,
+            values: {},
+        });
         expect(edge.getLength()).toBe(0);
     });
 
     it("should return zero dx if the from node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: undefined, to: node, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: undefined,
+            to: node,
+            values: {},
+        });
         expect(edge.getDx()).toBe(0);
     });
 
     it("should return zero dx if the to node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: node, to: undefined, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: node,
+            to: undefined,
+            values: {},
+        });
         expect(edge.getDx()).toBe(0);
     });
 
     it("should return zero dy if the from node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: undefined, to: node, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: undefined,
+            to: node,
+            values: {},
+        });
         expect(edge.getDy()).toBe(0);
     });
 
     it("should return zero dy if the to node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: node, to: undefined, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: node,
+            to: undefined,
+            values: {},
+        });
         expect(edge.getDy()).toBe(0);
     });
 
     it("should return zero dz if the from node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: undefined, to: node, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: undefined,
+            to: node,
+            values: {},
+        });
         expect(edge.getDz()).toBe(0);
     });
 
     it("should return zero dz if the to node is undefined", () => {
-        const edge = new (Edge as any)({ id: 1, from: node, to: undefined, values: {} });
+        const edge = new (Edge as any)({
+            id: 1,
+            from: node,
+            to: undefined,
+            values: {},
+        });
         expect(edge.getDz()).toBe(0);
     });
 });

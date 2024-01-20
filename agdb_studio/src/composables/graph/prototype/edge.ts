@@ -101,7 +101,9 @@ export const Edge = (function () {
         return result;
     };
 
-    Edge.prototype.getValuesEntries = function (): IterableIterator<[string, string]> {
+    Edge.prototype.getValuesEntries = function (): IterableIterator<
+        [string, string]
+    > {
         const { values } = this[symbol];
         return values.entries();
     };

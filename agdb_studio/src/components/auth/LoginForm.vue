@@ -18,7 +18,12 @@ const login = async () => {
             </div>
             <div>
                 <label for="password">Password:</label>
-                <input type="password" id="password" v-model="password" required />
+                <input
+                    type="password"
+                    id="password"
+                    v-model="password"
+                    required
+                />
             </div>
             <button type="submit" class="button button-success">Login</button>
         </form>

@@ -32,6 +32,8 @@ describe("insert elements", () => {
             name: "John",
             age: 30,
         };
-        expect(() => QueryBuilder.insert().elements([e]).query()).toThrowError("invalid db_id");
+        expect(() => QueryBuilder.insert().elements([e]).query()).toThrowError(
+            "invalid db_id",
+        );
     });
 });

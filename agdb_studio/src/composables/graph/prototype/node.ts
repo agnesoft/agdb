@@ -76,7 +76,11 @@ export const Node = (function () {
         return { x: this[symbol].x, y: this[symbol].y, z: this[symbol].z };
     };
 
-    Node.prototype.setCoordinates = function (_x: number, _y: number, _z: number = 0): Node {
+    Node.prototype.setCoordinates = function (
+        _x: number,
+        _y: number,
+        _z: number = 0,
+    ): Node {
         this[symbol].x = _x;
         this[symbol].y = _y;
         this[symbol].z = _z;
@@ -95,7 +99,9 @@ export const Node = (function () {
         return result;
     };
 
-    Node.prototype.getValuesEntries = function (): IterableIterator<[string, string]> {
+    Node.prototype.getValuesEntries = function (): IterableIterator<
+        [string, string]
+    > {
         return this[symbol].values.entries();
     };
 
@@ -111,7 +117,11 @@ export const Node = (function () {
         );
     };
 
-    Node.prototype.setVelocity = function (_vx: number, _vy: number, _vz: number): Node {
+    Node.prototype.setVelocity = function (
+        _vx: number,
+        _vy: number,
+        _vz: number,
+    ): Node {
         this[symbol].vx = _vx;
         this[symbol].vy = _vy;
         this[symbol].vz = _vz;
@@ -131,7 +141,11 @@ export const Node = (function () {
         this[symbol].vz = 0;
     };
 
-    Node.prototype.addVelocity = function (_vx: number, _vy: number, _vz: number): Node {
+    Node.prototype.addVelocity = function (
+        _vx: number,
+        _vy: number,
+        _vz: number,
+    ): Node {
         this[symbol].vx += _vx;
         this[symbol].vy += _vy;
         this[symbol].vz += _vz;

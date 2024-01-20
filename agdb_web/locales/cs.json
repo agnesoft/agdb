@@ -1,11 +1,23 @@
 {
     "url": {
         "about": "/o-agdb",
-        "contact": "/kontakt"
+        "contact": "/kontakt",
+        "docs": "/docs",
+        "blog": "/blog",
+        "api": "/api",
+        "enterprise": "/enterprise",
+        "terms-and-conditions": "/podminky-uziti",
+        "privacy-policy": "/ochrana-osobnich-udaju"
     },
     "menu": {
         "home": "Domů",
         "about": "O agdb",
-        "contact": "Kontakt"
+        "contact": "Kontakt",
+        "docs": "Dokumentace",
+        "blog": "Blog",
+        "api": "API",
+        "enterprise": "Enterprise",
+        "terms-and-conditions": "Podmínky užití",
+        "privacy-policy": "Ochrana osobních údajů"
     }
 }

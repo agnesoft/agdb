@@ -77,7 +77,7 @@ flowchart LR
     condition --> logic("and/or")
     logic --> where
 ```
-* Available conditions: `distance, edge, edge_count, edge_count_from, edge_count_to, key, keys, node`
+\* *Available conditions: `distance, edge, edge_count, edge_count_from, edge_count_to, key, keys, node`*
 
 - [Queries](#queries)
 - [DbUserValue](#dbuservalue)

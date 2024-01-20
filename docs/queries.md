@@ -61,7 +61,7 @@ flowchart LR
     search --> to
     depth_first --> to
     breadth_first --> to
-    to --> where(("where"))
+    to --> where(("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#conditions'>where</a>"))
     order_by --> where
     offset --> where
     limit --> where
@@ -76,6 +76,7 @@ flowchart LR
     modifier --> condition[["distance<br/>edge<br/>edge_count<br/>edge_count_from<br/>edge_count_to<br/>key.value<br/>keys<br/>node"]]
     condition --> logic("and/or")
     logic --> where
+
 ```
 
 - [Queries](#queries)

@@ -5,7 +5,13 @@ import { RouterLink, RouterView } from "vue-router";
 <template>
     <div class="main-layout">
         <header>
-            <img alt="agdb logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+            <img
+                alt="agdb logo"
+                class="logo"
+                src="@/assets/logo.svg"
+                width="125"
+                height="125"
+            />
 
             <div class="wrapper">
                 <nav>

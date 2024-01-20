@@ -74,7 +74,12 @@ export const ForceDirectedGraph = (function () {
                 const to = this.findNode(edge.to);
 
                 edges.push(
-                    new (Edge as any)({ id: edge.id, from: from, to: to, values: edge.values }),
+                    new (Edge as any)({
+                        id: edge.id,
+                        from: from,
+                        to: to,
+                        values: edge.values,
+                    }),
                 );
             } else {
                 // element is a node
@@ -171,7 +176,9 @@ export const ForceDirectedGraph = (function () {
         };
     };
 
-    ForceDirectedGraph.prototype.findNode = function (id: number): Node | undefined {
+    ForceDirectedGraph.prototype.findNode = function (
+        id: number,
+    ): Node | undefined {
         return nodes.find((node) => node.getId() === id);
     };
 
@@ -206,7 +213,8 @@ export const ForceDirectedGraph = (function () {
             const dy = edge.getDy();
             const dz = edge.getDz();
             const distance = edge.getLength();
-            const force = ATTRACTION_CONSTANT * Math.max(distance - SPRING_LENGTH, 0.0);
+            const force =
+                ATTRACTION_CONSTANT * Math.max(distance - SPRING_LENGTH, 0.0);
 
             // Apply force to both from and to nodes
             from.addVelocity(

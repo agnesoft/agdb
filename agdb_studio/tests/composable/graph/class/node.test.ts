@@ -5,7 +5,11 @@ describe("Node", () => {
     let node: Node;
 
     beforeEach(() => {
-        node = new Node({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: { foo: "bar" } });
+        node = new Node({
+            id: 1,
+            coordinates: { x: 0, y: 0, z: 0 },
+            values: { foo: "bar" },
+        });
     });
 
     it("should set the velocity correctly", () => {
@@ -115,8 +119,16 @@ describe("Node", () => {
     });
 
     it("should calculate the correct distance between two nodes", () => {
-        const node1 = new Node({ id: 2, coordinates: { x: 1, y: 2, z: 3 }, values: {} });
-        const node2 = new Node({ id: 3, coordinates: { x: 4, y: 5, z: 6 }, values: {} });
+        const node1 = new Node({
+            id: 2,
+            coordinates: { x: 1, y: 2, z: 3 },
+            values: {},
+        });
+        const node2 = new Node({
+            id: 3,
+            coordinates: { x: 4, y: 5, z: 6 },
+            values: {},
+        });
         const distance = Math.sqrt((4 - 1) ** 2 + (5 - 2) ** 2 + (6 - 3) ** 2);
         expect(node1.dist(node2)).toBe(distance);
     });

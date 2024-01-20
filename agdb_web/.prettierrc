@@ -1,3 +1,5 @@
 {
-    "tabWidth": 4
+    "$schema": "https://json.schemastore.org/prettierrc",
+    "tabWidth": 4,
+    "endOfLine": "auto"
 }

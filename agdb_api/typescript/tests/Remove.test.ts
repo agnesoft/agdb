@@ -29,6 +29,8 @@ describe("remove", () => {
     });
 
     it("remove ids - nested queries", () => {
-        QueryBuilder.remove().ids(QueryBuilder.search().from(1).query()).query();
+        QueryBuilder.remove()
+            .ids(QueryBuilder.search().from(1).query())
+            .query();
     });
 });

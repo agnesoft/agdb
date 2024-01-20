@@ -34,15 +34,23 @@ describe("select", () => {
     });
 
     it("select aliases - nested queries", () => {
-        QueryBuilder.select().aliases().ids(QueryBuilder.search().from(1).query()).query();
+        QueryBuilder.select()
+            .aliases()
+            .ids(QueryBuilder.search().from(1).query())
+            .query();
     });
 
     it("select ids - nested queries", () => {
-        QueryBuilder.select().ids(QueryBuilder.search().from(1).query()).query();
+        QueryBuilder.select()
+            .ids(QueryBuilder.search().from(1).query())
+            .query();
     });
 
     it("select keys - nested queries", () => {
-        QueryBuilder.select().keys().ids(QueryBuilder.search().from(1).query()).query();
+        QueryBuilder.select()
+            .keys()
+            .ids(QueryBuilder.search().from(1).query())
+            .query();
     });
 
     it("select values - nested queries", () => {
@@ -53,6 +61,9 @@ describe("select", () => {
     });
 
     it("select key count - nested queries", () => {
-        QueryBuilder.select().key_count().ids(QueryBuilder.search().from(1).query()).query();
+        QueryBuilder.select()
+            .key_count()
+            .ids(QueryBuilder.search().from(1).query())
+            .query();
     });
 });

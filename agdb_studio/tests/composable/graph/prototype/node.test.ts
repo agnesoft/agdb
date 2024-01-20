@@ -119,8 +119,16 @@ describe("Node", () => {
     });
 
     it("should calculate the correct distance between two nodes", () => {
-        const node1 = new (Node as any)({ id: 2, coordinates: { x: 1, y: 2, z: 3 }, values: {} });
-        const node2 = new (Node as any)({ id: 3, coordinates: { x: 4, y: 5, z: 6 }, values: {} });
+        const node1 = new (Node as any)({
+            id: 2,
+            coordinates: { x: 1, y: 2, z: 3 },
+            values: {},
+        });
+        const node2 = new (Node as any)({
+            id: 3,
+            coordinates: { x: 4, y: 5, z: 6 },
+            values: {},
+        });
         const distance = Math.sqrt((4 - 1) ** 2 + (5 - 2) ** 2 + (6 - 3) ** 2);
         expect(node1.dist(node2)).toBe(distance);
     });

@@ -14,12 +14,14 @@ export class Api {
             });
 
             Api.c = await Api.api.init<Client>();
-            Api.c.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-                if (Api.token !== "") {
-                    config.headers.Authorization = `Bearer ${Api.token}`;
-                }
-                return config;
-            });
+            Api.c.interceptors.request.use(
+                (config: InternalAxiosRequestConfig) => {
+                    if (Api.token !== "") {
+                        config.headers.Authorization = `Bearer ${Api.token}`;
+                    }
+                    return config;
+                },
+            );
             Api.c.interceptors.response.use(
                 (response: AxiosResponse) => {
                     return response.data;
@@ -44,7 +46,8 @@ export class Api {
                         return Promise.reject(error);
                     }
                     const data = error.response.data;
-                    const errorData: string = (data && data.message) || "Unknown error";
+                    const errorData: string =
+                        (data && data.message) || "Unknown error";
                     return Promise.reject(errorData);
                 },
             );

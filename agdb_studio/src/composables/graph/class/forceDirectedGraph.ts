@@ -41,7 +41,14 @@ export default class ForceDirectedGraph {
                 const from = this.findNode(edge.from);
                 const to = this.findNode(edge.to);
 
-                this.edges.push(new Edge({ id: edge.id, from: from, to: to, values: edge.values }));
+                this.edges.push(
+                    new Edge({
+                        id: edge.id,
+                        from: from,
+                        to: to,
+                        values: edge.values,
+                    }),
+                );
             } else {
                 // element is a node
                 const node = element as GraphNode;
@@ -132,7 +139,9 @@ export default class ForceDirectedGraph {
 
         return {
             x: Math.cos(this.angle1) * distance,
-            y: Math.sin(this.angle1) * distance + Math.cos(this.angle2) * distance,
+            y:
+                Math.sin(this.angle1) * distance +
+                Math.cos(this.angle2) * distance,
             z: Math.sin(this.angle2) * distance,
         };
     }
@@ -172,7 +181,8 @@ export default class ForceDirectedGraph {
             const dy = edge.getDy();
             const dz = edge.getDz();
             const distance = edge.getLength();
-            const force = ATTRACTION_CONSTANT * Math.max(distance - SPRING_LENGTH, 0.0);
+            const force =
+                ATTRACTION_CONSTANT * Math.max(distance - SPRING_LENGTH, 0.0);
 
             // Apply force to both from and to nodes
             from.addVelocity(

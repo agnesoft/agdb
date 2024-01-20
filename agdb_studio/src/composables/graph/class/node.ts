@@ -66,7 +66,9 @@ export default class Node {
     }
 
     public getVelocityLength(): number {
-        return Math.sqrt(Math.pow(this.vx, 2) + Math.pow(this.vy, 2) + Math.pow(this.vz, 2));
+        return Math.sqrt(
+            Math.pow(this.vx, 2) + Math.pow(this.vy, 2) + Math.pow(this.vz, 2),
+        );
     }
 
     public setVelocity(vx: number, vy: number, vz: number): Node {
@@ -110,7 +112,9 @@ export default class Node {
 
     public dist(v: Node): number {
         return Math.sqrt(
-            Math.pow(this.x - v.x, 2) + Math.pow(this.y - v.y, 2) + Math.pow(this.z - v.z, 2),
+            Math.pow(this.x - v.x, 2) +
+                Math.pow(this.y - v.y, 2) +
+                Math.pow(this.z - v.z, 2),
         );
     }
 }

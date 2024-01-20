@@ -115,7 +115,9 @@ function useNode(options: NodeOptions): Node {
     };
 
     const dist = (v: Node): number => {
-        return Math.sqrt((x - v.getX()) ** 2 + (y - v.getY()) ** 2 + (z - v.getZ()) ** 2);
+        return Math.sqrt(
+            (x - v.getX()) ** 2 + (y - v.getY()) ** 2 + (z - v.getZ()) ** 2,
+        );
     };
 
     return {

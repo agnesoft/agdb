@@ -8,9 +8,22 @@ describe("Edge", () => {
     let toNode: Node;
 
     beforeEach(() => {
-        fromNode = new Node({ id: 1, coordinates: { x: 0, y: 0, z: 0 }, values: {} });
-        toNode = new Node({ id: 2, coordinates: { x: 3, y: 4, z: 5 }, values: {} });
-        edge = new Edge({ id: 1, from: fromNode, to: toNode, values: { foo: "bar" } });
+        fromNode = new Node({
+            id: 1,
+            coordinates: { x: 0, y: 0, z: 0 },
+            values: {},
+        });
+        toNode = new Node({
+            id: 2,
+            coordinates: { x: 3, y: 4, z: 5 },
+            values: {},
+        });
+        edge = new Edge({
+            id: 1,
+            from: fromNode,
+            to: toNode,
+            values: { foo: "bar" },
+        });
     });
 
     it("should return the correct id", () => {
@@ -50,7 +63,11 @@ describe("Edge", () => {
     });
 
     it("should set the from node correctly", () => {
-        const newFromNode = new Node({ id: 3, coordinates: { x: 1, y: 2, z: 3 }, values: {} });
+        const newFromNode = new Node({
+            id: 3,
+            coordinates: { x: 1, y: 2, z: 3 },
+            values: {},
+        });
         edge.setFrom(newFromNode);
         expect(edge.getFrom()).toBe(newFromNode);
     });
@@ -60,7 +77,11 @@ describe("Edge", () => {
     });
 
     it("should set the to node correctly", () => {
-        const newToNode = new Node({ id: 4, coordinates: { x: 4, y: 5, z: 6 }, values: {} });
+        const newToNode = new Node({
+            id: 4,
+            coordinates: { x: 4, y: 5, z: 6 },
+            values: {},
+        });
         edge.setTo(newToNode);
         expect(edge.getTo()).toBe(newToNode);
     });
@@ -70,7 +91,11 @@ describe("Edge with undefined from or to", () => {
     let node: Node;
 
     beforeEach(() => {
-        node = new Node({ id: 2, coordinates: { x: 3, y: 4, z: 5 }, values: {} });
+        node = new Node({
+            id: 2,
+            coordinates: { x: 3, y: 4, z: 5 },
+            values: {},
+        });
     });
 
     it("should return zero length if the from node is undefined", () => {

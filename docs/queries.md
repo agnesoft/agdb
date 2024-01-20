@@ -855,7 +855,9 @@ pub struct SelectAllAliases {}
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of elements with aliases
-    pub elements: Vec<DbElement>, // list of elements with an alias each with a single property (`String("alias"): String`)
+    pub elements: Vec<DbElement>, // list of elements with an
+                                  // alias each with a single
+                                  // property (`String("alias"): String`)
 }
 ```
 
@@ -920,7 +922,7 @@ QueryBuilder::search().from("a").to("b").query(); //path search, A*
 QueryBuilder::search().breadth_first().from("a").query(); //breadth first is the default and can be omitted however
 QueryBuilder::search().depth_first().from("a").query();
 
-QueryBuilder::search().index("age").value(20).query();
+QueryBuilder::search().index("age").value(20).query(); //index search
 
 //limit, offset and order_by can be applied similarly to all the search variants
 QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()

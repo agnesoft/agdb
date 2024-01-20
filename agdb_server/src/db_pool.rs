@@ -38,6 +38,7 @@ use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use uuid::Uuid;
 
 const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 
@@ -842,9 +843,9 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn save_token(&self, user: DbId, token: String) -> ServerResult<String> {
+    pub(crate) fn user_token(&self, user: DbId) -> ServerResult<String> {
         self.db_mut()?.transaction_mut(|t| {
-            let existing = t
+            let mut user_token = t
                 .exec(
                     &QueryBuilder::select()
                         .values(vec!["token".into()])
@@ -855,17 +856,19 @@ impl DbPool {
                 .values[0]
                 .value
                 .to_string();
-            if existing.is_empty() {
+
+            if user_token.is_empty() {
+                let token_uuid = Uuid::new_v4();
+                user_token = token_uuid.to_string();
                 t.exec_mut(
                     &QueryBuilder::insert()
-                        .values_uniform(vec![("token", &token).into()])
+                        .values_uniform(vec![("token", &user_token.clone()).into()])
                         .ids(user)
                         .query(),
                 )?;
-                Ok(token.clone())
-            } else {
-                Ok(existing)
             }
+
+            Ok(user_token)
         })
     }
 

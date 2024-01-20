@@ -8,7 +8,6 @@ use agdb_api::UserLogin;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use uuid::Uuid;
 
 #[utoipa::path(post,
     path = "/api/v1/user/login",
@@ -32,13 +31,7 @@ pub(crate) async fn login(
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
-    let token = if user.token.is_empty() {
-        let token_uuid = Uuid::new_v4();
-        let token = token_uuid.to_string();
-        db_pool.save_token(user.db_id.unwrap(), token)?
-    } else {
-        user.token
-    };
+    let token = db_pool.user_token(user.db_id.unwrap())?;
 
     Ok((StatusCode::OK, Json(token)))
 }

@@ -82,7 +82,7 @@ impl QueryBuilder {
         Remove {}
     }
 
-    /// Search teh database by traversing the graph
+    /// Search the database by traversing the graph
     /// and returns element ids using breadth first,
     /// depth first or A* algorithm:
     ///

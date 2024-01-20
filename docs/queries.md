@@ -37,6 +37,84 @@
       - [Results](#results)
     - [Paths](#paths)
 
+```mermaid
+flowchart LR
+
+    QueryBuilder --> insert
+    QueryBuilder --> remove
+    QueryBuilder --> select
+    QueryBuilder --> search
+
+    insert --> i_aliases("aliases") --> i_a_ids("ids") --> InsertAliasesQuery
+    insert --> i_edges("edges") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery
+    i_e_to --> each("each") --> InsertEdgesQuery
+    i_e_to --> i_e_values("values")
+    each --> i_e_values_uniform("values_uniform") --> InsertEdgesQuery
+    each --> i_e_values("values") --> InsertEdgesQuery
+    insert --> i_index("index") --> InsertIndexQuery
+    insert --> i_nodes("nodes")   
+    i_nodes --> i_n_values("values") --> InsertNodesQuery   
+    i_nodes --> i_n_aliases("aliases")
+    i_n_count --> i_n_values_uniform("values_uniform")
+    i_n_aliases --> i_n_values
+    i_n_aliases --> InsertNodesQuery
+    i_n_aliases --> i_n_values_uniform
+    i_nodes --> i_n_count("count") --> InsertNodesQuery
+    insert --> i_element("element") --> InsertValuesQuery
+    insert --> i_elements("elements") --> InsertValuesQuery
+    insert --> i_values("values")
+    i_values --> i_v_ids("ids") --> InsertValuesQuery
+    insert --> i_values_uniform("values_uniform") --> InsertValuesQuery
+
+    remove --> r_aliases("aliases") --> RemoveAliasesQuery
+    remove --> r_ids("ids") --> RemoveQuery
+    remove --> r_index("index") --> RemoveIndexQuery
+    remove --> r_values("values") --> r_v_ids("ids") --> RemoveValuesQuery
+
+    select --> s_aliases("aliases") --> SelectAllAliasesQuery
+    s_aliases --> s_a_ids("ids") --> SelectAliasesQuery
+    select --> s_ids("ids") --> SelectQuery
+    select --> s_indexes("indexes") --> SelectIndexesQuery
+    select --> s_keys("keys") --> s_k_ids("ids") --> SelectKeysQuery
+    select --> key_count --> s_k_c_ids("ids") --> SelectKeyCountQuery
+    select --> values --> s_v_ids("ids") --> SelectValuesQuery
+
+    search --> index --> s_i_value("value") --> SearchQuery
+    search --> from --> SearchQuery
+    from --> limit --> SearchQuery
+    from --> offset
+    offset --> limit
+    from --> order_by
+    order_by --> offset
+    order_by --> limit
+    order_by --> SearchQuery
+    from --> where --> SearchQuery
+    from --> to
+    to --> order_by
+    to --> offset
+    to --> limit
+    search --> breadth_first --> from
+    search --> depth_first --> from
+    search --> to
+    depth_first --> to
+    breadth_first --> to
+    to --> where
+    order_by --> where
+    offset --> where
+    limit --> where
+
+    condition --> SearchQuery
+    end_where --> SearchQuery
+    where --> condition
+    modifier --> where
+    condition --> end_where
+    end_where --> logic
+    where --> modifier("not/beyond")
+    modifier --> condition{"condition*"}
+    condition --> logic("and/or")
+    logic --> where
+```
+
 All interactions with the `agdb` are realized through queries. There are two kinds of queries:
 
 - Immutable queries

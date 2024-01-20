@@ -708,7 +708,8 @@ pub struct SelectValuesQuery {
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements with only selected properties
+    pub elements: Vec<DbElement>, // list of elements with only
+                                  // selected properties
 }
 ```
 
@@ -738,7 +739,8 @@ pub struct SelectKeysQuery(pub QueryIds);
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements with only keys and default (empty `I64(0)` values)
+    pub elements: Vec<DbElement>, // list of elements with only keys and
+                                  // default (empty `I64(0)` values)
 }
 ```
 
@@ -768,7 +770,8 @@ pub struct SelectKeyCountQuery(pub QueryIds);
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements each with a single property (`String("key_count")`: `u64`)
+    pub elements: Vec<DbElement>, // list of elements each with a single
+                                  // property (`String("key_count")`: `u64`)
 }
 ```
 
@@ -798,7 +801,11 @@ pub struct SelectIndexesQuery {};
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of indexes in the database
-    pub elements: Vec<DbElement>, // single element with id 0 and list of properties representing each index (`DbValue`: `u64`) where the key is the indexed key and the value is number of indexed values in the index.
+    pub elements: Vec<DbElement>, // single element with id 0 and list of
+                                  // properties representing each index
+                                  // (`DbValue`: `u64`) where the key is
+                                  // the indexed key and the value is number
+                                  // of indexed values in the index.
 }
 ```
 
@@ -826,7 +833,8 @@ pub struct SelectAliasesQuery(pub QueryIds);
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements each with a single property (`String("alias")`: `String`)
+    pub elements: Vec<DbElement>, // list of elements each with a single
+                                  // property (`String("alias")`: `String`)
 }
 ```
 

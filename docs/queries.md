@@ -8,41 +8,41 @@ flowchart LR
     QueryBuilder --> select("select")
     QueryBuilder --> search("search")
 
-    insert --> i_aliases("aliases") --> i_a_ids("ids") --> InsertAliasesQuery
-    insert --> i_edges("edges") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery
+    insert --> i_aliases("aliases") --> i_a_ids("ids") --> InsertAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>InsertAliasesQuery</a>"]
+    insert --> i_edges("edges") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>InsertEdgesQuery</a>"]
     i_e_to --> each("each") --> InsertEdgesQuery
     i_e_to --> i_e_values("values")
     each --> i_e_values_uniform("values_uniform") --> InsertEdgesQuery
     each --> i_e_values("values") --> InsertEdgesQuery
-    insert --> i_index("index") --> InsertIndexQuery
+    insert --> i_index("index") --> InsertIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>InsertIndexQuery</a>"]
     insert --> i_nodes("nodes")   
-    i_nodes --> i_n_values("values") --> InsertNodesQuery   
+    i_nodes --> i_n_values("values") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
     i_nodes --> i_n_aliases("aliases")
     i_n_count --> i_n_values_uniform("values_uniform")
     i_n_aliases --> i_n_values
     i_n_aliases --> InsertNodesQuery
     i_n_aliases --> i_n_values_uniform
     i_nodes --> i_n_count("count") --> InsertNodesQuery
-    insert --> i_element("element") --> InsertValuesQuery
+    insert --> i_element("element") --> InsertValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>InsertValuesQuery</a>"]
     insert --> i_elements("elements") --> InsertValuesQuery
     insert --> i_values("values")
     i_values --> i_v_ids("ids") --> InsertValuesQuery
     insert --> i_values_uniform("values_uniform") --> InsertValuesQuery
 
-    remove --> r_aliases("aliases") --> RemoveAliasesQuery
-    remove --> r_ids("ids") --> RemoveQuery
-    remove --> r_index("index") --> RemoveIndexQuery
-    remove --> r_values("values") --> r_v_ids("ids") --> RemoveValuesQuery
+    remove --> r_aliases("aliases") --> RemoveAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-aliases'>RemoveAliasesQuery</a>"]
+    remove --> r_ids("ids") --> RemoveQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-elements'>RemoveQuery</a>"]
+    remove --> r_index("index") --> RemoveIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-index'>RemoveIndexQuery</a>"]
+    remove --> r_values("values") --> r_v_ids("ids") --> RemoveValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-values'>RemoveValuesQuery</a>"]
 
-    select --> s_aliases("aliases") --> SelectAllAliasesQuery
-    s_aliases --> s_a_ids("ids") --> SelectAliasesQuery
-    select --> s_ids("ids") --> SelectQuery
-    select --> s_indexes("indexes") --> SelectIndexesQuery
-    select --> s_keys("keys") --> s_k_ids("ids") --> SelectKeysQuery
-    select --> key_count("key_count") --> s_k_c_ids("ids") --> SelectKeyCountQuery
-    select --> values("values") --> s_v_ids("ids") --> SelectValuesQuery
+    select --> s_aliases("aliases") --> SelectAllAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-all-aliases'>SelectAllAliasesQuery</a>"]
+    s_aliases --> s_a_ids("ids") --> SelectAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>SelectAliasesQuery</a>"]
+    select --> s_ids("ids") --> SelectQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>SelectQuery</a>"]
+    select --> s_indexes("indexes") --> SelectIndexesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>SelectIndexesQuery</a>"]
+    select --> s_keys("keys") --> s_k_ids("ids") --> SelectKeysQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>SelectKeysQuery</a>"]
+    select --> key_count("key_count") --> s_k_c_ids("ids") --> SelectKeyCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>SelectKeyCountQuery</a>"]
+    select --> values("values") --> s_v_ids("ids") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
 
-    search --> index("index") --> s_i_value("value") --> SearchQuery
+    search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#search'>SearchQuery</a>"]
     search --> from("from") --> SearchQuery
     from --> limit("limit") --> SearchQuery
     from --> offset("offset")
@@ -73,10 +73,9 @@ flowchart LR
     condition --> end_where
     end_where --> logic
     where --> modifier("not/beyond")
-    modifier --> condition[["distance<br/>edge<br/>edge_count<br/>edge_count_from<br/>edge_count_to<br/>key.value<br/>keys<br/>node"]]
+    modifier --> condition[["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#conditions'>distance<br/>edge<br/>edge_count<br/>edge_count_from<br/>edge_count_to<br/>ids<br/>key.value<br/>keys<br/>node</a>"]]
     condition --> logic("and/or")
     logic --> where
-
 ```
 
 - [Queries](#queries)

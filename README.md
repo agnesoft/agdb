@@ -31,6 +31,7 @@
 <p align="center">
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="license"></a>
     <a href="https://crates.io/crates/agdb"><img src="https://img.shields.io/crates/v/agdb" alt="Crates.io"></a>
+    <a href="https://docs.rs/agdb/latest/agdb/"><img src="https://docs.rs/agdb/badge.svg"></a>
     <a href="https://github.com/agnesoft/agdb/actions/workflows/release.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/release.yaml/badge.svg" alt="release"></a>
     <a href="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml"><img src="https://github.com/agnesoft/agdb/actions/workflows/coverage.yaml/badge.svg" alt="coverage"></a>
     <a href="https://codecov.io/gh/agnesoft/agdb"><img src="https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU" alt="codecov"></a>
@@ -46,7 +47,7 @@
 ## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
-<a href="./docs/but_why.md">Why not SQL?</a> | <a href="#decision-tree">DECISION TREE</a> | <a href="./docs/troubleshooting.md">Troubleshooting</a>
+<a href="./docs/but_why.md">Why not SQL?</a> | <a href="#decision-tree">DECISION TREE</a> | <a href="./docs/queries.md">Queries</a>
 </p>
 
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.

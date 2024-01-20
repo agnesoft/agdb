@@ -3,7 +3,7 @@
 ```mermaid
 flowchart LR
 
-    QueryBuilder --> insert("insert")
+    QueryBuilder["<a href='https://docs.rs/agdb/latest/agdb/struct.QueryBuilder.html'>QueryBuilder</a>"] --> insert("insert")
     QueryBuilder --> remove("remove")
     QueryBuilder --> select("select")
     QueryBuilder --> search("search")
@@ -90,7 +90,7 @@ flowchart LR
     - [Insert nodes](#insert-nodes)
     - [Insert edges](#insert-edges)
     - [Insert aliases](#insert-aliases)
-    - [Insert indexes](#insert-indexes)
+    - [Insert index](#insert-index)
     - [Insert values](#insert-values)
   - [Remove](#remove)
     - [Remove elements](#remove-elements)
@@ -420,7 +420,7 @@ The result will contain:
 - number of aliases inserted or updated
 - empty list of elements
 
-### Insert indexes
+### Insert index
 
 ```Rust
 pub struct InsertIndexQuery(pub DbValue);

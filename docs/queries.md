@@ -87,25 +87,25 @@ flowchart LR
 - [QueryValues](#queryvalues)
 - [Mutable queries](#mutable-queries)
   - [Insert](#insert)
-    - [Insert nodes](#insert-nodes)
-    - [Insert edges](#insert-edges)
     - [Insert aliases](#insert-aliases)
+    - [Insert edges](#insert-edges)
     - [Insert index](#insert-index)
+    - [Insert nodes](#insert-nodes)
     - [Insert values](#insert-values)
   - [Remove](#remove)
-    - [Remove elements](#remove-elements)
     - [Remove aliases](#remove-aliases)
+    - [Remove elements](#remove-elements)
     - [Remove index](#remove-index)
     - [Remove values](#remove-values)
 - [Immutable queries](#immutable-queries)
   - [Select](#select)
-    - [Select elements](#select-elements)
-    - [Select values](#select-values)
-    - [Select keys](#select-keys)
-    - [Select key count](#select-key-count)
-    - [Select indexes](#select-indexes)
     - [Select aliases](#select-aliases)
     - [Select all aliases](#select-all-aliases)
+    - [Select elements](#select-elements)
+    - [Select indexes](#select-indexes)
+    - [Select keys](#select-keys)
+    - [Select key count](#select-key-count)
+    - [Select values](#select-values)
   - [Search](#search)
     - [Conditions](#conditions)
     - [Truth tables](#truth-tables)
@@ -327,21 +327,20 @@ The `insert` queries are used for both insert and updating data while `remove` q
 
 There are 5 distinct insert queries:
 
-- insert nodes
-- insert edges
 - insert aliases
+- insert edges
+- insert nodes
 - insert index
 - insert values
 
-### Insert nodes
+### Insert aliases
 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
 ```Rust
-pub struct InsertNodesQuery {
-    pub count: u64,
-    pub values: QueryValues,
+pub struct InsertAliasesQuery {
+    pub ids: QueryIds,
     pub aliases: Vec<String>,
 }
 ```
@@ -350,25 +349,24 @@ pub struct InsertNodesQuery {
 
 ```Rust
 pub struct QueryResult {
-    pub result: i64, // number of inserted nodes
-    pub elements: Vec<DbElement>, // list of inserted nodes (only ids)
+    pub result: i64, // number of inserted/updated aliases
+    pub elements: Vec<DbElement>, // empty
 }
 ```
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::insert().nodes().count(2).query();
-QueryBuilder::insert().nodes().count(2).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
-QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).query();
-QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
-QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
-QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
+QueryBuilder::insert().aliases("a").ids(1).query();
+QueryBuilder::insert().aliases("a").ids("b").query(); // alias "b" is replaced  with "a"
+QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]).query();
 ```
 
 </td></tr></table>
 
-The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is a logic error if the count cannot be inferred and is set to `0`. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty alias (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+Inserts or updates aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.
+
+Note that this query is used also for updating existing aliases. Byt inserting a different alias of an id that already has one that alias will be overwritten with the new one.
 
 ### Insert edges
 
@@ -412,41 +410,6 @@ QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().no
 
 The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
-### Insert aliases
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct InsertAliasesQuery {
-    pub ids: QueryIds,
-    pub aliases: Vec<String>,
-}
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // number of inserted/updated aliases
-    pub elements: Vec<DbElement>, // empty
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::insert().aliases("a").ids(1).query();
-QueryBuilder::insert().aliases("a").ids("b").query(); // alias "b" is replaced  with "a"
-QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]).query();
-```
-
-</td></tr></table>
-
-Inserts or updates aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.
-
-Note that this query is used also for updating existing aliases. Byt inserting a different alias of an id that already has one that alias will be overwritten with the new one.
-
 ### Insert index
 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
@@ -474,6 +437,43 @@ QueryBuilder::insert().index("key").query();
 </td></tr></table>
 
 Creates an index for a key. The index is valid for the entire database including any and all existing values in the database. The purpose of the index is to provide faster lookup for data that is not modelled on the graph itself. Example can be looking up users by their username or token.
+
+### Insert nodes
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct InsertNodesQuery {
+    pub count: u64,
+    pub values: QueryValues,
+    pub aliases: Vec<String>,
+}
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // number of inserted nodes
+    pub elements: Vec<DbElement>, // list of inserted nodes (only ids)
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::insert().nodes().count(2).query();
+QueryBuilder::insert().nodes().count(2).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
+QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).query();
+QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
+QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
+QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
+```
+
+</td></tr></table>
+
+The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is a logic error if the count cannot be inferred and is set to `0`. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty alias (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
 ### Insert values
 
@@ -515,43 +515,12 @@ Note that this query is used also for updating existing values. By inserting the
 
 ## Remove
 
-There are 3 distinct remove queries:
+There are 4 distinct remove queries:
 
-- remove (elements)
 - remove aliases
+- remove (elements)
+- remove index
 - remove values
-
-### Remove elements
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct RemoveQuery(pub QueryIds);
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // negative number of removed ids (does not include removed edges unless listed in query ids)
-    pub elements: Vec<DbElement>, // empty
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::remove().ids(1).query();
-QueryBuilder::remove().ids("a").query();
-QueryBuilder::remove().ids(vec![1, 2]).query();
-QueryBuilder::remove().ids(vec!["a", "b"]).query();
-QueryBuilder::remove().ids(QueryBuilder::search().from("a").query()).query();
-```
-
-</td></tr></table>
-
-The elements identified by [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is NOT an error if the elements to be removed do not exist in the database. All associated properties (key-value pairs) are also removed from all elements. Removing nodes will also remove all their edges (incoming and outgoing) and their properties.
 
 ### Remove aliases
 
@@ -582,6 +551,40 @@ QueryBuilder::remove().aliases(vec!["a", "b"]).query();
 
 The aliases listed will be removed from the database if they exist. It is NOT an error if the aliases do not exist in the database.
 
+### Remove elements
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct RemoveQuery(pub QueryIds);
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // negative number of removed ids
+                     // (does not include removed edges
+                     // unless listed in query ids)
+    pub elements: Vec<DbElement>, // empty
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::remove().ids(1).query();
+QueryBuilder::remove().ids("a").query();
+QueryBuilder::remove().ids(vec![1, 2]).query();
+QueryBuilder::remove().ids(vec!["a", "b"]).query();
+QueryBuilder::remove().ids(QueryBuilder::search().from("a").query()).query();
+```
+
+</td></tr></table>
+
+The elements identified by [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is NOT an error if the elements to be removed do not exist in the database. All associated properties (key-value pairs) are also removed from all elements. Removing nodes will also remove all their edges (incoming and outgoing) and their properties.
+
 ### Remove index
 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
@@ -595,7 +598,8 @@ pub struct RemoveIndexQuery(pub DbValue);
 
 ```Rust
 pub struct QueryResult {
-    pub result: i64, // negative number of values removed from the index
+    pub result: i64, // negative number of values removed
+                     // from the index
     pub elements: Vec<DbElement>, // empty
 }
 ```
@@ -623,7 +627,8 @@ pub struct RemoveValuesQuery(pub SelectValuesQuery);
 
 ```Rust
 pub struct QueryResult {
-    pub result: i64, // negative number of actually removed key-value pairs
+    pub result: i64, // negative number of actually removed
+                     // key-value pairs
     pub elements: Vec<DbElement>, // empty
 }
 ```
@@ -652,172 +657,15 @@ The `select` queries are used to read the data from the database using known `id
 
 ## Select
 
-There are 6 select queries:
+There are 7 select queries:
 
-- select (elements)
-- select values
-- select keys
-- select key count
 - select aliases
 - select all aliases
-
-### Select elements
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct SelectQuery(pub QueryIds);
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements with all properties
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::select().ids("a").query();
-QueryBuilder::select().ids(vec![1, 2]).query();
-QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
-```
-
-</td></tr></table>
-
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with all their properties. If any of the ids does not exist in the database running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select.
-
-### Select values
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct SelectValuesQuery {
-    pub keys: Vec<DbValue>,
-    pub ids: QueryIds,
-}
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements with only
-                                  // selected properties
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids("a").query();
-QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(vec![1, 2]).query();
-QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
-```
-
-</td></tr></table>
-
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. While the search query is most commonly used to find, filter or otherwise limit what elements to select, using this particular query can limit what properties will be returned. If you plan to convert the result into your user defined type(s) you should use `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
-
-### Select keys
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct SelectKeysQuery(pub QueryIds);
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements with only keys and
-                                  // default (empty `I64(0)` values)
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::select().keys().ids("a").query();
-QueryBuilder::select().keys().ids(vec![1, 2]).query();
-QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query();
-```
-
-</td></tr></table>
-
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only keys returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing what data is available in on the graph elements (e.g. when transforming the data into a table this query could be used to populate the column names).
-
-### Select key count
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct SelectKeyCountQuery(pub QueryIds);
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements each with a single
-                                  // property (`String("key_count")`: `u64`)
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::select().key_count().ids("a").query();
-QueryBuilder::select().key_count().ids(vec![1, 2]).query();
-QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query();
-```
-
-</td></tr></table>
-
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only key count returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing how many properties there are associated with the graph elements.
-
-### Select indexes
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct SelectIndexesQuery {};
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // number of indexes in the database
-    pub elements: Vec<DbElement>, // single element with id 0 and list of
-                                  // properties representing each index
-                                  // (`DbValue`: `u64`) where the key is
-                                  // the indexed key and the value is number
-                                  // of indexed values in the index.
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::select().indexes().query();
-```
-
-</td></tr></table>
-
-Selects all indexes in the database.
+- select (elements)
+- select indexes
+- select keys
+- select key count
+- select values
 
 ### Select aliases
 
@@ -833,8 +681,9 @@ pub struct SelectAliasesQuery(pub QueryIds);
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements each with a single
-                                  // property (`String("alias")`: `String`)
+    pub elements: Vec<DbElement>, // list of elements each with
+                                  // a single property
+                                  // (`String("alias")`: `String`)
 }
 ```
 
@@ -878,6 +727,166 @@ QueryBuilder::select().aliases().query()
 </td></tr></table>
 
 Selects all aliases in the database.
+
+### Select elements
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectQuery(pub QueryIds);
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // number of returned elements
+    pub elements: Vec<DbElement>, // list of elements with
+                                  // all properties
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().ids("a").query();
+QueryBuilder::select().ids(vec![1, 2]).query();
+QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
+```
+
+</td></tr></table>
+
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with all their properties. If any of the ids does not exist in the database running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select.
+
+### Select indexes
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectIndexesQuery {};
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // number of indexes in the database
+    pub elements: Vec<DbElement>, // single element with id 0 and list of
+                                  // properties representing each index
+                                  // (`DbValue`: `u64`) where the key is
+                                  // the indexed key and the value is number
+                                  // of indexed values in the index.
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().indexes().query();
+```
+
+</td></tr></table>
+
+Selects all indexes in the database.
+
+### Select keys
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectKeysQuery(pub QueryIds);
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // number of returned elements
+    pub elements: Vec<DbElement>, // list of elements with only keys
+                                  // defaulted values will be `I64(0)`
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().keys().ids("a").query();
+QueryBuilder::select().keys().ids(vec![1, 2]).query();
+QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query();
+```
+
+</td></tr></table>
+
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only keys returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing what data is available in on the graph elements (e.g. when transforming the data into a table this query could be used to populate the column names).
+
+### Select key count
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectKeyCountQuery(pub QueryIds);
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // number of returned elements
+    pub elements: Vec<DbElement>, // list of elements each with a
+                                  // single property
+                                  // (`String("key_count")`: `u64`)
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().key_count().ids("a").query();
+QueryBuilder::select().key_count().ids(vec![1, 2]).query();
+QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query();
+```
+
+</td></tr></table>
+
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only key count returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing how many properties there are associated with the graph elements.
+
+### Select values
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectValuesQuery {
+    pub keys: Vec<DbValue>,
+    pub ids: QueryIds,
+}
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // number of returned elements
+    pub elements: Vec<DbElement>, // list of elements with only
+                                  // selected properties
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids("a").query();
+QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(vec![1, 2]).query();
+QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
+```
+
+</td></tr></table>
+
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. While the search query is most commonly used to find, filter or otherwise limit what elements to select, using this particular query can limit what properties will be returned. If you plan to convert the result into your user defined type(s) you should use `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
 
 ## Search
 
@@ -925,13 +934,10 @@ pub enum DbKeyOrder {
 ```Rust
 QueryBuilder::search().from("a").query();
 QueryBuilder::search().to(1).query(); //reverse search
-QueryBuilder::search().from("a").to("b").query(); //path search, A*
-
-QueryBuilder::search().breadth_first().from("a").query(); //breadth first is the default and can be omitted however
+QueryBuilder::search().from("a").to("b").query(); //path search using A* algorithm
+QueryBuilder::search().breadth_first().from("a").query(); //breadth first is the default and can be omitted
 QueryBuilder::search().depth_first().from("a").query();
-
 QueryBuilder::search().index("age").value(20).query(); //index search
-
 //limit, offset and order_by can be applied similarly to all the search variants
 QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()
 QueryBuilder::search().from(1).offset(10).query();

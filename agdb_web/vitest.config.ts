@@ -14,6 +14,7 @@ export default defineVitestConfig({
                 ...coverageConfigDefaults.exclude,
                 "e2e/*",
                 "*.config.ts",
+                "*/**/*.vue",
             ],
         },
     },

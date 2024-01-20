@@ -189,8 +189,6 @@ The `QueryResult` is the universal result type for all successful queries. It ca
 ```Rust
 pub struct QueryResult {
     pub result: i64,
-    pub from: Option<DbId>,
-    pub to: Option<DbId>,
     pub elements: Vec<DbElement>,
 }
 ```
@@ -202,6 +200,8 @@ The `elements` field hold the [database elements](concepts.md#graph) returned. E
 ```Rust
 pub struct DbElement {
     pub id: DbId,
+    pub from: Option<DbId>,
+    pub to: Option<DbId>,
     pub values: Vec<DbKeyValue>,
 }
 ```

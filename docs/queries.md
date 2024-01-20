@@ -3,20 +3,20 @@
 ```mermaid
 flowchart LR
 
-    QueryBuilder["<a href='https://docs.rs/agdb/latest/agdb/struct.QueryBuilder.html'>QueryBuilder</a>"] --> insert("insert")
-    QueryBuilder --> remove("remove")
-    QueryBuilder --> select("select")
-    QueryBuilder --> search("search")
+    QueryBuilder["<a href='https://docs.rs/agdb/latest/agdb/struct.QueryBuilder.html'>QueryBuilder</a>"] --> insert("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert'>insert</a>")
+    QueryBuilder --> remove("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove'>remove</a>")
+    QueryBuilder --> select("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select'>select</a>")
+    QueryBuilder --> search("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#search'>search</a>")
 
-    insert --> i_aliases("aliases") --> i_a_ids("ids") --> InsertAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>InsertAliasesQuery</a>"]
-    insert --> i_edges("edges") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>InsertEdgesQuery</a>"]
+    insert --> i_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>aliases</a>") --> i_a_ids("ids") --> InsertAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>InsertAliasesQuery</a>"]
+    insert --> i_edges("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>edges</a>") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>InsertEdgesQuery</a>"]
     i_e_to --> each("each") --> InsertEdgesQuery
     i_e_to --> i_e_values("values")
     each --> i_e_values_uniform("values_uniform") --> InsertEdgesQuery
     each --> i_e_values("values") --> InsertEdgesQuery
     insert --> i_index("index") --> InsertIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>InsertIndexQuery</a>"]
-    insert --> i_nodes("nodes")
-    i_nodes --> i_n_values("values") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
+    insert --> i_nodes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>nodes</a>")
+    i_nodes --> i_n_values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>values</a>") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
     i_nodes --> i_n_aliases("aliases")
     i_n_count --> i_n_values_uniform("values_uniform")
     i_n_aliases --> i_n_values

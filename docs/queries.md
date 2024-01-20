@@ -15,7 +15,7 @@ flowchart LR
     each --> i_e_values_uniform("values_uniform") --> InsertEdgesQuery
     each --> i_e_values("values") --> InsertEdgesQuery
     insert --> i_index("index") --> InsertIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>InsertIndexQuery</a>"]
-    insert --> i_nodes("nodes")   
+    insert --> i_nodes("nodes")
     i_nodes --> i_n_values("values") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
     i_nodes --> i_n_aliases("aliases")
     i_n_count --> i_n_values_uniform("values_uniform")

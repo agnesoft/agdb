@@ -14,7 +14,7 @@ flowchart LR
     i_e_to --> i_e_values("values")
     each --> i_e_values_uniform("values_uniform") --> InsertEdgesQuery
     each --> i_e_values("values") --> InsertEdgesQuery
-    insert --> i_index("index") --> InsertIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>InsertIndexQuery</a>"]
+    insert --> i_index("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>index</a>") --> InsertIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>InsertIndexQuery</a>"]
     insert --> i_nodes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>nodes</a>")
     i_nodes --> i_n_values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>values</a>") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
     i_nodes --> i_n_aliases("aliases")
@@ -29,10 +29,10 @@ flowchart LR
     i_values --> i_v_ids("ids") --> InsertValuesQuery
     insert --> i_values_uniform("values_uniform") --> InsertValuesQuery
 
-    remove --> r_aliases("aliases") --> RemoveAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-aliases'>RemoveAliasesQuery</a>"]
-    remove --> r_ids("ids") --> RemoveQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-elements'>RemoveQuery</a>"]
-    remove --> r_index("index") --> RemoveIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-index'>RemoveIndexQuery</a>"]
-    remove --> r_values("values") --> r_v_ids("ids") --> RemoveValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-values'>RemoveValuesQuery</a>"]
+    remove --> r_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-aliases'>aliases</a>") --> RemoveAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-aliases'>RemoveAliasesQuery</a>"]
+    remove --> r_ids("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-elements'>ids</a>") --> RemoveQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-elements'>RemoveQuery</a>"]
+    remove --> r_index("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-index'>index</a>") --> RemoveIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-index'>RemoveIndexQuery</a>"]
+    remove --> r_values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-values'>values</a>") --> r_v_ids("ids") --> RemoveValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-values'>RemoveValuesQuery</a>"]
 
     select --> s_aliases("aliases") --> SelectAllAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-all-aliases'>SelectAllAliasesQuery</a>"]
     s_aliases --> s_a_ids("ids") --> SelectAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>SelectAliasesQuery</a>"]

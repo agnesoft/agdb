@@ -3,7 +3,7 @@
 ```mermaid
 flowchart LR
 
-    QueryBuilder --> insert("insert")
+    QueryBuilder["<a href='https://docs.rs/agdb/latest/agdb/struct.QueryBuilder.html'>QueryBuilder</a>"] --> insert("insert")
     QueryBuilder --> remove("remove")
     QueryBuilder --> select("select")
     QueryBuilder --> search("search")

@@ -18,6 +18,13 @@ export default defineNuxtConfig({
                         prefix: "/",
                     },
                 },
+                highlight: {
+                    theme: {
+                        default: "github-light",
+                        dark: "github-dark",
+                        sepia: "monokai",
+                    },
+                },
             },
         ],
         "@nuxt/test-utils/module",
@@ -31,5 +38,17 @@ export default defineNuxtConfig({
         build: {
             target: ["es2015", "edge88", "firefox78", "chrome87", "safari12"],
         },
+        css: {
+            preprocessorOptions: {
+                less: {
+                    modifyVars: {
+                        "@smallWidth": "600px",
+                        "@mediumWidth": "768px",
+                        "@largeWidth": "992px",
+                    },
+                },
+            },
+        },
     },
+    css: ["@/assets/less/main.less"],
 });

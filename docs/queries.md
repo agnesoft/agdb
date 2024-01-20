@@ -16,31 +16,31 @@ flowchart LR
     each --> i_e_values("values") --> InsertEdgesQuery
     insert --> i_index("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>index</a>") --> InsertIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-index'>InsertIndexQuery</a>"]
     insert --> i_nodes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>nodes</a>")
-    i_nodes --> i_n_values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>values</a>") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
+    i_nodes --> i_n_values("values") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
     i_nodes --> i_n_aliases("aliases")
     i_n_count --> i_n_values_uniform("values_uniform")
     i_n_aliases --> i_n_values
     i_n_aliases --> InsertNodesQuery
     i_n_aliases --> i_n_values_uniform
     i_nodes --> i_n_count("count") --> InsertNodesQuery
-    insert --> i_element("element") --> InsertValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>InsertValuesQuery</a>"]
-    insert --> i_elements("elements") --> InsertValuesQuery
-    insert --> i_values("values")
+    insert --> i_element("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>element</a>") --> InsertValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>InsertValuesQuery</a>"]
+    insert --> i_elements("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>elements</a>") --> InsertValuesQuery
+    insert --> i_values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>values</a>")
     i_values --> i_v_ids("ids") --> InsertValuesQuery
-    insert --> i_values_uniform("values_uniform") --> InsertValuesQuery
+    insert --> i_values_uniform("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>values_uniform</a>") --> InsertValuesQuery
 
     remove --> r_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-aliases'>aliases</a>") --> RemoveAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-aliases'>RemoveAliasesQuery</a>"]
     remove --> r_ids("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-elements'>ids</a>") --> RemoveQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-elements'>RemoveQuery</a>"]
     remove --> r_index("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-index'>index</a>") --> RemoveIndexQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-index'>RemoveIndexQuery</a>"]
     remove --> r_values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-values'>values</a>") --> r_v_ids("ids") --> RemoveValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#remove-values'>RemoveValuesQuery</a>"]
 
-    select --> s_aliases("aliases") --> SelectAllAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-all-aliases'>SelectAllAliasesQuery</a>"]
+    select --> s_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>aliases</a>") --> SelectAllAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-all-aliases'>SelectAllAliasesQuery</a>"]
     s_aliases --> s_a_ids("ids") --> SelectAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>SelectAliasesQuery</a>"]
-    select --> s_ids("ids") --> SelectQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>SelectQuery</a>"]
-    select --> s_indexes("indexes") --> SelectIndexesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>SelectIndexesQuery</a>"]
-    select --> s_keys("keys") --> s_k_ids("ids") --> SelectKeysQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>SelectKeysQuery</a>"]
-    select --> key_count("key_count") --> s_k_c_ids("ids") --> SelectKeyCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>SelectKeyCountQuery</a>"]
-    select --> values("values") --> s_v_ids("ids") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
+    select --> s_ids("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>ids</a>") --> SelectQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>SelectQuery</a>"]
+    select --> s_indexes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>indexes</a>") --> SelectIndexesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>SelectIndexesQuery</a>"]
+    select --> s_keys("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>keys</a>") --> s_k_ids("ids") --> SelectKeysQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>SelectKeysQuery</a>"]
+    select --> key_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>key_count</a>") --> s_k_c_ids("ids") --> SelectKeyCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>SelectKeyCountQuery</a>"]
+    select --> values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>values</a>") --> s_v_ids("ids") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
 
     search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#search'>SearchQuery</a>"]
     search --> from("from") --> SearchQuery
@@ -366,7 +366,7 @@ QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]).query();
 
 Inserts or updates aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.
 
-Note that this query is used also for updating existing aliases. Byt inserting a different alias of an id that already has one that alias will be overwritten with the new one.
+Note that this query is also used for updating existing aliases. Byt inserting a different alias of an id that already has one that alias will be overwritten with the new one.
 
 ### Insert edges
 
@@ -509,9 +509,9 @@ QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).i
 
 </td></tr></table>
 
-Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<DbId>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your objects. All the rules as if specified manually still apply (e.g. the ids must exist in the database). The `values()` can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<DbId>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your types. All the rules as if specified manually still apply (e.g. the ids must exist in the database). The `values()` can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
-Note that this query is used also for updating existing values. By inserting the same `key` its old value will be overwritten with the new one.
+Note that this query is also used for updating existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
 ## Remove
 

@@ -13,6 +13,7 @@ use agdb::CountComparison;
 use agdb::DbId;
 use agdb::DbUserValue;
 use agdb::QueryBuilder;
+use agdb::QueryConditionData;
 use agdb::QueryError;
 use agdb::QueryId;
 use agdb::QueryIds;
@@ -1108,8 +1109,7 @@ fn t_exec(
 ) -> Result<QueryResult, QueryError> {
     match q {
         QueryType::Search(q) => {
-            q.origin = id_or_result(q.origin.clone(), results)?;
-            q.destination = id_or_result(q.destination.clone(), results)?;
+            inject_results_search(q, results)?;
             t.exec(q)
         }
         QueryType::Select(q) => {
@@ -1145,8 +1145,7 @@ fn t_exec_mut(
 ) -> Result<QueryResult, QueryError> {
     match q {
         QueryType::Search(q) => {
-            q.origin = id_or_result(q.origin.clone(), results)?;
-            q.destination = id_or_result(q.destination.clone(), results)?;
+            inject_results_search(q, results)?;
             t.exec(q)
         }
         QueryType::Select(q) => {
@@ -1212,7 +1211,7 @@ fn id_or_result(id: QueryId, results: &[QueryResult]) -> Result<QueryId, QueryEr
                         )))?
                         .elements
                         .first()
-                        .ok_or(QueryError::from("No lement found in the result"))?
+                        .ok_or(QueryError::from("No element found in the result"))?
                         .id,
                 ));
             }
@@ -1223,23 +1222,50 @@ fn id_or_result(id: QueryId, results: &[QueryResult]) -> Result<QueryId, QueryEr
 }
 
 fn inject_results(ids: &mut QueryIds, results: &[QueryResult]) -> Result<(), QueryError> {
-    if let QueryIds::Ids(ids) = ids {
-        for i in 0..ids.len() {
-            if let QueryId::Alias(alias) = &ids[i] {
-                if let Some(index) = alias.strip_prefix(':') {
-                    if let Ok(index) = index.parse::<usize>() {
-                        let result_ids = results
-                            .get(index)
-                            .ok_or(QueryError::from(format!(
-                                "Results index out of bounds '{index}' (> {})",
-                                results.len()
-                            )))?
-                            .ids()
-                            .into_iter()
-                            .map(QueryId::Id)
-                            .collect::<Vec<QueryId>>();
-                        ids.splice(i..i + 1, result_ids.into_iter());
-                    }
+    match ids {
+        QueryIds::Ids(ids) => {
+            inject_results_ids(ids, results)?;
+        }
+        QueryIds::Search(search) => {
+            inject_results_search(search, results)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn inject_results_search(
+    search: &mut SearchQuery,
+    results: &[QueryResult],
+) -> Result<(), QueryError> {
+    search.origin = id_or_result(search.origin.clone(), results)?;
+    search.destination = id_or_result(search.destination.clone(), results)?;
+
+    for c in &mut search.conditions {
+        if let QueryConditionData::Ids(ids) = &mut c.data {
+            inject_results_ids(ids, results)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Result<(), QueryError> {
+    for i in 0..ids.len() {
+        if let QueryId::Alias(alias) = &ids[i] {
+            if let Some(index) = alias.strip_prefix(':') {
+                if let Ok(index) = index.parse::<usize>() {
+                    let result_ids = results
+                        .get(index)
+                        .ok_or(QueryError::from(format!(
+                            "Results index out of bounds '{index}' (> {})",
+                            results.len()
+                        )))?
+                        .ids()
+                        .into_iter()
+                        .map(QueryId::Id)
+                        .collect::<Vec<QueryId>>();
+                    ids.splice(i..i + 1, result_ids.into_iter());
                 }
             }
         }

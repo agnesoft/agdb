@@ -239,6 +239,109 @@ async fn use_result_of_previous_query() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn use_result_in_subquery() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("users")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .nodes()
+            .values(vec![vec![("key", 1.1).into()], vec![("key", 2.2).into()]])
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .from("users")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::select()
+            .ids(
+                QueryBuilder::search()
+                    .from(":0")
+                    .where_()
+                    .keys(vec!["key".into()])
+                    .query(),
+            )
+            .query()
+            .into(),
+    ];
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[3],
+        QueryResult {
+            result: 2,
+            elements: vec![
+                DbElement {
+                    id: DbId(3),
+                    from: None,
+                    to: None,
+                    values: vec![("key", 2.2).into()]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![("key", 1.1).into()]
+                }
+            ]
+        }
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn use_result_in_condition() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("users")
+            .query()
+            .into(),
+        QueryBuilder::search()
+            .from("users")
+            .where_()
+            .ids(":0")
+            .query()
+            .into(),
+    ];
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[1],
+        QueryResult {
+            result: 1,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![]
+            },]
+        }
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn use_result_in_search() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
@@ -286,6 +389,41 @@ async fn use_result_in_search() -> anyhow::Result<()> {
             ]
         }
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn use_result_in_search_bad_query() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![QueryBuilder::search().from(":bad").query().into()];
+    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    assert_eq!(error.status, 470);
+    assert_eq!(error.description, "Alias ':bad' not found");
+    Ok(())
+}
+
+#[tokio::test]
+async fn use_result_in_search_empty_result() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![
+        QueryBuilder::remove().ids(0).query().into(),
+        QueryBuilder::search().from(":0").query().into(),
+    ];
+    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    assert_eq!(error.status, 470);
+    assert_eq!(error.description, "No element found in the result");
     Ok(())
 }
 

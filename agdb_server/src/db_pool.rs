@@ -1107,7 +1107,11 @@ fn t_exec(
     results: &[QueryResult],
 ) -> Result<QueryResult, QueryError> {
     match q {
-        QueryType::Search(q) => t.exec(q),
+        QueryType::Search(q) => {
+            q.origin = id_or_result(q.origin.clone(), results)?;
+            q.destination = id_or_result(q.destination.clone(), results)?;
+            t.exec(q)
+        }
         QueryType::Select(q) => {
             inject_results(&mut q.0, results)?;
             t.exec(q)
@@ -1140,7 +1144,11 @@ fn t_exec_mut(
     results: &[QueryResult],
 ) -> Result<QueryResult, QueryError> {
     match q {
-        QueryType::Search(q) => t.exec(q),
+        QueryType::Search(q) => {
+            q.origin = id_or_result(q.origin.clone(), results)?;
+            q.destination = id_or_result(q.destination.clone(), results)?;
+            t.exec(q)
+        }
         QueryType::Select(q) => {
             inject_results(&mut q.0, results)?;
             t.exec(q)
@@ -1189,6 +1197,29 @@ fn t_exec_mut(
             t.exec_mut(q)
         }
     }
+}
+
+fn id_or_result(id: QueryId, results: &[QueryResult]) -> Result<QueryId, QueryError> {
+    if let QueryId::Alias(alias) = &id {
+        if let Some(index) = alias.strip_prefix(':') {
+            if let Ok(index) = index.parse::<usize>() {
+                return Ok(QueryId::Id(
+                    results
+                        .get(index)
+                        .ok_or(QueryError::from(format!(
+                            "Results index out of bounds '{index}' (> {})",
+                            results.len()
+                        )))?
+                        .elements
+                        .first()
+                        .ok_or(QueryError::from("No lement found in the result"))?
+                        .id,
+                ));
+            }
+        }
+    }
+
+    Ok(id)
 }
 
 fn inject_results(ids: &mut QueryIds, results: &[QueryResult]) -> Result<(), QueryError> {

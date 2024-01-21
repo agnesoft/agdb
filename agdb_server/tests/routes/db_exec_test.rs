@@ -239,6 +239,57 @@ async fn use_result_of_previous_query() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn use_result_in_search() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![
+        QueryBuilder::insert().nodes().count(1).query().into(),
+        QueryBuilder::insert().nodes().count(1).query().into(),
+        QueryBuilder::insert()
+            .edges()
+            .from(":0")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+    ];
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[3],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-3),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn use_result_bad_query() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();

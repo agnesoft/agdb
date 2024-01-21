@@ -1,12 +1,22 @@
 ---
-title: "agdb documentation"
-description: "Documentation of agdb, Agnesoft Graph Database"
+title: "agdb guides"
+description: "Guides for agdb, Agnesoft Graph Database"
+navigation:
+    title: "Guides"
 ---
 
-# agdb documentation
+# guides
 
-[Guides](/docs/guides)
+[Concepts](/docs/guides/concepts)
 
-[Examples](/docs/examples)
+[Quickstart](/docs/guides/quickstart)
 
-[References](/docs/references)
+[Quickstart - Client](/docs/guides/quickstart-client)
+
+[Server](/docs/guides/server)
+
+[Studio](/docs/guides/studio)
+
+# examples
+
+# reference

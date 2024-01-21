@@ -3,4 +3,4 @@ navigation:
     title: "Examples"
 ---
 
-# agdb examples
+# examples

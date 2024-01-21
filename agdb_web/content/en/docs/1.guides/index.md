@@ -5,14 +5,14 @@ navigation:
     title: "Guides"
 ---
 
-# agdb guides
+# guides
 
-[Key Concepts](/docs/guides/key-concepts)
+[Concepts](/docs/guides/concepts)
 
-[Usage](/docs/guides/usage)
+[Quickstart](/docs/guides/quickstart)
 
-lol
+[Quickstart - Client](/docs/guides/quickstart-client)
 
-```Rust
-let foo;
-```
+[Server](/docs/guides/server)
+
+[Studio](/docs/guides/studio)

@@ -1,18 +1,28 @@
 ---
-title: "agdb guides"
-description: "Guides for agdb, Agnesoft Graph Database"
+title: "Guides"
+description: "Guides, Agnesoft Graph Database"
 navigation:
     title: "Guides"
 ---
 
 # guides
 
-[Concepts](/docs/guides/concepts)
+The following guides are guided examples of usage of the agdb:
 
-[Quickstart](/docs/guides/quickstart)
+1. [Concepts](/docs/guides/concepts)
+   <br/><br/>
 
-[Quickstart - Client](/docs/guides/quickstart_client)
+2. [Quickstart](/docs/guides/quickstart)
+   <br/><br/>
 
-[Server](/docs/guides/server)
+3. [Quickstart - Client](/docs/guides/quickstart_client)
+   <br/><br/>
 
-[Studio](/docs/guides/studio)
+4. [How to run a server?](/docs/guides/how_to_run_server)
+   <br/><br/>
+
+5. [How to use the studio?](/docs/guides/how_to_use_studio)
+   <br/><br/>
+
+6. [Troubleshooting](docs/guides/troubleshooting)
+   <br/><br/>

@@ -1,1 +1,1 @@
-../agdb_web/content/en/api/index.md
+agdb_web/content/en/index.md

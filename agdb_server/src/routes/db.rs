@@ -172,7 +172,7 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let results = db_pool.exec(&owner, &db, user.0, &queries)?;
+    let results = db_pool.exec(&owner, &db, user.0, queries)?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }

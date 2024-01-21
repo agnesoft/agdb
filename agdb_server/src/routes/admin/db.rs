@@ -149,7 +149,7 @@ pub(crate) async fn exec(
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
     let owner_id = db_pool.find_user_id(&owner)?;
-    let results = db_pool.exec(&owner, &db, owner_id, &queries)?;
+    let results = db_pool.exec(&owner, &db, owner_id, queries)?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }

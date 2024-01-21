@@ -13,8 +13,10 @@ use agdb::CountComparison;
 use agdb::DbId;
 use agdb::DbUserValue;
 use agdb::QueryBuilder;
+use agdb::QueryConditionData;
 use agdb::QueryError;
 use agdb::QueryId;
+use agdb::QueryIds;
 use agdb::QueryResult;
 use agdb::QueryType;
 use agdb::SearchQuery;
@@ -393,11 +395,11 @@ impl DbPool {
         owner: &str,
         db: &str,
         user: DbId,
-        queries: &Queries,
+        mut queries: Queries,
     ) -> ServerResult<Vec<QueryResult>> {
         let db_name = db_name(owner, db);
         let role = self.find_user_db_role(user, &db_name)?;
-        let required_role = required_role(queries);
+        let required_role = required_role(&queries);
 
         if required_role == DbUserRole::Write && role == DbUserRole::Read {
             return Err(permission_denied("write rights required"));
@@ -407,21 +409,23 @@ impl DbPool {
         let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
 
         let results = if required_role == DbUserRole::Read {
-            db.get()?.transaction(|t| {
+            db.get()?.transaction(move |t| {
                 let mut results = vec![];
 
-                for q in &queries.0 {
-                    results.push(t_exec(t, q)?);
+                for q in queries.0.iter_mut() {
+                    let result = t_exec(t, q, &results)?;
+                    results.push(result);
                 }
 
                 Ok(results)
             })
         } else {
-            db.get_mut()?.transaction_mut(|t| {
+            db.get_mut()?.transaction_mut(move |t| {
                 let mut results = vec![];
 
-                for q in &queries.0 {
-                    results.push(t_exec_mut(t, q)?);
+                for q in queries.0.iter_mut() {
+                    let result = t_exec_mut(t, q, &results)?;
+                    results.push(result);
                 }
 
                 Ok(results)
@@ -1098,43 +1102,176 @@ fn required_role(queries: &Queries) -> DbUserRole {
     DbUserRole::Read
 }
 
-fn t_exec(t: &Transaction<ServerDbStorage>, q: &QueryType) -> Result<QueryResult, QueryError> {
+fn t_exec(
+    t: &Transaction<ServerDbStorage>,
+    q: &mut QueryType,
+    results: &[QueryResult],
+) -> Result<QueryResult, QueryError> {
     match q {
-        QueryType::Search(q) => t.exec(q),
-        QueryType::Select(q) => t.exec(q),
-        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::Search(q) => {
+            inject_results_search(q, results)?;
+            t.exec(q)
+        }
+        QueryType::Select(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
+        QueryType::SelectAliases(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
         QueryType::SelectAllAliases(q) => t.exec(q),
         QueryType::SelectIndexes(q) => t.exec(q),
-        QueryType::SelectKeys(q) => t.exec(q),
-        QueryType::SelectKeyCount(q) => t.exec(q),
-        QueryType::SelectValues(q) => t.exec(q),
+        QueryType::SelectKeys(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
+        QueryType::SelectKeyCount(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
+        QueryType::SelectValues(q) => {
+            inject_results(&mut q.ids, results)?;
+            t.exec(q)
+        }
         _ => unreachable!(),
     }
 }
 
 fn t_exec_mut(
     t: &mut TransactionMut<ServerDbStorage>,
-    q: &QueryType,
+    q: &mut QueryType,
+    results: &[QueryResult],
 ) -> Result<QueryResult, QueryError> {
     match q {
-        QueryType::Search(q) => t.exec(q),
-        QueryType::Select(q) => t.exec(q),
-        QueryType::SelectAliases(q) => t.exec(q),
+        QueryType::Search(q) => {
+            inject_results_search(q, results)?;
+            t.exec(q)
+        }
+        QueryType::Select(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
+        QueryType::SelectAliases(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
         QueryType::SelectAllAliases(q) => t.exec(q),
         QueryType::SelectIndexes(q) => t.exec(q),
-        QueryType::SelectKeys(q) => t.exec(q),
-        QueryType::SelectKeyCount(q) => t.exec(q),
-        QueryType::SelectValues(q) => t.exec(q),
-        QueryType::InsertAlias(q) => t.exec_mut(q),
-        QueryType::InsertEdges(q) => t.exec_mut(q),
+        QueryType::SelectKeys(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
+        QueryType::SelectKeyCount(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec(q)
+        }
+        QueryType::SelectValues(q) => {
+            inject_results(&mut q.ids, results)?;
+            t.exec(q)
+        }
+        QueryType::InsertAlias(q) => {
+            inject_results(&mut q.ids, results)?;
+            t.exec_mut(q)
+        }
+        QueryType::InsertEdges(q) => {
+            inject_results(&mut q.from, results)?;
+            inject_results(&mut q.to, results)?;
+            t.exec_mut(q)
+        }
         QueryType::InsertNodes(q) => t.exec_mut(q),
-        QueryType::InsertValues(q) => t.exec_mut(q),
-        QueryType::Remove(q) => t.exec_mut(q),
+        QueryType::InsertValues(q) => {
+            inject_results(&mut q.ids, results)?;
+            t.exec_mut(q)
+        }
+        QueryType::Remove(q) => {
+            inject_results(&mut q.0, results)?;
+            t.exec_mut(q)
+        }
         QueryType::InsertIndex(q) => t.exec_mut(q),
         QueryType::RemoveAliases(q) => t.exec_mut(q),
         QueryType::RemoveIndex(q) => t.exec_mut(q),
-        QueryType::RemoveValues(q) => t.exec_mut(q),
+        QueryType::RemoveValues(q) => {
+            inject_results(&mut q.0.ids, results)?;
+            t.exec_mut(q)
+        }
     }
+}
+
+fn id_or_result(id: QueryId, results: &[QueryResult]) -> Result<QueryId, QueryError> {
+    if let QueryId::Alias(alias) = &id {
+        if let Some(index) = alias.strip_prefix(':') {
+            if let Ok(index) = index.parse::<usize>() {
+                return Ok(QueryId::Id(
+                    results
+                        .get(index)
+                        .ok_or(QueryError::from(format!(
+                            "Results index out of bounds '{index}' (> {})",
+                            results.len()
+                        )))?
+                        .elements
+                        .first()
+                        .ok_or(QueryError::from("No element found in the result"))?
+                        .id,
+                ));
+            }
+        }
+    }
+
+    Ok(id)
+}
+
+fn inject_results(ids: &mut QueryIds, results: &[QueryResult]) -> Result<(), QueryError> {
+    match ids {
+        QueryIds::Ids(ids) => {
+            inject_results_ids(ids, results)?;
+        }
+        QueryIds::Search(search) => {
+            inject_results_search(search, results)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn inject_results_search(
+    search: &mut SearchQuery,
+    results: &[QueryResult],
+) -> Result<(), QueryError> {
+    search.origin = id_or_result(search.origin.clone(), results)?;
+    search.destination = id_or_result(search.destination.clone(), results)?;
+
+    for c in &mut search.conditions {
+        if let QueryConditionData::Ids(ids) = &mut c.data {
+            inject_results_ids(ids, results)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Result<(), QueryError> {
+    for i in 0..ids.len() {
+        if let QueryId::Alias(alias) = &ids[i] {
+            if let Some(index) = alias.strip_prefix(':') {
+                if let Ok(index) = index.parse::<usize>() {
+                    let result_ids = results
+                        .get(index)
+                        .ok_or(QueryError::from(format!(
+                            "Results index out of bounds '{index}' (> {})",
+                            results.len()
+                        )))?
+                        .ids()
+                        .into_iter()
+                        .map(QueryId::Id)
+                        .collect::<Vec<QueryId>>();
+                    ids.splice(i..i + 1, result_ids.into_iter());
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1149,7 +1286,13 @@ mod tests {
         let db = ServerDb::new("memory:test").unwrap();
         db.get()
             .unwrap()
-            .transaction(|t| t_exec(t, &QueryType::Remove(QueryBuilder::remove().ids(1).query())))
+            .transaction(|t| {
+                t_exec(
+                    t,
+                    &mut QueryType::Remove(QueryBuilder::remove().ids(1).query()),
+                    &[],
+                )
+            })
             .unwrap();
     }
 }

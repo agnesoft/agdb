@@ -443,7 +443,7 @@ async fn use_result_bad_query() -> anyhow::Result<()> {
         .into()];
     let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
     assert_eq!(error.status, 470);
-    assert_eq!(error.description, ":bad' not found");
+    assert_eq!(error.description, "Alias ':bad' not found");
     Ok(())
 }
 

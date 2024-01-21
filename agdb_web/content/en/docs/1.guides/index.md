@@ -11,7 +11,7 @@ navigation:
 
 [Quickstart](/docs/guides/quickstart)
 
-[Quickstart - Client](/docs/guides/quickstart-client)
+[Quickstart - Client](/docs/guides/quickstart_client)
 
 [Server](/docs/guides/server)
 

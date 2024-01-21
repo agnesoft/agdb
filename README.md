@@ -1,5 +1,5 @@
 <p align="center">
-    <img width="300" src="./docs/images/logo.svg" alt="agdb logo">
+    <img width="300" src="./agdb_web/static/logo.svg" alt="agdb logo">
 </p>
 <h1 align="center">
     agdb
@@ -10,22 +10,22 @@
 
 <p align="center">
     <br/>
-    <a href="./docs/queries.md"><img width="100" src="./docs/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/studio.md"><img width="100" src="./docs/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 
+    <a href="./docs/queries.md"><img width="100" src="./agdb_web/public/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/api.md"><img width="100" src="./agdb_web/public/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/studio.md"><img width="100" src="./agdb_web/public/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/server.md"><img width="100" src="./agdb_web/public/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/cloud.md"><img width="100" src="./agdb_web/public/images/cloud.png" alt="cloud"></a> 
 </p>
 
 <p align="center">
-    <img width="25" src="./docs/images/rust.png" alt="rust"> 
-    <img width="25" src="./docs/images/ts.png" alt="ts"> 
-    <img width="25" src="./docs/images/js.png" alt="js"> 
-    <img width="25" src="./docs/images/python.png" alt="python"> 
-    <img width="25" src="./docs/images/java.png" alt="java"> 
-    <img width="25" src="./docs/images/c.png" alt="c"> 
-    <img width="25" src="./docs/images/cpp.png" alt="cpp"> 
-    <img width="25" src="./docs/images/csharp.png" alt="csharp">
+    <img width="25" src="./agdb_web/public/images/rust.png" alt="rust"> 
+    <img width="25" src="./agdb_web/public/images/ts.png" alt="ts"> 
+    <img width="25" src="./agdb_web/public/images/js.png" alt="js"> 
+    <img width="25" src="./agdb_web/public/images/python.png" alt="python"> 
+    <img width="25" src="./agdb_web/public/images/java.png" alt="java"> 
+    <img width="25" src="./agdb_web/public/images/c.png" alt="c"> 
+    <img width="25" src="./agdb_web/public/images/cpp.png" alt="cpp"> 
+    <img width="25" src="./agdb_web/public/images/csharp.png" alt="csharp">
 </p>
 
 <p align="center">
@@ -38,13 +38,13 @@
 </p>
 
 <p align="center">
-    <img width="25" src="./docs/images/reddit.png" alt="reddit"> &nbsp;
-    <img width="25" src="./docs/images/x.png" alt="x"> &nbsp;
-    <img width="25" src="./docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
-    <img width="25" src="./docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
+    <img width="25" src="./agdb_web/public/images/reddit.png" alt="reddit"> &nbsp;
+    <img width="25" src="./agdb_web/public/images/x.png" alt="x"> &nbsp;
+    <img width="25" src="./agdb_web/public/images/linkedin.png" alt="lkinkedin"> &nbsp;
+    <img width="25" src="./agdb_web/public/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
 </p>
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
+## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
 <a href="./docs/but_why.md">Why not SQL?</a> | <a href="#decision-tree">DECISION TREE</a> | <a href="./docs/queries.md">Queries</a>
@@ -59,7 +59,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 - [Roadmap](#roadmap)
 - [Reference](#reference)
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
+## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
 - Data plotted on a graph
 - Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
@@ -72,7 +72,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 - [Cloud](docs/cloud.md) hosted SaaS database
 - _Db itself has no dependencies_
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
+## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
 
 ```
 cargo add agdb
@@ -149,7 +149,7 @@ println!("{:?}", user);
 
 For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
+## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
 ### agdb
 
@@ -165,24 +165,24 @@ For database concepts and primitive data types see [concepts](docs/concepts.md).
 | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | reqwest | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
+## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
 ```mermaid
 flowchart TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
     Embedded --> Studio[<a href='https://github.com/agnesoft/agdb/blob/main/docs/studio.md'>Studio</a>]
-    Embedded --> Queries[<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md'>Queries</a>]   
+    Embedded --> Queries[<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md'>Queries</a>]
     B --> Client
     B --> Hosting
     Client --> API[<a href='https://github.com/agnesoft/agdb/blob/main/docs/api.md'>API</a>]
     Client --> Studio
-    Client --> Queries   
+    Client --> Queries
     Hosting --> Server[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Server</a>]
     Hosting --> Cloud[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Cloud</a>]
 ```
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
+## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 
 The following are planned features with target versions:
 
@@ -199,7 +199,7 @@ The following are planned features with target versions:
 | #\[no_std]                            | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. | 1.0.0   |
 | Public Cloud Offering                 | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     | 1.0.0   |
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
+## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
 - [API](docs/api.md)
 

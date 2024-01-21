@@ -10,8 +10,8 @@ const i18n = useI18n();
                     src="@/static/logo.svg"
                     alt="agdb logo"
                     class="logo"
-                    width="80"
-                    height="80"
+                    width="70"
+                    height="70"
                 />
                 <span>agdb</span>
             </NuxtLink>
@@ -25,12 +25,11 @@ const i18n = useI18n();
     display: flex;
     align-items: center;
     justify-content: space-between;
-
-    // border-bottom: 1px solid var(--color-border);
     top: 0;
     left: 0;
     right: 0;
     box-shadow: 0 0 3px 0 var(--color-border);
+    padding-block: 0.5rem;
     .page-container {
         display: flex;
         align-items: center;
@@ -44,8 +43,8 @@ const i18n = useI18n();
         font-weight: 700;
         img {
             margin-right: 0.5rem;
-            width: 70px;
-            height: 70px;
+            width: 4rem;
+            height: 4rem;
         }
     }
 }

@@ -1,103 +1,13 @@
-<script lang="ts" setup>
-// const { t, getLocalePath } = useI18n();
-// const docsQuery = queryContent(localeCode.value, "docs");
-// const apiQuery = queryContent(localeCode.value, "api");
-// const enterpriseQuery = queryContent(localeCode.value, "enterprise");
-// const blogQuery = queryContent(localeCode.value, "blog");
-</script>
+<script lang="ts" setup></script>
 
 <template>
     <nav class="header-links">
-        <CommonLinkItem :name="'docs'" />
-        <!-- <ContentNavigation v-slot="{ navigation }" :query="docsQuery">
-            <ul>
-                <template
-                    v-for="link of navigation.at(0)?.children?.at(0)?.children"
-                    :key="link._path"
-                >
-                    <li v-if="link.children?.length">
-                        <NuxtLink
-                            v-if="link.children?.length"
-                            :to="getLocalePath(link._path)"
-                            >{{ link.navTitle || link.title }}</NuxtLink
-                        >
-                    </li>
-                </template>
-            </ul>
-        </ContentNavigation> -->
-        <CommonLinkItem :name="'api'" />
-        <!-- <ContentNavigation v-slot="{ navigation }" :query="apiQuery">
-            <ul>
-                <template
-                    v-for="link of navigation.at(0)?.children?.at(0)?.children"
-                    :key="link._path"
-                >
-                    <li v-if="link.children?.length">
-                        <NuxtLink
-                            v-if="link.children?.length"
-                            :to="getLocalePath(link._path)"
-                            >{{ link.navTitle || link.title }}</NuxtLink
-                        >
-                    </li>
-                </template>
-            </ul>
-        </ContentNavigation> -->
+        <NavigationDropdownLinks :name="'docs'" />
+        <NavigationDropdownLinks :name="'api'" />
 
-        <CommonLinkItem :name="'enterprise'" />
+        <NavigationDropdownLinks :name="'enterprise'" />
 
-        <!-- <ContentNavigation v-slot="{ navigation }" :query="enterpriseQuery">
-            <ul>
-                <template
-                    v-for="link of navigation.at(0)?.children?.at(0)?.children"
-                    :key="link._path"
-                >
-                    <li v-if="link.children?.length">
-                        <NuxtLink
-                            v-if="link.children?.length"
-                            :to="getLocalePath(link._path)"
-                            >{{ link.navTitle || link.title }}</NuxtLink
-                        >
-                    </li>
-                </template>
-            </ul>
-        </ContentNavigation> -->
-
-        <CommonLinkItem :name="'blog'" />
-        <!-- <ContentNavigation v-slot="{ navigation }" :query="blogQuery">
-            <ul>
-                <template
-                    v-for="link of navigation.at(0)?.children?.at(0)?.children"
-                    :key="link._path"
-                >
-                    <li v-if="link.children?.length">
-                        <NuxtLink
-                            v-if="link.children?.length"
-                            :to="getLocalePath(link._path)"
-                            >{{ link.navTitle || link.title }}</NuxtLink
-                        >
-                    </li>
-                </template>
-            </ul>
-        </ContentNavigation> -->
-
-        <!-- <h3>Other:</h3>
-        <ul>
-            <li>
-                <NuxtLink :to="getLocalePath('/')">
-                    {{ t("menu.home") }}
-                </NuxtLink>
-            </li>
-            <li>
-                <NuxtLink :to="getLocalePath(t('url.about'))">
-                    {{ t("menu.about") }}
-                </NuxtLink>
-            </li>
-            <li>
-                <NuxtLink :to="getLocalePath(t('url.contact'))">
-                    {{ t("menu.contact") }}
-                </NuxtLink>
-            </li>
-        </ul> -->
+        <NavigationDropdownLinks :name="'blog'" />
     </nav>
 </template>
 

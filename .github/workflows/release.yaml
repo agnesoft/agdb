@@ -66,3 +66,10 @@ jobs:
           cargo publish --package agdb_api --token ${CRATES_IO_TOKEN}
         env:
           CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      - uses: actions/setup-node@4
+      - working-directory: agdb_api/typescript
+        run: |
+          npm ci
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ORG_TOKEN }}

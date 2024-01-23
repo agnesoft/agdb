@@ -1,8 +1,10 @@
 use std::io::BufRead;
 
-const RUST_RELEASE_PROJECTS: [&str; 4] = ["agdb", "agdb_derive", "agdb_server", "agdb_api/rust"];
-const TYPESCRIPT_PROJECTS: [&str; 1] = ["agdb_api/typescript"];
+const RUST_RELEASE_PROJECTS: [&str; 4] = ["agdb", "agdb_derive", "agdb_api", "agdb_server"];
+const AGDB_PROJECT: &str = "agdb";
 const CARGO_TOML: &str = "Cargo.toml";
+const TYPESCRIPT_PROJECTS: [&str; 1] = ["agdb_api/typescript"];
+
 //const PACKAGE_JSON: &str = "package.json";
 
 #[allow(dead_code)]
@@ -20,7 +22,7 @@ impl<E: std::error::Error> From<E> for CIError {
 }
 
 fn current_version() -> Result<String, CIError> {
-    let cargo_toml = std::path::Path::new(RUST_RELEASE_PROJECTS[0]).join(CARGO_TOML);
+    let cargo_toml = std::path::Path::new(AGDB_PROJECT).join(CARGO_TOML);
     std::io::BufReader::new(std::fs::File::open(cargo_toml)?)
         .lines()
         .find_map(|line| {
@@ -57,35 +59,46 @@ fn cargo_tomls(path: &std::path::Path) -> Result<Vec<std::path::PathBuf>, CIErro
     Ok(tomls)
 }
 
+fn update_cargo_projects(current_version: &str, new_version: &str) -> Result<(), CIError> {
+    for cargo_toml in cargo_tomls(std::path::Path::new("."))? {
+        println!("Updating... {:?}", cargo_toml);
+
+        let mut content = std::fs::read_to_string(&cargo_toml)?.replace(
+            &format!("\nversion = \"{current_version}\""),
+            &format!("\nversion = \"{new_version}\""),
+        );
+
+        for project in RUST_RELEASE_PROJECTS {
+            content = content
+                .replace(
+                    &format!("{project} = \"{current_version}\""),
+                    &format!("{project} = \"{new_version}\""),
+                )
+                .replace(
+                    &format!("{project} = {{ version = \"{current_version}\""),
+                    &format!("{project} = {{ version = \"{new_version}\""),
+                );
+        }
+
+        std::fs::write(cargo_toml, content)?;
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), CIError> {
     let current_version = current_version()?;
-    let new_version = std::fs::read_to_string(std::path::Path::new("Version"))?;
-    let cargo_tomls = cargo_tomls(std::path::Path::new("."))?;
+    let new_version = std::fs::read_to_string(std::path::Path::new("Version"))?
+        .trim()
+        .to_string();
 
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
     if current_version != new_version {
-        for cargo_toml in cargo_tomls {
-            let mut content = std::fs::read_to_string(&cargo_toml)?.replace(
-                &format!("\nversion = \"{current_version}\""),
-                &format!("\nversion = \"{new_version}\""),
-            );
-
-            for project in RUST_RELEASE_PROJECTS {
-                content = content
-                    .replace(
-                        &format!("{project} = \"{current_version}\""),
-                        &format!("{project} = \"{new_version}\""),
-                    )
-                    .replace(
-                        &format!("{project} = {{ version = \"{current_version}\""),
-                        &format!("{project} = {{ version = \"{new_version}\""),
-                    );
-            }
-
-            std::fs::write(cargo_toml, content)?;
-        }
+        update_cargo_projects(&current_version, &new_version)?;
+    } else {
+        println!("No version change. Nothing to do...");
     }
 
     Ok(())

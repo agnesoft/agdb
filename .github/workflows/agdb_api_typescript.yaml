@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@4
+      - uses: actions/setup-node@v4
       - working-directory: agdb_api/typescript
         run: |
           npm ci

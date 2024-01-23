@@ -67,6 +67,8 @@ jobs:
         env:
           CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
       - uses: actions/setup-node@v4
+        with:
+          registry-url: "https://registry.npmjs.org"
       - working-directory: agdb_api/typescript
         run: |
           npm ci

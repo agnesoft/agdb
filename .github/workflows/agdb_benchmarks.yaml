@@ -19,7 +19,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb/src/ agdb/src/Cargo.toml agdb_derive/src/ agdb_derive/Cargo.toml .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT) fi
+          if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb/src/ agdb/src/Cargo.toml agdb_derive/src/ agdb_derive/Cargo.toml .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_benchmarks:
     runs-on: ubuntu-latest

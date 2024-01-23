@@ -26,14 +26,10 @@ jobs:
       new_version: ${{ steps.new_version.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - id: new_version
         run: |
-          PUBLISHED_VERSION=$(cargo search ^agdb$ --limit 1 -q | head -n 1 | cut -d '"' -f 2)
-          CURRENT_VERSION=$(cat agdb/Cargo.toml | grep version | head -n 1 | cut -d '"' -f 2)
-          if [[ "${PUBLISHED_VERSION}" != "${CURRENT_VERSION}" ]]; then echo "new_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT; fi
-          echo "Published version: ${PUBLISHED_VERSION}" 
-          echo "Current version: ${CURRENT_VERSION}"
+          if [[ "$(git diff origin/main --name-only -- Version)" != "" ]]; then echo "new_version=$(cat Version)" >> $GITHUB_OUTPUT; fi
+          echo "New version: ${CURRENT_VERSION}"
 
   release:
     runs-on: ubuntu-latest
@@ -41,7 +37,6 @@ jobs:
     if: needs.new_version.outputs.new_version != ''
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"

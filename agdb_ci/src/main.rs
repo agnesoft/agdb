@@ -3,9 +3,9 @@ use std::io::BufRead;
 const RUST_RELEASE_PROJECTS: [&str; 4] = ["agdb", "agdb_derive", "agdb_api", "agdb_server"];
 const AGDB_PROJECT: &str = "agdb";
 const CARGO_TOML: &str = "Cargo.toml";
-const TYPESCRIPT_PROJECTS: [&str; 1] = ["agdb_api/typescript"];
-
-//const PACKAGE_JSON: &str = "package.json";
+const PACKAGE_JSON: &str = "package.json";
+const NODE_MODULES: &str = "node_modules";
+const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -13,10 +13,16 @@ struct CIError {
     description: String,
 }
 
+#[derive(Default)]
+struct ProjectFiles {
+    cargo_tomls: Vec<std::path::PathBuf>,
+    package_jsons: Vec<std::path::PathBuf>,
+}
+
 impl<E: std::error::Error> From<E> for CIError {
     fn from(error: E) -> Self {
         Self {
-            description: error.to_string(),
+            description: format!("{:?}", error),
         }
     }
 }
@@ -39,31 +45,33 @@ fn current_version() -> Result<String, CIError> {
         })
 }
 
-fn cargo_tomls(path: &std::path::Path) -> Result<Vec<std::path::PathBuf>, CIError> {
-    let mut tomls = Vec::new();
-
+fn project_files(path: &std::path::Path, files: &mut ProjectFiles) -> Result<(), CIError> {
     for dir in std::fs::read_dir(path)? {
         let dir = dir?;
 
-        if dir.file_type()?.is_dir() {
-            let cargo_toml = dir.path().join(CARGO_TOML);
-
-            if cargo_toml.exists() {
-                tomls.push(cargo_toml);
+        if dir.file_type()?.is_dir() && dir.file_name() != NODE_MODULES {
+            if dir.path().join(CARGO_TOML).exists() {
+                files.cargo_tomls.push(dir.path().join(CARGO_TOML));
+            } else if dir.path().join(PACKAGE_JSON).exists() {
+                files.package_jsons.push(dir.path().join(PACKAGE_JSON));
             }
 
-            tomls.extend(cargo_tomls(&dir.path())?);
+            project_files(&dir.path(), files)?;
         }
     }
 
-    Ok(tomls)
+    Ok(())
 }
 
-fn update_cargo_projects(current_version: &str, new_version: &str) -> Result<(), CIError> {
-    for cargo_toml in cargo_tomls(std::path::Path::new("."))? {
+fn update_cargo_projects(
+    current_version: &str,
+    new_version: &str,
+    cargo_tomls: &[std::path::PathBuf],
+) -> Result<(), CIError> {
+    for cargo_toml in cargo_tomls {
         println!("Updating... {:?}", cargo_toml);
 
-        let mut content = std::fs::read_to_string(&cargo_toml)?.replace(
+        let mut content = std::fs::read_to_string(cargo_toml)?.replace(
             &format!("\nversion = \"{current_version}\""),
             &format!("\nversion = \"{new_version}\""),
         );
@@ -86,6 +94,42 @@ fn update_cargo_projects(current_version: &str, new_version: &str) -> Result<(),
     Ok(())
 }
 
+fn update_typescript_projects(
+    current_version: &str,
+    new_version: &str,
+    package_jsons: &[std::path::PathBuf],
+) -> Result<(), CIError> {
+    for package_json in package_jsons {
+        println!("Updating... {:?}", package_json);
+
+        let mut content = std::fs::read_to_string(package_json)?.replace(
+            &format!("\"version\": \"{current_version}\""),
+            &format!("\"version\": \"{new_version}\""),
+        );
+
+        for project in TYPESCRIPT_PROJECTS {
+            content = content
+                .replace(
+                    &format!("\"{project}\": \"{current_version}\""),
+                    &format!("\"{project}\": \"{new_version}\""),
+                )
+                .replace(
+                    &format!("\"{project}\": \"^{current_version}\""),
+                    &format!("\"{project}\": \"^{new_version}\""),
+                );
+        }
+
+        std::fs::write(package_json, content)?;
+        std::process::Command::new("bash")
+            .arg("-c")
+            .arg("npm install")
+            .current_dir(package_json.parent().expect("Parent directory not found"))
+            .spawn()?
+            .wait()?;
+    }
+    Ok(())
+}
+
 fn main() -> Result<(), CIError> {
     let current_version = current_version()?;
     let new_version = std::fs::read_to_string(std::path::Path::new("Version"))?
@@ -95,11 +139,12 @@ fn main() -> Result<(), CIError> {
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
-    if current_version != new_version {
-        update_cargo_projects(&current_version, &new_version)?;
-    } else {
-        println!("No version change. Nothing to do...");
-    }
+    let mut files = ProjectFiles::default();
+    project_files(std::path::Path::new("."), &mut files)?;
+    update_cargo_projects(&current_version, &new_version, &files.cargo_tomls)?;
+    update_typescript_projects(&current_version, &new_version, &files.package_jsons)?;
+
+    println!("DONE");
 
     Ok(())
 }

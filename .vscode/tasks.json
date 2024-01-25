@@ -58,6 +58,22 @@
       "group": "build"
     },
     {
+      "label": "Coverage CI",
+      "type": "cargo",
+      "command": "llvm-cov",
+      "args": ["--package", "agdb_ci", "--all-features", "--show-missing-lines"],
+      "problemMatcher": ["$rustc"],
+      "group": "build"
+    },
+    {
+      "label": "Coverage CI HTML",
+      "type": "cargo",
+      "command": "llvm-cov",
+      "args": ["--package", "agdb_ci", "--all-features", "--html", "--open"],
+      "problemMatcher": ["$rustc"],
+      "group": "build"
+    },
+    {
       "label": "Format",
       "type": "cargo",
       "command": "fmt",

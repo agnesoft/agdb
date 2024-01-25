@@ -32,13 +32,13 @@ fn current_version() -> Result<String, CIError> {
     std::io::BufReader::new(std::fs::File::open(cargo_toml)?)
         .lines()
         .find_map(|line| {
-            if let Ok(line) = line {
+            line.ok().and_then(|line| {
                 if line.starts_with("version = ") {
                     return Some(line.split('"').nth(1).unwrap_or("").to_string());
                 }
-            }
 
-            None
+                None
+            })
         })
         .ok_or(CIError {
             description: "Current version not found".to_string(),
@@ -147,4 +147,30 @@ fn main() -> Result<(), CIError> {
     println!("DONE");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug)]
+    struct MyError {}
+    impl std::error::Error for MyError {}
+    impl std::fmt::Display for MyError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "MyError")
+        }
+    }
+
+    #[test]
+    fn derived_from_debug() {
+        let error = CIError::from(MyError {});
+
+        assert_eq!(format!("{:?}", MyError {}), "MyError");
+        assert_eq!(format!("{}", MyError {}), "MyError");
+        assert_eq!(
+            format!("{:?}", error),
+            "CIError { description: \"MyError\" }"
+        );
+    }
 }

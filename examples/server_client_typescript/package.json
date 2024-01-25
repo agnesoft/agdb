@@ -1,6 +1,5 @@
 {
   "name": "examples_server_client",
-  "version": "0.0.0",
   "main": "index.js",
   "type": "module",
   "scripts": {

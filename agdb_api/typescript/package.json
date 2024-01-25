@@ -1,9 +1,18 @@
 {
-  "name": "agdb_api",
-  "version": "0.0.0",
+  "name": "@agnesoft/agdb_api",
+  "version": "0.5.2",
+  "license": "Apache-2.0",
+  "description": "Agnesoft Graph Database API client for typescript/javascript",
+  "author": "Agnesoft",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "keywords": [
+    "graph",
+    "database",
+    "api",
+    "client"
+  ],
   "files": [
     "/dist"
   ],

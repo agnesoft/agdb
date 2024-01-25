@@ -4,7 +4,16 @@ const RUST_RELEASE_PROJECTS: [&str; 4] = ["agdb", "agdb_derive", "agdb_api", "ag
 const AGDB_PROJECT: &str = "agdb";
 const CARGO_TOML: &str = "Cargo.toml";
 const PACKAGE_JSON: &str = "package.json";
-const NODE_MODULES: &str = "node_modules";
+const IGNORE: [&str; 8] = [
+    "node_modules",
+    "tests",
+    "target",
+    "src",
+    "dist",
+    ".nuxt",
+    "playwright-report",
+    "test-results",
+];
 const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
 
 #[allow(dead_code)]
@@ -49,7 +58,9 @@ fn project_files(path: &std::path::Path, files: &mut ProjectFiles) -> Result<(),
     for dir in std::fs::read_dir(path)? {
         let dir = dir?;
 
-        if dir.file_type()?.is_dir() && dir.file_name() != NODE_MODULES {
+        if dir.file_type()?.is_dir()
+            && !IGNORE.contains(&dir.file_name().to_string_lossy().as_ref())
+        {
             if dir.path().join(CARGO_TOML).exists() {
                 files.cargo_tomls.push(dir.path().join(CARGO_TOML));
             } else if dir.path().join(PACKAGE_JSON).exists() {

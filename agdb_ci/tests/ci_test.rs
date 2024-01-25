@@ -29,7 +29,8 @@ fn read_dirs(src: impl AsRef<std::path::Path>) -> std::io::Result<Vec<String>> {
         let entry = entry?;
         let ty = entry.file_type()?;
         if ty.is_dir() {
-            files.extend(read_dirs(entry.path())?);
+            let sub_files = read_dirs(entry.path())?;
+            files.extend(sub_files);
         } else {
             let content = std::fs::read_to_string(entry.path())?;
             files.push(content);
@@ -71,7 +72,7 @@ fn replace_version() {
         std::env::current_dir()
             .unwrap()
             .join("tests")
-            .join("test_data_after"),
+            .join("test_data_expected"),
     )
     .unwrap();
 

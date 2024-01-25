@@ -2,6 +2,6 @@
     "name": "project2",
     "version": "0.3.0",
     "dependencies": {
-        "agdb_api": "0.3.0"
+        "@agnesoft/agdb_api": "0.3.0"
     }
 }

@@ -66,7 +66,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 
 - Data plotted on a graph
 - Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
-- Persistent platform agnostic file based storage (transferable between machines)
+- Persistent platform agnostic file based storage (transferable between platforms)
 - ACID compliant
 - [Object queries](docs/queries.md) with builder pattern (no text, no query language)
 - Memory mapped for fast querying

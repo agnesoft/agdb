@@ -47,7 +47,7 @@
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
-    <a href="/agdb_web/content/en/docs/1.guides/2.quickstart.md">Quickstart Db</a> | <a href="#decision-tree">DECISION TREE</a> | <a href="./docs/queries.md">QUERIES</a> | <a href="/agdb_web/content/en/docs/1.guides/3.quickstart_client.md">Quickstart Client</a>
+    <a href="/agdb_web/content/en/docs/1.guides/2.quickstart.md">Quickstart Db</a> | <a href="/agdb_web/content/en/docs/1.guides/3.quickstart_client.md">Quickstart Client</a> | <a href="./docs/queries.md">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
 </p>
 <p align="center">
     <a href="./docs/but_why.md">Why not SQL?</a>

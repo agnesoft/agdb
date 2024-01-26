@@ -47,7 +47,10 @@
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
-<a href="./docs/but_why.md">Why not SQL?</a> | <a href="#decision-tree">DECISION TREE</a> | <a href="./docs/queries.md">Queries</a>
+    <a href="/agdb_web/content/en/docs/1.guides/2.quickstart.md">Quickstart Db</a> | <a href="#decision-tree">DECISION TREE</a> | <a href="./docs/queries.md">QUERIES</a> | <a href="/agdb_web/content/en/docs/1.guides/3.quickstart_client.md">Quickstart Client</a>
+</p>
+<p align="center">
+    <a href="./docs/but_why.md">Why not SQL?</a>
 </p>
 
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
@@ -63,7 +66,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 
 - Data plotted on a graph
 - Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
-- Persistent file based storage
+- Persistent platform agnostic file based storage (transferable between machines)
 - ACID compliant
 - [Object queries](docs/queries.md) with builder pattern (no text, no query language)
 - Memory mapped for fast querying

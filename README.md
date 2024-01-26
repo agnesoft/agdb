@@ -182,7 +182,7 @@ flowchart TD;
     Client --> Studio
     Client --> Queries
     Hosting --> Server[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Server</a>]
-    Hosting --> Cloud[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Cloud</a>]
+    Hosting --> Cloud[<a href='https://github.com/agnesoft/agdb/blob/main/docs/cloud.md'>Cloud</a>]
 ```
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

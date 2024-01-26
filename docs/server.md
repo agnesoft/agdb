@@ -1,5 +1,6 @@
 # Server
 
+- [How to run he server?](/agdb_web/content/en/docs/1.guides/4.how_to_run_server.md)
 - [Configuration](#configuration)
 - [Users](#users)
 - [Databases](#databases)
@@ -15,33 +16,39 @@ The `agdb_server` is the OpenAPI REST server that provides remote `agdb` databas
 
 [How to run he server?](/agdb_web/content/en/docs/1.guides/4.how_to_run_server.md)
 
-The server is based on the [`axum`](https://github.com/tokio-rs/axum) and uses OpenAPI to specify its API (via [`utoipa`](https://github.com/juhaku/utoipa)) and [`rapidoc`](https://rapidocweb.com/) for the OpenAPI GUI. To interact with the server you can use the rapidoc GUI, `curl` or any of the [available API clients](/agdb_api/):
+The server is based on [`axum`](https://github.com/tokio-rs/axum) and uses OpenAPI to specify its API (via [`utoipa`](https://github.com/juhaku/utoipa)) and [`rapidoc`](https://rapidocweb.com/) for the OpenAPI GUI. To interact with the server you can use the rapidoc GUI, `curl` or any of the [available API clients](/agdb_api/). Internally it uses the `agdb` database:
+
+GUI accessible at (run in browser when the server is running):
+
+`http://localhost:3000/api/v1`
 
 ![rapidoc](./agdb_server_rapidoc.png)
-
-Internally it uses the `agdb` database as well and allows database management for logged in users.
 
 ## Configuration
 
 The server will create default configuration when run:
 
 ```yaml
-host: localhost #host address to listen on
-port: 3000 #port to bind to
-admin: admin #the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
-data_dir: agdb_server_data #directory to store user data
+# agdb_server.yaml
+host: localhost # host address to listen on
+port: 3000 # port to bind to
+admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
+data_dir: agdb_server_data # directory to store user data
 ```
 
-You can prepare it in advance. After the server database is created changes to the `admin` field will have no effect but the other settings can be changed later. Any changes will require server restart to take effect.
+You can prepare it in advance in a file `agdb_server.yaml`. After the server database is created changes to the `admin` field will have no effect but the other settings can be changed later. All config changes require server restart to take effect.
 
 ## Users
 
 The server has a single admin account (`admin` by default, configurable with password being the name) that can perform any regular user action + all admin actions such as creating users. You can use this account for using the database locally but it would be advisable to use it only for maintaining the server and to create a regular user for use with the databases:
 
 ```bash
-token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}') #will produce a token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
-curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/user/my_db_user/add -d '{"password":"password123"}' #using admin to create the user
-token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"my_db_user","password":"password123"}') #will produce a token for the my_db_user account we have just created
+ # produce an admin API token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}')
+# using admin token to create a user
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/user/my_db_user/add -d '{"password":"password123"}'
+# login as the new user and producing their token
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"my_db_user","password":"password123"}')
 ```
 
 Users are allowed to change their password and to create and manipulate databases.
@@ -67,21 +74,21 @@ curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/db/my_db_
 Note that a user can only create databases under their own name. The `db_type` can be one of:
 
 ```yaml
-memory #memory only database, basically a cache
-mapped #memory mapped database, using memory for reading but persisting changes to the disk
-file #file based database only, no memory caching, reading/writing from/to disk
+memory # memory only database, basically a cache
+mapped # memory mapped database, using memory for reading but persisting changes to the disk
+file # file based database only, no memory caching, reading/writing from/to disk
 ```
 
 It is possible to add an existing database to the server. Move the db file to the server data folder and run `/api/v1/db/{owner}/{db}/add` API as if you were creating a new database with the db's name. If the file exists it will be added rather than created. Similarly you can remove database (instead of deleting it) from the server with `/api/v1/db/{owner}/{db}/remove` API that will disassociate the db from the server which you can then move and use elsehwere.
 
 ### Database Users
 
-Each database is scoped to one user (owner) who can excercise full control over it. The owner can add more users to the database including admin level users with one of three roles:
+Each database is scoped to one user (owner) who can excercise full control over it. The owner can add more users (they must exist on the server) to the database including admin level users with one of three roles:
 
 ```yaml
-read #can only run immutable exec queries
-write #can run mutable and immutable exec queries
-admin #same as write but can also admin the database
+read # can only run immutable exec queries
+write # can run mutable and immutable exec queries
+admin # same as write but can also admin the database
 ```
 
 The admin users can do some (but not all) actions that the owner can:
@@ -110,24 +117,24 @@ Each database can be backed up. The backup API `/api/v1/db/{owner}/{db}/backup` 
 
 ### Queries
 
-All queries are executed using the single `/api/v1/db/{owner}/{db}/exec` endpoint and are exactly the same as in the embedded/application database (see [Queries documentation](/docs/queries.md)). However depending on the user's role the server may reject executing the queries (i.e. mutable queries executed by the user with `read` role in the database). The endpoint accept list of queries and the entire list is run as a transaction meaning either all queries have succeeded or none of them have. The endpoint will return list of results for each query.
+All queries are executed using the single `/api/v1/db/{owner}/{db}/exec` endpoint and are exactly the same as in the embedded/application database (see [Queries documentation](/docs/queries.md)). However depending on the user's role the server may reject executing the queries (i.e. mutable queries executed by the user with `read` role in the database). The endpoint accepts a list of queries and the entire list is run as a transaction meaning either all queries succeed or none of them do. The endpoint will return list of results, one per executed query.
 
-It is possible to reference queries from each other in the list and the server will inject results of the referenced queries to the next one. This is best illustrated by an example:
+It is possible to reference queries from each other in the list and the server will inject results of the referenced queries to the next one. This is slight extension to the vanilla `agdb` queries. It is best illustrated by an example:
 
 ```rs
 let queries = &vec![
-    QueryBuilder::insert().nodes().count(1).query().into(),
-    QueryBuilder::insert().nodes().count(1).query().into(),
-    QueryBuilder::insert().edges().from(":0").to(":1").query().into(),
-    QueryBuilder::search().from(":0").to(":1").query().into(),
+    QueryBuilder::insert().nodes().count(1).query().into(), // :0
+    QueryBuilder::insert().nodes().count(1).query().into(), // :1
+    QueryBuilder::insert().edges().from(":0").to(":1").query().into(), // :2
+    QueryBuilder::search().from(":0").to(":1").query().into(), //:3
 ];
 ```
 
-In places where the `alias` can be used (an `ids` identifier) you can use an index prefixed by `:` to inject result of the previous query in the list. In the example we are inserting two separate nodes and then creating an edge between them and finally searching from one node to the other. The result "index" can be used in most places including conditions. What is currently not possible is to inject data (i.e. key-value properties) from results to subsequent queries.
+In places where the `alias` can be used (an `ids` identifier) you can use an index prefixed by `:` to inject result of the previous query in the list. In the example we are inserting two separate nodes and then creating an edge between them and finally searching from one node to the other. An index to the results can be used in most places including conditions. What is currently not possible is to inject data (i.e. key-value properties) from results to subsequent queries.
 
 **Transactions**
 
-While the server serves each request asynchronously and can server any number of clients at the same time the queries and individual databses must still follow the basic principles of the `agdb` that are the same as in Rust and for the embedded variant:
+While the server serves each request asynchronously and can serve any number of clients at the same time the queries and individual databases must still follow the basic principles of the `agdb` that are the same as in the embedded variant (and derived from Rust itself):
 
 There can be either:
 
@@ -138,7 +145,7 @@ However the `agdb` is written in such a way that it performs excellently even un
 
 ## Admin
 
-Each `agdb_server` has exactly one admin account (`admin` by default) that acts as the regular user but additonally is allowed to execute APIs under `/admin/`. These mostly copies the APIs for regular users but some of the restrictions are not enforced (e.g. ownership or db role). Additionally the admin has access to the following exclusive APIs:
+Each `agdb_server` has exactly one admin account (`admin` by default) that acts as the regular user but additonally is allowed to execute APIs under `/admin/`. These mostly copies the APIs for regular users but some of the restrictions are not enforced (i.e. ownership or db role). Additionally the admin has access to the following exclusive APIs:
 
 | Action                                        | Description                                                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------------- |
@@ -160,7 +167,7 @@ curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/shu
 
 ## Misc
 
-There are several special endpoints worth noting:
+Following are the special or miscellanerous endpoints:
 
 | Endpoint             | Description                                          |
 | -------------------- | ---------------------------------------------------- |

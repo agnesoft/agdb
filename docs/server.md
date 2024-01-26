@@ -8,6 +8,7 @@
   - [Backups](#backups)
   - [Queries](#queries)
 - [Admin](#admin)
+- [Shutdown](#shutdown)
 - [Misc](#misc)
 
 The `agdb_server` is the OpenAPI REST server that provides remote `agdb` database management. Running the server is trivial as there are no dependencies, no complicated configuration etc. It can be run on any platform supported by Rust. Please follow the guide:
@@ -147,6 +148,15 @@ Each `agdb_server` has exactly one admin account (`admin` by default) that acts 
 | /api/v1/admin/user/{username}/change_password | changes password of a user                                                       |
 | /api/v1/admin/user/{username}/remove          | deletes user and all their data (databases) from the server                      |
 | /api/v1/admin/db/\*                           | provides same endpoints as for regular users but without owner/role restrictions |
+
+## Shutdown
+
+The server can be gracefully shutdown with `CTRL+C` or programmatically by using the `/api/v1/admin/shutdown` endpoint which requires admin token, e.g.
+
+```bash
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}') #will produce a token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/shutdown
+```
 
 ## Misc
 

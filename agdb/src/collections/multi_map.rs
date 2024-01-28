@@ -477,10 +477,6 @@ where
                 occupancy.set(pos);
                 self.data.swap(storage, *i, pos)?;
 
-                if self.data.state(storage, *i)? == MapValueState::Deleted {
-                    self.data.set_state(storage, *i, MapValueState::Empty)?;
-                }
-
                 if *i == pos {
                     *i += 1;
                 }
@@ -513,6 +509,7 @@ where
         }
     }
 
+    #[rustfmt::skip]
     fn rehash_values(
         &mut self,
         storage: &mut Storage<D>,
@@ -528,8 +525,7 @@ where
                 self.data.state(storage, i)?,
                 &mut i,
                 new_capacity,
-                &mut occupancy,
-            )?;
+                &mut occupancy)?;
         }
 
         Ok(())
@@ -843,8 +839,8 @@ mod tests {
             .map(|i| (format!("db_user{i}"), i.to_string()))
             .collect();
 
-        for (user, db) in users {
-            map.insert(&mut storage, &user, &db).unwrap();
+        for (user, value) in users {
+            map.insert(&mut storage, &user, &value).unwrap();
         }
 
         for i in range {

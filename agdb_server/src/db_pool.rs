@@ -83,6 +83,9 @@ impl DbPool {
             let admin_password = Password::create(&config.admin, &config.admin);
 
             db_pool.0.server_db.get_mut()?.transaction_mut(|t| {
+                t.exec_mut(&QueryBuilder::insert().index("username").query())?;
+                t.exec_mut(&QueryBuilder::insert().index("token").query())?;
+
                 t.exec_mut(
                     &QueryBuilder::insert()
                         .nodes()
@@ -549,18 +552,7 @@ impl DbPool {
     pub(crate) fn find_user_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
             .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .depth_first()
-                    .from("users")
-                    .limit(1)
-                    .where_()
-                    .distance(CountComparison::Equal(2))
-                    .and()
-                    .key("username")
-                    .value(Comparison::Equal(name.into()))
-                    .query(),
-            )?
+            .exec(&QueryBuilder::search().index("username").value(name).query())?
             .elements
             .first()
             .ok_or(user_not_found(name))?
@@ -570,18 +562,7 @@ impl DbPool {
     pub(crate) fn find_user_id_by_token(&self, token: &str) -> ServerResult<DbId> {
         Ok(self
             .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .depth_first()
-                    .from("users")
-                    .limit(1)
-                    .where_()
-                    .distance(CountComparison::Equal(2))
-                    .and()
-                    .key("token")
-                    .value(Comparison::Equal(token.into()))
-                    .query(),
-            )?
+            .exec(&QueryBuilder::search().index("token").value(token).query())?
             .elements
             .first()
             .ok_or(format!("No user found for token '{token}'"))?

@@ -463,12 +463,17 @@ where
         empty_list: &mut [bool],
     ) -> Result<(), DbError> {
         let key = self.data.key(storage, *i)?;
-        let mut pos = key.stable_hash() % new_capacity;
+        let hash = key.stable_hash();
+        let mut pos = hash % new_capacity;
 
         loop {
             if empty_list[pos as usize] {
                 empty_list[pos as usize] = false;
                 self.data.swap(storage, *i, pos)?;
+
+                if self.data.state(storage, *i)? == MapValueState::Deleted {
+                    self.data.set_state(storage, *i, MapValueState::Empty)?;
+                }
 
                 if *i == pos {
                     *i += 1;
@@ -502,7 +507,6 @@ where
         }
     }
 
-    #[rustfmt::skip]
     fn rehash_values(
         &mut self,
         storage: &mut Storage<D>,
@@ -513,7 +517,13 @@ where
         let mut empty_list = vec![true; new_capacity as usize];
 
         while i != current_capacity {
-            self.rehash_value(storage, self.data.state(storage,   i)?, &mut i, new_capacity, &mut empty_list)?;
+            self.rehash_value(
+                storage,
+                self.data.state(storage, i)?,
+                &mut i,
+                new_capacity,
+                &mut empty_list,
+            )?;
         }
 
         Ok(())

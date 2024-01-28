@@ -1,19 +1,19 @@
 [package]
 name = "agdb_server"
-version = "0.6.3"
+version = "0.6.4"
 edition = "2021"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
 repository = "https://github.com/agnesoft/agdb"
 documentation = "https://github.com/agnesoft/agdb"
-description = "Agnesoft Graph Database Server"
 readme = "../README.md"
+description = "Agnesoft Graph Database Server"
 keywords = ["graph", "database", "api"]
 categories = ["database", "database-interfaces"]
 
 [dependencies]
-agdb = { version = "0.6.3", path = "../agdb", features = ["serde", "openapi"] }
-agdb_api = { version = "0.6.3", path = "../agdb_api/rust", features = ["reqwest"] }
+agdb = { version = "0.6.4", path = "../agdb", features = ["serde", "openapi"] }
+agdb_api = { version = "0.6.4", path = "../agdb_api/rust", features = ["reqwest"] }
 axum = { version = "0.7", features = ["http2"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 http-body-util = "0.1"

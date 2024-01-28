@@ -138,7 +138,7 @@ where
             if index.0 == self.destination.0 {
                 std::mem::swap(&mut self.result, &mut self.current_path.elements);
             } else {
-                self.visited.insert(index.as_u64());
+                self.visited.set(index.as_u64());
                 self.expand(index)?;
             }
         }

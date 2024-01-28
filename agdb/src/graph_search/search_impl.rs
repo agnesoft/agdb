@@ -162,7 +162,7 @@ where
 
     fn visit_index(&mut self, index: &SearchIndex) -> bool {
         let visited = self.visited.value(index.index.as_u64());
-        self.visited.insert(index.index.as_u64());
+        self.visited.set(index.index.as_u64());
 
         visited
     }

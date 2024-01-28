@@ -1,5 +1,29 @@
-import { DocsThemeConfig } from "nextra-theme-docs";
+import { DocsThemeConfig, useConfig } from "nextra-theme-docs";
 import Logo from "@/components/layout/logo";
+import { useRouter } from "next/router";
+
+const useHead = () => {
+    const { asPath, defaultLocale, locale } = useRouter();
+
+    const config = useConfig();
+
+    const url =
+        "https://my-app.com" +
+        (defaultLocale === locale ? asPath : `/${locale}${asPath}`);
+    const title = config.title ? `${config.title} | agdb` : "agdb";
+
+    return (
+        <>
+            <title>{title}</title>
+            <meta property="og:url" content={url} />
+            <meta property="og:title" content={title} />
+            <meta
+                property="og:description"
+                content={config.frontMatter.description || "agdb docs"}
+            />
+        </>
+    );
+};
 
 const config: DocsThemeConfig = {
     logo: Logo,
@@ -17,6 +41,7 @@ const config: DocsThemeConfig = {
         { locale: "en-US", text: "English" },
         { locale: "cs-CZ", text: "Čeština" },
     ],
+    head: useHead,
 };
 
 export default config;

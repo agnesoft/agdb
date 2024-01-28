@@ -3,13 +3,15 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev -p 5001",
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
-        "test:unit": "vitest run --coverage"
+        "test:unit": "vitest run --coverage",
+        "test:e2e": "playwright test",
+        "before-commit": "npm run format && npm run lint && npm run test:unit && npm run test:e2e"
     },
     "dependencies": {
         "next": "14.1.0",
@@ -19,6 +21,7 @@
         "react-dom": "^18"
     },
     "devDependencies": {
+        "@playwright/test": "^1.41.1",
         "@testing-library/react": "^14.1.2",
         "@types/node": "^20",
         "@types/react": "^18",

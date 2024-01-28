@@ -59,8 +59,8 @@ jobs:
       - run: |
           cargo publish --package agdb_derive --token ${CRATES_IO_TOKEN}
           cargo publish --package agdb --token ${CRATES_IO_TOKEN}
-          cargo publish --package agdb_server --token ${CRATES_IO_TOKEN}
           cargo publish --package agdb_api --token ${CRATES_IO_TOKEN}
+          cargo publish --package agdb_server --token ${CRATES_IO_TOKEN}
         env:
           CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 

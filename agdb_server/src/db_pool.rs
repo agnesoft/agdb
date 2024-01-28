@@ -47,7 +47,7 @@ const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 #[derive(UserValue)]
 pub(crate) struct ServerUser {
     pub(crate) db_id: Option<DbId>,
-    pub(crate) name: String,
+    pub(crate) username: String,
     pub(crate) password: Vec<u8>,
     pub(crate) salt: Vec<u8>,
     pub(crate) token: String,
@@ -95,7 +95,7 @@ impl DbPool {
                         .nodes()
                         .values(&ServerUser {
                             db_id: None,
-                            name: config.admin.clone(),
+                            username: config.admin.clone(),
                             password: admin_password.password.to_vec(),
                             salt: admin_password.user_salt.to_vec(),
                             token: String::new(),
@@ -282,7 +282,7 @@ impl DbPool {
 
     pub(crate) fn change_password(&self, mut user: ServerUser, new_password: &str) -> ServerResult {
         password::validate_password(new_password)?;
-        let pswd = Password::create(&user.name, new_password);
+        let pswd = Password::create(&user.username, new_password);
         user.password = pswd.password.to_vec();
         user.salt = pswd.user_salt.to_vec();
         self.save_user(user)?;
@@ -475,14 +475,14 @@ impl DbPool {
             .db()?
             .exec(
                 &QueryBuilder::select()
-                    .values(vec!["name".into()])
+                    .values(vec!["username".into()])
                     .ids(
                         QueryBuilder::search()
                             .from("users")
                             .where_()
                             .distance(CountComparison::Equal(2))
                             .and()
-                            .keys(vec!["name".into()])
+                            .keys(vec!["username".into()])
                             .query(),
                     )
                     .query(),
@@ -557,7 +557,7 @@ impl DbPool {
                     .where_()
                     .distance(CountComparison::Equal(2))
                     .and()
-                    .key("name")
+                    .key("username")
                     .value(Comparison::Equal(name.into()))
                     .query(),
             )?
@@ -887,7 +887,7 @@ impl DbPool {
             .db()?
             .exec(
                 &QueryBuilder::select()
-                    .values(vec!["name".into()])
+                    .values(vec!["username".into()])
                     .ids(id)
                     .query(),
             )?
@@ -915,7 +915,7 @@ impl DbPool {
                     .where_()
                     .distance(CountComparison::Equal(2))
                     .and()
-                    .key("name")
+                    .key("username")
                     .value(Comparison::Equal(name.into()))
                     .query(),
             )?

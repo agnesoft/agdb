@@ -46,7 +46,7 @@ pub(crate) async fn add(
 
     db_pool.add_user(ServerUser {
         db_id: None,
-        name: username.clone(),
+        username: username.clone(),
         password: pswd.password.to_vec(),
         salt: pswd.user_salt.to_vec(),
         token: String::new(),

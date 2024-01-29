@@ -25,7 +25,7 @@ pub(crate) async fn login(
     let user = db_pool
         .find_user(&request.username)
         .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
-    let pswd = Password::new(&user.name, &user.password, &user.salt)?;
+    let pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !pswd.verify_password(&request.password) {
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
@@ -71,7 +71,7 @@ pub(crate) async fn change_password(
     Json(request): Json<ChangePassword>,
 ) -> ServerResponse {
     let user = db_pool.get_user(user.0)?;
-    let old_pswd = Password::new(&user.name, &user.password, &user.salt)?;
+    let old_pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));

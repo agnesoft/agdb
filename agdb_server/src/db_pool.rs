@@ -47,7 +47,7 @@ const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 #[derive(UserValue)]
 pub(crate) struct ServerUser {
     pub(crate) db_id: Option<DbId>,
-    pub(crate) name: String,
+    pub(crate) username: String,
     pub(crate) password: Vec<u8>,
     pub(crate) salt: Vec<u8>,
     pub(crate) token: String,
@@ -83,6 +83,9 @@ impl DbPool {
             let admin_password = Password::create(&config.admin, &config.admin);
 
             db_pool.0.server_db.get_mut()?.transaction_mut(|t| {
+                t.exec_mut(&QueryBuilder::insert().index("username").query())?;
+                t.exec_mut(&QueryBuilder::insert().index("token").query())?;
+
                 t.exec_mut(
                     &QueryBuilder::insert()
                         .nodes()
@@ -95,7 +98,7 @@ impl DbPool {
                         .nodes()
                         .values(&ServerUser {
                             db_id: None,
-                            name: config.admin.clone(),
+                            username: config.admin.clone(),
                             password: admin_password.password.to_vec(),
                             salt: admin_password.user_salt.to_vec(),
                             token: String::new(),
@@ -282,7 +285,7 @@ impl DbPool {
 
     pub(crate) fn change_password(&self, mut user: ServerUser, new_password: &str) -> ServerResult {
         password::validate_password(new_password)?;
-        let pswd = Password::create(&user.name, new_password);
+        let pswd = Password::create(&user.username, new_password);
         user.password = pswd.password.to_vec();
         user.salt = pswd.user_salt.to_vec();
         self.save_user(user)?;
@@ -475,14 +478,14 @@ impl DbPool {
             .db()?
             .exec(
                 &QueryBuilder::select()
-                    .values(vec!["name".into()])
+                    .values(vec!["username".into()])
                     .ids(
                         QueryBuilder::search()
                             .from("users")
                             .where_()
                             .distance(CountComparison::Equal(2))
                             .and()
-                            .keys(vec!["name".into()])
+                            .keys(vec!["username".into()])
                             .query(),
                     )
                     .query(),
@@ -549,18 +552,7 @@ impl DbPool {
     pub(crate) fn find_user_id(&self, name: &str) -> ServerResult<DbId> {
         Ok(self
             .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .depth_first()
-                    .from("users")
-                    .limit(1)
-                    .where_()
-                    .distance(CountComparison::Equal(2))
-                    .and()
-                    .key("name")
-                    .value(Comparison::Equal(name.into()))
-                    .query(),
-            )?
+            .exec(&QueryBuilder::search().index("username").value(name).query())?
             .elements
             .first()
             .ok_or(user_not_found(name))?
@@ -570,18 +562,7 @@ impl DbPool {
     pub(crate) fn find_user_id_by_token(&self, token: &str) -> ServerResult<DbId> {
         Ok(self
             .db()?
-            .exec(
-                &QueryBuilder::search()
-                    .depth_first()
-                    .from("users")
-                    .limit(1)
-                    .where_()
-                    .distance(CountComparison::Equal(2))
-                    .and()
-                    .key("token")
-                    .value(Comparison::Equal(token.into()))
-                    .query(),
-            )?
+            .exec(&QueryBuilder::search().index("token").value(token).query())?
             .elements
             .first()
             .ok_or(format!("No user found for token '{token}'"))?
@@ -887,7 +868,7 @@ impl DbPool {
             .db()?
             .exec(
                 &QueryBuilder::select()
-                    .values(vec!["name".into()])
+                    .values(vec!["username".into()])
                     .ids(id)
                     .query(),
             )?
@@ -915,7 +896,7 @@ impl DbPool {
                     .where_()
                     .distance(CountComparison::Equal(2))
                     .and()
-                    .key("name")
+                    .key("username")
                     .value(Comparison::Equal(name.into()))
                     .query(),
             )?

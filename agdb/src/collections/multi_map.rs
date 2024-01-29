@@ -1,3 +1,4 @@
+use crate::collections::bit_set::BitSet;
 use crate::collections::map::DbMapData;
 use crate::collections::map::MapData;
 use crate::collections::map::MapIterator;
@@ -460,14 +461,20 @@ where
         storage: &mut Storage<D>,
         i: &mut u64,
         new_capacity: u64,
-        empty_list: &mut [bool],
+        occupancy: &mut BitSet,
     ) -> Result<(), DbError> {
+        if *i < new_capacity && occupancy.value(*i) {
+            *i += 1;
+            return Ok(());
+        }
+
         let key = self.data.key(storage, *i)?;
-        let mut pos = key.stable_hash() % new_capacity;
+        let hash = key.stable_hash();
+        let mut pos = hash % new_capacity;
 
         loop {
-            if empty_list[pos as usize] {
-                empty_list[pos as usize] = false;
+            if !occupancy.value(pos) {
+                occupancy.set(pos);
                 self.data.swap(storage, *i, pos)?;
 
                 if *i == pos {
@@ -493,12 +500,12 @@ where
         state: MapValueState,
         i: &mut u64,
         new_capacity: u64,
-        empty_list: &mut [bool],
+        occupancy: &mut BitSet,
     ) -> Result<(), DbError> {
         match state {
             MapValueState::Empty => self.rehash_empty(i),
             MapValueState::Deleted => self.rehash_deleted(storage, i, new_capacity),
-            MapValueState::Valid => self.rehash_valid(storage, i, new_capacity, empty_list),
+            MapValueState::Valid => self.rehash_valid(storage, i, new_capacity, occupancy),
         }
     }
 
@@ -510,10 +517,15 @@ where
         new_capacity: u64,
     ) -> Result<(), DbError> {
         let mut i = 0_u64;
-        let mut empty_list = vec![true; new_capacity as usize];
+        let mut occupancy = BitSet::with_capacity(new_capacity);
 
         while i != current_capacity {
-            self.rehash_value(storage, self.data.state(storage,   i)?, &mut i, new_capacity, &mut empty_list)?;
+            self.rehash_value(
+                storage,
+                self.data.state(storage, i)?,
+                &mut i,
+                new_capacity,
+                &mut occupancy)?;
         }
 
         Ok(())
@@ -813,5 +825,27 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         assert_eq!(storage.len(), 0)
+    }
+
+    #[test]
+    fn empty_pos_after_rehash() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<String, String, MemoryStorage>::new(&mut storage).unwrap();
+        let range = 1..200;
+
+        let users: Vec<(String, String)> = range
+            .clone()
+            .rev()
+            .map(|i| (format!("db_user{i}"), i.to_string()))
+            .collect();
+
+        for (user, value) in users {
+            map.insert(&mut storage, &user, &value).unwrap();
+        }
+
+        for i in range {
+            let value = map.value(&storage, &format!("db_user{i}")).unwrap();
+            assert_eq!(value, Some(i.to_string()));
+        }
     }
 }

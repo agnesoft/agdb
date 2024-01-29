@@ -17,7 +17,6 @@ pub struct DbIndexStorageIndex {
     ids_index: StorageIndex,
 }
 
-#[allow(dead_code)]
 pub struct DbIndex<D>
 where
     D: StorageData,
@@ -27,7 +26,6 @@ where
     ids: MultiMapStorage<DbValue, DbId, D>,
 }
 
-#[allow(dead_code)]
 pub struct DbIndexes<D>
 where
     D: StorageData,
@@ -36,7 +34,6 @@ where
     storage_indexes: DbVec<DbIndexStorageIndex, D>,
 }
 
-#[allow(dead_code)]
 impl<D> DbIndex<D>
 where
     D: StorageData,

@@ -119,6 +119,9 @@ pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) 
     Router::new()
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest("/api/v1", api_v1)
-        .layer(middleware::from_fn(logger::logger))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            logger::logger,
+        ))
         .with_state(state)
 }

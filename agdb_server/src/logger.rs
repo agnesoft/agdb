@@ -1,10 +1,14 @@
+use crate::server_state::ServerState;
+use crate::user_id::UserName;
 use axum::body::Body;
 use axum::extract::Request;
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
 use axum::response::Response;
 use axum::Error as AxumError;
+use axum::RequestPartsExt;
 use http_body_util::BodyExt;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -13,8 +17,9 @@ use std::time::Instant;
 #[derive(Default, Serialize)]
 struct LogRecord {
     method: String,
-    uri: String,
     version: String,
+    user: String,
+    uri: String,
     request_headers: HashMap<String, String>,
     request_body: String,
     status: u16,
@@ -35,10 +40,14 @@ impl LogRecord {
     }
 }
 
-pub(crate) async fn logger(request: Request, next: Next) -> Result<impl IntoResponse, Response> {
+pub(crate) async fn logger(
+    state: State<ServerState>,
+    request: Request,
+    next: Next,
+) -> Result<impl IntoResponse, Response> {
     let mut log_record = LogRecord::default();
     let skip_body = request.uri().path().ends_with("openapi.json");
-    let request = request_log(request, &mut log_record, skip_body).await?;
+    let request = request_log(state, request, &mut log_record, skip_body).await?;
     let now = Instant::now();
     let response = next.run(request).await;
     log_record.time = now.elapsed().as_micros();
@@ -49,7 +58,9 @@ pub(crate) async fn logger(request: Request, next: Next) -> Result<impl IntoResp
     response
 }
 
+#[rustfmt::skip]
 async fn request_log(
+    state: State<ServerState>,
     request: Request,
     log_record: &mut LogRecord,
     skip_body: bool,
@@ -64,9 +75,10 @@ async fn request_log(
         .collect();
 
     if !skip_body {
-        let (parts, body) = request.into_parts();
+        let (mut parts, body) = request.into_parts();
         let bytes = body.collect().await.map_err(map_error)?.to_bytes();
         log_record.request_body = String::from_utf8_lossy(&bytes).to_string();
+        log_record.user = parts.extract_with_state::<UserName, ServerState>(&state).await.unwrap_or_default().0;
 
         return Ok(Request::from_parts(parts, Body::from(bytes)));
     }
@@ -123,6 +135,7 @@ mod tests {
             method: "GET".to_string(),
             uri: "/".to_string(),
             version: "HTTP/1.1".to_string(),
+            user: "user".to_string(),
             request_headers: HashMap::new(),
             request_body: String::new(),
             status: 500,

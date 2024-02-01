@@ -14,6 +14,7 @@ use crate::StorageData;
 /// index.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub struct SelectIndexesQuery {}
 
 impl Query for SelectIndexesQuery {

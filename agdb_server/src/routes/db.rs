@@ -5,6 +5,7 @@ use crate::db_pool::DbPool;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use agdb_api::DbAudit;
 use agdb_api::DbType;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
@@ -66,6 +67,29 @@ pub(crate) async fn add(
     db_pool.add_db(&owner, &db, request.db_type, &config)?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(get,
+    path = "/api/v1/db/{owner}/{db}/audit",
+    operation_id = "db_audit",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name")
+    ),
+    responses(
+         (status = 200, description = "ok", body = DbAudit),
+         (status = 401, description = "unauthorized"),
+    )
+)]
+pub(crate) async fn audit(
+    user: UserId,
+    State(db_pool): State<DbPool>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
+    let results = db_pool.audit(&owner, &db, user.0)?;
+
+    Ok((StatusCode::OK, Json(results)))
 }
 
 #[utoipa::path(post,

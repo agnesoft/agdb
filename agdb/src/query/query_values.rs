@@ -6,6 +6,7 @@ use crate::DbValue;
 /// and multiple (`Multi`) values in database queries.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub enum QueryValues {
     /// Single list of properties (key-value pairs)
     /// to be applied to all elements in a query.

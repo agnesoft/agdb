@@ -22,6 +22,7 @@ use crate::StorageData;
 /// their ids but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub struct InsertEdgesQuery {
     /// Origins
     pub from: QueryIds,

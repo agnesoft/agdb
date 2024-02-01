@@ -23,6 +23,7 @@ use agdb::SearchQuery;
 use agdb::Transaction;
 use agdb::TransactionMut;
 use agdb::UserValue;
+use agdb_api::DbAudit;
 use agdb_api::DbType;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
@@ -243,6 +244,10 @@ impl DbPool {
             )
         })?;
         Ok(())
+    }
+
+    pub(crate) fn audit(&self, owner: &str, db: &str, user: DbId) -> ServerResult<DbAudit> {
+        Ok(DbAudit(vec![]))
     }
 
     pub(crate) fn backup_db(

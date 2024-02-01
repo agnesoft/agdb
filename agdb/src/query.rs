@@ -55,6 +55,7 @@ use crate::{
 #[cfg(any(feature = "serde", feature = "opeanapi"))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub enum QueryType {
     InsertAlias(InsertAliasesQuery),
     InsertEdges(InsertEdgesQuery),

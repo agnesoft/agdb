@@ -26,7 +26,6 @@ const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
-static MUTEX: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
 static SERVER: std::sync::OnceLock<tokio::sync::RwLock<Option<TestServerImpl>>> =
     std::sync::OnceLock::new();
 
@@ -106,6 +105,7 @@ impl TestServerImpl {
                     TestServer::url_base(),
                     port
                 ))
+                .timeout(Duration::from_secs(1))
                 .json(&admin)
                 .send()?
                 .json()?;
@@ -147,12 +147,8 @@ impl TestServerImpl {
 
 impl TestServer {
     pub async fn new() -> anyhow::Result<Self> {
-        let _guard = MUTEX
-            .get_or_init(|| tokio::sync::Mutex::new(()))
-            .lock()
-            .await;
         let global_server = SERVER.get_or_init(|| tokio::sync::RwLock::new(None));
-        let mut server_guard = global_server.try_write().unwrap();
+        let mut server_guard = global_server.write().await;
 
         if server_guard.is_none() {
             *server_guard = Some(TestServerImpl::new().await?);
@@ -196,20 +192,21 @@ impl Drop for TestServerImpl {
 
 impl Drop for TestServer {
     fn drop(&mut self) {
-        let mutex = MUTEX.get().unwrap();
-        let _guard = loop {
-            if let Ok(g) = mutex.try_lock() {
-                break g;
+        let global_server = SERVER.get().unwrap();
+        let mut server_guard = loop {
+            if let Ok(s) = global_server.try_write() {
+                break s;
+            } else {
+                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
             }
         };
-        let global_server = SERVER.get().unwrap();
-        let mut server_guard = global_server.try_write().unwrap();
-        let server = server_guard.as_mut().unwrap();
 
-        if server.instances == 1 {
-            *server_guard = None;
-        } else {
-            server.instances -= 1;
+        if let Some(s) = server_guard.as_mut() {
+            if s.instances == 1 {
+                *server_guard = None;
+            } else {
+                s.instances -= 1;
+            }
         }
     }
 }

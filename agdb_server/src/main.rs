@@ -30,7 +30,7 @@ async fn main() -> ServerResult {
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let config = config::new()?;
-    let db_pool = DbPool::new(&config)?;
+    let db_pool = DbPool::new(&config).await?;
     let address = format!("{}:{}", config.host, config.port);
     let app = app::app(config, shutdown_sender, db_pool);
     tracing::info!("Listening at {address}");

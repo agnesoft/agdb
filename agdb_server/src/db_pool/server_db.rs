@@ -2,9 +2,9 @@ use crate::db_pool::server_db_storage::ServerDbStorage;
 use crate::server_error::ServerResult;
 use agdb::DbImpl;
 use std::sync::Arc;
-use std::sync::RwLock;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
+use tokio::sync::RwLock;
+use tokio::sync::RwLockReadGuard;
+use tokio::sync::RwLockWriteGuard;
 
 pub(crate) type ServerDbImpl = DbImpl<ServerDbStorage>;
 pub(crate) struct ServerDb(pub(crate) Arc<RwLock<ServerDbImpl>>);
@@ -14,15 +14,15 @@ impl ServerDb {
         Ok(Self(Arc::new(RwLock::new(ServerDbImpl::new(name)?))))
     }
 
-    pub(crate) fn copy(&self, name: &str) -> ServerResult<Self> {
-        Ok(Self(Arc::new(RwLock::new(self.get()?.copy(name)?))))
+    pub(crate) async fn copy(&self, name: &str) -> ServerResult<Self> {
+        Ok(Self(Arc::new(RwLock::new(self.get().await.copy(name)?))))
     }
 
-    pub(crate) fn get(&self) -> ServerResult<RwLockReadGuard<ServerDbImpl>> {
-        Ok(self.0.read()?)
+    pub(crate) async fn get(&self) -> RwLockReadGuard<ServerDbImpl> {
+        self.0.read().await
     }
 
-    pub(crate) fn get_mut(&self) -> ServerResult<RwLockWriteGuard<ServerDbImpl>> {
-        Ok(self.0.write()?)
+    pub(crate) async fn get_mut(&self) -> RwLockWriteGuard<ServerDbImpl> {
+        self.0.write().await
     }
 }

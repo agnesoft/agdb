@@ -105,7 +105,6 @@ impl TestServerImpl {
                     TestServer::url_base(),
                     port
                 ))
-                .timeout(Duration::from_secs(1))
                 .json(&admin)
                 .send()?
                 .json()?;

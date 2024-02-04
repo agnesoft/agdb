@@ -64,7 +64,7 @@ pub(crate) async fn audit(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
-    let owner_id = db_pool.find_user_id(&owner)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
     let results = db_pool.audit(&owner, &db, owner_id)?;
 
     Ok((StatusCode::OK, Json(results)))

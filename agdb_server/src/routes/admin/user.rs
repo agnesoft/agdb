@@ -38,19 +38,21 @@ pub(crate) async fn add(
     password::validate_username(&username)?;
     password::validate_password(&request.password)?;
 
-    if db_pool.find_user_id(&username).is_ok() {
+    if db_pool.find_user_id(&username).await.is_ok() {
         return Err(ErrorCode::UserExists.into());
     }
 
     let pswd = Password::create(&username, &request.password);
 
-    db_pool.add_user(ServerUser {
-        db_id: None,
-        username: username.clone(),
-        password: pswd.password.to_vec(),
-        salt: pswd.user_salt.to_vec(),
-        token: String::new(),
-    })?;
+    db_pool
+        .add_user(ServerUser {
+            db_id: None,
+            username: username.clone(),
+            password: pswd.password.to_vec(),
+            salt: pswd.user_salt.to_vec(),
+            token: String::new(),
+        })
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -76,8 +78,8 @@ pub(crate) async fn change_password(
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
-    let user = db_pool.find_user(&username)?;
-    db_pool.change_password(user, &request.password)?;
+    let user = db_pool.find_user(&username).await?;
+    db_pool.change_password(user, &request.password).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -96,7 +98,8 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<UserStatus>>)> {
     let users = db_pool
-        .find_users()?
+        .find_users()
+        .await?
         .into_iter()
         .map(|name| UserStatus { name })
         .collect();
@@ -122,7 +125,7 @@ pub(crate) async fn remove(
     State(config): State<Config>,
     Path(username): Path<String>,
 ) -> ServerResponse {
-    db_pool.remove_user(&username, &config)?;
+    db_pool.remove_user(&username, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

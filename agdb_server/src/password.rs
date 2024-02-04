@@ -19,7 +19,6 @@ pub(crate) struct Password {
     pub(crate) user_salt: [u8; 16],
 }
 
-#[allow(dead_code)]
 impl Password {
     pub(crate) fn create(user: &str, pswd: &str) -> Self {
         let rng = SystemRandom::new();

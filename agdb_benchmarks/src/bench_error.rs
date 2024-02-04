@@ -1,6 +1,6 @@
-#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct BenchError {
+    #[allow(dead_code)]
     pub(crate) description: String,
 }
 

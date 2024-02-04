@@ -55,7 +55,7 @@ pub(crate) async fn add(
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let current_username = db_pool.user_name(user.0)?;
+    let current_username = db_pool.user_name(user.0).await?;
 
     if current_username != owner {
         return Err(ServerError::new(
@@ -64,7 +64,9 @@ pub(crate) async fn add(
         ));
     }
 
-    db_pool.add_db(&owner, &db, request.db_type, &config)?;
+    db_pool
+        .add_db(&owner, &db, request.db_type, &config)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -113,7 +115,7 @@ pub(crate) async fn backup(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.backup_db(&owner, &db, user.0, &config)?;
+    db_pool.backup_db(&owner, &db, user.0, &config).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -143,7 +145,9 @@ pub(crate) async fn copy(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    db_pool.copy_db(&owner, &db, &request.new_name, user.0, &config, false)?;
+    db_pool
+        .copy_db(&owner, &db, &request.new_name, user.0, &config, false)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -169,7 +173,7 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.delete_db(&owner, &db, user.0, &config)?;
+    db_pool.delete_db(&owner, &db, user.0, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -196,7 +200,7 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let results = db_pool.exec(&owner, &db, user.0, queries)?;
+    let results = db_pool.exec(&owner, &db, user.0, queries).await?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
@@ -214,7 +218,7 @@ pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
-    let dbs = db_pool.find_user_dbs(user.0)?;
+    let dbs = db_pool.find_user_dbs(user.0).await?;
 
     Ok((StatusCode::OK, Json(dbs)))
 }
@@ -238,7 +242,7 @@ pub(crate) async fn optimize(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
-    let db = db_pool.optimize_db(&owner, &db, user.0)?;
+    let db = db_pool.optimize_db(&owner, &db, user.0).await?;
 
     Ok((StatusCode::OK, Json(db)))
 }
@@ -263,7 +267,7 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.remove_db(&owner, &db, user.0)?;
+    db_pool.remove_db(&owner, &db, user.0).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -293,7 +297,9 @@ pub(crate) async fn rename(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    db_pool.rename_db(&owner, &db, &request.new_name, user.0, &config)?;
+    db_pool
+        .rename_db(&owner, &db, &request.new_name, user.0, &config)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -319,7 +325,7 @@ pub(crate) async fn restore(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.restore_db(&owner, &db, user.0, &config)?;
+    db_pool.restore_db(&owner, &db, user.0, &config).await?;
 
     Ok(StatusCode::CREATED)
 }

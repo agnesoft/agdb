@@ -7,7 +7,6 @@ use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::UserValue;
 
-#[allow(dead_code)]
 #[derive(Debug, UserValue)]
 struct UserDb {
     name: String,
@@ -22,7 +21,6 @@ enum UserStatus {
     Banned,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, UserValue)]
 struct UserDb2 {
     db_id: Option<DbId>,

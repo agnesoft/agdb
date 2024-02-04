@@ -16,9 +16,9 @@ const IGNORE: [&str; 8] = [
 ];
 const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct CIError {
+    #[allow(dead_code)]
     description: String,
 }
 

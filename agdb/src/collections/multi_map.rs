@@ -509,7 +509,6 @@ where
         }
     }
 
-    #[rustfmt::skip]
     fn rehash_values(
         &mut self,
         storage: &mut Storage<D>,
@@ -525,7 +524,8 @@ where
                 self.data.state(storage, i)?,
                 &mut i,
                 new_capacity,
-                &mut occupancy)?;
+                &mut occupancy,
+            )?;
         }
 
         Ok(())

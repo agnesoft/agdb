@@ -30,8 +30,10 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         if let Ok(bearer) = parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
             let db_pool = DbPool::from_ref(state);
-            let id = db_pool.find_user_id_by_token(utilities::unquote(bearer.token()))?;
-            return Ok(UserName(db_pool.user_name(id)?));
+            let id = db_pool
+                .find_user_id_by_token(utilities::unquote(bearer.token()))
+                .await?;
+            return Ok(UserName(db_pool.user_name(id).await?));
         }
 
         Ok(Self("".to_string()))
@@ -51,6 +53,7 @@ where
             parts.extract().await.map_err(unauthorized)?;
         let id = DbPool::from_ref(state)
             .find_user_id_by_token(utilities::unquote(bearer.token()))
+            .await
             .map_err(unauthorized)?;
         Ok(Self(id))
     }
@@ -69,6 +72,7 @@ where
         let admin_user = Config::from_ref(state).admin.clone();
         let admin = DbPool::from_ref(state)
             .find_user(&admin_user)
+            .await
             .map_err(unauthorized)?;
         let bearer: TypedHeader<Authorization<Bearer>> =
             parts.extract().await.map_err(unauthorized)?;

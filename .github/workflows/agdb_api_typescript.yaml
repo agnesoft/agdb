@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: ["main"]
 
-env:
-  PROJECT: agdb_api/typescript
-
 jobs:
   diff:
     runs-on: ubuntu-latest
@@ -19,7 +16,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb_server/openapi/schema.json .github/workflows/agdb_api_typescript.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
+          if [[ "$(git diff origin/main --name-only -- agdb_api/typescript/ agdb_server/openapi/schema.json .github/workflows/agdb_api_typescript.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_api_typescript_analyse:
     runs-on: ubuntu-latest
@@ -27,7 +24,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_api/typescript
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
@@ -39,7 +36,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_api/typescript
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -49,7 +46,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ${{ env.PROJECT }}/coverage/
+          path: agdb_api/typescript/coverage/
           retention-days: 30
 
   agdb_api_typescript_format:
@@ -58,7 +55,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_api/typescript
     steps:
       - uses: actions/checkout@v4
       - run: npm ci

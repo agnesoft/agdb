@@ -41,7 +41,9 @@ pub(crate) async fn add(
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
 ) -> ServerResponse {
-    db_pool.add_db_user(&owner, &db, &username, request.0.db_role, user.0)?;
+    db_pool
+        .add_db_user(&owner, &db, &username, request.0.db_role, user.0)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -65,7 +67,7 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let users = db_pool.db_users(&owner, &db, user.0)?;
+    let users = db_pool.db_users(&owner, &db, user.0).await?;
 
     Ok((StatusCode::OK, Json(users)))
 }
@@ -91,7 +93,9 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db, username)): Path<(String, String, String)>,
 ) -> ServerResponse {
-    db_pool.remove_db_user(&owner, &db, &username, user.0)?;
+    db_pool
+        .remove_db_user(&owner, &db, &username, user.0)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

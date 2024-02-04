@@ -32,8 +32,10 @@ pub(crate) async fn add(
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.add_db_user(&owner, &db, &username, request.0.db_role, owner_id)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool
+        .add_db_user(&owner, &db, &username, request.0.db_role, owner_id)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -57,8 +59,8 @@ pub(crate) async fn list(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    let users = db_pool.db_users(&owner, &db, owner_id)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    let users = db_pool.db_users(&owner, &db, owner_id).await?;
 
     Ok((StatusCode::OK, Json(users)))
 }
@@ -84,8 +86,10 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db, username)): Path<(String, String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.remove_db_user(&owner, &db, &username, owner_id)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool
+        .remove_db_user(&owner, &db, &username, owner_id)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

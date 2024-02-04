@@ -295,7 +295,6 @@ where
         self.len() == 0
     }
 
-    #[allow(dead_code)]
     pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> VecIterator<T, D, Data, E> {
         VecIterator {
             index: 0,
@@ -319,7 +318,6 @@ where
         self.data.remove_from_storage(storage)
     }
 
-    #[allow(dead_code)]
     pub fn remove(&mut self, storage: &mut Storage<D>, index: u64) -> Result<T, E> {
         self.validate_index(index)?;
         self.data.remove(storage, index)

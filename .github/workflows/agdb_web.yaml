@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: ["main"]
 
-env:
-  PROJECT: agdb_web
-
 jobs:
   diff:
     runs-on: ubuntu-latest
@@ -19,7 +16,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- agdb_web/ .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
+          if [[ "$(git diff origin/main --name-only -- agdb_web/ .github/workflows/agdb_web.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_web_analyse:
     runs-on: ubuntu-latest
@@ -27,7 +24,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_web
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
@@ -40,7 +37,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_web
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
@@ -50,7 +47,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ${{ env.PROJECT }}/coverage/
+          path: agdb_web/coverage/
           retention-days: 30
 
   agdb_web_e2e:
@@ -59,7 +56,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_web
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
@@ -70,7 +67,7 @@ jobs:
         if: always()
         with:
           name: e2e
-          path: ${{ env.PROJECT }}/playwright-report/
+          path: agdb_web/playwright-report/
           retention-days: 30
 
   agdb_web_format:
@@ -79,7 +76,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_web
     steps:
       - uses: actions/checkout@v4
       - run: npm ci

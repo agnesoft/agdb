@@ -39,7 +39,9 @@ pub(crate) async fn add(
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    db_pool.add_db(&owner, &db, request.db_type, &config)?;
+    db_pool
+        .add_db(&owner, &db, request.db_type, &config)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -89,8 +91,8 @@ pub(crate) async fn backup(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.backup_db(&owner, &db, owner_id, &config)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool.backup_db(&owner, &db, owner_id, &config).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -119,8 +121,10 @@ pub(crate) async fn copy(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.copy_db(&owner, &db, &request.new_name, owner_id, &config, true)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool
+        .copy_db(&owner, &db, &request.new_name, owner_id, &config, true)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -145,8 +149,8 @@ pub(crate) async fn delete(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.delete_db(&owner, &db, owner_id, &config)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool.delete_db(&owner, &db, owner_id, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -173,8 +177,8 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    let results = db_pool.exec(&owner, &db, owner_id, queries)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    let results = db_pool.exec(&owner, &db, owner_id, queries).await?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
@@ -192,7 +196,7 @@ pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
-    let dbs = db_pool.find_dbs()?;
+    let dbs = db_pool.find_dbs().await?;
 
     Ok((StatusCode::OK, Json(dbs)))
 }
@@ -215,8 +219,8 @@ pub(crate) async fn optimize(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    let db = db_pool.optimize_db(&owner, &db, owner_id)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    let db = db_pool.optimize_db(&owner, &db, owner_id).await?;
 
     Ok((StatusCode::OK, Json(db)))
 }
@@ -240,8 +244,8 @@ pub(crate) async fn remove(
     State(db_pool): State<DbPool>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.remove_db(&owner, &db, owner_id)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool.remove_db(&owner, &db, owner_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -270,8 +274,10 @@ pub(crate) async fn rename(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.rename_db(&owner, &db, &request.new_name, owner_id, &config)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool
+        .rename_db(&owner, &db, &request.new_name, owner_id, &config)
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -296,8 +302,8 @@ pub(crate) async fn restore(
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner)?;
-    db_pool.restore_db(&owner, &db, owner_id, &config)?;
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool.restore_db(&owner, &db, owner_id, &config).await?;
 
     Ok(StatusCode::CREATED)
 }

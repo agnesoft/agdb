@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: ["main"]
 
-env:
-  PROJECT: agdb_ci
-
 jobs:
   diff:
     runs-on: ubuntu-latest
@@ -19,7 +16,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ .github/workflows/${{ env.PROJECT }}.yaml Version)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
+          if [[ "$(git diff origin/main --name-only -- agdb_ci/ .github/workflows/agdb_ci.yaml Version)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_ci_analyse:
     runs-on: ubuntu-latest
@@ -28,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo clippy --package ${{ env.PROJECT }} --all-targets --all-features -- -D warnings
+      - run: cargo clippy --package agdb_ci --all-targets --all-features -- -D warnings
 
   agdb_ci_coverage:
     runs-on: ubuntu-latest
@@ -39,7 +36,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --package ${{ env.PROJECT }} --all-features --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
+      - run: cargo llvm-cov --package agdb_ci --all-features --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
 
   agdb_ci_format:
     runs-on: ubuntu-latest
@@ -48,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo fmt --package ${{ env.PROJECT }} --check
+      - run: cargo fmt --package agdb_ci --check
 
   validate_version:
     runs-on: ubuntu-latest

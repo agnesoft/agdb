@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: ["main"]
 
-env:
-  PROJECT: agdb_studio
-
 jobs:
   diff:
     runs-on: ubuntu-latest
@@ -19,7 +16,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- ${{ env.PROJECT }}/ agdb_api/typescript/src/ agdb_api/typescript/package.json agdb_server/openapi/schema.json .github/workflows/${{ env.PROJECT }}.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
+          if [[ "$(git diff origin/main --name-only -- agdb_studio/ agdb_api/typescript/src/ agdb_api/typescript/package.json agdb_server/openapi/schema.json .github/workflows/agdb_studio.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_studio_analyse:
     runs-on: ubuntu-latest
@@ -27,7 +24,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_studio
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
@@ -39,7 +36,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_studio
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
@@ -48,7 +45,7 @@ jobs:
         if: always()
         with:
           name: coverage
-          path: ${{ env.PROJECT }}/coverage/
+          path: agdb_studio/coverage/
           retention-days: 30
 
   agdb_studio_e2e:
@@ -57,7 +54,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_studio
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
@@ -68,7 +65,7 @@ jobs:
         if: always()
         with:
           name: e2e
-          path: ${{ env.PROJECT }}/playwright-report/
+          path: agdb_studio/playwright-report/
           retention-days: 30
 
   agdb_studio_format:
@@ -77,7 +74,7 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     defaults:
       run:
-        working-directory: ${{ env.PROJECT }}
+        working-directory: agdb_studio
     steps:
       - uses: actions/checkout@v4
       - run: npm ci

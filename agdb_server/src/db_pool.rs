@@ -61,7 +61,6 @@ struct Database {
     pub(crate) backup: u64,
 }
 
-#[allow(dead_code)]
 pub(crate) struct DbPoolImpl {
     server_db: ServerDb,
     pool: RwLock<HashMap<String, ServerDb>>,

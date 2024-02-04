@@ -3,10 +3,10 @@ use agdb::DbMemory;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 
-#[allow(dead_code)]
 #[derive(Debug)]
 struct UserDb {
     name: String,
+    #[allow(dead_code)]
     role: String,
 }
 

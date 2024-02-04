@@ -12,7 +12,8 @@ use agdb::QueryResult;
 pub use test_file::TestFile;
 
 pub struct TestDb {
-    _test_file: TestFile,
+    #[allow(dead_code)]
+    test_file: TestFile,
     pub db: Db,
 }
 
@@ -23,10 +24,7 @@ impl TestDb {
         let test_file = TestFile::new();
         let db = Db::new(test_file.file_name()).unwrap();
 
-        Self {
-            _test_file: test_file,
-            db,
-        }
+        Self { test_file, db }
     }
 
     #[track_caller]

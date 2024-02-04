@@ -58,7 +58,6 @@ pub(crate) async fn logger(
     response
 }
 
-#[rustfmt::skip]
 async fn request_log(
     state: State<ServerState>,
     request: Request,
@@ -78,7 +77,11 @@ async fn request_log(
         let (mut parts, body) = request.into_parts();
         let bytes = body.collect().await.map_err(map_error)?.to_bytes();
         log_record.request_body = String::from_utf8_lossy(&bytes).to_string();
-        log_record.user = parts.extract_with_state::<UserName, ServerState>(&state).await.unwrap_or_default().0;
+        log_record.user = parts
+            .extract_with_state::<UserName, ServerState>(&state)
+            .await
+            .unwrap_or_default()
+            .0;
 
         return Ok(Request::from_parts(parts, Body::from(bytes)));
     }

@@ -88,7 +88,6 @@ where
     }
 }
 
-#[allow(dead_code)]
 impl<D> DbIndexes<D>
 where
     D: StorageData,

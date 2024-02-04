@@ -87,9 +87,10 @@ pub(crate) async fn add(
 pub(crate) async fn audit(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
-    let results = db_pool.audit(&owner, &db, user.0)?;
+    let results = db_pool.audit(&owner, &db, user.0, &config).await?;
 
     Ok((StatusCode::OK, Json(results)))
 }
@@ -197,10 +198,11 @@ pub(crate) async fn delete(
 pub(crate) async fn exec(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let results = db_pool.exec(&owner, &db, user.0, queries).await?;
+    let results = db_pool.exec(&owner, &db, user.0, queries, &config).await?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }

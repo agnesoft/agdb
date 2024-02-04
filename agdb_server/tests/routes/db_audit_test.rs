@@ -2,7 +2,6 @@ use crate::TestServer;
 use crate::ADMIN;
 use agdb::QueryBuilder;
 use agdb_api::DbType;
-use agdb_api::QueryAudit;
 
 #[tokio::test]
 async fn read_write() -> anyhow::Result<()> {
@@ -20,16 +19,12 @@ async fn read_write() -> anyhow::Result<()> {
             .values(vec![vec![("key", 1.1).into()]])
             .query()
             .into(),
-        QueryBuilder::select().ids("root").query().into(),
+        QueryBuilder::select().ids(":0").query().into(),
     ];
     server.api.db_exec(owner, db, &queries).await?;
     let (status, results) = server.api.db_audit(owner, db).await?;
     assert_eq!(status, 200);
-    let expected = vec![QueryAudit {
-        timestamp: 0,
-        user: owner.to_string(),
-        query: queries.remove(0),
-    }];
-    assert_eq!(results.0, expected);
+    assert_eq!(results.0[0].user, owner.to_string());
+    assert_eq!(results.0[0].query, queries.remove(0));
     Ok(())
 }

@@ -28,6 +28,7 @@ use agdb_api::DbType;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use agdb_api::Queries;
+use agdb_api::QueryAudit;
 use agdb_api::ServerDatabase;
 use axum::http::StatusCode;
 use server_db::ServerDb;
@@ -134,7 +135,7 @@ impl DbPool {
         }
 
         let db_path = Path::new(&config.data_dir).join(&db_name);
-        std::fs::create_dir_all(Path::new(&config.data_dir).join(owner))?;
+        std::fs::create_dir_all(db_audit_dir(owner, config))?;
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
         let server_db = ServerDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
@@ -245,7 +246,30 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) fn audit(&self, owner: &str, db: &str, user: DbId) -> ServerResult<DbAudit> {
+    pub(crate) async fn audit(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+        config: &Config,
+    ) -> ServerResult<DbAudit> {
+        if let Ok(log) = std::fs::OpenOptions::new()
+            .read(true)
+            .open(db_audit_file(owner, db, config))
+        {
+            let audit: Vec<QueryAudit> = serde_json::from_reader(log)?;
+            let db_role = self.find_user_db_role(user, &db_name(owner, db)).await?;
+
+            if db_role == DbUserRole::Write {
+                let username = self.user_name(user).await?;
+                return Ok(DbAudit(
+                    audit.into_iter().filter(|a| a.user == username).collect(),
+                ));
+            } else {
+                return Ok(DbAudit(audit));
+            }
+        }
+
         Ok(DbAudit(vec![]))
     }
 
@@ -413,6 +437,7 @@ impl DbPool {
         db: &str,
         user: DbId,
         mut queries: Queries,
+        config: &Config,
     ) -> ServerResult<Vec<QueryResult>> {
         let db_name = db_name(owner, db);
         let role = self.find_user_db_role(user, &db_name).await?;
@@ -423,10 +448,9 @@ impl DbPool {
         }
 
         let pool = self.get_pool().await;
-        let db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
-
+        let server_db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
         let results = if required_role == DbUserRole::Read {
-            db.get().await.transaction(move |t| {
+            server_db.get().await.transaction(|t| {
                 let mut results = vec![];
 
                 for q in queries.0.iter_mut() {
@@ -437,16 +461,28 @@ impl DbPool {
                 Ok(results)
             })
         } else {
-            db.get_mut().await.transaction_mut(move |t| {
-                let mut results = vec![];
+            let username = self.user_name(user).await?;
+            let mut audit = vec![];
 
-                for q in queries.0.iter_mut() {
-                    let result = t_exec_mut(t, q, &results)?;
+            let r = server_db.get_mut().await.transaction_mut(|t| {
+                let mut results = vec![];
+                queries.0.reverse();
+
+                while let Some(q) = queries.0.pop() {
+                    let result = t_exec_mut(t, q, &results, &mut audit, &username)?;
                     results.push(result);
                 }
 
                 Ok(results)
-            })
+            });
+            if r.is_ok() {
+                let log = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(db_audit_file(owner, db, config))?;
+                serde_json::to_writer(log, &audit)?;
+            }
+            r
         }
         .map_err(|e: QueryError| ServerError::new(ErrorCode::QueryError.into(), &e.description))?;
 
@@ -1104,6 +1140,14 @@ fn db_backup_dir(owner: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join("backups")
 }
 
+fn db_audit_dir(owner: &str, config: &Config) -> PathBuf {
+    Path::new(&config.data_dir).join(owner).join("audit")
+}
+
+fn db_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
+    db_audit_dir(owner, config).join(format!("{db}.log"))
+}
+
 fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join(db)
 }
@@ -1176,10 +1220,14 @@ fn t_exec(
 
 fn t_exec_mut(
     t: &mut TransactionMut<ServerDbStorage>,
-    q: &mut QueryType,
+    mut q: QueryType,
     results: &[QueryResult],
+    audit: &mut Vec<QueryAudit>,
+    username: &str,
 ) -> Result<QueryResult, QueryError> {
-    match q {
+    let mut do_audit = false;
+
+    let r = match &mut q {
         QueryType::Search(q) => {
             inject_results_search(q, results)?;
             t.exec(q)
@@ -1207,31 +1255,55 @@ fn t_exec_mut(
             t.exec(q)
         }
         QueryType::InsertAlias(q) => {
+            do_audit = true;
             inject_results(&mut q.ids, results)?;
             t.exec_mut(q)
         }
         QueryType::InsertEdges(q) => {
+            do_audit = true;
             inject_results(&mut q.from, results)?;
             inject_results(&mut q.to, results)?;
+
             t.exec_mut(q)
         }
-        QueryType::InsertNodes(q) => t.exec_mut(q),
+        QueryType::InsertNodes(q) => {
+            do_audit = true;
+            t.exec_mut(q)
+        }
         QueryType::InsertValues(q) => {
+            do_audit = true;
             inject_results(&mut q.ids, results)?;
             t.exec_mut(q)
         }
         QueryType::Remove(q) => {
+            do_audit = true;
             inject_results(&mut q.0, results)?;
             t.exec_mut(q)
         }
-        QueryType::InsertIndex(q) => t.exec_mut(q),
-        QueryType::RemoveAliases(q) => t.exec_mut(q),
-        QueryType::RemoveIndex(q) => t.exec_mut(q),
+        QueryType::InsertIndex(q) => {
+            do_audit = true;
+            t.exec_mut(q)
+        }
+        QueryType::RemoveAliases(q) => {
+            do_audit = true;
+            t.exec_mut(q)
+        }
+        QueryType::RemoveIndex(q) => {
+            do_audit = true;
+            t.exec_mut(q)
+        }
         QueryType::RemoveValues(q) => {
+            do_audit = true;
             inject_results(&mut q.0.ids, results)?;
             t.exec_mut(q)
         }
+    };
+
+    if do_audit {
+        audit_query(username, audit, q);
     }
+
+    r
 }
 
 fn id_or_result(id: QueryId, results: &[QueryResult]) -> Result<QueryId, QueryError> {
@@ -1308,6 +1380,17 @@ fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Result
     }
 
     Ok(())
+}
+
+fn audit_query(user: &str, audit: &mut Vec<QueryAudit>, query: QueryType) {
+    audit.push(QueryAudit {
+        timestamp: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        user: user.to_string(),
+        query,
+    });
 }
 
 #[cfg(test)]

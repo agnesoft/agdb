@@ -253,21 +253,14 @@ impl DbPool {
         user: DbId,
         config: &Config,
     ) -> ServerResult<DbAudit> {
+        let db_name = db_name(owner, db);
+        self.find_user_db_id(user, &db_name).await?;
+
         if let Ok(log) = std::fs::OpenOptions::new()
             .read(true)
             .open(db_audit_file(owner, db, config))
         {
-            let audit: Vec<QueryAudit> = serde_json::from_reader(log)?;
-            let db_role = self.find_user_db_role(user, &db_name(owner, db)).await?;
-
-            if db_role == DbUserRole::Write {
-                let username = self.user_name(user).await?;
-                return Ok(DbAudit(
-                    audit.into_iter().filter(|a| a.user == username).collect(),
-                ));
-            } else {
-                return Ok(DbAudit(audit));
-            }
+            return Ok(DbAudit(serde_json::from_reader(log)?));
         }
 
         Ok(DbAudit(vec![]))
@@ -466,9 +459,10 @@ impl DbPool {
 
             let r = server_db.get_mut().await.transaction_mut(|t| {
                 let mut results = vec![];
-                queries.0.reverse();
+                let mut qs = vec![];
+                std::mem::swap(&mut queries.0, &mut qs);
 
-                while let Some(q) = queries.0.pop() {
+                for q in qs {
                     let result = t_exec_mut(t, q, &results, &mut audit, &username)?;
                     results.push(result);
                 }

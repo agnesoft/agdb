@@ -107,6 +107,7 @@ The admin users can do some (but not all) actions that the owner can:
 | /api/v1/db/{owner}/{db}/remove      | owner      | removes the database from the server but keeps the files on disk (main, WAL, backup)             |
 | /api/v1/db/{owner}/{db}/rename      | owner      | changes the name of the database (this API can be used to transfer db ownership!)                |
 | /api/v1/db/{owner}/{db}/restore     | admin      | restores the database from the automatic backup - the current database will become the backup    |
+| /api/v1/db/{owner}/{db}/audit       | read       | returns the log of all mutable queries that ran against the database (with user who ran them)    |
 | /api/v1/db/{owner}/{db}/user/list   | read       | list users of the database with their roles                                                      |
 | /api/v1/db/{owner}/{db}/user/add    | admin      | adds a user to the database                                                                      |
 | /api/v1/db/{owner}/{db}/user/remove | admin      | removes a user from the database                                                                 |

@@ -6,6 +6,7 @@ use crate::routes::db::DbTypeParam;
 use crate::routes::db::ServerDatabaseRename;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use agdb_api::DbAudit;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
 use agdb_api::ServerDatabase;
@@ -43,6 +44,31 @@ pub(crate) async fn add(
         .await?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(get,
+    path = "/api/v1/admin/db/{owner}/{db}/audit",
+    operation_id = "admin_db_audit",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name")
+    ),
+    responses(
+         (status = 200, description = "ok", body = DbAudit),
+         (status = 401, description = "unauthorized"),
+    )
+)]
+pub(crate) async fn audit(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    let results = db_pool.audit(&owner, &db, owner_id, &config).await?;
+
+    Ok((StatusCode::OK, Json(results)))
 }
 
 #[utoipa::path(post,
@@ -149,11 +175,14 @@ pub(crate) async fn delete(
 pub(crate) async fn exec(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
     let owner_id = db_pool.find_user_id(&owner).await?;
-    let results = db_pool.exec(&owner, &db, owner_id, queries).await?;
+    let results = db_pool
+        .exec(&owner, &db, owner_id, queries, &config)
+        .await?;
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }

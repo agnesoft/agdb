@@ -14,6 +14,7 @@ use crate::StorageData;
 /// a value `u64`.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub struct SelectKeyCountQuery(pub QueryIds);
 
 impl Query for SelectKeyCountQuery {

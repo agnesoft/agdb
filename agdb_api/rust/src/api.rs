@@ -1,16 +1,16 @@
-use agdb::QueryResult;
-use agdb::QueryType;
-
 use crate::api_result::AgdbApiResult;
 use crate::api_types::DbType;
 use crate::api_types::ServerDatabase;
 use crate::api_types::UserCredentials;
 use crate::http_client::HttpClient;
 use crate::ChangePassword;
+use crate::DbAudit;
 use crate::DbUser;
 use crate::DbUserRole;
 use crate::UserLogin;
 use crate::UserStatus;
+use agdb::QueryResult;
+use agdb::QueryType;
 
 pub struct AgdbApi<T: HttpClient> {
     client: T,
@@ -39,6 +39,15 @@ impl<T: HttpClient> AgdbApi<T> {
             )
             .await?
             .0)
+    }
+
+    pub async fn admin_db_audit(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, DbAudit)> {
+        self.client
+            .get(
+                &self.url(&format!("/admin/db/{owner}/{db}/audit")),
+                &self.token,
+            )
+            .await
     }
 
     pub async fn admin_db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {
@@ -266,6 +275,12 @@ impl<T: HttpClient> AgdbApi<T> {
             )
             .await?
             .0)
+    }
+
+    pub async fn db_audit(&self, owner: &str, db: &str) -> AgdbApiResult<(u16, DbAudit)> {
+        self.client
+            .get(&self.url(&format!("/db/{owner}/{db}/audit")), &self.token)
+            .await
     }
 
     pub async fn db_backup(&self, owner: &str, db: &str) -> AgdbApiResult<u16> {

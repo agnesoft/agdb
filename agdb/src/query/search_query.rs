@@ -13,9 +13,9 @@ use crate::StorageData;
 use std::cmp::Ordering;
 
 /// Search algorithm to be used
-#[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SearchQueryAlgorithm {
     /// Examines each distance level from the search origin in full
     /// before continuing with the next level. E.g. when starting at

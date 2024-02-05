@@ -14,6 +14,7 @@ use crate::StorageData;
 /// also removed along with their properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub struct RemoveQuery(pub QueryIds);
 
 impl QueryMut for RemoveQuery {

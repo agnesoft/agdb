@@ -13,6 +13,7 @@ use crate::StorageData;
 /// list of elements with all properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub struct SelectQuery(pub QueryIds);
 
 impl Query for SelectQuery {

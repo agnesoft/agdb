@@ -13,6 +13,7 @@ use crate::StorageData;
 /// do not exist on any of the elements).
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[derive(Debug, PartialEq)]
 pub struct RemoveValuesQuery(pub SelectValuesQuery);
 
 impl QueryMut for RemoveValuesQuery {

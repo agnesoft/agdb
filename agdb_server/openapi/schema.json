@@ -101,6 +101,54 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/audit": {
+      "get": {
+        "tags": [
+          "crate::routes::admin::db"
+        ],
+        "operationId": "admin_db_audit",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbAudit"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/backup": {
       "post": {
         "tags": [
@@ -958,6 +1006,57 @@
           },
           "467": {
             "description": "db invalid"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/audit": {
+      "get": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "db_audit",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbAudit"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
           }
         },
         "security": [
@@ -1849,6 +1948,12 @@
         ],
         "description": "Comparison of unsigned integers (`u64`) used\nby `distance()` and `edge_count*()` conditions. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`."
       },
+      "DbAudit": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryAudit"
+        }
+      },
       "DbElement": {
         "type": "object",
         "description": "Database element used in [`QueryResult`]\nthat represents a node or an edge.",
@@ -2223,6 +2328,27 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/QueryResult"
+        }
+      },
+      "QueryAudit": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "user",
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "$ref": "#/components/schemas/QueryType"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "user": {
+            "type": "string"
+          }
         }
       },
       "QueryCondition": {

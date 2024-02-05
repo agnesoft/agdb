@@ -1,4 +1,5 @@
 mod admin_db_add_test;
+mod admin_db_audit_test;
 mod admin_db_backup_restore_test;
 mod admin_db_copy_test;
 mod admin_db_delete_test;

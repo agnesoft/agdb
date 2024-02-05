@@ -421,6 +421,11 @@ impl DbPool {
             std::fs::remove_file(backup_file)?;
         }
 
+        let audit_file = db_audit_file(owner, db, config);
+        if audit_file.exists() {
+            std::fs::remove_file(audit_file)?;
+        }
+
         Ok(())
     }
 

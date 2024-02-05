@@ -82,6 +82,7 @@ pub(crate) async fn add(
     responses(
          (status = 200, description = "ok", body = DbAudit),
          (status = 401, description = "unauthorized"),
+         (status = 404, description = "user / db not found"),
     )
 )]
 pub(crate) async fn audit(

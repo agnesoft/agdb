@@ -2,10 +2,9 @@ use crate::TestServer;
 use crate::ADMIN;
 use agdb::QueryBuilder;
 use agdb_api::DbType;
-use std::path::Path;
 
 #[tokio::test]
-async fn audit() -> anyhow::Result<()> {
+async fn admin_audit() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
     let db = &server.next_db_name();
@@ -23,7 +22,8 @@ async fn audit() -> anyhow::Result<()> {
         QueryBuilder::select().ids(":0").query().into(),
     ];
     server.api.db_exec(owner, db, &queries).await?;
-    let (status, results) = server.api.db_audit(owner, db).await?;
+    server.api.user_login(ADMIN, ADMIN).await?;
+    let (status, results) = server.api.admin_db_audit(owner, db).await?;
     assert_eq!(status, 200);
     assert_eq!(results.0[0].user, owner.to_string());
     assert_eq!(results.0[0].query, queries.remove(0));
@@ -31,7 +31,7 @@ async fn audit() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn audit_delete_db() -> anyhow::Result<()> {
+async fn admin_audit_db_empty() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
     let db = &server.next_db_name();
@@ -39,43 +39,39 @@ async fn audit_delete_db() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
-    let queries = vec![QueryBuilder::insert()
-        .nodes()
-        .aliases("root")
-        .values(vec![vec![("key", 1.1).into()]])
-        .query()
-        .into()];
-    server.api.db_exec(owner, db, &queries).await?;
-    let db_audit_file = Path::new(&server.data_dir)
-        .join(owner)
-        .join("audit")
-        .join(format!("{}.log", db));
-    assert!(db_audit_file.exists());
-    let status = server.api.db_delete(owner, db).await?;
-    assert_eq!(status, 204);
-    assert!(!db_audit_file.exists());
-    Ok(())
-}
-
-#[tokio::test]
-async fn audit_db_empty() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
-    let (status, results) = server.api.db_audit(owner, db).await?;
+    let (status, results) = server.api.admin_db_audit(owner, db).await?;
     assert_eq!(status, 200);
     assert_eq!(results.0, vec![]);
     Ok(())
 }
 
 #[tokio::test]
+async fn non_admin() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .admin_db_audit("owner", "db")
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 401);
+    Ok(())
+}
+
+#[tokio::test]
 async fn audit_no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let status = server.api.db_audit("owner", "db").await.unwrap_err().status;
+    let status = server
+        .api
+        .admin_db_audit("owner", "db")
+        .await
+        .unwrap_err()
+        .status;
     assert_eq!(status, 401);
     Ok(())
 }

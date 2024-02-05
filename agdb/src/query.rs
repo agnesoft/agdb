@@ -194,3 +194,56 @@ impl From<SelectValuesQuery> for QueryType {
         QueryType::SelectValues(value)
     }
 }
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::QueryBuilder;
+
+    #[test]
+    fn derived_from_debug_and_partial_eq() {
+        let queries: Vec<QueryType> = vec![
+            QueryBuilder::insert().nodes().count(2).query().into(),
+            QueryBuilder::insert()
+                .aliases(vec!["node1", "node2"])
+                .ids(vec![1, 2])
+                .query()
+                .into(),
+            QueryBuilder::insert()
+                .edges()
+                .from("node1")
+                .to("node2")
+                .query()
+                .into(),
+            QueryBuilder::insert()
+                .values(vec![vec![("key", 1.1).into()]])
+                .ids("node1")
+                .query()
+                .into(),
+            QueryBuilder::insert().index("key").query().into(),
+            QueryBuilder::search().from(1).query().into(),
+            QueryBuilder::select().ids(1).query().into(),
+            QueryBuilder::select().aliases().ids(1).query().into(),
+            QueryBuilder::select().aliases().query().into(),
+            QueryBuilder::select().indexes().query().into(),
+            QueryBuilder::select().keys().ids(1).query().into(),
+            QueryBuilder::select().key_count().ids(1).query().into(),
+            QueryBuilder::select()
+                .values(vec!["key".into()])
+                .ids(1)
+                .query()
+                .into(),
+            QueryBuilder::remove().aliases("node2").query().into(),
+            QueryBuilder::remove().index("key").query().into(),
+            QueryBuilder::remove()
+                .values(vec!["key".into()])
+                .ids(1)
+                .query()
+                .into(),
+            QueryBuilder::remove().ids("node1").query().into(),
+        ];
+        format!("{:?}", queries);
+        assert_eq!(queries, queries);
+    }
+}

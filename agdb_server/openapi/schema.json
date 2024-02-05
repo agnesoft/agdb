@@ -1054,6 +1054,9 @@
           },
           "401": {
             "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
           }
         },
         "security": [

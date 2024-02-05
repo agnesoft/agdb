@@ -48,14 +48,14 @@ pub struct Queries(pub Vec<QueryType>);
 #[derive(Serialize, ToSchema)]
 pub struct QueriesResults(pub Vec<QueryResult>);
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
 pub struct QueryAudit {
     pub timestamp: u64,
     pub user: String,
     pub query: QueryType,
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
 pub struct DbAudit(pub Vec<QueryAudit>);
 
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
@@ -149,6 +149,8 @@ impl Display for DbUserRole {
 
 #[cfg(test)]
 mod tests {
+    use agdb::SelectIndexesQuery;
+
     use super::*;
 
     #[test]
@@ -178,6 +180,26 @@ mod tests {
                 name: "user".to_string()
             }
         );
+        format!(
+            "{:?}",
+            QueryAudit {
+                timestamp: 0,
+                user: "user".to_string(),
+                query: QueryType::SelectIndexes(SelectIndexesQuery {})
+            }
+        );
+        format!("{:?}", DbAudit(vec![]));
+    }
+
+    #[test]
+    fn derived_from_partial_eq() {
+        let query_audit = QueryAudit {
+            timestamp: 0,
+            user: "user".to_string(),
+            query: QueryType::SelectIndexes(SelectIndexesQuery {}),
+        };
+        let audit = DbAudit(vec![query_audit]);
+        assert_eq!(audit, audit);
     }
 
     #[test]

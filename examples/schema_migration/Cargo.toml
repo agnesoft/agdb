@@ -4,4 +4,4 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-agdb = { version = "0.6.5", path = "../../agdb" }
+agdb = { version = "0.6.6", path = "../../agdb" }

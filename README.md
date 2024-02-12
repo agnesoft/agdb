@@ -170,6 +170,8 @@ For database concepts and primitive data types see [concepts](docs/concepts.md).
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
+**NOTE: Regular links are broken in mermaid, use CTRL+Click to navgiate to the relevant docs.**
+
 ```mermaid
 flowchart TD;
     A[Embedded or server?] --> Embedded

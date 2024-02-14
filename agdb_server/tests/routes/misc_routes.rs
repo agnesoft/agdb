@@ -1,10 +1,13 @@
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
+use crate::HOST;
+use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
+use std::collections::HashMap;
 use std::process::Command;
 
 #[tokio::test]
@@ -78,5 +81,36 @@ async fn db_config_reuse() -> anyhow::Result<()> {
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)
         .spawn()?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_cluster() -> anyhow::Result<()> {
+    let port1 = TestServerImpl::next_port();
+    let port2 = TestServerImpl::next_port();
+    let port3 = TestServerImpl::next_port();
+    let cluster = vec![
+        format!("{HOST}:{port1}"),
+        format!("{HOST}:{port2}"),
+        format!("{HOST}:{port3}"),
+    ];
+
+    let mut config1 = HashMap::<&str, serde_yaml::Value>::new();
+    config1.insert("host", HOST.into());
+    config1.insert("port", port1.into());
+    config1.insert("admin", ADMIN.into());
+    config1.insert("data_dir", SERVER_DATA_DIR.into());
+    config1.insert("cluster", cluster.into());
+
+    let mut config2 = config1.clone();
+    config2.insert("port", port2.into());
+
+    let mut config3 = config1.clone();
+    config3.insert("port", port3.into());
+
+    let _server1 = TestServerImpl::with_config(&config1).await?;
+    let _server2 = TestServerImpl::with_config(&config2).await?;
+    let _server3 = TestServerImpl::with_config(&config3).await?;
+
     Ok(())
 }

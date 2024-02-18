@@ -1668,7 +1668,8 @@
             "description": "get cluster status",
             "required": true,
             "schema": {
-              "type": "boolean"
+              "type": "boolean",
+              "nullable": true
             }
           }
         ],
@@ -1795,6 +1796,21 @@
           },
           "password": {
             "type": "string"
+          }
+        }
+      },
+      "ClusterStatus": {
+        "type": "object",
+        "required": [
+          "address",
+          "status"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "status": {
+            "type": "boolean"
           }
         }
       },

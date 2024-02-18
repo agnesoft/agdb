@@ -62,6 +62,7 @@ use utoipa::OpenApi;
         agdb_api::QueriesResults,
         agdb_api::QueryAudit,
         agdb_api::ServerDatabase,
+        agdb_api::StatusParams,
         agdb_api::UserCredentials,
         agdb_api::UserLogin,
         agdb_api::UserStatus,

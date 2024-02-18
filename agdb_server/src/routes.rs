@@ -5,21 +5,16 @@ pub(crate) mod user;
 use crate::config::Config;
 use crate::server_error::ServerResult;
 use agdb_api::ClusterStatus;
+use agdb_api::StatusParams;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use serde::Deserialize;
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct StatusParams {
-    cluster: Option<bool>,
-}
 
 #[utoipa::path(get,
     path = "/api/v1/status",
     params(
-        ("cluster" = Option<bool>, description = "get cluster status"),
+        ("cluster" = StatusParams, description = "get cluster status"),
     ),
     responses(
          (status = 200, description = "Server is ready", body = Vec<ClusterStatus>),

@@ -8,6 +8,7 @@ pub use api::AgdbApi;
 pub use api_error::AgdbApiError;
 pub use api_result::AgdbApiResult;
 pub use api_types::ChangePassword;
+pub use api_types::ClusterStatus;
 pub use api_types::DbAudit;
 pub use api_types::DbType;
 pub use api_types::DbUser;

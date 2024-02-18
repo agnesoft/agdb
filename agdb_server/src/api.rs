@@ -57,6 +57,7 @@ use utoipa::OpenApi;
         agdb_api::DbUser,
         agdb_api::DbUserRole,
         agdb_api::ChangePassword,
+        agdb_api::ClusterStatus,
         agdb_api::Queries,
         agdb_api::QueriesResults,
         agdb_api::QueryAudit,

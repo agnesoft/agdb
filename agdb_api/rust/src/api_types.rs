@@ -42,6 +42,12 @@ pub struct ChangePassword {
     pub new_password: String,
 }
 
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
+pub struct ClusterStatus {
+    pub address: String,
+    pub status: bool,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct Queries(pub Vec<QueryType>);
 

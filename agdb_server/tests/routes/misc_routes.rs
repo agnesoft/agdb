@@ -108,9 +108,24 @@ async fn db_cluster() -> anyhow::Result<()> {
     let mut config3 = config1.clone();
     config3.insert("port", port3.into());
 
-    let _server1 = TestServerImpl::with_config(&config1).await?;
-    let _server2 = TestServerImpl::with_config(&config2).await?;
-    let _server3 = TestServerImpl::with_config(&config3).await?;
+    let server1 = TestServerImpl::with_config(&config1).await?;
+    let server2 = TestServerImpl::with_config(&config2).await?;
+    let server3 = TestServerImpl::with_config(&config3).await?;
+
+    let client1 = AgdbApi::new(ReqwestClient::new(), &TestServer::url_base(), server1.port);
+    let client2 = AgdbApi::new(ReqwestClient::new(), &TestServer::url_base(), server2.port);
+    let client3 = AgdbApi::new(ReqwestClient::new(), &TestServer::url_base(), server3.port);
+
+    let status1 = client1.status_cluster().await?;
+    let status2 = client2.status_cluster().await?;
+    let status3 = client3.status_cluster().await?;
+
+    assert_eq!(status1.0, 200);
+    assert_eq!(status2.0, 200);
+    assert_eq!(status3.0, 200);
+
+    assert_eq!(status1.1, status2.1);
+    assert_eq!(status1.1, status3.1);
 
     Ok(())
 }

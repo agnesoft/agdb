@@ -1668,7 +1668,7 @@
             "description": "get cluster status",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/StatusParams"
+              "type": "boolean"
             }
           }
         ],

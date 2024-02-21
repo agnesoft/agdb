@@ -14,7 +14,7 @@ use axum::Json;
 #[utoipa::path(get,
     path = "/api/v1/status",
     params(
-        ("cluster" = StatusParams, description = "get cluster status"),
+        ("cluster" = bool, description = "get cluster status"),
     ),
     responses(
          (status = 200, description = "Server is ready", body = Vec<ClusterStatus>),

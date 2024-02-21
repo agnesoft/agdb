@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 import { AgdbApi } from "../src/index";
 
 describe("openapi test", () => {
+    it("status", async () => {
+        let client = await AgdbApi.client("http://localhost", 3000);
+        let res = await client.status({ cluster: true });
+        expect(res.status).toEqual(200);
+        expect(res.data).toEqual([]);
+    });
+
     it("insert nodes with edges", async () => {
         let client = await AgdbApi.client("http://localhost", 3000);
         let admin_token = await client.user_login(null, {

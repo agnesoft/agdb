@@ -6,7 +6,7 @@
     "license": {
       "name": "Apache-2.0"
     },
-    "version": "0.6.5"
+    "version": "0.6.6"
   },
   "servers": [
     {
@@ -1661,9 +1661,30 @@
           "crate::routes"
         ],
         "operationId": "status",
+        "parameters": [
+          {
+            "name": "cluster",
+            "in": "path",
+            "description": "get cluster status",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Server is ready"
+            "description": "Server is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClusterStatus"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1774,6 +1795,21 @@
           },
           "password": {
             "type": "string"
+          }
+        }
+      },
+      "ClusterStatus": {
+        "type": "object",
+        "required": [
+          "address",
+          "status"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "status": {
+            "type": "boolean"
           }
         }
       },
@@ -2985,6 +3021,15 @@
         "properties": {
           "new_name": {
             "type": "string"
+          }
+        }
+      },
+      "StatusParams": {
+        "type": "object",
+        "properties": {
+          "cluster": {
+            "type": "boolean",
+            "nullable": true
           }
         }
       },

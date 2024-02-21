@@ -13,6 +13,7 @@ pub(crate) struct ConfigImpl {
     pub(crate) port: u16,
     pub(crate) admin: String,
     pub(crate) data_dir: String,
+    pub(crate) cluster: Vec<String>,
 }
 
 pub(crate) fn new() -> ServerResult<Config> {
@@ -25,6 +26,7 @@ pub(crate) fn new() -> ServerResult<Config> {
         port: 3000,
         admin: "admin".to_string(),
         data_dir: "agdb_server_data".to_string(),
+        cluster: vec![],
     };
 
     std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config)?)?;

@@ -32,10 +32,9 @@ async fn main() -> ServerResult {
     let config = config::new()?;
     let db_pool = DbPool::new(&config).await?;
     let address = format!("{}:{}", config.host, config.port);
-    let app = app::app(config, shutdown_sender, db_pool);
+    let app = app::app(config.clone(), shutdown_sender, db_pool);
     tracing::info!("Listening at {address}");
     let listener = tokio::net::TcpListener::bind(address).await?;
-
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal(shutdown_receiver))
         .await?;

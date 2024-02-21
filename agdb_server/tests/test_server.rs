@@ -45,19 +45,21 @@ struct TestServerImpl {
 }
 
 impl TestServerImpl {
-    pub async fn new() -> anyhow::Result<Self> {
-        let port = PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16;
+    pub async fn with_config(mut config: HashMap<&str, serde_yaml::Value>) -> anyhow::Result<Self> {
+        let port = if let Some(port) = config.get("port") {
+            port.as_u64()
+                .ok_or_else(|| anyhow!("invalid port: {:?}", port))? as u16
+        } else {
+            let port = Self::next_port();
+            config.insert("port", port.into());
+            port
+        };
+
         let dir = format!("{BINARY}.{port}.test");
         let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
 
         Self::remove_dir_if_exists(&dir)?;
         std::fs::create_dir(&dir)?;
-
-        let mut config = HashMap::<&str, serde_yaml::Value>::new();
-        config.insert("host", HOST.into());
-        config.insert("port", port.into());
-        config.insert("admin", ADMIN.into());
-        config.insert("data_dir", SERVER_DATA_DIR.into());
 
         let file = std::fs::File::options()
             .create_new(true)
@@ -85,6 +87,20 @@ impl TestServerImpl {
         }
 
         anyhow::bail!("Failed to start server")
+    }
+
+    pub async fn new() -> anyhow::Result<Self> {
+        let mut config = HashMap::<&str, serde_yaml::Value>::new();
+        config.insert("host", HOST.into());
+        config.insert("admin", ADMIN.into());
+        config.insert("data_dir", SERVER_DATA_DIR.into());
+        config.insert("cluster", Vec::<String>::new().into());
+
+        Self::with_config(config).await
+    }
+
+    pub fn next_port() -> u16 {
+        PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
     }
 
     fn shutdown_server(&mut self) -> anyhow::Result<()> {

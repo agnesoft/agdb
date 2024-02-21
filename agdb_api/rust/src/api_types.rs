@@ -42,6 +42,12 @@ pub struct ChangePassword {
     pub new_password: String,
 }
 
+#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
+pub struct ClusterStatus {
+    pub address: String,
+    pub status: bool,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct Queries(pub Vec<QueryType>);
 
@@ -65,6 +71,11 @@ pub struct ServerDatabase {
     pub role: DbUserRole,
     pub size: u64,
     pub backup: u64,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct StatusParams {
+    pub cluster: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -149,9 +160,8 @@ impl Display for DbUserRole {
 
 #[cfg(test)]
 mod tests {
-    use agdb::SelectIndexesQuery;
-
     use super::*;
+    use agdb::SelectIndexesQuery;
 
     #[test]
     fn derived_from_debug() {
@@ -189,6 +199,14 @@ mod tests {
             }
         );
         format!("{:?}", DbAudit(vec![]));
+        format!(
+            "{:?}",
+            ClusterStatus {
+                address: "localhost".to_string(),
+                status: true
+            }
+        );
+        format!("{:?}", StatusParams { cluster: None });
     }
 
     #[test]

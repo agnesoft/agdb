@@ -160,9 +160,8 @@ impl Display for DbUserRole {
 
 #[cfg(test)]
 mod tests {
-    use agdb::SelectIndexesQuery;
-
     use super::*;
+    use agdb::SelectIndexesQuery;
 
     #[test]
     fn derived_from_debug() {
@@ -200,6 +199,14 @@ mod tests {
             }
         );
         format!("{:?}", DbAudit(vec![]));
+        format!(
+            "{:?}",
+            ClusterStatus {
+                address: "localhost".to_string(),
+                status: true
+            }
+        );
+        format!("{:?}", StatusParams { cluster: None });
     }
 
     #[test]

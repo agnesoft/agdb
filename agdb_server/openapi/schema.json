@@ -1668,8 +1668,7 @@
             "description": "get cluster status",
             "required": true,
             "schema": {
-              "type": "boolean",
-              "nullable": true
+              "$ref": "#/components/schemas/StatusParams"
             }
           }
         ],
@@ -3022,6 +3021,15 @@
         "properties": {
           "new_name": {
             "type": "string"
+          }
+        }
+      },
+      "StatusParams": {
+        "type": "object",
+        "properties": {
+          "cluster": {
+            "type": "boolean",
+            "nullable": true
           }
         }
       },

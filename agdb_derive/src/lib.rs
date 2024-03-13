@@ -95,7 +95,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
                 vec![#(#db_keys.into()),*]
             }
 
-            fn from_db_element(element: &agdb::DbElement) -> Result<Self, agdb::DbError> {
+            fn from_db_element(element: &agdb::DbElement) -> std::result::Result<Self, agdb::DbError> {
                 Ok(Self {
                     #(#from_db_element),*
                 })
@@ -109,7 +109,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
         impl TryFrom<&agdb::DbElement> for #name {
             type Error = agdb::DbError;
 
-            fn try_from(value: &agdb::DbElement) -> Result<Self, Self::Error> {
+            fn try_from(value: &agdb::DbElement) -> std::result::Result<Self, Self::Error> {
                 use agdb::DbUserValue;
                 #name::from_db_element(value)
             }
@@ -118,7 +118,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
         impl TryFrom<agdb::QueryResult> for #name {
             type Error = agdb::DbError;
 
-            fn try_from(value: agdb::QueryResult) -> Result<Self, Self::Error> {
+            fn try_from(value: agdb::QueryResult) -> std::result::Result<Self, Self::Error> {
                 use agdb::DbUserValue;
                 value
                     .elements

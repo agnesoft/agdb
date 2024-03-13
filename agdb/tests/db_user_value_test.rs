@@ -7,6 +7,8 @@ use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::UserValue;
+#[allow(unused_imports)]
+use std::fmt::Result;
 use test_db::TestDb;
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -35,7 +37,7 @@ impl From<Status> for DbValue {
 impl TryFrom<DbValue> for Status {
     type Error = DbError;
 
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+    fn try_from(value: DbValue) -> std::result::Result<Self, Self::Error> {
         if value.to_u64()? == 0 {
             Ok(Status::Inactive)
         } else {
@@ -418,7 +420,7 @@ fn derived_macro_should_not_panic() {
         1,
     );
 
-    let user: Result<User, DbError> = db
+    let user: std::result::Result<User, DbError> = db
         .exec_result(QueryBuilder::search().from(1).query())
         .try_into();
 

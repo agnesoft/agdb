@@ -1,6 +1,6 @@
 [package]
 name = "agdb_api"
-version = "0.6.6"
+version = "0.6.7"
 edition = "2021"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"
@@ -17,7 +17,7 @@ categories = ["database", "api-bindings"]
 reqwest = ["dep:reqwest"]
 
 [dependencies]
-agdb = { version = "0.6.6", path = "../../agdb", features = ["serde"] }
+agdb = { version = "0.6.7", path = "../../agdb", features = ["serde"] }
 reqwest = { version = "0.11", features = ["json"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

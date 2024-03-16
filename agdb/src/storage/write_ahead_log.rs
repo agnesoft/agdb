@@ -32,13 +32,17 @@ impl WriteAheadLog {
     }
 
     pub fn new(filename: &str) -> Result<WriteAheadLog, DbError> {
-        Ok(Self {
+        let mut wal = Self {
             file: OpenOptions::new()
                 .read(true)
                 .write(true)
                 .create(true)
                 .open(WriteAheadLog::wal_filename(filename))?,
-        })
+        };
+
+        wal.repair()?;
+
+        Ok(wal)
     }
 
     pub fn records(&mut self) -> Result<Vec<WriteAheadLogRecord>, DbError> {
@@ -85,6 +89,42 @@ impl WriteAheadLog {
             pos,
             value: Self::read_exact(file, size)?,
         })
+    }
+
+    fn skip_record(file: &mut File) -> Result<(), DbError> {
+        file.seek(SeekFrom::Current(u64::serialized_size_static() as i64))?;
+        let value_size = u64::deserialize(&Self::read_exact(file, u64::serialized_size_static())?)?;
+        file.seek(SeekFrom::Current(value_size as i64))?;
+        Ok(())
+    }
+
+    fn repair(&mut self) -> Result<(), DbError> {
+        let size = self.file.seek(SeekFrom::End(0))?;
+        println!("size: {}", size);
+        self.file.rewind()?;
+        let mut pos = 0_u64;
+
+        while pos < size {
+            println!("pos: {}", pos);
+            if Self::skip_record(&mut self.file).is_err() {
+                println!("repairing: failed to skip record");
+                self.file.set_len(pos)?;
+                return Ok(());
+            } else {
+                let new_pos = self.file.stream_position()?;
+                println!("new_pos: {}", new_pos);
+
+                if new_pos > size {
+                    println!("repairing: new_pos > size");
+                    self.file.set_len(pos)?;
+                    return Ok(());
+                } else {
+                    pos = new_pos;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

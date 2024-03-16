@@ -11,7 +11,7 @@ impl TestFile {
     }
 
     #[track_caller]
-    pub fn new() -> TestFile {
+    pub fn new() -> Self {
         let caller = Location::caller();
         let file = format!(
             "./{}.{}.{}.testfile",
@@ -27,7 +27,7 @@ impl TestFile {
         TestFile::from(file)
     }
 
-    fn hidden_filename(filename: &String) -> String {
+    pub fn hidden_filename(filename: &String) -> String {
         let path = Path::new(filename);
         let name: String = path.file_name().unwrap().to_str().unwrap().to_string();
         let parent = path.parent().unwrap();

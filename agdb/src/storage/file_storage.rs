@@ -1200,4 +1200,58 @@ mod tests {
         file.resize(10).unwrap();
         assert_eq!(file.read(0, 10).unwrap(), "Hello, Wor".as_bytes());
     }
+
+    #[test]
+    fn corrupted_wal_is_truncated() {
+        let test_file = TestFile::new();
+
+        //crate wal
+        {
+            let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+            wal.insert(0, "Hello".as_bytes()).unwrap(); //len 5
+            wal.insert(5, "World".as_bytes()).unwrap();
+        }
+
+        // truncate wal simulating cutoff during write
+        // of the value causing the wal record to overrun
+        // the file length
+        {
+            let file = File::options()
+                .write(true)
+                .open(TestFile::hidden_filename(test_file.file_name()))
+                .unwrap();
+            file.set_len((std::mem::size_of::<u64>() * 4 + 6) as u64)
+                .unwrap();
+        }
+
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.len(), 5);
+    }
+
+    #[test]
+    fn corrupted_wal_is_truncated_validation_read_error() {
+        let test_file = TestFile::new();
+
+        //crate wal
+        {
+            let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
+            wal.insert(0, "Hello".as_bytes()).unwrap(); //len 5
+            wal.insert(5, "World".as_bytes()).unwrap();
+        }
+
+        // truncate wal simulating cutoff during write
+        // of value meta-data (i.e. pos or value len)
+        // causing the record to be unreadable
+        {
+            let file = File::options()
+                .write(true)
+                .open(TestFile::hidden_filename(test_file.file_name()))
+                .unwrap();
+            file.set_len((std::mem::size_of::<u64>() * 3 + 5) as u64)
+                .unwrap();
+        }
+
+        let storage = FileStorage::new(test_file.file_name()).unwrap();
+        assert_eq!(storage.len(), 5);
+    }
 }

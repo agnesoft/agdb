@@ -170,26 +170,19 @@ For database concepts and primitive data types see [concepts](docs/concepts.md).
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
-**NOTE: Regular links are broken in mermaid, use CTRL+Click to navigate to the relevant docs.**
-
 ```mermaid
 flowchart TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
-    Embedded --> Studio
-    Embedded --> Queries
+    Embedded --> Studio[<a href='https://github.com/agnesoft/agdb/blob/main/docs/studio.md'>Studio</a>]
+    Embedded --> Queries[<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md'>Queries</a>]
     B --> Client
     B --> Hosting
-    Client --> API
+    Client --> API[<a href='https://github.com/agnesoft/agdb/blob/main/docs/api.md'>API</a>]
     Client --> Studio
     Client --> Queries
-    Hosting --> Server
-    Hosting --> Cloud
-    click Embedded "https://github.com/agnesoft/agdb/blob/main/docs/studio.md"
-    click Queries "https://github.com/agnesoft/agdb/blob/main/docs/queries.md"
-    click API "https://github.com/agnesoft/agdb/blob/main/docs/api.md"
-    click Hosting "https://github.com/agnesoft/agdb/blob/main/docs/server.md"
-    click Cloud "https://github.com/agnesoft/agdb/blob/main/docs/cloud.md"
+    Hosting --> Server[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Server</a>]
+    Hosting --> Cloud[<a href='https://github.com/agnesoft/agdb/blob/main/docs/cloud.md'>Cloud</a>]
 ```
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap

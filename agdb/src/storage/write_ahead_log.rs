@@ -35,7 +35,8 @@ impl WriteAheadLog {
         let mut wal = Self {
             file: OpenOptions::new()
                 .read(true)
-                .append(true)
+                .write(true)
+                .truncate(false)
                 .create(true)
                 .open(WriteAheadLog::wal_filename(filename))?,
         };

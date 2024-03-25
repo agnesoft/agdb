@@ -90,7 +90,8 @@ impl StorageData for FileStorage {
     fn new(name: &str) -> Result<Self, DbError> {
         let mut file = OpenOptions::new()
             .read(true)
-            .append(true)
+            .write(true)
+            .truncate(false)
             .create(true)
             .open(name)?;
         let mut wal: WriteAheadLog = WriteAheadLog::new(name)?;

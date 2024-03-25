@@ -36,6 +36,7 @@ impl WriteAheadLog {
             file: OpenOptions::new()
                 .read(true)
                 .write(true)
+                .truncate(false)
                 .create(true)
                 .open(WriteAheadLog::wal_filename(filename))?,
         };

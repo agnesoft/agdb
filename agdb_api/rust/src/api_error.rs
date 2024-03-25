@@ -70,10 +70,7 @@ mod tests {
             .user_agent("\0")
             .build()
             .unwrap_err();
-        assert_eq!(
-            AgdbApiError::from(error).description,
-            "builder error: failed to parse header value"
-        );
+        assert_eq!(AgdbApiError::from(error).description, "builder error");
     }
 
     #[test]

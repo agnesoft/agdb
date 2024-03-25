@@ -1,6 +1,5 @@
 mod api;
 mod app;
-mod cluster;
 mod config;
 mod db_pool;
 mod error_code;

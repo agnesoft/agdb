@@ -8,7 +8,6 @@ use crate::password;
 use crate::password::Password;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
-use agdb::AgdbSerialize;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbId;

@@ -91,6 +91,7 @@ impl StorageData for FileStorage {
         let mut file = OpenOptions::new()
             .read(true)
             .write(true)
+            .truncate(false)
             .create(true)
             .open(name)?;
         let mut wal: WriteAheadLog = WriteAheadLog::new(name)?;

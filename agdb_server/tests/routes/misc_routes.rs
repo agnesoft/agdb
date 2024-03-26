@@ -1,13 +1,10 @@
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
-use crate::HOST;
-use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
-use std::collections::HashMap;
 use std::process::Command;
 
 #[tokio::test]

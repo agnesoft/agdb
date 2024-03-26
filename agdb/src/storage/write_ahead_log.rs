@@ -101,22 +101,17 @@ impl WriteAheadLog {
 
     fn repair(&mut self) -> Result<(), DbError> {
         let size = self.file.seek(SeekFrom::End(0))?;
-        println!("size: {}", size);
         self.file.rewind()?;
         let mut pos = 0_u64;
 
         while pos < size {
-            println!("pos: {}", pos);
             if Self::skip_record(&mut self.file).is_err() {
-                println!("repairing: failed to skip record");
                 self.file.set_len(pos)?;
                 return Ok(());
             } else {
                 let new_pos = self.file.stream_position()?;
-                println!("new_pos: {}", new_pos);
 
                 if new_pos > size {
-                    println!("repairing: new_pos > size");
                     self.file.set_len(pos)?;
                     return Ok(());
                 } else {

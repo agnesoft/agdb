@@ -8,7 +8,7 @@ use agdb_api::ReqwestClient;
 use std::collections::HashMap;
 
 #[tokio::test]
-async fn db_cluster() -> anyhow::Result<()> {
+async fn db_cluster_established() -> anyhow::Result<()> {
     let port1 = TestServerImpl::next_port();
     let port2 = TestServerImpl::next_port();
     let port3 = TestServerImpl::next_port();
@@ -49,6 +49,8 @@ async fn db_cluster() -> anyhow::Result<()> {
 
     assert_eq!(status1.1, status2.1);
     assert_eq!(status1.1, status3.1);
+
+    assert!(status1.1.iter().any(|s| s.leader));
 
     Ok(())
 }

@@ -20,9 +20,6 @@ fn serialize_deserialize() {
     .unwrap();
     let select_query_json = serde_json::to_string(&QueryBuilder::select().ids(1).query()).unwrap();
 
-    println!("{}", insert_query_json);
-    println!("{}", select_query_json);
-
     let mut db = TestDb::new();
     let insert_query: InsertNodesQuery = serde_json::from_str(&insert_query_json).unwrap();
     let select_query: SelectQuery = serde_json::from_str(&select_query_json).unwrap();

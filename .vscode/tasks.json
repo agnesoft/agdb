@@ -3,89 +3,89 @@
   "tasks": [
     {
       "label": "Clippy",
-      "type": "cargo",
-      "command": "clippy",
-      "args": ["--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage Db",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--show-missing-lines"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--show-missing-lines"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage Db HTML",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--html", "--open"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb", "--all-features", "--ignore-filename-regex", "agdb_", "--html", "--open"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage Server",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_derive|agdb_api|api.rs", "--show-missing-lines"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_derive|agdb_api|api.rs", "--show-missing-lines"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage Server HTML",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_derive|agdb_api|api.rs", "--html", "--open"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_derive|agdb_api|api.rs", "--html", "--open"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage Api",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb_api", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_server|agdb_derive", "--show-missing-lines"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb_api", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_server|agdb_derive", "--show-missing-lines"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage Api HTML",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb_api", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_server|agdb_derive", "--html", "--open"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb_api", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_server|agdb_derive", "--html", "--open"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage CI",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb_ci", "--all-features", "--show-missing-lines"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb_ci", "--all-features", "--show-missing-lines"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage CI HTML",
-      "type": "cargo",
-      "command": "llvm-cov",
-      "args": ["--package", "agdb_ci", "--all-features", "--html", "--open"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["llvm-cov", "--package", "agdb_ci", "--all-features", "--html", "--open"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Format",
-      "type": "cargo",
-      "command": "fmt",
-      "args": ["--all"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["fmt", "--all"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Format Check",
-      "type": "cargo",
-      "command": "fmt",
-      "args": ["--all", "--check"],
+      "type": "process",
+      "command": "cargo",
+      "args": ["fmt", "--all", "--check"],
       "problemMatcher": ["$rustc"],
       "group": "build"
     }

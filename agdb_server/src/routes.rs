@@ -45,6 +45,9 @@ pub(crate) async fn status(
             statuses.push(ClusterStatus {
                 address: node.clone(),
                 status,
+                leader: false,
+                term: 0,
+                commit: 0,
             });
         }
 

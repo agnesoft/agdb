@@ -1802,14 +1802,30 @@
         "type": "object",
         "required": [
           "address",
-          "status"
+          "status",
+          "leader",
+          "term",
+          "commit"
         ],
         "properties": {
           "address": {
             "type": "string"
           },
+          "commit": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "leader": {
+            "type": "boolean"
+          },
           "status": {
             "type": "boolean"
+          },
+          "term": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },

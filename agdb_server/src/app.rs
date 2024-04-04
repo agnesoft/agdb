@@ -1,4 +1,5 @@
 use crate::api::Api;
+use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::logger;
@@ -11,10 +12,16 @@ use tokio::sync::broadcast::Sender;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
-pub(crate) fn app(config: Config, shutdown_sender: Sender<()>, db_pool: DbPool) -> Router {
+pub(crate) fn app(
+    config: Config,
+    shutdown_sender: Sender<()>,
+    db_pool: DbPool,
+    cluster: Cluster,
+) -> Router {
     let state = ServerState {
         db_pool,
         config,
+        cluster,
         shutdown_sender,
     };
 

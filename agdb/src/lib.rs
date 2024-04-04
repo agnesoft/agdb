@@ -97,3 +97,4 @@ pub use storage::StorageSlice;
 pub use transaction::Transaction;
 pub use transaction_mut::TransactionMut;
 pub use utilities::serialize::Serialize as AgdbSerialize;
+pub use utilities::stable_hash::StableHash;

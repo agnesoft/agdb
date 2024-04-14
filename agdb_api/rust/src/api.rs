@@ -15,19 +15,29 @@ use agdb::QueryType;
 
 pub struct AgdbApi<T: HttpClient> {
     client: T,
-    host: String,
-    port: u16,
+    address: String,
+    base_url: String,
     pub token: Option<String>,
 }
 
 impl<T: HttpClient> AgdbApi<T> {
-    pub fn new(client: T, host: &str, port: u16) -> Self {
+    pub fn new(client: T, address: &str) -> Self {
+        let base = if address.starts_with("http") || address.starts_with("https") {
+            address.to_string()
+        } else {
+            format!("http://{address}")
+        };
+
         Self {
             client,
-            host: host.to_string(),
-            port,
+            address: address.to_string(),
+            base_url: format!("{base}/api/v1"),
             token: None,
         }
+    }
+
+    pub fn address(&self) -> &str {
+        &self.address
     }
 
     pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
@@ -483,6 +493,6 @@ impl<T: HttpClient> AgdbApi<T> {
     }
 
     fn url(&self, uri: &str) -> String {
-        format!("{}:{}/api/v1{uri}", self.host, self.port)
+        format!("{}{uri}", self.base_url)
     }
 }

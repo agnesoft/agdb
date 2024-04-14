@@ -15,7 +15,6 @@ use std::time::Duration;
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
 const SERVER_DATA_DIR: &str = "agdb_server_data";
-const PROTOCOL: &str = "http";
 const HOST: &str = "localhost";
 const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
@@ -32,30 +31,33 @@ static SERVER: std::sync::OnceLock<tokio::sync::RwLock<Option<TestServerImpl>>> 
 pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
-    pub port: u16,
     pub api: AgdbApi<ReqwestClient>,
 }
 
 struct TestServerImpl {
     pub dir: String,
     pub data_dir: String,
-    pub port: u16,
+    pub address: String,
     pub process: Child,
     pub instances: u16,
 }
 
 impl TestServerImpl {
     pub async fn with_config(mut config: HashMap<&str, serde_yaml::Value>) -> anyhow::Result<Self> {
-        let port = if let Some(port) = config.get("port") {
-            port.as_u64()
-                .ok_or_else(|| anyhow!("invalid port: {:?}", port))? as u16
+        let address = if let Some(address) = config.get("address") {
+            address
+                .as_str()
+                .ok_or_else(|| anyhow!("Invalid address"))?
+                .to_string()
         } else {
             let port = Self::next_port();
-            config.insert("port", port.into());
-            port
+            let address = format!("{HOST}:{port}");
+            config.insert("bind", address.to_owned().into());
+            config.insert("address", address.to_owned().into());
+            address
         };
 
-        let dir = format!("{BINARY}.{port}.test");
+        let dir = format!("{BINARY}.{}.test", address.split(':').last().unwrap());
         let data_dir = format!("{dir}/{SERVER_DATA_DIR}");
 
         Self::remove_dir_if_exists(&dir)?;
@@ -68,7 +70,7 @@ impl TestServerImpl {
         serde_yaml::to_writer(file, &config)?;
 
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
-        let api = AgdbApi::new(ReqwestClient::new(), &TestServer::url_base(), port);
+        let api = AgdbApi::new(ReqwestClient::new(), &address);
 
         for _ in 0..RETRY_ATTEMPS {
             if let Ok(status) = api.status().await {
@@ -76,7 +78,7 @@ impl TestServerImpl {
                     return Ok(Self {
                         dir,
                         data_dir,
-                        port,
+                        address,
                         process,
                         instances: 1,
                     });
@@ -91,7 +93,6 @@ impl TestServerImpl {
 
     pub async fn new() -> anyhow::Result<Self> {
         let mut config = HashMap::<&str, serde_yaml::Value>::new();
-        config.insert("host", HOST.into());
         config.insert("admin", ADMIN.into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("cluster", Vec::<String>::new().into());
@@ -108,7 +109,12 @@ impl TestServerImpl {
             return Ok(());
         }
 
-        let port = self.port;
+        let mut address = self.address.clone();
+
+        if !address.starts_with("http") {
+            address = format!("http://{}", address);
+        }
+
         let mut admin = HashMap::<&str, String>::new();
         admin.insert("username", ADMIN.to_string());
         admin.insert("password", ADMIN.to_string());
@@ -116,21 +122,13 @@ impl TestServerImpl {
         std::thread::spawn(move || -> anyhow::Result<()> {
             let client = reqwest::blocking::Client::new();
             let token: String = client
-                .post(format!(
-                    "{}:{}/api/v1/user/login",
-                    TestServer::url_base(),
-                    port
-                ))
+                .post(format!("{}/api/v1/user/login", address))
                 .json(&admin)
                 .send()?
                 .json()?;
 
             client
-                .post(format!(
-                    "{}:{}/api/v1/admin/shutdown",
-                    TestServer::url_base(),
-                    port
-                ))
+                .post(format!("{}/api/v1/admin/shutdown", address))
                 .bearer_auth(token)
                 .send()?;
             Ok(())
@@ -174,9 +172,8 @@ impl TestServer {
         let server = server_guard.as_ref().unwrap();
 
         Ok(Self {
-            api: AgdbApi::new(ReqwestClient::new(), &Self::url_base(), server.port),
+            api: AgdbApi::new(ReqwestClient::new(), &server.address),
             dir: server.dir.clone(),
-            port: server.port,
             data_dir: server.data_dir.clone(),
         })
     }
@@ -190,11 +187,11 @@ impl TestServer {
     }
 
     pub fn url(&self, uri: &str) -> String {
-        format!("{}:{}/api/v1{uri}", Self::url_base(), self.port)
+        format!("{}{uri}", self.api.address())
     }
 
-    fn url_base() -> String {
-        format!("{PROTOCOL}://{HOST}")
+    pub fn full_url(&self, uri: &str) -> String {
+        format!("http://{}/api/v1{uri}", self.api.address())
     }
 }
 

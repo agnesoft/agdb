@@ -27,13 +27,13 @@ pub(crate) async fn status(
     let statuses = if status_params.cluster.unwrap_or_default() {
         let mut statuses = Vec::with_capacity(config.cluster.len());
         let client = reqwest::Client::new();
-        let local_node = format!("{}:{}", config.host, config.port);
 
         for node in &config.cluster {
-            let status = if node == &local_node {
+            let status = if node == &config.address {
                 true
             } else {
-                let url = format!("http://{node}/api/v1/status");
+                let url = format!("{}api/v1/status", node.as_str());
+                tracing::info!("URL: {}", url);
                 let response = client
                     .get(&url)
                     .timeout(std::time::Duration::from_secs(1))
@@ -43,7 +43,7 @@ pub(crate) async fn status(
             };
 
             statuses.push(ClusterStatus {
-                address: node.clone(),
+                address: node.as_str().to_string(),
                 status,
                 leader: false,
                 term: 0,

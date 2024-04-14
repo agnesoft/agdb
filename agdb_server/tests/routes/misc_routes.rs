@@ -71,7 +71,7 @@ async fn openapi() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_config_reuse() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
-    let mut client = AgdbApi::new(ReqwestClient::new(), &TestServer::url_base(), server.port);
+    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_shutdown().await?;
     assert!(server.process.wait()?.success());

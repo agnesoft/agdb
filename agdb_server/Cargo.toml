@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["full"] }
 tower = "0.4"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+url = { version = "2", features = ["serde"] }
 utoipa = "4"
 utoipa-rapidoc = { version = "3", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }

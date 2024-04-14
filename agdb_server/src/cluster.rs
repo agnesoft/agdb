@@ -23,16 +23,13 @@ pub(crate) fn new(config: &Config) -> ServerResult<Cluster> {
     let mut nodes = vec![];
 
     for node in &config.cluster {
-        if node != &format!("{}:{}", config.host, config.port) {
-            let (host, port) = node.split_once(':').ok_or(format!(
-                "Invalid cluster node address (must be host:port): {}",
-                node
-            ))?;
-            nodes.push(ClusterApi::new(ReqwestClient::new(), host, port.parse()?));
+        if node != &config.address {
+            nodes.push(ClusterApi::new(ReqwestClient::new(), node.as_str()));
         }
     }
 
-    let mut sorted_cluster = config.cluster.clone();
+    let mut sorted_cluster: Vec<String> =
+        config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
     let cluster_hash = sorted_cluster.stable_hash();
 

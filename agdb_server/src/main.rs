@@ -25,15 +25,14 @@ async fn main() -> ServerResult {
     let config = config::new()?;
     let cluster = cluster::new(&config)?;
     let db_pool = DbPool::new(&config).await?;
-    let address = format!("{}:{}", config.host, config.port);
     let app = app::app(
         config.clone(),
         shutdown_sender.clone(),
         db_pool,
         cluster.clone(),
     );
-    tracing::info!("Listening at {address}");
-    let listener = tokio::net::TcpListener::bind(address).await?;
+    tracing::info!("Listening at {}", config.bind);
+    let listener = tokio::net::TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)
         .with_graceful_shutdown(cluster::start_with_shutdown(cluster, shutdown_receiver))
         .await?;

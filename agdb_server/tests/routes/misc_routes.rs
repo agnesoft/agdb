@@ -11,7 +11,11 @@ use std::process::Command;
 async fn error() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest::Client::new();
-    let status = client.get(server.url("/test_error")).send().await?.status();
+    let status = client
+        .get(server.full_url("/test_error"))
+        .send()
+        .await?
+        .status();
     assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     Ok(())
 }
@@ -20,7 +24,11 @@ async fn error() -> anyhow::Result<()> {
 async fn missing() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest::Client::new();
-    let status = client.get(server.url("/missing")).send().await?.status();
+    let status = client
+        .get(server.full_url("/missing"))
+        .send()
+        .await?
+        .status();
     assert_eq!(status, StatusCode::NOT_FOUND);
     Ok(())
 }
@@ -46,7 +54,7 @@ async fn shutdown_bad_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest::Client::new();
     let status = client
-        .post(server.url("/admin/shutdown"))
+        .post(server.full_url("/admin/shutdown"))
         .bearer_auth("bad")
         .send()
         .await?
@@ -60,7 +68,7 @@ async fn openapi() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest::Client::new();
     let status = client
-        .get(server.url("/openapi.json"))
+        .get(server.full_url("/openapi.json"))
         .send()
         .await?
         .status();
@@ -69,7 +77,7 @@ async fn openapi() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn db_config_reuse() -> anyhow::Result<()> {
+async fn config_reuse() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
     let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
     client.user_login(ADMIN, ADMIN).await?;

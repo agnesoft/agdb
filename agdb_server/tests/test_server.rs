@@ -109,7 +109,12 @@ impl TestServerImpl {
             return Ok(());
         }
 
-        let address = self.address.clone();
+        let mut address = self.address.clone();
+
+        if !address.starts_with("http") {
+            address = format!("http://{}", address);
+        }
+
         let mut admin = HashMap::<&str, String>::new();
         admin.insert("username", ADMIN.to_string());
         admin.insert("password", ADMIN.to_string());
@@ -183,6 +188,10 @@ impl TestServer {
 
     pub fn url(&self, uri: &str) -> String {
         format!("{}{uri}", self.api.address())
+    }
+
+    pub fn full_url(&self, uri: &str) -> String {
+        format!("http://{}/api/v1{uri}", self.api.address())
     }
 }
 

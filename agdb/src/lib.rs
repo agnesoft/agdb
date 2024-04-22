@@ -81,6 +81,7 @@ pub use query::search_query::SearchQuery;
 pub use query::search_query::SearchQueryAlgorithm;
 pub use query::select_aliases_query::SelectAliasesQuery;
 pub use query::select_all_aliases_query::SelectAllAliasesQuery;
+pub use query::select_edge_count_query::SelectEdgeCountQuery;
 pub use query::select_indexes_query::SelectIndexesQuery;
 pub use query::select_key_count_query::SelectKeyCountQuery;
 pub use query::select_keys_query::SelectKeysQuery;

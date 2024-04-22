@@ -12,6 +12,7 @@ mod remove_values;
 mod search;
 mod select;
 mod select_aliases;
+mod select_edge_count;
 mod select_ids;
 mod select_indexes;
 mod select_key_count;

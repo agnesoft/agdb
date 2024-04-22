@@ -17,6 +17,7 @@ pub mod remove_values_query;
 pub mod search_query;
 pub mod select_aliases_query;
 pub mod select_all_aliases_query;
+pub mod select_edge_count_query;
 pub mod select_indexes_query;
 pub mod select_key_count_query;
 pub mod select_keys_query;
@@ -47,8 +48,8 @@ pub trait QueryMut {
 use crate::{
     InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
     RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
-    SelectAliasesQuery, SelectAllAliasesQuery, SelectIndexesQuery, SelectKeyCountQuery,
-    SelectKeysQuery, SelectQuery, SelectValuesQuery,
+    SelectAliasesQuery, SelectAllAliasesQuery, SelectEdgeCountQuery, SelectIndexesQuery,
+    SelectKeyCountQuery, SelectKeysQuery, SelectQuery, SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.
@@ -70,6 +71,7 @@ pub enum QueryType {
     Select(SelectQuery),
     SelectAliases(SelectAliasesQuery),
     SelectAllAliases(SelectAllAliasesQuery),
+    SelectEdgeCount(SelectEdgeCountQuery),
     SelectIndexes(SelectIndexesQuery),
     SelectKeys(SelectKeysQuery),
     SelectKeyCount(SelectKeyCountQuery),
@@ -168,6 +170,13 @@ impl From<SelectAllAliasesQuery> for QueryType {
 }
 
 #[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<SelectEdgeCountQuery> for QueryType {
+    fn from(value: SelectEdgeCountQuery) -> Self {
+        QueryType::SelectEdgeCount(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectIndexesQuery> for QueryType {
     fn from(value: SelectIndexesQuery) -> Self {
         QueryType::SelectIndexes(value)
@@ -229,6 +238,7 @@ mod tests {
             QueryBuilder::select().indexes().query().into(),
             QueryBuilder::select().keys().ids(1).query().into(),
             QueryBuilder::select().key_count().ids(1).query().into(),
+            QueryBuilder::select().edge_count().ids(1).query().into(),
             QueryBuilder::select()
                 .values(vec!["key".into()])
                 .ids(1)

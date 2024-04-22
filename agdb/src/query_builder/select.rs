@@ -1,5 +1,6 @@
 use crate::query::query_values::QueryKeys;
 use crate::query_builder::select_aliases::SelectAliases;
+use crate::query_builder::select_edge_count::SelectEdgeCount;
 use crate::query_builder::select_ids::SelectIds;
 use crate::query_builder::select_indexes::SelectIndexes;
 use crate::query_builder::select_key_count::SelectKeyCount;
@@ -7,6 +8,7 @@ use crate::query_builder::select_keys::SelectKeys;
 use crate::query_builder::select_values::SelectValues;
 use crate::QueryIds;
 use crate::SelectAliasesQuery;
+use crate::SelectEdgeCountQuery;
 use crate::SelectKeyCountQuery;
 use crate::SelectKeysQuery;
 use crate::SelectQuery;
@@ -25,6 +27,39 @@ impl Select {
     /// when running such query.
     pub fn aliases(self) -> SelectAliases {
         SelectAliases(SelectAliasesQuery(QueryIds::Ids(vec![])))
+    }
+
+    /// Select number of outgoing and incoming edges. Each
+    /// element of the result withll have a proeprty `String("edge_count")`
+    /// with u64 as the value.
+    pub fn edge_count(self) -> SelectEdgeCount {
+        SelectEdgeCount(SelectEdgeCountQuery {
+            ids: QueryIds::Ids(vec![0.into()]),
+            from: true,
+            to: true,
+        })
+    }
+
+    /// Select number of outgoing edges. Each
+    /// element of the result withll have a proeprty `String("edge_count")`
+    /// with u64 as the value.
+    pub fn edge_count_from(self) -> SelectEdgeCount {
+        SelectEdgeCount(SelectEdgeCountQuery {
+            ids: QueryIds::Ids(vec![0.into()]),
+            from: true,
+            to: false,
+        })
+    }
+
+    /// Select number of incoming edges. Each
+    /// element of the result withll have a proeprty `String("edge_count")`
+    /// with u64 as the value.
+    pub fn edge_count_to(self) -> SelectEdgeCount {
+        SelectEdgeCount(SelectEdgeCountQuery {
+            ids: QueryIds::Ids(vec![0.into()]),
+            from: false,
+            to: true,
+        })
     }
 
     /// Select elements with `ids` with all properties (key-values).
@@ -46,7 +81,7 @@ impl Select {
     }
 
     /// Select number of keys. Each element of the result will have
-    /// a property `String("key_count")` with `i64` as the value.
+    /// a property `String("key_count")` with `u64` as the value.
     pub fn key_count(self) -> SelectKeyCount {
         SelectKeyCount(SelectKeyCountQuery(QueryIds::Ids(vec![0.into()])))
     }

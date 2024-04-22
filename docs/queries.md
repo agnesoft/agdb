@@ -40,6 +40,9 @@ flowchart LR
     select --> s_indexes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>indexes</a>") --> SelectIndexesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>SelectIndexesQuery</a>"]
     select --> s_keys("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>keys</a>") --> s_k_ids("ids") --> SelectKeysQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>SelectKeysQuery</a>"]
     select --> key_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>key_count</a>") --> s_k_c_ids("ids") --> SelectKeyCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>SelectKeyCountQuery</a>"]
+    select --> edge_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids") ---> SelectEdgeCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>SelectEdgeCountQuery</a>"]
+    select --> edge_count_from("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
+    select --> edge_count_to("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
     select --> values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>values</a>") --> s_v_ids("ids") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
 
     search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#search'>SearchQuery</a>"]
@@ -101,6 +104,7 @@ flowchart LR
   - [Select](#select)
     - [Select aliases](#select-aliases)
     - [Select all aliases](#select-all-aliases)
+    - [Select edge count](#select-edge-count)
     - [Select elements](#select-elements)
     - [Select indexes](#select-indexes)
     - [Select keys](#select-keys)
@@ -657,10 +661,11 @@ The `select` queries are used to read the data from the database using known `id
 
 ## Select
 
-There are 7 select queries:
+There are following select queries:
 
 - select aliases
 - select all aliases
+- select edge count
 - select (elements)
 - select indexes
 - select keys
@@ -704,7 +709,7 @@ Selects aliases of the `ids` [`QueryIds`](#queryids--queryid) or a search. If an
 <tr><td>
 
 ```Rust
-pub struct SelectAllAliases {}
+pub struct SelectAllAliasesQuery {}
 ```
 
 </td><td>
@@ -727,6 +732,44 @@ QueryBuilder::select().aliases().query()
 </td></tr></table>
 
 Selects all aliases in the database.
+
+### Select edge count
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectEdgeCountQuery {
+    pub ids: Ids,
+    pub from: bool,
+    pub to: bool
+}
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // number of elements with aliases
+    pub elements: Vec<DbElement>, // list of elements with an
+                                  // alias each with a single
+                                  // property (`String("edge_count"): String`)
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().edge_count().ids(vec![1, 2]).query()
+QueryBuilder::select().edge_count_from().ids(vec![1, 2]).query()
+QueryBuilder::select().edge_count_to().ids(vec![1, 2]).query()
+```
+
+</td></tr></table>
+
+Selects count of edges of nodes (ids). The `edge_count` variant counts all edges (outgoing & incoming). The `edge_count_from` counts only outgoing edges. The `edge_count_to` counts only incoming edges.
+
+NOTE: Self-referential edges (going from the same node to the same node) will be counted twice in the first variant (`edge_count`) as the query counts ountgoing/incoming edges rather than unique database elements. As a result the `edge_count` result may be higher than the actual number of physical edges in such a case.
 
 ### Select elements
 

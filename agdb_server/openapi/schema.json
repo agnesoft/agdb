@@ -2802,6 +2802,17 @@
           {
             "type": "object",
             "required": [
+              "SelectEdgeCount"
+            ],
+            "properties": {
+              "SelectEdgeCount": {
+                "$ref": "#/components/schemas/SelectEdgeCountQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
               "SelectIndexes"
             ],
             "properties": {
@@ -2965,6 +2976,28 @@
       "SelectAllAliasesQuery": {
         "type": "object",
         "description": "Query to select all aliases in the database.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
+      },
+      "SelectEdgeCountQuery": {
+        "type": "object",
+        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database. If any\nof the ids is not a node the result will be 0 (not\nan error).\n\nThe result will be number of elements returned and the list\nof elements with a single property `String(\"edge_count\")` with\na value `u64`.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
+        "required": [
+          "ids",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "boolean",
+            "description": "If set to `true` the query will count outgoing edges\nfrom the nodes."
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "to": {
+            "type": "boolean",
+            "description": "If set to `true` the query will count incoming edges\nto the nodes."
+          }
+        }
       },
       "SelectIndexesQuery": {
         "type": "object",

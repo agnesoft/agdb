@@ -105,6 +105,13 @@ async fn read_queries() -> anyhow::Result<()> {
         QueryBuilder::select().ids(1).query().into(),
         QueryBuilder::select().aliases().ids(1).query().into(),
         QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().edge_count().ids(1).query().into(),
+        QueryBuilder::select()
+            .edge_count_from()
+            .ids(1)
+            .query()
+            .into(),
+        QueryBuilder::select().edge_count_to().ids(1).query().into(),
         QueryBuilder::select().indexes().query().into(),
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
@@ -116,7 +123,7 @@ async fn read_queries() -> anyhow::Result<()> {
     ];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
-    assert_eq!(results.len(), 8);
+    assert_eq!(results.len(), 11);
     Ok(())
 }
 
@@ -152,6 +159,13 @@ async fn write_queries() -> anyhow::Result<()> {
         QueryBuilder::select().ids(1).query().into(),
         QueryBuilder::select().aliases().ids(1).query().into(),
         QueryBuilder::select().aliases().query().into(),
+        QueryBuilder::select().edge_count().ids(1).query().into(),
+        QueryBuilder::select()
+            .edge_count_from()
+            .ids(1)
+            .query()
+            .into(),
+        QueryBuilder::select().edge_count_to().ids(1).query().into(),
         QueryBuilder::select().indexes().query().into(),
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
@@ -171,7 +185,7 @@ async fn write_queries() -> anyhow::Result<()> {
     ];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
-    assert_eq!(results.len(), 17);
+    assert_eq!(results.len(), 20);
     Ok(())
 }
 

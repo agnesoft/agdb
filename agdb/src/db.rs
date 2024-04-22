@@ -496,6 +496,21 @@ impl<Store: StorageData> DbImpl<Store> {
         }
     }
 
+    pub(crate) fn edge_count(&self, db_id: DbId, from: bool, to: bool) -> Result<u64, QueryError> {
+        let index = self.graph_index(db_id.0)?;
+
+        if let Some(node) = self.graph.node(&self.storage, index) {
+            return Ok(match (from, to) {
+                (true, true) => node.edge_count(),
+                (true, false) => node.edge_count_from(),
+                (false, true) => node.edge_count_to(),
+                (false, false) => 0,
+            });
+        }
+
+        Ok(0)
+    }
+
     #[allow(clippy::wrong_self_convention)]
     pub(crate) fn from_id(&self, id: DbId) -> Option<DbId> {
         if id.0 < 0 {

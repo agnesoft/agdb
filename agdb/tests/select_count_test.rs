@@ -1,5 +1,6 @@
 mod test_db;
 
+use agdb::CountComparison;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -158,6 +159,45 @@ fn select_edge_count_multi() {
                 values: vec![("edge_count", 2_u64).into()],
             },
         ],
+    );
+}
+
+#[test]
+fn select_edge_count_search() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(vec!["node1", "node2", "node3"])
+            .query(),
+        3,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(vec!["node1", "node3", "node2", "node2"])
+            .to(vec!["node3", "node2", "node1", "node2"])
+            .query(),
+        4,
+    );
+
+    db.exec_elements(
+        QueryBuilder::select()
+            .edge_count()
+            .ids(
+                QueryBuilder::search()
+                    .from("node1")
+                    .where_()
+                    .edge_count(CountComparison::Equal(4))
+                    .query(),
+            )
+            .query(),
+        &[DbElement {
+            id: DbId(2),
+            from: None,
+            to: None,
+            values: vec![("edge_count", 4_u64).into()],
+        }],
     );
 }
 

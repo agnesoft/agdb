@@ -11,6 +11,10 @@ use crate::QueryResult;
 /// The result will be number of elements returned and the list
 /// of elements with a single property `String("edge_count")` with
 /// a value `u64`.
+///
+/// NOTE: Self-referential edges are counted twice as if they
+/// were coming from another edge. Therefore the edge count
+/// might be greater than number of unique db elements.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[derive(Debug, PartialEq)]

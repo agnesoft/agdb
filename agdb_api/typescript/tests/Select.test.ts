@@ -10,6 +10,18 @@ describe("select", () => {
         QueryBuilder.select().aliases().ids([1, 2]).query();
     });
 
+    it("select().edge_count().ids().query()", () => {
+        QueryBuilder.select().edge_count().ids([1, 2]).query();
+    });
+
+    it("select().edge_count_from().ids().query()", () => {
+        QueryBuilder.select().edge_count_from().ids([1, 2]).query();
+    });
+
+    it("select().edge_count_to().ids().query()", () => {
+        QueryBuilder.select().edge_count_to().ids([1, 2]).query();
+    });
+
     it("select().indexes().query()", () => {
         QueryBuilder.select().indexes().query();
     });
@@ -63,6 +75,13 @@ describe("select", () => {
     it("select key count - nested queries", () => {
         QueryBuilder.select()
             .key_count()
+            .ids(QueryBuilder.search().from(1).query())
+            .query();
+    });
+
+    it("select edge count - nested queries", () => {
+        QueryBuilder.select()
+            .edge_count()
             .ids(QueryBuilder.search().from(1).query())
             .query();
     });

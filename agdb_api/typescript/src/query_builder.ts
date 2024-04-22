@@ -593,6 +593,36 @@ class SelectKeyCountIdsBuilder {
     }
 }
 
+class SelectEdgeCountIdsBuilder {
+    private data: Components.Schemas.SelectEdgeCountQuery;
+
+    constructor(data: Components.Schemas.SelectEdgeCountQuery) {
+        this.data = data;
+    }
+
+    query(): Components.Schemas.QueryType {
+        return { SelectEdgeCount: this.data };
+    }
+}
+
+class SelectEdgeCountBuilder {
+    private data: Components.Schemas.SelectEdgeCountQuery;
+
+    constructor(data: Components.Schemas.SelectEdgeCountQuery) {
+        this.data = data;
+    }
+
+    ids(
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
+    ): SelectEdgeCountIdsBuilder {
+        this.data.ids = intoQueryIds(ids);
+        return new SelectEdgeCountIdsBuilder(this.data);
+    }
+}
+
 class SelectKeyCountBuilder {
     private data: Components.Schemas.SelectKeyCountQuery;
 
@@ -620,6 +650,30 @@ class SelectIndexesBuilder {
 class SelectBuilder {
     aliases(): SelectAliasesBuilder {
         return new SelectAliasesBuilder();
+    }
+
+    edge_count(): SelectEdgeCountBuilder {
+        return new SelectEdgeCountBuilder({
+            ids: { Ids: [] },
+            from: true,
+            to: true,
+        });
+    }
+
+    edge_count_from(): SelectEdgeCountBuilder {
+        return new SelectEdgeCountBuilder({
+            ids: { Ids: [] },
+            from: true,
+            to: false,
+        });
+    }
+
+    edge_count_to(): SelectEdgeCountBuilder {
+        return new SelectEdgeCountBuilder({
+            ids: { Ids: [] },
+            from: false,
+            to: true,
+        });
     }
 
     ids(

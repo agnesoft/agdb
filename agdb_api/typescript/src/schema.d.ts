@@ -14,7 +14,10 @@ declare namespace Components {
         }
         export interface ClusterStatus {
             address: string;
+            commit: number; // int64
+            leader: boolean;
             status: boolean;
+            term: number; // int64
         }
         /**
          * Comparison of database values ([`DbValue`]) used
@@ -883,6 +886,22 @@ declare namespace Components {
              */
             SelectAllAliasesQuery;
         } | {
+            SelectEdgeCount: /**
+             * Query to select number of edges of given node ids.
+             * All of the ids must exist in the database. If any
+             * of the ids is not a node the result will be 0 (not
+             * an error).
+             *
+             * The result will be number of elements returned and the list
+             * of elements with a single property `String("edge_count")` with
+             * a value `u64`.
+             *
+             * NOTE: Self-referential edges are counted twice as if they
+             * were coming from another edge. Therefore the edge count
+             * might be greater than number of unique db elements.
+             */
+            SelectEdgeCountQuery;
+        } | {
             SelectIndexes: /**
              * Query to select all indexes in the database.
              *
@@ -1058,6 +1077,41 @@ declare namespace Components {
          * the value `String`.
          */
         export interface SelectAllAliasesQuery {
+        }
+        /**
+         * Query to select number of edges of given node ids.
+         * All of the ids must exist in the database. If any
+         * of the ids is not a node the result will be 0 (not
+         * an error).
+         *
+         * The result will be number of elements returned and the list
+         * of elements with a single property `String("edge_count")` with
+         * a value `u64`.
+         *
+         * NOTE: Self-referential edges are counted twice as if they
+         * were coming from another edge. Therefore the edge count
+         * might be greater than number of unique db elements.
+         */
+        export interface SelectEdgeCountQuery {
+            /**
+             * If set to `true` the query will count outgoing edges
+             * from the nodes.
+             */
+            from: boolean;
+            ids: /**
+             * List of database ids used in queries. It
+             * can either represent a list of [`QueryId`]s
+             * or a search query. Search query allows query
+             * nesting and sourcing the ids dynamically for
+             * another query most commonly with the
+             * select queries.
+             */
+            QueryIds;
+            /**
+             * If set to `true` the query will count incoming edges
+             * to the nodes.
+             */
+            to: boolean;
         }
         /**
          * Query to select all indexes in the database.

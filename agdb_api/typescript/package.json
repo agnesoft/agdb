@@ -32,12 +32,12 @@
     "@rushstack/eslint-patch": "^1.6.1",
     "@types/node": "^20.10.5",
     "@typescript-eslint/parser": "^6.16.0",
-    "@vitest/coverage-v8": "^1.1.0",
+    "@vitest/coverage-v8": "^1.5.3",
     "copyfiles": "^2.4.1",
     "eslint": "^8.56.0",
     "prettier": "^3.1.1",
     "typescript": "^5.3.3",
     "vite": "^5.0.12",
-    "vitest": "^1.1.0"
+    "vitest": "^1.5.3"
   }
 }

@@ -14,7 +14,7 @@
         "before-commit": "npm run format && npm run lint && npm run test:unit && npm run test:e2e"
     },
     "dependencies": {
-        "next": "14.1.0",
+        "next": "14.1.1",
         "nextra": "^2.13.2",
         "nextra-theme-docs": "^2.13.2",
         "react": "^18",

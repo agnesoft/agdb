@@ -308,6 +308,41 @@ class InsertIndexBuilder {
     }
 }
 
+function convertToDbValue(value: any): Components.Schemas.DbValue {
+    if (typeof value === 'string') {
+        // String type
+        return { String: value };
+    } else if (typeof value === 'boolean') {
+        return { String: value ? 'true' : 'false' };
+    } else if (typeof value === 'number') {
+        // Numeric type, integers with positive or negative signs use I64 or U64, and floating-point numbers use DbF64
+        return Number.isInteger(value) ?
+            value >= 0 ? { U64: value } : { I64: value } :
+            { F64: value };
+    } else if (Array.isArray(value)) {
+        // Array type, different handling based on the element type
+        const allIntegers = value.every(Number.isInteger);
+        const allStrings = value.every(item => typeof item === 'string');
+
+        if (allIntegers) {
+            // When all array elements are integers, further determine if they are positive or negative
+            const allPositive = value.every(num => num >= 0);
+            return allPositive ? { VecU64: value.map(Number) } : { VecI64: value.map(Number) };
+        } else if (allStrings) {
+            // When all array elements are strings
+            return { VecString: value };
+        } else {
+            // The array contains mixed types or floating-point numbers
+            return { VecF64: value };
+        }
+    } else if (value === null || value === undefined) {
+        // Handle null and undefined cases, return undefined
+        return undefined;
+    } else {
+        throw new Error(`Unsupported type for DbValue conversion: ${typeof value}`);
+    }
+}
+
 class InsertBuilder {
     aliases(names: string[]): InsertAliasesBuilder {
         return new InsertAliasesBuilder(names);
@@ -337,12 +372,16 @@ class InsertBuilder {
                         throw new Error("invalid db_id");
                     }
                 } else {
-                    data.values.Multi.push([
-                        {
-                            key: { String: key },
-                            value: elem[key],
-                        },
-                    ]);
+                    let keyValue = convertToDbValue(key);
+                    let valueValue = convertToDbValue(elem[key]);
+                    if (keyValue !== undefined && valueValue !== undefined) {
+                        multiItem.push(
+                            {
+                                'key': keyValue,
+                                'value': valueValue,
+                            }
+                        )
+                    };
                 }
             }
         }
@@ -350,6 +389,38 @@ class InsertBuilder {
         return new InsertValuesIdsBuilder(data);
     }
 
+    elementsAliases(elems: any[], alias: string): InsertNodesValuesBuilder {
+        let data: Components.Schemas.InsertNodesQuery = {
+            aliases: [],
+            count: 0,
+            values: { Multi: [] },
+        };
+        data.aliases = []
+        data.values = {
+            Multi: [],
+        };
+
+        let multiItem: Components.Schemas.DbKeyValue[] = []
+        for (const elem of elems) {
+            for (const key of Object.keys(elem)) {
+                let keyValue = convertToDbValue(key);
+                let valueValue = convertToDbValue(elem[key]);
+                if (keyValue !== undefined && valueValue !== undefined) {
+                    multiItem.push(
+                        {
+                            'key': keyValue,
+                            'value': valueValue,
+                        }
+                    )
+                };
+            }
+            data.aliases.push(elem[alias])
+
+            data.values.Multi.push(multiItem)
+        }
+        return new InsertNodesValuesBuilder(data);
+    }    
+    
     edges(): InsertEdgesBuilder {
         return new InsertEdgesBuilder();
     }

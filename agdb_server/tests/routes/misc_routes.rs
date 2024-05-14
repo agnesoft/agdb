@@ -88,3 +88,31 @@ async fn config_reuse() -> anyhow::Result<()> {
         .spawn()?;
     Ok(())
 }
+
+#[tokio::test]
+async fn db_list_after_shutdown() -> anyhow::Result<()> {
+    let mut server = TestServerImpl::new().await?;
+    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+
+    {
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add("userx", "userxpassword").await?;
+        client.user_logout().await?;
+        client.user_login("userx", "userxpassword").await?;
+        client
+            .db_add("userx", "mydb", agdb_api::DbType::Mapped)
+            .await?;
+        client.user_logout().await?;
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_shutdown().await?;
+    }
+
+    server.process = Command::cargo_bin("agdb_server")?
+        .current_dir(&server.dir)
+        .spawn()?;
+    client.user_login("userx", "userxpassword").await?;
+    let dbs = client.db_list().await?.1;
+    assert_eq!(dbs.len(), 1);
+
+    Ok(())
+}

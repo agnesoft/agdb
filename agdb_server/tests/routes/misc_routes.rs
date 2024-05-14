@@ -105,6 +105,7 @@ async fn db_list_after_shutdown() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_shutdown().await?;
+        assert!(server.process.wait()?.success());
     }
 
     server.process = Command::cargo_bin("agdb_server")?
@@ -133,6 +134,7 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_shutdown().await?;
+        assert!(server.process.wait()?.success());
     }
 
     std::fs::remove_dir_all(&server.data_dir)?;

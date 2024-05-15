@@ -368,6 +368,8 @@ class InsertBuilder {
                     let id = elem[key];
                     if (typeof id === "number") {
                         data.ids.Ids.push({ Id: id });
+                    } else if (id === null || id === undefined) {
+                        /* intentionally does nothing */                        
                     } else {
                         throw new Error("invalid db_id");
                     }
@@ -388,38 +390,6 @@ class InsertBuilder {
 
         return new InsertValuesIdsBuilder(data);
     }
-
-    elementsAliases(elems: any[], alias: string): InsertNodesValuesBuilder {
-        let data: Components.Schemas.InsertNodesQuery = {
-            aliases: [],
-            count: 0,
-            values: { Multi: [] },
-        };
-        data.aliases = []
-        data.values = {
-            Multi: [],
-        };
-
-        let multiItem: Components.Schemas.DbKeyValue[] = []
-        for (const elem of elems) {
-            for (const key of Object.keys(elem)) {
-                let keyValue = convertToDbValue(key);
-                let valueValue = convertToDbValue(elem[key]);
-                if (keyValue !== undefined && valueValue !== undefined) {
-                    multiItem.push(
-                        {
-                            'key': keyValue,
-                            'value': valueValue,
-                        }
-                    )
-                };
-            }
-            data.aliases.push(elem[alias])
-
-            data.values.Multi.push(multiItem)
-        }
-        return new InsertNodesValuesBuilder(data);
-    }    
     
     edges(): InsertEdgesBuilder {
         return new InsertEdgesBuilder();

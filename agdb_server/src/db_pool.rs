@@ -80,7 +80,34 @@ impl DbPool {
             pool: RwLock::new(HashMap::new()),
         }));
 
-        if !db_exists {
+        if db_exists {
+            let dbs: Vec<Database> = db_pool
+                .0
+                .server_db
+                .get()
+                .await
+                .exec(
+                    &QueryBuilder::select()
+                        .ids(
+                            QueryBuilder::search()
+                                .from("dbs")
+                                .where_()
+                                .distance(CountComparison::Equal(2))
+                                .query(),
+                        )
+                        .query(),
+                )?
+                .try_into()?;
+
+            for db in dbs {
+                let (owner, db_name) = db.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+                let db_path = Path::new(&config.data_dir).join(db_name);
+                std::fs::create_dir_all(db_audit_dir(owner, config))?;
+                let server_db =
+                    ServerDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
+                db_pool.0.pool.write().await.insert(db.name, server_db);
+            }
+        } else {
             let admin_password = Password::create(&config.admin, &config.admin);
 
             db_pool.0.server_db.get_mut().await.transaction_mut(|t| {

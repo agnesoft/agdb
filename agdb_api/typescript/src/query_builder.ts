@@ -362,7 +362,9 @@ class InsertBuilder {
             Multi: [],
         };
 
+        let multiItem: Components.Schemas.DbKeyValue[] = []
         for (const elem of elems) {
+            multiItem = []
             for (const key of Object.keys(elem)) {
                 if (key === "db_id") {
                     let id = elem[key];
@@ -386,6 +388,7 @@ class InsertBuilder {
                     };
                 }
             }
+            data.values.Multi.push(multiItem)
         }
 
         return new InsertValuesIdsBuilder(data);

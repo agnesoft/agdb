@@ -599,13 +599,6 @@ impl<Store: StorageData> DbImpl<Store> {
         db_id: DbId,
         alias: &String,
     ) -> Result<(), QueryError> {
-        if let Some(id) = self.aliases.value(&self.storage, alias)? {
-            return Err(QueryError::from(format!(
-                "Alias '{alias}' already exists ({})",
-                id.0
-            )));
-        }
-
         self.undo_stack.push(Command::RemoveAlias {
             alias: alias.clone(),
         });

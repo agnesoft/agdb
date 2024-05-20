@@ -309,25 +309,29 @@ class InsertIndexBuilder {
 }
 
 function convertToDbValue(value: any): Components.Schemas.DbValue {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
         // String type
         return { String: value };
-    } else if (typeof value === 'boolean') {
-        return { String: value ? 'true' : 'false' };
-    } else if (typeof value === 'number') {
+    } else if (typeof value === "boolean") {
+        return { String: value ? "true" : "false" };
+    } else if (typeof value === "number") {
         // Numeric type, integers with positive or negative signs use I64 or U64, and floating-point numbers use DbF64
-        return Number.isInteger(value) ?
-            value >= 0 ? { U64: value } : { I64: value } :
-            { F64: value };
+        return Number.isInteger(value)
+            ? value >= 0
+                ? { U64: value }
+                : { I64: value }
+            : { F64: value };
     } else if (Array.isArray(value)) {
         // Array type, different handling based on the element type
         const allIntegers = value.every(Number.isInteger);
-        const allStrings = value.every(item => typeof item === 'string');
+        const allStrings = value.every((item) => typeof item === "string");
 
         if (allIntegers) {
             // When all array elements are integers, further determine if they are positive or negative
-            const allPositive = value.every(num => num >= 0);
-            return allPositive ? { VecU64: value.map(Number) } : { VecI64: value.map(Number) };
+            const allPositive = value.every((num) => num >= 0);
+            return allPositive
+                ? { VecU64: value.map(Number) }
+                : { VecI64: value.map(Number) };
         } else if (allStrings) {
             // When all array elements are strings
             return { VecString: value };
@@ -339,7 +343,9 @@ function convertToDbValue(value: any): Components.Schemas.DbValue {
         // Handle null and undefined cases, return undefined
         return undefined;
     } else {
-        throw new Error(`Unsupported type for DbValue conversion: ${typeof value}`);
+        throw new Error(
+            `Unsupported type for DbValue conversion: ${typeof value}`,
+        );
     }
 }
 
@@ -362,16 +368,16 @@ class InsertBuilder {
             Multi: [],
         };
 
-        let multiItem: Components.Schemas.DbKeyValue[] = []
+        let multiItem: Components.Schemas.DbKeyValue[] = [];
         for (const elem of elems) {
-            multiItem = []
+            multiItem = [];
             for (const key of Object.keys(elem)) {
                 if (key === "db_id") {
                     let id = elem[key];
                     if (typeof id === "number") {
                         data.ids.Ids.push({ Id: id });
                     } else if (id === null || id === undefined) {
-                        /* intentionally does nothing */                        
+                        /* intentionally does nothing */
                     } else {
                         throw new Error("invalid db_id");
                     }
@@ -379,21 +385,18 @@ class InsertBuilder {
                     let keyValue = convertToDbValue(key);
                     let valueValue = convertToDbValue(elem[key]);
                     if (keyValue !== undefined && valueValue !== undefined) {
-                        multiItem.push(
-                            {
-                                'key': keyValue,
-                                'value': valueValue,
-                            }
-                        )
-                    };
+                        multiItem.push({
+                            key: keyValue,
+                            value: valueValue,
+                        });
+                    }
                 }
             }
-            data.values.Multi.push(multiItem)
+            data.values.Multi.push(multiItem);
         }
-
         return new InsertValuesIdsBuilder(data);
     }
-    
+
     edges(): InsertEdgesBuilder {
         return new InsertEdgesBuilder();
     }

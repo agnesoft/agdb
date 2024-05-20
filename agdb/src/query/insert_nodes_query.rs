@@ -2,6 +2,7 @@ use crate::query::query_values::QueryValues;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::QueryError;
+use crate::QueryId;
 use crate::QueryMut;
 use crate::QueryResult;
 use crate::StorageData;
@@ -45,6 +46,18 @@ impl QueryMut for InsertNodesQuery {
         };
 
         for (index, key_values) in values.iter().enumerate() {
+            if let Some(alias) = self.aliases.get(index) {
+                if let Ok(db_id) = db.db_id(&QueryId::Alias(alias.to_string())) {
+                    ids.push(db_id);
+
+                    for key_value in *key_values {
+                        db.insert_or_replace_key_value(db_id, key_value)?;
+                    }
+
+                    continue;
+                }
+            }
+
             let db_id = db.insert_node()?;
             ids.push(db_id);
 

@@ -29,10 +29,10 @@ fn insert_node_existing_alias() {
         QueryBuilder::insert().nodes().aliases("alias").query(),
         &[1],
     );
-    db.exec_mut_error(
+    db.exec_mut_ids(
         QueryBuilder::insert().nodes().aliases("alias").query(),
-        "Alias 'alias' already exists (1)",
-    )
+        &[1],
+    );
 }
 
 #[test]
@@ -224,6 +224,50 @@ fn insert_nodes_values() {
                 from: None,
                 to: None,
                 values: vec![("key", "value3").into()],
+            },
+        ],
+    );
+}
+
+#[test]
+fn insert_nodes_existing_aliases_values() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("alias")
+            .values(vec![vec![("key", 1).into()]])
+            .query(),
+        1,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(vec!["new_alias", "alias", "alias3"])
+            .values(vec![
+                vec![("some_key", "value").into()],
+                vec![("key", 10).into(), ("new_key", 100).into()],
+                vec![],
+            ])
+            .query(),
+        3,
+    );
+    db.exec_elements(
+        QueryBuilder::select()
+            .ids(vec!["alias", "new_alias"])
+            .query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![("key", 10).into(), ("new_key", 100).into()],
+            },
+            DbElement {
+                id: DbId(2),
+                from: None,
+                to: None,
+                values: vec![("some_key", "value").into()],
             },
         ],
     );

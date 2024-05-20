@@ -272,3 +272,16 @@ fn insert_nodes_existing_aliases_values() {
         ],
     );
 }
+
+#[test]
+fn insert_nodes_aliases_values_mismatched_length() {
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(vec!["alias", "alias2"])
+            .values(vec![vec![("key", 1).into()]])
+            .query(),
+        "Values (1) and aliases (2) must have the same length",
+    );
+}

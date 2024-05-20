@@ -28,7 +28,7 @@ describe("insert elements", () => {
 
     it("invalid db_id", () => {
         let e: MyClass = {
-            db_id: '1',
+            db_id: "1",
             name: "John",
             age: 30,
         };

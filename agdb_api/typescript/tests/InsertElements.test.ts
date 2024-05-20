@@ -2,7 +2,7 @@ import { QueryBuilder } from "../src/index";
 import { describe, it, expect } from "vitest";
 
 class MyClass {
-    db_id: number | undefined;
+    db_id: number | undefined | string;
     name: string = "";
     age: number = 0;
 }
@@ -28,7 +28,7 @@ describe("insert elements", () => {
 
     it("invalid db_id", () => {
         let e: MyClass = {
-            db_id: undefined,
+            db_id: "1",
             name: "John",
             age: 30,
         };

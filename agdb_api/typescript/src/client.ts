@@ -6,18 +6,34 @@ export class AgdbApi {
     private static c: Client | undefined = undefined;
     private static token: string = "";
 
-    static async client(host: String, port: number): Promise<Client> {
+    static async client(
+        host: String,
+        port: number,
+        publicPath?: string,
+    ): Promise<Client> {
         if (AgdbApi.c === undefined) {
-            AgdbApi.api = new OpenAPIClientAxios({
-                definition: `${host}:${port}/api/v1/openapi.json`,
-            });
-            AgdbApi.c = await AgdbApi.api.init<Client>();
-            AgdbApi.c.interceptors.request.use((config) => {
-                if (AgdbApi.token !== "") {
-                    config.headers.Authorization = `Bearer ${AgdbApi.token}`;
+            try {
+                let baseurl_tmp = `${host}:${port}`;
+                if (typeof publicPath !== "undefined") {
+                    baseurl_tmp = baseurl_tmp + `/${publicPath}`;
                 }
-                return config;
-            });
+                const baseURL = baseurl_tmp;
+                AgdbApi.api = new OpenAPIClientAxios({
+                    definition: `/api/v1/openapi.json`,
+                    axiosConfigDefaults: {
+                        baseURL: baseURL, // set axios baseURL
+                    },
+                });
+                AgdbApi.c = await AgdbApi.api.init<Client>();
+                AgdbApi.c.interceptors.request.use((config) => {
+                    if (AgdbApi.token !== "") {
+                        config.headers.Authorization = `Bearer ${AgdbApi.token}`;
+                    }
+                    return config;
+                });
+            } catch (e) {
+                console.log(e);
+            }
         }
 
         return AgdbApi.c as Client;

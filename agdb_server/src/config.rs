@@ -36,7 +36,7 @@ pub(crate) fn new() -> ServerResult<Config> {
     let config = ConfigImpl {
         bind: ":::3000".to_string(),
         address: Url::parse("localhost:3000")?,
-        basepath: "".to_string(),
+        basepath: "/public".to_string(),
         admin: "admin".to_string(),
         data_dir: "agdb_server_data".to_string(),
         cluster: vec![],

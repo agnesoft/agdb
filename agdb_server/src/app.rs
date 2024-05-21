@@ -8,10 +8,10 @@ use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
 use axum::Router;
+use std::sync::Arc;
 use tokio::sync::broadcast::Sender;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
-use std::sync::Arc;
 
 pub(crate) fn app(
     config: Config,
@@ -129,12 +129,20 @@ pub(crate) fn app(
             routing::put(routes::user::change_password),
         );
 
+    // let basepath_str = config.basepath.clone();
     let full_api_path = format!("{}/api/v1", config.basepath);
     let full_www_path = config.basepath.to_string();
     Router::new()
-        .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
+        .merge(
+            RapiDoc::with_openapi("/watom/api/v1/openapi.json", Api::openapi())
+                .path("/watom/api/v1"),
+        )
+        // .nest("/api/v1", api_v1)
         .nest(&full_api_path, api_v1)
-        .nest(&full_www_path, axum_static::static_router("www").with_state(()))
+        .nest(
+            &full_www_path,
+            axum_static::static_router("www").with_state(()),
+        )
         .layer(middleware::from_fn_with_state(
             state.clone(),
             logger::logger,

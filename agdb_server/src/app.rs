@@ -11,6 +11,7 @@ use axum::Router;
 use tokio::sync::broadcast::Sender;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
+use std::sync::Arc;
 
 pub(crate) fn app(
     config: Config,
@@ -20,7 +21,7 @@ pub(crate) fn app(
 ) -> Router {
     let state = ServerState {
         db_pool,
-        config,
+        config: Arc::clone(&config),
         cluster,
         shutdown_sender,
     };
@@ -128,9 +129,12 @@ pub(crate) fn app(
             routing::put(routes::user::change_password),
         );
 
+    let full_api_path = format!("{}/api/v1", config.basepath);
+    let full_www_path = format!("{}", config.basepath);
     Router::new()
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
-        .nest("/api/v1", api_v1)
+        .nest(&full_api_path, api_v1)
+        .nest(&full_www_path, axum_static::static_router("www").with_state(()))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             logger::logger,

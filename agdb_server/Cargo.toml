@@ -30,6 +30,7 @@ url = { version = "2", features = ["serde"] }
 utoipa = "4"
 utoipa-rapidoc = { version = "3", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
+axum_static = "1.7.1"
 
 [dev-dependencies]
 assert_cmd = "2"

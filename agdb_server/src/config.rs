@@ -13,7 +13,7 @@ const CONFIG_FILE: &str = "agdb_server.yaml";
 pub(crate) struct ConfigImpl {
     pub(crate) bind: String,
     pub(crate) address: Url,
-    pub(crate) basepath: String,     
+    pub(crate) basepath: String,
     pub(crate) admin: String,
     pub(crate) data_dir: String,
     pub(crate) cluster: Vec<Url>,
@@ -36,7 +36,7 @@ pub(crate) fn new() -> ServerResult<Config> {
     let config = ConfigImpl {
         bind: ":::3000".to_string(),
         address: Url::parse("localhost:3000")?,
-        basepath: "/www".to_string(),
+        basepath: "".to_string(),
         admin: "admin".to_string(),
         data_dir: "agdb_server_data".to_string(),
         cluster: vec![],

@@ -133,11 +133,7 @@ pub(crate) fn app(
     let full_api_path = format!("{}/api/v1", config.basepath);
     let full_www_path = config.basepath.to_string();
     Router::new()
-        .merge(
-            RapiDoc::with_openapi(&full_api_json_path, Api::openapi())
-                .path("/api/v1"),
-        )
-        // .nest("/api/v1", api_v1)
+        .merge(RapiDoc::with_openapi(&full_api_json_path, Api::openapi()).path("/api/v1"))
         .nest(&full_api_path, api_v1)
         .nest(
             &full_www_path,

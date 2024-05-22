@@ -129,13 +129,13 @@ pub(crate) fn app(
             routing::put(routes::user::change_password),
         );
 
-    // let basepath_str = config.basepath.clone();
+    let full_api_json_path = format!("{}/api/v1/openapi.json", config.basepath);
     let full_api_path = format!("{}/api/v1", config.basepath);
     let full_www_path = config.basepath.to_string();
     Router::new()
         .merge(
-            RapiDoc::with_openapi("/watom/api/v1/openapi.json", Api::openapi())
-                .path("/watom/api/v1"),
+            RapiDoc::with_openapi(&full_api_json_path, Api::openapi())
+                .path("/api/v1"),
         )
         // .nest("/api/v1", api_v1)
         .nest(&full_api_path, api_v1)

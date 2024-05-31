@@ -6,6 +6,8 @@ use agdb::DbId;
 use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
+use agdb::QueryId;
+use agdb::QueryResult;
 use agdb::UserValue;
 #[allow(unused_imports)]
 use std::fmt::Result;
@@ -446,4 +448,100 @@ fn try_from_db_element() {
     assert_eq!(user.user_id, 100);
     assert_eq!(user.status, Status::Active);
     assert_eq!(user.password, "pswd");
+}
+
+#[derive(UserValue)]
+struct MyValue {
+    db_id: Option<QueryId>,
+    name: String,
+    age: u64,
+}
+
+#[test]
+fn insert_element_alias_update_values() {
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        db_id: Some("my_alias".into()),
+        name: "my name".to_string(),
+        age: 20,
+    };
+    db.exec_mut(
+        QueryBuilder::insert().nodes().aliases("my_alias").query(),
+        1,
+    );
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: None,
+            to: None,
+            values: vec![("name", "my name").into(), ("age", 20_u64).into()],
+        }],
+    );
+}
+
+#[test]
+fn insert_element_alias_new() {
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        db_id: Some("my_alias".into()),
+        name: "my name".to_string(),
+        age: 20,
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
+    db.exec_elements(
+        QueryBuilder::select().ids("my_alias").query(),
+        &[DbElement {
+            id: DbId(1),
+            from: None,
+            to: None,
+            values: vec![("name", "my name").into(), ("age", 20_u64).into()],
+        }],
+    );
+}
+
+#[test]
+fn insert_element_no_id_new_element() {
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        db_id: None,
+        name: "my name".to_string(),
+        age: 20,
+    };
+    assert_eq!(
+        db.exec_mut_result(QueryBuilder::insert().element(&my_value).query()),
+        QueryResult {
+            result: 2,
+            elements: vec![DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![],
+            }]
+        }
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(1).query(),
+        &[DbElement {
+            id: DbId(1),
+            from: None,
+            to: None,
+            values: vec![("name", "my name").into(), ("age", 20_u64).into()],
+        }],
+    );
+}
+
+#[test]
+fn insert_element_missing_id() {
+    let mut db = TestDb::new();
+    let my_value = MyValue {
+        db_id: Some(1.into()),
+        name: "my name".to_string(),
+        age: 20,
+    };
+    db.exec_mut_error(
+        QueryBuilder::insert().element(&my_value).query(),
+        "Id '1' not found",
+    );
 }

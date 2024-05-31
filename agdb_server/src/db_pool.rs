@@ -123,8 +123,7 @@ impl DbPool {
 
                 let admin = t.exec_mut(
                     &QueryBuilder::insert()
-                        .nodes()
-                        .values(&ServerUser {
+                        .element(&ServerUser {
                             db_id: None,
                             username: config.admin.clone(),
                             password: admin_password.password.to_vec(),
@@ -181,8 +180,7 @@ impl DbPool {
         self.db_mut().await.transaction_mut(|t| {
             let db = t.exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(&Database {
+                    .element(&Database {
                         db_id: None,
                         name: db_name.clone(),
                         db_type,
@@ -260,7 +258,7 @@ impl DbPool {
 
     pub(crate) async fn add_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut().await.transaction_mut(|t| {
-            let user = t.exec_mut(&QueryBuilder::insert().nodes().values(&user).query())?;
+            let user = t.exec_mut(&QueryBuilder::insert().element(&user).query())?;
 
             t.exec_mut(
                 &QueryBuilder::insert()
@@ -401,8 +399,7 @@ impl DbPool {
         self.db_mut().await.transaction_mut(|t| {
             let db = t.exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(&Database {
+                    .element(&Database {
                         db_id: None,
                         name: target_db.clone(),
                         db_type: database.db_type,

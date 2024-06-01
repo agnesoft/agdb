@@ -1,3 +1,4 @@
+use crate::wait_for_ready;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
@@ -86,6 +87,7 @@ async fn config_reuse() -> anyhow::Result<()> {
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)
         .spawn()?;
+    wait_for_ready(&client).await?;
     Ok(())
 }
 
@@ -111,6 +113,7 @@ async fn db_list_after_shutdown() -> anyhow::Result<()> {
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)
         .spawn()?;
+    wait_for_ready(&client).await?;
     client.user_login("userx", "userxpassword").await?;
     let dbs = client.db_list().await?.1;
     assert_eq!(dbs.len(), 1);
@@ -142,6 +145,7 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)
         .spawn()?;
+    wait_for_ready(&client).await?;
     client.user_login("userx", "userxpassword").await?;
     let dbs = client.db_list().await?.1;
     assert_eq!(dbs.len(), 1);

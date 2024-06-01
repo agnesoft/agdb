@@ -376,8 +376,10 @@ class InsertBuilder {
                     let id = elem[key];
                     if (typeof id === "number") {
                         data.ids.Ids.push({ Id: id });
+                    } else if (typeof id === "string") {
+                        data.ids.Ids.push({ Alias: id });
                     } else if (id === null || id === undefined) {
-                        /* intentionally does nothing */
+                        data.ids.Ids.push({ Id: 0 });
                     } else {
                         throw new Error("invalid db_id");
                     }

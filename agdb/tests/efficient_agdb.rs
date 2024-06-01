@@ -86,12 +86,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
         }
 
         let user = t
-            .exec_mut(
-                &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![user.to_db_values()])
-                    .query(),
-            )?
+            .exec_mut(&QueryBuilder::insert().element(user).query())?
             .elements[0]
             .id;
 
@@ -110,12 +105,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
 fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let post = t
-            .exec_mut(
-                &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![post.to_db_values()])
-                    .query(),
-            )?
+            .exec_mut(&QueryBuilder::insert().element(post).query())?
             .elements[0]
             .id;
 
@@ -140,12 +130,7 @@ fn create_comment(
 ) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let comment = t
-            .exec_mut(
-                &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![comment.to_db_values()])
-                    .query(),
-            )?
+            .exec_mut(&QueryBuilder::insert().element(comment).query())?
             .elements[0]
             .id;
 

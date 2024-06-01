@@ -65,7 +65,7 @@ impl Insert {
     /// int the database.
     pub fn element<T: DbUserValue>(self, elem: &T) -> InsertValuesIds {
         InsertValuesIds(InsertValuesQuery {
-            ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default().into()]),
+            ids: QueryIds::Ids(vec![elem.db_id().unwrap_or_default()]),
             values: QueryValues::Multi(vec![elem.to_db_values()]),
         })
     }
@@ -82,7 +82,7 @@ impl Insert {
         values.reserve(elems.len());
 
         elems.iter().for_each(|v| {
-            ids.push(v.db_id().unwrap_or_default().into());
+            ids.push(v.db_id().unwrap_or_default());
             values.push(v.to_db_values());
         });
 

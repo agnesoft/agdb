@@ -92,8 +92,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
         let user = t
             .exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![user.to_db_values()])
+                    .element(user)
                     .query(),
             )?
             .elements[0]
@@ -141,8 +140,7 @@ fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError>
         let post = t
             .exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![post.to_db_values()])
+                    .element(post)
                     .query(),
             )?
             .elements[0]
@@ -194,8 +192,7 @@ fn create_comment(
         let comment = t
             .exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![comment.to_db_values()])
+                    .element(comment)
                     .query(),
             )?
             .elements[0]

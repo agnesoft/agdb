@@ -511,7 +511,8 @@ declare namespace Components {
          * will be inserted uniformly to all `ids` otherwise there must be
          * enough `values` for all `ids`.
          *
-         * The result will be number of inserted/update values and no elements.
+         * The result will be number of inserted/updated values and inserted new
+         * elements (nodes).
          *
          * NOTE: The result is NOT number of affected elements but individual properties.
          */
@@ -805,7 +806,8 @@ declare namespace Components {
              * will be inserted uniformly to all `ids` otherwise there must be
              * enough `values` for all `ids`.
              *
-             * The result will be number of inserted/update values and no elements.
+             * The result will be number of inserted/updated values and inserted new
+             * elements (nodes).
              *
              * NOTE: The result is NOT number of affected elements but individual properties.
              */

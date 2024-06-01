@@ -2,6 +2,12 @@ import { QueryBuilder } from "../src/index";
 import { describe, expect, it } from "vitest";
 import { AgdbApi } from "../src/index";
 
+class MyClass {
+    db_id: number | undefined | string;
+    name: string = "";
+    age: number = 0;
+}
+
 describe("openapi test", () => {
     it("status", async () => {
         let client = await AgdbApi.client("http://localhost", 3000);
@@ -47,5 +53,83 @@ describe("openapi test", () => {
         ]);
 
         expect(res2.status).toEqual(200);
+    });
+
+    it("insert elements", async () => {
+        let client = await AgdbApi.client("http://localhost", 3000);
+        let admin_token = await client.user_login(null, {
+            username: "admin",
+            password: "admin",
+        });
+        AgdbApi.setToken(admin_token.data);
+
+        await client.admin_user_add("user2", { password: "password123" });
+        let token = await client.user_login(null, {
+            username: "user2",
+            password: "password123",
+        });
+        AgdbApi.setToken(token.data);
+
+        await client.db_add({
+            owner: "user2",
+            db: "db1",
+            db_type: "memory",
+        });
+
+        let e1: MyClass = {
+            db_id: 0,
+            name: "John",
+            age: 30,
+        };
+
+        let e2: MyClass = {
+            db_id: "my_alias",
+            name: "John",
+            age: 30,
+        };
+
+        let e3: MyClass = {
+            db_id: "my_alias",
+            name: "John",
+            age: 31,
+        };
+
+        let res = await client.db_exec({ owner: "user2", db: "db1" }, [
+            QueryBuilder.insert().elements([e1, e2]).query(),
+            QueryBuilder.insert().element(e3).query(),
+        ]);
+
+        expect(res.status).toEqual(200);
+
+        let res2 = await client.db_exec({ owner: "user2", db: "db1" }, [
+            QueryBuilder.select().ids([1, "my_alias"]).query(),
+        ]);
+
+        let expected = {
+            result: 2,
+            elements: [
+                {
+                    id: 1,
+                    from: null,
+                    to: null,
+                    values: [
+                        { key: { String: "name" }, value: { String: "John" } },
+                        { key: { String: "age" }, value: { U64: 30 } },
+                    ],
+                },
+                {
+                    id: 2,
+                    from: null,
+                    to: null,
+                    values: [
+                        { key: { String: "name" }, value: { String: "John" } },
+                        { key: { String: "age" }, value: { U64: 31 } },
+                    ],
+                },
+            ],
+        };
+
+        expect(res2.status).toEqual(200);
+        expect(res2.data).toEqual([expected]);
     });
 });

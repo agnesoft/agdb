@@ -187,20 +187,20 @@ flowchart TD;
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 
-The following are planned features with target versions:
+The following are planned features:
 
-| Feature                               | Description                                                                                                                                          | Version |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| Agdb Studio                           | Graphical interface to `agdb`                                                                                                                        | 0.7.0   |
-| Python Client                         | Convenience client using bindings genereated from OpenAPI.                                                                                           | 0.7.0   |
-| Java Client                           | Convenience client using bindings genereated from OpenAPI.                                                                                           | 0.8.0   |
-| C# Client                             | Convenience client using bindings genereated from OpenAPI.                                                                                           | 0.8.0   |
-| C Client                              | Convenience client using bindings genereated from OpenAPI.                                                                                           | 0.8.0   |
-| C++ Client                            | Convenience client using bindings genereated from OpenAPI.                                                                                           | 0.8.0   |
-| Data replication & consensus protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                                                | 0.9.0   |
-| Agdb Playground                       | Free public cloud-based playground to tinker with `agdb`.                                                                                            | 0.9.0   |
-| #\[no_std]                            | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. | 1.0.0   |
-| Public Cloud Offering                 | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     | 1.0.0   |
+| Feature                               | Description                                                                                                                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agdb Studio                           | Graphical interface to `agdb`                                                                                                                        |
+| Python Client                         | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| Java Client                           | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C# Client                             | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C Client                              | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C++ Client                            | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| Data replication & consensus protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                                                |
+| Agdb Playground                       | Free public cloud-based playground to tinker with `agdb`.                                                                                            |
+| #\[no_std]                            | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. |
+| Public Cloud Offering                 | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     |
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 

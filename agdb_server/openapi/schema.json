@@ -2356,7 +2356,7 @@
       },
       "InsertValuesQuery": {
         "type": "object",
-        "description": "Query to insert or update key-value pairs (properties)\nto existing elements in the database. All `ids` must exist\nin the database. If `values` is set to `Single` the properties\nwill be inserted uniformly to all `ids` otherwise there must be\nenough `values` for all `ids`.\n\nThe result will be number of inserted/update values and no elements.\n\nNOTE: The result is NOT number of affected elements but individual properties.",
+        "description": "Query to insert or update key-value pairs (properties)\nto existing elements in the database. All `ids` must exist\nin the database. If `values` is set to `Single` the properties\nwill be inserted uniformly to all `ids` otherwise there must be\nenough `values` for all `ids`.\n\nThe result will be number of inserted/updated values and inserted new\nelements (nodes).\n\nNOTE: The result is NOT number of affected elements but individual properties.",
         "required": [
           "ids",
           "values"

@@ -7,6 +7,12 @@ class MyClass {
     age: number = 0;
 }
 
+class BadClass {
+    db_id: any;
+    name: string = "";
+    age: number = 0;
+}
+
 describe("insert elements", () => {
     it("insert().element().query()", () => {
         let e: MyClass = {
@@ -27,8 +33,8 @@ describe("insert elements", () => {
     });
 
     it("invalid db_id", () => {
-        let e: MyClass = {
-            db_id: "1",
+        let e: BadClass = {
+            db_id: {},
             name: "John",
             age: 30,
         };

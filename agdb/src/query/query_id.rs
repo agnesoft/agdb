@@ -38,6 +38,12 @@ impl From<DbId> for QueryId {
     }
 }
 
+impl Default for QueryId {
+    fn default() -> Self {
+        Self::Id(DbId::default())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

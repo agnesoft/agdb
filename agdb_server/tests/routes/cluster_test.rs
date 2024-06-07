@@ -21,6 +21,7 @@ async fn db_cluster_established() -> anyhow::Result<()> {
     config1.insert("bind", format!("{HOST}:{port1}").into());
     config1.insert("address", format!("http://{HOST}:{port1}").into());
     config1.insert("admin", ADMIN.into());
+    config1.insert("basepath", "".into());
     config1.insert("data_dir", SERVER_DATA_DIR.into());
     config1.insert("cluster", cluster.into());
 

@@ -5,7 +5,7 @@ async function main() {
   // from the root.
 
   // Creates a client connecting to the remote server.
-  let client = await AgdbApi.client("http://localhost", 3000);
+  let client = await AgdbApi.client("http://localhost:3000");
 
   // Creates a user using default admin credentials.
   let admin_token = await client.user_login(null, {

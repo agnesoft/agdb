@@ -10,14 +10,14 @@ class MyClass {
 
 describe("openapi test", () => {
     it("status", async () => {
-        let client = await AgdbApi.client("http://localhost", 3000);
+        let client = await AgdbApi.client("http://localhost:3000");
         let res = await client.status({ cluster: true });
         expect(res.status).toEqual(200);
         expect(res.data).toEqual([]);
     });
 
     it("insert nodes with edges", async () => {
-        let client = await AgdbApi.client("http://localhost", 3000);
+        let client = await AgdbApi.client("http://localhost:3000");
         let admin_token = await client.user_login(null, {
             username: "admin",
             password: "admin",
@@ -56,7 +56,7 @@ describe("openapi test", () => {
     });
 
     it("insert elements", async () => {
-        let client = await AgdbApi.client("http://localhost", 3000);
+        let client = await AgdbApi.client("http://localhost:3000");
         let admin_token = await client.user_login(null, {
             username: "admin",
             password: "admin",

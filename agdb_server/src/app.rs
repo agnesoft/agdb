@@ -18,6 +18,8 @@ pub(crate) fn app(
     db_pool: DbPool,
     cluster: Cluster,
 ) -> Router {
+    let basepath = config.basepath.clone();
+
     let state = ServerState {
         db_pool,
         config,
@@ -128,12 +130,18 @@ pub(crate) fn app(
             routing::put(routes::user::change_password),
         );
 
-    Router::new()
+    let router = Router::new()
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest("/api/v1", api_v1)
         .layer(middleware::from_fn_with_state(
             state.clone(),
             logger::logger,
         ))
-        .with_state(state)
+        .with_state(state);
+
+    if !basepath.is_empty() {
+        Router::new().nest(&basepath, router)
+    } else {
+        router
+    }
 }

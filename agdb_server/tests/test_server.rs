@@ -69,8 +69,14 @@ impl TestServerImpl {
             .open(Path::new(&dir).join(CONFIG_FILE))?;
         serde_yaml::to_writer(file, &config)?;
 
+        let api_address = if let Some(basepath) = config.get("basepath") {
+            format!("{address}{}", basepath.as_str().unwrap_or_default())
+        } else {
+            address.clone()
+        };
+
         let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
-        let api = AgdbApi::new(ReqwestClient::new(), &address);
+        let api = AgdbApi::new(ReqwestClient::new(), &api_address);
 
         for _ in 0..RETRY_ATTEMPS {
             if let Ok(status) = api.status().await {
@@ -78,7 +84,7 @@ impl TestServerImpl {
                     return Ok(Self {
                         dir,
                         data_dir,
-                        address,
+                        address: api_address,
                         process,
                         instances: 1,
                     });
@@ -95,6 +101,7 @@ impl TestServerImpl {
         let mut config = HashMap::<&str, serde_yaml::Value>::new();
         config.insert("admin", ADMIN.into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
+        config.insert("basepath", "".into());
         config.insert("cluster", Vec::<String>::new().into());
 
         Self::with_config(config).await
@@ -191,7 +198,7 @@ impl TestServer {
     }
 
     pub fn full_url(&self, uri: &str) -> String {
-        format!("http://{}/api/v1{uri}", self.api.address())
+        self.api.base_url().to_string() + uri
     }
 }
 

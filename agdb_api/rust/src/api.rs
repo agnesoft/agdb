@@ -40,6 +40,10 @@ impl<T: HttpClient> AgdbApi<T> {
         &self.address
     }
 
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
     pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
         Ok(self
             .client
@@ -494,5 +498,25 @@ impl<T: HttpClient> AgdbApi<T> {
 
     fn url(&self, uri: &str) -> String {
         format!("{}{uri}", self.base_url)
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "reqwest")]
+mod tests {
+    use super::*;
+    use crate::ReqwestClient;
+
+    #[test]
+    fn address() {
+        let client = AgdbApi::new(ReqwestClient::new(), "http://localhost:3000");
+        assert_eq!(client.address(), "http://localhost:3000");
+    }
+
+    #[test]
+    fn base_path() {
+        let client = AgdbApi::new(ReqwestClient::new(), "http://localhost:3000/public");
+        assert_eq!(client.address(), "http://localhost:3000/public");
+        assert_eq!(client.base_url(), "http://localhost:3000/public/api/v1");
     }
 }

@@ -30,8 +30,9 @@ The server will create default configuration when run:
 
 ```yaml
 # agdb_server.yaml
-host: localhost # host address to listen on
-port: 3000 # port to bind to
+bind: ":::3000" # address to listen at (bind to)
+address: "localhost:3000" # address the incoming connections will come from
+basepath: "" # base path to append to the address in case the server is to be run behind a reverse proxy
 admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
 data_dir: agdb_server_data # directory to store user data
 ```

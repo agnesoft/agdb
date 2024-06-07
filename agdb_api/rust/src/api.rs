@@ -40,6 +40,10 @@ impl<T: HttpClient> AgdbApi<T> {
         &self.address
     }
 
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
     pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
         Ok(self
             .client

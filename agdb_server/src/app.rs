@@ -8,7 +8,6 @@ use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
 use axum::Router;
-use std::sync::Arc;
 use tokio::sync::broadcast::Sender;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
@@ -19,9 +18,11 @@ pub(crate) fn app(
     db_pool: DbPool,
     cluster: Cluster,
 ) -> Router {
+    let basepath = config.basepath.clone();
+
     let state = ServerState {
         db_pool,
-        config: Arc::clone(&config),
+        config,
         cluster,
         shutdown_sender,
     };
@@ -129,20 +130,18 @@ pub(crate) fn app(
             routing::put(routes::user::change_password),
         );
 
-    let full_api_json_path = format!("{}/api/v1/openapi.json", config.basepath);
-    let full_api_web_path = format!("{}/api/v1", config.basepath);
-    let full_api_path = format!("{}/api/v1", config.basepath);
-    let full_www_path = config.basepath.to_string();
-    Router::new()
-        .merge(RapiDoc::with_openapi(&full_api_json_path, Api::openapi()).path(&full_api_web_path))
-        .nest(&full_api_path, api_v1)
-        .nest(
-            &full_www_path,
-            axum_static::static_router("www").with_state(()),
-        )
+    let router = Router::new()
+        .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
+        .nest("/api/v1", api_v1)
         .layer(middleware::from_fn_with_state(
             state.clone(),
             logger::logger,
         ))
-        .with_state(state)
+        .with_state(state);
+
+    if !basepath.is_empty() {
+        Router::new().nest(&basepath, router)
+    } else {
+        router
+    }
 }

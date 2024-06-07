@@ -2,10 +2,12 @@ use crate::wait_for_ready;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
+use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
+use std::collections::HashMap;
 use std::process::Command;
 
 #[tokio::test]
@@ -149,6 +151,23 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
     client.user_login("userx", "userxpassword").await?;
     let dbs = client.db_list().await?.1;
     assert_eq!(dbs.len(), 1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn basepath_test() -> anyhow::Result<()> {
+    let mut config = HashMap::<&str, serde_yaml::Value>::new();
+    config.insert("admin", ADMIN.into());
+    config.insert("data_dir", SERVER_DATA_DIR.into());
+    config.insert("basepath", "/public".into());
+    config.insert("cluster", Vec::<String>::new().into());
+
+    let _server = TestServerImpl::with_config(config).await?;
+
+    // If the base path does not work the server
+    // will not ever be considered ready, see
+    // TestServer implementation for details.
 
     Ok(())
 }

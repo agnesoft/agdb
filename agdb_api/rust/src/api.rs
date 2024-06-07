@@ -500,3 +500,22 @@ impl<T: HttpClient> AgdbApi<T> {
         format!("{}{uri}", self.base_url)
     }
 }
+
+#[cfg(feature = "reqwest")]
+mod tests {
+    use super::*;
+    use crate::ReqwestClient;
+
+    #[test]
+    fn address() {
+        let client = AgdbApi::new(ReqwestClient::new(), "http://localhost:3000");
+        assert_eq!(client.address(), "http://localhost:3000");
+    }
+
+    #[test]
+    fn base_path() {
+        let client = AgdbApi::new(ReqwestClient::new(), "http://localhost:3000/public");
+        assert_eq!(client.address(), "http://localhost:3000/public");
+        assert_eq!(client.base_url(), "http://localhost:3000/public/api/v1");
+    }
+}

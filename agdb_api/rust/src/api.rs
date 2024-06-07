@@ -501,6 +501,7 @@ impl<T: HttpClient> AgdbApi<T> {
     }
 }
 
+#[cfg(test)]
 #[cfg(feature = "reqwest")]
 mod tests {
     use super::*;

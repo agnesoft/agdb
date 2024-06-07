@@ -36,7 +36,11 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
             if let Some(name) = &f.ident {
                 if name == "db_id" {
                     return Some(quote! {
-                        self.db_id
+                        if let Some(id) = self.db_id.clone() {
+                            return Some(id.into());
+                        } else {
+                            return None;
+                        }
                     });
                 }
             }
@@ -51,7 +55,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
         if let Some(name) = &f.ident {
             if name == "db_id" {
                 return Some(quote! {
-                    #name: Some(element.id)
+                    #name: Some(element.id.into())
                 });
             } else {
                 let i = counter;
@@ -87,7 +91,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
     });
     let tokens = quote! {
         impl agdb::DbUserValue for #name {
-            fn db_id(&self) -> Option<agdb::DbId> {
+            fn db_id(&self) -> Option<agdb::QueryId> {
                 #db_id
             }
 

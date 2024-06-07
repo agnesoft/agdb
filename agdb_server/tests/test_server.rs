@@ -222,3 +222,15 @@ impl Drop for TestServer {
         }
     }
 }
+
+pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<()> {
+    for _ in 0..RETRY_ATTEMPS {
+        if api.status().await.is_ok() {
+            return Ok(());
+        }
+
+        std::thread::sleep(RETRY_TIMEOUT);
+    }
+
+    anyhow::bail!("Server not ready")
+}

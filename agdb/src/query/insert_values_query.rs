@@ -1,6 +1,10 @@
 use crate::query::query_values::QueryValues;
+use crate::DbElement;
+use crate::DbId;
 use crate::DbImpl;
+use crate::DbKeyValue;
 use crate::QueryError;
+use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
@@ -12,7 +16,8 @@ use crate::StorageData;
 /// will be inserted uniformly to all `ids` otherwise there must be
 /// enough `values` for all `ids`.
 ///
-/// The result will be number of inserted/update values and no elements.
+/// The result will be number of inserted/updated values and inserted new
+/// elements (nodes).
 ///
 /// NOTE: The result is NOT number of affected elements but individual properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -37,12 +42,7 @@ impl QueryMut for InsertValuesQuery {
             QueryIds::Ids(ids) => match &self.values {
                 QueryValues::Single(values) => {
                     for id in ids {
-                        let db_id = db.db_id(id)?;
-
-                        for key_value in values {
-                            db.insert_or_replace_key_value(db_id, key_value)?;
-                            result.result += 1;
-                        }
+                        insert_values(db, id, values, &mut result)?;
                     }
                 }
                 QueryValues::Multi(values) => {
@@ -51,11 +51,7 @@ impl QueryMut for InsertValuesQuery {
                     }
 
                     for (id, values) in ids.iter().zip(values) {
-                        let db_id = db.db_id(id)?;
-                        for key_value in values {
-                            db.insert_or_replace_key_value(db_id, key_value)?;
-                            result.result += 1;
-                        }
+                        insert_values(db, id, values, &mut result)?;
                     }
                 }
             },
@@ -65,10 +61,7 @@ impl QueryMut for InsertValuesQuery {
                 match &self.values {
                     QueryValues::Single(values) => {
                         for db_id in db_ids {
-                            for key_value in values {
-                                db.insert_or_replace_key_value(db_id, key_value)?;
-                                result.result += 1;
-                            }
+                            insert_values_id(db, db_id, values, &mut result)?;
                         }
                     }
                     QueryValues::Multi(values) => {
@@ -77,10 +70,7 @@ impl QueryMut for InsertValuesQuery {
                         }
 
                         for (db_id, values) in db_ids.iter().zip(values) {
-                            for key_value in values {
-                                db.insert_or_replace_key_value(*db_id, key_value)?;
-                                result.result += 1;
-                            }
+                            insert_values_id(db, *db_id, values, &mut result)?;
                         }
                     }
                 }
@@ -89,4 +79,65 @@ impl QueryMut for InsertValuesQuery {
 
         Ok(result)
     }
+}
+
+fn insert_values<Store: StorageData>(
+    db: &mut DbImpl<Store>,
+    id: &QueryId,
+    values: &[DbKeyValue],
+    result: &mut QueryResult,
+) -> Result<(), QueryError> {
+    match db.db_id(id) {
+        Ok(db_id) => insert_values_id(db, db_id, values, result),
+        Err(e) => match id {
+            QueryId::Id(id) => {
+                if id.0 == 0 {
+                    insert_values_new(db, None, values, result)
+                } else {
+                    Err(e)
+                }
+            }
+            QueryId::Alias(alias) => insert_values_new(db, Some(alias), values, result),
+        },
+    }
+}
+
+fn insert_values_new<Store: StorageData>(
+    db: &mut DbImpl<Store>,
+    alias: Option<&String>,
+    values: &[DbKeyValue],
+    result: &mut QueryResult,
+) -> Result<(), QueryError> {
+    let db_id = db.insert_node()?;
+
+    if let Some(alias) = alias {
+        db.insert_new_alias(db_id, alias)?;
+    }
+
+    for key_value in values {
+        db.insert_key_value(db_id, key_value)?;
+    }
+
+    result.result += values.len() as i64;
+    result.elements.push(DbElement {
+        id: db_id,
+        from: None,
+        to: None,
+        values: vec![],
+    });
+
+    Ok(())
+}
+
+fn insert_values_id<Store: StorageData>(
+    db: &mut DbImpl<Store>,
+    db_id: DbId,
+    values: &[DbKeyValue],
+    result: &mut QueryResult,
+) -> Result<(), QueryError> {
+    for key_value in values {
+        db.insert_or_replace_key_value(db_id, key_value)?;
+        result.result += 1;
+    }
+    Ok(())
 }

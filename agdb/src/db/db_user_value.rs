@@ -1,8 +1,8 @@
 use crate::DbElement;
 use crate::DbError;
-use crate::DbId;
 use crate::DbKeyValue;
 use crate::DbValue;
+use crate::QueryId;
 
 /// Trait that allows use of user defined values
 /// directly by facilitating translation from/to
@@ -11,11 +11,17 @@ use crate::DbValue;
 /// of types that are convertible to/from database
 /// primitive types.
 ///
-/// The special type `db_id` of type [`Option<DbId>`](DbId)
-/// can be used to allow direct insertion and select
-/// of a user value tied with a particular database
-/// element. The field `db_id` is skipped in the derive
-/// macro and used only for the `db_id()` method.
+/// The special name `db_id` can be used to allow
+/// direct insertion and select of a user value tied
+/// with a particular database element. The field `db_id`
+/// should be of a type `Option<T>` where [`T: Into<QueryId>`](QueryId).
+/// Typically either `Option<QueryId>` or `Option<DbId>`.
+/// The former allows usage of aliases for insertions. Note
+/// that when retrieving elements from the database the
+/// alias is never returned, only the numerical id.
+///
+/// The field `db_id` is skipped in the derive macro
+/// and used only for the `db_id()` method implementation.
 ///
 /// The trait is derivable using `agdb::UserValue`
 /// derive macro. When implementing it by hand you
@@ -36,7 +42,7 @@ use crate::DbValue;
 /// ```
 pub trait DbUserValue: Sized {
     /// Returns the database id if present.
-    fn db_id(&self) -> Option<DbId>;
+    fn db_id(&self) -> Option<QueryId>;
 
     /// Returns the list of database keys of
     /// this type.

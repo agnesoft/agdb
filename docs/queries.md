@@ -477,7 +477,9 @@ QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).
 
 </td></tr></table>
 
-The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be an no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty alias (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. If any alias already exists in the database its values will be amended (inserted or replaced) with the provided values.
+The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be a no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+
+If an alias already exists in the database its values will be amended (inserted or replaced) with the provided values.
 
 ### Insert values
 
@@ -496,7 +498,7 @@ pub struct InsertValuesQuery {
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of inserted key-value pairs
-    pub elements: Vec<DbElement>, // empty
+    pub elements: Vec<DbElement>, // list of new elements
 }
 ```
 
@@ -513,9 +515,13 @@ QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).i
 
 </td></tr></table>
 
-Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<DbId>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your types. All the rules as if specified manually still apply (e.g. the ids must exist in the database). The `values()` can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your types. The `values()` will be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
-Note that this query is also used for updating existing values. By inserting the same `key` its old value will be overwritten with the new one.
+If an id is non-0 or an existing alias that element will be updated in the database with provided values.
+
+If an id is `0` or an non-existent alias new element (node) will be inserted into the database.
+
+Note that this query is insert-or-update for both nodes and existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
 ## Remove
 

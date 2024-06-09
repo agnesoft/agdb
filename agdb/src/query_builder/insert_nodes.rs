@@ -111,7 +111,7 @@ impl InsertNodes {
     /// ```
     /// use agdb::QueryBuilder;
     ///
-    /// QueryBuilder::insert().nodes().ids(1).query();
+    /// QueryBuilder::insert().nodes().ids(1);
     /// QueryBuilder::insert().nodes().ids(1).aliases("a");
     /// QueryBuilder::insert().nodes().ids(1).count(1);
     /// QueryBuilder::insert().nodes().ids(1).values(vec![vec![("k", 1).into()]]);

@@ -10,6 +10,8 @@ flowchart LR
 
     insert --> i_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>aliases</a>") --> i_a_ids("ids") --> InsertAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>InsertAliasesQuery</a>"]
     insert --> i_edges("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>edges</a>") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>InsertEdgesQuery</a>"]
+    i_edges --> i_e_ids("ids")
+    i_e_ids --> i_e_from
     i_e_to --> each("each") --> InsertEdgesQuery
     i_e_to --> i_e_values("values")
     each --> i_e_values_uniform("values_uniform") --> InsertEdgesQuery
@@ -18,10 +20,14 @@ flowchart LR
     insert --> i_nodes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>nodes</a>")
     i_nodes --> i_n_values("values") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
     i_nodes --> i_n_aliases("aliases")
+    i_nodes --> i_n_ids("ids")
     i_n_count --> i_n_values_uniform("values_uniform")
     i_n_aliases --> i_n_values
     i_n_aliases --> InsertNodesQuery
     i_n_aliases --> i_n_values_uniform
+    i_n_ids --> i_n_values
+    i_n_ids --> i_n_aliases
+    i_n_ids --> i_n_count
     i_nodes --> i_n_count("count") --> InsertNodesQuery
     insert --> i_element("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>element</a>") --> InsertValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>InsertValuesQuery</a>"]
     insert --> i_elements("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>elements</a>") --> InsertValuesQuery
@@ -408,11 +414,14 @@ QueryBuilder::insert().edges().from("a").to(vec![1, 2]).values_uniform(vec![("k"
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).query();
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
+QueryBuilder::insert().edges().ids(-3).from(1).to(2).query();
+QueryBuilder::insert().edges().ids(vec![-3, -4]).from(1).to(2).query();
+QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge().query()).from(1).to(2).query();
 ```
 
 </td></tr></table>
 
-The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert edges as normal. If the list is not empty all ids must exist and refer to existing edges and the query will perform update of values instead. Note: the specified from/to (origin/destination) for the updated edges is not checked against those supplied via `ids`.
 
 ### Insert index
 
@@ -473,11 +482,16 @@ QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).query();
 QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
 QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
 QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
+QueryBuilder::insert().nodes().ids(1).count(1).query();
+QueryBuilder::insert().nodes().ids(vec![1, 2]).count(1).query();
+QueryBuilder::insert().nodes().ids("a").count(1).query();
+QueryBuilder::insert().nodes().ids(vec!["a", "b"]).count(1).query();
+QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count(1).query();
 ```
 
 </td></tr></table>
 
-The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be a no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be a no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal. If the list is not empty all ids must exist and must refer to nodes and the query will perform update instead - both aliases (replacing existing ones if applicable) and values.
 
 If an alias already exists in the database its values will be amended (inserted or replaced) with the provided values.
 

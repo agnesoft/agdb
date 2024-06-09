@@ -379,3 +379,14 @@ fn insert_or_replace_mismatch_length() {
         "Values (1) and ids (2) must have the same length",
     );
 }
+
+#[test]
+fn insert_or_update_edge_id() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+    db.exec_mut_error(
+        QueryBuilder::insert().nodes().ids(-3).count(1).query(),
+        "The ids for insert or update must all refer to nodes - edge id '-3' found",
+    );
+}

@@ -66,6 +66,17 @@ impl QueryMut for InsertNodesQuery {
         };
 
         if !query_ids.is_empty() {
+            query_ids.iter().try_for_each(|db_id| {
+                if db_id.0 < 0 {
+                    Err(QueryError::from(format!(
+                        "The ids for insert or update must all refer to nodes - edge id '{}' found",
+                        db_id.0
+                    )))
+                } else {
+                    Ok(())
+                }
+            })?;
+
             if values.len() != query_ids.len() {
                 return Err(QueryError::from(format!(
                     "Values ({}) and ids ({}) must have the same length",

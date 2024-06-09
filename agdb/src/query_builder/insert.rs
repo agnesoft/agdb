@@ -48,11 +48,15 @@ impl Insert {
     /// QueryBuilder::insert().edges().from(1);
     /// QueryBuilder::insert().edges().from(vec![1, 2]);
     /// QueryBuilder::insert().edges().from(QueryBuilder::search().from(1).query());
+    /// QueryBuilder::insert().edges().ids(-3);
+    /// QueryBuilder::insert().edges().ids(vec![-3, -4]);
+    /// QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge().query());
     /// ```
     pub fn edges(self) -> InsertEdges {
         InsertEdges(InsertEdgesQuery {
             from: QueryIds::Ids(vec![]),
             to: QueryIds::Ids(vec![]),
+            ids: QueryIds::Ids(vec![]),
             values: QueryValues::Single(vec![]),
             each: false,
         })
@@ -107,6 +111,11 @@ impl Insert {
     /// QueryBuilder::insert().nodes().count(1);
     /// QueryBuilder::insert().nodes().aliases("a");
     /// QueryBuilder::insert().nodes().aliases(vec!["a", "b"]);
+    /// QueryBuilder::insert().nodes().ids(1);
+    /// QueryBuilder::insert().nodes().ids(vec![1, 2]);
+    /// QueryBuilder::insert().nodes().ids("a");
+    /// QueryBuilder::insert().nodes().ids(vec!["a", "b"]);
+    /// QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()]]);
     /// ```
     pub fn nodes(self) -> InsertNodes {

@@ -103,7 +103,7 @@ impl InsertNodes {
 
     /// Optional ids of nodes (can be a search sub-query) to
     /// be inserted or updated. If the list is empty the nodes
-    /// will be inserted. If the list not empty all ids must
+    /// will be inserted. If the list is not empty all ids must
     /// exist in the database and will be updated instead.
     ///
     /// Options:

@@ -18,7 +18,7 @@ use crate::StorageData;
 /// unless they are not se and the count is derived from `values.
 ///
 /// If the `ids` member is empty the query will insert new nodes
-/// otherwise it will update the existing nodes. The rules for lenght
+/// otherwise it will update the existing nodes. The rules for length
 /// of `values` still apply and the search yield or static list must
 /// have equal length to the `values` (or the `Single` variant must
 /// be used).

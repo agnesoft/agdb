@@ -19,11 +19,55 @@ pub struct InsertEdgesFrom(pub InsertEdgesQuery);
 /// or set `each`.
 pub struct InsertEdgesFromTo(pub InsertEdgesQuery);
 
+/// Insert edges builder with ids allowing insert
+/// or update semantics that lets you add `from`
+/// (origin) nodes.
+pub struct InsertEdgesIds(pub InsertEdgesQuery);
+
 /// Final builder that lets you create
 /// an actual query object.
 pub struct InsertEdgesValues(pub InsertEdgesQuery);
 
 impl InsertEdges {
+    /// An id or list of ids or search query from where the edges should come from (origin).
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().edges().from(1).to(2);
+    /// QueryBuilder::insert().edges().from(1).to(vec![2, 3]);
+    /// QueryBuilder::insert().edges().from(1).to(QueryBuilder::search().from(1).query());
+    /// ```
+    pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
+        self.0.from = ids.into();
+
+        InsertEdgesFrom(self.0)
+    }
+
+    /// Optional ids of edges (can be search sub-query) to be
+    /// inserted or updated. If the list is empty the nodes will be
+    /// inserted. If the list is not empty all ids must exist in the
+    /// database and will be updated instead:
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().edges().ids(1).from(1);
+    /// QueryBuilder::insert().edges().ids(1).from(vec![1, 2]);
+    /// QueryBuilder::insert().edges().ids(1).from(QueryBuilder::search().from(1).query());
+    /// ```
+    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesIds {
+        self.0.ids = ids.into();
+
+        InsertEdgesIds(self.0)
+    }
+}
+
+impl InsertEdgesIds {
     /// An id or list of ids or search query from where the edges should come from (origin).
     ///
     /// Options:

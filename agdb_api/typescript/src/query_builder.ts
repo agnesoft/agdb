@@ -64,6 +64,56 @@ class InsertNodesBuilder {
         this.data = {
             count: 0,
             aliases: [],
+            ids: { Ids: [] },
+            values: {
+                Single: [],
+            },
+        };
+    }
+
+    aliases(aliases: string[]): InsertNodesAliasesBuilder {
+        this.data.aliases = aliases;
+        return new InsertNodesAliasesBuilder(this.data);
+    }
+
+    count(count: number): InsertNodesCountBuilder {
+        this.data.count = count;
+        return new InsertNodesCountBuilder(this.data);
+    }
+
+    ids(
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
+    ) {
+        this.data.ids = intoQueryIds(ids);
+        return new InsertNodesIdsBuilder();
+    }
+
+    values_uniform(
+        values: Components.Schemas.DbKeyValue[],
+    ): InsertNodesValuesBuilder {
+        this.data.values = { Single: values };
+        return new InsertNodesValuesBuilder(this.data);
+    }
+
+    values(
+        values: Components.Schemas.DbKeyValue[][],
+    ): InsertNodesValuesBuilder {
+        this.data.values = { Multi: values };
+        return new InsertNodesValuesBuilder(this.data);
+    }
+}
+
+class InsertNodesIdsBuilder {
+    private data: Components.Schemas.InsertNodesQuery;
+
+    constructor() {
+        this.data = {
+            count: 0,
+            aliases: [],
+            ids: { Ids: [] },
             values: {
                 Single: [],
             },
@@ -221,6 +271,41 @@ class InsertEdgesBuilder {
             each: false,
             from: { Ids: [] },
             to: { Ids: [] },
+            ids: { Ids: [] },
+            values: { Single: [] },
+        };
+    }
+
+    from(
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
+    ): InsertEdgesFromBuilder {
+        this.data.from = intoQueryIds(ids);
+        return new InsertEdgesFromBuilder(this.data);
+    }
+
+    ids(
+        ids:
+            | QueryId[]
+            | Components.Schemas.QueryType
+            | Components.Schemas.QueryResult,
+    ) {
+        this.data.ids = intoQueryIds(ids);
+        return new InsertEdgesIdsBuilder();
+    }
+}
+
+class InsertEdgesIdsBuilder {
+    private data: Components.Schemas.InsertEdgesQuery;
+
+    constructor() {
+        this.data = {
+            each: false,
+            from: { Ids: [] },
+            to: { Ids: [] },
+            ids: { Ids: [] },
             values: { Single: [] },
         };
     }

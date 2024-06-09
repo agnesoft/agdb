@@ -89,4 +89,8 @@ describe("insert edges", () => {
                 .query(),
         ).toThrowError("invalid search query");
     });
+
+    it("insert().edges().ids().from().to().query()", () => {
+        QueryBuilder.insert().edges().ids([-3]).from([1]).to([2]).query();
+    });
 });

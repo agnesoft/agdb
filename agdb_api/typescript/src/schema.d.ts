@@ -431,8 +431,14 @@ declare namespace Components {
          * origin to every destination. By default it would connect only
          * the pairs. For asymmetric inserts `each` is assumed.
          *
-         * The result will contain number of edges inserted and elements with
-         * their ids but no properties.
+         * If the `ids` member is empty the query will insert new edges
+         * otherwise it will update the existing edges. The rules for length
+         * of `values` still apply and the search yield or static list must
+         * have equal length to the `values` (or the `Single` variant must
+         * be used).
+         *
+         * The result will contain number of edges inserted or udpated and elements
+         * with their ids, origin and destination, but no properties.
          */
         export interface InsertEdgesQuery {
             /**
@@ -441,6 +447,15 @@ declare namespace Components {
              */
             each: boolean;
             from: /**
+             * List of database ids used in queries. It
+             * can either represent a list of [`QueryId`]s
+             * or a search query. Search query allows query
+             * nesting and sourcing the ids dynamically for
+             * another query most commonly with the
+             * select queries.
+             */
+            QueryIds;
+            ids: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
              * or a search query. Search query allows query
@@ -486,8 +501,14 @@ declare namespace Components {
          * set to `Single` there must be enough value for `count/aliases`
          * unless they are not se and the count is derived from `values.
          *
-         * The result will contain number of nodes inserted and elements with
-         * their ids but no properties.
+         * If the `ids` member is empty the query will insert new nodes
+         * otherwise it will update the existing nodes. The rules for length
+         * of `values` still apply and the search yield or static list must
+         * have equal length to the `values` (or the `Single` variant must
+         * be used).
+         *
+         * The result will contain number of nodes inserted or updated and elements
+         * with their ids but no properties.
          */
         export interface InsertNodesQuery {
             /**
@@ -498,6 +519,15 @@ declare namespace Components {
              * Number of nodes to be inserted.
              */
             count: number; // int64
+            ids: /**
+             * List of database ids used in queries. It
+             * can either represent a list of [`QueryId`]s
+             * or a search query. Search query allows query
+             * nesting and sourcing the ids dynamically for
+             * another query most commonly with the
+             * select queries.
+             */
+            QueryIds;
             values: /**
              * Helper type distinguishing uniform (`Single`) values
              * and multiple (`Multi`) values in database queries.
@@ -766,8 +796,14 @@ declare namespace Components {
              * origin to every destination. By default it would connect only
              * the pairs. For asymmetric inserts `each` is assumed.
              *
-             * The result will contain number of edges inserted and elements with
-             * their ids but no properties.
+             * If the `ids` member is empty the query will insert new edges
+             * otherwise it will update the existing edges. The rules for length
+             * of `values` still apply and the search yield or static list must
+             * have equal length to the `values` (or the `Single` variant must
+             * be used).
+             *
+             * The result will contain number of edges inserted or udpated and elements
+             * with their ids, origin and destination, but no properties.
              */
             InsertEdgesQuery;
         } | {
@@ -794,8 +830,14 @@ declare namespace Components {
              * set to `Single` there must be enough value for `count/aliases`
              * unless they are not se and the count is derived from `values.
              *
-             * The result will contain number of nodes inserted and elements with
-             * their ids but no properties.
+             * If the `ids` member is empty the query will insert new nodes
+             * otherwise it will update the existing nodes. The rules for length
+             * of `values` still apply and the search yield or static list must
+             * have equal length to the `values` (or the `Single` variant must
+             * be used).
+             *
+             * The result will contain number of nodes inserted or updated and elements
+             * with their ids but no properties.
              */
             InsertNodesQuery;
         } | {

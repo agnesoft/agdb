@@ -285,3 +285,108 @@ fn insert_nodes_aliases_values_mismatched_length() {
         "Values (1) and aliases (2) must have the same length",
     );
 }
+
+#[test]
+fn insert_or_replace_insert_new() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("key").query(), 0);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(QueryBuilder::search().index("key").value(1).query())
+            .values(vec![vec![("key", 1).into()]])
+            .query(),
+        &[1],
+    );
+}
+
+#[test]
+fn insert_or_replace_insert_count() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("key").query(), 0);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(QueryBuilder::search().index("key").value(1).query())
+            .count(3)
+            .query(),
+        &[1, 2, 3],
+    );
+}
+
+#[test]
+fn insert_or_replace_existing() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(QueryBuilder::search().from(1).query())
+            .values(vec![vec![("key", 1).into()]])
+            .query(),
+        &[1],
+    );
+}
+
+#[test]
+fn insert_or_replace_with_new_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(QueryBuilder::search().from(1).query())
+            .aliases("my_alias")
+            .values(vec![vec![("key", 1).into()]])
+            .query(),
+        &[1],
+    );
+    db.exec_ids(QueryBuilder::select().ids("my_alias").query(), &[1]);
+}
+
+#[test]
+fn insert_or_replace_update_alias() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert().nodes().aliases("my_alias").query(),
+        1,
+    );
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(QueryBuilder::search().from(1).query())
+            .aliases("my_alias2")
+            .query(),
+        &[1],
+    );
+    db.exec_error(
+        QueryBuilder::select().ids("my_alias").query(),
+        "Alias 'my_alias' not found",
+    );
+    db.exec_ids(QueryBuilder::select().ids("my_alias2").query(), &[1]);
+}
+
+#[test]
+fn insert_or_replace_mismatch_length() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(vec![1, 2])
+            .values(vec![vec![]])
+            .query(),
+        "Values (1) and ids (2) must have the same length",
+    );
+}
+
+#[test]
+fn insert_or_update_edge_id() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+    db.exec_mut_error(
+        QueryBuilder::insert().nodes().ids(-3).count(1).query(),
+        "The ids for insert or update must all refer to nodes - edge id '-3' found",
+    );
+}

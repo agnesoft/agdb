@@ -376,3 +376,83 @@ fn insert_edges_from_to_inserted_nodes() {
         &[-5, -6],
     );
 }
+
+#[test]
+fn insert_or_update_new_edge() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .ids(QueryBuilder::search().from(1).where_().edge().query())
+            .from(1)
+            .to(2)
+            .query(),
+        &[-3],
+    );
+}
+
+#[test]
+fn insert_or_update_existing_edge() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .edges()
+            .ids(vec![-3])
+            .from(1)
+            .to(2)
+            .values(vec![vec![("key", 1).into()]])
+            .query(),
+        &[-3],
+    );
+}
+
+#[test]
+fn insert_or_update_mismatch_length() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .edges()
+            .ids(vec![-3])
+            .from(1)
+            .to(2)
+            .values(vec![])
+            .query(),
+        "Values len '0' do not match the insert count '1'",
+    );
+}
+
+#[test]
+fn insert_or_update_unknown_edge() {
+    let mut db = TestDb::new();
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .edges()
+            .ids(vec![-3])
+            .from(1)
+            .to(2)
+            .values(vec![])
+            .query(),
+        "Id '-3' not found",
+    );
+}
+
+#[test]
+fn insert_or_update_node_id() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .edges()
+            .ids(vec![1])
+            .from(1)
+            .to(2)
+            .values(vec![])
+            .query(),
+        "The ids for insert or update must all refer to edges - node id '1' found",
+    );
+}

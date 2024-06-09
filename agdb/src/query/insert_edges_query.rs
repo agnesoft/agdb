@@ -18,8 +18,14 @@ use crate::StorageData;
 /// origin to every destination. By default it would connect only
 /// the pairs. For asymmetric inserts `each` is assumed.
 ///
-/// The result will contain number of edges inserted and elements with
-/// their ids but no properties.
+/// If the `ids` member is empty the query will insert new edges
+/// otherwise it will update the existing edges. The rules for length
+/// of `values` still apply and the search yield or static list must
+/// have equal length to the `values` (or the `Single` variant must
+/// be used).
+///
+/// The result will contain number of edges inserted or udpated and elements
+/// with their ids, origin and destination, but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[derive(Debug, PartialEq)]
@@ -29,6 +35,10 @@ pub struct InsertEdgesQuery {
 
     /// Destinations
     pub to: QueryIds,
+
+    /// Optional ids of edges (optionally a search sub-query).
+    /// This can be empty.
+    pub ids: QueryIds,
 
     /// Key value pairs to be associated with
     /// the new edges.
@@ -46,13 +56,46 @@ impl QueryMut for InsertEdgesQuery {
     ) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
-        let from = Self::db_ids(&self.from, db)?;
-        let to: Vec<DbId> = Self::db_ids(&self.to, db)?;
+        let query_ids = match &self.ids {
+            QueryIds::Ids(ids) => ids
+                .iter()
+                .map(|query_id| db.db_id(query_id))
+                .collect::<Result<Vec<DbId>, QueryError>>()?,
+            QueryIds::Search(search_query) => search_query.search(db)?,
+        };
 
-        let ids = if self.each || from.len() != to.len() {
-            self.many_to_many_each(db, &from, &to)?
+        let ids = if !query_ids.is_empty() {
+            query_ids.iter().try_for_each(|db_id| {
+                if db_id.0 > 0 {
+                    Err(QueryError::from(format!(
+                        "The ids for insert or update must all refer to edges - node id '{}' found",
+                        db_id.0
+                    )))
+                } else {
+                    Ok(())
+                }
+            })?;
+
+            let mut ids = vec![];
+
+            for (db_id, key_values) in query_ids.iter().zip(self.values(query_ids.len())?) {
+                for key_value in key_values {
+                    db.insert_or_replace_key_value(*db_id, key_value)?;
+                }
+
+                ids.push(*db_id);
+            }
+
+            ids
         } else {
-            self.many_to_many(db, &from, &to)?
+            let from = Self::db_ids(&self.from, db)?;
+            let to: Vec<DbId> = Self::db_ids(&self.to, db)?;
+
+            if self.each || from.len() != to.len() {
+                self.many_to_many_each(db, &from, &to)?
+            } else {
+                self.many_to_many(db, &from, &to)?
+            }
         };
 
         result.result = ids.len() as i64;

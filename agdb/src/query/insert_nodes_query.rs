@@ -23,8 +23,8 @@ use crate::StorageData;
 /// have equal length to the `values` (or the `Single` variant must
 /// be used).
 ///
-/// The result will contain number of nodes inserted and elements with
-/// their ids but no properties.
+/// The result will contain number of nodes inserted or updated and elements
+/// with their ids but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[derive(Debug, PartialEq)]

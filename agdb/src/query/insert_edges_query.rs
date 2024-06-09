@@ -24,8 +24,8 @@ use crate::StorageData;
 /// have equal length to the `values` (or the `Single` variant must
 /// be used).
 ///
-/// The result will contain number of edges inserted and elements with
-/// their ids but no properties.
+/// The result will contain number of edges inserted or udpated and elements
+/// with their ids, origin and destination, but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[derive(Debug, PartialEq)]
@@ -68,7 +68,7 @@ impl QueryMut for InsertEdgesQuery {
             query_ids.iter().try_for_each(|db_id| {
                 if db_id.0 > 0 {
                     Err(QueryError::from(format!(
-                        "All ids must refer to edges - node id '{}' found",
+                        "The ids for insert or update must all refer to edges - node id '{}' found",
                         db_id.0
                     )))
                 } else {

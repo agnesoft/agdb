@@ -57,6 +57,16 @@ impl QueryMut for InsertNodesQuery {
             QueryValues::Multi(v) => v.iter().collect(),
         };
 
+        if values.len() < self.aliases.len() {
+            return Err(QueryError::from(format!(
+                "Aliases ({}) and values ({}) must have compatible lenghts ({} <= {})",
+                self.aliases.len(),
+                values.len(),
+                self.aliases.len(),
+                values.len(),
+            )));
+        }
+
         let query_ids = match &self.ids {
             QueryIds::Ids(ids) => ids
                 .iter()
@@ -97,14 +107,6 @@ impl QueryMut for InsertNodesQuery {
                 ids.push(*db_id);
             }
         } else {
-            if !self.aliases.is_empty() && values.len() != self.aliases.len() {
-                return Err(QueryError::from(format!(
-                    "Values ({}) and aliases ({}) must have the same length",
-                    values.len(),
-                    self.aliases.len()
-                )));
-            }
-
             for (index, key_values) in values.iter().enumerate() {
                 if let Some(alias) = self.aliases.get(index) {
                     if let Ok(db_id) = db.db_id(&QueryId::Alias(alias.to_string())) {

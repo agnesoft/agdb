@@ -114,6 +114,7 @@ impl Insert {
             count: 0,
             values: QueryValues::Single(vec![]),
             aliases: vec![],
+            ids: QueryIds::Ids(vec![]),
         })
     }
 

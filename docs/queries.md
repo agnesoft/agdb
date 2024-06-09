@@ -387,6 +387,7 @@ Note that this query is also used for updating existing aliases. Byt inserting a
 pub struct InsertEdgesQuery {
     pub from: QueryIds,
     pub to: QueryIds,
+    pub ids: QueryIds,
     pub values: QueryValues,
     pub each: bool,
 }
@@ -461,6 +462,7 @@ pub struct InsertNodesQuery {
     pub count: u64,
     pub values: QueryValues,
     pub aliases: Vec<String>,
+    pub ids: QueryIds,
 }
 ```
 

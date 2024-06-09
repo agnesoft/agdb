@@ -287,7 +287,7 @@ fn insert_nodes_aliases_values_mismatched_length() {
 }
 
 #[test]
-fn insert_or_replace_missing() {
+fn insert_or_replace_insert_new() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().index("key").query(), 0);
     db.exec_mut_ids(
@@ -297,6 +297,20 @@ fn insert_or_replace_missing() {
             .values(vec![vec![("key", 1).into()]])
             .query(),
         &[1],
+    );
+}
+
+#[test]
+fn insert_or_replace_insert_count() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().index("key").query(), 0);
+    db.exec_mut_ids(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(QueryBuilder::search().index("key").value(1).query())
+            .count(3)
+            .query(),
+        &[1, 2, 3],
     );
 }
 
@@ -350,4 +364,18 @@ fn insert_or_replace_update_alias() {
         "Alias 'my_alias' not found",
     );
     db.exec_ids(QueryBuilder::select().ids("my_alias2").query(), &[1]);
+}
+
+#[test]
+fn insert_or_replace_mismatch_length() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut_error(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(vec![1, 2])
+            .values(vec![vec![]])
+            .query(),
+        "Values (1) and ids (2) must have the same length",
+    );
 }

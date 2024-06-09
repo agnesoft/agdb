@@ -101,6 +101,21 @@ impl InsertNodes {
         InsertNodesCount(self.0)
     }
 
+    /// Optional ids of nodes (can be a search sub-query) to
+    /// be inserted or updated. If the list is empty the nodes
+    /// will be inserted. If the list not empty all ids must
+    /// exist in the database and will be updated instead.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::insert().nodes().ids(1).query();
+    /// QueryBuilder::insert().nodes().ids(1).aliases("a");
+    /// QueryBuilder::insert().nodes().ids(1).count(1);
+    /// QueryBuilder::insert().nodes().ids(1).values(vec![vec![("k", 1).into()]]);
+    /// ```
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertNodesIds {
         self.0.ids = ids.into();
 

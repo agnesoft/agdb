@@ -2301,10 +2301,11 @@
       },
       "InsertEdgesQuery": {
         "type": "object",
-        "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nThe result will contain number of edges inserted and elements with\ntheir ids but no properties.",
+        "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nIf the `ids` member is empty the query will insert new edges\notherwise it will update the existing edges. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of edges inserted or udpated and elements\nwith their ids, origin and destination, but no properties.",
         "required": [
           "from",
           "to",
+          "ids",
           "values",
           "each"
         ],
@@ -2314,6 +2315,9 @@
             "description": "If `true` create an edge between each origin\nand destination."
           },
           "from": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "ids": {
             "$ref": "#/components/schemas/QueryIds"
           },
           "to": {
@@ -2329,11 +2333,12 @@
       },
       "InsertNodesQuery": {
         "type": "object",
-        "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nThe result will contain number of nodes inserted and elements with\ntheir ids but no properties.",
+        "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nIf the `ids` member is empty the query will insert new nodes\notherwise it will update the existing nodes. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of nodes inserted or updated and elements\nwith their ids but no properties.",
         "required": [
           "count",
           "values",
-          "aliases"
+          "aliases",
+          "ids"
         ],
         "properties": {
           "aliases": {
@@ -2348,6 +2353,9 @@
             "format": "int64",
             "description": "Number of nodes to be inserted.",
             "minimum": 0
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
           },
           "values": {
             "$ref": "#/components/schemas/QueryValues"

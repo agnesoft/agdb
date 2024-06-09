@@ -77,4 +77,8 @@ describe("insert nodes", () => {
             ])
             .query();
     });
+
+    it("insert().nodes().ids().count().query()", () => {
+        QueryBuilder.insert().nodes().ids(["alias"]).count(1).query();
+    });
 });

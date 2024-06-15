@@ -27,6 +27,21 @@ struct User {
     status: Status,
 }
 
+#[derive(UserValue)]
+struct MyValue {
+    db_id: Option<QueryId>,
+    name: String,
+    age: u64,
+}
+
+#[derive(UserValue, PartialEq, Debug)]
+struct MyValueWithBool {
+    db_id: Option<QueryId>,
+    name: String,
+    is_active: bool,
+    truths: Vec<bool>,
+}
+
 impl From<Status> for DbValue {
     fn from(value: Status) -> Self {
         match value {
@@ -450,13 +465,6 @@ fn try_from_db_element() {
     assert_eq!(user.password, "pswd");
 }
 
-#[derive(UserValue)]
-struct MyValue {
-    db_id: Option<QueryId>,
-    name: String,
-    age: u64,
-}
-
 #[test]
 fn insert_element_alias_update_values() {
     let mut db = TestDb::new();
@@ -544,4 +552,49 @@ fn insert_element_missing_id() {
         QueryBuilder::insert().element(&my_value).query(),
         "Id '1' not found",
     );
+}
+
+#[test]
+fn insert_element_bool() {
+    let mut db = TestDb::new();
+    let mut my_value = MyValueWithBool {
+        db_id: None,
+        name: "my name".to_string(),
+        is_active: true,
+        truths: vec![true, false],
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 3);
+    let my_value_from_db: MyValueWithBool = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into()
+        .unwrap();
+    my_value.db_id = Some(QueryId::Id(DbId(1)));
+    assert_eq!(my_value, my_value_from_db);
+}
+
+#[test]
+fn insert_element_to_bool_conversion() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values(vec![vec![
+                ("name", "my name").into(),
+                ("is_active", 50).into(),
+                ("truths", vec![1, 0]).into(),
+            ]])
+            .query(),
+        1,
+    );
+    let my_value_from_db: MyValueWithBool = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into()
+        .unwrap();
+    let expected = MyValueWithBool {
+        db_id: Some(QueryId::Id(DbId(1))),
+        name: "my name".to_string(),
+        is_active: true,
+        truths: vec![true, false],
+    };
+    assert_eq!(expected, my_value_from_db);
 }

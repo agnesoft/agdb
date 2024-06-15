@@ -167,7 +167,7 @@ pub trait DbUserValue: Sized {
 
 Typically you would derive this trait with `agdb::UserValue` procedural macro that uses the field names as keys (of type `String`) and loss-lessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
 
-It is recommended but optional to have `db_id` field of type `Option<DbId>` in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders:
+It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders:
 
 ```Rust
 #[derive(UserValue)]
@@ -191,6 +191,13 @@ Types not directly used in the database but for which the conversions are suppor
 - Vec<f32> <=> Vec<f64>
 - &str => String (only one way conversion to `String`)
 - Vec<&str> => Vec<String> (only one way conversion to `Vec<String>`)
+- bool (\*)
+
+\* The boolean type is not a native type in the `agdb` but you can still use it in your types in any language. The `bool` type will be converted to `u64` (0 == false, 1 == true). The `Vec<bool>` type will be converted to `Vec<u8>` (bytes, 0 == false, 1 == true). The conversion back to `bool` is possible from wider range of values - the same rules apply for vectorized version which however cannot be converted to from single values:
+
+- u64 / i64: any non-zero value will be `true`
+- f64: any value except `0.0` will be `true`
+- string: only `"true"` or `"1"` will be `true`
 
 # QueryResult
 
@@ -249,6 +256,7 @@ The enum variants can be conveniently accessed through methods named after each 
 
 ```Rust
 fn bytes(&self) -> Result<&Vec<u8>, DbError>;
+fn to_bool(&self) -> Result<bool, DbError>;
 fn to_f64(&self) -> Result<DbF64, DbError>;
 fn to_i64(&self) -> Result<i64, DbError>;
 fn to_u64(&self) -> Result<u64, DbError>;
@@ -258,10 +266,10 @@ fn vec_f64(&self) -> Result<&Vec<DbF64>, DbError>;
 fn vec_i64(&self) -> Result<&Vec<i64>, DbError>;
 fn vec_u64(&self) -> Result<&Vec<u64>, DbError>;
 fn vec_string(&self) -> Result<&Vec<String>, DbError>;
-
+fn vec_bool(&self) -> Result<Vec<bool>, DbError>;
 ```
 
-The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string.
+The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For bool conversion details refer to [DbUserValue](#dbuservalue) section.
 
 # QueryError
 
@@ -533,11 +541,10 @@ QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).i
 
 Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your types. The `values()` will be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
-If an id is non-0 or an existing alias that element will be updated in the database with provided values.
+- If an id is non-0 or an existing alias that element will be updated in the database with provided values.
+- If an id is `0` or an non-existent alias new element (node) will be inserted into the database with that alias.
 
-If an id is `0` or an non-existent alias new element (node) will be inserted into the database with that alias.
-
-Note that this query is insert-or-update for both nodes and existing values. By inserting the same `key` its old value will be overwritten with the new one.
+Note: that this query is insert-or-update for both nodes and existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
 ## Remove
 

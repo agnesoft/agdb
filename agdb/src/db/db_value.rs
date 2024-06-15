@@ -94,6 +94,24 @@ impl DbValue {
         }
     }
 
+    /// Returns `bool` possibly converted from `i64`, `u64`, `f64` or `string`.
+    /// For numerical types any non-zero value will be `true`. For `string` only
+    /// "1" or "true" will be `true` and all other string values will be `false`.
+    /// Conversion from bytes or vectorized types is an error.
+    pub fn to_bool(&self) -> Result<bool, DbError> {
+        match self {
+            DbValue::Bytes(_) => Self::type_error("bytes", "bool"),
+            DbValue::I64(v) => Ok(*v != 0),
+            DbValue::U64(v) => Ok(*v != 0),
+            DbValue::F64(v) => Ok(*v != 0.0.into()),
+            DbValue::String(v) => Ok(v == "true" || v == "1"),
+            DbValue::VecI64(_) => Self::type_error("Vec<i64>", "bool"),
+            DbValue::VecU64(_) => Self::type_error("Vec<u64>", "bool"),
+            DbValue::VecF64(_) => Self::type_error("Vec<f64>", "bool"),
+            DbValue::VecString(_) => Self::type_error("Vec<string>", "bool"),
+        }
+    }
+
     /// Returns `DbF64` possibly converted from `i64` or `u64`
     /// or na error if the conversion failed or the value is of
     /// a different type.
@@ -206,6 +224,24 @@ impl DbValue {
             DbValue::VecU64(_) => Self::type_error("vec<u64>", "vec<string>"),
             DbValue::VecF64(_) => Self::type_error("vec<f64>", "vec<string>"),
             DbValue::VecString(v) => Ok(v),
+        }
+    }
+
+    /// Returns `Vec<bool>` possibly converted from `bytes` or vectorized types.
+    /// For numerical types any non-zero value will be `true`. For `string` only
+    /// "1" or "true" will be `true` and all other string values will be `false`.
+    /// Conversion from i64, u64, f64 and string is an error.
+    pub fn vec_bool(&self) -> Result<Vec<bool>, DbError> {
+        match self {
+            DbValue::Bytes(v) => Ok(v.iter().map(|b| *b != 0).collect()),
+            DbValue::I64(_) => Self::type_error("i64", "Vec<bool>"),
+            DbValue::U64(_) => Self::type_error("u64", "Vec<bool>"),
+            DbValue::F64(_) => Self::type_error("f64", "Vec<bool>"),
+            DbValue::String(_) => Self::type_error("string", "Vec<bool>"),
+            DbValue::VecI64(v) => Ok(v.iter().map(|i| *i != 0).collect()),
+            DbValue::VecU64(v) => Ok(v.iter().map(|i| *i != 0).collect()),
+            DbValue::VecF64(v) => Ok(v.iter().map(|i| *i != 0.0.into()).collect()),
+            DbValue::VecString(v) => Ok(v.iter().map(|s| s == "true" || s == "1").collect()),
         }
     }
 
@@ -389,6 +425,12 @@ impl From<&str> for DbValue {
     }
 }
 
+impl From<bool> for DbValue {
+    fn from(value: bool) -> Self {
+        DbValue::U64(if value { 1 } else { 0 })
+    }
+}
+
 impl From<Vec<f32>> for DbValue {
     fn from(value: Vec<f32>) -> Self {
         DbValue::VecF64(value.iter().map(|i| (*i).into()).collect())
@@ -446,6 +488,12 @@ impl From<Vec<&str>> for DbValue {
 impl From<Vec<u8>> for DbValue {
     fn from(value: Vec<u8>) -> Self {
         DbValue::Bytes(value)
+    }
+}
+
+impl From<Vec<bool>> for DbValue {
+    fn from(value: Vec<bool>) -> Self {
+        DbValue::Bytes(value.iter().map(|b| *b as u8).collect())
     }
 }
 
@@ -580,6 +628,22 @@ impl TryFrom<DbValue> for Vec<String> {
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         Ok(value.vec_string()?.clone())
+    }
+}
+
+impl TryFrom<DbValue> for bool {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        value.to_bool()
+    }
+}
+
+impl TryFrom<DbValue> for Vec<bool> {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        value.vec_bool()
     }
 }
 
@@ -1286,6 +1350,111 @@ mod tests {
             DbValue::from(vec![""]).string(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'vec<string>' to 'string'."
+            ))
+        );
+    }
+
+    #[test]
+    fn to_bool() {
+        assert!(DbValue::from(true).to_bool().unwrap());
+        assert!(DbValue::from(1_u64).to_bool().unwrap());
+        assert!(DbValue::from(10_i64).to_bool().unwrap());
+        assert!(DbValue::from(1.1).to_bool().unwrap());
+        assert!(DbValue::from("true").to_bool().unwrap());
+        assert!(DbValue::from("1").to_bool().unwrap());
+
+        assert!(!DbValue::from(false).to_bool().unwrap());
+        assert!(!DbValue::from(0_u64).to_bool().unwrap());
+        assert!(!DbValue::from(0_i64).to_bool().unwrap());
+        assert!(!DbValue::from(0.0).to_bool().unwrap());
+        assert!(!DbValue::from("").to_bool().unwrap());
+        assert!(!DbValue::from("2").to_bool().unwrap());
+
+        assert_eq!(
+            DbValue::from(vec![0_u8]).to_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'bool'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_i64]).to_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'Vec<i64>' to 'bool'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64]).to_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'Vec<u64>' to 'bool'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![0.0_f64]).to_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'Vec<f64>' to 'bool'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec!["a", ""]).to_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'Vec<string>' to 'bool'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(vec![true, false]).to_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'bool'."
+            ))
+        );
+    }
+
+    #[test]
+    fn vec_bool() {
+        assert_eq!(
+            DbValue::from(vec![true, false]).vec_bool().unwrap(),
+            vec![true, false]
+        );
+        assert_eq!(
+            DbValue::from(vec![1_i64, 0, -2]).vec_bool().unwrap(),
+            vec![true, false, true]
+        );
+        assert_eq!(
+            DbValue::from(vec![1_u64, 0, 2]).vec_bool().unwrap(),
+            vec![true, false, true]
+        );
+        assert_eq!(
+            DbValue::from(vec![1.1_f64, 0.0, 2.2]).vec_bool().unwrap(),
+            vec![true, false, true]
+        );
+        assert_eq!(
+            DbValue::from(vec!["true", "1", "", "0", "false", "2"])
+                .vec_bool()
+                .unwrap(),
+            vec![true, true, false, false, false, false]
+        );
+
+        assert_eq!(
+            DbValue::from(1_i64).vec_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'Vec<bool>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1_u64).vec_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'Vec<bool>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from(1.1_f64).vec_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'Vec<bool>'."
+            ))
+        );
+        assert_eq!(
+            DbValue::from("true").vec_bool(),
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'Vec<bool>'."
             ))
         );
     }

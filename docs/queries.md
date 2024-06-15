@@ -493,7 +493,7 @@ QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count
 
 </td></tr></table>
 
-The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be a no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal. If the list is not empty all ids must exist and must refer to nodes and the query will perform update instead - both aliases (replacing existing ones if applicable) and values.
+The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be a no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must be compatible (aliases <= values), otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal. If the list is not empty all ids must exist and must refer to nodes and the query will perform update instead - both aliases (replacing existing ones if applicable) and values.
 
 If an alias already exists in the database its values will be amended (inserted or replaced) with the provided values.
 
@@ -535,7 +535,7 @@ Inserts or updates key-value pairs (properties) of existing elements or insert n
 
 If an id is non-0 or an existing alias that element will be updated in the database with provided values.
 
-If an id is `0` or an non-existent alias new element (node) will be inserted into the database.
+If an id is `0` or an non-existent alias new element (node) will be inserted into the database with that alias.
 
 Note that this query is insert-or-update for both nodes and existing values. By inserting the same `key` its old value will be overwritten with the new one.
 

@@ -282,7 +282,7 @@ fn insert_nodes_aliases_values_mismatched_length() {
             .aliases(vec!["alias", "alias2"])
             .values(vec![vec![("key", 1).into()]])
             .query(),
-        "Values (1) and aliases (2) must have the same length",
+        "Aliases (2) and values (1) must have compatible lenghts (2 <= 1)",
     );
 }
 
@@ -388,5 +388,22 @@ fn insert_or_update_edge_id() {
     db.exec_mut_error(
         QueryBuilder::insert().nodes().ids(-3).count(1).query(),
         "The ids for insert or update must all refer to nodes - edge id '-3' found",
+    );
+}
+
+#[test]
+fn insert_aliases_and_normal_nodes() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("users")
+            .values(vec![
+                vec![],
+                vec![("name", "alice").into()],
+                vec![("name", "bob").into()],
+            ])
+            .query(),
+        3,
     );
 }

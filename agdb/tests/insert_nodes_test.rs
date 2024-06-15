@@ -390,3 +390,20 @@ fn insert_or_update_edge_id() {
         "The ids for insert or update must all refer to nodes - edge id '-3' found",
     );
 }
+
+#[test]
+fn insert_aliases_and_normal_nodes() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("users")
+            .values(vec![
+                vec![],
+                vec![("name", "alice").into()],
+                vec![("name", "bob").into()],
+            ])
+            .query(),
+        3,
+    );
+}

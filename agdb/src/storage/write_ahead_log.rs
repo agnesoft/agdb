@@ -8,6 +8,7 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 
+#[derive(Debug)]
 pub struct WriteAheadLog {
     file: File,
 }

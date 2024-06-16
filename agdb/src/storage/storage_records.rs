@@ -1,7 +1,7 @@
 use crate::utilities::serialize::Serialize;
 use crate::DbError;
 
-#[derive(Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct StorageRecord {
     pub index: u64,
     pub pos: u64,
@@ -18,7 +18,7 @@ impl StorageRecord {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct StorageRecords {
     records: Vec<StorageRecord>,
 }

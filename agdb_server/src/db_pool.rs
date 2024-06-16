@@ -1234,6 +1234,7 @@ fn t_exec(
             inject_results(&mut q.0, results)?;
             t.exec(q)
         }
+        QueryType::SelectNodeCount(q) => t.exec(q),
         QueryType::SelectValues(q) => {
             inject_results(&mut q.ids, results)?;
             t.exec(q)
@@ -1275,6 +1276,7 @@ fn t_exec_mut(
             inject_results(&mut q.0, results)?;
             t.exec(q)
         }
+        QueryType::SelectNodeCount(q) => t.exec(q),
         QueryType::SelectValues(q) => {
             inject_results(&mut q.ids, results)?;
             t.exec(q)

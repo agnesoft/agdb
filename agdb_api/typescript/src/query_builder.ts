@@ -781,6 +781,12 @@ class SelectIndexesBuilder {
     }
 }
 
+class SelectNodeCountBuilder {
+    query(): Components.Schemas.QueryType {
+        return { SelectNodeCount: {} };
+    }
+}
+
 class SelectBuilder {
     aliases(): SelectAliasesBuilder {
         return new SelectAliasesBuilder();
@@ -829,6 +835,10 @@ class SelectBuilder {
 
     key_count(): SelectKeyCountBuilder {
         return new SelectKeyCountBuilder({ Ids: [] });
+    }
+
+    node_count(): SelectNodeCountBuilder {
+        return new SelectNodeCountBuilder();
     }
 
     values(values: Components.Schemas.DbValue[]): SelectValuesBuilder {

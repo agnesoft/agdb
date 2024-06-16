@@ -41,6 +41,7 @@ use utoipa::OpenApi;
     agdb::SelectKeyCountQuery,
     agdb::SelectKeysQuery,
     agdb::SelectQuery,
+    agdb::SelectNodeCountQuery,
     agdb::SelectValuesQuery,
 )))]
 pub(crate) struct Api;

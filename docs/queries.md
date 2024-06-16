@@ -49,6 +49,7 @@ flowchart LR
     select --> edge_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids") ---> SelectEdgeCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>SelectEdgeCountQuery</a>"]
     select --> edge_count_from("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
     select --> edge_count_to("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
+    select --> select_node_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-node-count'>node_count</a>")
     select --> values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>values</a>") --> s_v_ids("ids") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
 
     search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#search'>SearchQuery</a>"]
@@ -115,6 +116,7 @@ flowchart LR
     - [Select indexes](#select-indexes)
     - [Select keys](#select-keys)
     - [Select key count](#select-key-count)
+    - [Select node count](#select-node_count)
     - [Select values](#select-values)
   - [Search](#search)
     - [Conditions](#conditions)
@@ -925,6 +927,34 @@ QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).q
 </td></tr></table>
 
 Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only key count returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing how many properties there are associated with the graph elements.
+
+### Select node count
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectNodeCountQuery {}
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // Always  1
+    pub elements: Vec<DbElement>, // single element with single property (`String("node_count"): String`)
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().node_count().query()
+```
+
+</td></tr></table>
+
+Selects number (count) of nodes in the database.
 
 ### Select values
 

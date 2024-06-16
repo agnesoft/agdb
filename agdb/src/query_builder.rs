@@ -17,6 +17,7 @@ mod select_ids;
 mod select_indexes;
 mod select_key_count;
 mod select_keys;
+mod select_node_count;
 mod select_values;
 mod where_;
 
@@ -114,6 +115,7 @@ impl QueryBuilder {
     /// QueryBuilder::select().aliases();
     /// QueryBuilder::select().keys();
     /// QueryBuilder::select().key_count();
+    /// QueryBuilder::select().node_count();
     /// QueryBuilder::select().values(vec!["k".into()]);
     /// ```
     pub fn select() -> Select {

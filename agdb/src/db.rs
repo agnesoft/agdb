@@ -685,6 +685,10 @@ impl<Store: StorageData> DbImpl<Store> {
         self.values.values_count(&self.storage, &db_id)
     }
 
+    pub(crate) fn node_count(&self) -> Result<u64, DbError> {
+        self.graph.node_count(&self.storage)
+    }
+
     pub(crate) fn remove(&mut self, query_id: &QueryId) -> Result<bool, QueryError> {
         match query_id {
             QueryId::Id(db_id) => self.remove_id(*db_id),

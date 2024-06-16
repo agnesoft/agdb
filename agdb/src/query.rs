@@ -21,6 +21,7 @@ pub mod select_edge_count_query;
 pub mod select_indexes_query;
 pub mod select_key_count_query;
 pub mod select_keys_query;
+pub mod select_node_count;
 pub mod select_query;
 pub mod select_values_query;
 
@@ -49,7 +50,7 @@ use crate::{
     InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
     RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
     SelectAliasesQuery, SelectAllAliasesQuery, SelectEdgeCountQuery, SelectIndexesQuery,
-    SelectKeyCountQuery, SelectKeysQuery, SelectQuery, SelectValuesQuery,
+    SelectKeyCountQuery, SelectKeysQuery, SelectNodeCountQuery, SelectQuery, SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.
@@ -75,6 +76,7 @@ pub enum QueryType {
     SelectIndexes(SelectIndexesQuery),
     SelectKeys(SelectKeysQuery),
     SelectKeyCount(SelectKeyCountQuery),
+    SelectNodeCount(SelectNodeCountQuery),
     SelectValues(SelectValuesQuery),
 }
 
@@ -198,6 +200,13 @@ impl From<SelectKeysQuery> for QueryType {
 }
 
 #[cfg(any(feature = "serde", feature = "opeanapi"))]
+impl From<SelectNodeCountQuery> for QueryType {
+    fn from(value: SelectNodeCountQuery) -> Self {
+        QueryType::SelectNodeCount(value)
+    }
+}
+
+#[cfg(any(feature = "serde", feature = "opeanapi"))]
 impl From<SelectValuesQuery> for QueryType {
     fn from(value: SelectValuesQuery) -> Self {
         QueryType::SelectValues(value)
@@ -239,6 +248,7 @@ mod tests {
             QueryBuilder::select().keys().ids(1).query().into(),
             QueryBuilder::select().key_count().ids(1).query().into(),
             QueryBuilder::select().edge_count().ids(1).query().into(),
+            QueryBuilder::select().node_count().query().into(),
             QueryBuilder::select()
                 .values(vec!["key".into()])
                 .ids(1)

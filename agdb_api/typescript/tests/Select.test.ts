@@ -45,6 +45,10 @@ describe("select", () => {
             .query();
     });
 
+    it("select().node_count().query()", () => {
+        QueryBuilder.select().node_count().query();
+    });
+
     it("select aliases - nested queries", () => {
         QueryBuilder.select()
             .aliases()

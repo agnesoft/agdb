@@ -976,6 +976,15 @@ declare namespace Components {
              */
             QueryIds;
         } | {
+            SelectNodeCount: /**
+             * Query to select number of nodes in the database.
+             *
+             * The result will be 1 and elements with a single element
+             * of id 0 and a single property `String("node_count")` with
+             * a value `u64` represneting number of nodes in teh database.
+             */
+            SelectNodeCountQuery;
+        } | {
             SelectValues: /**
              * Query to select elements with only certain properties of
              * given ids. All ids must exist in the database and all
@@ -1185,6 +1194,15 @@ declare namespace Components {
          * select queries.
          */
         QueryIds;
+        /**
+         * Query to select number of nodes in the database.
+         *
+         * The result will be 1 and elements with a single element
+         * of id 0 and a single property `String("node_count")` with
+         * a value `u64` represneting number of nodes in teh database.
+         */
+        export interface SelectNodeCountQuery {
+        }
         export type SelectQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s
@@ -2598,3 +2616,4 @@ export interface PathsDictionary {
 }
 
 export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
+

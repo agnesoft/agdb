@@ -115,6 +115,7 @@ async fn read_queries() -> anyhow::Result<()> {
         QueryBuilder::select().indexes().query().into(),
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
+        QueryBuilder::select().node_count().query().into(),
         QueryBuilder::select()
             .values(vec!["key".into()])
             .ids(1)
@@ -169,6 +170,7 @@ async fn write_queries() -> anyhow::Result<()> {
         QueryBuilder::select().indexes().query().into(),
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
+        QueryBuilder::select().node_count().query().into(),
         QueryBuilder::select()
             .values(vec!["key".into()])
             .ids(1)

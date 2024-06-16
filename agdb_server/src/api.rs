@@ -102,6 +102,7 @@ use utoipa::OpenApi;
         agdb::SelectKeyCountQuery,
         agdb::SelectKeysQuery,
         agdb::SelectQuery,
+        agdb::SelectNodeCountQuery,
         agdb::SelectValuesQuery,
     )),
     modifiers(&BearerToken),

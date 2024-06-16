@@ -17,6 +17,7 @@ mod select_ids;
 mod select_indexes;
 mod select_key_count;
 mod select_keys;
+mod select_node_count;
 mod select_values;
 mod where_;
 

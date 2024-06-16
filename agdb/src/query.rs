@@ -21,6 +21,7 @@ pub mod select_edge_count_query;
 pub mod select_indexes_query;
 pub mod select_key_count_query;
 pub mod select_keys_query;
+pub mod select_node_count;
 pub mod select_query;
 pub mod select_values_query;
 

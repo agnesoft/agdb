@@ -5,6 +5,7 @@ use crate::query_builder::select_ids::SelectIds;
 use crate::query_builder::select_indexes::SelectIndexes;
 use crate::query_builder::select_key_count::SelectKeyCount;
 use crate::query_builder::select_keys::SelectKeys;
+use crate::query_builder::select_node_count::SelectNodeCount;
 use crate::query_builder::select_values::SelectValues;
 use crate::QueryIds;
 use crate::SelectAliasesQuery;
@@ -84,6 +85,13 @@ impl Select {
     /// a property `String("key_count")` with `u64` as the value.
     pub fn key_count(self) -> SelectKeyCount {
         SelectKeyCount(SelectKeyCountQuery(QueryIds::Ids(vec![0.into()])))
+    }
+
+    /// Select number of nodes in the database. The result will be a
+    /// single element with a property `String("node_count")` with `u64`
+    /// as the value.
+    pub fn node_count(self) -> SelectNodeCount {
+        SelectNodeCount {}
     }
 
     /// Select elements with `ids` with only `keys` properties (key-values).

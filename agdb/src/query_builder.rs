@@ -115,6 +115,7 @@ impl QueryBuilder {
     /// QueryBuilder::select().aliases();
     /// QueryBuilder::select().keys();
     /// QueryBuilder::select().key_count();
+    /// QueryBuilder::select().node_count();
     /// QueryBuilder::select().values(vec!["k".into()]);
     /// ```
     pub fn select() -> Select {

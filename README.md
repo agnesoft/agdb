@@ -18,14 +18,14 @@
 </p>
 
 <p align="center">
-    <img width="25" src="./agdb_web/public/images/rust.png" alt="rust"> 
-    <img width="25" src="./agdb_web/public/images/ts.png" alt="ts"> 
-    <img width="25" src="./agdb_web/public/images/js.png" alt="js"> 
-    <img width="25" src="./agdb_web/public/images/python.png" alt="python"> 
-    <img width="25" src="./agdb_web/public/images/java.png" alt="java"> 
-    <img width="25" src="./agdb_web/public/images/c.png" alt="c"> 
-    <img width="25" src="./agdb_web/public/images/cpp.png" alt="cpp"> 
-    <img width="25" src="./agdb_web/public/images/csharp.png" alt="csharp">
+    <picture><img width="25" src="./agdb_web/public/images/rust.png" alt="rust"></picture>
+    <picture><img width="25" src="./agdb_web/public/images/ts.png" alt="ts"></picture> 
+    <picture><img width="25" src="./agdb_web/public/images/js.png" alt="js"></picture> 
+    <picture><img width="25" src="./agdb_web/public/images/python.png" alt="python"></picture> 
+    <picture><img width="25" src="./agdb_web/public/images/java.png" alt="java"></picture> 
+    <picture><img width="25" src="./agdb_web/public/images/c.png" alt="c"></picture> 
+    <picture><img width="25" src="./agdb_web/public/images/cpp.png" alt="cpp"></picture> 
+    <picture><img width="25" src="./agdb_web/public/images/csharp.png" alt="csharp"></picture>
 </p>
 
 <p align="center">
@@ -37,12 +37,12 @@
     <a href="https://codecov.io/gh/agnesoft/agdb"><img src="https://codecov.io/gh/agnesoft/agdb/branch/main/graph/badge.svg?token=Z6YO8C3XGU" alt="codecov"></a>
 </p>
 
-<p align="center">
+<!-- <p align="center">
     <img width="25" src="./agdb_web/public/images/reddit.png" alt="reddit"> &nbsp;
     <img width="25" src="./agdb_web/public/images/x.png" alt="x"> &nbsp;
     <img width="25" src="./agdb_web/public/images/linkedin.png" alt="lkinkedin"> &nbsp;
     <img width="25" src="./agdb_web/public/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
-</p>
+</p> -->
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
@@ -55,25 +55,25 @@
 
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
 
-- [Key Features](#key-features)
-- [At a glance](#at-a-glance)
-- [Crate Features](#crate-features)
-- [Decision Tree](#decision-tree)
-- [Roadmap](#roadmap)
-- [Reference](#reference)
+-   [Key Features](#key-features)
+-   [At a glance](#at-a-glance)
+-   [Crate Features](#crate-features)
+-   [Decision Tree](#decision-tree)
+-   [Roadmap](#roadmap)
+-   [Reference](#reference)
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
-- Data plotted on a graph
-- Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
-- Persistent platform agnostic file based storage (transferable between platforms)
-- ACID compliant
-- [Object queries](docs/queries.md) with builder pattern (no text, no query language)
-- Memory mapped for fast querying
-- [Server mode](docs/server.md)
-- [OpenAPI clients](docs/api.md) in any programming language
-- [Cloud](docs/cloud.md) hosted SaaS database
-- _Db itself has no dependencies_
+-   Data plotted on a graph
+-   Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
+-   Persistent platform agnostic file based storage (transferable between platforms)
+-   ACID compliant
+-   [Object queries](docs/queries.md) with builder pattern (no text, no query language)
+-   Memory mapped for fast querying
+-   [Server mode](docs/server.md)
+-   [OpenAPI clients](docs/api.md) in any programming language
+-   [Cloud](docs/cloud.md) hosted SaaS database
+-   _Db itself has no dependencies_
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
 
@@ -204,22 +204,22 @@ The following are planned features:
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
-- [API](docs/api.md)
+-   [API](docs/api.md)
 
-- [But why?](docs/but_why.md)
+-   [But why?](docs/but_why.md)
 
-- [Cloud](docs/cloud.md)
+-   [Cloud](docs/cloud.md)
 
-- [Concepts](docs/concepts.md)
+-   [Concepts](docs/concepts.md)
 
-- [Efficient agdb](docs/efficient_agdb.md)
+-   [Efficient agdb](docs/efficient_agdb.md)
 
-- [Performance](docs/performance.md)
+-   [Performance](docs/performance.md)
 
-- [Queries](docs/queries.md)
+-   [Queries](docs/queries.md)
 
-- [Server](docs/server.md)
+-   [Server](docs/server.md)
 
-- [Studio](docs/studio.md)
+-   [Studio](docs/studio.md)
 
-- [Troubleshooting](docs/troubleshooting.md)
+-   [Troubleshooting](docs/troubleshooting.md)

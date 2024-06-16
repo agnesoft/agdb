@@ -69,7 +69,7 @@ async fn transfer() -> anyhow::Result<()> {
         name: format!("{}/{}", owner2, db),
         db_type: DbType::Mapped,
         role: DbUserRole::Admin,
-        size: 2632,
+        size: 2656,
         backup: 0,
     }];
     assert_eq!(list, expected);

@@ -25,6 +25,7 @@ use std::sync::Mutex;
 /// relies on the OS to flush the content to the disk. It is specifically not
 /// using manual calls to `File::sync_data()` / `File::sync_all()` because they
 /// result in extreme slowdown.
+#[derive(Debug)]
 pub struct FileStorage {
     file: File,
     filename: String,
@@ -870,7 +871,7 @@ mod tests {
         }
 
         let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(u64::serialized_size_static() * 2, &2_u64.serialize())
+        wal.insert(u64::serialized_size_static() * 5, &2_u64.serialize())
             .unwrap();
 
         let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
@@ -893,7 +894,7 @@ mod tests {
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
         let expected_size =
-            (u64::serialized_size_static() * 2) * 2 + i64::serialized_size_static() * 2;
+            (u64::serialized_size_static() * 2) * 3 + i64::serialized_size_static() * 3;
 
         assert_eq!(actual_size, expected_size);
         assert_eq!(storage.value(index1), Ok(1_i64));
@@ -1254,5 +1255,147 @@ mod tests {
 
         let storage = FileStorage::new(test_file.file_name()).unwrap();
         assert_eq!(storage.len(), 5);
+    }
+
+    #[test]
+    fn load_with_version_info() {
+        let test_file = TestFile::new();
+
+        let mut with_version_record = 0_u64.serialize();
+        with_version_record.extend(8_u64.serialize());
+        with_version_record.extend(1_u64.serialize());
+        let value1 = vec![1_u64, 2, 3, 4, 5];
+        with_version_record.extend(1_u64.serialize());
+        with_version_record.extend(value1.serialized_size().serialize());
+        with_version_record.extend(value1.serialize());
+        let value2 = "Hello, world!".to_string();
+        with_version_record.extend(0_u64.serialize());
+        with_version_record.extend(value2.serialized_size().serialize());
+        with_version_record.extend(value2.serialize());
+        let value3 = -20_i64;
+        with_version_record.extend(3_u64.serialize());
+        with_version_record.extend(value3.serialized_size().serialize());
+        with_version_record.extend(value3.serialize());
+        std::fs::write(test_file.file_name(), with_version_record).unwrap();
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
+        let val = storage.value::<i64>(StorageIndex(3)).unwrap();
+
+        assert_eq!(vec, vec![1, 2, 3, 4, 5]);
+        assert_eq!(val, -20);
+        assert_eq!(storage.len(), 149);
+        assert_eq!(storage.version(), 1);
+    }
+
+    #[test]
+    fn load_with_version_info_optimize() {
+        let test_file = TestFile::new();
+
+        let mut with_version_record = 0_u64.serialize();
+        with_version_record.extend(8_u64.serialize());
+        with_version_record.extend(1_u64.serialize());
+        let value1 = vec![1_u64, 2, 3, 4, 5];
+        with_version_record.extend(1_u64.serialize());
+        with_version_record.extend(value1.serialized_size().serialize());
+        with_version_record.extend(value1.serialize());
+        let value2 = "Hello, world!".to_string();
+        with_version_record.extend(0_u64.serialize());
+        with_version_record.extend(value2.serialized_size().serialize());
+        with_version_record.extend(value2.serialize());
+        let value3 = -20_i64;
+        with_version_record.extend(3_u64.serialize());
+        with_version_record.extend(value3.serialized_size().serialize());
+        with_version_record.extend(value3.serialize());
+        std::fs::write(test_file.file_name(), with_version_record).unwrap();
+
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
+        let val = storage.value::<i64>(StorageIndex(3)).unwrap();
+
+        storage.shrink_to_fit().unwrap();
+
+        assert_eq!(vec, vec![1, 2, 3, 4, 5]);
+        assert_eq!(val, -20);
+        assert_eq!(storage.len(), 112);
+        assert_eq!(storage.version(), 1);
+    }
+
+    #[test]
+    fn load_without_version_info() {
+        let test_file = TestFile::new();
+
+        let mut buf = Vec::new();
+        let value1 = vec![1_u64, 2, 3, 4, 5];
+        buf.extend(1_u64.serialize());
+        buf.extend(value1.serialized_size().serialize());
+        buf.extend(value1.serialize());
+        let value2 = "Hello, world!".to_string();
+        buf.extend(0_u64.serialize());
+        buf.extend(value2.serialized_size().serialize());
+        buf.extend(value2.serialize());
+        let value3 = -20_i64;
+        buf.extend(3_u64.serialize());
+        buf.extend(value3.serialized_size().serialize());
+        buf.extend(value3.serialize());
+        std::fs::write(test_file.file_name(), buf).unwrap();
+
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
+        let val = storage.value::<i64>(StorageIndex(3)).unwrap();
+
+        storage.shrink_to_fit().unwrap();
+
+        assert_eq!(vec, vec![1, 2, 3, 4, 5]);
+        assert_eq!(val, -20);
+        assert_eq!(storage.len(), 112);
+        assert_eq!(storage.version(), 1);
+    }
+
+    #[test]
+    fn load_with_too_high_version_info() {
+        let test_file = TestFile::new();
+
+        let mut with_version_record = 0_u64.serialize();
+        with_version_record.extend(8_u64.serialize());
+        with_version_record.extend(2_u64.serialize());
+        std::fs::write(test_file.file_name(), with_version_record).unwrap();
+
+        assert_eq!(
+            Storage::<FileStorage>::new(test_file.file_name()).unwrap_err(),
+            DbError::from("Storage error: db version '2' is higher than the current version '1'")
+        );
+    }
+
+    #[test]
+    fn load_with_corrupted_version_info() {
+        let test_file = TestFile::new();
+
+        let mut with_version_record = 0_u64.serialize();
+        with_version_record.extend(4_u64.serialize());
+        std::fs::write(test_file.file_name(), with_version_record).unwrap();
+
+        assert_eq!(
+            Storage::<FileStorage>::new(test_file.file_name()).unwrap_err(),
+            DbError::from("Storage error: invalid version record size (4 < 8)")
+        );
+    }
+
+    #[test]
+    fn load_without_version_info_large_data() {
+        let test_file = TestFile::new();
+
+        let mut buf = Vec::new();
+        let value1 = vec![1_u64; 256000];
+        buf.extend(1_u64.serialize());
+        buf.extend(value1.serialized_size().serialize());
+        buf.extend(value1.serialize());
+        std::fs::write(test_file.file_name(), buf).unwrap();
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
+
+        assert_eq!(vec, value1);
+        assert_eq!(storage.version(), 1);
     }
 }

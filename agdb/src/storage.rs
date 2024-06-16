@@ -12,6 +12,9 @@ use crate::utilities::serialize::SerializeStatic;
 use crate::DbError;
 use std::borrow::Cow;
 
+const CURRENT_VERSION: u64 = 1;
+const CHUNK_SIZE: u64 = 1024 * 1024;
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct StorageIndex(pub u64);
 
@@ -50,6 +53,7 @@ pub trait StorageData: Sized {
         Ok(())
     }
 
+    /// Copies the storage to a new `name`.
     fn copy(&self, name: &str) -> Result<Self, DbError>;
 
     /// Flushes any buffers to the underlying storage (e.g. file). The
@@ -91,10 +95,12 @@ pub trait StorageData: Sized {
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError>;
 }
 
-pub struct Storage<D: StorageData> {
+#[derive(Debug)]
+pub(crate) struct Storage<D: StorageData> {
     data: D,
     records: StorageRecords,
     transactions: u64,
+    version: u64,
 }
 
 impl<D: StorageData> Storage<D> {
@@ -103,6 +109,7 @@ impl<D: StorageData> Storage<D> {
             data: D::new(name)?,
             records: StorageRecords::new(),
             transactions: 0,
+            version: 0,
         };
 
         storage.read_records()?;
@@ -123,6 +130,7 @@ impl<D: StorageData> Storage<D> {
             data: self.data.copy(name)?,
             records: self.records.clone(),
             transactions: 0,
+            version: self.version,
         })
     }
 
@@ -283,6 +291,11 @@ impl<D: StorageData> Storage<D> {
         Ok(self.record(index.0)?.size)
     }
 
+    #[allow(dead_code)]
+    pub fn version(&self) -> u64 {
+        self.version
+    }
+
     fn append(&mut self, bytes: &[u8]) -> Result<(), DbError> {
         let len = self.len();
         self.data.write(len, bytes)
@@ -370,6 +383,19 @@ impl<D: StorageData> Storage<D> {
         Ok(())
     }
 
+    fn extract_version(&mut self, record: &StorageRecord) -> Result<u64, DbError> {
+        if record.size < u64::serialized_size_static() {
+            return Err(DbError::from(format!(
+                "Storage error: invalid version record size ({} < {})",
+                record.size,
+                u64::serialized_size_static()
+            )));
+        }
+
+        let bytes = self.read_value(record)?.to_vec();
+        u64::deserialize(&bytes)
+    }
+
     fn invalidate_record(&mut self, pos: u64) -> Result<(), DbError> {
         self.data.write(pos, &0_u64.serialize())
     }
@@ -400,6 +426,16 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn read_records(&mut self) -> Result<(), DbError> {
+        if Self::record_serialized_size() <= self.len() {
+            let version_record = self.read_record(0)?;
+
+            if version_record.index == 0 {
+                self.version = self.extract_version(&version_record)?;
+            }
+        }
+
+        self.validate_or_update_version()?;
+
         let mut records: Vec<StorageRecord> = vec![StorageRecord::default()];
         let end = self.len();
         let mut current_pos = 0;
@@ -470,7 +506,7 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn shrink_records(&mut self, records: Vec<StorageRecord>) -> Result<u64, DbError> {
-        let mut current_pos = 0_u64;
+        let mut current_pos = Self::current_version_record().end();
 
         for record in records {
             current_pos = self.shrink_index(&record, current_pos)?;
@@ -513,6 +549,56 @@ impl<D: StorageData> Storage<D> {
         record.pos = new_pos;
         record.size = new_size;
         self.write_record(record)
+    }
+
+    fn validate_or_update_version(&mut self) -> Result<(), DbError> {
+        if self.version > CURRENT_VERSION {
+            return Err(DbError::from(format!(
+                "Storage error: db version '{}' is higher than the current version '{CURRENT_VERSION}'",
+                self.version
+            )));
+        }
+
+        if self.version == CURRENT_VERSION {
+            return Ok(());
+        }
+
+        self.version = CURRENT_VERSION;
+        let version_record = Self::current_version_record();
+        let version_record_size = version_record.end();
+        let len = self.data.len();
+        let mut pos = len;
+        let mut size;
+
+        let transaction_id = self.transaction();
+        self.data.resize(len + version_record_size)?;
+
+        while 0 < pos {
+            if CHUNK_SIZE < pos {
+                pos -= CHUNK_SIZE;
+                size = CHUNK_SIZE;
+            } else {
+                size = pos;
+                pos = 0;
+            }
+            let data = self.data.read(pos, size)?.to_vec();
+            self.data.write(pos + version_record_size, &data)?;
+        }
+
+        self.write_record(&version_record)?;
+        self.data
+            .write(version_record.value_start(), &self.version.serialize())?;
+        self.commit(transaction_id)?;
+
+        Ok(())
+    }
+
+    fn current_version_record() -> StorageRecord {
+        StorageRecord {
+            index: 0,
+            pos: 0,
+            size: u64::serialized_size_static(),
+        }
     }
 
     fn validate_read_size(offset: u64, read_size: u64, value_size: u64) -> Result<(), DbError> {

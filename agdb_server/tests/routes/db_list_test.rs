@@ -28,14 +28,14 @@ async fn list() -> anyhow::Result<()> {
             name: format!("{}/{}", owner, db1),
             db_type: DbType::Memory,
             role: DbUserRole::Read,
-            size: 2632,
+            size: 2656,
             backup: 0,
         },
         ServerDatabase {
             name: format!("{}/{}", user, db2),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,
-            size: 2632,
+            size: 2656,
             backup: 0,
         },
     ];

@@ -590,7 +590,7 @@ mod tests {
         storage.shrink_to_fit().unwrap();
 
         let expected_size =
-            (u64::serialized_size_static() * 2) * 2 + i64::serialized_size_static() * 2;
+            (u64::serialized_size_static() * 2) * 3 + i64::serialized_size_static() * 3;
 
         assert_eq!(storage.len(), expected_size);
         assert_eq!(storage.value(index1), Ok(1_i64));

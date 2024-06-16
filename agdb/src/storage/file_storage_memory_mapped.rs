@@ -783,7 +783,7 @@ mod tests {
         }
 
         let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(u64::serialized_size_static() * 2, &2_u64.serialize())
+        wal.insert(u64::serialized_size_static() * 5, &2_u64.serialize())
             .unwrap();
 
         let storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
@@ -806,7 +806,7 @@ mod tests {
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
         let expected_size =
-            (u64::serialized_size_static() * 2) * 2 + i64::serialized_size_static() * 2;
+            (u64::serialized_size_static() * 2) * 3 + i64::serialized_size_static() * 3;
 
         assert_eq!(actual_size, expected_size);
         assert_eq!(storage.value(index1), Ok(1_i64));

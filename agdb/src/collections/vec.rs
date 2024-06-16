@@ -910,11 +910,9 @@ mod tests {
         .unwrap();
 
         vec.remove_from_storage(&mut storage).unwrap();
-
-        assert_ne!(storage.len(), 0);
-
+        let len = storage.len();
         storage.shrink_to_fit().unwrap();
 
-        assert_eq!(storage.len(), 0)
+        assert!(storage.len() < len)
     }
 }

@@ -1055,7 +1055,6 @@ impl<Store: StorageData> DbImpl<Store> {
         let aliases_storage;
         let indexes_storage;
         let values_storage;
-        let len = storage.len();
         let index = storage.value::<DbStorageIndex>(StorageIndex(1));
 
         if let Ok(index) = index {
@@ -1063,7 +1062,7 @@ impl<Store: StorageData> DbImpl<Store> {
             aliases_storage = DbIndexedMap::from_storage(&storage, index.aliases)?;
             indexes_storage = DbIndexes::from_storage(&storage, index.indexes)?;
             values_storage = MultiMapStorage::from_storage(&storage, index.values)?;
-        } else if len == 0 {
+        } else {
             storage.insert(&DbStorageIndex::default())?;
             graph_storage = DbGraph::new(&mut storage)?;
             aliases_storage = DbIndexedMap::new(&mut storage)?;
@@ -1076,10 +1075,6 @@ impl<Store: StorageData> DbImpl<Store> {
                 values: values_storage.storage_index(),
             };
             storage.insert_at(StorageIndex(1), 0, &db_storage_index)?;
-        } else {
-            return Err(DbError::from(format!(
-                "File '{filename}' is not a valid database file and is not empty."
-            )));
         }
 
         Ok(Self {

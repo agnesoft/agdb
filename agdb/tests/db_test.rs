@@ -262,10 +262,7 @@ fn invalid_db_file() {
     assert_eq!(error.description, "Failed to create database");
     assert_eq!(
         error.cause.unwrap().description,
-        format!(
-            "File '{}' is not a valid database file and is not empty.",
-            test_file.file_name()
-        )
+        "Storage error: invalid version record size (0 < 8)"
     );
 }
 

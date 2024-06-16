@@ -22,14 +22,14 @@ async fn db_list() -> anyhow::Result<()> {
         name: format!("{}/{}", owner1, db1),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
-        size: 2632,
+        size: 2656,
         backup: 0,
     }));
     assert!(list.contains(&ServerDatabase {
         name: format!("{}/{}", owner2, db2),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
-        size: 2632,
+        size: 2656,
         backup: 0,
     }));
     Ok(())

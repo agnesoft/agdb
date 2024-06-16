@@ -871,7 +871,7 @@ mod tests {
         }
 
         let mut wal = WriteAheadLog::new(test_file.file_name()).unwrap();
-        wal.insert(u64::serialized_size_static() * 2, &2_u64.serialize())
+        wal.insert(u64::serialized_size_static() * 5, &2_u64.serialize())
             .unwrap();
 
         let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
@@ -894,7 +894,7 @@ mod tests {
 
         let actual_size = std::fs::metadata(test_file.file_name()).unwrap().len();
         let expected_size =
-            (u64::serialized_size_static() * 2) * 2 + i64::serialized_size_static() * 2;
+            (u64::serialized_size_static() * 2) * 3 + i64::serialized_size_static() * 3;
 
         assert_eq!(actual_size, expected_size);
         assert_eq!(storage.value(index1), Ok(1_i64));
@@ -1379,5 +1379,23 @@ mod tests {
             Storage::<FileStorage>::new(test_file.file_name()).unwrap_err(),
             DbError::from("Storage error: invalid version record size (4 < 8)")
         );
+    }
+
+    #[test]
+    fn load_without_version_info_large_data() {
+        let test_file = TestFile::new();
+
+        let mut buf = Vec::new();
+        let value1 = vec![1_u64; 256000];
+        buf.extend(1_u64.serialize());
+        buf.extend(value1.serialized_size().serialize());
+        buf.extend(value1.serialize());
+        std::fs::write(test_file.file_name(), buf).unwrap();
+
+        let storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let vec = storage.value::<Vec<u64>>(StorageIndex(1)).unwrap();
+
+        assert_eq!(vec, value1);
+        assert_eq!(storage.version(), 1);
     }
 }

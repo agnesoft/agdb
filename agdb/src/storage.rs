@@ -426,7 +426,9 @@ impl<D: StorageData> Storage<D> {
     }
 
     fn read_records(&mut self) -> Result<(), DbError> {
-        if let Ok(version_record) = self.read_record(0) {
+        if Self::record_serialized_size() <= self.len() {
+            let version_record = self.read_record(0)?;
+
             if version_record.index == 0 {
                 self.version = self.extract_version(&version_record)?;
             }
@@ -561,34 +563,32 @@ impl<D: StorageData> Storage<D> {
             return Ok(());
         }
 
-        if self.version == 0 {
-            self.version = CURRENT_VERSION;
-            let version_record = Self::current_version_record();
-            let version_record_size = version_record.end();
-            let len = self.data.len();
-            let mut pos = len;
-            let mut size;
+        self.version = CURRENT_VERSION;
+        let version_record = Self::current_version_record();
+        let version_record_size = version_record.end();
+        let len = self.data.len();
+        let mut pos = len;
+        let mut size;
 
-            let transaction_id = self.transaction();
-            self.data.resize(len + version_record_size)?;
+        let transaction_id = self.transaction();
+        self.data.resize(len + version_record_size)?;
 
-            while 0 < pos {
-                if CHUNK_SIZE < pos {
-                    pos -= CHUNK_SIZE;
-                    size = CHUNK_SIZE;
-                } else {
-                    size = pos;
-                    pos = 0;
-                }
-                let data = self.data.read(pos, size)?.to_vec();
-                self.data.write(pos + version_record_size, &data)?;
+        while 0 < pos {
+            if CHUNK_SIZE < pos {
+                pos -= CHUNK_SIZE;
+                size = CHUNK_SIZE;
+            } else {
+                size = pos;
+                pos = 0;
             }
-
-            self.write_record(&version_record)?;
-            self.data
-                .write(version_record.value_start(), &self.version.serialize())?;
-            self.commit(transaction_id)?;
+            let data = self.data.read(pos, size)?.to_vec();
+            self.data.write(pos + version_record_size, &data)?;
         }
+
+        self.write_record(&version_record)?;
+        self.data
+            .write(version_record.value_start(), &self.version.serialize())?;
+        self.commit(transaction_id)?;
 
         Ok(())
     }

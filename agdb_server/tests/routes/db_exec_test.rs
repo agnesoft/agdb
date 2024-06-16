@@ -124,7 +124,7 @@ async fn read_queries() -> anyhow::Result<()> {
     ];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
-    assert_eq!(results.len(), 11);
+    assert_eq!(results.len(), 12);
     Ok(())
 }
 
@@ -187,7 +187,7 @@ async fn write_queries() -> anyhow::Result<()> {
     ];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
-    assert_eq!(results.len(), 20);
+    assert_eq!(results.len(), 21);
     Ok(())
 }
 

@@ -25,7 +25,6 @@ pub mod select_node_count;
 pub mod select_query;
 pub mod select_values_query;
 
-use crate::query::select_node_count::SelectNodeCountQuery;
 use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryResult;
@@ -51,7 +50,7 @@ use crate::{
     InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
     RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
     SelectAliasesQuery, SelectAllAliasesQuery, SelectEdgeCountQuery, SelectIndexesQuery,
-    SelectKeyCountQuery, SelectKeysQuery, SelectQuery, SelectValuesQuery,
+    SelectKeyCountQuery, SelectKeysQuery, SelectNodeCountQuery, SelectQuery, SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.

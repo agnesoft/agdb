@@ -61,6 +61,7 @@ fn query_type() {
         QueryBuilder::select().edge_count().ids(1).query().into(),
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
+        QueryBuilder::select().node_count().query().into(),
         QueryBuilder::select().values(vec![]).ids(1).query().into(),
         QueryBuilder::select().indexes().query().into(),
     ];

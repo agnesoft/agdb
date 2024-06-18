@@ -2986,7 +2986,8 @@
         "enum": [
           "BreadthFirst",
           "DepthFirst",
-          "Index"
+          "Index",
+          "Elements"
         ]
       },
       "SelectAliasesQuery": {

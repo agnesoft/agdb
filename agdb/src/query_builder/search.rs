@@ -92,13 +92,12 @@ impl Search {
     }
 
     /// Searches all elements (nodes & edges) in the database disregarding the graph
-    /// structure or any relationships between elements.
+    /// structure or any relationships between elements. This performs linear search
+    /// through the entire database which may be prohibitively expensive. Consider
+    /// using `limit()`.
     ///
-    /// NOTE: This performs linear search through the entire database which may
-    /// be prohibitively expensive. Consider using limit().
-    ///
-    /// Note2: While the full range of conitions can be used some conditions such
-    /// as distance cannot be satisfied and will yield empty result.
+    /// Note2: While the full range of conitions can be used some conditions do not
+    /// make logical sense (e.g. distance, beyond, edge_count etc.).
     ///
     /// Options:
     ///

@@ -739,19 +739,16 @@ where
 
     fn next_element(&self, storage: &Storage<D>, index: GraphIndex) -> Option<GraphIndex> {
         for i in (index.as_u64() + 1) as i64..(self.data.capacity().unwrap_or_default() as i64) {
-            if self
-                .is_valid_index(storage, GraphIndex(i))
-                .unwrap_or_default()
+            if !self
+                .is_removed_index(storage, GraphIndex::from(i))
+                .unwrap_or(true)
             {
                 if self
                     .is_valid_edge(storage, GraphIndex::from(-i))
                     .unwrap_or_default()
                 {
                     return Some(GraphIndex::from(-i));
-                } else if self
-                    .is_valid_node(storage, GraphIndex::from(i))
-                    .unwrap_or_default()
-                {
+                } else {
                     return Some(GraphIndex::from(i));
                 }
             }

@@ -97,6 +97,7 @@ impl QueryBuilder {
     /// QueryBuilder::search().to(1); // BDS
     /// QueryBuilder::search().breadth_first();
     /// QueryBuilder::search().depth_first();
+    /// QueryBuilder::search().elements();
     /// ```
     pub fn search() -> Search {
         Search {}

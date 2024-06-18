@@ -1112,7 +1112,7 @@ declare namespace Components {
         /**
          * Search algorithm to be used
          */
-        export type SearchQueryAlgorithm = "BreadthFirst" | "DepthFirst" | "Index";
+        export type SearchQueryAlgorithm = "BreadthFirst" | "DepthFirst" | "Index" | "Elements";
         export type SelectAliasesQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s

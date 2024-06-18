@@ -31,6 +31,10 @@ pub enum SearchQueryAlgorithm {
     /// Bypasses the graph traversal and inspects only the index specified
     /// as the first condition (key).
     Index,
+
+    /// Examines all elements in the database disregarding the graph structure
+    /// or any relationship between the elements.
+    Elements,
 }
 
 /// Query to search for ids in the database following the graph.
@@ -100,7 +104,21 @@ impl SearchQuery {
             }
         }
 
-        if self.destination == QueryId::Id(DbId(0)) {
+        if self.algorithm == SearchQueryAlgorithm::Elements {
+            if self.order_by.is_empty() {
+                db.search_from(
+                    DbId(0),
+                    self.algorithm,
+                    self.limit,
+                    self.offset,
+                    &self.conditions,
+                )
+            } else {
+                let mut ids = db.search_from(DbId(0), self.algorithm, 0, 0, &self.conditions)?;
+                self.sort(&mut ids, db)?;
+                self.slice(ids)
+            }
+        } else if self.destination == QueryId::Id(DbId(0)) {
             let origin = db.db_id(&self.origin)?;
 
             if self.order_by.is_empty() {

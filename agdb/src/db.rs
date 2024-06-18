@@ -786,10 +786,11 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     DefaultHandler::new(self, conditions),
                 )?,
-                _ => search.depth_first_search(
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
                     GraphIndex(from.0),
                     DefaultHandler::new(self, conditions),
                 )?,
+                _ => search.elements(DefaultHandler::new(self, conditions))?,
             },
 
             (_, 0) => match algorithm {
@@ -797,10 +798,11 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
-                _ => search.depth_first_search(
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
                     GraphIndex(from.0),
                     LimitHandler::new(limit, self, conditions),
                 )?,
+                _ => search.elements(LimitHandler::new(limit, self, conditions))?,
             },
 
             (0, _) => match algorithm {
@@ -808,10 +810,11 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
-                _ => search.depth_first_search(
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
                     GraphIndex(from.0),
                     OffsetHandler::new(offset, self, conditions),
                 )?,
+                _ => search.elements(OffsetHandler::new(offset, self, conditions))?,
             },
 
             (_, _) => match algorithm {
@@ -819,10 +822,11 @@ impl<Store: StorageData> DbImpl<Store> {
                     GraphIndex(from.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
-                _ => search.depth_first_search(
+                SearchQueryAlgorithm::DepthFirst => search.depth_first_search(
                     GraphIndex(from.0),
                     LimitOffsetHandler::new(limit, offset, self, conditions),
                 )?,
+                _ => search.elements(LimitOffsetHandler::new(limit, offset, self, conditions))?,
             },
         };
 

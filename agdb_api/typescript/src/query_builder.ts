@@ -1240,6 +1240,12 @@ class SearchBuilder {
         return new SearchAlgorithmBuilder(data);
     }
 
+    elements(): SearchToBuilder {
+        let data = SearchBuilder.new_data();
+        data.algorithm = "Elements";
+        return new SearchToBuilder(data);
+    }
+
     from(id: QueryId): SearchFromBuilder {
         let data = SearchBuilder.new_data();
         data.origin = intoQueryId(id);

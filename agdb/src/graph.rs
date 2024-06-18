@@ -514,7 +514,6 @@ where
         })
     }
 
-    #[allow(dead_code)]
     pub fn node_count(&self, storage: &Storage<D>) -> Result<u64, DbError> {
         self.data.node_count(storage)
     }

@@ -132,4 +132,57 @@ describe("openapi test", () => {
         expect(res2.status).toEqual(200);
         expect(res2.data).toEqual([expected]);
     });
+
+    it("search elements", async () => {
+        let client = await AgdbApi.client("http://localhost:3000");
+        let admin_token = await client.user_login(null, {
+            username: "admin",
+            password: "admin",
+        });
+        AgdbApi.setToken(admin_token.data);
+
+        await client.admin_user_add("user3", { password: "password123" });
+        let token = await client.user_login(null, {
+            username: "user3",
+            password: "password123",
+        });
+        AgdbApi.setToken(token.data);
+
+        await client.db_add({
+            owner: "user3",
+            db: "db1",
+            db_type: "memory",
+        });
+
+        let res = await client.db_exec({ owner: "user3", db: "db1" }, [
+            QueryBuilder.insert().nodes().count(1).query(),
+            QueryBuilder.insert().nodes().count(1).query(),
+            QueryBuilder.insert().edges().from([":0"]).to([":1"]).query(),
+            QueryBuilder.search().elements().query(),
+        ]);
+
+        expect(res.status).toEqual(200);
+        expect(res.data.length).toEqual(4);
+        expect(res.data[3].result).toEqual(3);
+        expect(res.data[3].elements).toEqual([
+            {
+                id: 1,
+                from: null,
+                to: null,
+                values: [],
+            },
+            {
+                id: 2,
+                from: null,
+                to: null,
+                values: [],
+            },
+            {
+                id: -3,
+                from: 1,
+                to: 2,
+                values: [],
+            },
+        ]);
+    });
 });

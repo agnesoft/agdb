@@ -34,6 +34,9 @@ use axum::http::StatusCode;
 use server_db::ServerDb;
 use server_db::ServerDbImpl;
 use std::collections::HashMap;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -498,12 +501,21 @@ impl DbPool {
 
                 Ok(results)
             });
-            if r.is_ok() {
-                let log = std::fs::OpenOptions::new()
+            if r.is_ok() && !audit.is_empty() {
+                let mut log = std::fs::OpenOptions::new()
                     .create(true)
-                    .append(true)
+                    .truncate(false)
+                    .write(true)
                     .open(db_audit_file(owner, db, config))?;
-                serde_json::to_writer(log, &audit)?;
+                let len = log.seek(SeekFrom::End(0))?;
+                if len == 0 {
+                    serde_json::to_writer(&log, &audit)?;
+                } else {
+                    let mut data = serde_json::to_vec(&audit)?;
+                    data[0] = b',';
+                    log.seek(SeekFrom::End(-1))?;
+                    log.write_all(&data)?;
+                }
             }
             r
         }

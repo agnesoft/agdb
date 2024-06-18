@@ -4,6 +4,7 @@ mod breadth_first_search;
 mod breadth_first_search_reverse;
 mod depth_first_search;
 mod depth_first_search_reverse;
+mod element_search;
 mod search_impl;
 
 use self::breadth_first_search::BreadthFirstSearch;
@@ -16,6 +17,7 @@ use self::search_impl::SearchImpl;
 use crate::graph::GraphData;
 use crate::graph::GraphImpl;
 use crate::graph::GraphIndex;
+use crate::graph_search::element_search::ElementSearch;
 use crate::storage::Storage;
 use crate::DbError;
 use crate::StorageData;
@@ -113,6 +115,13 @@ where
         } else {
             Ok(vec![])
         }
+    }
+
+    pub fn elements<Handler: SearchHandler>(
+        &self,
+        handler: Handler,
+    ) -> Result<Vec<GraphIndex>, DbError> {
+        ElementSearch::<D, Data, Handler>::new(self.graph, self.storage, handler).search()
     }
 
     fn is_valid_index(&self, index: GraphIndex) -> bool {

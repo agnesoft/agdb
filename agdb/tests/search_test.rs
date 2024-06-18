@@ -653,3 +653,37 @@ fn search_depth_first_to_offset_limit() {
         &[-13, 5, -12],
     );
 }
+
+#[test]
+fn search_elements() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 2, 3]);
+}
+
+#[test]
+fn search_elements_edges() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
+    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 2, 3, -4]);
+}
+
+#[test]
+fn search_elements_removed_node() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
+    db.exec_mut(QueryBuilder::remove().ids(2).query(), -1);
+    db.exec_ids(QueryBuilder::search().elements().query(), &[1, 3, -4]);
+}
+
+#[test]
+fn search_elements_removed_node_inserted_edge() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
+    db.exec_mut(QueryBuilder::remove().ids(2).query(), -1);
+    db.exec_mut(QueryBuilder::insert().edges().from(3).to(1).query(), 1);
+    db.exec_ids(QueryBuilder::search().elements().query(), &[1, -2, 3, -4]);
+}

@@ -347,6 +347,32 @@ where
     }
 }
 
+pub struct GraphIterator<'a, D, Data>
+where
+    Data: GraphData<D>,
+    D: StorageData,
+{
+    graph: &'a GraphImpl<D, Data>,
+    index: Option<GraphIndex>,
+    storage: &'a Storage<D>,
+}
+
+impl<'a, D, Data> Iterator for GraphIterator<'a, D, Data>
+where
+    Data: GraphData<D>,
+    D: StorageData,
+{
+    type Item = GraphIndex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(index) = self.index {
+            self.index = self.graph.next_element(self.storage, index);
+        }
+
+        self.index
+    }
+}
+
 pub struct GraphNodeIterator<'a, D, Data>
 where
     Data: GraphData<D>,
@@ -546,6 +572,14 @@ where
         Ok(index)
     }
 
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> GraphIterator<D, Data> {
+        GraphIterator {
+            graph: self,
+            index: Some(GraphIndex::default()),
+            storage,
+        }
+    }
+
     pub fn node<'a>(
         &'a self,
         storage: &'a Storage<D>,
@@ -701,6 +735,29 @@ where
 
     fn edge_count_to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<i64, DbError> {
         self.data.to_meta(storage, index)
+    }
+
+    fn next_element(&self, storage: &Storage<D>, index: GraphIndex) -> Option<GraphIndex> {
+        for i in (index.as_u64() + 1) as i64..(self.data.capacity().unwrap_or_default() as i64) {
+            if self
+                .is_valid_index(storage, GraphIndex(i))
+                .unwrap_or_default()
+            {
+                if self
+                    .is_valid_edge(storage, GraphIndex::from(-i))
+                    .unwrap_or_default()
+                {
+                    return Some(GraphIndex::from(-i));
+                } else if self
+                    .is_valid_node(storage, GraphIndex::from(i))
+                    .unwrap_or_default()
+                {
+                    return Some(GraphIndex::from(i));
+                }
+            }
+        }
+
+        None
     }
 
     fn next_node(
@@ -1406,5 +1463,65 @@ mod tests {
         graph.remove_edge(&mut storage, e1).unwrap();
         let n3 = graph.insert_node(&mut storage).unwrap();
         assert!(graph.node(&storage, n3).is_some());
+    }
+
+    #[test]
+    fn graph_iterator() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+
+        let n1 = graph.insert_node(&mut storage).unwrap();
+        let n2 = graph.insert_node(&mut storage).unwrap();
+        let e1 = graph.insert_edge(&mut storage, n1, n2).unwrap();
+
+        let indexes = graph.iter(&storage).collect::<Vec<GraphIndex>>();
+        assert_eq!(indexes, vec![n1, n2, e1]);
+    }
+
+    #[test]
+    fn graph_iterator_edge_removed() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+
+        let n1 = graph.insert_node(&mut storage).unwrap();
+        let n2 = graph.insert_node(&mut storage).unwrap();
+        let e1 = graph.insert_edge(&mut storage, n1, n2).unwrap();
+        graph.remove_edge(&mut storage, e1).unwrap();
+
+        let indexes = graph.iter(&storage).collect::<Vec<GraphIndex>>();
+        assert_eq!(indexes, vec![n1, n2]);
+    }
+
+    #[test]
+    fn graph_iterator_node_removed() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+
+        let n1 = graph.insert_node(&mut storage).unwrap();
+        let n2 = graph.insert_node(&mut storage).unwrap();
+        let _e1 = graph.insert_edge(&mut storage, n1, n2).unwrap();
+        graph.remove_node(&mut storage, n1).unwrap();
+
+        let indexes = graph.iter(&storage).collect::<Vec<GraphIndex>>();
+        assert_eq!(indexes, vec![n2]);
+    }
+
+    #[test]
+    fn graph_iterator_node_removed_and_edge_inserted() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorageMemoryMapped>::new(test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+
+        let n1 = graph.insert_node(&mut storage).unwrap();
+        let n2 = graph.insert_node(&mut storage).unwrap();
+        let _e1 = graph.insert_edge(&mut storage, n1, n2).unwrap();
+        graph.remove_node(&mut storage, n1).unwrap();
+        let e1 = graph.insert_edge(&mut storage, n2, n2).unwrap();
+
+        let indexes = graph.iter(&storage).collect::<Vec<GraphIndex>>();
+        assert_eq!(indexes, vec![e1, n2]);
     }
 }

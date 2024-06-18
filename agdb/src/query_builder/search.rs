@@ -91,6 +91,37 @@ impl Search {
         })
     }
 
+    /// Searches all elements (nodes & edges) in the database disregarding the graph
+    /// structure or any relationships between elements.
+    ///
+    /// NOTE: This performs linear search through the entire database which may
+    /// be prohibitively expensive. Consider using limit().
+    ///
+    /// Note2: While the full range of conitions can be used some conditions such
+    /// as distance cannot be satisfied and will yield empty result.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::{QueryBuilder, DbKeyOrder};
+    ///
+    /// QueryBuilder::search().elements().order_by(vec![DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().elements().offset(5);
+    /// QueryBuilder::search().elements().limit(10);
+    /// QueryBuilder::search().elements().where_();
+    /// ```
+    pub fn elements(self) -> SearchTo {
+        SearchTo(SearchQuery {
+            algorithm: SearchQueryAlgorithm::Elements,
+            origin: QueryId::from(0),
+            destination: QueryId::from(0),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        })
+    }
+
     pub fn index<T: Into<DbValue>>(self, key: T) -> SearchIndex {
         SearchIndex(key.into())
     }

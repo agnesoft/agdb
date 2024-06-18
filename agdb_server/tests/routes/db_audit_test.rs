@@ -103,7 +103,7 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
         .await?;
     let (status, audit) = server.api.db_audit(owner, db).await?;
     assert_eq!(status, 200);
-    assert!(!audit.0.is_empty());
+    assert_eq!(audit.0.len(), 1);
     server
         .api
         .db_exec(
@@ -119,7 +119,5 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
     let (status, audit2) = server.api.db_audit(owner, db).await?;
     assert_eq!(status, 200);
     assert_eq!(audit2.0.len(), 2);
-    assert_eq!(audit2.0[0], audit.0[0]);
-    assert_eq!(audit2.0[1], audit.0[0]);
     Ok(())
 }

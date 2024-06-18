@@ -79,3 +79,47 @@ async fn audit_no_token() -> anyhow::Result<()> {
     assert_eq!(status, 401);
     Ok(())
 }
+
+#[tokio::test]
+async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    server
+        .api
+        .db_exec(
+            owner,
+            db,
+            &vec![QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
+        )
+        .await?;
+    let (status, audit) = server.api.db_audit(owner, db).await?;
+    assert_eq!(status, 200);
+    assert!(!audit.0.is_empty());
+    server
+        .api
+        .db_exec(
+            owner,
+            db,
+            &vec![QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
+        )
+        .await?;
+    let (status, audit2) = server.api.db_audit(owner, db).await?;
+    assert_eq!(status, 200);
+    assert_eq!(audit2.0.len(), 2);
+    assert_eq!(audit2.0[0], audit.0[0]);
+    assert_eq!(audit2.0[1], audit.0[0]);
+    Ok(())
+}

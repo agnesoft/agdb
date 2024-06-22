@@ -19,17 +19,23 @@ use test_db::TestDb;
 #[allow(unused_imports)]
 #[test]
 fn public_types() {
+    use agdb::AgdbSerialize;
     use agdb::Comparison;
     use agdb::CountComparison;
     use agdb::Db;
     use agdb::DbElement;
     use agdb::DbError;
+    use agdb::DbF64;
     use agdb::DbFile;
     use agdb::DbFileTransaction;
     use agdb::DbFileTransactionMut;
     use agdb::DbId;
+    use agdb::DbImpl;
     use agdb::DbKeyOrder;
     use agdb::DbKeyValue;
+    use agdb::DbMemory;
+    use agdb::DbMemoryTransaction;
+    use agdb::DbMemoryTransactionMut;
     use agdb::DbTransaction;
     use agdb::DbTransactionMut;
     use agdb::DbUserValue;
@@ -38,6 +44,7 @@ fn public_types() {
     use agdb::FileStorageMemoryMapped;
     use agdb::InsertAliasesQuery;
     use agdb::InsertEdgesQuery;
+    use agdb::InsertIndexQuery;
     use agdb::InsertNodesQuery;
     use agdb::InsertValuesQuery;
     use agdb::MemoryStorage;
@@ -57,13 +64,19 @@ fn public_types() {
     use agdb::RemoveQuery;
     use agdb::RemoveValuesQuery;
     use agdb::SearchQuery;
+    use agdb::SearchQueryAlgorithm;
     use agdb::SelectAliasesQuery;
     use agdb::SelectAllAliasesQuery;
+    use agdb::SelectEdgeCountQuery;
+    use agdb::SelectIndexesQuery;
     use agdb::SelectKeyCountQuery;
     use agdb::SelectKeysQuery;
+    use agdb::SelectNodeCountQuery;
     use agdb::SelectQuery;
     use agdb::SelectValuesQuery;
+    use agdb::StableHash;
     use agdb::StorageData;
+    use agdb::StorageSlice;
     use agdb::Transaction;
     use agdb::TransactionMut;
     use agdb::UserValue;

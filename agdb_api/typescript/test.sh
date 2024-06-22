@@ -2,6 +2,7 @@ cd ../../agdb_server
 rm -f agdb_server.yaml
 rm -f .agdb_server.agdb
 rm -f agdb_server.agdb
+rm -rf agdb_server_data
 cargo build --release
 cargo run --release &
 cd ../agdb_api/typescript
@@ -14,4 +15,5 @@ curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admi
 rm -f agdb_server.yaml
 rm -f .agdb_server.agdb
 rm -f agdb_server.agdb
+rm -rf agdb_server_data
 exit $error_code

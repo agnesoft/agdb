@@ -104,7 +104,7 @@ impl DbPool {
 
             for db in dbs {
                 let (owner, db_name) = db.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-                let db_path = Path::new(&config.data_dir).join(db_name);
+                let db_path = db_file(owner, db_name, config);
                 std::fs::create_dir_all(db_audit_dir(owner, config))?;
                 let server_db =
                     ServerDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;

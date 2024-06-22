@@ -3,6 +3,7 @@ use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
 use crate::SERVER_DATA_DIR;
+use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
@@ -168,6 +169,51 @@ async fn basepath_test() -> anyhow::Result<()> {
     // If the base path does not work the server
     // will not ever be considered ready, see
     // TestServer implementation for details.
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn location_change_after_restart() -> anyhow::Result<()> {
+    let mut server = TestServerImpl::new().await?;
+    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+
+    {
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add("user1", "userxpassword").await?;
+        client.user_logout().await?;
+        client.user_login("user1", "userxpassword").await?;
+        client
+            .db_add("user1", "mydb", agdb_api::DbType::Mapped)
+            .await?;
+        client
+            .db_exec(
+                "user1",
+                "mydb",
+                &vec![QueryBuilder::insert().nodes().count(1).query().into()],
+            )
+            .await?;
+        client.user_logout().await?;
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_shutdown().await?;
+        assert!(server.process.wait()?.success());
+    }
+
+    server.process = Command::cargo_bin("agdb_server")?
+        .current_dir(&server.dir)
+        .spawn()?;
+    wait_for_ready(&client).await?;
+    client.user_login("user1", "userxpassword").await?;
+    let results = client
+        .db_exec(
+            "user1",
+            "mydb",
+            &vec![QueryBuilder::select().ids(1).query().into()],
+        )
+        .await?;
+
+    assert_eq!(results.1.len(), 1);
+    assert_eq!(results.1[0].result, 1);
 
     Ok(())
 }

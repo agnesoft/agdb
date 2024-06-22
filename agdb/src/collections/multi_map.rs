@@ -845,4 +845,30 @@ mod tests {
             assert_eq!(value, Some(i.to_string()));
         }
     }
+
+    #[test]
+    fn deadlock_test() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        for i in 0_u64..60 {
+            map.insert(&mut storage, &i, &i).unwrap();
+        }
+
+        for i in 0_u64..60 {
+            map.remove_value(&mut storage, &i, &i).unwrap();
+        }
+
+        map.insert(&mut storage, &60, &60).unwrap();
+        map.insert(&mut storage, &61, &61).unwrap();
+        map.insert(&mut storage, &62, &62).unwrap();
+        map.insert(&mut storage, &63, &63).unwrap();
+
+        map.remove_key(&mut storage, &60).unwrap();
+        map.remove_key(&mut storage, &61).unwrap();
+        map.remove_key(&mut storage, &62).unwrap();
+        map.remove_key(&mut storage, &63).unwrap();
+
+        map.remove_key(&mut storage, &0).unwrap();
+    }
 }

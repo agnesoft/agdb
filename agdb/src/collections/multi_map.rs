@@ -156,7 +156,7 @@ where
 
         loop {
             match self.data.state(storage, pos)? {
-                MapValueState::Empty => {
+                MapValueState::Empty | MapValueState::Deleted => {
                     self.do_insert(storage, pos, key, new_value)?;
                     break;
                 }
@@ -170,7 +170,7 @@ where
                         pos = self.next_pos(pos)
                     }
                 }
-                MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
+                MapValueState::Valid => pos = self.next_pos(pos),
             }
         }
 
@@ -222,6 +222,7 @@ where
 
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
+        let start_pos = pos;
         let mut len = self.len();
 
         let id = self.data.transaction(storage);
@@ -237,6 +238,13 @@ where
             }
 
             pos = self.next_pos(pos);
+
+            if pos == start_pos {
+                if len == self.len() {
+                    self.rehash(storage, self.capacity())?;
+                }
+                break;
+            }
         }
 
         if len != self.len() {
@@ -262,7 +270,7 @@ where
 
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
-
+        let start_pos = pos;
         let id = self.data.transaction(storage);
 
         loop {
@@ -276,6 +284,11 @@ where
                     break;
                 }
                 MapValueState::Valid | MapValueState::Deleted => pos = self.next_pos(pos),
+            }
+
+            if pos == start_pos {
+                self.rehash(storage, self.capacity())?;
+                break;
             }
         }
 
@@ -431,8 +444,9 @@ where
         let new_capacity = std::cmp::max(capacity, 64_u64);
 
         match current_capacity.cmp(&new_capacity) {
-            std::cmp::Ordering::Less => self.grow(storage, current_capacity, new_capacity),
-            std::cmp::Ordering::Equal => Ok(()),
+            std::cmp::Ordering::Less | std::cmp::Ordering::Equal => {
+                self.grow(storage, current_capacity, new_capacity)
+            }
             std::cmp::Ordering::Greater => self.shrink(storage, current_capacity, new_capacity),
         }
     }
@@ -519,13 +533,8 @@ where
         let mut occupancy = BitSet::with_capacity(new_capacity);
 
         while i != current_capacity {
-            self.rehash_value(
-                storage,
-                self.data.state(storage, i)?,
-                &mut i,
-                new_capacity,
-                &mut occupancy,
-            )?;
+            let state = self.data.state(storage, i)?;
+            self.rehash_value(storage, state, &mut i, new_capacity, &mut occupancy)?;
         }
 
         Ok(())
@@ -847,7 +856,7 @@ mod tests {
     }
 
     #[test]
-    fn deadlock_test() {
+    fn deadlock_test_key() {
         let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
         let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
 
@@ -855,20 +864,67 @@ mod tests {
             map.insert(&mut storage, &i, &i).unwrap();
         }
 
-        for i in 0_u64..60 {
-            map.remove_value(&mut storage, &i, &i).unwrap();
-        }
+        map.remove_key(&mut storage, &0).unwrap();
+        map.remove_key(&mut storage, &1).unwrap();
+        map.remove_key(&mut storage, &2).unwrap();
+        map.remove_key(&mut storage, &3).unwrap();
 
         map.insert(&mut storage, &60, &60).unwrap();
         map.insert(&mut storage, &61, &61).unwrap();
         map.insert(&mut storage, &62, &62).unwrap();
         map.insert(&mut storage, &63, &63).unwrap();
 
-        map.remove_key(&mut storage, &60).unwrap();
-        map.remove_key(&mut storage, &61).unwrap();
-        map.remove_key(&mut storage, &62).unwrap();
-        map.remove_key(&mut storage, &63).unwrap();
+        map.remove_key(&mut storage, &32).unwrap();
+        map.remove_key(&mut storage, &0).unwrap();
+    }
+
+    #[test]
+    fn deadlock_test_value() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        for i in 0_u64..60 {
+            map.insert(&mut storage, &i, &i).unwrap();
+        }
 
         map.remove_key(&mut storage, &0).unwrap();
+        map.remove_key(&mut storage, &1).unwrap();
+        map.remove_key(&mut storage, &2).unwrap();
+        map.remove_key(&mut storage, &3).unwrap();
+
+        map.insert(&mut storage, &60, &60).unwrap();
+        map.insert(&mut storage, &61, &61).unwrap();
+        map.insert(&mut storage, &62, &62).unwrap();
+        map.insert(&mut storage, &63, &63).unwrap();
+
+        map.remove_value(&mut storage, &32, &32).unwrap();
+        map.remove_value(&mut storage, &32, &0).unwrap();
+    }
+
+    #[test]
+    fn iterate_over_deleted() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        for i in 0_u64..20 {
+            map.insert(&mut storage, &i, &i).unwrap();
+            map.insert(&mut storage, &i, &(i + 1)).unwrap();
+            map.insert(&mut storage, &i, &(i + 2)).unwrap();
+        }
+
+        map.remove_value(&mut storage, &10, &10).unwrap();
+        map.remove_value(&mut storage, &10, &11).unwrap();
+
+        assert!(map.contains(&storage, &10).unwrap());
+        assert!(map.contains_value(&storage, &10, &12).unwrap());
+
+        let values = map.iter(&storage).collect::<Vec<(u64, u64)>>();
+
+        assert!(!values.contains(&(10, 10)));
+        assert!(!values.contains(&(10, 11)));
+        assert!(values.contains(&(10, 12)));
+
+        let keys = map.iter_key(&storage, &10).collect::<Vec<(u64, u64)>>();
+        assert_eq!(keys, vec![(10, 12)]);
     }
 }

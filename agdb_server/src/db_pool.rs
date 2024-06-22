@@ -472,35 +472,46 @@ impl DbPool {
             return Err(permission_denied("write rights required"));
         }
 
-        let pool = self.get_pool().await;
-        let server_db = pool.get(&db_name).ok_or(db_not_found(&db_name))?;
         let results = if required_role == DbUserRole::Read {
-            server_db.get().await.transaction(|t| {
-                let mut results = vec![];
+            self.get_pool()
+                .await
+                .get(&db_name)
+                .ok_or(db_not_found(&db_name))?
+                .get()
+                .await
+                .transaction(|t| {
+                    let mut results = vec![];
 
-                for q in queries.0.iter_mut() {
-                    let result = t_exec(t, q, &results)?;
-                    results.push(result);
-                }
+                    for q in queries.0.iter_mut() {
+                        let result = t_exec(t, q, &results)?;
+                        results.push(result);
+                    }
 
-                Ok(results)
-            })
+                    Ok(results)
+                })
         } else {
             let username = self.user_name(user).await?;
             let mut audit = vec![];
 
-            let r = server_db.get_mut().await.transaction_mut(|t| {
-                let mut results = vec![];
-                let mut qs = vec![];
-                std::mem::swap(&mut queries.0, &mut qs);
+            let r = self
+                .get_pool()
+                .await
+                .get(&db_name)
+                .ok_or(db_not_found(&db_name))?
+                .get_mut()
+                .await
+                .transaction_mut(|t| {
+                    let mut results = vec![];
+                    let mut qs = vec![];
+                    std::mem::swap(&mut queries.0, &mut qs);
 
-                for q in qs {
-                    let result = t_exec_mut(t, q, &results, &mut audit, &username)?;
-                    results.push(result);
-                }
+                    for q in qs {
+                        let result = t_exec_mut(t, q, &results, &mut audit, &username)?;
+                        results.push(result);
+                    }
 
-                Ok(results)
-            });
+                    Ok(results)
+                });
             if r.is_ok() && !audit.is_empty() {
                 let mut log = std::fs::OpenOptions::new()
                     .create(true)

@@ -23,6 +23,19 @@ export class AgdbApi {
         return AgdbApi.c as Client;
     }
 
+    static async login(username: string, password: string): Promise<void> {
+        if (AgdbApi.c === undefined) {
+            throw new Error("client not initialized");
+        }
+
+        let token = await AgdbApi.c.user_login(null, {
+            username: username,
+            password: password,
+        });
+
+        AgdbApi.setToken(token.data);
+    }
+
     static setToken(token: string) {
         AgdbApi.token = token;
     }

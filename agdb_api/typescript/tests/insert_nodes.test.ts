@@ -1,8 +1,18 @@
 import { QueryBuilder } from "../src/index";
 import { describe, it } from "vitest";
+import { client } from "./test_setup";
 
 describe("insert nodes", () => {
-    it("insert().nodes().aliases().query()", () => {
+    it("insert().nodes().aliases().query()", async () => {
+        await client.db_add({
+            owner: "admin",
+            db: "insert_nodes",
+            db_type: "memory",
+        });
+        client.db_exec({ owner: "admin", db: "insert_nodes" }, [
+            QueryBuilder.insert().nodes().aliases(["alias1", "alias2"]).query(),
+        ]);
+
         QueryBuilder.insert().nodes().aliases(["alias1", "alias2"]).query();
     });
 

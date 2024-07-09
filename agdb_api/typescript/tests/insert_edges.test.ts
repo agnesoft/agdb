@@ -1,5 +1,6 @@
 import { QueryBuilder } from "../src/index";
 import { describe, it, expect } from "vitest";
+import { next_id } from "./test_setup";
 
 describe("insert edges", () => {
     it("insert().edges().from().to().query()", () => {

@@ -7,7 +7,11 @@ export default mergeConfig(
         test: {
             coverage: {
                 all: true,
-                exclude: [".eslintrc.cjs", "src/schema.d.ts"],
+                exclude: [
+                    ".eslintrc.cjs",
+                    "src/schema.d.ts",
+                    "query_test_generator.js",
+                ],
                 thresholds: {
                     lines: 100,
                     functions: 100,

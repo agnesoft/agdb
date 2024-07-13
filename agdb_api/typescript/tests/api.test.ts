@@ -1,4 +1,9 @@
-import { QueryBuilder } from "../src/index";
+import {
+    Components,
+    convertTo,
+    convertToNativeValue,
+    QueryBuilder,
+} from "../src/index";
 import { describe, expect, it } from "vitest";
 import { AgdbApi } from "../src/index";
 
@@ -113,6 +118,21 @@ describe("openapi test", () => {
 
         expect(res2.status).toEqual(200);
         expect(res2.data).toEqual([expected]);
+
+        let expected1: MyClass = {
+            db_id: 1,
+            name: "John",
+            age: 30,
+        };
+
+        let expected2: MyClass = {
+            db_id: 2,
+            name: "John",
+            age: 31,
+        };
+
+        let list = convertTo<MyClass>(res2.data[0]);
+        expect(list).toEqual([expected1, expected2]);
     });
 
     it("search elements", async () => {

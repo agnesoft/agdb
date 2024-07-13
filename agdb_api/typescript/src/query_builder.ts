@@ -7,13 +7,8 @@ type QueryIds =
     | Components.Schemas.QueryType
     | Components.Schemas.QueryResult
     | Components.Schemas.QueryIds;
-type DbValue =
-    | boolean
-    | string
-    | number
-    | string[]
-    | number[]
-    | Components.Schemas.DbValue;
+type NativeValue = boolean | string | number | string[] | number[];
+type DbValue = NativeValue | Components.Schemas.DbValue;
 type DbKeyValue = DbValue[] | Components.Schemas.DbKeyValue;
 
 function intoQueryIds(ids: QueryIds): Components.Schemas.QueryIds {
@@ -60,7 +55,78 @@ function intoQueryId(id: QueryId): Components.Schemas.QueryId {
     return id;
 }
 
-function convertToDbValue(value: any): Components.Schemas.DbValue {
+export function convertToNativeValue(
+    value: Components.Schemas.DbValue,
+): NativeValue {
+    if ("Bytes" in value) {
+        return value.Bytes;
+    }
+
+    if ("String" in value) {
+        if (value.String === "true") {
+            return true;
+        }
+
+        if (value.String === "false") {
+            return false;
+        }
+
+        return value.String;
+    }
+
+    if ("I64" in value) {
+        return value.I64;
+    }
+
+    if ("U64" in value) {
+        return value.U64;
+    }
+
+    if ("F64" in value) {
+        return value.F64;
+    }
+
+    if ("VecString" in value) {
+        return value.VecString;
+    }
+
+    if ("VecI64" in value) {
+        return value.VecI64;
+    }
+
+    if ("VecU64" in value) {
+        return value.VecU64;
+    }
+
+    if ("VecF64" in value) {
+        return value.VecF64;
+    }
+}
+
+export function convertTo<T>(result: Components.Schemas.QueryResult): T | T[] {
+    let res: T[] = [];
+
+    for (let e of result.elements) {
+        let obj: T = {} as T;
+
+        for (let kv of e.values) {
+            obj["db_id"] = e.id;
+            obj[convertToNativeValue(kv.key) as string] = convertToNativeValue(
+                kv.value,
+            );
+        }
+
+        res.push(obj);
+    }
+
+    if (res.length === 1) {
+        return res[0];
+    }
+
+    return res;
+}
+
+export function convertToDbValue(value: any): Components.Schemas.DbValue {
     if (typeof value === "string") {
         // String type
         return { String: value };
@@ -99,7 +165,7 @@ function convertToDbValue(value: any): Components.Schemas.DbValue {
     return value;
 }
 
-function convertToDbKeyValue(
+export function convertToDbKeyValue(
     key_value: DbKeyValue,
 ): Components.Schemas.DbKeyValue {
     if (Array.isArray(key_value)) {

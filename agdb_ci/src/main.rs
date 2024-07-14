@@ -17,6 +17,10 @@ const IGNORE: [&str; 8] = [
     "test-results",
 ];
 const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
+#[cfg(windows)]
+const LN: &'static str = "\r\n";
+#[cfg(not(windows))]
+const LN: &'static str = "\n";
 
 #[derive(Debug)]
 struct CIError {
@@ -173,8 +177,9 @@ fn update_api_md(schema: &std::path::PathBuf, api: &std::path::PathBuf) -> Resul
         .expect("invalid api.md")
         .0;
     let new_api = format!(
-        "{}## openapi.json\n\n```json\n{}\n```",
-        api_docs, schema_content
+        "{}## openapi.json{LN}{LN}```json{LN}{}{LN}```",
+        api_docs,
+        schema_content.trim()
     );
     std::fs::write(api, new_api)?;
     Ok(())

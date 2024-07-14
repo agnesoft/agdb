@@ -58,6 +58,16 @@ function intoAliases(aliases: string | string[]): string[] {
     return aliases;
 }
 
+function intoDbKeyOrder(
+    keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
+): Components.Schemas.DbKeyOrder[] {
+    if (Array.isArray(keys)) {
+        return keys;
+    }
+
+    return [keys];
+}
+
 export function convertToNativeValue(
     value: Components.Schemas.DbValue,
 ): NativeValue {
@@ -578,8 +588,10 @@ class InsertBuilder {
                         data.ids.Ids.push({ Alias: id });
                     } else if (id === null || id === undefined) {
                         data.ids.Ids.push({ Id: 0 });
-                    } else {
+                    } else if ("Id" in id || "Alias" in id) {
                         data.ids.Ids.push(id);
+                    } else {
+                        throw "Invalid db_id type";
                     }
                 } else {
                     let keyValue = convertToDbValue(key);
@@ -978,9 +990,7 @@ class SearchWhereLogicBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        while (collapse_conditions(this.data.conditions)) {
-            /* intentionally empty */
-        }
+        do {} while (collapse_conditions(this.data.conditions));
         this.data.data.conditions = this.data.conditions[0];
         return { Search: this.data.data };
     }
@@ -1204,8 +1214,10 @@ class SearchFromBuilder {
         return new SearchOffsetBuilder(this.data);
     }
 
-    order_by(keys: Components.Schemas.DbKeyOrder[]): SearchOrderBy {
-        this.data.order_by = keys;
+    order_by(
+        keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
+    ): SearchOrderBy {
+        this.data.order_by = intoDbKeyOrder(keys);
         return new SearchOrderBy(this.data);
     }
 
@@ -1240,8 +1252,10 @@ class SearchToBuilder {
         return new SearchOffsetBuilder(this.data);
     }
 
-    order_by(keys: Components.Schemas.DbKeyOrder[]): SearchOrderBy {
-        this.data.order_by = keys;
+    order_by(
+        keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
+    ): SearchOrderBy {
+        this.data.order_by = intoDbKeyOrder(keys);
         return new SearchOrderBy(this.data);
     }
 

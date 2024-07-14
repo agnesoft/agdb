@@ -1,19 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
     Comparison,
+    Components,
     convertToDbKeyValue,
     convertToDbValue,
     convertToNativeValue,
     CountComparison,
+    DbKeyOrder,
     QueryBuilder,
 } from "../src/index";
-
-import test_queries from "../../../agdb_server/openapi/test_queries.json";
-
-class T {
-    value1: string = "";
-    value2: number = 0;
-}
 
 describe("QueryBuilder misc tests", () => {
     it(`convertToNativeValue`, () => {
@@ -116,5 +111,60 @@ describe("QueryBuilder misc tests", () => {
                 },
             },
         });
+    });
+
+    it(`db_id as QueryId`, () => {
+        class T {
+            db_id: Components.Schemas.QueryId = { Alias: "alias" };
+        }
+
+        let query = QueryBuilder.insert().element(new T()).query();
+        expect(query).toEqual({
+            InsertValues: {
+                ids: {
+                    Ids: [
+                        {
+                            Alias: "alias",
+                        },
+                    ],
+                },
+                values: {
+                    Multi: [[]],
+                },
+            },
+        });
+    });
+
+    it(`db_id invalid type`, () => {
+        class T {
+            db_id: string[] = ["hello"];
+        }
+
+        expect(() => QueryBuilder.insert().element(new T()).query()).toThrow(
+            "Invalid db_id type",
+        );
+    });
+
+    it("single order_by", () => {
+        let query = QueryBuilder.search()
+            .from(1)
+            .order_by(DbKeyOrder.Asc("key"))
+            .query();
+        let expected = {
+            Search: {
+                algorithm: "BreadthFirst",
+                origin: {
+                    Id: 1,
+                },
+                destination: {
+                    Id: 0,
+                },
+                limit: 0,
+                offset: 0,
+                order_by: [{ Asc: { String: "key" } }],
+                conditions: [],
+            },
+        };
+        expect(query).toEqual(expected);
     });
 });

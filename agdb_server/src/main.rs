@@ -162,6 +162,7 @@ QueryBuilder::search().from("a").query(),
 QueryBuilder::search().to(1).query(), 
 QueryBuilder::search().from("a").to("b").query(), 
 QueryBuilder::search().breadth_first().from("a").query(), 
+QueryBuilder::search().depth_first().to(1).query(),
 QueryBuilder::search().depth_first().from("a").query(),
 QueryBuilder::search().elements().query(),
 QueryBuilder::search().index("age").value(20).query(), 
@@ -190,6 +191,13 @@ QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::G
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Equal(1.into())).end_where().query(),
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(1.into())).end_where().query(),
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains((vec![1, 2]).into())).end_where().query(),
+QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).where_().node().query(),
+QueryBuilder::search().from(1).limit(1).where_().node().query(),
+QueryBuilder::search().from(1).offset(1).where_().node().query(),
+QueryBuilder::search().to(1).offset(1).query(),
+QueryBuilder::search().to(1).limit(1).query(),
+QueryBuilder::search().to(1).where_().node().query(),
+QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).where_().node().query()
         ];
 
         serde_json::to_writer_pretty(File::create("openapi/test_queries.json").unwrap(), &queries)

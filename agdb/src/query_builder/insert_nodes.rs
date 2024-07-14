@@ -173,4 +173,12 @@ impl InsertNodesIds {
 
         InsertNodesValues(self.0)
     }
+
+    /// List of `key_values` to be inserted into the all nodes that are being created or
+    /// updated.
+    pub fn values_uniform<T: Into<SingleValues>>(mut self, key_values: T) -> InsertNodesValues {
+        self.0.values = QueryValues::Single(Into::<SingleValues>::into(key_values).0);
+
+        InsertNodesValues(self.0)
+    }
 }

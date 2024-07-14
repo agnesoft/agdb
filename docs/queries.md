@@ -498,7 +498,10 @@ QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).
 QueryBuilder::insert().nodes().ids(1).count(1).query();
 QueryBuilder::insert().nodes().ids(vec![1, 2]).count(1).query();
 QueryBuilder::insert().nodes().ids("a").count(1).query();
+QueryBuilder::insert().nodes().ids("a").aliases("a").query(),
 QueryBuilder::insert().nodes().ids(vec!["a", "b"]).count(1).query();
+QueryBuilder::insert().nodes().ids(vec![1, 2]).values(vec![vec![("k", "v").into()], vec![(1, 10).into()]]).query(),
+QueryBuilder::insert().nodes().ids(vec![1, 2]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query(),
 QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count(1).query();
 ```
 
@@ -643,7 +646,7 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::remove().index("key").query()
+QueryBuilder::remove().index("key").query();
 ```
 
 </td></tr></table>
@@ -758,7 +761,7 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::select().aliases().query()
+QueryBuilder::select().aliases().query();
 ```
 
 </td></tr></table>
@@ -792,9 +795,9 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::select().edge_count().ids(vec![1, 2]).query()
-QueryBuilder::select().edge_count_from().ids(vec![1, 2]).query()
-QueryBuilder::select().edge_count_to().ids(vec![1, 2]).query()
+QueryBuilder::select().edge_count().ids(vec![1, 2]).query();
+QueryBuilder::select().edge_count_from().ids(vec![1, 2]).query();
+QueryBuilder::select().edge_count_to().ids(vec![1, 2]).query();
 ```
 
 </td></tr></table>
@@ -950,7 +953,7 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::select().node_count().query()
+QueryBuilder::select().node_count().query();
 ```
 
 </td></tr></table>
@@ -1131,19 +1134,19 @@ pub enum Comparison {
 //not() and not_beyond() can be applied to all conditions including nested where_()
 QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query();
 QueryBuilder::search().from(1).where_().edge().query();
-QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2))().query();
-QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1))().query();
-QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1))().query();
+QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query();
+QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query();
+QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1)).query();
 QueryBuilder::search().from(1).where_().node().query();
 QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
 QueryBuilder::search().from(1).where_().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().not().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().ids(vec![1, 2]).query();
-QueryBuilder::search().from(1).where_().beyond().keys(vec!["k"]).query();
+QueryBuilder::search().from(1).where_().beyond().keys(vec!["k".into()]).query();
 QueryBuilder::search().from(1).where_().not().ids(vec![1, 2]).query();
 QueryBuilder::search().from(1).where_().not_beyond().ids("a").query();
 QueryBuilder::search().from(1).where_().node().or().edge().query();
-QueryBuilder::search().from(1).where_().node().and().distance().query(CountComparison::GreaterThanOrEqual(3)).query();
+QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Equal(1.into())).end_where().query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(1.into())).end_where().query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(vec![1, 2].into())).end_where().query();

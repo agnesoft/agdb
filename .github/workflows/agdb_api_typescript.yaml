@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
-      - run: npm run lint
+      - run: npm run lint:check
 
   agdb_api_typescript_coverage:
     runs-on: ubuntu-latest

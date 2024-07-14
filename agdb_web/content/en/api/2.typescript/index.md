@@ -68,17 +68,9 @@ async function main() {
 7. To create a user using the default admin user:
 
 ```ts
-let admin_token = await client.user_login(null, {
-    username: "admin",
-    password: "admin",
-});
-AgdbApi.setToken(admin_token.data);
+await client.login("admin", "admin");
 await client.admin_user_add("user1", { password: "password123" });
-let token = await client.user_login(null, {
-    username: "user1",
-    password: "password123",
-});
-AgdbApi.setToken(token.data); //replaces the admin token
+await client.login("user1", "password123");
 ```
 
 8. To create a database:

@@ -52,8 +52,15 @@ impl QueryMut for InsertNodesQuery {
         let mut result = QueryResult::default();
         let mut ids = vec![];
         let count = std::cmp::max(self.count, self.aliases.len() as u64);
+        let query_ids = match &self.ids {
+            QueryIds::Ids(ids) => ids
+                .iter()
+                .map(|query_id| db.db_id(query_id))
+                .collect::<Result<Vec<DbId>, QueryError>>()?,
+            QueryIds::Search(search_query) => search_query.search(db)?,
+        };
         let values = match &self.values {
-            QueryValues::Single(v) => vec![v; std::cmp::max(1, count as usize)],
+            QueryValues::Single(v) => vec![v; std::cmp::max(query_ids.len(), count as usize)],
             QueryValues::Multi(v) => v.iter().collect(),
         };
 
@@ -66,14 +73,6 @@ impl QueryMut for InsertNodesQuery {
                 values.len(),
             )));
         }
-
-        let query_ids = match &self.ids {
-            QueryIds::Ids(ids) => ids
-                .iter()
-                .map(|query_id| db.db_id(query_id))
-                .collect::<Result<Vec<DbId>, QueryError>>()?,
-            QueryIds::Search(search_query) => search_query.search(db)?,
-        };
 
         if !query_ids.is_empty() {
             query_ids.iter().try_for_each(|db_id| {

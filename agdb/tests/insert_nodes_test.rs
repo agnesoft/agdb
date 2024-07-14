@@ -407,3 +407,34 @@ fn insert_aliases_and_normal_nodes() {
         3,
     );
 }
+
+#[test]
+fn insert_nodes_ids_values_uniform() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .ids(vec![1, 2])
+            .values_uniform(vec![("key", "value").into()])
+            .query(),
+        2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids(vec![1, 2]).query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![("key", "value").into()],
+            },
+            DbElement {
+                id: DbId(2),
+                from: None,
+                to: None,
+                values: vec![("key", "value").into()],
+            },
+        ],
+    );
+}

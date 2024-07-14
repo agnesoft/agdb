@@ -32,7 +32,7 @@ jobs:
       - run: |
           cd examples/server_client_typescript
           npm ci
-          npm run lint
+          npm run lint:check
 
   agdb_examples_build:
     runs-on: ubuntu-latest

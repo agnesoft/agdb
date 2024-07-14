@@ -7,22 +7,19 @@ navigation:
 
 # rust
 
-The rust agdb API client is **async only** and can be used with any HTTP client that would implement the `agdb_api::HttpClient` trait. The default implementation uses [reqwest](https://crates.io/crates/reqwest). The following is the quickstart guide for the agdb client in Rust (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](how_to_run_server.md) to learn how to run the server.
+The rust agdb API client is **async only** and can be used with any HTTP client that would implement the `agdb_api::HttpClient` trait. The default implementation uses [reqwest](https://crates.io/crates/reqwest). The following is the quickstart guide for the agdb client in Rust (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how_to_run_server.md) to learn how to run the server.
 
-Looking for... [how to run a server?](how_to_run_server.md) | [another language?](./) | [embedded db guide?](quickstart.md)
+Looking for... [how to run a server?](/docs/guides/how_to_run_server.md) | [another language?](/docs/api.md) | [embedded db guide?](/docs/guides/quickstart.md)
 
-<br/>1. First install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install) (mininum required version is `1.75.0`).
-<br/>
+1. First install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install) (mininum required version is `1.75.0`).
 
-<br/>2. Create an applicaiton folder, for example `agdb_client` and initialize your application using cargo:
-<br/><br/>
+2. Create an applicaiton folder, for example `agdb_client` and initialize your application using cargo:
 
 ```
 cargo add agdb_client
 ```
 
-<br/>3. Add `agdb`, `agdb_api`, `tokio` and `anyhow` as a dependencies:
-<br/><br/>
+3. Add `agdb`, `agdb_api`, `tokio` and `anyhow` as a dependencies:
 
 ```bash
 cargo add agdb --features serde,openapi
@@ -31,8 +28,7 @@ cargo add tokio --features full
 cargo add anyhow
 ```
 
-<br/> 4. Create the client pointing to an `agdb` server:
-<br/><br/>
+4. Create the client pointing to an `agdb` server:
 
 ```rs
 use agdb_api::AgdbApi;
@@ -46,8 +42,7 @@ async fn main() -> anyhow::Result<()> {
 }
 ```
 
-<br/> 5. Login as admin and setup the user:
-<br/><br/>
+5. Login as admin and setup the user:
 
 ```rs
 client.user_login("admin", "admin").await?; // The authentication login is stored in
@@ -57,8 +52,7 @@ client.admin_user_add("my_user", "password123").await?;
 client.user_login("my_user", "password123").await?; // Login as our newly created user.
 ```
 
-<br/> 6. Create a database:
-<br/><br/>
+6. Create a database:
 
 ```rs
 use agdb_api::DbType;
@@ -67,8 +61,7 @@ client.db_add("my_user", "my_db", DbType::Mapped).await?; // Memory mapped datab
                                                           // will be created under our "my_user".
 ```
 
-<br/> 7. Run our first queries against the database inserting a node with alias "users" and some users connecting them together:
-<br/><br/>
+7. Run our first queries against the database inserting a node with alias "users" and some users connecting them together:
 
 ```rs
 // We derive from agdb::UserValue
@@ -101,8 +94,7 @@ let queries: Vec<QueryType> = vec![QueryBuilder::insert().nodes().aliases("users
 client.exec("my_user", "my_db", &queries).await?;
 ```
 
-<br/> 8. Run another query searching & selecting the users and converting them back to the native local object:
-<br/><br/>
+8. Run another query searching & selecting the users and converting them back to the native local object:
 
 ```rs
 let queries = vec![QueryBuilder::select()
@@ -124,8 +116,7 @@ let users: Vec<User> = client.exec("my_user", "my_db", &queries).await?[0].try_i
 println!("{:?}", users);
 ```
 
-<br/> 9. Full program:
-<br/><br/>
+9. Full program:
 
 Cargo.toml:
 
@@ -211,3 +202,5 @@ let queries: Vec<QueryType> = vec![QueryBuilder::insert().nodes().aliases("users
 //...
 let users: Vec<User> = client.exec("my_user", "my_db", &queries).await?[3].try_into()?; // Have you noticed a different index of the result?
 ```
+
+10. See full program in the examples: https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust

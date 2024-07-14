@@ -7,17 +7,17 @@ navigation:
 
 # api
 
-The [agdb server](guides/server.md) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
+The [agdb server](/docs/guides/server.md) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
 
 <p align="center">
-    <a href="/docs/guides/rust.md"><img width="50" src="./images/rust.png" alt="rust"></a>
-    <a href="/docs/guides/typescript_javascript.md"><img width="50" src="./images/ts.png" alt="ts"></a>
-    <a href="/docs/guides/typescript_javascript.md"><img width="50" src="./images/js.png" alt="js"></a>
-    <img width="50" src="./images/python.png" alt="python">
-    <img width="50" src="./images/java.png" alt="java">
-    <img width="50" src="./images/c.png" alt="c">
-    <img width="50" src="./images/cpp.png" alt="cpp">
-    <img width="50" src="./images/csharp.png" alt="csharp">
+    <a href="/docs/guides/rust.md"><img width="50" src="/docs/images/rust.png" alt="rust"></a>
+    <a href="/docs/guides/typescript_javascript.md"><img width="50" src="/docs/images/ts.png" alt="ts"></a>
+    <a href="/docs/guides/typescript_javascript.md"><img width="50" src="/docs/images/js.png" alt="js"></a>
+    <img width="50" src="/docs/images/python.png" alt="python">
+    <img width="50" src="/docs/images/java.png" alt="java">
+    <img width="50" src="/docs/images/c.png" alt="c">
+    <img width="50" src="/docs/images/cpp.png" alt="cpp">
+    <img width="50" src="/docs/images/csharp.png" alt="csharp">
 </p>
 
 ## openapi.json

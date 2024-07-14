@@ -187,7 +187,7 @@ Increasing the number of writers and readers 10x:
 
 The following is the ["flamegraph"](https://github.com/flamegraph-rs/flamegraph) illustrating what the benchmark is spending most time on. The obvious answer (as predicted) is the async orchestration through tokio followed by the database running queries. Digging down the callgraph there is no immediate performance bottleneck (such as memory allocation) that could be significantly optimised. The database functionality seems to be evenly distributed matching the expectations given what is being run:
 
-![Flamegraph](./images/flamegraph.svg)
+![Flamegraph](/docs/images/flamegraph.svg)
 
 ## Conclusion
 

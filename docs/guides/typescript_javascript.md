@@ -7,9 +7,9 @@ navigation:
 
 # typescript / javascript
 
-The typescript agdb API client is based on [openapi-client-axios](https://www.npmjs.com/package/openapi-client-axios). The following is the quickstart guide for the agdb client in Javascript/Typescript (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](how_to_run_server.md) to learn how to run the server.
+The typescript agdb API client is based on [openapi-client-axios](https://www.npmjs.com/package/openapi-client-axios). The following is the quickstart guide for the agdb client in Javascript/Typescript (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how_to_run_server.md) to learn how to run the server.
 
-Looking for... [how to run a server?](how_to_run_server.md) | [another language?](./) | [embedded db guide?](quickstart.md)
+Looking for... [how to run a server?](/docs/guides/how_to_run_server.md) | [another language?](/docs/api.md) | [embedded db guide?](/docs/guides/quickstart.md)
 
 # Usage
 

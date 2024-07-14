@@ -22,7 +22,7 @@ GUI accessible at (run in browser when the server is running):
 
 `http://localhost:3000/api/v1`
 
-![rapidoc](./images/agdb_server_rapidoc.png)
+![rapidoc](/docs/images/agdb_server_rapidoc.png)
 
 ## Configuration
 

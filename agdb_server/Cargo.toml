@@ -9,7 +9,7 @@ documentation = "https://github.com/agnesoft/agdb"
 readme = "../README.md"
 description = "Agnesoft Graph Database Server"
 keywords = ["graph", "database", "api"]
-categories = ["database", "database-interfaces"]
+categories = ["database", "database-implementations"]
 
 [dependencies]
 agdb = { version = "0.7.1", path = "../agdb", features = ["serde", "openapi"] }

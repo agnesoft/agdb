@@ -7,7 +7,7 @@ navigation:
 
 # api
 
-The [agdb server](/docs/guides/server.md) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
+The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
 
 <p align="center">
     <a href="/docs/guides/rust.md"><img width="50" src="/docs/images/rust.png" alt="rust"></a>

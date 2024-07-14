@@ -1,31 +1,14 @@
 {
-  "QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc(\"age\".into()),DbKeyOrder::Asc(\"name\".into())]).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [
+  "QueryBuilder::select().key_count().ids(\"a\").query()": {
+    "SelectKeyCount": {
+      "Ids": [
         {
-          "Desc": {
-            "String": "age"
-          }
-        },
-        {
-          "Asc": {
-            "String": "name"
-          }
+          "Alias": "a"
         }
-      ],
-      "conditions": []
+      ]
     }
   },
-  "QueryBuilder::search().from(1).where_().edge().query()": {
+  "QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -41,62 +24,14 @@
         {
           "logic": "And",
           "modifier": "None",
-          "data": "Edge"
-        }
-      ]
-    }
-  },
-  "QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
+          "data": "Node"
+        },
         {
           "logic": "And",
           "modifier": "None",
           "data": {
             "Distance": {
-              "LessThan": 3
-            }
-          }
-        }
-      ]
-    }
-  },
-  "QueryBuilder::search().from(1).where_().key(\"k\").value(Comparison::Equal(1.into())).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": {
-            "KeyValue": {
-              "key": {
-                "String": "k"
-              },
-              "value": {
-                "Equal": {
-                  "I64": 1
-                }
-              }
+              "GreaterThanOrEqual": 3
             }
           }
         }
@@ -136,6 +71,1042 @@
       }
     }
   },
+  "QueryBuilder::insert().values(vec![vec![(\"k\",\"v\").into(),(1,10).into()],vec![(\"k\",2).into()]]).ids(QueryBuilder::search().from(\"a\").query()).query()": {
+    "InsertValues": {
+      "ids": {
+        "Search": {
+          "algorithm": "BreadthFirst",
+          "origin": {
+            "Alias": "a"
+          },
+          "destination": {
+            "Id": 0
+          },
+          "limit": 0,
+          "offset": 0,
+          "order_by": [],
+          "conditions": []
+        }
+      },
+      "values": {
+        "Multi": [
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "String": "v"
+              }
+            },
+            {
+              "key": {
+                "I64": 1
+              },
+              "value": {
+                "I64": 10
+              }
+            }
+          ],
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 2
+              }
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query()": {
+    "Select": {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": []
+      }
+    }
+  },
+  "QueryBuilder::insert().aliases(\"a\").ids(\"b\").query()": {
+    "InsertAlias": {
+      "ids": {
+        "Ids": [
+          {
+            "Alias": "b"
+          }
+        ]
+      },
+      "aliases": [
+        "a"
+      ]
+    }
+  },
+  "QueryBuilder::select().ids(vec![1,2]).query()": {
+    "Select": {
+      "Ids": [
+        {
+          "Id": 1
+        },
+        {
+          "Id": 2
+        }
+      ]
+    }
+  },
+  "QueryBuilder::select().keys().ids(vec![1,2]).query()": {
+    "SelectKeys": {
+      "Ids": [
+        {
+          "Id": 1
+        },
+        {
+          "Id": 2
+        }
+      ]
+    }
+  },
+  "QueryBuilder::remove().ids(QueryBuilder::search().from(\"a\").query()).query()": {
+    "Remove": {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Alias": "a"
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": []
+      }
+    }
+  },
+  "QueryBuilder::select().edge_count_from().ids(vec![1,2]).query()": {
+    "SelectEdgeCount": {
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "from": true,
+      "to": false
+    }
+  },
+  "QueryBuilder::search().from(1).where_().node().query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "None",
+          "data": "Node"
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "None",
+          "data": {
+            "EdgeCount": {
+              "GreaterThan": 2
+            }
+          }
+        }
+      ]
+    }
+  },
+  "QueryBuilder::insert().edges().ids(vec![-3,-4]).from(1).to(2).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Id": 1
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "ids": {
+        "Ids": [
+          {
+            "Id": -3
+          },
+          {
+            "Id": -4
+          }
+        ]
+      },
+      "values": {
+        "Single": []
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge().query()).from(1).to(2).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Id": 1
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "ids": {
+        "Search": {
+          "algorithm": "BreadthFirst",
+          "origin": {
+            "Id": 1
+          },
+          "destination": {
+            "Id": 0
+          },
+          "limit": 0,
+          "offset": 0,
+          "order_by": [],
+          "conditions": [
+            {
+              "logic": "And",
+              "modifier": "None",
+              "data": "Edge"
+            }
+          ]
+        }
+      },
+      "values": {
+        "Single": []
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::insert().nodes().count(2).values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).query()": {
+    "InsertNodes": {
+      "count": 2,
+      "values": {
+        "Single": [
+          {
+            "key": {
+              "String": "k"
+            },
+            "value": {
+              "String": "v"
+            }
+          },
+          {
+            "key": {
+              "I64": 1
+            },
+            "value": {
+              "I64": 10
+            }
+          }
+        ]
+      },
+      "aliases": [],
+      "ids": {
+        "Ids": []
+      }
+    }
+  },
+  "QueryBuilder::insert().values(vec![vec![(\"k\",\"v\").into(),(1,10).into()],vec![(\"k\",2).into()]]).ids(vec![1,2]).query()": {
+    "InsertValues": {
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "values": {
+        "Multi": [
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "String": "v"
+              }
+            },
+            {
+              "key": {
+                "I64": 1
+              },
+              "value": {
+                "I64": 10
+              }
+            }
+          ],
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 2
+              }
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "QueryBuilder::insert().nodes().aliases(vec![\"a\",\"b\"]).values(vec![vec![(\"k\",1).into()],vec![(\"k\",2).into()]]).query()": {
+    "InsertNodes": {
+      "count": 0,
+      "values": {
+        "Multi": [
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 1
+              }
+            }
+          ],
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 2
+              }
+            }
+          ]
+        ]
+      },
+      "aliases": [
+        "a",
+        "b"
+      ],
+      "ids": {
+        "Ids": []
+      }
+    }
+  },
+  "QueryBuilder::insert().edges().from(1).to(2).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Id": 1
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "ids": {
+        "Ids": []
+      },
+      "values": {
+        "Single": []
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().values_uniform(vec![(\"k\",1).into(),(\"k\",2).into()]).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 2
+          },
+          {
+            "Id": 3
+          }
+        ]
+      },
+      "ids": {
+        "Ids": []
+      },
+      "values": {
+        "Single": [
+          {
+            "key": {
+              "String": "k"
+            },
+            "value": {
+              "I64": 1
+            }
+          },
+          {
+            "key": {
+              "String": "k"
+            },
+            "value": {
+              "I64": 2
+            }
+          }
+        ]
+      },
+      "each": true
+    }
+  },
+  "QueryBuilder::insert().edges().ids(-3).from(1).to(2).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Id": 1
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "ids": {
+        "Ids": [
+          {
+            "Id": -3
+          }
+        ]
+      },
+      "values": {
+        "Single": []
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::remove().aliases(\"a\").query()": {
+    "RemoveAliases": [
+      "a"
+    ]
+  },
+  "QueryBuilder::remove().aliases(vec![\"a\",\"b\"]).query()": {
+    "RemoveAliases": [
+      "a",
+      "b"
+    ]
+  },
+  "QueryBuilder::select().keys().ids(\"a\").query()": {
+    "SelectKeys": {
+      "Ids": [
+        {
+          "Alias": "a"
+        }
+      ]
+    }
+  },
+  "QueryBuilder::select().values(vec![\"k\".into(),\"k2\".into()]).ids(\"a\").query()": {
+    "SelectValues": {
+      "keys": [
+        {
+          "String": "k"
+        },
+        {
+          "String": "k2"
+        }
+      ],
+      "ids": {
+        "Ids": [
+          {
+            "Alias": "a"
+          }
+        ]
+      }
+    }
+  },
+  "QueryBuilder::select().aliases().ids(vec![1,2]).query()": {
+    "SelectAliases": {
+      "Ids": [
+        {
+          "Id": 1
+        },
+        {
+          "Id": 2
+        }
+      ]
+    }
+  },
+  "QueryBuilder::select().values(vec![\"k\".into(),\"k2\".into()]).ids(QueryBuilder::search().from(1).query()).query()": {
+    "SelectValues": {
+      "keys": [
+        {
+          "String": "k"
+        },
+        {
+          "String": "k2"
+        }
+      ],
+      "ids": {
+        "Search": {
+          "algorithm": "BreadthFirst",
+          "origin": {
+            "Id": 1
+          },
+          "destination": {
+            "Id": 0
+          },
+          "limit": 0,
+          "offset": 0,
+          "order_by": [],
+          "conditions": []
+        }
+      }
+    }
+  },
+  "QueryBuilder::insert().nodes().ids(vec![1,2]).count(1).query()": {
+    "InsertNodes": {
+      "count": 1,
+      "values": {
+        "Single": []
+      },
+      "aliases": [],
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      }
+    }
+  },
+  "QueryBuilder::remove().ids(vec![1,2]).query()": {
+    "Remove": {
+      "Ids": [
+        {
+          "Id": 1
+        },
+        {
+          "Id": 2
+        }
+      ]
+    }
+  },
+  "QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query()": {
+    "SelectKeyCount": {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": []
+      }
+    }
+  },
+  "QueryBuilder::search().from(1).limit(5).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 5,
+      "offset": 0,
+      "order_by": [],
+      "conditions": []
+    }
+  },
+  "QueryBuilder::insert().edges().from(\"a\").to(vec![1,2]).values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Alias": "a"
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "ids": {
+        "Ids": []
+      },
+      "values": {
+        "Single": [
+          {
+            "key": {
+              "String": "k"
+            },
+            "value": {
+              "String": "v"
+            }
+          },
+          {
+            "key": {
+              "I64": 1
+            },
+            "value": {
+              "I64": 10
+            }
+          }
+        ]
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "None",
+          "data": {
+            "Distance": {
+              "LessThan": 3
+            }
+          }
+        }
+      ]
+    }
+  },
+  "QueryBuilder::insert().values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).ids(vec![1,2]).query()": {
+    "InsertValues": {
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "values": {
+        "Single": [
+          {
+            "key": {
+              "String": "k"
+            },
+            "value": {
+              "String": "v"
+            }
+          },
+          {
+            "key": {
+              "I64": 1
+            },
+            "value": {
+              "I64": 10
+            }
+          }
+        ]
+      }
+    }
+  },
+  "QueryBuilder::search().index(\"age\").value(20).query()": {
+    "Search": {
+      "algorithm": "Index",
+      "origin": {
+        "Id": 0
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "None",
+          "data": {
+            "KeyValue": {
+              "key": {
+                "String": "age"
+              },
+              "value": {
+                "Equal": {
+                  "I64": 20
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().from(1).where_().edge().query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "None",
+          "data": "Edge"
+        }
+      ]
+    }
+  },
+  "QueryBuilder::insert().edges().from(\"a\").to(vec![1,2]).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Alias": "a"
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "ids": {
+        "Ids": []
+      },
+      "values": {
+        "Single": []
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::insert().nodes().ids(vec![1,2]).values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).query()": {
+    "InsertNodes": {
+      "count": 0,
+      "values": {
+        "Single": [
+          {
+            "key": {
+              "String": "k"
+            },
+            "value": {
+              "String": "v"
+            }
+          },
+          {
+            "key": {
+              "I64": 1
+            },
+            "value": {
+              "I64": 10
+            }
+          }
+        ]
+      },
+      "aliases": [],
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      }
+    }
+  },
+  "QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc(\"age\".into()),DbKeyOrder::Asc(\"name\".into())]).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [
+        {
+          "Desc": {
+            "String": "age"
+          }
+        },
+        {
+          "Asc": {
+            "String": "name"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  },
+  "QueryBuilder::insert().edges().from(\"a\").to(vec![1,2]).values(vec![vec![(\"k\",1).into()],vec![(\"k\",2).into()]]).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Alias": "a"
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "ids": {
+        "Ids": []
+      },
+      "values": {
+        "Multi": [
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 1
+              }
+            }
+          ],
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "I64": 2
+              }
+            }
+          ]
+        ]
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::select().node_count().query()": {
+    "SelectNodeCount": {}
+  },
+  "QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1)).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "None",
+          "data": {
+            "EdgeCountTo": {
+              "NotEqual": 1
+            }
+          }
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().from(1).where_().not().keys(vec![\"k1\".into(),\"k2\".into()]).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "Not",
+          "data": {
+            "Keys": [
+              {
+                "String": "k1"
+              },
+              {
+                "String": "k2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc(\"k\".into())]).limit(5).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 5,
+      "offset": 0,
+      "order_by": [
+        {
+          "Desc": {
+            "String": "k"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  },
+  "QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query()": {
+    "SelectKeys": {
+      "Search": {
+        "algorithm": "BreadthFirst",
+        "origin": {
+          "Id": 1
+        },
+        "destination": {
+          "Id": 0
+        },
+        "limit": 0,
+        "offset": 0,
+        "order_by": [],
+        "conditions": []
+      }
+    }
+  },
+  "QueryBuilder::remove().ids(1).query()": {
+    "Remove": {
+      "Ids": [
+        {
+          "Id": 1
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc(\"k\".into())]).offset(10).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 10,
+      "order_by": [
+        {
+          "Desc": {
+            "String": "k"
+          }
+        }
+      ],
+      "conditions": []
+    }
+  },
   "QueryBuilder::search().from(1).where_().ids(vec![1,2]).query()": {
     "Search": {
       "algorithm": "BreadthFirst",
@@ -166,65 +1137,118 @@
       ]
     }
   },
-  "QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query()": {
-    "Select": {
-      "Search": {
-        "algorithm": "BreadthFirst",
-        "origin": {
-          "Id": 1
-        },
-        "destination": {
-          "Id": 0
-        },
-        "limit": 0,
-        "offset": 0,
-        "order_by": [],
-        "conditions": []
-      }
+  "QueryBuilder::search().from(1).where_().not_beyond().ids(\"a\").query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "NotBeyond",
+          "data": {
+            "Ids": [
+              {
+                "Alias": "a"
+              }
+            ]
+          }
+        }
+      ]
     }
   },
-  "QueryBuilder::remove().values(vec![\"k1\".into(),\"k2\".into()]).ids(QueryBuilder::search().from(\"a\").query()).query()": {
-    "RemoveValues": {
-      "keys": [
-        {
-          "String": "k1"
-        },
-        {
-          "String": "k2"
-        }
-      ],
+  "QueryBuilder::select().aliases().query()": {
+    "SelectAllAliases": {}
+  },
+  "QueryBuilder::insert().nodes().ids(vec![\"a\",\"b\"]).count(1).query()": {
+    "InsertNodes": {
+      "count": 1,
+      "values": {
+        "Single": []
+      },
+      "aliases": [],
       "ids": {
-        "Search": {
-          "algorithm": "BreadthFirst",
-          "origin": {
+        "Ids": [
+          {
             "Alias": "a"
           },
-          "destination": {
-            "Id": 0
-          },
-          "limit": 0,
-          "offset": 0,
-          "order_by": [],
-          "conditions": []
-        }
+          {
+            "Alias": "b"
+          }
+        ]
       }
     }
   },
-  "QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query()": {
-    "SelectKeyCount": {
-      "Search": {
-        "algorithm": "BreadthFirst",
-        "origin": {
-          "Id": 1
+  "QueryBuilder::select().ids(\"a\").query()": {
+    "Select": {
+      "Ids": [
+        {
+          "Alias": "a"
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().elements().query()": {
+    "Search": {
+      "algorithm": "Elements",
+      "origin": {
+        "Id": 0
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": []
+    }
+  },
+  "QueryBuilder::search().from(1).where_().node().or().edge().query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": [
+        {
+          "logic": "And",
+          "modifier": "None",
+          "data": "Node"
         },
-        "destination": {
-          "Id": 0
-        },
-        "limit": 0,
-        "offset": 0,
-        "order_by": [],
-        "conditions": []
-      }
+        {
+          "logic": "Or",
+          "modifier": "None",
+          "data": "Edge"
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().to(1).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 0
+      },
+      "destination": {
+        "Id": 1
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": []
     }
   },
   "QueryBuilder::insert().edges().from(QueryBuilder::search().from(\"a\").where_().node().query()).to(QueryBuilder::search().from(\"b\").where_().node().query()).values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).query()": {
@@ -297,7 +1321,43 @@
       "each": false
     }
   },
-  "QueryBuilder::search().from(\"a\").query()": {
+  "QueryBuilder::insert().aliases(\"a\").ids(1).query()": {
+    "InsertAlias": {
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          }
+        ]
+      },
+      "aliases": [
+        "a"
+      ]
+    }
+  },
+  "QueryBuilder::select().values(vec![\"k\".into(),\"k2\".into()]).ids(vec![1,2]).query()": {
+    "SelectValues": {
+      "keys": [
+        {
+          "String": "k"
+        },
+        {
+          "String": "k2"
+        }
+      ],
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      }
+    }
+  },
+  "QueryBuilder::search().breadth_first().from(\"a\").query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -310,38 +1370,6 @@
       "offset": 0,
       "order_by": [],
       "conditions": []
-    }
-  },
-  "QueryBuilder::search().index(\"age\").value(20).query()": {
-    "Search": {
-      "algorithm": "Index",
-      "origin": {
-        "Id": 0
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": {
-            "KeyValue": {
-              "key": {
-                "String": "age"
-              },
-              "value": {
-                "Equal": {
-                  "I64": 20
-                }
-              }
-            }
-          }
-        }
-      ]
     }
   },
   "QueryBuilder::search().from(1).where_().beyond().keys(vec![\"k\".into()]).query()": {
@@ -421,25 +1449,22 @@
       ]
     }
   },
-  "QueryBuilder::remove().ids(\"a\").query()": {
-    "Remove": {
-      "Ids": [
-        {
-          "Alias": "a"
-        }
-      ]
+  "QueryBuilder::insert().nodes().aliases(vec![\"a\",\"b\"]).query()": {
+    "InsertNodes": {
+      "count": 0,
+      "values": {
+        "Single": []
+      },
+      "aliases": [
+        "a",
+        "b"
+      ],
+      "ids": {
+        "Ids": []
+      }
     }
   },
-  "QueryBuilder::select().key_count().ids(\"a\").query()": {
-    "SelectKeyCount": {
-      "Ids": [
-        {
-          "Alias": "a"
-        }
-      ]
-    }
-  },
-  "QueryBuilder::search().from(1).where_().not().keys(vec![\"k1\".into(),\"k2\".into()]).query()": {
+  "QueryBuilder::search().from(1).offset(10).limit(5).query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -448,108 +1473,33 @@
       "destination": {
         "Id": 0
       },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "Not",
-          "data": {
-            "Keys": [
-              {
-                "String": "k1"
-              },
-              {
-                "String": "k2"
-              }
-            ]
-          }
-        }
-      ]
-    }
-  },
-  "QueryBuilder::search().depth_first().from(\"a\").query()": {
-    "Search": {
-      "algorithm": "DepthFirst",
-      "origin": {
-        "Alias": "a"
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
+      "limit": 5,
+      "offset": 10,
       "order_by": [],
       "conditions": []
     }
   },
-  "QueryBuilder::insert().edges().from(\"a\").to(vec![1,2]).query()": {
+  "QueryBuilder::insert().aliases(vec![\"a\",\"b\"]).ids(vec![1,2]).query()": {
+    "InsertAlias": {
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "aliases": [
+        "a",
+        "b"
+      ]
+    }
+  },
+  "QueryBuilder::insert().edges().from(QueryBuilder::search().from(\"a\").where_().node().query()).to(QueryBuilder::search().from(\"b\").where_().node().query()).query()": {
     "InsertEdges": {
       "from": {
-        "Ids": [
-          {
-            "Alias": "a"
-          }
-        ]
-      },
-      "to": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "ids": {
-        "Ids": []
-      },
-      "values": {
-        "Single": []
-      },
-      "each": false
-    }
-  },
-  "QueryBuilder::insert().nodes().ids(1).count(1).query()": {
-    "InsertNodes": {
-      "count": 1,
-      "values": {
-        "Single": []
-      },
-      "aliases": [],
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          }
-        ]
-      }
-    }
-  },
-  "QueryBuilder::insert().nodes().ids(vec![1,2]).count(1).query()": {
-    "InsertNodes": {
-      "count": 1,
-      "values": {
-        "Single": []
-      },
-      "aliases": [],
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      }
-    }
-  },
-  "QueryBuilder::insert().values(vec![vec![(\"k\",\"v\").into(),(1,10).into()],vec![(\"k\",2).into()]]).ids(QueryBuilder::search().from(\"a\").query()).query()": {
-    "InsertValues": {
-      "ids": {
         "Search": {
           "algorithm": "BreadthFirst",
           "origin": {
@@ -561,36 +1511,108 @@
           "limit": 0,
           "offset": 0,
           "order_by": [],
-          "conditions": []
+          "conditions": [
+            {
+              "logic": "And",
+              "modifier": "None",
+              "data": "Node"
+            }
+          ]
         }
+      },
+      "to": {
+        "Search": {
+          "algorithm": "BreadthFirst",
+          "origin": {
+            "Alias": "b"
+          },
+          "destination": {
+            "Id": 0
+          },
+          "limit": 0,
+          "offset": 0,
+          "order_by": [],
+          "conditions": [
+            {
+              "logic": "And",
+              "modifier": "None",
+              "data": "Node"
+            }
+          ]
+        }
+      },
+      "ids": {
+        "Ids": []
+      },
+      "values": {
+        "Single": []
+      },
+      "each": false
+    }
+  },
+  "QueryBuilder::select().edge_count_to().ids(vec![1,2]).query()": {
+    "SelectEdgeCount": {
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "from": false,
+      "to": true
+    }
+  },
+  "QueryBuilder::insert().elements(&[T::default(),T::default()]).query()": {
+    "InsertValues": {
+      "ids": {
+        "Ids": [
+          {
+            "Id": 0
+          },
+          {
+            "Id": 0
+          }
+        ]
       },
       "values": {
         "Multi": [
           [
             {
               "key": {
-                "String": "k"
+                "String": "value1"
               },
               "value": {
-                "String": "v"
+                "String": ""
               }
             },
             {
               "key": {
-                "I64": 1
+                "String": "value2"
               },
               "value": {
-                "I64": 10
+                "I64": 0
               }
             }
           ],
           [
             {
               "key": {
-                "String": "k"
+                "String": "value1"
               },
               "value": {
-                "I64": 2
+                "String": ""
+              }
+            },
+            {
+              "key": {
+                "String": "value2"
+              },
+              "value": {
+                "I64": 0
               }
             }
           ]
@@ -598,8 +1620,8 @@
       }
     }
   },
-  "QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query()": {
-    "SelectKeys": {
+  "QueryBuilder::select().aliases().ids(QueryBuilder::search().from(1).query()).query()": {
+    "SelectAliases": {
       "Search": {
         "algorithm": "BreadthFirst",
         "origin": {
@@ -615,34 +1637,41 @@
       }
     }
   },
-  "QueryBuilder::select().key_count().ids(vec![1,2]).query()": {
-    "SelectKeyCount": {
-      "Ids": [
-        {
-          "Id": 1
-        },
-        {
-          "Id": 2
-        }
-      ]
-    }
-  },
-  "QueryBuilder::insert().edges().from(\"a\").to(vec![1,2]).values(vec![vec![(\"k\",1).into()],vec![(\"k\",2).into()]]).query()": {
-    "InsertEdges": {
-      "from": {
-        "Ids": [
-          {
-            "Alias": "a"
-          }
-        ]
-      },
-      "to": {
+  "QueryBuilder::select().edge_count().ids(vec![1,2]).query()": {
+    "SelectEdgeCount": {
+      "ids": {
         "Ids": [
           {
             "Id": 1
           },
           {
             "Id": 2
+          }
+        ]
+      },
+      "from": true,
+      "to": true
+    }
+  },
+  "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().values(vec![vec![(\"k\",1).into()],vec![(\"k\",2).into()]]).query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      },
+      "to": {
+        "Ids": [
+          {
+            "Id": 2
+          },
+          {
+            "Id": 3
           }
         ]
       },
@@ -673,39 +1702,35 @@
           ]
         ]
       },
-      "each": false
+      "each": true
     }
   },
-  "QueryBuilder::insert().nodes().count(2).values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).query()": {
-    "InsertNodes": {
-      "count": 2,
-      "values": {
-        "Single": [
+  "QueryBuilder::insert().edges().from(\"a\").to(\"b\").query()": {
+    "InsertEdges": {
+      "from": {
+        "Ids": [
           {
-            "key": {
-              "String": "k"
-            },
-            "value": {
-              "String": "v"
-            }
-          },
-          {
-            "key": {
-              "I64": 1
-            },
-            "value": {
-              "I64": 10
-            }
+            "Alias": "a"
           }
         ]
       },
-      "aliases": [],
+      "to": {
+        "Ids": [
+          {
+            "Alias": "b"
+          }
+        ]
+      },
       "ids": {
         "Ids": []
-      }
+      },
+      "values": {
+        "Single": []
+      },
+      "each": false
     }
   },
-  "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().query()": {
+  "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).query()": {
     "InsertEdges": {
       "from": {
         "Ids": [
@@ -732,126 +1757,6 @@
       },
       "values": {
         "Single": []
-      },
-      "each": true
-    }
-  },
-  "QueryBuilder::insert().edges().ids(vec![-3,-4]).from(1).to(2).query()": {
-    "InsertEdges": {
-      "from": {
-        "Ids": [
-          {
-            "Id": 1
-          }
-        ]
-      },
-      "to": {
-        "Ids": [
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "ids": {
-        "Ids": [
-          {
-            "Id": -3
-          },
-          {
-            "Id": -4
-          }
-        ]
-      },
-      "values": {
-        "Single": []
-      },
-      "each": false
-    }
-  },
-  "QueryBuilder::remove().values(vec![\"k1\".into(),\"k2\".into()]).ids(vec![1,2]).query()": {
-    "RemoveValues": {
-      "keys": [
-        {
-          "String": "k1"
-        },
-        {
-          "String": "k2"
-        }
-      ],
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      }
-    }
-  },
-  "QueryBuilder::select().edge_count_from().ids(vec![1,2]).query()": {
-    "SelectEdgeCount": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "from": true,
-      "to": false
-    }
-  },
-  "QueryBuilder::insert().index(\"key\").query()": {
-    "InsertIndex": {
-      "String": "key"
-    }
-  },
-  "QueryBuilder::insert().edges().from(\"a\").to(vec![1,2]).values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).query()": {
-    "InsertEdges": {
-      "from": {
-        "Ids": [
-          {
-            "Alias": "a"
-          }
-        ]
-      },
-      "to": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "ids": {
-        "Ids": []
-      },
-      "values": {
-        "Single": [
-          {
-            "key": {
-              "String": "k"
-            },
-            "value": {
-              "String": "v"
-            }
-          },
-          {
-            "key": {
-              "I64": 1
-            },
-            "value": {
-              "I64": 10
-            }
-          }
-        ]
       },
       "each": false
     }
@@ -888,9 +1793,53 @@
       }
     }
   },
-  "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).query()": {
-    "InsertEdges": {
-      "from": {
+  "QueryBuilder::insert().nodes().ids(\"a\").aliases(\"a\").query()": {
+    "InsertNodes": {
+      "count": 0,
+      "values": {
+        "Single": []
+      },
+      "aliases": [
+        "a"
+      ],
+      "ids": {
+        "Ids": [
+          {
+            "Alias": "a"
+          }
+        ]
+      }
+    }
+  },
+  "QueryBuilder::insert().nodes().ids(vec![1,2]).values(vec![vec![(\"k\",\"v\").into()],vec![(1,10).into()]]).query()": {
+    "InsertNodes": {
+      "count": 0,
+      "values": {
+        "Multi": [
+          [
+            {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "String": "v"
+              }
+            }
+          ],
+          [
+            {
+              "key": {
+                "I64": 1
+              },
+              "value": {
+                "I64": 10
+              }
+            }
+          ]
+        ]
+      },
+      "aliases": [],
+      "ids": {
         "Ids": [
           {
             "Id": 1
@@ -899,38 +1848,6 @@
             "Id": 2
           }
         ]
-      },
-      "to": {
-        "Ids": [
-          {
-            "Id": 2
-          },
-          {
-            "Id": 3
-          }
-        ]
-      },
-      "ids": {
-        "Ids": []
-      },
-      "values": {
-        "Single": []
-      },
-      "each": false
-    }
-  },
-  "QueryBuilder::insert().nodes().aliases(vec![\"a\",\"b\"]).query()": {
-    "InsertNodes": {
-      "count": 0,
-      "values": {
-        "Single": []
-      },
-      "aliases": [
-        "a",
-        "b"
-      ],
-      "ids": {
-        "Ids": []
       }
     }
   },
@@ -973,17 +1890,42 @@
       }
     }
   },
-  "QueryBuilder::remove().aliases(\"a\").query()": {
-    "RemoveAliases": [
-      "a"
-    ]
+  "QueryBuilder::remove().index(\"key\").query()": {
+    "RemoveIndex": {
+      "String": "key"
+    }
   },
-  "QueryBuilder::insert().edges().from(1).to(2).query()": {
+  "QueryBuilder::remove().values(vec![\"k1\".into(),\"k2\".into()]).ids(vec![1,2]).query()": {
+    "RemoveValues": {
+      "keys": [
+        {
+          "String": "k1"
+        },
+        {
+          "String": "k2"
+        }
+      ],
+      "ids": {
+        "Ids": [
+          {
+            "Id": 1
+          },
+          {
+            "Id": 2
+          }
+        ]
+      }
+    }
+  },
+  "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().query()": {
     "InsertEdges": {
       "from": {
         "Ids": [
           {
             "Id": 1
+          },
+          {
+            "Id": 2
           }
         ]
       },
@@ -991,6 +1933,9 @@
         "Ids": [
           {
             "Id": 2
+          },
+          {
+            "Id": 3
           }
         ]
       },
@@ -1000,148 +1945,49 @@
       "values": {
         "Single": []
       },
-      "each": false
+      "each": true
     }
   },
-  "QueryBuilder::insert().nodes().ids(vec![\"a\",\"b\"]).count(1).query()": {
-    "InsertNodes": {
-      "count": 1,
-      "values": {
-        "Single": []
-      },
-      "aliases": [],
+  "QueryBuilder::remove().values(vec![\"k1\".into(),\"k2\".into()]).ids(QueryBuilder::search().from(\"a\").query()).query()": {
+    "RemoveValues": {
+      "keys": [
+        {
+          "String": "k1"
+        },
+        {
+          "String": "k2"
+        }
+      ],
       "ids": {
-        "Ids": [
-          {
+        "Search": {
+          "algorithm": "BreadthFirst",
+          "origin": {
             "Alias": "a"
           },
-          {
-            "Alias": "b"
-          }
-        ]
-      }
-    }
-  },
-  "QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": "Node"
-        },
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": {
-            "Distance": {
-              "GreaterThanOrEqual": 3
-            }
-          }
-        }
-      ]
-    }
-  },
-  "QueryBuilder::insert().values(vec![vec![(\"k\",\"v\").into(),(1,10).into()],vec![(\"k\",2).into()]]).ids(vec![1,2]).query()": {
-    "InsertValues": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
+          "destination": {
+            "Id": 0
           },
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "values": {
-        "Multi": [
-          [
-            {
-              "key": {
-                "String": "k"
-              },
-              "value": {
-                "String": "v"
-              }
-            },
-            {
-              "key": {
-                "I64": 1
-              },
-              "value": {
-                "I64": 10
-              }
-            }
-          ],
-          [
-            {
-              "key": {
-                "String": "k"
-              },
-              "value": {
-                "I64": 2
-              }
-            }
-          ]
-        ]
+          "limit": 0,
+          "offset": 0,
+          "order_by": [],
+          "conditions": []
+        }
       }
     }
   },
-  "QueryBuilder::remove().index(\"key\").query()": {
-    "RemoveIndex": {
-      "String": "key"
-    }
-  },
-  "QueryBuilder::select().aliases().query()": {
-    "SelectAllAliases": {}
-  },
-  "QueryBuilder::select().ids(\"a\").query()": {
-    "Select": {
+  "QueryBuilder::select().key_count().ids(vec![1,2]).query()": {
+    "SelectKeyCount": {
       "Ids": [
         {
-          "Alias": "a"
-        }
-      ]
-    }
-  },
-  "QueryBuilder::search().from(1).where_().node().or().edge().query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": "Node"
+          "Id": 1
         },
         {
-          "logic": "Or",
-          "modifier": "None",
-          "data": "Edge"
+          "Id": 2
         }
       ]
     }
   },
-  "QueryBuilder::search().from(1).where_().node().query()": {
+  "QueryBuilder::search().from(1).where_().not().ids(vec![1,2]).query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -1156,13 +2002,22 @@
       "conditions": [
         {
           "logic": "And",
-          "modifier": "None",
-          "data": "Node"
+          "modifier": "Not",
+          "data": {
+            "Ids": [
+              {
+                "Id": 1
+              },
+              {
+                "Id": 2
+              }
+            ]
+          }
         }
       ]
     }
   },
-  "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(Comparison::Equal(1.into())).end_where().query()": {
+  "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(Comparison::Contains((vec![1,2]).into())).end_where().query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -1199,8 +2054,11 @@
                       "String": "k"
                     },
                     "value": {
-                      "Equal": {
-                        "I64": 1
+                      "Contains": {
+                        "VecI64": [
+                          1,
+                          2
+                        ]
                       }
                     }
                   }
@@ -1286,78 +2144,31 @@
       "each": false
     }
   },
-  "QueryBuilder::insert().values_uniform(vec![(\"k\",\"v\").into(),(1,10).into()]).ids(vec![1,2]).query()": {
-    "InsertValues": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
+  "QueryBuilder::search().from(\"a\").to(\"b\").query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Alias": "a"
       },
+      "destination": {
+        "Alias": "b"
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": []
+    }
+  },
+  "QueryBuilder::insert().nodes().count(2).query()": {
+    "InsertNodes": {
+      "count": 2,
       "values": {
-        "Single": [
-          {
-            "key": {
-              "String": "k"
-            },
-            "value": {
-              "String": "v"
-            }
-          },
-          {
-            "key": {
-              "I64": 1
-            },
-            "value": {
-              "I64": 10
-            }
-          }
-        ]
-      }
-    }
-  },
-  "QueryBuilder::select().ids(vec![1,2]).query()": {
-    "Select": {
-      "Ids": [
-        {
-          "Id": 1
-        },
-        {
-          "Id": 2
-        }
-      ]
-    }
-  },
-  "QueryBuilder::select().keys().ids(vec![1,2]).query()": {
-    "SelectKeys": {
-      "Ids": [
-        {
-          "Id": 1
-        },
-        {
-          "Id": 2
-        }
-      ]
-    }
-  },
-  "QueryBuilder::select().edge_count_to().ids(vec![1,2]).query()": {
-    "SelectEdgeCount": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
+        "Single": []
       },
-      "from": false,
-      "to": true
+      "aliases": [],
+      "ids": {
+        "Ids": []
+      }
     }
   },
   "QueryBuilder::insert().element(&T::default()).query()": {
@@ -1393,36 +2204,25 @@
       }
     }
   },
-  "QueryBuilder::insert().edges().ids(-3).from(1).to(2).query()": {
-    "InsertEdges": {
-      "from": {
-        "Ids": [
-          {
-            "Id": 1
-          }
-        ]
+  "QueryBuilder::search().from(1).offset(10).query()": {
+    "Search": {
+      "algorithm": "BreadthFirst",
+      "origin": {
+        "Id": 1
       },
-      "to": {
-        "Ids": [
-          {
-            "Id": 2
-          }
-        ]
+      "destination": {
+        "Id": 0
       },
-      "ids": {
-        "Ids": [
-          {
-            "Id": -3
-          }
-        ]
-      },
-      "values": {
-        "Single": []
-      },
-      "each": false
+      "limit": 0,
+      "offset": 10,
+      "order_by": [],
+      "conditions": []
     }
   },
-  "QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query()": {
+  "QueryBuilder::select().indexes().query()": {
+    "SelectIndexes": {}
+  },
+  "QueryBuilder::search().from(1).where_().key(\"k\").value(Comparison::Equal(1.into())).query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -1439,30 +2239,22 @@
           "logic": "And",
           "modifier": "None",
           "data": {
-            "EdgeCountFrom": {
-              "Equal": 1
+            "KeyValue": {
+              "key": {
+                "String": "k"
+              },
+              "value": {
+                "Equal": {
+                  "I64": 1
+                }
+              }
             }
           }
         }
       ]
     }
   },
-  "QueryBuilder::select().indexes().query()": {
-    "SelectIndexes": {}
-  },
-  "QueryBuilder::insert().nodes().count(2).query()": {
-    "InsertNodes": {
-      "count": 2,
-      "values": {
-        "Single": []
-      },
-      "aliases": [],
-      "ids": {
-        "Ids": []
-      }
-    }
-  },
-  "QueryBuilder::search().from(1).limit(5).query()": {
+  "QueryBuilder::search().from(1).where_().keys(vec![\"k1\".into(),\"k2\".into()]).query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -1471,92 +2263,28 @@
       "destination": {
         "Id": 0
       },
-      "limit": 5,
+      "limit": 0,
       "offset": 0,
       "order_by": [],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc(\"k\".into())]).limit(5).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 5,
-      "offset": 0,
-      "order_by": [
+      "conditions": [
         {
-          "Desc": {
-            "String": "k"
+          "logic": "And",
+          "modifier": "None",
+          "data": {
+            "Keys": [
+              {
+                "String": "k1"
+              },
+              {
+                "String": "k2"
+              }
+            ]
           }
         }
-      ],
-      "conditions": []
+      ]
     }
   },
-  "QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge().query()).from(1).to(2).query()": {
-    "InsertEdges": {
-      "from": {
-        "Ids": [
-          {
-            "Id": 1
-          }
-        ]
-      },
-      "to": {
-        "Ids": [
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "ids": {
-        "Search": {
-          "algorithm": "BreadthFirst",
-          "origin": {
-            "Id": 1
-          },
-          "destination": {
-            "Id": 0
-          },
-          "limit": 0,
-          "offset": 0,
-          "order_by": [],
-          "conditions": [
-            {
-              "logic": "And",
-              "modifier": "None",
-              "data": "Edge"
-            }
-          ]
-        }
-      },
-      "values": {
-        "Single": []
-      },
-      "each": false
-    }
-  },
-  "QueryBuilder::search().from(1).offset(10).limit(5).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 5,
-      "offset": 10,
-      "order_by": [],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::insert().nodes().ids(\"a\").count(1).query()": {
+  "QueryBuilder::insert().nodes().ids(1).count(1).query()": {
     "InsertNodes": {
       "count": 1,
       "values": {
@@ -1566,85 +2294,17 @@
       "ids": {
         "Ids": [
           {
-            "Alias": "a"
+            "Id": 1
           }
         ]
       }
     }
   },
-  "QueryBuilder::insert().aliases(\"a\").ids(\"b\").query()": {
-    "InsertAlias": {
-      "ids": {
-        "Ids": [
-          {
-            "Alias": "b"
-          }
-        ]
-      },
-      "aliases": [
-        "a"
-      ]
-    }
-  },
-  "QueryBuilder::insert().elements(&[T::default(),T::default()]).query()": {
-    "InsertValues": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 0
-          },
-          {
-            "Id": 0
-          }
-        ]
-      },
-      "values": {
-        "Multi": [
-          [
-            {
-              "key": {
-                "String": "value1"
-              },
-              "value": {
-                "String": ""
-              }
-            },
-            {
-              "key": {
-                "String": "value2"
-              },
-              "value": {
-                "I64": 0
-              }
-            }
-          ],
-          [
-            {
-              "key": {
-                "String": "value1"
-              },
-              "value": {
-                "String": ""
-              }
-            },
-            {
-              "key": {
-                "String": "value2"
-              },
-              "value": {
-                "I64": 0
-              }
-            }
-          ]
-        ]
-      }
-    }
-  },
-  "QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query()": {
+  "QueryBuilder::search().from(\"a\").query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
-        "Id": 1
+        "Alias": "a"
       },
       "destination": {
         "Id": 0
@@ -1652,45 +2312,10 @@
       "limit": 0,
       "offset": 0,
       "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": {
-            "EdgeCount": {
-              "GreaterThan": 2
-            }
-          }
-        }
-      ]
+      "conditions": []
     }
   },
-  "QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1)).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": {
-            "EdgeCountTo": {
-              "NotEqual": 1
-            }
-          }
-        }
-      ]
-    }
-  },
-  "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(Comparison::Contains((vec![1,2]).into())).end_where().query()": {
+  "QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key(\"k\").value(Comparison::Equal(1.into())).end_where().query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -1727,11 +2352,8 @@
                       "String": "k"
                     },
                     "value": {
-                      "Contains": {
-                        "VecI64": [
-                          1,
-                          2
-                        ]
+                      "Equal": {
+                        "I64": 1
                       }
                     }
                   }
@@ -1741,194 +2363,6 @@
           }
         }
       ]
-    }
-  },
-  "QueryBuilder::remove().ids(vec![\"a\",\"b\"]).query()": {
-    "Remove": {
-      "Ids": [
-        {
-          "Alias": "a"
-        },
-        {
-          "Alias": "b"
-        }
-      ]
-    }
-  },
-  "QueryBuilder::select().values(vec![\"k\".into(),\"k2\".into()]).ids(vec![1,2]).query()": {
-    "SelectValues": {
-      "keys": [
-        {
-          "String": "k"
-        },
-        {
-          "String": "k2"
-        }
-      ],
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      }
-    }
-  },
-  "QueryBuilder::insert().edges().from(\"a\").to(\"b\").query()": {
-    "InsertEdges": {
-      "from": {
-        "Ids": [
-          {
-            "Alias": "a"
-          }
-        ]
-      },
-      "to": {
-        "Ids": [
-          {
-            "Alias": "b"
-          }
-        ]
-      },
-      "ids": {
-        "Ids": []
-      },
-      "values": {
-        "Single": []
-      },
-      "each": false
-    }
-  },
-  "QueryBuilder::search().to(1).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 0
-      },
-      "destination": {
-        "Id": 1
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::search().elements().query()": {
-    "Search": {
-      "algorithm": "Elements",
-      "origin": {
-        "Id": 0
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::search().from(1).where_().not().ids(vec![1,2]).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "Not",
-          "data": {
-            "Ids": [
-              {
-                "Id": 1
-              },
-              {
-                "Id": 2
-              }
-            ]
-          }
-        }
-      ]
-    }
-  },
-  "QueryBuilder::select().node_count().query()": {
-    "SelectNodeCount": {}
-  },
-  "QueryBuilder::select().aliases().ids(QueryBuilder::search().from(1).query()).query()": {
-    "SelectAliases": {
-      "Search": {
-        "algorithm": "BreadthFirst",
-        "origin": {
-          "Id": 1
-        },
-        "destination": {
-          "Id": 0
-        },
-        "limit": 0,
-        "offset": 0,
-        "order_by": [],
-        "conditions": []
-      }
-    }
-  },
-  "QueryBuilder::search().from(1).where_().keys(vec![\"k1\".into(),\"k2\".into()]).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": [
-        {
-          "logic": "And",
-          "modifier": "None",
-          "data": {
-            "Keys": [
-              {
-                "String": "k1"
-              },
-              {
-                "String": "k2"
-              }
-            ]
-          }
-        }
-      ]
-    }
-  },
-  "QueryBuilder::select().values(vec![\"k\".into(),\"k2\".into()]).ids(\"a\").query()": {
-    "SelectValues": {
-      "keys": [
-        {
-          "String": "k"
-        },
-        {
-          "String": "k2"
-        }
-      ],
-      "ids": {
-        "Ids": [
-          {
-            "Alias": "a"
-          }
-        ]
-      }
     }
   },
   "QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc(\"k\".into())]).offset(10).limit(5).query()": {
@@ -1950,191 +2384,6 @@
         }
       ],
       "conditions": []
-    }
-  },
-  "QueryBuilder::search().breadth_first().from(\"a\").query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Alias": "a"
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::remove().ids(QueryBuilder::search().from(\"a\").query()).query()": {
-    "Remove": {
-      "Search": {
-        "algorithm": "BreadthFirst",
-        "origin": {
-          "Alias": "a"
-        },
-        "destination": {
-          "Id": 0
-        },
-        "limit": 0,
-        "offset": 0,
-        "order_by": [],
-        "conditions": []
-      }
-    }
-  },
-  "QueryBuilder::insert().edges().from(QueryBuilder::search().from(\"a\").where_().node().query()).to(QueryBuilder::search().from(\"b\").where_().node().query()).query()": {
-    "InsertEdges": {
-      "from": {
-        "Search": {
-          "algorithm": "BreadthFirst",
-          "origin": {
-            "Alias": "a"
-          },
-          "destination": {
-            "Id": 0
-          },
-          "limit": 0,
-          "offset": 0,
-          "order_by": [],
-          "conditions": [
-            {
-              "logic": "And",
-              "modifier": "None",
-              "data": "Node"
-            }
-          ]
-        }
-      },
-      "to": {
-        "Search": {
-          "algorithm": "BreadthFirst",
-          "origin": {
-            "Alias": "b"
-          },
-          "destination": {
-            "Id": 0
-          },
-          "limit": 0,
-          "offset": 0,
-          "order_by": [],
-          "conditions": [
-            {
-              "logic": "And",
-              "modifier": "None",
-              "data": "Node"
-            }
-          ]
-        }
-      },
-      "ids": {
-        "Ids": []
-      },
-      "values": {
-        "Single": []
-      },
-      "each": false
-    }
-  },
-  "QueryBuilder::select().edge_count().ids(vec![1,2]).query()": {
-    "SelectEdgeCount": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "from": true,
-      "to": true
-    }
-  },
-  "QueryBuilder::select().aliases().ids(vec![1,2]).query()": {
-    "SelectAliases": {
-      "Ids": [
-        {
-          "Id": 1
-        },
-        {
-          "Id": 2
-        }
-      ]
-    }
-  },
-  "QueryBuilder::remove().ids(vec![1,2]).query()": {
-    "Remove": {
-      "Ids": [
-        {
-          "Id": 1
-        },
-        {
-          "Id": 2
-        }
-      ]
-    }
-  },
-  "QueryBuilder::remove().aliases(vec![\"a\",\"b\"]).query()": {
-    "RemoveAliases": [
-      "a",
-      "b"
-    ]
-  },
-  "QueryBuilder::select().values(vec![\"k\".into(),\"k2\".into()]).ids(QueryBuilder::search().from(1).query()).query()": {
-    "SelectValues": {
-      "keys": [
-        {
-          "String": "k"
-        },
-        {
-          "String": "k2"
-        }
-      ],
-      "ids": {
-        "Search": {
-          "algorithm": "BreadthFirst",
-          "origin": {
-            "Id": 1
-          },
-          "destination": {
-            "Id": 0
-          },
-          "limit": 0,
-          "offset": 0,
-          "order_by": [],
-          "conditions": []
-        }
-      }
-    }
-  },
-  "QueryBuilder::insert().aliases(vec![\"a\",\"b\"]).ids(vec![1,2]).query()": {
-    "InsertAlias": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          },
-          {
-            "Id": 2
-          }
-        ]
-      },
-      "aliases": [
-        "a",
-        "b"
-      ]
-    }
-  },
-  "QueryBuilder::select().keys().ids(\"a\").query()": {
-    "SelectKeys": {
-      "Ids": [
-        {
-          "Alias": "a"
-        }
-      ]
     }
   },
   "QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count(1).query()": {
@@ -2161,7 +2410,48 @@
       }
     }
   },
-  "QueryBuilder::search().from(1).where_().not_beyond().ids(\"a\").query()": {
+  "QueryBuilder::remove().ids(vec![\"a\",\"b\"]).query()": {
+    "Remove": {
+      "Ids": [
+        {
+          "Alias": "a"
+        },
+        {
+          "Alias": "b"
+        }
+      ]
+    }
+  },
+  "QueryBuilder::insert().index(\"key\").query()": {
+    "InsertIndex": {
+      "String": "key"
+    }
+  },
+  "QueryBuilder::remove().ids(\"a\").query()": {
+    "Remove": {
+      "Ids": [
+        {
+          "Alias": "a"
+        }
+      ]
+    }
+  },
+  "QueryBuilder::search().depth_first().from(\"a\").query()": {
+    "Search": {
+      "algorithm": "DepthFirst",
+      "origin": {
+        "Alias": "a"
+      },
+      "destination": {
+        "Id": 0
+      },
+      "limit": 0,
+      "offset": 0,
+      "order_by": [],
+      "conditions": []
+    }
+  },
+  "QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query()": {
     "Search": {
       "algorithm": "BreadthFirst",
       "origin": {
@@ -2176,72 +2466,23 @@
       "conditions": [
         {
           "logic": "And",
-          "modifier": "NotBeyond",
+          "modifier": "None",
           "data": {
-            "Ids": [
-              {
-                "Alias": "a"
-              }
-            ]
+            "EdgeCountFrom": {
+              "Equal": 1
+            }
           }
         }
       ]
     }
   },
-  "QueryBuilder::insert().nodes().aliases(vec![\"a\",\"b\"]).values(vec![vec![(\"k\",1).into()],vec![(\"k\",2).into()]]).query()": {
+  "QueryBuilder::insert().nodes().ids(\"a\").count(1).query()": {
     "InsertNodes": {
-      "count": 0,
-      "values": {
-        "Multi": [
-          [
-            {
-              "key": {
-                "String": "k"
-              },
-              "value": {
-                "I64": 1
-              }
-            }
-          ],
-          [
-            {
-              "key": {
-                "String": "k"
-              },
-              "value": {
-                "I64": 2
-              }
-            }
-          ]
-        ]
-      },
-      "aliases": [
-        "a",
-        "b"
-      ],
-      "ids": {
-        "Ids": []
-      }
-    }
-  },
-  "QueryBuilder::remove().ids(1).query()": {
-    "Remove": {
-      "Ids": [
-        {
-          "Id": 1
-        }
-      ]
-    }
-  },
-  "QueryBuilder::insert().nodes().ids(\"a\").aliases(\"a\").query()": {
-    "InsertNodes": {
-      "count": 0,
+      "count": 1,
       "values": {
         "Single": []
       },
-      "aliases": [
-        "a"
-      ],
+      "aliases": [],
       "ids": {
         "Ids": [
           {
@@ -2249,71 +2490,6 @@
           }
         ]
       }
-    }
-  },
-  "QueryBuilder::search().from(\"a\").to(\"b\").query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Alias": "a"
-      },
-      "destination": {
-        "Alias": "b"
-      },
-      "limit": 0,
-      "offset": 0,
-      "order_by": [],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::search().from(1).offset(10).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 10,
-      "order_by": [],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc(\"k\".into())]).offset(10).query()": {
-    "Search": {
-      "algorithm": "BreadthFirst",
-      "origin": {
-        "Id": 1
-      },
-      "destination": {
-        "Id": 0
-      },
-      "limit": 0,
-      "offset": 10,
-      "order_by": [
-        {
-          "Desc": {
-            "String": "k"
-          }
-        }
-      ],
-      "conditions": []
-    }
-  },
-  "QueryBuilder::insert().aliases(\"a\").ids(1).query()": {
-    "InsertAlias": {
-      "ids": {
-        "Ids": [
-          {
-            "Id": 1
-          }
-        ]
-      },
-      "aliases": [
-        "a"
-      ]
     }
   }
 }

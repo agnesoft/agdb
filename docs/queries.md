@@ -500,6 +500,8 @@ QueryBuilder::insert().nodes().ids(vec![1, 2]).count(1).query();
 QueryBuilder::insert().nodes().ids("a").count(1).query();
 QueryBuilder::insert().nodes().ids("a").aliases("a").query(),
 QueryBuilder::insert().nodes().ids(vec!["a", "b"]).count(1).query();
+QueryBuilder::insert().nodes().ids(vec![1, 2]).values(vec![vec![("k", "v").into()], vec![(1, 10).into()]]).query(),
+QueryBuilder::insert().nodes().ids(vec![1, 2]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query(),
 QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count(1).query();
 ```
 

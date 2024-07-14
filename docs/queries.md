@@ -498,6 +498,7 @@ QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).
 QueryBuilder::insert().nodes().ids(1).count(1).query();
 QueryBuilder::insert().nodes().ids(vec![1, 2]).count(1).query();
 QueryBuilder::insert().nodes().ids("a").count(1).query();
+QueryBuilder::insert().nodes().ids("a").aliases("a").query(),
 QueryBuilder::insert().nodes().ids(vec!["a", "b"]).count(1).query();
 QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count(1).query();
 ```

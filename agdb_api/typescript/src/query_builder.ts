@@ -1,31 +1,28 @@
 import type { Components } from "./schema";
 
-type QueryId = number | string | Components.Schemas.QueryId;
-type QueryIds =
-    | QueryId
-    | QueryId[]
+type BuilderQueryId = number | string | Components.Schemas.QueryId;
+type BuilderQueryIds =
+    | BuilderQueryId
+    | BuilderQueryId[]
     | Components.Schemas.QueryType
     | Components.Schemas.QueryResult
     | Components.Schemas.QueryIds;
 type NativeValue = boolean | string | number | string[] | number[];
-type DbValue = NativeValue | Components.Schemas.DbValue;
-type DbKeyValue = DbValue[] | Components.Schemas.DbKeyValue;
+type BuilderDbValue = NativeValue | Components.Schemas.DbValue;
+type BuilderDbKeyValue = BuilderDbValue[] | Components.Schemas.DbKeyValue;
 
-function intoQueryIds(ids: QueryIds): Components.Schemas.QueryIds {
-    if (typeof ids === "string") {
-        return { Ids: [{ Alias: ids }] };
-    }
-
-    if (typeof ids === "number") {
-        return { Ids: [{ Id: ids }] };
-    }
-
-    if ("Id" in ids || "Alias" in ids) {
-        return { Ids: [ids] };
-    }
-
+function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
     if (Array.isArray(ids)) {
         return { Ids: ids.map((id) => intoQueryId(id)) };
+    }
+
+    if (
+        typeof ids === "string" ||
+        typeof ids === "number" ||
+        "Id" in ids ||
+        "Alias" in ids
+    ) {
+        return { Ids: [intoQueryId(ids)] };
     }
 
     if ("Search" in ids) {
@@ -39,11 +36,9 @@ function intoQueryIds(ids: QueryIds): Components.Schemas.QueryIds {
             }),
         };
     }
-
-    return ids as Components.Schemas.QueryIds;
 }
 
-function intoQueryId(id: QueryId): Components.Schemas.QueryId {
+function intoQueryId(id: BuilderQueryId): Components.Schemas.QueryId {
     if (typeof id === "number") {
         return { Id: id };
     }
@@ -53,6 +48,14 @@ function intoQueryId(id: QueryId): Components.Schemas.QueryId {
     }
 
     return id;
+}
+
+function intoAliases(aliases: string | string[]): string[] {
+    if (typeof aliases === "string") {
+        return [aliases];
+    }
+
+    return aliases;
 }
 
 export function convertToNativeValue(
@@ -128,7 +131,6 @@ export function convertTo<T>(result: Components.Schemas.QueryResult): T | T[] {
 
 export function convertToDbValue(value: any): Components.Schemas.DbValue {
     if (typeof value === "string") {
-        // String type
         return { String: value };
     }
 
@@ -137,7 +139,6 @@ export function convertToDbValue(value: any): Components.Schemas.DbValue {
     }
 
     if (typeof value === "number") {
-        // Numeric type, integers with positive or negative signs use I64, and floating-point numbers use DbF64
         if (Number.isInteger(value)) {
             return { I64: value };
         }
@@ -158,7 +159,6 @@ export function convertToDbValue(value: any): Components.Schemas.DbValue {
     }
 
     if (value === null || value === undefined) {
-        // Handle null and undefined cases, return undefined
         return undefined;
     }
 
@@ -166,7 +166,7 @@ export function convertToDbValue(value: any): Components.Schemas.DbValue {
 }
 
 export function convertToDbKeyValue(
-    key_value: DbKeyValue,
+    key_value: BuilderDbKeyValue,
 ): Components.Schemas.DbKeyValue {
     if (Array.isArray(key_value)) {
         return {
@@ -207,41 +207,45 @@ export class CountComparison {
 }
 
 export class Comparison {
-    static Equal(value: DbValue): Components.Schemas.Comparison {
+    static Equal(value: BuilderDbValue): Components.Schemas.Comparison {
         return { Equal: convertToDbValue(value) };
     }
 
-    static GreaterThan(value: DbValue): Components.Schemas.Comparison {
+    static GreaterThan(value: BuilderDbValue): Components.Schemas.Comparison {
         return { GreaterThan: convertToDbValue(value) };
     }
 
-    static GreaterThanOrEqual(value: DbValue): Components.Schemas.Comparison {
+    static GreaterThanOrEqual(
+        value: BuilderDbValue,
+    ): Components.Schemas.Comparison {
         return { GreaterThanOrEqual: convertToDbValue(value) };
     }
 
-    static LessThan(value: DbValue): Components.Schemas.Comparison {
+    static LessThan(value: BuilderDbValue): Components.Schemas.Comparison {
         return { LessThan: convertToDbValue(value) };
     }
 
-    static LessThanOrEqual(value: DbValue): Components.Schemas.Comparison {
+    static LessThanOrEqual(
+        value: BuilderDbValue,
+    ): Components.Schemas.Comparison {
         return { LessThanOrEqual: convertToDbValue(value) };
     }
 
-    static NotEqual(value: DbValue): Components.Schemas.Comparison {
+    static NotEqual(value: BuilderDbValue): Components.Schemas.Comparison {
         return { NotEqual: convertToDbValue(value) };
     }
 
-    static Contains(value: DbValue): Components.Schemas.Comparison {
+    static Contains(value: BuilderDbValue): Components.Schemas.Comparison {
         return { Contains: convertToDbValue(value) };
     }
 }
 
 export class DbKeyOrder {
-    static Asc(value: DbValue): Components.Schemas.DbKeyOrder {
+    static Asc(value: BuilderDbValue): Components.Schemas.DbKeyOrder {
         return { Asc: convertToDbValue(value) };
     }
 
-    static Desc(value: DbValue): Components.Schemas.DbKeyOrder {
+    static Desc(value: BuilderDbValue): Components.Schemas.DbKeyOrder {
         return { Desc: convertToDbValue(value) };
     }
 }
@@ -253,12 +257,12 @@ class InsertNodesAliasesBuilder {
         this.data = data;
     }
 
-    values_uniform(values: DbKeyValue[]): InsertNodesValuesBuilder {
+    values_uniform(values: BuilderDbKeyValue[]): InsertNodesValuesBuilder {
         this.data.values = { Single: values.map(convertToDbKeyValue) };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    values(values: DbKeyValue[][]): InsertNodesValuesBuilder {
+    values(values: BuilderDbKeyValue[][]): InsertNodesValuesBuilder {
         this.data.values = {
             Multi: values.map((item) => item.map(convertToDbKeyValue)),
         };
@@ -285,11 +289,7 @@ class InsertNodesBuilder {
     }
 
     aliases(aliases: string | string[]): InsertNodesAliasesBuilder {
-        if (typeof aliases === "string") {
-            this.data.aliases = [aliases];
-        } else {
-            this.data.aliases = aliases;
-        }
+        this.data.aliases = intoAliases(aliases);
         return new InsertNodesAliasesBuilder(this.data);
     }
 
@@ -298,17 +298,12 @@ class InsertNodesBuilder {
         return new InsertNodesCountBuilder(this.data);
     }
 
-    ids(ids: QueryIds) {
+    ids(ids: BuilderQueryIds) {
         this.data.ids = intoQueryIds(ids);
         return new InsertNodesIdsBuilder(this.data);
     }
 
-    values_uniform(values: DbKeyValue[]): InsertNodesValuesBuilder {
-        this.data.values = { Single: values.map(convertToDbKeyValue) };
-        return new InsertNodesValuesBuilder(this.data);
-    }
-
-    values(values: DbKeyValue[][]): InsertNodesValuesBuilder {
+    values(values: BuilderDbKeyValue[][]): InsertNodesValuesBuilder {
         this.data.values = {
             Multi: values.map((item) => item.map(convertToDbKeyValue)),
         };
@@ -324,11 +319,7 @@ class InsertNodesIdsBuilder {
     }
 
     aliases(aliases: string | string[]): InsertNodesAliasesBuilder {
-        if (typeof aliases === "string") {
-            this.data.aliases = [aliases];
-        } else {
-            this.data.aliases = aliases;
-        }
+        this.data.aliases = intoAliases(aliases);
         return new InsertNodesAliasesBuilder(this.data);
     }
 
@@ -337,12 +328,12 @@ class InsertNodesIdsBuilder {
         return new InsertNodesCountBuilder(this.data);
     }
 
-    values_uniform(values: DbKeyValue[]): InsertNodesValuesBuilder {
+    values_uniform(values: BuilderDbKeyValue[]): InsertNodesValuesBuilder {
         this.data.values = { Single: values.map(convertToDbKeyValue) };
         return new InsertNodesValuesBuilder(this.data);
     }
 
-    values(values: DbKeyValue[][]): InsertNodesValuesBuilder {
+    values(values: BuilderDbKeyValue[][]): InsertNodesValuesBuilder {
         this.data.values = {
             Multi: values.map((item) => item.map(convertToDbKeyValue)),
         };
@@ -357,7 +348,7 @@ class InsertNodesCountBuilder {
         this.data = data;
     }
 
-    values_uniform(values: DbKeyValue[]): InsertNodesValuesBuilder {
+    values_uniform(values: BuilderDbKeyValue[]): InsertNodesValuesBuilder {
         this.data.values = { Single: values.map(convertToDbKeyValue) };
         return new InsertNodesValuesBuilder(this.data);
     }
@@ -398,14 +389,14 @@ class InsertEdgesToEachBuilder {
         this.data = query;
     }
 
-    values(values: DbKeyValue[][]): InsertEdgesValuesBuilder {
+    values(values: BuilderDbKeyValue[][]): InsertEdgesValuesBuilder {
         this.data.values = {
             Multi: values.map((item) => item.map(convertToDbKeyValue)),
         };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    values_uniform(values: DbKeyValue[]): InsertEdgesValuesBuilder {
+    values_uniform(values: BuilderDbKeyValue[]): InsertEdgesValuesBuilder {
         this.data.values = { Single: values.map(convertToDbKeyValue) };
         return new InsertEdgesValuesBuilder(this.data);
     }
@@ -427,14 +418,14 @@ class InsertEdgesToBuilder {
         return new InsertEdgesToEachBuilder(this.data);
     }
 
-    values(values: DbKeyValue[][]): InsertEdgesValuesBuilder {
+    values(values: BuilderDbKeyValue[][]): InsertEdgesValuesBuilder {
         this.data.values = {
             Multi: values.map((item) => item.map(convertToDbKeyValue)),
         };
         return new InsertEdgesValuesBuilder(this.data);
     }
 
-    values_uniform(values: DbKeyValue[]): InsertEdgesValuesBuilder {
+    values_uniform(values: BuilderDbKeyValue[]): InsertEdgesValuesBuilder {
         this.data.values = { Single: values.map(convertToDbKeyValue) };
         return new InsertEdgesValuesBuilder(this.data);
     }
@@ -451,7 +442,7 @@ class InsertEdgesFromBuilder {
         this.data = query;
     }
 
-    to(ids: QueryIds): InsertEdgesToBuilder {
+    to(ids: BuilderQueryIds): InsertEdgesToBuilder {
         this.data.to = intoQueryIds(ids);
         return new InsertEdgesToBuilder(this.data);
     }
@@ -470,12 +461,12 @@ class InsertEdgesBuilder {
         };
     }
 
-    from(ids: QueryIds): InsertEdgesFromBuilder {
+    from(ids: BuilderQueryIds): InsertEdgesFromBuilder {
         this.data.from = intoQueryIds(ids);
         return new InsertEdgesFromBuilder(this.data);
     }
 
-    ids(ids: QueryIds) {
+    ids(ids: BuilderQueryIds) {
         this.data.ids = intoQueryIds(ids);
         return new InsertEdgesIdsBuilder(this.data);
     }
@@ -488,7 +479,7 @@ class InsertEdgesIdsBuilder {
         this.data = data;
     }
 
-    from(ids: QueryIds): InsertEdgesFromBuilder {
+    from(ids: BuilderQueryIds): InsertEdgesFromBuilder {
         this.data.from = intoQueryIds(ids);
         return new InsertEdgesFromBuilder(this.data);
     }
@@ -513,7 +504,7 @@ class InsertAliasesBuilder {
         this.data = { aliases: aliases, ids: { Ids: [] } };
     }
 
-    ids(ids: QueryIds): InsertAliasesIdsBuilder {
+    ids(ids: BuilderQueryIds): InsertAliasesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertAliasesIdsBuilder(this.data);
     }
@@ -538,7 +529,7 @@ class InsertValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryIds): InsertValuesIdsBuilder {
+    ids(ids: BuilderQueryIds): InsertValuesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertValuesIdsBuilder(this.data);
     }
@@ -570,13 +561,9 @@ class InsertBuilder {
     }
 
     elements(elems: any[]): InsertValuesIdsBuilder {
-        let data: Components.Schemas.InsertValuesQuery = {
+        let data = {
             ids: { Ids: [] },
-            values: { Single: [] },
-        };
-        data.ids = { Ids: [] };
-        data.values = {
-            Multi: [],
+            values: { Multi: [] },
         };
 
         let multiItem: Components.Schemas.DbKeyValue[] = [];
@@ -592,7 +579,7 @@ class InsertBuilder {
                     } else if (id === null || id === undefined) {
                         data.ids.Ids.push({ Id: 0 });
                     } else {
-                        throw new Error("invalid db_id");
+                        data.ids.Ids.push(id);
                     }
                 } else {
                     let keyValue = convertToDbValue(key);
@@ -614,7 +601,7 @@ class InsertBuilder {
         return new InsertEdgesBuilder();
     }
 
-    index(key: DbValue): InsertIndexBuilder {
+    index(key: BuilderDbValue): InsertIndexBuilder {
         return new InsertIndexBuilder(convertToDbValue(key));
     }
 
@@ -622,7 +609,7 @@ class InsertBuilder {
         return new InsertNodesBuilder();
     }
 
-    values(values: DbKeyValue[][]): InsertValuesBuilder {
+    values(values: BuilderDbKeyValue[][]): InsertValuesBuilder {
         return new InsertValuesBuilder({
             ids: { Ids: [] },
             values: {
@@ -631,7 +618,7 @@ class InsertBuilder {
         });
     }
 
-    values_uniform(vals: DbKeyValue[]): InsertValuesBuilder {
+    values_uniform(vals: BuilderDbKeyValue[]): InsertValuesBuilder {
         return new InsertValuesBuilder({
             ids: { Ids: [] },
             values: { Single: vals.map(convertToDbKeyValue) },
@@ -682,7 +669,7 @@ class RemoveValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryIds): RemoveValuesIdsBuilder {
+    ids(ids: BuilderQueryIds): RemoveValuesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new RemoveValuesIdsBuilder(this.data);
     }
@@ -709,7 +696,7 @@ class RemoveBuilder {
         return new RemoveAliasesBuilder(aliases);
     }
 
-    ids(ids: QueryIds): RemoveIdsBuilder {
+    ids(ids: BuilderQueryIds): RemoveIdsBuilder {
         if (Array.isArray(ids)) {
             return new RemoveIdsBuilder(intoQueryIds(ids));
         } else {
@@ -717,11 +704,11 @@ class RemoveBuilder {
         }
     }
 
-    index(key: DbValue): RemoveIndexBuilder {
+    index(key: BuilderDbValue): RemoveIndexBuilder {
         return new RemoveIndexBuilder(convertToDbValue(key));
     }
 
-    values(values: DbValue[]): RemoveValuesBuilder {
+    values(values: BuilderDbValue[]): RemoveValuesBuilder {
         return new RemoveValuesBuilder({
             ids: { Ids: [] },
             keys: values.map(convertToDbValue),
@@ -750,7 +737,7 @@ class SelectAliasesBuilder {
         };
     }
 
-    ids(ids: QueryIds): SelectAliasesIdsBuilder {
+    ids(ids: BuilderQueryIds): SelectAliasesIdsBuilder {
         if (Array.isArray(ids)) {
             return new SelectAliasesIdsBuilder(intoQueryIds(ids));
         } else {
@@ -794,7 +781,7 @@ class SelectValuesBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryIds): SelectValuesIdsBuilder {
+    ids(ids: BuilderQueryIds): SelectValuesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new SelectValuesIdsBuilder(this.data);
     }
@@ -819,7 +806,7 @@ class SelectKeysBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryIds): SelectKeysIdsBuilder {
+    ids(ids: BuilderQueryIds): SelectKeysIdsBuilder {
         this.data = intoQueryIds(ids);
         return new SelectKeysIdsBuilder(this.data);
     }
@@ -856,7 +843,7 @@ class SelectEdgeCountBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryIds): SelectEdgeCountIdsBuilder {
+    ids(ids: BuilderQueryIds): SelectEdgeCountIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new SelectEdgeCountIdsBuilder(this.data);
     }
@@ -869,7 +856,7 @@ class SelectKeyCountBuilder {
         this.data = data;
     }
 
-    ids(ids: QueryIds): SelectKeyCountIdsBuilder {
+    ids(ids: BuilderQueryIds): SelectKeyCountIdsBuilder {
         this.data = intoQueryIds(ids);
         return new SelectKeyCountIdsBuilder(this.data);
     }
@@ -916,7 +903,7 @@ class SelectBuilder {
         });
     }
 
-    ids(ids: QueryIds): SelectIdsBuilder {
+    ids(ids: BuilderQueryIds): SelectIdsBuilder {
         return new SelectIdsBuilder(intoQueryIds(ids));
     }
 
@@ -936,7 +923,7 @@ class SelectBuilder {
         return new SelectNodeCountBuilder();
     }
 
-    values(values: DbValue[]): SelectValuesBuilder {
+    values(values: BuilderDbValue[]): SelectValuesBuilder {
         return new SelectValuesBuilder({
             ids: { Ids: [] },
             keys: values.map(convertToDbValue),
@@ -1083,7 +1070,7 @@ class SearchWhereBuilder {
         });
     }
 
-    ids(ids: QueryId | QueryId[]): SearchWhereLogicBuilder {
+    ids(ids: BuilderQueryId | BuilderQueryId[]): SearchWhereLogicBuilder {
         let inner_ids = Array.isArray(ids)
             ? ids.map((id) => intoQueryId(id))
             : [intoQueryId(ids)];
@@ -1094,11 +1081,11 @@ class SearchWhereBuilder {
         });
     }
 
-    key(key: DbValue): SearchWhereKeyBuilder {
+    key(key: BuilderDbValue): SearchWhereKeyBuilder {
         return new SearchWhereKeyBuilder(convertToDbValue(key), this);
     }
 
-    keys(keys: DbValue[]): SearchWhereLogicBuilder {
+    keys(keys: BuilderDbValue[]): SearchWhereLogicBuilder {
         return push_condition(this, {
             data: { Keys: keys.map(convertToDbValue) },
             logic: this.logic,
@@ -1222,7 +1209,7 @@ class SearchFromBuilder {
         return new SearchOrderBy(this.data);
     }
 
-    to(id: QueryId): SearchToBuilder {
+    to(id: BuilderQueryId): SearchToBuilder {
         this.data.destination = intoQueryId(id);
         return new SearchToBuilder(this.data);
     }
@@ -1274,12 +1261,12 @@ class SearchAlgorithmBuilder {
         this.data = data;
     }
 
-    from(id: QueryId): SearchFromBuilder {
+    from(id: BuilderQueryId): SearchFromBuilder {
         this.data.origin = intoQueryId(id);
         return new SearchFromBuilder(this.data);
     }
 
-    to(id: QueryId): SearchToBuilder {
+    to(id: BuilderQueryId): SearchToBuilder {
         this.data.destination = intoQueryId(id);
         return new SearchToBuilder(this.data);
     }
@@ -1304,7 +1291,7 @@ class SearchIndexBuilder {
         this.key = key;
     }
 
-    value(value: DbValue): SearchIndexValueBuilder {
+    value(value: BuilderDbValue): SearchIndexValueBuilder {
         let data = SearchBuilder.new_data();
         data.algorithm = "Index";
         data.conditions.push({
@@ -1352,17 +1339,17 @@ class SearchBuilder {
         return new SearchToBuilder(data);
     }
 
-    from(id: QueryId): SearchFromBuilder {
+    from(id: BuilderQueryId): SearchFromBuilder {
         let data = SearchBuilder.new_data();
         data.origin = intoQueryId(id);
         return new SearchFromBuilder(data);
     }
 
-    index(key: DbValue): SearchIndexBuilder {
+    index(key: BuilderDbValue): SearchIndexBuilder {
         return new SearchIndexBuilder(convertToDbValue(key));
     }
 
-    to(id: QueryId): SearchToBuilder {
+    to(id: BuilderQueryId): SearchToBuilder {
         let data = SearchBuilder.new_data();
         data.destination = intoQueryId(id);
         return new SearchToBuilder(data);

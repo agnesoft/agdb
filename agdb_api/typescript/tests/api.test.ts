@@ -90,6 +90,7 @@ describe("openapi test", () => {
 
         let res2 = await client.db_exec({ owner: "user2", db: "db1" }, [
             QueryBuilder.select().ids([1, "my_alias"]).query(),
+            QueryBuilder.select().ids("my_alias").query(),
         ]);
 
         let expected = {
@@ -117,7 +118,8 @@ describe("openapi test", () => {
         };
 
         expect(res2.status).toEqual(200);
-        expect(res2.data).toEqual([expected]);
+        expect(res2.data.length).toEqual(2);
+        expect(res2.data[0]).toEqual(expected);
 
         let expected1: MyClass = {
             db_id: 1,
@@ -133,6 +135,8 @@ describe("openapi test", () => {
 
         let list = convertTo<MyClass>(res2.data[0]);
         expect(list).toEqual([expected1, expected2]);
+        list = convertTo<MyClass>(res2.data[1]);
+        expect(list).toEqual(expected2);
     });
 
     it("search elements", async () => {

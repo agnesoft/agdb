@@ -18,14 +18,14 @@
 </p>
 
 <p align="center">
-    <picture><a href="./docs/guides/rust.md"><img width="25" src="./docs/images/rust.png" alt="rust"></a>
-    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./docs/images/ts.png" alt="ts"></a>
-    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./docs/images/js.png" alt="js"></a>
-    <picture><img width="25" src="./docs/images/python.png" alt="python"></picture> 
-    <picture><img width="25" src="./docs/images/java.png" alt="java"></picture> 
-    <picture><img width="25" src="./docs/images/c.png" alt="c"></picture> 
-    <picture><img width="25" src="./docs/images/cpp.png" alt="cpp"></picture> 
-    <picture><img width="25" src="./docs/images/csharp.png" alt="csharp"></picture>
+    <a href="./docs/guides/rust.md"><img width="25" src="./docs/images/rust.png" alt="rust"></a> &nbsp;
+    <a href="./docs/guides/typescript.md"><img width="25" src="./docs/images/ts.png" alt="ts"></a> &nbsp;
+    <a href="./docs/guides/typescript.md"><img width="25" src="./docs/images/js.png" alt="js"></a> &nbsp;
+    <img width="25" src="./docs/images/python.png" alt="python"> &nbsp;
+    <img width="25" src="./docs/images/java.png" alt="java"> &nbsp;
+    <img width="25" src="./docs/images/c.png" alt="c"> &nbsp;
+    <img width="25" src="./docs/images/cpp.png" alt="cpp"> &nbsp;
+    <img width="25" src="./docs/images/csharp.png" alt="csharp"> &nbsp;
 </p>
 
 <p align="center">

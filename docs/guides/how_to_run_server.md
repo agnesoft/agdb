@@ -73,7 +73,7 @@ data_dir: agdb_server_data # directory to store user data
 curl -v localhost:3000/api/v1/status # should return 200 OK
 ```
 
-<br/>8. It is recommended by optional to create a user to use for the database management rather than using the `admin` user (which is however still possible):
+<br/>8. It is recommended but optional to create a regular user rather than using the `admin` user (which is however still possible):
 <br/><br/>
 
 ```bash
@@ -85,7 +85,7 @@ curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/use
 token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"my_db_user","password":"password123"}')
 ```
 
-<br/>9. To interact with the database you can either continue using `curl`, interactive OpenAPI GUI from any browser `localhost:3000/api/v1` (provided by `rapidoc`) or choose one of the [available API clients](/api.md). The raw OpenAPI specification can be downloaded from the server at `localhost:3000/api/v1/openapi.json`.
+<br/>9. To interact with the database you can either continue using `curl`, interactive OpenAPI GUI from any browser `localhost:3000/api/v1` (provided by `rapidoc`) or choose one of the [available API clients](/docs/api.md). The raw OpenAPI specification can be downloaded from the server at `localhost:3000/api/v1/openapi.json`.
 <br/><br/>
 
 <br/>10. The server can be shutdown with `CTRL+C` or programmatically posting to the shutdown endpoint as logged in server admin:

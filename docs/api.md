@@ -10,9 +10,9 @@ navigation:
 The [agdb server](guides/server.md) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
 
 <p align="center">
-    <a href="./docs/guides/rust.md"><img width="50" src="./images/rust.png" alt="rust"></a>
-    <a href="./docs/guides/typescript_javascript.md"><img width="50" src="./images/ts.png" alt="ts"></a>
-    <a href="./docs/guides/typescript_javascript.md"><img width="50" src="./images/js.png" alt="js"></a>
+    <a href="/docs/guides/rust.md"><img width="50" src="./images/rust.png" alt="rust"></a>
+    <a href="/docs/guides/typescript_javascript.md"><img width="50" src="./images/ts.png" alt="ts"></a>
+    <a href="/docs/guides/typescript_javascript.md"><img width="50" src="./images/js.png" alt="js"></a>
     <img width="50" src="./images/python.png" alt="python">
     <img width="50" src="./images/java.png" alt="java">
     <img width="50" src="./images/c.png" alt="c">

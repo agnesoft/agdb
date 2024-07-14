@@ -1,9 +1,4 @@
-import {
-    Components,
-    convertTo,
-    convertToNativeValue,
-    QueryBuilder,
-} from "../src/index";
+import { convertTo, QueryBuilder } from "../src/index";
 import { describe, expect, it } from "vitest";
 import { AgdbApi } from "../src/index";
 
@@ -14,12 +9,6 @@ class MyClass {
 }
 
 describe("openapi test", () => {
-    it("api uninitialized", async () => {
-        await expect(AgdbApi.login("admin", "admin")).rejects.toThrow(
-            "client not initialized",
-        );
-    });
-
     it("status", async () => {
         let client = await AgdbApi.client("http://localhost:3000");
         let res = await client.status({ cluster: true });
@@ -28,10 +17,12 @@ describe("openapi test", () => {
     });
 
     it("insert nodes with edges", async () => {
+        let admin_client = await AgdbApi.client("http://localhost:3000");
+        await admin_client.login("admin", "admin");
+        await admin_client.admin_user_add("user1", { password: "password123" });
+
         let client = await AgdbApi.client("http://localhost:3000");
-        await AgdbApi.login("admin", "admin");
-        await client.admin_user_add("user1", { password: "password123" });
-        await AgdbApi.login("user1", "password123");
+        await client.login("user1", "password123");
         await client.db_add({
             owner: "user1",
             db: "db1",
@@ -53,10 +44,12 @@ describe("openapi test", () => {
     });
 
     it("insert elements", async () => {
+        let admin_client = await AgdbApi.client("http://localhost:3000");
+        await admin_client.login("admin", "admin");
+        await admin_client.admin_user_add("user2", { password: "password123" });
+
         let client = await AgdbApi.client("http://localhost:3000");
-        await AgdbApi.login("admin", "admin");
-        await client.admin_user_add("user2", { password: "password123" });
-        await AgdbApi.login("user2", "password123");
+        await client.login("user2", "password123");
         await client.db_add({
             owner: "user2",
             db: "db1",
@@ -140,10 +133,12 @@ describe("openapi test", () => {
     });
 
     it("search elements", async () => {
+        let admin_client = await AgdbApi.client("http://localhost:3000");
+        await admin_client.login("admin", "admin");
+        await admin_client.admin_user_add("user3", { password: "password123" });
+
         let client = await AgdbApi.client("http://localhost:3000");
-        await AgdbApi.login("admin", "admin");
-        await client.admin_user_add("user3", { password: "password123" });
-        await AgdbApi.login("user3", "password123");
+        await client.login("user3", "password123");
         await client.db_add({
             owner: "user3",
             db: "db1",

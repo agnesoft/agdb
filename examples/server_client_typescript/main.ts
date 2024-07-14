@@ -1,4 +1,4 @@
-import { QueryBuilder, AgdbApi } from "agdb_api";
+import { QueryBuilder, Comparison, AgdbApi } from "agdb_api";
 
 async function main() {
   // Requires the server to be running. Run it with `cargo run -p agdb_server`
@@ -8,19 +8,11 @@ async function main() {
   let client = await AgdbApi.client("http://localhost:3000");
 
   // Creates a user using default admin credentials.
-  let admin_token = await client.user_login(null, {
-    username: "admin",
-    password: "admin",
-  });
-  AgdbApi.setToken(admin_token.data);
+  client.login("admin", "admin");
   await client.admin_user_add("user1", { password: "password123" });
 
   // Creates a database using the newly created user.
-  let token = await client.user_login(null, {
-    username: "user1",
-    password: "password123",
-  });
-  AgdbApi.setToken(token.data);
+  client.login("user1", "password123");
   await client.db_add({
     owner: "user1",
     db: "db1",
@@ -29,17 +21,17 @@ async function main() {
 
   // Prepare the queries to be executed on the remote database.
   let queries = [
-    QueryBuilder.insert().nodes().aliases(["users"]).query(),
+    QueryBuilder.insert().nodes().aliases("users").query(),
     QueryBuilder.insert()
       .nodes()
       .values([
         [
-          { key: { String: "username" }, value: { String: "user1" } },
-          { key: { String: "password" }, value: { String: "password123" } },
+          ["username", "user1"],
+          ["password", "password123"],
         ],
         [
-          { key: { String: "username" }, value: { String: "user1" } },
-          { key: { String: "password" }, value: { String: "password456" } },
+          ["username", "user1"],
+          ["password", "password456"],
         ],
       ])
       .query(),
@@ -57,8 +49,8 @@ async function main() {
         QueryBuilder.search()
           .from("users")
           .where()
-          .key({ String: "username" })
-          .value({ Equal: { String: "user1" } })
+          .key("username")
+          .value(Comparison.Equal("user1"))
           .query(),
       )
       .query(),

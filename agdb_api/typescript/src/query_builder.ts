@@ -990,7 +990,8 @@ class SearchWhereLogicBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        do {} while (collapse_conditions(this.data.conditions));
+        // prettier-ignore
+        do { /**/ } while (collapse_conditions(this.data.conditions));
         this.data.data.conditions = this.data.conditions[0];
         return { Search: this.data.data };
     }

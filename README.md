@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-    <picture><a href="./docs/guides/rust.md.md"><img width="25" src="./agdb_web/public/images/rust.png" alt="rust"></a>
+    <picture><a href="./docs/guides/rust.md"><img width="25" src="./agdb_web/public/images/rust.png" alt="rust"></a>
     <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/ts.png" alt="ts"></a>
     <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/js.png" alt="js"></a>
     <picture><img width="25" src="./agdb_web/public/images/python.png" alt="python"></picture> 

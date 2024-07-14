@@ -42,7 +42,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
   "paths": {
     "/api/v1/admin/db/list": {
       "get": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_list",
         "responses": {
           "200": {
@@ -71,7 +73,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/add": {
       "post": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_add",
         "parameters": [
           {
@@ -124,7 +128,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/audit": {
       "get": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_audit",
         "parameters": [
           {
@@ -170,7 +176,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/backup": {
       "post": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_backup",
         "parameters": [
           {
@@ -215,7 +223,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/copy": {
       "post": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_copy",
         "parameters": [
           {
@@ -271,7 +281,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/delete": {
       "delete": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_delete",
         "parameters": [
           {
@@ -313,7 +325,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/exec": {
       "post": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_exec",
         "parameters": [
           {
@@ -375,7 +389,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/optimize": {
       "post": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_optimize",
         "parameters": [
           {
@@ -421,7 +437,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/remove": {
       "delete": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_remove",
         "parameters": [
           {
@@ -463,7 +481,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/rename": {
       "post": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_rename",
         "parameters": [
           {
@@ -519,7 +539,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/user/list": {
       "get": {
-        "tags": ["crate::routes::admin::db::user"],
+        "tags": [
+          "crate::routes::admin::db::user"
+        ],
         "operationId": "admin_db_user_list",
         "parameters": [
           {
@@ -571,7 +593,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/user/{username}/add": {
       "put": {
-        "tags": ["crate::routes::admin::db::user"],
+        "tags": [
+          "crate::routes::admin::db::user"
+        ],
         "operationId": "admin_db_user_add",
         "parameters": [
           {
@@ -633,7 +657,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/db/{owner}/{db}/user/{username}/remove": {
       "delete": {
-        "tags": ["crate::routes::admin::db::user"],
+        "tags": [
+          "crate::routes::admin::db::user"
+        ],
         "operationId": "admin_db_user_remove",
         "parameters": [
           {
@@ -687,7 +713,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/shutdown": {
       "post": {
-        "tags": ["crate::routes::admin"],
+        "tags": [
+          "crate::routes::admin"
+        ],
         "operationId": "admin_shutdown",
         "responses": {
           "202": {
@@ -706,7 +734,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/user/list": {
       "get": {
-        "tags": ["crate::routes::admin::user"],
+        "tags": [
+          "crate::routes::admin::user"
+        ],
         "operationId": "admin_user_list",
         "responses": {
           "200": {
@@ -735,7 +765,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/user/{username}/add": {
       "post": {
-        "tags": ["crate::routes::admin::user"],
+        "tags": [
+          "crate::routes::admin::user"
+        ],
         "operationId": "admin_user_add",
         "parameters": [
           {
@@ -784,7 +816,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/user/{username}/change_password": {
       "put": {
-        "tags": ["crate::routes::admin::user"],
+        "tags": [
+          "crate::routes::admin::user"
+        ],
         "operationId": "admin_user_change_password",
         "parameters": [
           {
@@ -830,7 +864,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/admin/user/{username}/remove": {
       "delete": {
-        "tags": ["crate::routes::admin::user"],
+        "tags": [
+          "crate::routes::admin::user"
+        ],
         "operationId": "admin_user_remove",
         "parameters": [
           {
@@ -873,7 +909,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/admin/{owner}/{db}/restore": {
       "post": {
-        "tags": ["crate::routes::admin::db"],
+        "tags": [
+          "crate::routes::admin::db"
+        ],
         "operationId": "admin_db_restore",
         "parameters": [
           {
@@ -915,7 +953,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/list": {
       "get": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_list",
         "responses": {
           "200": {
@@ -944,7 +984,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/add": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_add",
         "parameters": [
           {
@@ -1000,7 +1042,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/audit": {
       "get": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_audit",
         "parameters": [
           {
@@ -1049,7 +1093,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/backup": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_backup",
         "parameters": [
           {
@@ -1094,7 +1140,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/copy": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_copy",
         "parameters": [
           {
@@ -1153,7 +1201,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/delete": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_delete",
         "parameters": [
           {
@@ -1198,7 +1248,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/exec": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_exec",
         "parameters": [
           {
@@ -1260,7 +1312,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/optimize": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_optimize",
         "parameters": [
           {
@@ -1309,7 +1363,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/remove": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_remove",
         "parameters": [
           {
@@ -1354,7 +1410,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/rename": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_rename",
         "parameters": [
           {
@@ -1413,7 +1471,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/restore": {
       "post": {
-        "tags": ["crate::routes::db"],
+        "tags": [
+          "crate::routes::db"
+        ],
         "operationId": "db_restore",
         "parameters": [
           {
@@ -1458,7 +1518,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/user/list": {
       "get": {
-        "tags": ["crate::routes::db::user"],
+        "tags": [
+          "crate::routes::db::user"
+        ],
         "operationId": "db_user_list",
         "parameters": [
           {
@@ -1500,7 +1562,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/user/{username}/add": {
       "post": {
-        "tags": ["crate::routes::db::user"],
+        "tags": [
+          "crate::routes::db::user"
+        ],
         "operationId": "db_user_add",
         "parameters": [
           {
@@ -1562,7 +1626,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/db/{owner}/{db}/user/{username}/remove": {
       "post": {
-        "tags": ["crate::routes::db::user"],
+        "tags": [
+          "crate::routes::db::user"
+        ],
         "operationId": "db_user_remove",
         "parameters": [
           {
@@ -1616,7 +1682,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/status": {
       "get": {
-        "tags": ["crate::routes"],
+        "tags": [
+          "crate::routes"
+        ],
         "operationId": "status",
         "parameters": [
           {
@@ -1648,7 +1716,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/user/change_password": {
       "put": {
-        "tags": ["crate::routes::user"],
+        "tags": [
+          "crate::routes::user"
+        ],
         "operationId": "user_change_password",
         "requestBody": {
           "content": {
@@ -1680,7 +1750,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/user/login": {
       "post": {
-        "tags": ["crate::routes::user"],
+        "tags": [
+          "crate::routes::user"
+        ],
         "operationId": "user_login",
         "requestBody": {
           "content": {
@@ -1711,7 +1783,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     },
     "/api/v1/user/logout": {
       "post": {
-        "tags": ["crate::routes::user"],
+        "tags": [
+          "crate::routes::user"
+        ],
         "operationId": "user_logout",
         "responses": {
           "201": {
@@ -1736,7 +1810,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "schemas": {
       "ChangePassword": {
         "type": "object",
-        "required": ["password", "new_password"],
+        "required": [
+          "password",
+          "new_password"
+        ],
         "properties": {
           "new_password": {
             "type": "string"
@@ -1748,7 +1825,13 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "ClusterStatus": {
         "type": "object",
-        "required": ["address", "status", "leader", "term", "commit"],
+        "required": [
+          "address",
+          "status",
+          "leader",
+          "term",
+          "commit"
+        ],
         "properties": {
           "address": {
             "type": "string"
@@ -1775,7 +1858,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["Equal"],
+            "required": [
+              "Equal"
+            ],
             "properties": {
               "Equal": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1784,7 +1869,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["GreaterThan"],
+            "required": [
+              "GreaterThan"
+            ],
             "properties": {
               "GreaterThan": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1793,7 +1880,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["GreaterThanOrEqual"],
+            "required": [
+              "GreaterThanOrEqual"
+            ],
             "properties": {
               "GreaterThanOrEqual": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1802,7 +1891,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["LessThan"],
+            "required": [
+              "LessThan"
+            ],
             "properties": {
               "LessThan": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1811,7 +1902,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["LessThanOrEqual"],
+            "required": [
+              "LessThanOrEqual"
+            ],
             "properties": {
               "LessThanOrEqual": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1820,7 +1913,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["NotEqual"],
+            "required": [
+              "NotEqual"
+            ],
             "properties": {
               "NotEqual": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1829,7 +1924,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Contains"],
+            "required": [
+              "Contains"
+            ],
             "properties": {
               "Contains": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1843,7 +1940,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["Equal"],
+            "required": [
+              "Equal"
+            ],
             "properties": {
               "Equal": {
                 "type": "integer",
@@ -1855,7 +1954,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["GreaterThan"],
+            "required": [
+              "GreaterThan"
+            ],
             "properties": {
               "GreaterThan": {
                 "type": "integer",
@@ -1867,7 +1968,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["GreaterThanOrEqual"],
+            "required": [
+              "GreaterThanOrEqual"
+            ],
             "properties": {
               "GreaterThanOrEqual": {
                 "type": "integer",
@@ -1879,7 +1982,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["LessThan"],
+            "required": [
+              "LessThan"
+            ],
             "properties": {
               "LessThan": {
                 "type": "integer",
@@ -1891,7 +1996,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["LessThanOrEqual"],
+            "required": [
+              "LessThanOrEqual"
+            ],
             "properties": {
               "LessThanOrEqual": {
                 "type": "integer",
@@ -1903,7 +2010,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["NotEqual"],
+            "required": [
+              "NotEqual"
+            ],
             "properties": {
               "NotEqual": {
                 "type": "integer",
@@ -1925,7 +2034,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "DbElement": {
         "type": "object",
         "description": "Database element used in [`QueryResult`]\nthat represents a node or an edge.",
-        "required": ["id", "values"],
+        "required": [
+          "id",
+          "values"
+        ],
         "properties": {
           "from": {
             "allOf": [
@@ -1969,7 +2081,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["Asc"],
+            "required": [
+              "Asc"
+            ],
             "properties": {
               "Asc": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1978,7 +2092,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Desc"],
+            "required": [
+              "Desc"
+            ],
             "properties": {
               "Desc": {
                 "$ref": "#/components/schemas/DbValue"
@@ -1991,7 +2107,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "DbKeyValue": {
         "type": "object",
         "description": "Database key-value pair (aka property) attached to\ndatabase elements. It can be constructed from a\ntuple of types that are convertible to `DbValue`.",
-        "required": ["key", "value"],
+        "required": [
+          "key",
+          "value"
+        ],
         "properties": {
           "key": {
             "$ref": "#/components/schemas/DbValue"
@@ -2003,11 +2122,17 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "DbType": {
         "type": "string",
-        "enum": ["memory", "mapped", "file"]
+        "enum": [
+          "memory",
+          "mapped",
+          "file"
+        ]
       },
       "DbTypeParam": {
         "type": "object",
-        "required": ["db_type"],
+        "required": [
+          "db_type"
+        ],
         "properties": {
           "db_type": {
             "$ref": "#/components/schemas/DbType"
@@ -2016,7 +2141,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "DbUser": {
         "type": "object",
-        "required": ["user", "role"],
+        "required": [
+          "user",
+          "role"
+        ],
         "properties": {
           "role": {
             "$ref": "#/components/schemas/DbUserRole"
@@ -2028,11 +2156,17 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "DbUserRole": {
         "type": "string",
-        "enum": ["admin", "write", "read"]
+        "enum": [
+          "admin",
+          "write",
+          "read"
+        ]
       },
       "DbUserRoleParam": {
         "type": "object",
-        "required": ["db_role"],
+        "required": [
+          "db_role"
+        ],
         "properties": {
           "db_role": {
             "$ref": "#/components/schemas/DbUserRole"
@@ -2043,7 +2177,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["Bytes"],
+            "required": [
+              "Bytes"
+            ],
             "properties": {
               "Bytes": {
                 "type": "string",
@@ -2054,7 +2190,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["I64"],
+            "required": [
+              "I64"
+            ],
             "properties": {
               "I64": {
                 "type": "integer",
@@ -2065,7 +2203,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["U64"],
+            "required": [
+              "U64"
+            ],
             "properties": {
               "U64": {
                 "type": "integer",
@@ -2077,7 +2217,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["F64"],
+            "required": [
+              "F64"
+            ],
             "properties": {
               "F64": {
                 "$ref": "#/components/schemas/DbF64"
@@ -2086,7 +2228,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["String"],
+            "required": [
+              "String"
+            ],
             "properties": {
               "String": {
                 "type": "string",
@@ -2096,7 +2240,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["VecI64"],
+            "required": [
+              "VecI64"
+            ],
             "properties": {
               "VecI64": {
                 "type": "array",
@@ -2110,7 +2256,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["VecU64"],
+            "required": [
+              "VecU64"
+            ],
             "properties": {
               "VecU64": {
                 "type": "array",
@@ -2125,7 +2273,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["VecF64"],
+            "required": [
+              "VecF64"
+            ],
             "properties": {
               "VecF64": {
                 "type": "array",
@@ -2138,7 +2288,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["VecString"],
+            "required": [
+              "VecString"
+            ],
             "properties": {
               "VecString": {
                 "type": "array",
@@ -2155,7 +2307,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "InsertAliasesQuery": {
         "type": "object",
         "description": "Query to insert or update aliases of existing nodes.\nAll `ids` must exist. None of the `aliases` can be empty.\nIf there is an existing alias for any of the elements it\nwill be overwritten with a new one.\n\nNOTE: Setting `ids` to a search query will result in an error.\n\nThe result will contain number of aliases inserted/updated but no elements.",
-        "required": ["ids", "aliases"],
+        "required": [
+          "ids",
+          "aliases"
+        ],
         "properties": {
           "aliases": {
             "type": "array",
@@ -2172,7 +2327,13 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "InsertEdgesQuery": {
         "type": "object",
         "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nIf the `ids` member is empty the query will insert new edges\notherwise it will update the existing edges. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of edges inserted or udpated and elements\nwith their ids, origin and destination, but no properties.",
-        "required": ["from", "to", "ids", "values", "each"],
+        "required": [
+          "from",
+          "to",
+          "ids",
+          "values",
+          "each"
+        ],
         "properties": {
           "each": {
             "type": "boolean",
@@ -2198,7 +2359,12 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "InsertNodesQuery": {
         "type": "object",
         "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nIf the `ids` member is empty the query will insert new nodes\notherwise it will update the existing nodes. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of nodes inserted or updated and elements\nwith their ids but no properties.",
-        "required": ["count", "values", "aliases", "ids"],
+        "required": [
+          "count",
+          "values",
+          "aliases",
+          "ids"
+        ],
         "properties": {
           "aliases": {
             "type": "array",
@@ -2224,7 +2390,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "InsertValuesQuery": {
         "type": "object",
         "description": "Query to insert or update key-value pairs (properties)\nto existing elements in the database. All `ids` must exist\nin the database. If `values` is set to `Single` the properties\nwill be inserted uniformly to all `ids` otherwise there must be\nenough `values` for all `ids`.\n\nThe result will be number of inserted/updated values and inserted new\nelements (nodes).\n\nNOTE: The result is NOT number of affected elements but individual properties.",
-        "required": ["ids", "values"],
+        "required": [
+          "ids",
+          "values"
+        ],
         "properties": {
           "ids": {
             "$ref": "#/components/schemas/QueryIds"
@@ -2248,7 +2417,11 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "QueryAudit": {
         "type": "object",
-        "required": ["timestamp", "user", "query"],
+        "required": [
+          "timestamp",
+          "user",
+          "query"
+        ],
         "properties": {
           "query": {
             "$ref": "#/components/schemas/QueryType"
@@ -2266,7 +2439,11 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "QueryCondition": {
         "type": "object",
         "description": "Query condition. The condition consists of\n`data`, logic operator and a modifier.",
-        "required": ["logic", "modifier", "data"],
+        "required": [
+          "logic",
+          "modifier",
+          "data"
+        ],
         "properties": {
           "data": {
             "$ref": "#/components/schemas/QueryConditionData"
@@ -2283,7 +2460,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["Distance"],
+            "required": [
+              "Distance"
+            ],
             "properties": {
               "Distance": {
                 "$ref": "#/components/schemas/CountComparison"
@@ -2293,11 +2472,15 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           {
             "type": "string",
             "description": "Is the current element an edge? I.e. `id < 0`.",
-            "enum": ["Edge"]
+            "enum": [
+              "Edge"
+            ]
           },
           {
             "type": "object",
-            "required": ["EdgeCount"],
+            "required": [
+              "EdgeCount"
+            ],
             "properties": {
               "EdgeCount": {
                 "$ref": "#/components/schemas/CountComparison"
@@ -2306,7 +2489,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["EdgeCountFrom"],
+            "required": [
+              "EdgeCountFrom"
+            ],
             "properties": {
               "EdgeCountFrom": {
                 "$ref": "#/components/schemas/CountComparison"
@@ -2315,7 +2500,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["EdgeCountTo"],
+            "required": [
+              "EdgeCountTo"
+            ],
             "properties": {
               "EdgeCountTo": {
                 "$ref": "#/components/schemas/CountComparison"
@@ -2324,7 +2511,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Ids"],
+            "required": [
+              "Ids"
+            ],
             "properties": {
               "Ids": {
                 "type": "array",
@@ -2337,12 +2526,17 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["KeyValue"],
+            "required": [
+              "KeyValue"
+            ],
             "properties": {
               "KeyValue": {
                 "type": "object",
                 "description": "Tests if the current element has a property `key`\nwith a value that evaluates true against `comparison`.",
-                "required": ["key", "value"],
+                "required": [
+                  "key",
+                  "value"
+                ],
                 "properties": {
                   "key": {
                     "$ref": "#/components/schemas/DbValue"
@@ -2356,7 +2550,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Keys"],
+            "required": [
+              "Keys"
+            ],
             "properties": {
               "Keys": {
                 "type": "array",
@@ -2370,11 +2566,15 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           {
             "type": "string",
             "description": "Is the current element a node? I.e. `0 < id`.",
-            "enum": ["Node"]
+            "enum": [
+              "Node"
+            ]
           },
           {
             "type": "object",
-            "required": ["Where"],
+            "required": [
+              "Where"
+            ],
             "properties": {
               "Where": {
                 "type": "array",
@@ -2391,18 +2591,28 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "QueryConditionLogic": {
         "type": "string",
         "description": "Logical operator for query conditions",
-        "enum": ["And", "Or"]
+        "enum": [
+          "And",
+          "Or"
+        ]
       },
       "QueryConditionModifier": {
         "type": "string",
         "description": "Query condition modifier",
-        "enum": ["None", "Beyond", "Not", "NotBeyond"]
+        "enum": [
+          "None",
+          "Beyond",
+          "Not",
+          "NotBeyond"
+        ]
       },
       "QueryId": {
         "oneOf": [
           {
             "type": "object",
-            "required": ["Id"],
+            "required": [
+              "Id"
+            ],
             "properties": {
               "Id": {
                 "$ref": "#/components/schemas/DbId"
@@ -2411,7 +2621,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Alias"],
+            "required": [
+              "Alias"
+            ],
             "properties": {
               "Alias": {
                 "type": "string",
@@ -2426,7 +2638,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["Ids"],
+            "required": [
+              "Ids"
+            ],
             "properties": {
               "Ids": {
                 "type": "array",
@@ -2439,7 +2653,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Search"],
+            "required": [
+              "Search"
+            ],
             "properties": {
               "Search": {
                 "$ref": "#/components/schemas/SearchQuery"
@@ -2452,7 +2668,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "QueryResult": {
         "type": "object",
         "description": "Universal database result. Successful\nexecution of a query will always yield\nthis type. The `result` field is a numerical\nrepresentation of the result while the\n`elements` are the list of `DbElement`s\nwith database ids and properties (key-value pairs).",
-        "required": ["result", "elements"],
+        "required": [
+          "result",
+          "elements"
+        ],
         "properties": {
           "elements": {
             "type": "array",
@@ -2472,7 +2691,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["InsertAlias"],
+            "required": [
+              "InsertAlias"
+            ],
             "properties": {
               "InsertAlias": {
                 "$ref": "#/components/schemas/InsertAliasesQuery"
@@ -2481,7 +2702,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["InsertEdges"],
+            "required": [
+              "InsertEdges"
+            ],
             "properties": {
               "InsertEdges": {
                 "$ref": "#/components/schemas/InsertEdgesQuery"
@@ -2490,7 +2713,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["InsertIndex"],
+            "required": [
+              "InsertIndex"
+            ],
             "properties": {
               "InsertIndex": {
                 "$ref": "#/components/schemas/InsertIndexQuery"
@@ -2499,7 +2724,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["InsertNodes"],
+            "required": [
+              "InsertNodes"
+            ],
             "properties": {
               "InsertNodes": {
                 "$ref": "#/components/schemas/InsertNodesQuery"
@@ -2508,7 +2735,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["InsertValues"],
+            "required": [
+              "InsertValues"
+            ],
             "properties": {
               "InsertValues": {
                 "$ref": "#/components/schemas/InsertValuesQuery"
@@ -2517,7 +2746,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Remove"],
+            "required": [
+              "Remove"
+            ],
             "properties": {
               "Remove": {
                 "$ref": "#/components/schemas/RemoveQuery"
@@ -2526,7 +2757,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["RemoveAliases"],
+            "required": [
+              "RemoveAliases"
+            ],
             "properties": {
               "RemoveAliases": {
                 "$ref": "#/components/schemas/RemoveAliasesQuery"
@@ -2535,7 +2768,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["RemoveIndex"],
+            "required": [
+              "RemoveIndex"
+            ],
             "properties": {
               "RemoveIndex": {
                 "$ref": "#/components/schemas/RemoveIndexQuery"
@@ -2544,7 +2779,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["RemoveValues"],
+            "required": [
+              "RemoveValues"
+            ],
             "properties": {
               "RemoveValues": {
                 "$ref": "#/components/schemas/RemoveValuesQuery"
@@ -2553,7 +2790,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Search"],
+            "required": [
+              "Search"
+            ],
             "properties": {
               "Search": {
                 "$ref": "#/components/schemas/SearchQuery"
@@ -2562,7 +2801,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Select"],
+            "required": [
+              "Select"
+            ],
             "properties": {
               "Select": {
                 "$ref": "#/components/schemas/SelectQuery"
@@ -2571,7 +2812,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectAliases"],
+            "required": [
+              "SelectAliases"
+            ],
             "properties": {
               "SelectAliases": {
                 "$ref": "#/components/schemas/SelectAliasesQuery"
@@ -2580,7 +2823,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectAllAliases"],
+            "required": [
+              "SelectAllAliases"
+            ],
             "properties": {
               "SelectAllAliases": {
                 "$ref": "#/components/schemas/SelectAllAliasesQuery"
@@ -2589,7 +2834,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectEdgeCount"],
+            "required": [
+              "SelectEdgeCount"
+            ],
             "properties": {
               "SelectEdgeCount": {
                 "$ref": "#/components/schemas/SelectEdgeCountQuery"
@@ -2598,7 +2845,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectIndexes"],
+            "required": [
+              "SelectIndexes"
+            ],
             "properties": {
               "SelectIndexes": {
                 "$ref": "#/components/schemas/SelectIndexesQuery"
@@ -2607,7 +2856,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectKeys"],
+            "required": [
+              "SelectKeys"
+            ],
             "properties": {
               "SelectKeys": {
                 "$ref": "#/components/schemas/SelectKeysQuery"
@@ -2616,7 +2867,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectKeyCount"],
+            "required": [
+              "SelectKeyCount"
+            ],
             "properties": {
               "SelectKeyCount": {
                 "$ref": "#/components/schemas/SelectKeyCountQuery"
@@ -2625,7 +2878,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectNodeCount"],
+            "required": [
+              "SelectNodeCount"
+            ],
             "properties": {
               "SelectNodeCount": {
                 "$ref": "#/components/schemas/SelectNodeCountQuery"
@@ -2634,7 +2889,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["SelectValues"],
+            "required": [
+              "SelectValues"
+            ],
             "properties": {
               "SelectValues": {
                 "$ref": "#/components/schemas/SelectValuesQuery"
@@ -2648,7 +2905,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "oneOf": [
           {
             "type": "object",
-            "required": ["Single"],
+            "required": [
+              "Single"
+            ],
             "properties": {
               "Single": {
                 "type": "array",
@@ -2661,7 +2920,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           },
           {
             "type": "object",
-            "required": ["Multi"],
+            "required": [
+              "Multi"
+            ],
             "properties": {
               "Multi": {
                 "type": "array",
@@ -2747,7 +3008,12 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "SearchQueryAlgorithm": {
         "type": "string",
         "description": "Search algorithm to be used",
-        "enum": ["BreadthFirst", "DepthFirst", "Index", "Elements"]
+        "enum": [
+          "BreadthFirst",
+          "DepthFirst",
+          "Index",
+          "Elements"
+        ]
       },
       "SelectAliasesQuery": {
         "$ref": "#/components/schemas/QueryIds"
@@ -2759,7 +3025,11 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "SelectEdgeCountQuery": {
         "type": "object",
         "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database. If any\nof the ids is not a node the result will be 0 (not\nan error).\n\nThe result will be number of elements returned and the list\nof elements with a single property `String(\"edge_count\")` with\na value `u64`.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
-        "required": ["ids", "from", "to"],
+        "required": [
+          "ids",
+          "from",
+          "to"
+        ],
         "properties": {
           "from": {
             "type": "boolean",
@@ -2794,7 +3064,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "SelectValuesQuery": {
         "type": "object",
         "description": "Query to select elements with only certain properties of\ngiven ids. All ids must exist in the database and all\nof them must have the requested properties.\n\nThe result will be number of elements and the\nlist of elements with the requested properties.",
-        "required": ["keys", "ids"],
+        "required": [
+          "keys",
+          "ids"
+        ],
         "properties": {
           "ids": {
             "$ref": "#/components/schemas/QueryIds"
@@ -2809,7 +3082,13 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "ServerDatabase": {
         "type": "object",
-        "required": ["name", "db_type", "role", "size", "backup"],
+        "required": [
+          "name",
+          "db_type",
+          "role",
+          "size",
+          "backup"
+        ],
         "properties": {
           "backup": {
             "type": "integer",
@@ -2834,7 +3113,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "ServerDatabaseRename": {
         "type": "object",
-        "required": ["new_name"],
+        "required": [
+          "new_name"
+        ],
         "properties": {
           "new_name": {
             "type": "string"
@@ -2852,7 +3133,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "UserCredentials": {
         "type": "object",
-        "required": ["password"],
+        "required": [
+          "password"
+        ],
         "properties": {
           "password": {
             "type": "string"
@@ -2861,7 +3144,10 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "UserLogin": {
         "type": "object",
-        "required": ["username", "password"],
+        "required": [
+          "username",
+          "password"
+        ],
         "properties": {
           "password": {
             "type": "string"
@@ -2873,7 +3159,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       },
       "UserStatus": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
           "name": {
             "type": "string"

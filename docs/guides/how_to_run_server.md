@@ -2,7 +2,7 @@
 title: "How to run the server?"
 description: "How to run the server, Agnesoft Graph Database"
 navigation:
-    title: "How to run the server?"
+  title: "How to run the server?"
 ---
 
 # How to run the server?
@@ -10,10 +10,10 @@ navigation:
 The following is a guide how to run a local instance of the `agdb_server` on any platform/OS supported by Rust building from source.
 
 <br/>1. Install git from the [officail source](https://git-scm.com/) (skip if you already have it).
-<br/>
+<br/><br/>
 
 <br/>2. Install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install) (mininum required version is `1.75.0`).
-<br/>
+<br/><br/>
 
 <br/>3. Clone the `agdb` repository: `git clone https://github.com/agnesoft/agdb.git` (or `git@github.com:agnesoft/agdb.git` if using SSH).
 <br/><br/>
@@ -42,9 +42,9 @@ cargo run --release -p agdb_server
 
 The server upon starting will create few things in its working directory:
 
--   `agdb_server.yaml`: Configuration file. You can alter it as you wish. You would need to restart the server for the changes to take effect.
--   `agdb_server.agdb` (`.agdb_server.agdb`): Internal databse of the server (uses `agdb` itself) + its write ahead file (the dotfile).
--   `agdb_data_dir/`: Folder for stroing the user data. It can be changed in the configuration file (requires restart of the server).
+- `agdb_server.yaml`: Configuration file. You can alter it as you wish. You would need to restart the server for the changes to take effect.
+- `agdb_server.agdb` (`.agdb_server.agdb`): Internal databse of the server (uses `agdb` itself) + its write ahead file (the dotfile).
+- `agdb_data_dir/`: Folder for stroing the user data. It can be changed in the configuration file (requires restart of the server).
 
 and report where it listens at:
 
@@ -56,8 +56,9 @@ NOTE: You can prepare the configuration file before starting the server. It supp
 
 ```yaml
 # agdb_server.yaml
-host: localhost # host address to listen on
-port: 3000 # port to bind to
+bind: :::3000 # host address to listen on
+address: localhost:3000 # address of incoming connections
+basepath: "" # optional prefix to allow running behind a reverse proxy
 admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
 data_dir: agdb_server_data # directory to store user data
 ```
@@ -72,7 +73,7 @@ data_dir: agdb_server_data # directory to store user data
 curl -v localhost:3000/api/v1/status # should return 200 OK
 ```
 
-<br/>8. It is recommended by optional to create a user to use for the database management rather than using the `admin` user (which is however still possible):
+<br/>8. It is recommended but optional to create a regular user rather than using the `admin` user (which is however still possible):
 <br/><br/>
 
 ```bash
@@ -84,7 +85,7 @@ curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/use
 token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"my_db_user","password":"password123"}')
 ```
 
-<br/>9. To interact with the database you can either continue using `curl`, interactive OpenAPI GUI from any browser `localhost:3000/api/v1` (provided by `rapidoc`) or choose one of the [available API clients](/api.md). The raw OpenAPI specification can be downloaded from the server at `localhost:3000/api/v1/openapi.json`.
+<br/>9. To interact with the database you can either continue using `curl`, interactive OpenAPI GUI from any browser `localhost:3000/api/v1` (provided by `rapidoc`) or choose one of the [available API clients](/docs/api.md). The raw OpenAPI specification can be downloaded from the server at `localhost:3000/api/v1/openapi.json`.
 <br/><br/>
 
 <br/>10. The server can be shutdown with `CTRL+C` or programmatically posting to the shutdown endpoint as logged in server admin:

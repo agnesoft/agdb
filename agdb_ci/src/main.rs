@@ -18,9 +18,9 @@ const IGNORE: [&str; 8] = [
 ];
 const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
 #[cfg(windows)]
-const LN: &'static str = "\r\n";
+const LN: &str = "\r\n";
 #[cfg(not(windows))]
-const LN: &'static str = "\n";
+const LN: &str = "\n";
 
 #[derive(Debug)]
 struct CIError {

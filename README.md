@@ -11,7 +11,7 @@
 <p align="center">
     <br/>
     <a href="./docs/queries.md"><img width="100" src="./docs/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/api.md"><img width="100" src="./docs/public/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/api.md"><img width="100" src="./docs/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <a href="./docs/studio.md"><img width="100" src="./docs/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <a href="./docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <a href="./docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 

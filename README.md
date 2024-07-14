@@ -10,22 +10,22 @@
 
 <p align="center">
     <br/>
-    <a href="./docs/queries.md"><img width="100" src="./agdb_web/public/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/api.md"><img width="100" src="./agdb_web/public/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/studio.md"><img width="100" src="./agdb_web/public/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/server.md"><img width="100" src="./agdb_web/public/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/cloud.md"><img width="100" src="./agdb_web/public/images/cloud.png" alt="cloud"></a> 
+    <a href="./docs/queries.md"><img width="100" src="./docs/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/api.md"><img width="100" src="./docs/public/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/studio.md"><img width="100" src="./docs/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/server.md"><img width="100" src="./docs/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="./docs/cloud.md"><img width="100" src="./docs/images/cloud.png" alt="cloud"></a> 
 </p>
 
 <p align="center">
-    <picture><a href="./docs/guides/rust.md"><img width="25" src="./agdb_web/public/images/rust.png" alt="rust"></a>
-    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/ts.png" alt="ts"></a>
-    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/js.png" alt="js"></a>
-    <picture><img width="25" src="./agdb_web/public/images/python.png" alt="python"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/java.png" alt="java"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/c.png" alt="c"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/cpp.png" alt="cpp"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/csharp.png" alt="csharp"></picture>
+    <picture><a href="./docs/guides/rust.md"><img width="25" src="./docs/images/rust.png" alt="rust"></a>
+    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./docs/images/ts.png" alt="ts"></a>
+    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./docs/images/js.png" alt="js"></a>
+    <picture><img width="25" src="./docs/images/python.png" alt="python"></picture> 
+    <picture><img width="25" src="./docs/images/java.png" alt="java"></picture> 
+    <picture><img width="25" src="./docs/images/c.png" alt="c"></picture> 
+    <picture><img width="25" src="./docs/images/cpp.png" alt="cpp"></picture> 
+    <picture><img width="25" src="./docs/images/csharp.png" alt="csharp"></picture>
 </p>
 
 <p align="center">
@@ -38,10 +38,10 @@
 </p>
 
 <!-- <p align="center">
-    <img width="25" src="./agdb_web/public/images/reddit.png" alt="reddit"> &nbsp;
-    <img width="25" src="./agdb_web/public/images/x.png" alt="x"> &nbsp;
-    <img width="25" src="./agdb_web/public/images/linkedin.png" alt="lkinkedin"> &nbsp;
-    <img width="25" src="./agdb_web/public/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
+    <img width="25" src="./docs/images/reddit.png" alt="reddit"> &nbsp;
+    <img width="25" src="./docs/images/x.png" alt="x"> &nbsp;
+    <img width="25" src="./docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
+    <img width="25" src="./docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
 </p> -->
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database

@@ -18,9 +18,9 @@
 </p>
 
 <p align="center">
-    <picture><img width="25" src="./agdb_web/public/images/rust.png" alt="rust"></picture>
-    <picture><img width="25" src="./agdb_web/public/images/ts.png" alt="ts"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/js.png" alt="js"></picture> 
+    <picture><a href="./docs/guides/rust.md.md"><img width="25" src="./agdb_web/public/images/rust.png" alt="rust"></a>
+    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/ts.png" alt="ts"></a>
+    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/js.png" alt="js"></a>
     <picture><img width="25" src="./agdb_web/public/images/python.png" alt="python"></picture> 
     <picture><img width="25" src="./agdb_web/public/images/java.png" alt="java"></picture> 
     <picture><img width="25" src="./agdb_web/public/images/c.png" alt="c"></picture> 
@@ -55,25 +55,25 @@
 
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
 
--   [Key Features](#key-features)
--   [At a glance](#at-a-glance)
--   [Crate Features](#crate-features)
--   [Decision Tree](#decision-tree)
--   [Roadmap](#roadmap)
--   [Reference](#reference)
+- [Key Features](#key-features)
+- [At a glance](#at-a-glance)
+- [Crate Features](#crate-features)
+- [Decision Tree](#decision-tree)
+- [Roadmap](#roadmap)
+- [Reference](#reference)
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
--   Data plotted on a graph
--   Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
--   Persistent platform agnostic file based storage (transferable between platforms)
--   ACID compliant
--   [Object queries](docs/queries.md) with builder pattern (no text, no query language)
--   Memory mapped for fast querying
--   [Server mode](docs/server.md)
--   [OpenAPI clients](docs/api.md) in any programming language
--   [Cloud](docs/cloud.md) hosted SaaS database
--   _Db itself has no dependencies_
+- Data plotted on a graph
+- Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
+- Persistent platform agnostic file based storage (transferable between platforms)
+- ACID compliant
+- [Object queries](docs/queries.md) with builder pattern (no text, no query language)
+- Memory mapped for fast querying
+- [Server mode](docs/server.md)
+- [OpenAPI clients](docs/api.md) in any programming language
+- [Cloud](docs/cloud.md) hosted SaaS database
+- _Db itself has no dependencies_
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
 
@@ -150,7 +150,7 @@ println!("{:?}", user);
 // User { db_id: Some(DbId(3)), username: "Bob" }
 ```
 
-For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/efficient_agdb.md).
+For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/guides/efficient_agdb.md).
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
@@ -204,22 +204,24 @@ The following are planned features:
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
--   [API](docs/api.md)
+- [API](docs/api.md)
 
--   [But why?](docs/but_why.md)
+- [But why?](docs/but_why.md)
 
--   [Cloud](docs/cloud.md)
+- [Cloud](docs/cloud.md)
 
--   [Concepts](docs/concepts.md)
+- [Concepts](docs/concepts.md)
 
--   [Efficient agdb](docs/efficient_agdb.md)
+- [Efficient agdb](docs/guides/efficient_agdb.md)
 
--   [Performance](docs/performance.md)
+- [Guides](docs/guides/)
 
--   [Queries](docs/queries.md)
+- [Performance](docs/performance.md)
 
--   [Server](docs/server.md)
+- [Queries](docs/queries.md)
 
--   [Studio](docs/studio.md)
+- [Server](docs/server.md)
 
--   [Troubleshooting](docs/troubleshooting.md)
+- [Studio](docs/studio.md)
+
+- [Troubleshooting](docs/troubleshooting.md)

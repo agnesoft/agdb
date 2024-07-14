@@ -1,3 +1,2892 @@
-# API
+---
+title: "API"
+description: "API, Agnesoft Graph Database"
+navigation:
+  title: "API"
+---
 
-[Follow the link](/agdb_web/content/en/api/index.md)
+# api
+
+The [agdb server](guides/server.md) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
+
+<p>
+    <picture><a href="./docs/guides/rust.md.md"><img width="50" src="./agdb_web/public/images/rust.png" alt="rust"></a>
+    <picture><a href="./docs/guides/typescript.md"><img width="50" src="./agdb_web/public/images/ts.png" alt="ts"></a>
+    <picture><a href="./docs/guides/typescript.md"><img width="50" src="./agdb_web/public/images/js.png" alt="js"></a>
+    <picture><img width="50" src="./agdb_web/public/images/python.png" alt="python"></picture> 
+    <picture><img width="50" src="./agdb_web/public/images/java.png" alt="java"></picture> 
+    <picture><img width="50" src="./agdb_web/public/images/c.png" alt="c"></picture> 
+    <picture><img width="50" src="./agdb_web/public/images/cpp.png" alt="cpp"></picture> 
+    <picture><img width="50" src="./agdb_web/public/images/csharp.png" alt="csharp"></picture>
+</p>
+
+## openapi.json
+
+```json
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "agdb_server",
+    "description": "Agnesoft Graph Database Server",
+    "license": {
+      "name": "Apache-2.0"
+    },
+    "version": "0.7.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local server"
+    }
+  ],
+  "paths": {
+    "/api/v1/admin/db/list": {
+      "get": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabase"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/add": {
+      "post": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          },
+          "465": {
+            "description": "db exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/audit": {
+      "get": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_audit",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbAudit"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/backup": {
+      "post": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_backup",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "backup created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "memory db cannot have backup"
+          },
+          "404": {
+            "description": "db / user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/copy": {
+      "post": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_copy",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db copied"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/delete": {
+      "delete": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_delete",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db deleted"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/exec": {
+      "post": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_exec",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "permission denied"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/optimize": {
+      "post": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_optimize",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/remove": {
+      "delete": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/rename": {
+      "post": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_rename",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db renamed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/user/list": {
+      "get": {
+        "tags": ["crate::routes::admin::db::user"],
+        "operationId": "admin_db_user_list",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbUser"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/user/{username}/add": {
+      "put": {
+        "tags": ["crate::routes::admin::db::user"],
+        "operationId": "admin_db_user_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot change role of db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/user/{username}/remove": {
+      "delete": {
+        "tags": ["crate::routes::admin::db::user"],
+        "operationId": "admin_db_user_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot remove db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/shutdown": {
+      "post": {
+        "tags": ["crate::routes::admin"],
+        "operationId": "admin_shutdown",
+        "responses": {
+          "202": {
+            "description": "server is shutting down"
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/list": {
+      "get": {
+        "tags": ["crate::routes::admin::user"],
+        "operationId": "admin_user_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/add": {
+      "post": {
+        "tags": ["crate::routes::admin::user"],
+        "operationId": "admin_user_add",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "desired user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "user created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "461": {
+            "description": "password too short (<8)"
+          },
+          "462": {
+            "description": "name too short (<3)"
+          },
+          "463": {
+            "description": "user exists"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/change_password": {
+      "put": {
+        "tags": ["crate::routes::admin::user"],
+        "operationId": "admin_user_change_password",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "password changed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "461": {
+            "description": "password too short (<8)"
+          },
+          "464": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/remove": {
+      "delete": {
+        "tags": ["crate::routes::admin::user"],
+        "operationId": "admin_user_remove",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/admin/{owner}/{db}/restore": {
+      "post": {
+        "tags": ["crate::routes::admin::db"],
+        "operationId": "admin_db_restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/list": {
+      "get": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_list",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerDatabase"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/add": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot add db to another user"
+          },
+          "465": {
+            "description": "db already exists"
+          },
+          "467": {
+            "description": "db invalid"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/audit": {
+      "get": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_audit",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbAudit"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/backup": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_backup",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "backup created"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin / memory db cannot have backup"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/copy": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_copy",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db copied"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "cannot copy db to another user"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/delete": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_delete",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db deleted"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db owner"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/exec": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_exec",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must have at least write role"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/optimize": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_optimize",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must have write permissions"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/remove": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "db removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db owner"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/rename": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_rename",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db renamed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          },
+          "465": {
+            "description": "target db exists"
+          },
+          "467": {
+            "description": "invalid db"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/restore": {
+      "post": {
+        "tags": ["crate::routes::db"],
+        "operationId": "db_restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/user/list": {
+      "get": {
+        "tags": ["crate::routes::db::user"],
+        "operationId": "db_user_list",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/user/{username}/add": {
+      "post": {
+        "tags": ["crate::routes::db::user"],
+        "operationId": "db_user_add",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_role",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbUserRole"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user added"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "user must be a db admin / cannot change role of db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/user/{username}/remove": {
+      "post": {
+        "tags": ["crate::routes::db::user"],
+        "operationId": "db_user_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user removed"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be admin / cannot remove db owner"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": ["crate::routes"],
+        "operationId": "status",
+        "parameters": [
+          {
+            "name": "cluster",
+            "in": "path",
+            "description": "get cluster status",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClusterStatus"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user/change_password": {
+      "put": {
+        "tags": ["crate::routes::user"],
+        "operationId": "user_change_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "password changed"
+          },
+          "401": {
+            "description": "invalid credentials"
+          },
+          "461": {
+            "description": "password too short (<8)"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user/login": {
+      "post": {
+        "tags": ["crate::routes::user"],
+        "operationId": "user_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "login successful",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/v1/user/logout": {
+      "post": {
+        "tags": ["crate::routes::user"],
+        "operationId": "user_logout",
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "invalid credentials"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChangePassword": {
+        "type": "object",
+        "required": ["password", "new_password"],
+        "properties": {
+          "new_password": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "ClusterStatus": {
+        "type": "object",
+        "required": ["address", "status", "leader", "term", "commit"],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "leader": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "boolean"
+          },
+          "term": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "Comparison": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Equal"],
+            "properties": {
+              "Equal": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["GreaterThan"],
+            "properties": {
+              "GreaterThan": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["GreaterThanOrEqual"],
+            "properties": {
+              "GreaterThanOrEqual": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["LessThan"],
+            "properties": {
+              "LessThan": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["LessThanOrEqual"],
+            "properties": {
+              "LessThanOrEqual": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["NotEqual"],
+            "properties": {
+              "NotEqual": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Contains"],
+            "properties": {
+              "Contains": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          }
+        ],
+        "description": "Comparison of database values ([`DbValue`]) used\nby `key()` condition. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`\nplus `contains()`. The comparisons are type\nstrict except for the `contains` comparison\nwhich allows vectorized version of the base type. Notably\nhowever it does not support the `bytes` and integral types\nwhere the \"contains\" makes little sense (i.e. does 3 contain 1?)."
+      },
+      "CountComparison": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Equal"],
+            "properties": {
+              "Equal": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property == this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["GreaterThan"],
+            "properties": {
+              "GreaterThan": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property > this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["GreaterThanOrEqual"],
+            "properties": {
+              "GreaterThanOrEqual": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property >= this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["LessThan"],
+            "properties": {
+              "LessThan": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property < this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["LessThanOrEqual"],
+            "properties": {
+              "LessThanOrEqual": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property <= this",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["NotEqual"],
+            "properties": {
+              "NotEqual": {
+                "type": "integer",
+                "format": "int64",
+                "description": "property != this",
+                "minimum": 0
+              }
+            }
+          }
+        ],
+        "description": "Comparison of unsigned integers (`u64`) used\nby `distance()` and `edge_count*()` conditions. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`."
+      },
+      "DbAudit": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryAudit"
+        }
+      },
+      "DbElement": {
+        "type": "object",
+        "description": "Database element used in [`QueryResult`]\nthat represents a node or an edge.",
+        "required": ["id", "values"],
+        "properties": {
+          "from": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DbId"
+              }
+            ],
+            "nullable": true
+          },
+          "id": {
+            "$ref": "#/components/schemas/DbId"
+          },
+          "to": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DbId"
+              }
+            ],
+            "nullable": true
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbKeyValue"
+            },
+            "description": "List of key-value pairs associated with the element."
+          }
+        }
+      },
+      "DbF64": {
+        "type": "number",
+        "format": "double",
+        "description": "Database float is a wrapper around `f64` to provide\nfunctionality like comparison. The comparison is\nusing `total_cmp` standard library function. See its\n[docs](https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp)\nto understand how it handles NaNs and other edge cases\nof floating point numbers."
+      },
+      "DbId": {
+        "type": "integer",
+        "format": "int64",
+        "description": "Database id is a wrapper around `i64`.\nThe id is an identifier of a database element\nboth nodes and edges. The positive ids represent nodes,\nnegative ids represent edges. The value of `0` is\nlogically invalid (there cannot be element with id 0) and a default."
+      },
+      "DbKeyOrder": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Asc"],
+            "properties": {
+              "Asc": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Desc"],
+            "properties": {
+              "Desc": {
+                "$ref": "#/components/schemas/DbValue"
+              }
+            }
+          }
+        ],
+        "description": "Ordering for search queries"
+      },
+      "DbKeyValue": {
+        "type": "object",
+        "description": "Database key-value pair (aka property) attached to\ndatabase elements. It can be constructed from a\ntuple of types that are convertible to `DbValue`.",
+        "required": ["key", "value"],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/DbValue"
+          },
+          "value": {
+            "$ref": "#/components/schemas/DbValue"
+          }
+        }
+      },
+      "DbType": {
+        "type": "string",
+        "enum": ["memory", "mapped", "file"]
+      },
+      "DbTypeParam": {
+        "type": "object",
+        "required": ["db_type"],
+        "properties": {
+          "db_type": {
+            "$ref": "#/components/schemas/DbType"
+          }
+        }
+      },
+      "DbUser": {
+        "type": "object",
+        "required": ["user", "role"],
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "DbUserRole": {
+        "type": "string",
+        "enum": ["admin", "write", "read"]
+      },
+      "DbUserRoleParam": {
+        "type": "object",
+        "required": ["db_role"],
+        "properties": {
+          "db_role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          }
+        }
+      },
+      "DbValue": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Bytes"],
+            "properties": {
+              "Bytes": {
+                "type": "string",
+                "format": "binary",
+                "description": "Byte array, sometimes referred to as blob"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["I64"],
+            "properties": {
+              "I64": {
+                "type": "integer",
+                "format": "int64",
+                "description": "64-bit wide signed integer"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["U64"],
+            "properties": {
+              "U64": {
+                "type": "integer",
+                "format": "int64",
+                "description": "64-bit wide unsigned integer",
+                "minimum": 0
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["F64"],
+            "properties": {
+              "F64": {
+                "$ref": "#/components/schemas/DbF64"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["String"],
+            "properties": {
+              "String": {
+                "type": "string",
+                "description": "UTF-8 string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["VecI64"],
+            "properties": {
+              "VecI64": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "description": "List of 64-bit wide signed integers"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["VecU64"],
+            "properties": {
+              "VecU64": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "description": "List of 64-bit wide unsigned integers"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["VecF64"],
+            "properties": {
+              "VecF64": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbF64"
+                },
+                "description": "List of 64-bit floating point numbers"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["VecString"],
+            "properties": {
+              "VecString": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of UTF-8 strings"
+              }
+            }
+          }
+        ],
+        "description": "Database value is a strongly types value.\n\nIt is an enum of limited number supported types\nthat are universal across all platforms\nand programming languages.\n\nThe value is constructible from large number of\nraw types or associated types (e.g. i32, &str, etc.).\nGetting the raw value back as string can be done\nwith `to_string()` but otherwise requires a `match`."
+      },
+      "InsertAliasesQuery": {
+        "type": "object",
+        "description": "Query to insert or update aliases of existing nodes.\nAll `ids` must exist. None of the `aliases` can be empty.\nIf there is an existing alias for any of the elements it\nwill be overwritten with a new one.\n\nNOTE: Setting `ids` to a search query will result in an error.\n\nThe result will contain number of aliases inserted/updated but no elements.",
+        "required": ["ids", "aliases"],
+        "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Aliases to be inserted"
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          }
+        }
+      },
+      "InsertEdgesQuery": {
+        "type": "object",
+        "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nIf the `ids` member is empty the query will insert new edges\notherwise it will update the existing edges. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of edges inserted or udpated and elements\nwith their ids, origin and destination, but no properties.",
+        "required": ["from", "to", "ids", "values", "each"],
+        "properties": {
+          "each": {
+            "type": "boolean",
+            "description": "If `true` create an edge between each origin\nand destination."
+          },
+          "from": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "to": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "values": {
+            "$ref": "#/components/schemas/QueryValues"
+          }
+        }
+      },
+      "InsertIndexQuery": {
+        "$ref": "#/components/schemas/DbValue"
+      },
+      "InsertNodesQuery": {
+        "type": "object",
+        "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nIf the `ids` member is empty the query will insert new nodes\notherwise it will update the existing nodes. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of nodes inserted or updated and elements\nwith their ids but no properties.",
+        "required": ["count", "values", "aliases", "ids"],
+        "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Aliases of the new nodes."
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of nodes to be inserted.",
+            "minimum": 0
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "values": {
+            "$ref": "#/components/schemas/QueryValues"
+          }
+        }
+      },
+      "InsertValuesQuery": {
+        "type": "object",
+        "description": "Query to insert or update key-value pairs (properties)\nto existing elements in the database. All `ids` must exist\nin the database. If `values` is set to `Single` the properties\nwill be inserted uniformly to all `ids` otherwise there must be\nenough `values` for all `ids`.\n\nThe result will be number of inserted/updated values and inserted new\nelements (nodes).\n\nNOTE: The result is NOT number of affected elements but individual properties.",
+        "required": ["ids", "values"],
+        "properties": {
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "values": {
+            "$ref": "#/components/schemas/QueryValues"
+          }
+        }
+      },
+      "Queries": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryType"
+        }
+      },
+      "QueriesResults": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/QueryResult"
+        }
+      },
+      "QueryAudit": {
+        "type": "object",
+        "required": ["timestamp", "user", "query"],
+        "properties": {
+          "query": {
+            "$ref": "#/components/schemas/QueryType"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryCondition": {
+        "type": "object",
+        "description": "Query condition. The condition consists of\n`data`, logic operator and a modifier.",
+        "required": ["logic", "modifier", "data"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QueryConditionData"
+          },
+          "logic": {
+            "$ref": "#/components/schemas/QueryConditionLogic"
+          },
+          "modifier": {
+            "$ref": "#/components/schemas/QueryConditionModifier"
+          }
+        }
+      },
+      "QueryConditionData": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Distance"],
+            "properties": {
+              "Distance": {
+                "$ref": "#/components/schemas/CountComparison"
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "Is the current element an edge? I.e. `id < 0`.",
+            "enum": ["Edge"]
+          },
+          {
+            "type": "object",
+            "required": ["EdgeCount"],
+            "properties": {
+              "EdgeCount": {
+                "$ref": "#/components/schemas/CountComparison"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["EdgeCountFrom"],
+            "properties": {
+              "EdgeCountFrom": {
+                "$ref": "#/components/schemas/CountComparison"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["EdgeCountTo"],
+            "properties": {
+              "EdgeCountTo": {
+                "$ref": "#/components/schemas/CountComparison"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Ids"],
+            "properties": {
+              "Ids": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QueryId"
+                },
+                "description": "Tests if the current id is in the list of ids."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["KeyValue"],
+            "properties": {
+              "KeyValue": {
+                "type": "object",
+                "description": "Tests if the current element has a property `key`\nwith a value that evaluates true against `comparison`.",
+                "required": ["key", "value"],
+                "properties": {
+                  "key": {
+                    "$ref": "#/components/schemas/DbValue"
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/Comparison"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Keys"],
+            "properties": {
+              "Keys": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbValue"
+                },
+                "description": "Test if the current element has **all** of the keys listed."
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "Is the current element a node? I.e. `0 < id`.",
+            "enum": ["Node"]
+          },
+          {
+            "type": "object",
+            "required": ["Where"],
+            "properties": {
+              "Where": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QueryCondition"
+                },
+                "description": "Nested list of conditions (equivalent to brackets)."
+              }
+            }
+          }
+        ],
+        "description": "Query condition data"
+      },
+      "QueryConditionLogic": {
+        "type": "string",
+        "description": "Logical operator for query conditions",
+        "enum": ["And", "Or"]
+      },
+      "QueryConditionModifier": {
+        "type": "string",
+        "description": "Query condition modifier",
+        "enum": ["None", "Beyond", "Not", "NotBeyond"]
+      },
+      "QueryId": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Id"],
+            "properties": {
+              "Id": {
+                "$ref": "#/components/schemas/DbId"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Alias"],
+            "properties": {
+              "Alias": {
+                "type": "string",
+                "description": "String alias"
+              }
+            }
+          }
+        ],
+        "description": "Database id used in queries that lets\nyou refer to a database element as numerical\nid or a string alias."
+      },
+      "QueryIds": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Ids"],
+            "properties": {
+              "Ids": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/QueryId"
+                },
+                "description": "List of [`QueryId`]s"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Search"],
+            "properties": {
+              "Search": {
+                "$ref": "#/components/schemas/SearchQuery"
+              }
+            }
+          }
+        ],
+        "description": "List of database ids used in queries. It\ncan either represent a list of [`QueryId`]s\nor a search query. Search query allows query\nnesting and sourcing the ids dynamically for\nanother query most commonly with the\nselect queries."
+      },
+      "QueryResult": {
+        "type": "object",
+        "description": "Universal database result. Successful\nexecution of a query will always yield\nthis type. The `result` field is a numerical\nrepresentation of the result while the\n`elements` are the list of `DbElement`s\nwith database ids and properties (key-value pairs).",
+        "required": ["result", "elements"],
+        "properties": {
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbElement"
+            },
+            "description": "List of elements yielded by the query\npossibly with a list of properties."
+          },
+          "result": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Query result"
+          }
+        }
+      },
+      "QueryType": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["InsertAlias"],
+            "properties": {
+              "InsertAlias": {
+                "$ref": "#/components/schemas/InsertAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["InsertEdges"],
+            "properties": {
+              "InsertEdges": {
+                "$ref": "#/components/schemas/InsertEdgesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["InsertIndex"],
+            "properties": {
+              "InsertIndex": {
+                "$ref": "#/components/schemas/InsertIndexQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["InsertNodes"],
+            "properties": {
+              "InsertNodes": {
+                "$ref": "#/components/schemas/InsertNodesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["InsertValues"],
+            "properties": {
+              "InsertValues": {
+                "$ref": "#/components/schemas/InsertValuesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Remove"],
+            "properties": {
+              "Remove": {
+                "$ref": "#/components/schemas/RemoveQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["RemoveAliases"],
+            "properties": {
+              "RemoveAliases": {
+                "$ref": "#/components/schemas/RemoveAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["RemoveIndex"],
+            "properties": {
+              "RemoveIndex": {
+                "$ref": "#/components/schemas/RemoveIndexQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["RemoveValues"],
+            "properties": {
+              "RemoveValues": {
+                "$ref": "#/components/schemas/RemoveValuesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Search"],
+            "properties": {
+              "Search": {
+                "$ref": "#/components/schemas/SearchQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Select"],
+            "properties": {
+              "Select": {
+                "$ref": "#/components/schemas/SelectQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectAliases"],
+            "properties": {
+              "SelectAliases": {
+                "$ref": "#/components/schemas/SelectAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectAllAliases"],
+            "properties": {
+              "SelectAllAliases": {
+                "$ref": "#/components/schemas/SelectAllAliasesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectEdgeCount"],
+            "properties": {
+              "SelectEdgeCount": {
+                "$ref": "#/components/schemas/SelectEdgeCountQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectIndexes"],
+            "properties": {
+              "SelectIndexes": {
+                "$ref": "#/components/schemas/SelectIndexesQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectKeys"],
+            "properties": {
+              "SelectKeys": {
+                "$ref": "#/components/schemas/SelectKeysQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectKeyCount"],
+            "properties": {
+              "SelectKeyCount": {
+                "$ref": "#/components/schemas/SelectKeyCountQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectNodeCount"],
+            "properties": {
+              "SelectNodeCount": {
+                "$ref": "#/components/schemas/SelectNodeCountQuery"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SelectValues"],
+            "properties": {
+              "SelectValues": {
+                "$ref": "#/components/schemas/SelectValuesQuery"
+              }
+            }
+          }
+        ],
+        "description": "Convenience enum for serializing/deserializing queries."
+      },
+      "QueryValues": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Single"],
+            "properties": {
+              "Single": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DbKeyValue"
+                },
+                "description": "Single list of properties (key-value pairs)\nto be applied to all elements in a query."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["Multi"],
+            "properties": {
+              "Multi": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbKeyValue"
+                  }
+                },
+                "description": "List of lists of properties (key-value pairs)\nto be applied to all elements in a query. There\nmust be as many lists of properties as ids\nin a query."
+              }
+            }
+          }
+        ],
+        "description": "Helper type distinguishing uniform (`Single`) values\nand multiple (`Multi`) values in database queries."
+      },
+      "RemoveAliasesQuery": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Query to remove aliases from the database. It\nis not an error if an alias to be removed already\ndoes not exist.\n\nThe result will be a negative number signifying how\nmany aliases have been actually removed."
+      },
+      "RemoveIndexQuery": {
+        "$ref": "#/components/schemas/DbValue"
+      },
+      "RemoveQuery": {
+        "$ref": "#/components/schemas/QueryIds"
+      },
+      "RemoveValuesQuery": {
+        "$ref": "#/components/schemas/SelectValuesQuery"
+      },
+      "SearchQuery": {
+        "type": "object",
+        "description": "Query to search for ids in the database following the graph.",
+        "required": [
+          "algorithm",
+          "origin",
+          "destination",
+          "limit",
+          "offset",
+          "order_by",
+          "conditions"
+        ],
+        "properties": {
+          "algorithm": {
+            "$ref": "#/components/schemas/SearchQueryAlgorithm"
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueryCondition"
+            },
+            "description": "Set of conditions every element must satisfy to be included in the\nresult. Some conditions also influence the search path as well."
+          },
+          "destination": {
+            "$ref": "#/components/schemas/QueryId"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many elements maximum to return.",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many elements that would be returned should be\nskipped in the result.",
+            "minimum": 0
+          },
+          "order_by": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbKeyOrder"
+            },
+            "description": "Order of the elements in the result. The sorting happens before\n`offset` and `limit` are applied."
+          },
+          "origin": {
+            "$ref": "#/components/schemas/QueryId"
+          }
+        }
+      },
+      "SearchQueryAlgorithm": {
+        "type": "string",
+        "description": "Search algorithm to be used",
+        "enum": ["BreadthFirst", "DepthFirst", "Index", "Elements"]
+      },
+      "SelectAliasesQuery": {
+        "$ref": "#/components/schemas/QueryIds"
+      },
+      "SelectAllAliasesQuery": {
+        "type": "object",
+        "description": "Query to select all aliases in the database.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
+      },
+      "SelectEdgeCountQuery": {
+        "type": "object",
+        "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database. If any\nof the ids is not a node the result will be 0 (not\nan error).\n\nThe result will be number of elements returned and the list\nof elements with a single property `String(\"edge_count\")` with\na value `u64`.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
+        "required": ["ids", "from", "to"],
+        "properties": {
+          "from": {
+            "type": "boolean",
+            "description": "If set to `true` the query will count outgoing edges\nfrom the nodes."
+          },
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "to": {
+            "type": "boolean",
+            "description": "If set to `true` the query will count incoming edges\nto the nodes."
+          }
+        }
+      },
+      "SelectIndexesQuery": {
+        "type": "object",
+        "description": "Query to select all indexes in the database.\n\nThe result will be number of returned indexes and single element\nwith index 0 and the properties corresponding to the names of the indexes\n(keys) with `u64` values representing number of indexed values in each\nindex."
+      },
+      "SelectKeyCountQuery": {
+        "$ref": "#/components/schemas/QueryIds"
+      },
+      "SelectKeysQuery": {
+        "$ref": "#/components/schemas/QueryIds"
+      },
+      "SelectNodeCountQuery": {
+        "type": "object",
+        "description": "Query to select number of nodes in the database.\n\nThe result will be 1 and elements with a single element\nof id 0 and a single property `String(\"node_count\")` with\na value `u64` represneting number of nodes in teh database."
+      },
+      "SelectQuery": {
+        "$ref": "#/components/schemas/QueryIds"
+      },
+      "SelectValuesQuery": {
+        "type": "object",
+        "description": "Query to select elements with only certain properties of\ngiven ids. All ids must exist in the database and all\nof them must have the requested properties.\n\nThe result will be number of elements and the\nlist of elements with the requested properties.",
+        "required": ["keys", "ids"],
+        "properties": {
+          "ids": {
+            "$ref": "#/components/schemas/QueryIds"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DbValue"
+            }
+          }
+        }
+      },
+      "ServerDatabase": {
+        "type": "object",
+        "required": ["name", "db_type", "role", "size", "backup"],
+        "properties": {
+          "backup": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "db_type": {
+            "$ref": "#/components/schemas/DbType"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/DbUserRole"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "ServerDatabaseRename": {
+        "type": "object",
+        "required": ["new_name"],
+        "properties": {
+          "new_name": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusParams": {
+        "type": "object",
+        "properties": {
+          "cluster": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "UserCredentials": {
+        "type": "object",
+        "required": ["password"],
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "UserStatus": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Token": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
+```

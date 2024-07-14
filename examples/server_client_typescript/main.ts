@@ -43,7 +43,7 @@ async function main() {
 
   // Prepare the second batch using the result of the previous batch.
   queries = [
-    QueryBuilder.insert().edges().from(["users"]).to(results[1]).query(),
+    QueryBuilder.insert().edges().from("users").to(results[1]).query(),
     QueryBuilder.select()
       .ids(
         QueryBuilder.search()
@@ -51,7 +51,7 @@ async function main() {
           .where()
           .key("username")
           .value(Comparison.Equal("user1"))
-          .query(),
+          .query()
       )
       .query(),
   ];

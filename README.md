@@ -10,22 +10,22 @@
 
 <p align="center">
     <br/>
-    <a href="./docs/queries.md"><img width="100" src="./agdb_web/public/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/api.md"><img width="100" src="./agdb_web/public/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/studio.md"><img width="100" src="./agdb_web/public/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/server.md"><img width="100" src="./agdb_web/public/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="./docs/cloud.md"><img width="100" src="./agdb_web/public/images/cloud.png" alt="cloud"></a> 
+    <a href="/docs/queries.md"><img width="100" src="/docs/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/docs/api.md"><img width="100" src="/docs/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/docs/studio.md"><img width="100" src="/docs/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/docs/server.md"><img width="100" src="/docs/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/docs/cloud.md"><img width="100" src="/docs/images/cloud.png" alt="cloud"></a> 
 </p>
 
 <p align="center">
-    <picture><a href="./docs/guides/rust.md"><img width="25" src="./agdb_web/public/images/rust.png" alt="rust"></a>
-    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/ts.png" alt="ts"></a>
-    <picture><a href="./docs/guides/typescript.md"><img width="25" src="./agdb_web/public/images/js.png" alt="js"></a>
-    <picture><img width="25" src="./agdb_web/public/images/python.png" alt="python"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/java.png" alt="java"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/c.png" alt="c"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/cpp.png" alt="cpp"></picture> 
-    <picture><img width="25" src="./agdb_web/public/images/csharp.png" alt="csharp"></picture>
+    <a href="/docs/guides/rust.md"><img width="25" src="/docs/images/rust.png" alt="rust"></a>
+    <a href="/docs/guides/typescript_javascript.md"><img width="25" src="/docs/images/ts.png" alt="ts"></a>
+    <a href="/docs/guides/typescript_javascript.md"><img width="25" src="/docs/images/js.png" alt="js"></a>
+    <img width="25" src="/docs/images/python.png" alt="python">
+    <img width="25" src="/docs/images/java.png" alt="java">
+    <img width="25" src="/docs/images/c.png" alt="c">
+    <img width="25" src="/docs/images/cpp.png" alt="cpp">
+    <img width="25" src="/docs/images/csharp.png" alt="csharp">
 </p>
 
 <p align="center">
@@ -38,19 +38,19 @@
 </p>
 
 <!-- <p align="center">
-    <img width="25" src="./agdb_web/public/images/reddit.png" alt="reddit"> &nbsp;
-    <img width="25" src="./agdb_web/public/images/x.png" alt="x"> &nbsp;
-    <img width="25" src="./agdb_web/public/images/linkedin.png" alt="lkinkedin"> &nbsp;
-    <img width="25" src="./agdb_web/public/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
+    <img width="25" src="/docs/images/reddit.png" alt="reddit"> &nbsp;
+    <img width="25" src="/docs/images/x.png" alt="x"> &nbsp;
+    <img width="25" src="/docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
+    <img width="25" src="/docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
 </p> -->
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
-    <a href="/agdb_web/content/en/docs/1.guides/2.quickstart.md">Quickstart Db</a> | <a href="/agdb_web/content/en/docs/1.guides/3.quickstart_client.md">Quickstart Client</a> | <a href="./docs/queries.md">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
+    <a href="/agdb_web/content/en/docs/1.guides/2.quickstart.md">Quickstart Db</a> | <a href="/agdb_web/content/en/docs/1.guides/3.quickstart_client.md">Quickstart Client</a> | <a href="/docs/queries.md">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
 </p>
 <p align="center">
-    <a href="./docs/but_why.md">Why not SQL?</a>
+    <a href="/docs/but_why.md">Why not SQL?</a>
 </p>
 
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
@@ -65,14 +65,14 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
 - Data plotted on a graph
-- Typed [key-value properties](docs/concepts.md#data-types) attached to graph elements (nodes & edges)
+- Typed [key-value properties](/docs/concepts.md#data-types) attached to graph elements (nodes & edges)
 - Persistent platform agnostic file based storage (transferable between platforms)
 - ACID compliant
-- [Object queries](docs/queries.md) with builder pattern (no text, no query language)
+- [Object queries](/docs/queries.md) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
-- [Server mode](docs/server.md)
-- [OpenAPI clients](docs/api.md) in any programming language
-- [Cloud](docs/cloud.md) hosted SaaS database
+- [Server mode](/docs/server.md)
+- [OpenAPI clients](/docs/api.md) in any programming language
+- [Cloud](/docs/cloud.md) hosted SaaS database
 - _Db itself has no dependencies_
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
@@ -81,7 +81,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 cargo add agdb
 ```
 
-Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](docs/queries.md#queryerror) error types for operator `?` to work:
+Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](/docs/queries.md#queryerror) error types for operator `?` to work:
 
 ```Rust
 use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
@@ -150,7 +150,7 @@ println!("{:?}", user);
 // User { db_id: Some(DbId(3)), username: "Bob" }
 ```
 
-For database concepts and primitive data types see [concepts](docs/concepts.md). For comprehensive overview of all queries see the [queries](docs/queries.md) reference or continue with more in-depth [efficient agdb](docs/guides/efficient_agdb.md).
+For database concepts and primitive data types see [concepts](/docs/concepts.md). For comprehensive overview of all queries see the [queries](/docs/queries.md) reference or continue with more in-depth [efficient agdb](/docs/guides/efficient_agdb.md).
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
@@ -204,24 +204,24 @@ The following are planned features:
 
 ## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
-- [API](docs/api.md)
+- [API](/docs/api.md)
 
-- [But why?](docs/but_why.md)
+- [But why?](/docs/but_why.md)
 
-- [Cloud](docs/cloud.md)
+- [Cloud](/docs/cloud.md)
 
-- [Concepts](docs/concepts.md)
+- [Concepts](/docs/concepts.md)
 
-- [Efficient agdb](docs/guides/efficient_agdb.md)
+- [Efficient agdb](/docs/guides/efficient_agdb.md)
 
-- [Guides](docs/guides/)
+- [Guides](/docs/guides/)
 
-- [Performance](docs/performance.md)
+- [Performance](/docs/performance.md)
 
-- [Queries](docs/queries.md)
+- [Queries](/docs/queries.md)
 
-- [Server](docs/server.md)
+- [Server](/docs/server.md)
 
-- [Studio](docs/studio.md)
+- [Studio](/docs/studio.md)
 
-- [Troubleshooting](docs/troubleshooting.md)
+- [Troubleshooting](/docs/troubleshooting.md)

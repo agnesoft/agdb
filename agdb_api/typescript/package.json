@@ -19,8 +19,8 @@
   "scripts": {
     "build": "tsc && npx copyfiles -f src/schema.d.ts dist/",
     "test": "bash test.sh",
-    "lint": "eslint --max-warnings=0 . --fix",
-    "lint:check": "eslint --max-warnings=0 **/*.ts **/*.js",
+    "lint": "eslint --max-warnings=0 \"**/*.ts **/*.js\" --fix",
+    "lint:check": "eslint --max-warnings=0 \"**/*.ts **/*.js\"",
     "format": "prettier --write src/ tests/",
     "format:check": "prettier --check src/ tests/",
     "openapi": "npx openapicmd typegen ../../agdb_server/openapi/schema.json > src/schema.d.ts",

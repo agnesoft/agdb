@@ -11,6 +11,9 @@ export default mergeConfig(
                     ".eslintrc.cjs",
                     "src/schema.d.ts",
                     "query_test_generator.js",
+                    "tests/**",
+                    "vite.config.ts",
+                    "vitest.config.ts",
                 ],
                 thresholds: {
                     lines: 100,

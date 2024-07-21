@@ -42,7 +42,11 @@ impl Query for SelectValuesQuery {
         result.result = db_ids.len() as i64;
 
         for id in db_ids {
-            let values = db.values_by_keys(id, &self.keys)?;
+            let values = if self.keys.is_empty() {
+                db.values(id)?
+            } else {
+                db.values_by_keys(id, &self.keys)?
+            };
 
             if !is_search && values.len() != self.keys.len() {
                 for key in &self.keys {

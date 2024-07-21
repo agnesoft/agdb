@@ -22,7 +22,6 @@ pub mod select_indexes_query;
 pub mod select_key_count_query;
 pub mod select_keys_query;
 pub mod select_node_count;
-pub mod select_query;
 pub mod select_values_query;
 
 use crate::DbImpl;
@@ -50,7 +49,7 @@ use crate::{
     InsertAliasesQuery, InsertEdgesQuery, InsertIndexQuery, InsertNodesQuery, InsertValuesQuery,
     RemoveAliasesQuery, RemoveIndexQuery, RemoveQuery, RemoveValuesQuery, SearchQuery,
     SelectAliasesQuery, SelectAllAliasesQuery, SelectEdgeCountQuery, SelectIndexesQuery,
-    SelectKeyCountQuery, SelectKeysQuery, SelectNodeCountQuery, SelectQuery, SelectValuesQuery,
+    SelectKeyCountQuery, SelectKeysQuery, SelectNodeCountQuery, SelectValuesQuery,
 };
 
 /// Convenience enum for serializing/deserializing queries.
@@ -69,7 +68,6 @@ pub enum QueryType {
     RemoveIndex(RemoveIndexQuery),
     RemoveValues(RemoveValuesQuery),
     Search(SearchQuery),
-    Select(SelectQuery),
     SelectAliases(SelectAliasesQuery),
     SelectAllAliases(SelectAllAliasesQuery),
     SelectEdgeCount(SelectEdgeCountQuery),
@@ -147,13 +145,6 @@ impl From<RemoveValuesQuery> for QueryType {
 impl From<SearchQuery> for QueryType {
     fn from(value: SearchQuery) -> Self {
         QueryType::Search(value)
-    }
-}
-
-#[cfg(any(feature = "serde", feature = "opeanapi"))]
-impl From<SelectQuery> for QueryType {
-    fn from(value: SelectQuery) -> Self {
-        QueryType::Select(value)
     }
 }
 

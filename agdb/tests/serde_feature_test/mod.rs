@@ -5,7 +5,7 @@ use agdb::InsertNodesQuery;
 use agdb::QueryBuilder;
 use agdb::QueryResult;
 use agdb::QueryType;
-use agdb::SelectQuery;
+use agdb::SelectValuesQuery;
 
 use crate::test_db::TestDb;
 
@@ -22,7 +22,7 @@ fn serialize_deserialize() {
 
     let mut db = TestDb::new();
     let insert_query: InsertNodesQuery = serde_json::from_str(&insert_query_json).unwrap();
-    let select_query: SelectQuery = serde_json::from_str(&select_query_json).unwrap();
+    let select_query: SelectValuesQuery = serde_json::from_str(&select_query_json).unwrap();
 
     db.exec_mut(insert_query, 1);
     let result = db.exec_result(select_query);

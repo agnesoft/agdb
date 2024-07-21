@@ -86,7 +86,6 @@ pub use query::select_indexes_query::SelectIndexesQuery;
 pub use query::select_key_count_query::SelectKeyCountQuery;
 pub use query::select_keys_query::SelectKeysQuery;
 pub use query::select_node_count::SelectNodeCountQuery;
-pub use query::select_query::SelectQuery;
 pub use query::select_values_query::SelectValuesQuery;
 pub use query::Query;
 pub use query::QueryMut;

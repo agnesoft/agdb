@@ -739,7 +739,7 @@ mod tests {
         assert!(matches!(DbValue::from(vec![""]), DbValue::VecString { .. }));
         assert!(matches!(
             DbValue::from(Vec::<String>::new()),
-            DbValue::VecString { .. }
+            DbValue::Bytes { .. }
         ));
     }
 
@@ -1314,7 +1314,7 @@ mod tests {
         assert_eq!(
             DbValue::from(vec![true, false]).to_bool(),
             Err(DbError::from(
-                "Type mismatch. Cannot convert 'bytes' to 'bool'."
+                "Type mismatch. Cannot convert 'Vec<u64>' to 'bool'."
             ))
         );
     }
@@ -1343,6 +1343,10 @@ mod tests {
                 .unwrap(),
             vec![true, true, false, false, false, false]
         );
+        assert_eq!(
+            DbValue::from(vec![0_u8, 1, 2]).vec_bool().unwrap(),
+            vec![false, true, true]
+        );
 
         assert_eq!(
             DbValue::from(1_i64).vec_bool(),
@@ -1366,6 +1370,54 @@ mod tests {
             DbValue::from("true").vec_bool(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'string' to 'Vec<bool>'."
+            ))
+        );
+    }
+
+    #[test]
+    fn try_from_vec() {
+        let value: Result<Vec<u64>, DbError> = DbValue::from(0_u64).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from(0_i64).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from(0.0_f64).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from(vec![0_u8]).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from("").try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'Vec<DbValue>'."
             ))
         );
     }

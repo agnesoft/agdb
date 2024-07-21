@@ -439,11 +439,28 @@ impl From<Vec<u8>> for DbValue {
 
 impl<T: Into<DbValue>> From<Vec<T>> for DbValue {
     fn from(value: Vec<T>) -> Self {
-        value
+        let db_values = value
             .into_iter()
             .map(|v| v.into())
-            .collect::<Vec<DbValue>>()
-            .into()
+            .collect::<Vec<DbValue>>();
+        match db_values.first() {
+            Some(DbValue::I64(_)) => {
+                DbValue::VecI64(db_values.into_iter().map(|v| v.to_i64().unwrap()).collect())
+            }
+            Some(DbValue::U64(_)) => {
+                DbValue::VecU64(db_values.into_iter().map(|v| v.to_u64().unwrap()).collect())
+            }
+            Some(DbValue::F64(_)) => {
+                DbValue::VecF64(db_values.into_iter().map(|v| v.to_f64().unwrap()).collect())
+            }
+            Some(DbValue::String(_)) => DbValue::VecString(
+                db_values
+                    .into_iter()
+                    .map(|v| v.string().unwrap().to_owned())
+                    .collect(),
+            ),
+            _ => DbValue::Bytes(Vec::new()),
+        }
     }
 }
 

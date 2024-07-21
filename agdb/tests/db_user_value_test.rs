@@ -645,7 +645,7 @@ fn insert_vectorized_custom_types() {
             },
         ],
     };
-    db.exec_mut(QueryBuilder::insert().element(&my_type).query(), 1);
+    db.exec_mut(QueryBuilder::insert().element(&my_type).query(), 2);
     let my_type_from_db: MyCustomVec = db
         .exec_result(QueryBuilder::select().ids(1).query())
         .try_into()

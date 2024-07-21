@@ -431,69 +431,36 @@ impl From<bool> for DbValue {
     }
 }
 
-impl From<Vec<f32>> for DbValue {
-    fn from(value: Vec<f32>) -> Self {
-        DbValue::VecF64(value.iter().map(|i| (*i).into()).collect())
-    }
-}
-
-impl From<Vec<f64>> for DbValue {
-    fn from(value: Vec<f64>) -> Self {
-        DbValue::VecF64(value.iter().map(|i| (*i).into()).collect())
-    }
-}
-
-impl From<Vec<DbF64>> for DbValue {
-    fn from(value: Vec<DbF64>) -> Self {
-        DbValue::VecF64(value)
-    }
-}
-
-impl From<Vec<i32>> for DbValue {
-    fn from(value: Vec<i32>) -> Self {
-        DbValue::VecI64(value.iter().map(|i| *i as i64).collect())
-    }
-}
-
-impl From<Vec<i64>> for DbValue {
-    fn from(value: Vec<i64>) -> Self {
-        DbValue::VecI64(value)
-    }
-}
-
-impl From<Vec<u32>> for DbValue {
-    fn from(value: Vec<u32>) -> Self {
-        DbValue::VecU64(value.iter().map(|i| *i as u64).collect())
-    }
-}
-
-impl From<Vec<u64>> for DbValue {
-    fn from(value: Vec<u64>) -> Self {
-        DbValue::VecU64(value)
-    }
-}
-
-impl From<Vec<String>> for DbValue {
-    fn from(value: Vec<String>) -> Self {
-        DbValue::VecString(value)
-    }
-}
-
-impl From<Vec<&str>> for DbValue {
-    fn from(value: Vec<&str>) -> Self {
-        DbValue::VecString(value.iter().map(|s| s.to_string()).collect())
-    }
-}
-
 impl From<Vec<u8>> for DbValue {
     fn from(value: Vec<u8>) -> Self {
         DbValue::Bytes(value)
     }
 }
 
-impl From<Vec<bool>> for DbValue {
-    fn from(value: Vec<bool>) -> Self {
-        DbValue::Bytes(value.iter().map(|b| *b as u8).collect())
+impl<T: Into<DbValue>> From<Vec<T>> for DbValue {
+    fn from(value: Vec<T>) -> Self {
+        let db_values = value
+            .into_iter()
+            .map(|v| v.into())
+            .collect::<Vec<DbValue>>();
+        match db_values.first() {
+            Some(DbValue::I64(_)) => {
+                DbValue::VecI64(db_values.into_iter().map(|v| v.to_i64().unwrap()).collect())
+            }
+            Some(DbValue::U64(_)) => {
+                DbValue::VecU64(db_values.into_iter().map(|v| v.to_u64().unwrap()).collect())
+            }
+            Some(DbValue::F64(_)) => {
+                DbValue::VecF64(db_values.into_iter().map(|v| v.to_f64().unwrap()).collect())
+            }
+            Some(DbValue::String(_)) => DbValue::VecString(
+                db_values
+                    .into_iter()
+                    .map(|v| v.string().unwrap().to_owned())
+                    .collect(),
+            ),
+            _ => DbValue::Bytes(Vec::new()),
+        }
     }
 }
 
@@ -561,76 +528,6 @@ impl TryFrom<DbValue> for String {
     }
 }
 
-impl TryFrom<DbValue> for Vec<u64> {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        Ok(value.vec_u64()?.clone())
-    }
-}
-
-impl TryFrom<DbValue> for Vec<u32> {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        let mut result = vec![];
-        let value = value.vec_u64()?;
-        result.reserve(value.len());
-        value.iter().try_for_each(|u| -> Result<(), DbError> {
-            result.push((*u).try_into()?);
-            Ok(())
-        })?;
-        Ok(result)
-    }
-}
-
-impl TryFrom<DbValue> for Vec<i64> {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        Ok(value.vec_i64()?.clone())
-    }
-}
-
-impl TryFrom<DbValue> for Vec<i32> {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        let mut result = vec![];
-        let value = value.vec_i64()?;
-        result.reserve(value.len());
-        value.iter().try_for_each(|u| -> Result<(), DbError> {
-            result.push((*u).try_into()?);
-            Ok(())
-        })?;
-        Ok(result)
-    }
-}
-
-impl TryFrom<DbValue> for Vec<f64> {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        Ok(value.vec_f64()?.iter().map(|f| f.to_f64()).collect())
-    }
-}
-
-impl TryFrom<DbValue> for Vec<f32> {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        Ok(value.vec_f64()?.iter().map(|f| f.to_f64() as f32).collect())
-    }
-}
-
-impl TryFrom<DbValue> for Vec<String> {
-    type Error = DbError;
-
-    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        Ok(value.vec_string()?.clone())
-    }
-}
-
 impl TryFrom<DbValue> for bool {
     type Error = DbError;
 
@@ -639,11 +536,25 @@ impl TryFrom<DbValue> for bool {
     }
 }
 
-impl TryFrom<DbValue> for Vec<bool> {
+impl<T: TryFrom<DbValue, Error = DbError>> TryFrom<DbValue> for Vec<T> {
     type Error = DbError;
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
-        value.vec_bool()
+        let db_values: Vec<DbValue> = match value {
+            DbValue::VecI64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
+            DbValue::VecU64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
+            DbValue::VecF64(v) => Ok(v.into_iter().map(DbValue::from).collect()),
+            DbValue::VecString(v) => Ok(v.into_iter().map(DbValue::from).collect()),
+            DbValue::Bytes(_) => DbValue::type_error("bytes", "Vec<DbValue>"),
+            DbValue::I64(_) => DbValue::type_error("i64", "Vec<DbValue>"),
+            DbValue::U64(_) => DbValue::type_error("u64", "Vec<DbValue>"),
+            DbValue::F64(_) => DbValue::type_error("f64", "Vec<DbValue>"),
+            DbValue::String(_) => DbValue::type_error("string", "Vec<DbValue>"),
+        }?;
+        db_values
+            .into_iter()
+            .map(|v| v.try_into())
+            .collect::<Result<Vec<T>, Self::Error>>()
     }
 }
 
@@ -828,7 +739,7 @@ mod tests {
         assert!(matches!(DbValue::from(vec![""]), DbValue::VecString { .. }));
         assert!(matches!(
             DbValue::from(Vec::<String>::new()),
-            DbValue::VecString { .. }
+            DbValue::Bytes { .. }
         ));
     }
 
@@ -1403,7 +1314,7 @@ mod tests {
         assert_eq!(
             DbValue::from(vec![true, false]).to_bool(),
             Err(DbError::from(
-                "Type mismatch. Cannot convert 'bytes' to 'bool'."
+                "Type mismatch. Cannot convert 'Vec<u64>' to 'bool'."
             ))
         );
     }
@@ -1432,6 +1343,10 @@ mod tests {
                 .unwrap(),
             vec![true, true, false, false, false, false]
         );
+        assert_eq!(
+            DbValue::from(vec![0_u8, 1, 2]).vec_bool().unwrap(),
+            vec![false, true, true]
+        );
 
         assert_eq!(
             DbValue::from(1_i64).vec_bool(),
@@ -1455,6 +1370,54 @@ mod tests {
             DbValue::from("true").vec_bool(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'string' to 'Vec<bool>'."
+            ))
+        );
+    }
+
+    #[test]
+    fn try_from_vec() {
+        let value: Result<Vec<u64>, DbError> = DbValue::from(0_u64).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'u64' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from(0_i64).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'i64' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from(0.0_f64).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'f64' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from(vec![0_u8]).try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'bytes' to 'Vec<DbValue>'."
+            ))
+        );
+
+        let value: Result<Vec<u64>, DbError> = DbValue::from("").try_into();
+
+        assert_eq!(
+            value,
+            Err(DbError::from(
+                "Type mismatch. Cannot convert 'string' to 'Vec<DbValue>'."
             ))
         );
     }

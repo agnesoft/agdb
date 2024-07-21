@@ -763,14 +763,14 @@ class SelectAliasesBuilder {
 }
 
 class SelectIdsBuilder {
-    private data: Components.Schemas.SelectQuery;
+    private data: Components.Schemas.SelectValuesQuery;
 
-    constructor(data: Components.Schemas.SelectQuery) {
+    constructor(data: Components.Schemas.SelectValuesQuery) {
         this.data = data;
     }
 
     query(): Components.Schemas.QueryType {
-        return { Select: this.data };
+        return { SelectValues: this.data };
     }
 }
 
@@ -916,7 +916,7 @@ class SelectBuilder {
     }
 
     ids(ids: BuilderQueryIds): SelectIdsBuilder {
-        return new SelectIdsBuilder(intoQueryIds(ids));
+        return new SelectIdsBuilder({ keys: [], ids: intoQueryIds(ids) });
     }
 
     indexes(): SelectIndexesBuilder {

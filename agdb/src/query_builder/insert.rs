@@ -162,7 +162,7 @@ impl Insert {
     /// ```
     pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {
         InsertValues(InsertValuesQuery {
-            ids: QueryIds::Ids(vec![0.into()]),
+            ids: QueryIds::Ids(vec![]),
             values: QueryValues::Single(Into::<SingleValues>::into(key_values).0),
         })
     }

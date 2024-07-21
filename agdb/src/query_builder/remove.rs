@@ -53,7 +53,7 @@ impl Remove {
     pub fn values<T: Into<QueryKeys>>(self, keys: T) -> RemoveValues {
         RemoveValues(RemoveValuesQuery(SelectValuesQuery {
             keys: Into::<QueryKeys>::into(keys).0,
-            ids: QueryIds::Ids(vec![0.into()]),
+            ids: QueryIds::Ids(vec![]),
         }))
     }
 }

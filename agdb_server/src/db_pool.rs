@@ -1238,10 +1238,6 @@ fn t_exec(
             inject_results_search(q, results)?;
             t.exec(q)
         }
-        QueryType::Select(q) => {
-            inject_results(&mut q.0, results)?;
-            t.exec(q)
-        }
         QueryType::SelectAliases(q) => {
             inject_results(&mut q.0, results)?;
             t.exec(q)
@@ -1278,10 +1274,6 @@ fn t_exec_mut(
     let r = match &mut q {
         QueryType::Search(q) => {
             inject_results_search(q, results)?;
-            t.exec(q)
-        }
-        QueryType::Select(q) => {
-            inject_results(&mut q.0, results)?;
             t.exec(q)
         }
         QueryType::SelectAliases(q) => {

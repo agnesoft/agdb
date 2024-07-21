@@ -901,16 +901,6 @@ declare namespace Components {
         } | {
             Search: /* Query to search for ids in the database following the graph. */ SearchQuery;
         } | {
-            Select: /**
-             * List of database ids used in queries. It
-             * can either represent a list of [`QueryId`]s
-             * or a search query. Search query allows query
-             * nesting and sourcing the ids dynamically for
-             * another query most commonly with the
-             * select queries.
-             */
-            QueryIds;
-        } | {
             SelectAliases: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -1203,15 +1193,6 @@ declare namespace Components {
          */
         export interface SelectNodeCountQuery {
         }
-        export type SelectQuery = /**
-         * List of database ids used in queries. It
-         * can either represent a list of [`QueryId`]s
-         * or a search query. Search query allows query
-         * nesting and sourcing the ids dynamically for
-         * another query most commonly with the
-         * select queries.
-         */
-        QueryIds;
         /**
          * Query to select elements with only certain properties of
          * given ids. All ids must exist in the database and all

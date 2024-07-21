@@ -2802,17 +2802,6 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
           {
             "type": "object",
             "required": [
-              "Select"
-            ],
-            "properties": {
-              "Select": {
-                "$ref": "#/components/schemas/SelectQuery"
-              }
-            }
-          },
-          {
-            "type": "object",
-            "required": [
               "SelectAliases"
             ],
             "properties": {
@@ -3057,9 +3046,6 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       "SelectNodeCountQuery": {
         "type": "object",
         "description": "Query to select number of nodes in the database.\n\nThe result will be 1 and elements with a single element\nof id 0 and a single property `String(\"node_count\")` with\na value `u64` represneting number of nodes in teh database."
-      },
-      "SelectQuery": {
-        "$ref": "#/components/schemas/QueryIds"
       },
       "SelectValuesQuery": {
         "type": "object",

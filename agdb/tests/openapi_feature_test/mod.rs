@@ -40,7 +40,6 @@ use utoipa::OpenApi;
     agdb::SelectIndexesQuery,
     agdb::SelectKeyCountQuery,
     agdb::SelectKeysQuery,
-    agdb::SelectQuery,
     agdb::SelectNodeCountQuery,
     agdb::SelectValuesQuery,
 )))]

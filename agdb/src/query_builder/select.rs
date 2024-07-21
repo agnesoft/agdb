@@ -12,7 +12,6 @@ use crate::SelectAliasesQuery;
 use crate::SelectEdgeCountQuery;
 use crate::SelectKeyCountQuery;
 use crate::SelectKeysQuery;
-use crate::SelectQuery;
 use crate::SelectValuesQuery;
 
 /// Select builder that lets you choose what
@@ -35,7 +34,7 @@ impl Select {
     /// with u64 as the value.
     pub fn edge_count(self) -> SelectEdgeCount {
         SelectEdgeCount(SelectEdgeCountQuery {
-            ids: QueryIds::Ids(vec![0.into()]),
+            ids: QueryIds::Ids(vec![]),
             from: true,
             to: true,
         })
@@ -46,7 +45,7 @@ impl Select {
     /// with u64 as the value.
     pub fn edge_count_from(self) -> SelectEdgeCount {
         SelectEdgeCount(SelectEdgeCountQuery {
-            ids: QueryIds::Ids(vec![0.into()]),
+            ids: QueryIds::Ids(vec![]),
             from: true,
             to: false,
         })
@@ -57,7 +56,7 @@ impl Select {
     /// with u64 as the value.
     pub fn edge_count_to(self) -> SelectEdgeCount {
         SelectEdgeCount(SelectEdgeCountQuery {
-            ids: QueryIds::Ids(vec![0.into()]),
+            ids: QueryIds::Ids(vec![]),
             from: false,
             to: true,
         })
@@ -66,7 +65,10 @@ impl Select {
     /// Select elements with `ids` with all properties (key-values).
     /// All ids specified must exist in the database.
     pub fn ids<T: Into<QueryIds>>(self, ids: T) -> SelectIds {
-        SelectIds(SelectQuery(ids.into()))
+        SelectIds(SelectValuesQuery {
+            keys: vec![],
+            ids: ids.into(),
+        })
     }
 
     /// Select all indexes in the database. The returned result
@@ -78,13 +80,13 @@ impl Select {
 
     /// Select keys only (values will be empty).
     pub fn keys(self) -> SelectKeys {
-        SelectKeys(SelectKeysQuery(QueryIds::Ids(vec![0.into()])))
+        SelectKeys(SelectKeysQuery(QueryIds::Ids(vec![])))
     }
 
     /// Select number of keys. Each element of the result will have
     /// a property `String("key_count")` with `u64` as the value.
     pub fn key_count(self) -> SelectKeyCount {
-        SelectKeyCount(SelectKeyCountQuery(QueryIds::Ids(vec![0.into()])))
+        SelectKeyCount(SelectKeyCountQuery(QueryIds::Ids(vec![])))
     }
 
     /// Select number of nodes in the database. The result will be a
@@ -99,7 +101,7 @@ impl Select {
     pub fn values<T: Into<QueryKeys>>(self, keys: T) -> SelectValues {
         SelectValues(SelectValuesQuery {
             keys: Into::<QueryKeys>::into(keys).0,
-            ids: QueryIds::Ids(vec![0.into()]),
+            ids: QueryIds::Ids(vec![]),
         })
     }
 }

@@ -72,7 +72,6 @@ fn public_types() {
     use agdb::SelectKeyCountQuery;
     use agdb::SelectKeysQuery;
     use agdb::SelectNodeCountQuery;
-    use agdb::SelectQuery;
     use agdb::SelectValuesQuery;
     use agdb::StableHash;
     use agdb::StorageData;

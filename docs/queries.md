@@ -42,7 +42,7 @@ flowchart LR
 
     select --> s_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>aliases</a>") --> SelectAllAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-all-aliases'>SelectAllAliasesQuery</a>"]
     s_aliases --> s_a_ids("ids") --> SelectAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>SelectAliasesQuery</a>"]
-    select --> s_ids("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>ids</a>") --> SelectQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>SelectQuery</a>"]
+    select --> s_ids("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>ids</a>") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
     select --> s_indexes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>indexes</a>") --> SelectIndexesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>SelectIndexesQuery</a>"]
     select --> s_keys("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>keys</a>") --> s_k_ids("ids") --> SelectKeysQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>SelectKeysQuery</a>"]
     select --> key_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>key_count</a>") --> s_k_c_ids("ids") --> SelectKeyCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>SelectKeyCountQuery</a>"]
@@ -113,7 +113,6 @@ flowchart LR
     - [Select aliases](#select-aliases)
     - [Select all aliases](#select-all-aliases)
     - [Select edge count](#select-edge-count)
-    - [Select elements](#select-elements)
     - [Select indexes](#select-indexes)
     - [Select keys](#select-keys)
     - [Select key count](#select-key-count)
@@ -806,37 +805,6 @@ Selects count of edges of nodes (ids). The `edge_count` variant counts all edges
 
 NOTE: Self-referential edges (going from the same node to the same node) will be counted twice in the first variant (`edge_count`) as the query counts ountgoing/incoming edges rather than unique database elements. As a result the `edge_count` result may be higher than the actual number of physical edges in such a case.
 
-### Select elements
-
-<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
-<tr><td>
-
-```Rust
-pub struct SelectQuery(pub QueryIds);
-```
-
-</td><td>
-
-```Rust
-pub struct QueryResult {
-    pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements with
-                                  // all properties
-}
-```
-
-</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
-
-```Rust
-QueryBuilder::select().ids("a").query();
-QueryBuilder::select().ids(vec![1, 2]).query();
-QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
-```
-
-</td></tr></table>
-
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with all their properties. If any of the ids does not exist in the database running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select.
-
 ### Select indexes
 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
@@ -985,6 +953,9 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
+QueryBuilder::select().ids("a").query();
+QueryBuilder::select().ids(vec![1, 2]).query();
+QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids("a").query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(vec![1, 2]).query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
@@ -992,7 +963,7 @@ QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::s
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. While the search query is most commonly used to find, filter or otherwise limit what elements to select, using this particular query can limit what properties will be returned. If you plan to convert the result into your user defined type(s) you should use `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
 
 ## Search
 

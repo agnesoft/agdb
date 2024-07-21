@@ -42,6 +42,18 @@ struct MyValueWithBool {
     truths: Vec<bool>,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+struct Attribute {
+    name: String,
+    value: String,
+}
+
+#[derive(UserValue, PartialEq, Debug)]
+struct MyCustomVec {
+    vec: Vec<Status>,
+    attribtues: Vec<Attribute>,
+}
+
 impl From<Status> for DbValue {
     fn from(value: Status) -> Self {
         match value {
@@ -60,6 +72,24 @@ impl TryFrom<DbValue> for Status {
         } else {
             Ok(Status::Active)
         }
+    }
+}
+
+impl From<Attribute> for DbValue {
+    fn from(value: Attribute) -> Self {
+        DbValue::String(format!("{}:{}", value.name, value.value))
+    }
+}
+
+impl TryFrom<DbValue> for Attribute {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> std::result::Result<Self, Self::Error> {
+        let (name, value) = value.string()?.split_once(':').ok_or("Invalid")?;
+        Ok(Attribute {
+            name: name.to_string(),
+            value: value.to_string(),
+        })
     }
 }
 
@@ -597,4 +627,28 @@ fn insert_element_to_bool_conversion() {
         truths: vec![true, false],
     };
     assert_eq!(expected, my_value_from_db);
+}
+
+#[test]
+fn insert_vectorized_custom_types() {
+    let mut db = TestDb::new();
+    let my_type = MyCustomVec {
+        vec: vec![Status::Active, Status::Inactive],
+        attribtues: vec![
+            Attribute {
+                name: "name".to_string(),
+                value: "value".to_string(),
+            },
+            Attribute {
+                name: "name2".to_string(),
+                value: "value2".to_string(),
+            },
+        ],
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_type).query(), 1);
+    let my_type_from_db: MyCustomVec = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into()
+        .unwrap();
+    assert_eq!(my_type, my_type_from_db);
 }

@@ -19,6 +19,18 @@ pub enum DbType {
     File,
 }
 
+#[derive(
+    Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum DbBackupPolicy {
+    #[default]
+    Create,
+    Enforce,
+    EnforceOrCreate,
+    Ignore,
+}
+
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbUser {
     pub user: String,
@@ -127,6 +139,28 @@ impl Display for DbType {
             DbType::File => f.write_str("file"),
             DbType::Mapped => f.write_str("mapped"),
             DbType::Memory => f.write_str("memory"),
+        }
+    }
+}
+
+impl From<&str> for DbBackupPolicy {
+    fn from(value: &str) -> Self {
+        match value {
+            "create" => DbBackupPolicy::Create,
+            "enforce" => DbBackupPolicy::Enforce,
+            "enforce_or_create" => DbBackupPolicy::EnforceOrCreate,
+            _ => DbBackupPolicy::Ignore,
+        }
+    }
+}
+
+impl Display for DbBackupPolicy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DbBackupPolicy::Create => f.write_str("create"),
+            DbBackupPolicy::Enforce => f.write_str("enforce"),
+            DbBackupPolicy::EnforceOrCreate => f.write_str("enforce_or_create"),
+            DbBackupPolicy::Ignore => f.write_str("ignore"),
         }
     }
 }

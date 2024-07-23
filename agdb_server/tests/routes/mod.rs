@@ -19,6 +19,7 @@ mod cluster_test;
 mod db_add_test;
 mod db_audit_test;
 mod db_backup_restore_test;
+mod db_clear_test;
 mod db_copy_test;
 mod db_delete_test;
 mod db_exec_test;

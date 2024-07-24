@@ -101,11 +101,12 @@ The admin users can do some (but not all) actions that the owner can:
 | /api/v1/db/{owner}/{db}/list        | read       | lists the databases with role of the current user (owned and others')                            |
 | /api/v1/db/{owner}/{db}/add         | owner      | adds (from existing files) or creates a database                                                 |
 | /api/v1/db/{owner}/{db}/backup      | admin      | creates an automatic backup snapshot of the database (see backup docs below)                     |
+| /api/v1/db/{owner}/{db}/clear       | admin      | clears the content of the database (adheres to backup policy, does not clear audit log)          |
 | /api/v1/db/{owner}/{db}/copy        | read       | creates a copy of the database under the current user                                            |
 | /api/v1/db/{owner}/{db}/delete      | owner      | deletes the database including files on disk                                                     |
 | /api/v1/db/{owner}/{db}/exec        | read\*     | executes queries against the database (\*read permissions only allow immutable queries)          |
 | /api/v1/db/{owner}/{db}/optimize    | write      | optimizes the underlying file storage packing the data reclaiming unused regions (defragmenting) |
-| /api/v1/db/{owner}/{db}/remove      | owner      | removes the database from the server but keeps the files on disk (main, WAL, backup)             |
+| /api/v1/db/{owner}/{db}/remove      | owner      | removes the database from the server but keeps the files on disk (main, WAL, backup, audit)      |
 | /api/v1/db/{owner}/{db}/rename      | owner      | changes the name of the database (this API can be used to transfer db ownership!)                |
 | /api/v1/db/{owner}/{db}/restore     | admin      | restores the database from the automatic backup - the current database will become the backup    |
 | /api/v1/db/{owner}/{db}/audit       | read       | returns the log of all mutable queries that ran against the database (with user who ran them)    |

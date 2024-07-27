@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 import withNextra from "nextra";
+
 const nextConfig = {
     i18n: {
         locales: ["en-US", "cs-CZ"],

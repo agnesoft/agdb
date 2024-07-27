@@ -9,16 +9,17 @@
         "lint": "next lint",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
-        "test:unit": "vitest run --coverage",
+        "test": "vitest run --coverage",
         "test:e2e": "playwright test",
-        "before-commit": "npm run format && npm run lint && npm run test:unit && npm run test:e2e"
+        "before-commit": "npm run format && npm run lint && npm run test && npm run test:e2e"
     },
     "dependencies": {
         "next": "14.1.1",
         "nextra": "^2.13.2",
         "nextra-theme-docs": "^2.13.2",
         "react": "^18",
-        "react-dom": "^18"
+        "react-dom": "^18",
+        "sass": "^1.77.5"
     },
     "devDependencies": {
         "@playwright/test": "^1.41.1",

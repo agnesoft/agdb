@@ -301,6 +301,7 @@ declare namespace Components {
              */
             DbValue;
         }
+        export type DbResource = "all" | "db" | "audit" | "backup";
         export type DbType = "memory" | "mapped" | "file";
         export interface DbTypeParam {
             db_type: DbType;
@@ -1235,6 +1236,9 @@ declare namespace Components {
         export interface ServerDatabaseRename {
             new_name: string;
         }
+        export interface ServerDatabaseResource {
+            resource: DbResource;
+        }
         export interface StatusParams {
             cluster?: boolean | null;
         }
@@ -1648,6 +1652,29 @@ declare namespace Paths {
         namespace Responses {
             export interface $201 {
             }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
+    namespace DbClear {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+            export type Resource = Components.Schemas.DbResource;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            resource: Parameters.Resource;
+        }
+        namespace Responses {
+            export type $201 = Components.Schemas.ServerDatabase;
             export interface $401 {
             }
             export interface $403 {
@@ -2110,6 +2137,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbBackup.Responses.$201>
   /**
+   * db_clear
+   */
+  'db_clear'(
+    parameters?: Parameters<Paths.DbClear.QueryParameters & Paths.DbClear.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DbClear.Responses.$201>
+  /**
    * db_copy
    */
   'db_copy'(
@@ -2453,6 +2488,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbBackup.Responses.$201>
+  }
+  ['/api/v1/db/{owner}/{db}/clear']: {
+    /**
+     * db_clear
+     */
+    'post'(
+      parameters?: Parameters<Paths.DbClear.QueryParameters & Paths.DbClear.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DbClear.Responses.$201>
   }
   ['/api/v1/db/{owner}/{db}/copy']: {
     /**

@@ -101,6 +101,7 @@ pub(crate) fn app(
         .route("/db/:user/:db/add", routing::post(routes::db::add))
         .route("/db/:user/:db/audit", routing::get(routes::db::audit))
         .route("/db/:user/:db/backup", routing::post(routes::db::backup))
+        .route("/db/:user/:db/clear", routing::post(routes::db::clear))
         .route("/db/:user/:db/copy", routing::post(routes::db::copy))
         .route("/db/:user/:db/delete", routing::delete(routes::db::delete))
         .route("/db/:user/:db/exec", routing::post(routes::db::exec))

@@ -15,10 +15,12 @@
     },
     "dependencies": {
         "next": "14.1.1",
+        "next-intl": "^3.15.0",
         "nextra": "^2.13.2",
         "nextra-theme-docs": "^2.13.2",
         "react": "^18",
-        "react-dom": "^18"
+        "react-dom": "^18",
+        "sass": "^1.77.5"
     },
     "devDependencies": {
         "@playwright/test": "^1.41.1",

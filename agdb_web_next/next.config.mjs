@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 import withNextra from "nextra";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin();
+
 const nextConfig = {
     i18n: {
         locales: ["en-US", "cs-CZ"],
@@ -11,4 +15,4 @@ const nextConfig = {
 export default withNextra({
     theme: "nextra-theme-docs",
     themeConfig: "./theme.config.tsx",
-})(nextConfig);
+})(withNextIntl(nextConfig));

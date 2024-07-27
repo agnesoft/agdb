@@ -1,0 +1,9 @@
+{
+    "concepts": "Concepts",
+    "quickstart": "Quickstart",
+    "quickstart_client": "Quickstart (Client)",
+    "how_to_run_server": "How to Run Server",
+    "how_to_use_studio": "How to Use Studio",
+    "troubleshooting": "Troubleshooting",
+    "migration_from_sql": "Migration from SQL"
+}

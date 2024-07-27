@@ -19,6 +19,18 @@ pub enum DbType {
     File,
 }
 
+#[derive(
+    Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum DbResource {
+    #[default]
+    All,
+    Db,
+    Audit,
+    Backup,
+}
+
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbUser {
     pub user: String,
@@ -127,6 +139,17 @@ impl Display for DbType {
             DbType::File => f.write_str("file"),
             DbType::Mapped => f.write_str("mapped"),
             DbType::Memory => f.write_str("memory"),
+        }
+    }
+}
+
+impl Display for DbResource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DbResource::All => f.write_str("all"),
+            DbResource::Db => f.write_str("db"),
+            DbResource::Audit => f.write_str("audit"),
+            DbResource::Backup => f.write_str("backup"),
         }
     }
 }

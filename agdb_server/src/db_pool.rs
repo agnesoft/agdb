@@ -24,6 +24,7 @@ use agdb::Transaction;
 use agdb::TransactionMut;
 use agdb::UserValue;
 use agdb_api::DbAudit;
+use agdb_api::DbResource;
 use agdb_api::DbType;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
@@ -312,24 +313,13 @@ impl DbPool {
             return Err(permission_denied("memory db cannot have backup"));
         }
 
-        let backup_path = db_backup_file(owner, db, config);
+        let pool = self.get_pool().await;
+        let server_db = pool
+            .get(&database.name)
+            .ok_or(db_not_found(&database.name))?;
 
-        if backup_path.exists() {
-            std::fs::remove_file(&backup_path)?;
-        } else {
-            std::fs::create_dir_all(db_backup_dir(owner, config))?;
-        }
-
-        self.get_pool()
-            .await
-            .get(&db_name)
-            .ok_or(db_not_found(&db_name))?
-            .get_mut()
-            .await
-            .backup(backup_path.to_string_lossy().as_ref())?;
-
-        database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-        self.save_db(database).await?;
+        self.do_backup(owner, db, config, server_db, &mut database)
+            .await?;
 
         Ok(())
     }
@@ -345,6 +335,132 @@ impl DbPool {
         user.salt = pswd.user_salt.to_vec();
         self.save_user(user).await?;
 
+        Ok(())
+    }
+
+    pub(crate) async fn clear_db(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+        config: &Config,
+        resource: DbResource,
+    ) -> ServerResult<ServerDatabase> {
+        let db_name = db_name(owner, db);
+        let mut database = self.find_user_db(user, &db_name).await?;
+        let role = self.find_user_db_role(user, &db_name).await?;
+
+        if role != DbUserRole::Admin {
+            return Err(permission_denied("admin only"));
+        }
+
+        match resource {
+            DbResource::All => {
+                self.do_clear_db(&database, owner, db, config, db_name)
+                    .await?;
+                do_clear_db_audit(owner, db, config)?;
+                self.do_clear_db_backup(owner, db, config, &mut database)
+                    .await?;
+            }
+            DbResource::Db => {
+                self.do_clear_db(&database, owner, db, config, db_name)
+                    .await?;
+            }
+            DbResource::Audit => {
+                do_clear_db_audit(owner, db, config)?;
+            }
+            DbResource::Backup => {
+                self.do_clear_db_backup(owner, db, config, &mut database)
+                    .await?;
+            }
+        }
+
+        let size = self
+            .get_pool()
+            .await
+            .get(&database.name)
+            .ok_or(db_not_found(&database.name))?
+            .get()
+            .await
+            .size();
+
+        Ok(ServerDatabase {
+            name: database.name,
+            db_type: database.db_type,
+            role,
+            size,
+            backup: database.backup,
+        })
+    }
+
+    async fn do_clear_db_backup(
+        &self,
+        owner: &str,
+        db: &str,
+        config: &Config,
+        database: &mut Database,
+    ) -> Result<(), ServerError> {
+        let backup_file = db_backup_file(owner, db, config);
+        if backup_file.exists() {
+            std::fs::remove_file(&backup_file)?;
+        }
+        database.backup = 0;
+        self.save_db(&*database).await?;
+        Ok(())
+    }
+
+    async fn do_clear_db(
+        &self,
+        database: &Database,
+        owner: &str,
+        db: &str,
+        config: &Config,
+        db_name: String,
+    ) -> Result<(), ServerError> {
+        let mut pool = self.get_pool_mut().await;
+        let server_db = pool
+            .get_mut(&database.name)
+            .ok_or(db_not_found(&database.name))?;
+        *server_db = ServerDb::new(&format!("{}:{}", DbType::Memory, database.name))?;
+        if database.db_type != DbType::Memory {
+            let main_file = db_file(owner, db, config);
+            if main_file.exists() {
+                std::fs::remove_file(&main_file)?;
+            }
+
+            let wal_file = db_file(owner, &format!(".{db}"), config);
+            if wal_file.exists() {
+                std::fs::remove_file(wal_file)?;
+            }
+
+            let db_path = Path::new(&config.data_dir).join(&db_name);
+            let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
+            *server_db = ServerDb::new(&format!("{}:{}", database.db_type, path))?;
+        }
+
+        Ok(())
+    }
+
+    async fn do_backup(
+        &self,
+        owner: &str,
+        db: &str,
+        config: &Config,
+        server_db: &ServerDb,
+        database: &mut Database,
+    ) -> Result<(), ServerError> {
+        let backup_path = db_backup_file(owner, db, config);
+        if backup_path.exists() {
+            std::fs::remove_file(&backup_path)?;
+        } else {
+            std::fs::create_dir_all(db_backup_dir(owner, config))?;
+        }
+        server_db
+            .get_mut()
+            .await
+            .backup(backup_path.to_string_lossy().as_ref())?;
+        database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        self.save_db(database).await?;
         Ok(())
     }
 
@@ -951,7 +1067,7 @@ impl DbPool {
         ))?;
         pool.insert(db_name, server_db);
         database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-        self.save_db(database).await?;
+        self.save_db(&database).await?;
 
         Ok(())
     }
@@ -1162,12 +1278,22 @@ impl DbPool {
             == 1)
     }
 
-    async fn save_db(&self, db: Database) -> ServerResult {
+    async fn save_db(&self, db: &Database) -> ServerResult {
         self.db_mut()
             .await
-            .exec_mut(&QueryBuilder::insert().element(&db).query())?;
+            .exec_mut(&QueryBuilder::insert().element(db).query())?;
         Ok(())
     }
+}
+
+fn do_clear_db_audit(owner: &str, db: &str, config: &Config) -> Result<(), ServerError> {
+    let audit_file = db_audit_file(owner, db, config);
+
+    if audit_file.exists() {
+        std::fs::remove_file(&audit_file)?;
+    }
+
+    Ok(())
 }
 
 fn user_not_found(name: &str) -> ServerError {

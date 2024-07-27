@@ -1113,6 +1113,68 @@
         ]
       }
     },
+    "/api/v1/db/{owner}/{db}/clear": {
+      "post": {
+        "tags": [
+          "crate::routes::db"
+        ],
+        "operationId": "db_clear",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbResource"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db resource(s) cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/{owner}/{db}/copy": {
       "post": {
         "tags": [
@@ -2094,6 +2156,15 @@
             "$ref": "#/components/schemas/DbValue"
           }
         }
+      },
+      "DbResource": {
+        "type": "string",
+        "enum": [
+          "all",
+          "db",
+          "audit",
+          "backup"
+        ]
       },
       "DbType": {
         "type": "string",
@@ -3080,6 +3151,17 @@
         "properties": {
           "new_name": {
             "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseResource": {
+        "type": "object",
+        "required": [
+          "resource"
+        ],
+        "properties": {
+          "resource": {
+            "$ref": "#/components/schemas/DbResource"
           }
         }
       },

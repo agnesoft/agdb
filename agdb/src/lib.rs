@@ -33,7 +33,7 @@ mod utilities;
 #[cfg(test)]
 pub mod test_utilities;
 
-#[cfg(any(feature = "serde", feature = "opeanapi"))]
+#[cfg(any(feature = "serde", feature = "openapi"))]
 pub use query::QueryType;
 
 #[cfg(feature = "derive")]

@@ -7,28 +7,21 @@
             "description": "For running git commands",
             "open": true,
             "focus": true,
-            "commands": [
-                "git fetch -v"
-            ]
+            "commands": ["git fetch -v"]
         },
         {
             "name": "web SERVER",
             "description": "For running web dev server",
             "open": true,
             "focus": false,
-            "commands": [
-                "cd agdb_web_next",
-                "npm run dev"
-            ]
+            "commands": ["cd agdb_web_next", "npm run dev"]
         },
         {
             "name": "web SCRIPTS",
             "description": "For running web scripts",
             "open": true,
             "focus": false,
-            "commands": [
-                "cd agdb_web_next"
-            ]
+            "commands": ["cd agdb_web_next"]
         }
     ]
 }

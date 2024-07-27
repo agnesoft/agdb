@@ -1,1 +1,24 @@
-{}
+{
+    "url": {
+        "home": "/",
+        "about": "/about",
+        "contact": "/contact",
+        "docs": "/docs",
+        "blog": "/blog",
+        "api": "/api",
+        "enterprise": "/enterprise",
+        "terms-and-conditions": "/terms-and-conditions",
+        "privacy-policy": "/privacy-policy"
+    },
+    "link": {
+        "home": "Home",
+        "about": "About",
+        "contact": "Contact",
+        "docs": "Docs",
+        "blog": "Blog",
+        "api": "API",
+        "enterprise": "Enterprise",
+        "terms-and-conditions": "Terms and Conditions",
+        "privacy-policy": "Privacy Policy"
+    }
+}

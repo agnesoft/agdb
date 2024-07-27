@@ -1,5 +1,5 @@
 import styles from "./footer.module.scss";
-import Link from "next/link";
+import { LinkItem } from "../common/link-item";
 
 export default function Footer() {
     return (
@@ -11,19 +11,18 @@ export default function Footer() {
         >
             <div className={styles.footerLinks}>
                 <div className={styles.footerColumn}>
-                    <Link href="/docs">Documentation</Link>
-                    <Link href="/contact">Contact</Link>
-                    <Link href="/contact">Contact</Link>
+                    <LinkItem i18nKey="docs" />
+                    <LinkItem i18nKey="api" />
+                    <LinkItem i18nKey="enterprise" />
                 </div>
                 <div className={styles.footerColumn}>
-                    <Link href="/about">About</Link>
-                    <Link href="/contact">Contact</Link>
-                    <Link href="/contact">Contact</Link>
+                    <LinkItem i18nKey="blog" />
+                    <LinkItem i18nKey="about" />
+                    <LinkItem i18nKey="contact" />
                 </div>
                 <div className={styles.footerColumn}>
-                    <Link href="/about">About</Link>
-                    <Link href="/contact">Contact</Link>
-                    <Link href="/contact">Contact</Link>
+                    <LinkItem i18nKey="privacy-policy" />
+                    <LinkItem i18nKey="terms-and-conditions" />
                 </div>
             </div>
             <div className={styles.copyright}>

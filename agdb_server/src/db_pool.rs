@@ -24,7 +24,7 @@ use agdb::Transaction;
 use agdb::TransactionMut;
 use agdb::UserValue;
 use agdb_api::DbAudit;
-use agdb_api::DbBackupPolicy;
+use agdb_api::DbResource;
 use agdb_api::DbType;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
@@ -344,7 +344,7 @@ impl DbPool {
         db: &str,
         user: DbId,
         config: &Config,
-        backup: DbBackupPolicy,
+        resource: DbResource,
     ) -> ServerResult<ServerDatabase> {
         let db_name = db_name(owner, db);
         let mut database = self.find_user_db(user, &db_name).await?;
@@ -354,15 +354,74 @@ impl DbPool {
             return Err(permission_denied("admin only"));
         }
 
-        self.apply_backup_policy(&mut database, backup, owner, db, config)
-            .await?;
+        match resource {
+            DbResource::All => {
+                self.do_clear_db(&database, owner, db, config, db_name)
+                    .await?;
+                do_clear_db_audit(owner, db, config)?;
+                self.do_clear_db_backup(owner, db, config, &mut database)
+                    .await?;
+            }
+            DbResource::Db => {
+                self.do_clear_db(&database, owner, db, config, db_name)
+                    .await?;
+            }
+            DbResource::Audit => {
+                do_clear_db_audit(owner, db, config)?;
+            }
+            DbResource::Backup => {
+                self.do_clear_db_backup(owner, db, config, &mut database)
+                    .await?;
+            }
+        }
 
+        let size = self
+            .get_pool()
+            .await
+            .get(&database.name)
+            .ok_or(db_not_found(&database.name))?
+            .get()
+            .await
+            .size();
+
+        Ok(ServerDatabase {
+            name: database.name,
+            db_type: database.db_type,
+            role,
+            size,
+            backup: database.backup,
+        })
+    }
+
+    async fn do_clear_db_backup(
+        &self,
+        owner: &str,
+        db: &str,
+        config: &Config,
+        database: &mut Database,
+    ) -> Result<(), ServerError> {
+        let backup_file = db_backup_file(owner, db, config);
+        if backup_file.exists() {
+            std::fs::remove_file(&backup_file)?;
+        }
+        database.backup = 0;
+        self.save_db(&*database).await?;
+        Ok(())
+    }
+
+    async fn do_clear_db(
+        &self,
+        database: &Database,
+        owner: &str,
+        db: &str,
+        config: &Config,
+        db_name: String,
+    ) -> Result<(), ServerError> {
         let mut pool = self.get_pool_mut().await;
         let server_db = pool
             .get_mut(&database.name)
             .ok_or(db_not_found(&database.name))?;
         *server_db = ServerDb::new(&format!("{}:{}", DbType::Memory, database.name))?;
-
         if database.db_type != DbType::Memory {
             let main_file = db_file(owner, db, config);
             if main_file.exists() {
@@ -377,49 +436,6 @@ impl DbPool {
             let db_path = Path::new(&config.data_dir).join(&db_name);
             let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
             *server_db = ServerDb::new(&format!("{}:{}", database.db_type, path))?;
-        }
-
-        Ok(ServerDatabase {
-            name: database.name,
-            db_type: database.db_type,
-            role,
-            size: 0,
-            backup: database.backup,
-        })
-    }
-
-    async fn apply_backup_policy(
-        &self,
-        database: &mut Database,
-        backup: DbBackupPolicy,
-        owner: &str,
-        db: &str,
-        config: &Arc<crate::config::ConfigImpl>,
-    ) -> Result<(), ServerError> {
-        let pool = self.get_pool().await;
-        let server_db = pool
-            .get(&database.name)
-            .ok_or(db_not_found(&database.name))?;
-
-        if database.db_type != DbType::Memory {
-            match backup {
-                DbBackupPolicy::Create => {
-                    self.do_backup(owner, db, config, server_db, database)
-                        .await?;
-                }
-                DbBackupPolicy::Enforce => {
-                    if !db_backup_file(owner, db, config).exists() {
-                        return Err(permission_denied("backup enforced"));
-                    }
-                }
-                DbBackupPolicy::EnforceOrCreate => {
-                    if !db_backup_file(owner, db, config).exists() {
-                        self.do_backup(owner, db, config, server_db, database)
-                            .await?;
-                    }
-                }
-                DbBackupPolicy::Ignore => {}
-            }
         }
 
         Ok(())
@@ -1268,6 +1284,16 @@ impl DbPool {
             .exec_mut(&QueryBuilder::insert().element(db).query())?;
         Ok(())
     }
+}
+
+fn do_clear_db_audit(owner: &str, db: &str, config: &Config) -> Result<(), ServerError> {
+    let audit_file = db_audit_file(owner, db, config);
+
+    if audit_file.exists() {
+        std::fs::remove_file(&audit_file)?;
+    }
+
+    Ok(())
 }
 
 fn user_not_found(name: &str) -> ServerError {

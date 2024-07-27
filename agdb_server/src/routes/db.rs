@@ -6,7 +6,7 @@ use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use agdb_api::DbAudit;
-use agdb_api::DbBackupPolicy;
+use agdb_api::DbResource;
 use agdb_api::DbType;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
@@ -34,8 +34,8 @@ pub(crate) struct DbTypeParam {
 
 #[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
-pub struct ServerDatabaseBackupPolicy {
-    pub backup: DbBackupPolicy,
+pub struct ServerDatabaseResource {
+    pub resource: DbResource,
 }
 
 #[utoipa::path(post,
@@ -136,12 +136,12 @@ pub(crate) async fn backup(
     params(
         ("owner" = String, Path, description = "user name"),
         ("db" = String, Path, description = "db name"),
-        ServerDatabaseBackupPolicy
+        ServerDatabaseResource
     ),
     responses(
-         (status = 201, description = "db cleared", body = ServerDatabase),
+         (status = 201, description = "db resource(s) cleared", body = ServerDatabase),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "must be a db admin / backup policy violation"),
+         (status = 403, description = "must be a db admin"),
          (status = 404, description = "user / db not found"),
     )
 )]
@@ -150,10 +150,10 @@ pub(crate) async fn clear(
     State(db_pool): State<DbPool>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
-    request: Query<ServerDatabaseBackupPolicy>,
+    request: Query<ServerDatabaseResource>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
     let db = db_pool
-        .clear_db(&owner, &db, user.0, &config, request.backup)
+        .clear_db(&owner, &db, user.0, &config, request.resource)
         .await?;
 
     Ok((StatusCode::OK, Json(db)))

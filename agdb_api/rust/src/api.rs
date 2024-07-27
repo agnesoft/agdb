@@ -6,7 +6,7 @@ use crate::http_client::HttpClient;
 use crate::ChangePassword;
 use crate::ClusterStatus;
 use crate::DbAudit;
-use crate::DbBackupPolicy;
+use crate::DbResource;
 use crate::DbUser;
 use crate::DbUserRole;
 use crate::UserLogin;
@@ -315,11 +315,11 @@ impl<T: HttpClient> AgdbApi<T> {
         &self,
         owner: &str,
         db: &str,
-        backup: DbBackupPolicy,
+        resource: DbResource,
     ) -> AgdbApiResult<(u16, ServerDatabase)> {
         self.client
             .post::<(), ServerDatabase>(
-                &self.url(&format!("/db/{owner}/{db}/clear?backup={backup}")),
+                &self.url(&format!("/db/{owner}/{db}/clear?resource={resource}")),
                 &None,
                 &self.token,
             )

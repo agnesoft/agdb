@@ -14,13 +14,14 @@ export default function Footer() {
                     <LinkItem i18nKey="docs" />
                     <LinkItem i18nKey="api" />
                     <LinkItem i18nKey="enterprise" />
+                    <LinkItem i18nKey="blog" />
                 </div>
                 <div className={styles.footerColumn}>
-                    <LinkItem i18nKey="blog" />
                     <LinkItem i18nKey="about" />
                     <LinkItem i18nKey="contact" />
                 </div>
                 <div className={styles.footerColumn}>
+                    <LinkItem i18nKey="license" />
                     <LinkItem i18nKey="privacy-policy" />
                     <LinkItem i18nKey="terms-and-conditions" />
                 </div>

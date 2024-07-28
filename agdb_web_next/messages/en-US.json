@@ -8,7 +8,8 @@
         "api": "/api",
         "enterprise": "/enterprise",
         "terms-and-conditions": "/terms-and-conditions",
-        "privacy-policy": "/privacy-policy"
+        "privacy-policy": "/privacy-policy",
+        "license": "/license"
     },
     "link": {
         "home": "Home",
@@ -19,6 +20,7 @@
         "api": "API",
         "enterprise": "Enterprise",
         "terms-and-conditions": "Terms and Conditions",
-        "privacy-policy": "Privacy Policy"
+        "privacy-policy": "Privacy Policy",
+        "license": "License"
     }
 }

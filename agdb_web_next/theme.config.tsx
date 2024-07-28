@@ -41,6 +41,14 @@ const config: DocsThemeConfig = {
         { locale: "cs-CZ", text: "Čeština" },
     ],
     head: useHead,
+    // banner: {
+    //   key: '2.0-release',
+    //   text: (
+    //     <a href="/release" target="_blank">
+    //       🎉 agdb 2.0 is released. Read more →
+    //     </a>
+    //   )
+    // }
 };
 
 export default config;

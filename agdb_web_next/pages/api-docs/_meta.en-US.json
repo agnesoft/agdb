@@ -1,4 +1,5 @@
 {
+    "openapi": "OpenAPI",
     "rust": "Rust",
     "typescript": "TypeScript",
     "python": "Python"

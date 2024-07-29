@@ -27,7 +27,7 @@ struct User {
     status: Status,
 }
 
-#[derive(UserValue)]
+#[derive(UserValue, PartialEq, Debug)]
 struct MyValue {
     db_id: Option<QueryId>,
     name: String,
@@ -651,4 +651,21 @@ fn insert_vectorized_custom_types() {
         .try_into()
         .unwrap();
     assert_eq!(my_type, my_type_from_db);
+}
+
+#[test]
+fn select_user_value() {
+    let mut db = TestDb::new();
+    let mut my_value = MyValue {
+        db_id: None,
+        name: "my name".to_string(),
+        age: 20,
+    };
+    let result = db.exec_mut_result(QueryBuilder::insert().element(&my_value).query());
+    let my_value_from_db: MyValue = db
+        .exec_result(QueryBuilder::select().elements::<MyValue>().ids(1).query())
+        .try_into()
+        .unwrap();
+    my_value.db_id = Some(result.elements[0].id.into());
+    assert_eq!(my_value, my_value_from_db);
 }

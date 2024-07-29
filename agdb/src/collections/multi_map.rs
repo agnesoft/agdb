@@ -152,26 +152,37 @@ where
 
         let hash = key.stable_hash();
         let mut pos = hash % self.capacity();
+        let mut free_pos = None;
         let mut ret = None;
 
         loop {
             match self.data.state(storage, pos)? {
-                MapValueState::Empty | MapValueState::Deleted => {
-                    self.do_insert(storage, pos, key, new_value)?;
+                MapValueState::Empty => {
+                    free_pos = Some(pos);
                     break;
+                }
+                MapValueState::Deleted => {
+                    if free_pos.is_none() {
+                        free_pos = Some(pos);
+                    }
                 }
                 MapValueState::Valid if self.data.key(storage, pos)? == *key => {
                     let old_value = self.data.value(storage, pos)?;
                     if predicate(&old_value) {
                         self.data.set_value(storage, pos, new_value)?;
                         ret = Some(old_value);
+                        free_pos = None;
                         break;
-                    } else {
-                        pos = self.next_pos(pos)
                     }
                 }
-                MapValueState::Valid => pos = self.next_pos(pos),
+                MapValueState::Valid => {}
             }
+
+            pos = self.next_pos(pos)
+        }
+
+        if let Some(pos) = free_pos {
+            self.do_insert(storage, pos, key, new_value)?;
         }
 
         self.data.commit(storage, id)?;
@@ -444,10 +455,9 @@ where
         let new_capacity = std::cmp::max(capacity, 64_u64);
 
         match current_capacity.cmp(&new_capacity) {
-            std::cmp::Ordering::Less | std::cmp::Ordering::Equal => {
-                self.grow(storage, current_capacity, new_capacity)
-            }
+            std::cmp::Ordering::Less => self.grow(storage, current_capacity, new_capacity),
             std::cmp::Ordering::Greater => self.shrink(storage, current_capacity, new_capacity),
+            std::cmp::Ordering::Equal => Ok(()),
         }
     }
 
@@ -926,5 +936,26 @@ mod tests {
 
         let keys = map.iter_key(&storage, &10).collect::<Vec<(u64, u64)>>();
         assert_eq!(keys, vec![(10, 12)]);
+    }
+
+    #[test]
+    fn insert_or_replace_over_deleted() {
+        let mut storage: Storage<MemoryStorage> = Storage::new("test").unwrap();
+        let mut map = MultiMapStorage::<u64, u64, MemoryStorage>::new(&mut storage).unwrap();
+
+        map.insert(&mut storage, &1, &10).unwrap();
+        map.insert(&mut storage, &1, &20).unwrap();
+        map.insert(&mut storage, &1, &21).unwrap();
+        map.insert(&mut storage, &1, &30).unwrap();
+
+        map.remove_value(&mut storage, &1, &20).unwrap();
+        map.remove_value(&mut storage, &1, &21).unwrap();
+
+        map.insert_or_replace(&mut storage, &1, |v| *v == 30, &30)
+            .unwrap();
+
+        let values = map.values(&storage, &1).unwrap();
+
+        assert_eq!(values, vec![10, 30]);
     }
 }

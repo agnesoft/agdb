@@ -147,7 +147,7 @@ impl DbValue {
     }
 
     /// Returns `u64` possibly converted from `i64`
-    /// or na error if the conversion failed or the value is of
+    /// or an error if the conversion failed or the value is of
     /// a different type.
     pub fn to_u64(&self) -> Result<u64, DbError> {
         match self {
@@ -352,6 +352,7 @@ impl DbValue {
         Ok(index)
     }
 
+    #[track_caller]
     fn type_error<T>(from: &str, to: &str) -> Result<T, DbError> {
         Err(DbError::from(format!(
             "Type mismatch. Cannot convert '{from}' to '{to}'."

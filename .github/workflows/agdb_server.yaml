@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo test --package agdb_server
-      - run: cargo test --release --package agdb_server
+      - run: count=0; while cargo test --release --package agdb_server &> test.log && [[ "$count" != "100" ]]; do count=$((count+1)); echo -n "."; done; cat test.log; echo "$count of 100 tests run"
 
   agdb_server_format:
     runs-on: ubuntu-latest

@@ -12,8 +12,9 @@ class T { db_id: undefined = undefined; value1: string = ""; value2: number = 0;
 \n\n
 describe("query tests", () => {`;
 
-for (let query in test_queries) {
-    let builder = query;
+for (let index in test_queries) {
+    let name = test_queries[index][0];
+    let builder = test_queries[index][0];
     builder = builder.replace(/&/g, "");
     builder = builder.replace(/T::default\(\)/g, "new T()");
     builder = builder.replace(/::/g, ".");
@@ -25,7 +26,7 @@ for (let query in test_queries) {
     builder = builder.replace(/\("k",2\)/g, "[\"k\", 2]");
     builder = builder.replace(/\(1,10\)/g, "[1, 10]");
     
-    tests += `it(\`${query}\`, () => { let query = \`${query}\`;\nlet builder = ${builder};\nexpect(builder).toEqual(test_queries[query]); });\n\n`;
+    tests += `it(\`${name}\`, () => { let query = ${builder};\nexpect(query).toEqual(test_queries[${index}][1]); });\n\n`;
 }
 
 tests += `});`;

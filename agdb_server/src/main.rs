@@ -50,7 +50,6 @@ mod tests {
     use agdb::QueryId;
     use agdb::QueryType;
     use agdb::UserValue;
-    use std::collections::HashMap;
     use std::fs::File;
     use std::io::Write;
     use utoipa::OpenApi;
@@ -58,15 +57,15 @@ mod tests {
     macro_rules! queries {
         ($($x:expr),+ $(,)?) => {
             {
-                let mut map: HashMap<String, QueryType> = HashMap::new();
+                let mut vec: Vec<(String, QueryType)> = Vec::new();
                 $(
                     {
                         let mut as_string = stringify!($x).to_string();
                         as_string.retain(|c| !c.is_whitespace());
-                        map.insert(as_string, $x.into());
+                        vec.push((as_string, $x.into()));
                     }
                 )*
-                map
+                vec
             }
         };
     }

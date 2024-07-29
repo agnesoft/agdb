@@ -1,0 +1,9 @@
+{
+    "*": {
+        "display": "hidden"
+    },
+    "dokumentace": {
+        "title": "Dokumentace",
+        "display": "visible"
+    }
+}

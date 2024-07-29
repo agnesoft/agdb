@@ -1,11 +1,50 @@
 {
-    "index": "Domů",
-    "about": {
-        "title": "O agdb",
-        "type": "page"
+    "*": {
+        "display": "hidden",
+        "theme": {
+            "sidebar": false,
+            "toc": false,
+            "breadcrumb": false
+        }
     },
-    "contact": {
-        "title": "Kontakt ↗",
-        "type": "page"
+    "api-docs": {
+        "title": "API",
+        "type": "page",
+        "display": "visible",
+        "theme": {
+            "sidebar": true,
+            "toc": true,
+            "breadcrumb": true
+        }
+    },
+    "enterprise": {
+        "title": "Enterprise",
+        "type": "page",
+        "display": "visible",
+        "theme": {
+            "sidebar": true,
+            "toc": true,
+            "breadcrumb": true
+        }
+    },
+    "blog": {
+        "title": "Blog",
+        "type": "page",
+        "display": "visible",
+        "theme": {
+            "sidebar": true,
+            "toc": true,
+            "breadcrumb": true
+        }
+    },
+    "docs": {
+        "title": "Docs",
+        "type": "page",
+        "display": "visible",
+        "theme": {
+            "sidebar": true,
+            "toc": true,
+            "breadcrumb": true
+        }
     }
 }

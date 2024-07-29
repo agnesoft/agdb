@@ -1,0 +1,9 @@
+{
+    "*": {
+        "display": "hidden"
+    },
+    "openapi": {
+        "title": "OpenAPI",
+        "display": "visible"
+    }
+}

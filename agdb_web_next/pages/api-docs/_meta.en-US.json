@@ -1,6 +1,21 @@
 {
-    "openapi": "OpenAPI",
-    "rust": "Rust",
-    "typescript": "TypeScript",
-    "python": "Python"
+    "*": {
+        "display": "hidden"
+    },
+    "openapi": {
+        "title": "OpenAPI",
+        "display": "visible"
+    },
+    "rust": {
+        "title": "Rust",
+        "display": "visible"
+    },
+    "typescript": {
+        "title": "TypeScript",
+        "display": "visible"
+    },
+    "python": {
+        "title": "Python",
+        "display": "visible"
+    }
 }

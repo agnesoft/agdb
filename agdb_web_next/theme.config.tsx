@@ -35,7 +35,7 @@ const config: DocsThemeConfig = {
     //     link: "https://discord.com",
     // },
     docsRepositoryBase: "https://github.com/agnesoft/agdb",
-    footer: { component: Footer },
+    footer: { text: Footer },
     i18n: [
         { locale: "en-US", text: "English" },
         { locale: "cs-CZ", text: "Čeština" },

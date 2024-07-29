@@ -1,8 +1,29 @@
 {
-    "enterprise": "Enterprise",
-    "pricing": "Pricing",
-    "cloud": "Cloud",
-    "self-hosted": "Self-hosted",
-    "support": "Support",
-    "sponsors": "Sponsors"
+    "*": {
+        "display": "hidden"
+    },
+    "enterprise": {
+        "title": "Enterprise",
+        "display": "visible"
+    },
+    "pricing": {
+        "title": "Pricing",
+        "display": "visible"
+    },
+    "cloud": {
+        "title": "Cloud",
+        "display": "visible"
+    },
+    "self-hosted": {
+        "title": "Self-hosted",
+        "display": "visible"
+    },
+    "support": {
+        "title": "Support",
+        "display": "visible"
+    },
+    "sponsors": {
+        "title": "Sponsors",
+        "display": "visible"
+    }
 }

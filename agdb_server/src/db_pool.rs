@@ -653,6 +653,7 @@ impl DbPool {
     }
 
     pub(crate) async fn find_dbs(&self) -> ServerResult<Vec<ServerDatabase>> {
+        let pool = self.get_pool().await;
         let dbs: Vec<Database> = self
             .db()
             .await
@@ -676,9 +677,7 @@ impl DbPool {
             databases.push(ServerDatabase {
                 db_type: db.db_type,
                 role: DbUserRole::Admin,
-                size: self
-                    .get_pool()
-                    .await
+                size: pool
                     .get(&db.name)
                     .ok_or(db_not_found(&db.name))?
                     .get()

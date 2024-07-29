@@ -109,11 +109,16 @@ impl QueryBuilder {
     ///
     /// ```
     /// use agdb::QueryBuilder;
+    /// use agdb::UserValue;
+    ///
+    /// #[derive(UserValue)]
+    /// struct MyValue { db_id: Option<DbId>, key: String }
     ///
     /// QueryBuilder::select().ids(1);
     /// QueryBuilder::select().ids(vec![1, 2]);
     /// QueryBuilder::select().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::select().aliases();
+    /// QueryBuilder::select().elements::<MyValue>();
     /// QueryBuilder::select().keys();
     /// QueryBuilder::select().key_count();
     /// QueryBuilder::select().node_count();

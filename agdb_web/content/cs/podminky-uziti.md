@@ -1,1 +1,0 @@
-# Podmínky užití

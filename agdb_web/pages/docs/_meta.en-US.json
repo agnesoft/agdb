@@ -1,0 +1,21 @@
+{
+    "*": {
+        "display": "hidden"
+    },
+    "docs": {
+        "title": "Docs",
+        "display": "normal"
+    },
+    "guides": {
+        "title": "Guides",
+        "display": "normal"
+    },
+    "examples": {
+        "title": "Examples",
+        "display": "normal"
+    },
+    "references": {
+        "title": "references",
+        "display": "normal"
+    }
+}

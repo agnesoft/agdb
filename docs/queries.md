@@ -51,6 +51,7 @@ flowchart LR
     select --> edge_count_to("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
     select --> select_node_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-node-count'>node_count</a>")
     select --> values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>values</a>") --> s_v_ids("ids") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
+    select --> elements("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>values</a>) --> s_v_ids("ids")
 
     search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#search'>SearchQuery</a>"]
     search --> from("from") --> SearchQuery
@@ -959,11 +960,12 @@ QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids("a").query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(vec![1, 2]).query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().elements::<T>().ids(1).query();
 ```
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
 
 ## Search
 

@@ -92,6 +92,7 @@ impl DbPool {
                 .await
                 .exec(
                     &QueryBuilder::select()
+                        .elements::<Database>()
                         .ids(
                             QueryBuilder::search()
                                 .from("dbs")
@@ -657,6 +658,7 @@ impl DbPool {
             .await
             .exec(
                 &QueryBuilder::select()
+                    .elements::<Database>()
                     .ids(
                         QueryBuilder::search()
                             .from("dbs")
@@ -767,7 +769,12 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&QueryBuilder::select().ids(user_id).query())?
+            .exec(
+                &QueryBuilder::select()
+                    .elements::<ServerUser>()
+                    .ids(user_id)
+                    .query(),
+            )?
             .try_into()?)
     }
 
@@ -797,7 +804,12 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&QueryBuilder::select().ids(user).query())?
+            .exec(
+                &QueryBuilder::select()
+                    .elements::<ServerUser>()
+                    .ids(user)
+                    .query(),
+            )?
             .try_into()?)
     }
 
@@ -1178,7 +1190,12 @@ impl DbPool {
                     .first()
                     .ok_or(db_not_found(db))?
                     .id;
-                Ok(t.exec(&QueryBuilder::select().ids(db_id).query())?)
+                Ok(t.exec(
+                    &QueryBuilder::select()
+                        .elements::<Database>()
+                        .ids(db_id)
+                        .query(),
+                )?)
             })?
             .try_into()?)
     }
@@ -1189,6 +1206,7 @@ impl DbPool {
             .await
             .exec(
                 &QueryBuilder::select()
+                    .elements::<Database>()
                     .ids(
                         QueryBuilder::search()
                             .depth_first()

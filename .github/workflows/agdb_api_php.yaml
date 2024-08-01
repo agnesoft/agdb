@@ -58,5 +58,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
-      - run: chmod +x ./ci.sh
       - run: ./ci.sh format:check

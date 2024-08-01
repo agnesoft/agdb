@@ -6,7 +6,7 @@ on:
 
 jobs:
   diff:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       diff: ${{ steps.diff.outputs.diff }}
     steps:
@@ -19,7 +19,7 @@ jobs:
           if [[ "$(git diff origin/main --name-only -- agdb_api/php/ agdb_server/openapi/schema.json .github/workflows/agdb_api_php.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_api_php_analyse:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     defaults:
@@ -31,7 +31,7 @@ jobs:
       - run: ./ci.sh analyse
 
   agdb_api_php_coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: diff
     if: needs.diff.outputs.diff == 'true'
     defaults:

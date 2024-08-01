@@ -28,6 +28,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: php-actions/composer@v6
+        with:
+          container_workdir: agdb_api/php
       - run: ./ci.sh analyse
 
   agdb_api_php_coverage:
@@ -40,6 +42,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: php-actions/composer@v6
+        with:
+          container_workdir: agdb_api/php
       - run: ./ci.sh coverage
       - uses: actions/upload-artifact@v3
         if: always()

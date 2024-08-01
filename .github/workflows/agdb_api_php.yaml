@@ -27,9 +27,7 @@ jobs:
         working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
-      - uses: php-actions/composer@v6
-        with:
-          container_workdir: agdb_api/php
+      - run: composer install
       - run: ./ci.sh analyse
 
   agdb_api_php_coverage:
@@ -41,9 +39,7 @@ jobs:
         working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
-      - uses: php-actions/composer@v6
-        with:
-          container_workdir: agdb_api/php
+      - run: composer install
       - run: ./ci.sh coverage
       - uses: actions/upload-artifact@v3
         if: always()
@@ -62,4 +58,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
+      - run: chmod +x ./ci.sh
       - run: ./ci.sh format:check

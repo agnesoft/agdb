@@ -9,4 +9,4 @@ class QueryBuilder
     {
         $this->query = "";
     }
-}   
+}

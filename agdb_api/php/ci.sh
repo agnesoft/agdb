@@ -1,5 +1,5 @@
 function coverage() {
-    local output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text)
+    local output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
     echo "$output"
     echo ""
 

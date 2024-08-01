@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: composer install
       - run: ./ci.sh coverage
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage

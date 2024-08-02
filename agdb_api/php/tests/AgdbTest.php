@@ -19,6 +19,6 @@ final class AgdbTest extends TestCase
     {
         $builder = new QueryBuilder();
 
-        $this->assertSame(count($builder->query), 0);
+        $this->assertIsArray($builder->query);
     }
 }

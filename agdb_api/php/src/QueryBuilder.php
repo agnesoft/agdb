@@ -4,7 +4,7 @@ namespace Agnesoft\Agdb;
 
 class QueryBuilder
 {
-    public array $query = [];
+    public mixed $query;
 
     public function __construct()
     {

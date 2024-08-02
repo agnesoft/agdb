@@ -1,0 +1,7 @@
+<?php
+
+return [
+    'openapi-file' => __DIR__ . '/../../agdb_server/openapi/schema.json',
+    'namespace' => 'Agnesoft\Agdb',
+    'directory' => __DIR__ . '/api',
+];

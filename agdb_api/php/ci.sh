@@ -1,11 +1,16 @@
 function coverage() {
-    cd ../../agdb_server
     rm -f agdb_server.yaml
     rm -f .agdb_server.agdb
     rm -f agdb_server.agdb
     rm -rf agdb_server_data
-    cargo build --release
-    cargo run --release &
+    cargo build --release -p agdb_server
+    echo "bind: \"0.0.0.0:3000\"
+address: localhost:3000
+basepath: \"\"
+admin: admin
+data_dir: agdb_server_data
+cluster: []" > agdb_server.yaml
+    cargo run --release -p agdb_server &
     
     cd ../agdb_api/php
     local output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
@@ -37,7 +42,6 @@ function coverage() {
     token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')
     curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown
 
-    cd ../../agdb_server
     rm -f agdb_server.yaml
     rm -f .agdb_server.agdb
     rm -f agdb_server.agdb

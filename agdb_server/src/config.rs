@@ -34,7 +34,7 @@ pub(crate) fn new() -> ServerResult<Config> {
     }
 
     let config = ConfigImpl {
-        bind: "0.0.0.0:3000".to_string(),
+        bind: ":::3000".to_string(),
         address: Url::parse("localhost:3000")?,
         basepath: "".to_string(),
         admin: "admin".to_string(),

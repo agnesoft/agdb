@@ -1,4 +1,6 @@
 <?php
+use Agnesoft\Agdb\Model\InsertNodesQuery;
+use Agnesoft\Agdb\Model\SearchQuery;
 use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 use Agnesoft\Agdb\Client;
@@ -15,6 +17,8 @@ final class AgdbTest extends TestCase
 
     public function testQueryBuilder(): void
     {
-        $client = new QueryBuilder();
+        $builder = new QueryBuilder();
+
+        $this->assertSame(count($builder->query), 0);
     }
 }

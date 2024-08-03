@@ -1,12 +1,22 @@
-<?php declare(strict_types=1);
+<?php
+use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
-use agdb\QueryBuilder;
 
 final class AgdbTest extends TestCase
 {
-    public function testAgdb(): void
+    public function testStatus(): void
     {
-        $qb = new QueryBuilder();
-        $this->assertSame($qb->query, "");
+        $config = Agdb\Configuration::getDefaultConfiguration();
+        $client = new Agdb\Api\RoutesApi(new GuzzleHttp\Client(), $config);
+        $response = $client->status(false);
+
+        $this->assertIsArray($response);
+    }
+
+    public function testQueryBuilder(): void
+    {
+        $builder = new QueryBuilder();
+
+        $this->assertIsArray($builder->query);
     }
 }

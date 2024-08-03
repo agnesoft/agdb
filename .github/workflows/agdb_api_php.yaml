@@ -39,6 +39,7 @@ jobs:
         working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: composer install
       - run: ./ci.sh coverage
       - uses: actions/upload-artifact@v4

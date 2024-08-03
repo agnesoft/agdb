@@ -13,6 +13,7 @@ cluster: []" > agdb_server.yaml
 
     cargo build --release -p agdb_server
     cargo run --release -p agdb_server &
+    sleep 3
     
     local output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
     local error_code=$?   

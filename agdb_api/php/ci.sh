@@ -12,7 +12,6 @@ data_dir: agdb_server_data
 cluster: []" > agdb_server.yaml
     cargo run --release -p agdb_server &
     
-    cd ../agdb_api/php
     local output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
     local error_code=$?   
     echo "$output"

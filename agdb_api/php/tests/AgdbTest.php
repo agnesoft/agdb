@@ -7,7 +7,6 @@ final class AgdbTest extends TestCase
     public function testStatus(): void
     {
         $config = Agdb\Configuration::getDefaultConfiguration();
-        $config->setHost('http://127.0.0.1:3000');
         $client = new Agdb\Api\RoutesApi(new GuzzleHttp\Client(), $config);
         $response = $client->status(false);
 

@@ -2,3 +2,4 @@ vendor/
 coverage/
 node_modules/
 openapitools.json
+.openapi-generator/

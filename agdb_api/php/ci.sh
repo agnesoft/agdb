@@ -38,7 +38,9 @@ cluster: []" > agdb_server.yaml
         echo "Insufficient classes coverage"; 
         error_code=1
     fi
-
+    
+    echo ""
+    
     token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')
     curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown
 

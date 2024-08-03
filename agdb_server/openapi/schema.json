@@ -18,7 +18,7 @@
     "/api/v1/admin/db/list": {
       "get": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_list",
         "responses": {
@@ -49,7 +49,7 @@
     "/api/v1/admin/db/{owner}/{db}/add": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_add",
         "parameters": [
@@ -104,7 +104,7 @@
     "/api/v1/admin/db/{owner}/{db}/audit": {
       "get": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_audit",
         "parameters": [
@@ -152,7 +152,7 @@
     "/api/v1/admin/db/{owner}/{db}/backup": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_backup",
         "parameters": [
@@ -199,7 +199,7 @@
     "/api/v1/admin/db/{owner}/{db}/copy": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_copy",
         "parameters": [
@@ -257,7 +257,7 @@
     "/api/v1/admin/db/{owner}/{db}/delete": {
       "delete": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_delete",
         "parameters": [
@@ -301,7 +301,7 @@
     "/api/v1/admin/db/{owner}/{db}/exec": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_exec",
         "parameters": [
@@ -365,7 +365,7 @@
     "/api/v1/admin/db/{owner}/{db}/optimize": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_optimize",
         "parameters": [
@@ -413,7 +413,7 @@
     "/api/v1/admin/db/{owner}/{db}/remove": {
       "delete": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_remove",
         "parameters": [
@@ -457,7 +457,7 @@
     "/api/v1/admin/db/{owner}/{db}/rename": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_rename",
         "parameters": [
@@ -515,7 +515,7 @@
     "/api/v1/admin/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
-          "crate::routes::admin::db::user"
+          "routes::admin::db::user"
         ],
         "operationId": "admin_db_user_list",
         "parameters": [
@@ -569,7 +569,7 @@
     "/api/v1/admin/db/{owner}/{db}/user/{username}/add": {
       "put": {
         "tags": [
-          "crate::routes::admin::db::user"
+          "routes::admin::db::user"
         ],
         "operationId": "admin_db_user_add",
         "parameters": [
@@ -633,7 +633,7 @@
     "/api/v1/admin/db/{owner}/{db}/user/{username}/remove": {
       "delete": {
         "tags": [
-          "crate::routes::admin::db::user"
+          "routes::admin::db::user"
         ],
         "operationId": "admin_db_user_remove",
         "parameters": [
@@ -689,7 +689,7 @@
     "/api/v1/admin/shutdown": {
       "post": {
         "tags": [
-          "crate::routes::admin"
+          "routes::admin"
         ],
         "operationId": "admin_shutdown",
         "responses": {
@@ -710,7 +710,7 @@
     "/api/v1/admin/user/list": {
       "get": {
         "tags": [
-          "crate::routes::admin::user"
+          "routes::admin::user"
         ],
         "operationId": "admin_user_list",
         "responses": {
@@ -741,7 +741,7 @@
     "/api/v1/admin/user/{username}/add": {
       "post": {
         "tags": [
-          "crate::routes::admin::user"
+          "routes::admin::user"
         ],
         "operationId": "admin_user_add",
         "parameters": [
@@ -792,7 +792,7 @@
     "/api/v1/admin/user/{username}/change_password": {
       "put": {
         "tags": [
-          "crate::routes::admin::user"
+          "routes::admin::user"
         ],
         "operationId": "admin_user_change_password",
         "parameters": [
@@ -840,7 +840,7 @@
     "/api/v1/admin/user/{username}/remove": {
       "delete": {
         "tags": [
-          "crate::routes::admin::user"
+          "routes::admin::user"
         ],
         "operationId": "admin_user_remove",
         "parameters": [
@@ -885,7 +885,7 @@
     "/api/v1/db/admin/{owner}/{db}/restore": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "routes::admin::db"
         ],
         "operationId": "admin_db_restore",
         "parameters": [
@@ -929,7 +929,7 @@
     "/api/v1/db/list": {
       "get": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_list",
         "responses": {
@@ -960,7 +960,7 @@
     "/api/v1/db/{owner}/{db}/add": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_add",
         "parameters": [
@@ -1018,7 +1018,7 @@
     "/api/v1/db/{owner}/{db}/audit": {
       "get": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_audit",
         "parameters": [
@@ -1069,7 +1069,7 @@
     "/api/v1/db/{owner}/{db}/backup": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_backup",
         "parameters": [
@@ -1116,7 +1116,7 @@
     "/api/v1/db/{owner}/{db}/clear": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_clear",
         "parameters": [
@@ -1178,7 +1178,7 @@
     "/api/v1/db/{owner}/{db}/copy": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_copy",
         "parameters": [
@@ -1239,7 +1239,7 @@
     "/api/v1/db/{owner}/{db}/delete": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_delete",
         "parameters": [
@@ -1286,7 +1286,7 @@
     "/api/v1/db/{owner}/{db}/exec": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_exec",
         "parameters": [
@@ -1350,7 +1350,7 @@
     "/api/v1/db/{owner}/{db}/optimize": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_optimize",
         "parameters": [
@@ -1401,7 +1401,7 @@
     "/api/v1/db/{owner}/{db}/remove": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_remove",
         "parameters": [
@@ -1448,7 +1448,7 @@
     "/api/v1/db/{owner}/{db}/rename": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_rename",
         "parameters": [
@@ -1509,7 +1509,7 @@
     "/api/v1/db/{owner}/{db}/restore": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "routes::db"
         ],
         "operationId": "db_restore",
         "parameters": [
@@ -1556,7 +1556,7 @@
     "/api/v1/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
-          "crate::routes::db::user"
+          "routes::db::user"
         ],
         "operationId": "db_user_list",
         "parameters": [
@@ -1600,7 +1600,7 @@
     "/api/v1/db/{owner}/{db}/user/{username}/add": {
       "post": {
         "tags": [
-          "crate::routes::db::user"
+          "routes::db::user"
         ],
         "operationId": "db_user_add",
         "parameters": [
@@ -1664,7 +1664,7 @@
     "/api/v1/db/{owner}/{db}/user/{username}/remove": {
       "post": {
         "tags": [
-          "crate::routes::db::user"
+          "routes::db::user"
         ],
         "operationId": "db_user_remove",
         "parameters": [
@@ -1720,7 +1720,7 @@
     "/api/v1/status": {
       "get": {
         "tags": [
-          "crate::routes"
+          "routes"
         ],
         "operationId": "status",
         "parameters": [
@@ -1754,7 +1754,7 @@
     "/api/v1/user/change_password": {
       "put": {
         "tags": [
-          "crate::routes::user"
+          "routes::user"
         ],
         "operationId": "user_change_password",
         "requestBody": {
@@ -1788,7 +1788,7 @@
     "/api/v1/user/login": {
       "post": {
         "tags": [
-          "crate::routes::user"
+          "routes::user"
         ],
         "operationId": "user_login",
         "requestBody": {
@@ -1821,7 +1821,7 @@
     "/api/v1/user/logout": {
       "post": {
         "tags": [
-          "crate::routes::user"
+          "routes::user"
         ],
         "operationId": "user_logout",
         "responses": {

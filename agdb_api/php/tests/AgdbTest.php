@@ -1,18 +1,16 @@
 <?php
-use Agnesoft\Agdb\Model\InsertNodesQuery;
-use Agnesoft\Agdb\Model\SearchQuery;
 use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
-use Agnesoft\Agdb\Client;
 
 final class AgdbTest extends TestCase
 {
     public function testStatus(): void
     {
-        $client = Client::create();
-        $response = $client->status(false, 'response');
+        $config = Agnesoft\Agdb::Configuration::getDefaultConfiguration();
+        $client = new OpenAPI\Client\Api\RoutesApi(new GuzzleHttp\Client(), $config);
+        $response = $client->status(false);
 
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertIsArray($response);
     }
 
     public function testQueryBuilder(): void

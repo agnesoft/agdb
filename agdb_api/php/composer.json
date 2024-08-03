@@ -1,15 +1,28 @@
 {
+    "version": "0.7.2",
+    "description": "Agnesoft Graph Database API client for PHP",
+    "keywords": [
+        "openapitools",
+        "openapi-generator",
+        "openapi",
+        "php",
+        "sdk",
+        "rest",
+        "api"
+    ],
+    "homepage": "https://github.com/agnesoft/agdb",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Agnesoft",
+            "homepage": "https://github.com/agnesoft/agdb"
+        }
+    ],
     "autoload": {
         "classmap": [
             "src",
-            "api"
+            "lib"
         ]
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^11",
-        "phpstan/phpstan": "^1.11",
-        "jane-php/open-api-3": "^7.8",
-        "friendsofphp/php-cs-fixer": "^3.61"
     },
     "config": {
         "allow-plugins": {
@@ -17,12 +30,15 @@
         }
     },
     "require": {
-        "jane-php/open-api-runtime": "^7.8",
-        "symfony/http-client": "^7.1"
+        "php": "^7.4 || ^8.0",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "guzzlehttp/guzzle": "^7.3",
+        "guzzlehttp/psr7": "^1.7 || ^2.0"
     },
-    "extra": {
-        "symfony": {
-            "allow-contrib": "true"
-        }
+    "require-dev": {
+        "phpunit/phpunit": "^8.0 || ^9.0",
+        "phpstan/phpstan": "^1.11"
     }
 }

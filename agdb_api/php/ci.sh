@@ -59,8 +59,11 @@ function format() {
 }
 
 function generate_api() {
-    php vendor/bin/jane-openapi generate
-    sed -i -e 's/localhost/localhost:3000/' ./api/Client.php
+    npx @openapitools/openapi-generator-cli generate \
+        -i ../../agdb_server/openapi/schema.json \
+        -g php \
+        -o ./ \
+        --additional-properties=invokerPackage=Agdb,artifactVersion=0.7.2
     composer dump-autoload -o
 }
 

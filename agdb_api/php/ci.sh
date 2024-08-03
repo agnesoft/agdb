@@ -3,13 +3,15 @@ function coverage() {
     rm -f .agdb_server.agdb
     rm -f agdb_server.agdb
     rm -rf agdb_server_data
-    cargo build --release -p agdb_server
+
     echo "bind: \"0.0.0.0:3000\"
 address: localhost:3000
 basepath: \"\"
 admin: admin
 data_dir: agdb_server_data
 cluster: []" > agdb_server.yaml
+
+    cargo build --release -p agdb_server
     cargo run --release -p agdb_server &
     
     local output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)

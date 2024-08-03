@@ -52,7 +52,7 @@ cluster: []" > agdb_server.yaml
     exit $error_code
 }
 
-function analysis() {
+function analyse() {
     ./vendor/bin/phpstan analyse --level=9 src tests
 }
 
@@ -75,8 +75,8 @@ function generate_tests() {
 
 if [[ "$1" == "coverage" ]]; then
     coverage
-elif [[ "$1" == "analysis" ]]; then
-    analysis
+elif [[ "$1" == "analyse" ]]; then
+    analyse
 elif [[ "$1" == "format" ]]; then
     format
 elif [[ "$1" == "format:check" ]]; then

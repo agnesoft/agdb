@@ -22,3 +22,4 @@ agdb_server.agdb
 agdb_server_data/
 !.github/workflows/agdb_benchmarks.yaml
 !.github/workflows/agdb_server.yaml
+test.log

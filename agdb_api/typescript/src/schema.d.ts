@@ -2513,7 +2513,7 @@ export interface PathsDictionary {
     /**
      * db_delete
      */
-    'post'(
+    'delete'(
       parameters?: Parameters<Paths.DbDelete.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
@@ -2543,7 +2543,7 @@ export interface PathsDictionary {
     /**
      * db_remove
      */
-    'post'(
+    'delete'(
       parameters?: Parameters<Paths.DbRemove.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  
@@ -2583,7 +2583,7 @@ export interface PathsDictionary {
     /**
      * db_user_add
      */
-    'post'(
+    'put'(
       parameters?: Parameters<Paths.DbUserAdd.QueryParameters & Paths.DbUserAdd.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  

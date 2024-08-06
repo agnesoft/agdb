@@ -72,7 +72,7 @@ function generate_api() {
 }
 
 function generate_tests() {
-    echo "TODO"
+    node query_test_generator.js && prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
 }
 
 if [[ "$1" == "coverage" ]]; then

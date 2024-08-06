@@ -191,7 +191,7 @@ pub(crate) async fn copy(
     Ok(StatusCode::CREATED)
 }
 
-#[utoipa::path(post,
+#[utoipa::path(delete,
     path = "/api/v1/db/{owner}/{db}/delete",
     operation_id = "db_delete",
     security(("Token" = [])),
@@ -287,7 +287,7 @@ pub(crate) async fn optimize(
     Ok((StatusCode::OK, Json(db)))
 }
 
-#[utoipa::path(post,
+#[utoipa::path(delete,
     path = "/api/v1/db/{owner}/{db}/remove",
     operation_id = "db_remove",
     security(("Token" = [])),

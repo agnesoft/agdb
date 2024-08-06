@@ -11,6 +11,15 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
     testDir: "./e2e",
+    /* Maximum time one test can run for. */
+    timeout: 30 * 1000,
+    expect: {
+        /**
+         * Maximum time expect() should wait for the condition to be met.
+         * For example in `await expect(locator).toHaveText();`
+         */
+        timeout: 5000,
+    },
     /* Run tests in files in parallel */
     fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -24,10 +33,13 @@ export default defineConfig({
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
         /* Base URL to use in actions like `await page.goto('/')`. */
-        // baseURL: 'http://127.0.0.1:3000',
+        baseURL: "http://localhost:5001",
 
         /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
         trace: "on-first-retry",
+        
+        /* Only on CI systems run the tests headless */
+        headless: !!process.env.CI,
     },
 
     /* Configure projects for major browsers */
@@ -48,14 +60,14 @@ export default defineConfig({
         },
 
         /* Test against mobile viewports. */
-        // {
-        //   name: 'Mobile Chrome',
-        //   use: { ...devices['Pixel 5'] },
-        // },
-        // {
-        //   name: 'Mobile Safari',
-        //   use: { ...devices['iPhone 12'] },
-        // },
+        {
+            name: "Mobile Chrome",
+            use: { ...devices["Pixel 5"] },
+        },
+        {
+            name: "Mobile Safari",
+            use: { ...devices["iPhone 12"] },
+        },
 
         /* Test against branded browsers. */
         // {
@@ -71,7 +83,7 @@ export default defineConfig({
     /* Run your local dev server before starting the tests */
     webServer: {
         command: "npm run start",
-        url: "http://127.0.0.1:5001",
+        url: "http://localhost:5001",
         reuseExistingServer: !process.env.CI,
     },
 });

@@ -1,20 +1,25 @@
-import { fileURLToPath, URL } from "node:url";
-import { configDefaults, coverageConfigDefaults } from "vitest/config";
-import { defineVitestConfig } from "@nuxt/test-utils/config";
+import {
+    defineConfig,
+    coverageConfigDefaults,
+    configDefaults,
+} from "vitest/config";
+import react from "@vitejs/plugin-react";
+import path from "path";
 
-export default defineVitestConfig({
+export default defineConfig({
+    plugins: [react()],
     test: {
-        environment: "nuxt",
+        environment: "jsdom",
         exclude: [...configDefaults.exclude, "e2e/*"],
-        root: fileURLToPath(new URL("./", import.meta.url)),
+        root: path.resolve(__dirname, "."),
         coverage: {
             provider: "v8",
             all: true,
             exclude: [
                 ...coverageConfigDefaults.exclude,
                 "e2e/*",
-                "*.config.ts",
-                "*/**/*.vue",
+                "*.config.*",
+                "middleware.ts",
             ],
         },
     },
@@ -23,7 +28,7 @@ export default defineVitestConfig({
     },
     resolve: {
         alias: {
-            "@": fileURLToPath(new URL(".", import.meta.url)),
+            "@": path.resolve(__dirname, "."),
         },
     },
 });

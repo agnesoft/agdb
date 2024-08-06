@@ -1,9 +1,0 @@
-{
-    "*": {
-        "display": "hidden"
-    },
-    "enterprise": {
-        "title": "Enterprise",
-        "display": "visible"
-    }
-}

@@ -1,9 +1,0 @@
-{
-    "*": {
-        "display": "hidden"
-    },
-    "blog": {
-        "title": "Blog",
-        "display": "visible"
-    }
-}

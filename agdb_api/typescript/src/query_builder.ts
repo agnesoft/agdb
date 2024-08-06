@@ -476,7 +476,7 @@ class InsertEdgesBuilder {
         return new InsertEdgesFromBuilder(this.data);
     }
 
-    ids(ids: BuilderQueryIds) {
+    ids(ids: BuilderQueryIds): InsertEdgesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertEdgesIdsBuilder(this.data);
     }

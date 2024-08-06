@@ -308,7 +308,7 @@ class InsertNodesBuilder {
         return new InsertNodesCountBuilder(this.data);
     }
 
-    ids(ids: BuilderQueryIds) {
+    ids(ids: BuilderQueryIds): InsertNodesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertNodesIdsBuilder(this.data);
     }

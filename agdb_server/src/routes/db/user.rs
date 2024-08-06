@@ -18,7 +18,7 @@ pub(crate) struct DbUserRoleParam {
     pub(crate) db_role: DbUserRole,
 }
 
-#[utoipa::path(post,
+#[utoipa::path(put,
     path = "/api/v1/db/{owner}/{db}/user/{username}/add",
     operation_id = "db_user_add",
     security(("Token" = [])),

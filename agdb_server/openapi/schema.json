@@ -1237,7 +1237,7 @@
       }
     },
     "/api/v1/db/{owner}/{db}/delete": {
-      "post": {
+      "delete": {
         "tags": [
           "routes::db"
         ],
@@ -1399,7 +1399,7 @@
       }
     },
     "/api/v1/db/{owner}/{db}/remove": {
-      "post": {
+      "delete": {
         "tags": [
           "routes::db"
         ],
@@ -1598,7 +1598,7 @@
       }
     },
     "/api/v1/db/{owner}/{db}/user/{username}/add": {
-      "post": {
+      "put": {
         "tags": [
           "routes::db::user"
         ],

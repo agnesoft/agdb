@@ -5,6 +5,7 @@ namespace Agnesoft\Agdb;
 use Agdb\Model\DbKeyValue;
 use Agdb\Model\DbValue;
 use Agdb\Model\InsertAliasesQuery;
+use Agdb\Model\InsertEdgesQuery;
 use Agdb\Model\InsertValuesQuery;
 use Agdb\Model\QueryId;
 use Agdb\Model\QueryIds;
@@ -82,6 +83,34 @@ function to_db_value($value): DbValue
     throw new \InvalidArgumentException('Unknown $value type', 1);
 }
 
+function to_multi_values($data): QueryValues
+{
+    $values = [];
+
+    foreach ($data as $element) {
+        $element_values = [];
+
+        foreach ($element as $key => $value) {
+            $element_values[] = new DbKeyValue(['key' => to_db_value($key), 'value' => to_db_value($value)]);
+        }
+
+        $values[] = $element_values;
+    }
+
+    return new QueryValues(['multi' => $values]);
+}
+
+function to_single_values($data): QueryValues
+{
+    $values = [];
+
+    foreach ($data as $key => $value) {
+        $values[] = new DbKeyValue(['key' => to_db_value($key), 'value' => to_db_value($value)]);
+    }
+
+    return new QueryValues(['single' => $values]);
+}
+
 class InsertAliasesIdsBuilder
 {
     private InsertAliasesQuery $data;
@@ -120,6 +149,160 @@ class InsertValuesIdsBuilder
     function __construct(InsertValuesQuery $data)
     {
         $this->data = $data;
+    }
+}
+
+class InsertEdgesToEachBuilder
+{
+    private InsertEdgesQuery $data;
+
+    public function __construct(InsertEdgesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function values($values): InsertEdgesValuesBuilder
+    {
+        $this->data->setValues(to_multi_values($values));
+        return new InsertEdgesValuesBuilder($this->data);
+    }
+
+    public function values_uniform($values): InsertEdgesValuesBuilder
+    {
+        $this->data->setValues(to_single_values($values));
+        return new InsertEdgesValuesBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['insert_edges' => $this->data]);
+    }
+}
+
+class InsertEdgesValuesBuilder
+{
+    private InsertEdgesQuery $data;
+
+    public function __construct(InsertEdgesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['insert_edges' => $this->data]);
+    }
+}
+
+class InsertEdgesToBuilder
+{
+    private InsertEdgesQuery $data;
+
+    public function __construct(InsertEdgesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function each(): InsertEdgesToEachBuilder
+    {
+        $this->data->setEach(true);
+        return new InsertEdgesToEachBuilder($this->data);
+    }
+
+    public function values($values): InsertEdgesValuesBuilder
+    {
+        $this->data->setValues(to_multi_values($values));
+        return new InsertEdgesValuesBuilder($this->data);
+    }
+
+    public function values_uniform($values): InsertEdgesValuesBuilder
+    {
+        $this->data->setValues(to_single_values($values));
+        return new InsertEdgesValuesBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['insert_edges' => $this->data]);
+    }
+}
+
+class InsertEdgesFromBuilder
+{
+    private InsertEdgesQuery $data;
+
+    public function __construct(InsertEdgesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function to(string|int|array|QueryId|SearchQuery|QueryIds $ids): InsertEdgesToBuilder
+    {
+        $this->data->setTo(to_query_ids($ids));
+        return new InsertEdgesToBuilder($this->data);
+    }
+}
+
+class InsertEdgesIdsBuilder
+{
+    private QueryIds $data;
+
+    public function __construct(QueryIds $ids)
+    {
+        $this->data = $ids;
+    }
+
+    public function from(string|int|array|QueryId|SearchQuery|QueryIds $ids): InsertEdgesFromBuilder
+    {
+        return new InsertEdgesFromBuilder(new InsertEdgesQuery(['ids' => $this->data]));
+    }
+}
+
+class InsertEdgesBuilder
+{
+    public function from(string|int|array|QueryId|SearchQuery|QueryIds $ids): InsertEdgesFromBuilder
+    {
+        return new InsertEdgesFromBuilder(new InsertEdgesQuery(['from' => to_query_ids($ids)]));
+    }
+
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): InsertEdgesIdsBuilder
+    {
+        return new InsertEdgesIdsBuilder(to_query_ids($ids));
+    }
+}
+
+class InsertNodesBuilder
+{
+
+}
+
+class InsertIndexBuilder
+{
+    private DbValue $data;
+
+    public function __construct(DbValue $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['insert_index' => $this->data]);
+    }
+}
+
+class InsertValuesBuilder
+{
+    private QueryValues $data;
+
+    public function __construct(QueryValues $data)
+    {
+        $this->data = $data;
+    }
+
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): InsertValuesIdsBuilder
+    {
+        return new InsertValuesIdsBuilder(new InsertValuesQuery(['values' => $this->data, 'ids' => to_query_ids($ids)]));
     }
 }
 
@@ -162,6 +345,31 @@ class InsertBuilder
         }
 
         return new InsertValuesIdsBuilder($data);
+    }
+
+    public function edges(): InsertEdgesBuilder
+    {
+        return new InsertEdgesBuilder();
+    }
+
+    public function index(mixed $key): InsertIndexBuilder
+    {
+        return new InsertIndexBuilder(to_db_value($key));
+    }
+
+    public function nodes(): InsertNodesBuilder
+    {
+        return new InsertNodesBuilder();
+    }
+
+    public function values(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(to_multi_values($data));
+    }
+
+    public function values_uniform(array $data): InsertValuesBuilder
+    {
+        return new InsertValuesBuilder(to_single_values($data));
     }
 }
 

@@ -2,16 +2,20 @@
 
 namespace Agnesoft\Agdb;
 
+use stdClass;
 use Agdb\Model\DbKeyValue;
 use Agdb\Model\DbValue;
 use Agdb\Model\InsertAliasesQuery;
 use Agdb\Model\InsertEdgesQuery;
+use Agdb\Model\InsertNodesQuery;
 use Agdb\Model\InsertValuesQuery;
 use Agdb\Model\QueryId;
 use Agdb\Model\QueryIds;
 use Agdb\Model\QueryType;
 use Agdb\Model\QueryValues;
 use Agdb\Model\SearchQuery;
+use Agdb\Model\SelectValuesQuery;
+use Agdb\Model\SelectEdgeCountQuery;
 
 function to_query_ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): QueryIds
 {
@@ -81,6 +85,18 @@ function to_db_value($value): DbValue
     }
 
     throw new \InvalidArgumentException('Unknown $value type', 1);
+}
+
+function to_db_keys(array $data): array
+{
+    $keys = [];
+
+    foreach ($data as $key) {
+        $keys[] = to_db_value($key);
+    }
+
+    return $keys;
+
 }
 
 function to_multi_values($data): QueryValues
@@ -271,9 +287,124 @@ class InsertEdgesBuilder
     }
 }
 
+class InsertNodesValuesBuilder
+{
+    private InsertNodesQuery $data;
+
+    public function __construct(InsertNodesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['insert_nodes' => $this->data]);
+    }
+}
+
+class InsertNodesAliasesBuilder
+{
+    private InsertNodesQuery $data;
+
+    public function __construct(InsertNodesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function values($values): InsertNodesValuesBuilder
+    {
+        $this->data->setValues(to_multi_values($values));
+        return new InsertNodesValuesBuilder($this->data);
+    }
+
+    public function values_uniform($values): InsertNodesValuesBuilder
+    {
+        $this->data->setValues(to_single_values($values));
+        return new InsertNodesValuesBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['insert_nodes' => $this->data]);
+    }
+}
+
+class InsertNodesCountBuilder
+{
+    private InsertNodesQuery $data;
+
+    public function __construct(InsertNodesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function values_uniform($values): InsertNodesValuesBuilder
+    {
+        $this->data->setValues(to_single_values($values));
+        return new InsertNodesValuesBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['insert_nodes' => $this->data]);
+    }
+}
+
+class InsertNodesIdsBuilder
+{
+    private InsertNodesQuery $data;
+
+    public function __construct(InsertNodesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function aliases(string|array $names): InsertNodesAliasesBuilder
+    {
+        $this->data->setAliases(is_array($names) ? $names : array($names));
+        return new InsertNodesAliasesBuilder($this->data);
+    }
+
+    public function count(int $count): InsertNodesCountBuilder
+    {
+        $this->data->setCount($count);
+        return new InsertNodesCountBuilder($this->data);
+    }
+
+    public function values($values): InsertNodesValuesBuilder
+    {
+        $this->data->setValues(to_multi_values($values));
+        return new InsertNodesValuesBuilder($this->data);
+    }
+
+    public function values_uniform($values): InsertNodesValuesBuilder
+    {
+        $this->data->setValues(to_single_values($values));
+        return new InsertNodesValuesBuilder($this->data);
+    }
+}
+
 class InsertNodesBuilder
 {
+    public function aliases(string|array $names): InsertNodesAliasesBuilder
+    {
+        return new InsertNodesAliasesBuilder(new InsertNodesQuery(['aliases' => is_array($names) ? $names : array($names)]));
+    }
 
+    public function count(int $count): InsertNodesCountBuilder
+    {
+        return new InsertNodesCountBuilder(new InsertNodesQuery(['count' => $count]));
+    }
+
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): InsertNodesIdsBuilder
+    {
+        return new InsertNodesIdsBuilder(new InsertNodesQuery(['ids' => to_query_ids($ids)]));
+    }
+
+    public function values($values): InsertNodesValuesBuilder
+    {
+        return new InsertNodesValuesBuilder(new InsertNodesQuery(['values' => to_multi_values($values)]));
+    }
 }
 
 class InsertIndexBuilder
@@ -373,9 +504,87 @@ class InsertBuilder
     }
 }
 
+class RemoveAliasesBuilder
+{
+    private array $data;
+
+    public function __construct(array $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['remove_aliases' => $this->data]);
+    }
+}
+
+class RemoveIdsBuilder
+{
+    private QueryIds $data;
+
+    public function __construct(QueryIds $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['remove' => $this->data]);
+    }
+}
+
+class RemoveIndexBuilder
+{
+    private DbValue $data;
+
+    public function __construct(DbValue $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['remove_index' => $this->data]);
+    }
+}
+
+class RemoveValuesBuilder
+{
+    private SelectValuesQuery $data;
+
+    public function __construct(SelectValuesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['remove_values' => $this->data]);
+    }
+}
+
 class RemoveBuilder
 {
+    public function aliases(string|array $names): RemoveAliasesBuilder
+    {
+        return new RemoveAliasesBuilder(is_array($names) ? $names : array($names));
+    }
 
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): RemoveIdsBuilder
+    {
+        return new RemoveIdsBuilder(to_query_ids($ids));
+    }
+
+    public function index(DbValue $value): RemoveIndexBuilder
+    {
+        return new RemoveIndexBuilder($value);
+    }
+
+    public function values(array $data): RemoveValuesBuilder
+    {
+        return new RemoveValuesBuilder(new SelectValuesQuery(['keys' => to_db_keys($data)]));
+    }
 }
 
 class SearchBuilder
@@ -383,9 +592,215 @@ class SearchBuilder
 
 }
 
+class SelectAliasesIdsBuilder
+{
+    private QueryIds $data;
+
+    public function __construct(QueryIds $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['select_aliases' => $this->data]);
+    }
+}
+
+class SelectAliasesBuilder
+{
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectAliasesIdsBuilder
+    {
+        return new SelectAliasesIdsBuilder(to_query_ids($ids));
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['select_all_aliases' => new stdClass()]);
+    }
+}
+
+class SelectEdgeCountIdsBuilder
+{
+    private SelectEdgeCountQuery $data;
+
+    public function __construct(SelectEdgeCountQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['select_edge_count' => $this->data]);
+    }
+}
+
+class SelectEdgeCountBuilder
+{
+    private bool $from;
+    private bool $to;
+
+    public function __construct(bool $from, bool $to)
+    {
+        $this->from = $from;
+        $this->to = $to;
+    }
+
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectEdgeCountIdsBuilder
+    {
+        return new SelectEdgeCountIdsBuilder(new SelectEdgeCountQuery(['from' => $this->from, 'to' => $this->to, 'ids' => to_query_ids($ids)]));
+    }
+}
+
+class SelectValuesIdsBuilder
+{
+    private SelectValuesQuery $data;
+
+    public function __construct(SelectValuesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectValuesBuilder
+    {
+        return new SelectValuesBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['select_values' => $this->data]);
+    }
+}
+
+class SelectValuesBuilder
+{
+    private SelectValuesQuery $data;
+
+    public function __construct(SelectValuesQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectValuesBuilder
+    {
+        $this->data->setIds(to_query_ids($ids));
+        return new SelectValuesBuilder($this->data);
+    }
+}
+
+class SelectIndexesBuilder
+{
+    public function query(): QueryType
+    {
+        return new QueryType(['select_all_indexes' => new stdClass()]);
+    }
+}
+
+class SelectKeysIdsBuilder
+{
+    private QueryIds $data;
+
+    public function __construct(QueryIds $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['select_keys' => $this->data]);
+    }
+}
+
+class SelectKeysBuilder
+{
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectKeysIdsBuilder
+    {
+        return new SelectKeysIdsBuilder(to_query_ids($ids));
+    }
+}
+
+class SelectKeyCountIdsBuilder
+{
+    private QueryIds $data;
+
+    public function __construct(QueryIds $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['select_key_count' => $this->data]);
+    }
+}
+
+class SelectKeyCountBuilder
+{
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectKeyCountIdsBuilder
+    {
+        return new SelectKeyCountIdsBuilder(to_query_ids($ids));
+    }
+}
+
+class SelectNodeCountBuilder
+{
+    public function query(): QueryType
+    {
+        return new QueryType(['select_node_count' => new stdClass()]);
+    }
+}
+
 class SelectBuilder
 {
+    public function aliases(): SelectAliasesBuilder
+    {
+        return new SelectAliasesBuilder();
+    }
 
+    public function edge_count_to(): SelectEdgeCountBuilder
+    {
+        return new SelectEdgeCountBuilder(false, true);
+    }
+
+    public function edge_count_from(): SelectEdgeCountBuilder
+    {
+        return new SelectEdgeCountBuilder(true, false);
+    }
+
+    public function edge_count(): SelectEdgeCountBuilder
+    {
+        return new SelectEdgeCountBuilder(true, true);
+    }
+
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectValuesIdsBuilder
+    {
+        return new SelectValuesIdsBuilder(new SelectValuesQuery(['ids' => to_query_ids($ids), 'keys' => []]));
+    }
+
+    public function indexes(): SelectIndexesBuilder
+    {
+        return new SelectIndexesBuilder();
+    }
+
+    public function keys(): SelectKeysBuilder
+    {
+        return new SelectKeysBuilder();
+    }
+
+    public function key_count(): SelectKeyCountBuilder
+    {
+        return new SelectKeyCountBuilder();
+    }
+
+    public function node_count(): SelectNodeCountBuilder
+    {
+        return new SelectNodeCountBuilder();
+    }
+
+    public function values(array $data): SelectValuesBuilder
+    {
+        return new SelectValuesBuilder(new SelectValuesQuery(['ids' => [], 'keys' => to_db_keys($data)]));
+    }
 }
 
 class QueryBuilder

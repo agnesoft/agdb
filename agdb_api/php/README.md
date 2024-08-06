@@ -97,14 +97,14 @@ Class | Method | HTTP request | Description
 *RoutesdbApi* | [**dbBackup**](docs/Api/RoutesdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 
 *RoutesdbApi* | [**dbClear**](docs/Api/RoutesdbApi.md#dbclear) | **POST** /api/v1/db/{owner}/{db}/clear | 
 *RoutesdbApi* | [**dbCopy**](docs/Api/RoutesdbApi.md#dbcopy) | **POST** /api/v1/db/{owner}/{db}/copy | 
-*RoutesdbApi* | [**dbDelete**](docs/Api/RoutesdbApi.md#dbdelete) | **POST** /api/v1/db/{owner}/{db}/delete | 
+*RoutesdbApi* | [**dbDelete**](docs/Api/RoutesdbApi.md#dbdelete) | **DELETE** /api/v1/db/{owner}/{db}/delete | 
 *RoutesdbApi* | [**dbExec**](docs/Api/RoutesdbApi.md#dbexec) | **POST** /api/v1/db/{owner}/{db}/exec | 
 *RoutesdbApi* | [**dbList**](docs/Api/RoutesdbApi.md#dblist) | **GET** /api/v1/db/list | 
 *RoutesdbApi* | [**dbOptimize**](docs/Api/RoutesdbApi.md#dboptimize) | **POST** /api/v1/db/{owner}/{db}/optimize | 
-*RoutesdbApi* | [**dbRemove**](docs/Api/RoutesdbApi.md#dbremove) | **POST** /api/v1/db/{owner}/{db}/remove | 
+*RoutesdbApi* | [**dbRemove**](docs/Api/RoutesdbApi.md#dbremove) | **DELETE** /api/v1/db/{owner}/{db}/remove | 
 *RoutesdbApi* | [**dbRename**](docs/Api/RoutesdbApi.md#dbrename) | **POST** /api/v1/db/{owner}/{db}/rename | 
 *RoutesdbApi* | [**dbRestore**](docs/Api/RoutesdbApi.md#dbrestore) | **POST** /api/v1/db/{owner}/{db}/restore | 
-*RoutesdbuserApi* | [**dbUserAdd**](docs/Api/RoutesdbuserApi.md#dbuseradd) | **POST** /api/v1/db/{owner}/{db}/user/{username}/add | 
+*RoutesdbuserApi* | [**dbUserAdd**](docs/Api/RoutesdbuserApi.md#dbuseradd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add | 
 *RoutesdbuserApi* | [**dbUserList**](docs/Api/RoutesdbuserApi.md#dbuserlist) | **GET** /api/v1/db/{owner}/{db}/user/list | 
 *RoutesdbuserApi* | [**dbUserRemove**](docs/Api/RoutesdbuserApi.md#dbuserremove) | **POST** /api/v1/db/{owner}/{db}/user/{username}/remove | 
 *RoutesuserApi* | [**userChangePassword**](docs/Api/RoutesuserApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 

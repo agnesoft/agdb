@@ -9,11 +9,11 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**dbBackup()**](RoutesdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
 | [**dbClear()**](RoutesdbApi.md#dbClear) | **POST** /api/v1/db/{owner}/{db}/clear |  |
 | [**dbCopy()**](RoutesdbApi.md#dbCopy) | **POST** /api/v1/db/{owner}/{db}/copy |  |
-| [**dbDelete()**](RoutesdbApi.md#dbDelete) | **POST** /api/v1/db/{owner}/{db}/delete |  |
+| [**dbDelete()**](RoutesdbApi.md#dbDelete) | **DELETE** /api/v1/db/{owner}/{db}/delete |  |
 | [**dbExec()**](RoutesdbApi.md#dbExec) | **POST** /api/v1/db/{owner}/{db}/exec |  |
 | [**dbList()**](RoutesdbApi.md#dbList) | **GET** /api/v1/db/list |  |
 | [**dbOptimize()**](RoutesdbApi.md#dbOptimize) | **POST** /api/v1/db/{owner}/{db}/optimize |  |
-| [**dbRemove()**](RoutesdbApi.md#dbRemove) | **POST** /api/v1/db/{owner}/{db}/remove |  |
+| [**dbRemove()**](RoutesdbApi.md#dbRemove) | **DELETE** /api/v1/db/{owner}/{db}/remove |  |
 | [**dbRename()**](RoutesdbApi.md#dbRename) | **POST** /api/v1/db/{owner}/{db}/rename |  |
 | [**dbRestore()**](RoutesdbApi.md#dbRestore) | **POST** /api/v1/db/{owner}/{db}/restore |  |
 

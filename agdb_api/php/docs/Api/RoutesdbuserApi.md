@@ -4,7 +4,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
-| [**dbUserAdd()**](RoutesdbuserApi.md#dbUserAdd) | **POST** /api/v1/db/{owner}/{db}/user/{username}/add |  |
+| [**dbUserAdd()**](RoutesdbuserApi.md#dbUserAdd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add |  |
 | [**dbUserList()**](RoutesdbuserApi.md#dbUserList) | **GET** /api/v1/db/{owner}/{db}/user/list |  |
 | [**dbUserRemove()**](RoutesdbuserApi.md#dbUserRemove) | **POST** /api/v1/db/{owner}/{db}/user/{username}/remove |  |
 

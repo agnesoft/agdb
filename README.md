@@ -56,7 +56,7 @@
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
 
 - [Key Features](#key-features)
-- [At a glance](#at-a-glance)
+- [At a glance](#at-a-glance-db)
 - [Crate Features](#crate-features)
 - [Decision Tree](#decision-tree)
 - [Roadmap](#roadmap)

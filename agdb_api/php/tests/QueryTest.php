@@ -1,10 +1,11 @@
+
 // GENERATED. DO NOT MODIFY AS ANY CHANGES WILL BE LOST.
 // query_test_generator.js
 <?php
 use Agnesoft\Agdb\QueryBuilder;
+use Agnesoft\Agdb\KeyOrder;
 use Agdb\Model\Comparison;
 use Agdb\Model\CountComparison;
-use Agdb\Model\DbKeyOrder;
 
 class T
 {
@@ -661,7 +662,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([DbKeyOrder::Desc("age"), DbKeyOrder::Asc("name")])
+            ->order_by([KeyOrder::Desc("age"), KeyOrder::Asc("name")])
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[77][1]);
@@ -682,7 +683,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([DbKeyOrder::Desc("k")])
+            ->order_by([KeyOrder::Desc("k")])
             ->offset(10)
             ->query();
         $json = json_encode($query->jsonSerialize());
@@ -692,7 +693,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([DbKeyOrder::Desc("k")])
+            ->order_by([KeyOrder::Desc("k")])
             ->limit(5)
             ->query();
         $json = json_encode($query->jsonSerialize());
@@ -702,7 +703,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([DbKeyOrder::Desc("k")])
+            ->order_by([KeyOrder::Desc("k")])
             ->offset(10)
             ->limit(5)
             ->query();
@@ -921,7 +922,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([DbKeyOrder::Asc("k")])
+            ->order_by([KeyOrder::Asc("k")])
             ->where()
             ->node()
             ->query();
@@ -972,7 +973,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->to(1)
-            ->order_by([DbKeyOrder::Asc("k")])
+            ->order_by([KeyOrder::Asc("k")])
             ->where()
             ->node()
             ->query();

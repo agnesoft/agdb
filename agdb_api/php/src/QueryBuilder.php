@@ -3,6 +3,9 @@
 namespace Agnesoft\Agdb;
 
 use stdClass;
+use Agdb\Model\Comparison;
+use Agdb\Model\QueryCondition;
+use Agdb\Model\QueryConditionData;
 use Agdb\Model\DbKeyValue;
 use Agdb\Model\DbValue;
 use Agdb\Model\InsertAliasesQuery;
@@ -16,6 +19,39 @@ use Agdb\Model\QueryValues;
 use Agdb\Model\SearchQuery;
 use Agdb\Model\SelectValuesQuery;
 use Agdb\Model\SelectEdgeCountQuery;
+use Agdb\Model\SearchQueryAlgorithm;
+use Agdb\Model\QueryConditionDataOneOf5KeyValue;
+use Agdb\Model\DbKeyOrder;
+
+class KeyOrder
+{
+    public static function Asc(int|float|string|array $value): DbKeyOrder
+    {
+        return new DbKeyOrder(['asc' => new stdClass()]);
+    }
+
+    public static function Desc(int|float|string|array $value): DbKeyOrder
+    {
+        return new DbKeyOrder(['desc' => new stdClass()]);
+    }
+}
+
+function to_query_id(string|int|QueryId $id): QueryId
+{
+    if (is_string($id)) {
+        return new QueryId(['alias' => $id]);
+    }
+
+    if (is_int($id)) {
+        return new QueryId(['id' => $id]);
+    }
+
+    if (get_class($id) === QueryId::class) {
+        return $id;
+    }
+
+    throw new \InvalidArgumentException('Unsupported $id type', 1);
+}
 
 function to_query_ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): QueryIds
 {
@@ -49,10 +85,10 @@ function to_query_ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): Query
         return $ids;
     }
 
-    throw new \InvalidArgumentException('Unknown $ids type', 1);
+    throw new \InvalidArgumentException('Unsupported $ids type', 1);
 }
 
-function to_db_value($value): DbValue
+function to_db_value(bool|int|float|string|array $value): DbValue
 {
     if (is_string($value)) {
         return new DbValue(['string' => $value]);
@@ -84,7 +120,7 @@ function to_db_value($value): DbValue
         }
     }
 
-    throw new \InvalidArgumentException('Unknown $value type', 1);
+    throw new \InvalidArgumentException('Unsupported $value type', 1);
 }
 
 function to_db_keys(array $data): array
@@ -99,7 +135,7 @@ function to_db_keys(array $data): array
 
 }
 
-function to_multi_values($data): QueryValues
+function to_multi_values(array $data): QueryValues
 {
     $values = [];
 
@@ -116,7 +152,7 @@ function to_multi_values($data): QueryValues
     return new QueryValues(['multi' => $values]);
 }
 
-function to_single_values($data): QueryValues
+function to_single_values(array $data): QueryValues
 {
     $values = [];
 
@@ -165,6 +201,11 @@ class InsertValuesIdsBuilder
     function __construct(InsertValuesQuery $data)
     {
         $this->data = $data;
+    }
+
+    function query(): QueryType
+    {
+        return new QueryType(['insert_values' => $this->data]);
     }
 }
 
@@ -558,6 +599,12 @@ class RemoveValuesBuilder
         $this->data = $data;
     }
 
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): RemoveValuesBuilder
+    {
+        $this->data->setIds(to_query_ids($ids));
+        return $this;
+    }
+
     public function query(): QueryType
     {
         return new QueryType(['remove_values' => $this->data]);
@@ -576,9 +623,9 @@ class RemoveBuilder
         return new RemoveIdsBuilder(to_query_ids($ids));
     }
 
-    public function index(DbValue $value): RemoveIndexBuilder
+    public function index(int|float|string|DbValue $value): RemoveIndexBuilder
     {
-        return new RemoveIndexBuilder($value);
+        return new RemoveIndexBuilder(to_db_value($value));
     }
 
     public function values(array $data): RemoveValuesBuilder
@@ -587,9 +634,266 @@ class RemoveBuilder
     }
 }
 
+class SearchAlgorithmBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function from(string|int|QueryId $id): SearchFromBuilder
+    {
+        $this->data->setOrigin(to_query_id($id));
+        return new SearchFromBuilder($this->data);
+    }
+
+    public function to(string|int|QueryId $id): SearchToBuilder
+    {
+        $this->data->setDestination(to_query_id($id));
+        return new SearchToBuilder($this->data);
+    }
+}
+
+class SearchIndexValueBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['search' => $this->data]);
+    }
+}
+
+class SearchIndexBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function value(int|float|string|array $v): SearchIndexValueBuilder
+    {
+        $this->data->getConditions()[0]->getData()->getKeyValue()->setValue(new Comparison(['equal' => to_db_value($v)]));
+        return new SearchIndexValueBuilder($this->data);
+    }
+}
+
+class SearchOrderByBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchLimitBuilder
+    {
+        $this->data->setLimit($limit);
+        return new SearchLimitBuilder($this->data);
+    }
+
+    public function offset(int $offset): SearchOffsetBuilder
+    {
+        $this->data->setOffset($offset);
+        return new SearchOffsetBuilder($this->data);
+    }
+
+    public function where(): SearchWhereBuilder
+    {
+        return new SearchWhereBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['search' => $this->data]);
+    }
+}
+
+class SearchWhereBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['search' => $this->data]);
+    }
+}
+
+class SearchFromBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchLimitBuilder
+    {
+        $this->data->setLimit($limit);
+        return new SearchLimitBuilder($this->data);
+    }
+
+    public function offset(int $offset): SearchOffsetBuilder
+    {
+        $this->data->setOffset($offset);
+        return new SearchOffsetBuilder($this->data);
+    }
+
+    public function order_by(array $data): SearchOrderByBuilder
+    {
+        $this->data->setOrderBy(is_array($data) ? $data : array($data));
+        return new SearchOrderByBuilder($this->data);
+    }
+
+    public function to(string|int|QueryId $id): SearchToBuilder
+    {
+        $this->data->setDestination(to_query_id($id));
+        return new SearchToBuilder($this->data);
+    }
+
+    public function where(): SearchWhereBuilder
+    {
+        return new SearchWhereBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['search' => $this->data]);
+    }
+}
+
+class SearchLimitBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function where(): SearchWhereBuilder
+    {
+        return new SearchWhereBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['search' => $this->data]);
+    }
+}
+
+class SearchOffsetBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchLimitBuilder
+    {
+        $this->data->setLimit($limit);
+        return new SearchLimitBuilder($this->data);
+    }
+
+    public function where(): SearchWhereBuilder
+    {
+        return new SearchWhereBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['search' => $this->data]);
+    }
+}
+
+class SearchToBuilder
+{
+    private SearchQuery $data;
+
+    public function __construct(SearchQuery $data)
+    {
+        $this->data = $data;
+    }
+
+    public function limit(int $limit): SearchLimitBuilder
+    {
+        $this->data->setLimit($limit);
+        return new SearchLimitBuilder($this->data);
+    }
+
+    public function offset(int $offset): SearchOffsetBuilder
+    {
+        $this->data->setOffset($offset);
+        return new SearchOffsetBuilder($this->data);
+    }
+
+    public function order_by(array $data): SearchOrderByBuilder
+    {
+        $this->data->setOrderBy(is_array($data) ? $data : array($data));
+        return new SearchOrderByBuilder($this->data);
+    }
+
+    public function where(): SearchWhereBuilder
+    {
+        return new SearchWhereBuilder($this->data);
+    }
+
+    public function query(): QueryType
+    {
+        return new QueryType(['search' => $this->data]);
+    }
+}
+
 class SearchBuilder
 {
+    public function breadth_first(): SearchAlgorithmBuilder
+    {
+        return new SearchAlgorithmBuilder(new SearchQuery(['algorithm' => SearchQueryAlgorithm::BREADTH_FIRST]));
+    }
 
+    public function depth_first(): SearchAlgorithmBuilder
+    {
+        return new SearchAlgorithmBuilder(new SearchQuery(['algorithm' => SearchQueryAlgorithm::DEPTH_FIRST]));
+    }
+
+    public function elements(): SearchToBuilder
+    {
+        return new SearchToBuilder(new SearchQuery(['algorithm' => SearchQueryAlgorithm::ELEMENTS]));
+    }
+
+    public function from(string|int|QueryId $id): SearchFromBuilder
+    {
+        return new SearchFromBuilder(new SearchQuery(['origin' => to_query_id($id)]));
+    }
+
+    public function index(int|float|string|array $key): SearchIndexBuilder
+    {
+        $condition = new QueryCondition(['data' => new QueryConditionData(['key_value' => new QueryConditionDataOneOf5KeyValue(['key' => to_db_value($key)])])]);
+        return new SearchIndexBuilder(new SearchQuery(['algorithm' => SearchQueryAlgorithm::INDEX, 'conditions' => [$condition]]));
+    }
+
+    public function to(string|int|QueryId $id): SearchToBuilder
+    {
+        return new SearchToBuilder(new SearchQuery(['destination' => to_query_id($id)]));
+    }
 }
 
 class SelectAliasesIdsBuilder
@@ -661,11 +965,6 @@ class SelectValuesIdsBuilder
         $this->data = $data;
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectValuesBuilder
-    {
-        return new SelectValuesBuilder($this->data);
-    }
-
     public function query(): QueryType
     {
         return new QueryType(['select_values' => $this->data]);
@@ -681,10 +980,10 @@ class SelectValuesBuilder
         $this->data = $data;
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectValuesBuilder
+    public function ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): SelectValuesIdsBuilder
     {
         $this->data->setIds(to_query_ids($ids));
-        return new SelectValuesBuilder($this->data);
+        return new SelectValuesIdsBuilder($this->data);
     }
 }
 

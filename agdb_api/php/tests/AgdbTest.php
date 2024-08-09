@@ -1,7 +1,7 @@
 <?php
 use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
-
+use Agnesoft\Agdb\DbKeyOrderBuilder;
 
 
 final class AgdbTest extends TestCase
@@ -24,10 +24,16 @@ final class AgdbTest extends TestCase
     //     );
     // }
 
-    // public function testQueryBuilder0(): void
+    // public function testQueryBuilder108(): void
     // {
-    //     $query = QueryBuilder::insert()->aliases("a")->ids(1)->query();
-    //     $json = json_encode($query->jsonSerialize());
-    //     $this->assertJsonStringEqualsJsonString($json, json_encode(self::$test_queries[0][1]));
+    //     $query = QueryBuilder::search()
+    //         ->to(1)
+    //         ->order_by([DbKeyOrderBuilder::Asc("k")])
+    //         ->where()
+    //         ->node()
+    //         ->query();
+    //     $json = $query->jsonSerialize();
+    //     print (json_encode($json));
+    //     $this->assertEquals(self::$test_queries[108][1], $json);
     // }
 }

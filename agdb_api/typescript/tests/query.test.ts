@@ -81,7 +81,7 @@ describe("query tests", () => {
         expect(query).toEqual(test_queries[8][1]);
     });
 
-    it(`QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().values_uniform(vec![("k",1).into(),("k",2).into()]).query()`, () => {
+    it(`QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().values_uniform(vec![("k",1).into(),(1,10).into()]).query()`, () => {
         let query = QueryBuilder.insert()
             .edges()
             .from([1, 2])
@@ -89,7 +89,7 @@ describe("query tests", () => {
             .each()
             .values_uniform([
                 ["k", 1],
-                ["k", 2],
+                [1, 10],
             ])
             .query();
         expect(query).toEqual(test_queries[9][1]);

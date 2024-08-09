@@ -20,23 +20,22 @@ final class QueryTest extends \\PHPUnit\\Framework\\TestCase {
     }`;
 
 for (let index in test_queries) {
-    let name = test_queries[index][0];
     let builder = test_queries[index][0];
     builder = builder.replace(/&/g, "");
     builder = builder.replace(/T::default\(\)/g, "new T()");
     builder = builder.replace(/vec!/g, "");
     builder = builder.replace(/where_/g, "where");
     builder = builder.replace(/\.into\(\)/g, "");
-    builder = builder.replace(/\("k","v"\)/g, "[\"k\" => \"v\"]");
-    builder = builder.replace(/\("k",1\)/g, "[\"k\" => 1]");
-    builder = builder.replace(/\("k",2\)/g, "[\"k\" => 2]");
-    builder = builder.replace(/\(1,10\)/g, "[1 => 10]");
+    builder = builder.replace(/\("k","v"\)/g, "\"k\" => \"v\"");
+    builder = builder.replace(/\("k",1\)/g, "\"k\" => 1");
+    builder = builder.replace(/\("k",2\)/g, "\"k\" => 2");
+    builder = builder.replace(/\(1,10\)/g, "1 => 10");
     builder = builder.replace(/\./g, "->");
     builder = builder.replace(/DbKeyOrder/g, "DbKeyOrderBuilder");
     builder = builder.replace(/CountComparison::/g, "CountComparisonBuilder::");
     builder = builder.replace(/Comparison::/g, "ComparisonBuilder::");
     
-    tests += `public function testQueryBuilder${index}(): void { $query = ${builder};$json = json_encode($query->jsonSerialize());\n$this->assertSame($json, json_encode(self::$test_queries[${index}][1])); }\n`;
+    tests += `public function testQueryBuilder${index}(): void { $query = ${builder};$json = $query->jsonSerialize();\n$this->assertEquals(self::$test_queries[${index}][1], $json); }\n`;
 }
 
 tests += `}`;

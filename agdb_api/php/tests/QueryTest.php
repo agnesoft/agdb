@@ -16,20 +16,25 @@ class T
 
 final class QueryTest extends \PHPUnit\Framework\TestCase
 {
-    public $test_queries = json_decode(
-        file_get_contents("../../agdb_server/openapi/test_queries.json")
-    );
+    private static $test_queries;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$test_queries = json_decode(
+            file_get_contents("../../agdb_server/openapi/test_queries.json")
+        );
+    }
     public function testQueryBuilder0(): void
     {
         $query = QueryBuilder::insert()->aliases("a")->ids(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[0][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[0][1]));
     }
     public function testQueryBuilder1(): void
     {
         $query = QueryBuilder::insert()->aliases("a")->ids("b")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[1][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[1][1]));
     }
     public function testQueryBuilder2(): void
     {
@@ -38,19 +43,19 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[2][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[2][1]));
     }
     public function testQueryBuilder3(): void
     {
         $query = QueryBuilder::insert()->edges()->from(1)->to(2)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[3][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[3][1]));
     }
     public function testQueryBuilder4(): void
     {
         $query = QueryBuilder::insert()->edges()->from("a")->to("b")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[4][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[4][1]));
     }
     public function testQueryBuilder5(): void
     {
@@ -60,7 +65,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->to([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[5][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[5][1]));
     }
     public function testQueryBuilder6(): void
     {
@@ -70,7 +75,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->to([2, 3])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[6][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[6][1]));
     }
     public function testQueryBuilder7(): void
     {
@@ -81,7 +86,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->each()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[7][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[7][1]));
     }
     public function testQueryBuilder8(): void
     {
@@ -93,7 +98,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values([[["k" => 1]], [["k" => 2]]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[8][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[8][1]));
     }
     public function testQueryBuilder9(): void
     {
@@ -105,7 +110,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values_uniform([["k" => 1], ["k" => 2]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[9][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[9][1]));
     }
     public function testQueryBuilder10(): void
     {
@@ -116,7 +121,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values([[["k" => 1]], [["k" => 2]]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[10][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[10][1]));
     }
     public function testQueryBuilder11(): void
     {
@@ -127,7 +132,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values_uniform([["k" => "v"], [1 => 10]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[11][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[11][1]));
     }
     public function testQueryBuilder12(): void
     {
@@ -137,7 +142,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->to(QueryBuilder::search()->from("b")->where()->node()->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[12][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[12][1]));
     }
     public function testQueryBuilder13(): void
     {
@@ -148,7 +153,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values([[["k" => 1]], [["k" => 2]]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[13][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[13][1]));
     }
     public function testQueryBuilder14(): void
     {
@@ -159,7 +164,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values_uniform([["k" => "v"], [1 => 10]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[14][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[14][1]));
     }
     public function testQueryBuilder15(): void
     {
@@ -170,7 +175,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->to(2)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[15][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[15][1]));
     }
     public function testQueryBuilder16(): void
     {
@@ -181,7 +186,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->to(2)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[16][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[16][1]));
     }
     public function testQueryBuilder17(): void
     {
@@ -192,19 +197,19 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->to(2)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[17][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[17][1]));
     }
     public function testQueryBuilder18(): void
     {
         $query = QueryBuilder::insert()->index("key")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[18][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[18][1]));
     }
     public function testQueryBuilder19(): void
     {
         $query = QueryBuilder::insert()->nodes()->count(2)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[19][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[19][1]));
     }
     public function testQueryBuilder20(): void
     {
@@ -214,7 +219,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values_uniform([["k" => "v"], [1 => 10]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[20][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[20][1]));
     }
     public function testQueryBuilder21(): void
     {
@@ -223,7 +228,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->aliases(["a", "b"])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[21][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[21][1]));
     }
     public function testQueryBuilder22(): void
     {
@@ -233,7 +238,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values([[["k" => 1]], [["k" => 2]]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[22][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[22][1]));
     }
     public function testQueryBuilder23(): void
     {
@@ -243,7 +248,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values_uniform([["k" => "v"], [1 => 10]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[23][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[23][1]));
     }
     public function testQueryBuilder24(): void
     {
@@ -252,13 +257,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values([[["k" => 1]], [["k" => 2]]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[24][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[24][1]));
     }
     public function testQueryBuilder25(): void
     {
         $query = QueryBuilder::insert()->nodes()->ids(1)->count(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[25][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[25][1]));
     }
     public function testQueryBuilder26(): void
     {
@@ -268,13 +273,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->count(1)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[26][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[26][1]));
     }
     public function testQueryBuilder27(): void
     {
         $query = QueryBuilder::insert()->nodes()->ids("a")->count(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[27][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[27][1]));
     }
     public function testQueryBuilder28(): void
     {
@@ -284,7 +289,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->aliases("a")
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[28][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[28][1]));
     }
     public function testQueryBuilder29(): void
     {
@@ -294,7 +299,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->count(1)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[29][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[29][1]));
     }
     public function testQueryBuilder30(): void
     {
@@ -304,7 +309,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values([[["k" => "v"]], [[1 => 10]]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[30][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[30][1]));
     }
     public function testQueryBuilder31(): void
     {
@@ -314,7 +319,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->values_uniform([["k" => "v"], [1 => 10]])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[31][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[31][1]));
     }
     public function testQueryBuilder32(): void
     {
@@ -324,13 +329,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->count(1)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[32][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[32][1]));
     }
     public function testQueryBuilder33(): void
     {
         $query = QueryBuilder::insert()->element(new T())->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[33][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[33][1]));
     }
     public function testQueryBuilder34(): void
     {
@@ -338,7 +343,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->elements([new T(), new T()])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[34][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[34][1]));
     }
     public function testQueryBuilder35(): void
     {
@@ -347,7 +352,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[35][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[35][1]));
     }
     public function testQueryBuilder36(): void
     {
@@ -356,7 +361,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from("a")->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[36][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[36][1]));
     }
     public function testQueryBuilder37(): void
     {
@@ -365,7 +370,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[37][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[37][1]));
     }
     public function testQueryBuilder38(): void
     {
@@ -374,13 +379,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from("a")->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[38][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[38][1]));
     }
     public function testQueryBuilder39(): void
     {
         $query = QueryBuilder::remove()->aliases("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[39][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[39][1]));
     }
     public function testQueryBuilder40(): void
     {
@@ -388,19 +393,19 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->aliases(["a", "b"])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[40][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[40][1]));
     }
     public function testQueryBuilder41(): void
     {
         $query = QueryBuilder::remove()->ids(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[41][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[41][1]));
     }
     public function testQueryBuilder42(): void
     {
         $query = QueryBuilder::remove()->ids("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[42][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[42][1]));
     }
     public function testQueryBuilder43(): void
     {
@@ -408,7 +413,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[43][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[43][1]));
     }
     public function testQueryBuilder44(): void
     {
@@ -416,7 +421,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(["a", "b"])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[44][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[44][1]));
     }
     public function testQueryBuilder45(): void
     {
@@ -424,13 +429,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from("a")->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[45][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[45][1]));
     }
     public function testQueryBuilder46(): void
     {
         $query = QueryBuilder::remove()->index("key")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[46][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[46][1]));
     }
     public function testQueryBuilder47(): void
     {
@@ -439,7 +444,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[47][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[47][1]));
     }
     public function testQueryBuilder48(): void
     {
@@ -448,7 +453,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from("a")->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[48][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[48][1]));
     }
     public function testQueryBuilder49(): void
     {
@@ -457,7 +462,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[49][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[49][1]));
     }
     public function testQueryBuilder50(): void
     {
@@ -466,13 +471,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from(1)->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[50][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[50][1]));
     }
     public function testQueryBuilder51(): void
     {
         $query = QueryBuilder::select()->aliases()->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[51][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[51][1]));
     }
     public function testQueryBuilder52(): void
     {
@@ -481,7 +486,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[52][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[52][1]));
     }
     public function testQueryBuilder53(): void
     {
@@ -490,7 +495,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[53][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[53][1]));
     }
     public function testQueryBuilder54(): void
     {
@@ -499,13 +504,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[54][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[54][1]));
     }
     public function testQueryBuilder55(): void
     {
         $query = QueryBuilder::select()->ids("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[55][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[55][1]));
     }
     public function testQueryBuilder56(): void
     {
@@ -513,7 +518,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[56][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[56][1]));
     }
     public function testQueryBuilder57(): void
     {
@@ -521,19 +526,19 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from(1)->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[57][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[57][1]));
     }
     public function testQueryBuilder58(): void
     {
         $query = QueryBuilder::select()->indexes()->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[58][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[58][1]));
     }
     public function testQueryBuilder59(): void
     {
         $query = QueryBuilder::select()->keys()->ids("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[59][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[59][1]));
     }
     public function testQueryBuilder60(): void
     {
@@ -542,7 +547,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[60][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[60][1]));
     }
     public function testQueryBuilder61(): void
     {
@@ -551,13 +556,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from(1)->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[61][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[61][1]));
     }
     public function testQueryBuilder62(): void
     {
         $query = QueryBuilder::select()->key_count()->ids("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[62][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[62][1]));
     }
     public function testQueryBuilder63(): void
     {
@@ -566,7 +571,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[63][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[63][1]));
     }
     public function testQueryBuilder64(): void
     {
@@ -575,13 +580,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from(1)->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[64][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[64][1]));
     }
     public function testQueryBuilder65(): void
     {
         $query = QueryBuilder::select()->node_count()->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[65][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[65][1]));
     }
     public function testQueryBuilder66(): void
     {
@@ -590,7 +595,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids("a")
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[66][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[66][1]));
     }
     public function testQueryBuilder67(): void
     {
@@ -599,7 +604,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[67][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[67][1]));
     }
     public function testQueryBuilder68(): void
     {
@@ -608,55 +613,55 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids(QueryBuilder::search()->from(1)->query())
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[68][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[68][1]));
     }
     public function testQueryBuilder69(): void
     {
         $query = QueryBuilder::search()->from("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[69][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[69][1]));
     }
     public function testQueryBuilder70(): void
     {
         $query = QueryBuilder::search()->to(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[70][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[70][1]));
     }
     public function testQueryBuilder71(): void
     {
         $query = QueryBuilder::search()->from("a")->to("b")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[71][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[71][1]));
     }
     public function testQueryBuilder72(): void
     {
         $query = QueryBuilder::search()->breadth_first()->from("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[72][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[72][1]));
     }
     public function testQueryBuilder73(): void
     {
         $query = QueryBuilder::search()->depth_first()->to(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[73][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[73][1]));
     }
     public function testQueryBuilder74(): void
     {
         $query = QueryBuilder::search()->depth_first()->from("a")->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[74][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[74][1]));
     }
     public function testQueryBuilder75(): void
     {
         $query = QueryBuilder::search()->elements()->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[75][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[75][1]));
     }
     public function testQueryBuilder76(): void
     {
         $query = QueryBuilder::search()->index("age")->value(20)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[76][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[76][1]));
     }
     public function testQueryBuilder77(): void
     {
@@ -668,19 +673,19 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[77][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[77][1]));
     }
     public function testQueryBuilder78(): void
     {
         $query = QueryBuilder::search()->from(1)->offset(10)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[78][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[78][1]));
     }
     public function testQueryBuilder79(): void
     {
         $query = QueryBuilder::search()->from(1)->limit(5)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[79][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[79][1]));
     }
     public function testQueryBuilder80(): void
     {
@@ -690,7 +695,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->offset(10)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[80][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[80][1]));
     }
     public function testQueryBuilder81(): void
     {
@@ -700,7 +705,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->limit(5)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[81][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[81][1]));
     }
     public function testQueryBuilder82(): void
     {
@@ -711,13 +716,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->limit(5)
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[82][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[82][1]));
     }
     public function testQueryBuilder83(): void
     {
         $query = QueryBuilder::search()->from(1)->offset(10)->limit(5)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[83][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[83][1]));
     }
     public function testQueryBuilder84(): void
     {
@@ -727,13 +732,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->distance(CountComparisonBuilder::LessThan(3))
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[84][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[84][1]));
     }
     public function testQueryBuilder85(): void
     {
         $query = QueryBuilder::search()->from(1)->where()->edge()->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[85][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[85][1]));
     }
     public function testQueryBuilder86(): void
     {
@@ -743,7 +748,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge_count(CountComparisonBuilder::GreaterThan(2))
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[86][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[86][1]));
     }
     public function testQueryBuilder87(): void
     {
@@ -753,7 +758,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge_count_from(CountComparisonBuilder::Equal(1))
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[87][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[87][1]));
     }
     public function testQueryBuilder88(): void
     {
@@ -763,13 +768,13 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge_count_to(CountComparisonBuilder::NotEqual(1))
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[88][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[88][1]));
     }
     public function testQueryBuilder89(): void
     {
         $query = QueryBuilder::search()->from(1)->where()->node()->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[89][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[89][1]));
     }
     public function testQueryBuilder90(): void
     {
@@ -780,7 +785,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->value(ComparisonBuilder::Equal(1))
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[90][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[90][1]));
     }
     public function testQueryBuilder91(): void
     {
@@ -790,7 +795,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->keys(["k1", "k2"])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[91][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[91][1]));
     }
     public function testQueryBuilder92(): void
     {
@@ -801,7 +806,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->keys(["k1", "k2"])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[92][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[92][1]));
     }
     public function testQueryBuilder93(): void
     {
@@ -811,7 +816,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[93][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[93][1]));
     }
     public function testQueryBuilder94(): void
     {
@@ -822,7 +827,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->keys(["k"])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[94][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[94][1]));
     }
     public function testQueryBuilder95(): void
     {
@@ -833,7 +838,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids([1, 2])
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[95][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[95][1]));
     }
     public function testQueryBuilder96(): void
     {
@@ -844,7 +849,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->ids("a")
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[96][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[96][1]));
     }
     public function testQueryBuilder97(): void
     {
@@ -856,7 +861,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[97][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[97][1]));
     }
     public function testQueryBuilder98(): void
     {
@@ -868,7 +873,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->distance(CountComparisonBuilder::GreaterThanOrEqual(3))
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[98][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[98][1]));
     }
     public function testQueryBuilder99(): void
     {
@@ -885,7 +890,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[99][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[99][1]));
     }
     public function testQueryBuilder100(): void
     {
@@ -902,7 +907,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[100][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[100][1]));
     }
     public function testQueryBuilder101(): void
     {
@@ -919,7 +924,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->end_where()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[101][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[101][1]));
     }
     public function testQueryBuilder102(): void
     {
@@ -930,7 +935,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[102][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[102][1]));
     }
     public function testQueryBuilder103(): void
     {
@@ -941,7 +946,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[103][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[103][1]));
     }
     public function testQueryBuilder104(): void
     {
@@ -952,25 +957,25 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[104][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[104][1]));
     }
     public function testQueryBuilder105(): void
     {
         $query = QueryBuilder::search()->to(1)->offset(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[105][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[105][1]));
     }
     public function testQueryBuilder106(): void
     {
         $query = QueryBuilder::search()->to(1)->limit(1)->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[106][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[106][1]));
     }
     public function testQueryBuilder107(): void
     {
         $query = QueryBuilder::search()->to(1)->where()->node()->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[107][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[107][1]));
     }
     public function testQueryBuilder108(): void
     {
@@ -981,7 +986,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->node()
             ->query();
         $json = json_encode($query->jsonSerialize());
-        $this->assertSame($json, $this->test_queries[108][1]);
+        $this->assertSame($json, json_encode(self::$test_queries[108][1]));
     }
 }
 

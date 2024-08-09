@@ -13,7 +13,11 @@ use Agnesoft\\Agdb\\ComparisonBuilder;
 class T { public $db_id = null; public string $value1 = ""; public int $value2 = 0; }
 
 final class QueryTest extends \\PHPUnit\\Framework\\TestCase {
-public $test_queries = json_decode(file_get_contents('../../agdb_server/openapi/test_queries.json'));`;
+    private static $test_queries;
+
+    public static function setUpBeforeClass(): void {
+        self::$test_queries = json_decode(file_get_contents('../../agdb_server/openapi/test_queries.json'));
+    }`;
 
 for (let index in test_queries) {
     let name = test_queries[index][0];
@@ -32,7 +36,7 @@ for (let index in test_queries) {
     builder = builder.replace(/CountComparison::/g, "CountComparisonBuilder::");
     builder = builder.replace(/Comparison::/g, "ComparisonBuilder::");
     
-    tests += `public function testQueryBuilder${index}(): void { $query = ${builder};$json = json_encode($query->jsonSerialize());\n$this->assertSame($json, $this->test_queries[${index}][1]); }\n`;
+    tests += `public function testQueryBuilder${index}(): void { $query = ${builder};$json = json_encode($query->jsonSerialize());\n$this->assertSame($json, json_encode(self::$test_queries[${index}][1])); }\n`;
 }
 
 tests += `}`;

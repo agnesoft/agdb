@@ -2,6 +2,8 @@
 use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 
+
+
 final class AgdbTest extends TestCase
 {
     // public function testStatus(): void
@@ -13,14 +15,19 @@ final class AgdbTest extends TestCase
     //     $this->assertIsArray($response);
     // }
 
-    public function testQueryBuilder(): void
-    {
-        $query = QueryBuilder::insert()->aliases('alias')->ids([10, 20])->query();
-        $json = json_encode($query->jsonSerialize());
+    // private static $test_queries;
 
-        echo $json;
-        $this->assertIsString($json);
-        $this->assertSame(true, false);
+    // public static function setUpBeforeClass(): void
+    // {
+    //     self::$test_queries = json_decode(
+    //         file_get_contents("../../agdb_server/openapi/test_queries.json")
+    //     );
+    // }
 
-    }
+    // public function testQueryBuilder0(): void
+    // {
+    //     $query = QueryBuilder::insert()->aliases("a")->ids(1)->query();
+    //     $json = json_encode($query->jsonSerialize());
+    //     $this->assertJsonStringEqualsJsonString($json, json_encode(self::$test_queries[0][1]));
+    // }
 }

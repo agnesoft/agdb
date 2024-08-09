@@ -3,6 +3,9 @@
 namespace Agnesoft\Agdb;
 
 use stdClass;
+use Agdb\Model\CountComparison;
+use Agdb\Model\QueryConditionLogic;
+use Agdb\Model\QueryConditionModifier;
 use Agdb\Model\Comparison;
 use Agdb\Model\QueryCondition;
 use Agdb\Model\QueryConditionData;
@@ -23,16 +26,87 @@ use Agdb\Model\SearchQueryAlgorithm;
 use Agdb\Model\QueryConditionDataOneOf5KeyValue;
 use Agdb\Model\DbKeyOrder;
 
-class KeyOrder
+class CountComparisonBuilder
 {
-    public static function Asc(int|float|string|array $value): DbKeyOrder
+    public static function Equal(int $value): CountComparison
     {
-        return new DbKeyOrder(['asc' => new stdClass()]);
+        return new CountComparison(['equal' => $value]);
     }
 
-    public static function Desc(int|float|string|array $value): DbKeyOrder
+    public static function GreaterThan(int $value): CountComparison
     {
-        return new DbKeyOrder(['desc' => new stdClass()]);
+        return new CountComparison(['greater_than' => $value]);
+    }
+
+    public static function GreaterThanOrEqual(int $value): CountComparison
+    {
+        return new CountComparison(['greater_than_or_equal' => $value]);
+    }
+
+    public static function LessThan(int $value): CountComparison
+    {
+        return new CountComparison(['less_than' => $value]);
+    }
+
+    public static function LessThanOrEqual(int $value): CountComparison
+    {
+        return new CountComparison(['less_than_or_equal' => $value]);
+    }
+
+    public static function NotEqual(int $value): CountComparison
+    {
+        return new CountComparison(['not_equal' => $value]);
+    }
+}
+
+class ComparisonBuilder
+{
+    public static function Contains(bool|int|float|string|array|DbValue $value): Comparison
+    {
+        return new Comparison(['equal' => to_db_value($value)]);
+    }
+
+    public static function Equal(bool|int|float|string|array|DbValue $value): Comparison
+    {
+        return new Comparison(['equal' => to_db_value($value)]);
+    }
+
+    public static function GreaterThan(bool|int|float|string|array|DbValue $value): Comparison
+    {
+        return new Comparison(['greater_than' => to_db_value($value)]);
+    }
+
+    public static function GreaterThanOrEqual(bool|int|float|string|array|DbValue $value): Comparison
+    {
+        return new Comparison(['greater_than_or_equal' => to_db_value($value)]);
+    }
+
+    public static function LessThan(bool|int|float|string|array|DbValue $value): Comparison
+    {
+        return new Comparison(['less_than' => to_db_value($value)]);
+    }
+
+    public static function LessThanOrEqual(bool|int|float|string|array|DbValue $value): Comparison
+    {
+        return new Comparison(['less_than_or_equal' => to_db_value($value)]);
+    }
+
+    public static function NotEqual(bool|int|float|string|array|DbValue $value): Comparison
+    {
+        return new Comparison(['not_equal' => to_db_value($value)]);
+    }
+}
+
+class DbKeyOrderBuilder
+{
+    public static function Asc(int|float|string|array|DbValue $value): DbKeyOrder
+    {
+        return new DbKeyOrder(['asc' => to_db_value($value)]);
+    }
+
+    public static function Desc(int|float|string|array|DbValue $value): DbKeyOrder
+    {
+        return new DbKeyOrder(['desc' => to_db_value($value)]);
     }
 }
 
@@ -88,7 +162,7 @@ function to_query_ids(string|int|array|QueryId|SearchQuery|QueryIds $ids): Query
     throw new \InvalidArgumentException('Unsupported $ids type', 1);
 }
 
-function to_db_value(bool|int|float|string|array $value): DbValue
+function to_db_value(bool|int|float|string|array|DbValue $value): DbValue
 {
     if (is_string($value)) {
         return new DbValue(['string' => $value]);
@@ -118,6 +192,10 @@ function to_db_value(bool|int|float|string|array $value): DbValue
                 return new DbValue(['vec_str' => $value]);
             }
         }
+    }
+
+    if (get_class($value) === DbValue::class) {
+        return $value;
     }
 
     throw new \InvalidArgumentException('Unsupported $value type', 1);
@@ -680,7 +758,7 @@ class SearchIndexBuilder
         $this->data = $data;
     }
 
-    public function value(int|float|string|array $v): SearchIndexValueBuilder
+    public function value(int|float|string|array|DbValue $v): SearchIndexValueBuilder
     {
         $this->data->getConditions()[0]->getData()->getKeyValue()->setValue(new Comparison(['equal' => to_db_value($v)]));
         return new SearchIndexValueBuilder($this->data);
@@ -719,18 +797,169 @@ class SearchOrderByBuilder
     }
 }
 
+class SearchWhereKeyBuilder
+{
+    private SearchWhereBuilder $data;
+    private DbValue $key;
+
+    public function __construct(SearchWhereBuilder $data, DbValue $key)
+    {
+        $this->data = $data;
+        $this->key = $key;
+    }
+
+    public function value(Comparison $comparison): SearchWhereLogicBuilder
+    {
+        $this->data->push_condition(new QueryConditionData(["key_value" => new QueryConditionDataOneOf5KeyValue(['key' => $this->key, 'comparison' => $comparison])]));
+        return new SearchWhereLogicBuilder($this->data);
+    }
+}
+
+class SearchWhereLogicBuilder
+{
+    private SearchWhereBuilder $data;
+
+    public function __construct(SearchWhereBuilder $data)
+    {
+        $this->data = $data;
+    }
+
+    public function and(): SearchWhereBuilder
+    {
+        $this->data->logic = QueryConditionLogic::_AND;
+        return $this->data;
+    }
+
+    public function end_where(): SearchWhereLogicBuilder
+    {
+        $this->data->collapse_conditions();
+        return $this;
+    }
+
+    public function or(): SearchWhereBuilder
+    {
+        $this->data->logic = QueryConditionLogic::_OR;
+        return $this->data;
+    }
+
+    public function query(): QueryType
+    {
+        while ($this->data->collapse_conditions()) {
+        }
+        return new QueryType(['search' => $this->data->data]);
+    }
+}
+
 class SearchWhereBuilder
 {
     private SearchQuery $data;
+    private string $modifier = QueryConditionModifier::NONE;
+    private string $logic = QueryConditionLogic::_AND;
+    private array $conditions = [[]];
 
     public function __construct(SearchQuery $data)
     {
         $this->data = $data;
     }
 
-    public function query(): QueryType
+    public function beyond(): SearchWhereBuilder
     {
-        return new QueryType(['search' => $this->data]);
+        $this->modifier = QueryConditionModifier::BEYOND;
+        return $this;
+    }
+
+    public function distance(CountComparison $comparison): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(["distance" => $comparison]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function edge(): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(['edge' => new stdClass()]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function edge_count(CountComparison $comparison): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(["edge_count" => $comparison]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function edge_count_from(CountComparison $comparison): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(["edge_count_from" => $comparison]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function edge_count_to(CountComparison $comparison): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(["edge_count_to" => $comparison]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function ids(string|int|array|QueryId|QueryIds $ids): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(["ids" => to_query_ids($ids)]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function key(int|float|string|array|DbValue $key): SearchWhereKeyBuilder
+    {
+        return new SearchWhereKeyBuilder($this, to_db_value($key));
+    }
+
+    public function keys(int|float|string|array|DbValue $keys): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(["keys" => is_array($keys) ? to_db_keys($keys) : array(to_db_value($keys))]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function node(): SearchWhereLogicBuilder
+    {
+        $this->push_condition(new QueryConditionData(['node' => new stdClass()]));
+        return new SearchWhereLogicBuilder($this);
+    }
+
+    public function not(): SearchWhereBuilder
+    {
+        $this->modifier = QueryConditionModifier::NOT;
+        return $this;
+    }
+
+    public function not_beyond(): SearchWhereBuilder
+    {
+        $this->modifier = QueryConditionModifier::NOT_BEYOND;
+        return $this;
+    }
+
+    public function where(): SearchWhereBuilder
+    {
+        $this->push_condition(new QueryConditionData(['where' => []]));
+        $this->conditions[] = [];
+        return $this;
+    }
+
+    private function push_condition($data)
+    {
+        end($this->conditions)[] = new QueryCondition(['data' => $data, 'modifier' => $this->modifier, 'logic' => $this->logic]);
+        $this->modifier = QueryConditionModifier::NONE;
+        $this->logic = QueryConditionLogic::_AND;
+    }
+
+    private function collapse_conditions(): bool
+    {
+        $len = count($this->conditions);
+
+        if ($len > 1) {
+            $last = array_pop($this->conditions);
+            $current = end($this->conditions);
+            $last_condition = end($current);
+            $last_condition->setData(new QueryConditionData(['where' => $last]));
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -884,7 +1113,7 @@ class SearchBuilder
         return new SearchFromBuilder(new SearchQuery(['origin' => to_query_id($id)]));
     }
 
-    public function index(int|float|string|array $key): SearchIndexBuilder
+    public function index(int|float|string|array|DbValue $key): SearchIndexBuilder
     {
         $condition = new QueryCondition(['data' => new QueryConditionData(['key_value' => new QueryConditionDataOneOf5KeyValue(['key' => to_db_value($key)])])]);
         return new SearchIndexBuilder(new SearchQuery(['algorithm' => SearchQueryAlgorithm::INDEX, 'conditions' => [$condition]]));

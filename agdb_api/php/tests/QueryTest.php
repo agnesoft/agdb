@@ -3,9 +3,9 @@
 // query_test_generator.js
 <?php
 use Agnesoft\Agdb\QueryBuilder;
-use Agnesoft\Agdb\KeyOrder;
-use Agdb\Model\Comparison;
-use Agdb\Model\CountComparison;
+use Agnesoft\Agdb\DbKeyOrderBuilder;
+use Agnesoft\Agdb\CountComparisonBuilder;
+use Agnesoft\Agdb\ComparisonBuilder;
 
 class T
 {
@@ -662,7 +662,10 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([KeyOrder::Desc("age"), KeyOrder::Asc("name")])
+            ->order_by([
+                DbKeyOrderBuilder::Desc("age"),
+                DbKeyOrderBuilder::Asc("name"),
+            ])
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[77][1]);
@@ -683,7 +686,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([KeyOrder::Desc("k")])
+            ->order_by([DbKeyOrderBuilder::Desc("k")])
             ->offset(10)
             ->query();
         $json = json_encode($query->jsonSerialize());
@@ -693,7 +696,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([KeyOrder::Desc("k")])
+            ->order_by([DbKeyOrderBuilder::Desc("k")])
             ->limit(5)
             ->query();
         $json = json_encode($query->jsonSerialize());
@@ -703,7 +706,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([KeyOrder::Desc("k")])
+            ->order_by([DbKeyOrderBuilder::Desc("k")])
             ->offset(10)
             ->limit(5)
             ->query();
@@ -721,7 +724,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->distance(CountComparison::LessThan(3))
+            ->distance(CountComparisonBuilder::LessThan(3))
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[84][1]);
@@ -737,7 +740,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count(CountComparison::GreaterThan(2))
+            ->edge_count(CountComparisonBuilder::GreaterThan(2))
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[86][1]);
@@ -747,7 +750,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_from(CountComparison::Equal(1))
+            ->edge_count_from(CountComparisonBuilder::Equal(1))
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[87][1]);
@@ -757,7 +760,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
         $query = QueryBuilder::search()
             ->from(1)
             ->where()
-            ->edge_count_to(CountComparison::NotEqual(1))
+            ->edge_count_to(CountComparisonBuilder::NotEqual(1))
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[88][1]);
@@ -774,7 +777,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->from(1)
             ->where()
             ->key("k")
-            ->value(Comparison::Equal(1))
+            ->value(ComparisonBuilder::Equal(1))
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[90][1]);
@@ -862,7 +865,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->where()
             ->node()
             ->and()
-            ->distance(CountComparison::GreaterThanOrEqual(3))
+            ->distance(CountComparisonBuilder::GreaterThanOrEqual(3))
             ->query();
         $json = json_encode($query->jsonSerialize());
         $this->assertSame($json, $this->test_queries[98][1]);
@@ -878,7 +881,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge()
             ->and()
             ->key("k")
-            ->value(Comparison::Equal(1))
+            ->value(ComparisonBuilder::Equal(1))
             ->end_where()
             ->query();
         $json = json_encode($query->jsonSerialize());
@@ -895,7 +898,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge()
             ->and()
             ->key("k")
-            ->value(Comparison::Contains(1))
+            ->value(ComparisonBuilder::Contains(1))
             ->end_where()
             ->query();
         $json = json_encode($query->jsonSerialize());
@@ -912,7 +915,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
             ->edge()
             ->and()
             ->key("k")
-            ->value(Comparison::Contains([1, 2]))
+            ->value(ComparisonBuilder::Contains([1, 2]))
             ->end_where()
             ->query();
         $json = json_encode($query->jsonSerialize());
@@ -922,7 +925,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->from(1)
-            ->order_by([KeyOrder::Asc("k")])
+            ->order_by([DbKeyOrderBuilder::Asc("k")])
             ->where()
             ->node()
             ->query();
@@ -973,7 +976,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     {
         $query = QueryBuilder::search()
             ->to(1)
-            ->order_by([KeyOrder::Asc("k")])
+            ->order_by([DbKeyOrderBuilder::Asc("k")])
             ->where()
             ->node()
             ->query();

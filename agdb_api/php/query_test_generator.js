@@ -6,9 +6,9 @@ let tests = `
 // query_test_generator.js
 <?php
 use Agnesoft\\Agdb\\QueryBuilder;
-use Agnesoft\\Agdb\\KeyOrder;
-use Agdb\\Model\\Comparison;
-use Agdb\\Model\\CountComparison;
+use Agnesoft\\Agdb\\DbKeyOrderBuilder;
+use Agnesoft\\Agdb\\CountComparisonBuilder;
+use Agnesoft\\Agdb\\ComparisonBuilder;
 
 class T { public $db_id = null; public string $value1 = ""; public int $value2 = 0; }
 
@@ -28,7 +28,9 @@ for (let index in test_queries) {
     builder = builder.replace(/\("k",2\)/g, "[\"k\" => 2]");
     builder = builder.replace(/\(1,10\)/g, "[1 => 10]");
     builder = builder.replace(/\./g, "->");
-    builder = builder.replace(/DbKeyOrder/g, "KeyOrder");
+    builder = builder.replace(/DbKeyOrder/g, "DbKeyOrderBuilder");
+    builder = builder.replace(/CountComparison::/g, "CountComparisonBuilder::");
+    builder = builder.replace(/Comparison::/g, "ComparisonBuilder::");
     
     tests += `public function testQueryBuilder${index}(): void { $query = ${builder};$json = json_encode($query->jsonSerialize());\n$this->assertSame($json, $this->test_queries[${index}][1]); }\n`;
 }

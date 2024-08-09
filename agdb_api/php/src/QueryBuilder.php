@@ -63,7 +63,7 @@ class ComparisonBuilder
 {
     public static function Contains(bool|int|float|string|array|DbValue $value): Comparison
     {
-        return new Comparison(['equal' => to_db_value($value)]);
+        return new Comparison(['contains' => to_db_value($value)]);
     }
 
     public static function Equal(bool|int|float|string|array|DbValue $value): Comparison
@@ -129,37 +129,35 @@ function to_query_id(string|int|QueryId $id): QueryId
 
 function to_query_ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): QueryIds
 {
+    $query_ids = new QueryIds();
+
     if (is_string($ids)) {
-        return new QueryIds(['ids' => [new QueryId(['alias' => $ids])]]);
-    }
-
-    if (is_int($ids)) {
-        return new QueryIds(['ids' => [new QueryId(['id' => $ids])]]);
-    }
-
-    if (is_array($ids)) {
+        $id = new QueryId();
+        $id->setAlias($ids);
+        $query_ids->setIds(array($id));
+    } else if (is_int($ids)) {
+        $id = new QueryId();
+        $id->setId($ids);
+        $query_ids->setIds(array($id));
+    } else if (is_array($ids)) {
         if (count($ids) !== 0) {
             if (is_int($ids[0])) {
                 return new QueryIds(['ids' => array_map(fn($id) => new QueryId(['id' => $id]), $ids)]);
             } else {
                 return new QueryIds(['ids' => array_map(fn($id) => new QueryId(['alias' => $id]), $ids)]);
             }
+        } else {
+            $query_ids->setIds([]);
         }
+    } else if (get_class($ids) === QueryId::class) {
+        $query_ids->setIds(array($ids));
+    } else if (get_class($ids) === QueryType::class) {
+        $query_ids->setSearch($ids['search']);
+    } else if (get_class($ids) == SearchQuery::class) {
+        $query_ids->setSearch($ids);
     }
 
-    if (get_class($ids) === QueryId::class) {
-        return new QueryIds(['ids' => [$ids]]);
-    }
-
-    if (get_class($ids) === QueryType::class) {
-        return new QueryIds(['search' => $ids['search']]);
-    }
-
-    if (get_class($ids) === QueryIds::class) {
-        return $ids;
-    }
-
-    throw new \InvalidArgumentException('Unsupported $ids type', 1);
+    return $query_ids;
 }
 
 function to_db_value(bool|int|float|string|array|DbValue $value): DbValue
@@ -614,30 +612,38 @@ class InsertBuilder
     public function elements(array $elems): InsertValuesIdsBuilder
     {
         $data = new InsertValuesQuery();
-        $data->setValues(new QueryValues(['multi' => []]));
-        $data->setIds(new QueryIds(['ids' => []]));
+        $values = [];
+        $ids = [];
+
 
         foreach ($elems as $elem) {
             if (property_exists($elem, 'db_id')) {
-                $values = [];
+                $element_values = [];
+
+                if (!property_exists($elem, 'db_id')) {
+                    $ids[] = new QueryId(['id' => 0]);
+                }
 
                 foreach ($elem as $key => $value) {
                     if ($key === 'db_id') {
-                        if (is_null($key) || $value === 0) {
-                            $data->getIds()->getIds()[] = new QueryId(['id' => 0]);
+                        if (is_null($value) || $value === 0) {
+                            $ids[] = new QueryId(['id' => 0]);
                         } else if (is_int($value)) {
-                            $data->getIds()->getIds()[] = new QueryId(['id' => $value]);
+                            $ids[] = new QueryId(['id' => $value]);
                         } else {
-                            $data->getIds()->getIds()[] = new QueryId(['alias' => $value]);
+                            $ids[] = new QueryId(['alias' => $value]);
                         }
                     } else {
-                        $values[] = new DbKeyValue(['key' => new DbValue(['string' => $key]), 'value' => to_db_value($value)]);
+                        $element_values[] = new DbKeyValue(['key' => new DbValue(['string' => $key]), 'value' => to_db_value($value)]);
                     }
                 }
 
-                $data->getValues()->getMulti()[] = $values;
+                $values[] = $element_values;
             }
         }
+
+        $data->setValues(new QueryValues(['multi' => $values]));
+        $data->setIds(new QueryIds(['ids' => $ids]));
 
         return new InsertValuesIdsBuilder($data);
     }
@@ -816,7 +822,7 @@ class SearchIndexBuilder
         $kv->setValue(new Comparison(['equal' => to_db_value($v)]));
         $condition_data->setKeyValue($kv);
         $condition->setData($condition_data);
-        $this->data->setConditions([]);
+        $this->data->setConditions(array($condition));
         return new SearchIndexValueBuilder($this->data);
     }
 }
@@ -866,7 +872,12 @@ class SearchWhereKeyBuilder
 
     public function value(Comparison $comparison): SearchWhereLogicBuilder
     {
-        $this->data->__push_condition(new QueryConditionData(["key_value" => new QueryConditionDataOneOf5KeyValue(['key' => $this->key, 'comparison' => $comparison])]));
+        $condition_data = new QueryConditionData();
+        $kv = new QueryConditionDataOneOf5KeyValue();
+        $kv->setKey($this->key);
+        $kv->setValue($comparison);
+        $condition_data->setKeyValue($kv);
+        $this->data->__push_condition($condition_data);
         return new SearchWhereLogicBuilder($this->data);
     }
 }
@@ -957,7 +968,7 @@ class SearchWhereBuilder
 
     public function ids(string|int|array|QueryId|QueryIds $ids): SearchWhereLogicBuilder
     {
-        $this->__push_condition(new QueryConditionData(["ids" => to_query_ids($ids)]));
+        $this->__push_condition(new QueryConditionData(["ids" => to_query_ids($ids)['ids']]));
         return new SearchWhereLogicBuilder($this);
     }
 

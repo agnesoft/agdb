@@ -1,5 +1,5 @@
 <p align="center">
-    <img width="300" src="./agdb_web/static/logo.svg" alt="agdb logo">
+    <img width="300" src="./docs/images/logo.svg" alt="agdb logo">
 </p>
 <h1 align="center">
     agdb
@@ -44,10 +44,10 @@
     <img width="25" src="/docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
 </p> -->
 
-## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
-    <a href="/agdb_web/content/en/docs/1.guides/2.quickstart.md">Quickstart Db</a> | <a href="/agdb_web/content/en/docs/1.guides/3.quickstart_client.md">Quickstart Client</a> | <a href="/docs/queries.md">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
+    <a href="/docs/guides/quickstart.md">Quickstart Db</a> | <a href="/docs/guides/rust.md">Quickstart Client</a> | <a href="/docs/queries.md">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
 </p>
 <p align="center">
     <a href="/docs/but_why.md">Why not SQL?</a>
@@ -56,13 +56,13 @@
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
 
 - [Key Features](#key-features)
-- [At a glance](#at-a-glance)
+- [At a glance](#at-a-glance-db)
 - [Crate Features](#crate-features)
 - [Decision Tree](#decision-tree)
 - [Roadmap](#roadmap)
 - [Reference](#reference)
 
-## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
 - Data plotted on a graph
 - Typed [key-value properties](/docs/concepts.md#data-types) attached to graph elements (nodes & edges)
@@ -75,7 +75,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 - [Cloud](/docs/cloud.md) hosted SaaS database
 - _Db itself has no dependencies_
 
-## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
 
 ```
 cargo add agdb
@@ -152,7 +152,7 @@ println!("{:?}", user);
 
 For database concepts and primitive data types see [concepts](/docs/concepts.md). For comprehensive overview of all queries see the [queries](/docs/queries.md) reference or continue with more in-depth [efficient agdb](/docs/guides/efficient_agdb.md).
 
-## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
 ### agdb
 
@@ -168,7 +168,7 @@ For database concepts and primitive data types see [concepts](/docs/concepts.md)
 | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | reqwest | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
 
-## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
 ```mermaid
 flowchart TD;
@@ -185,7 +185,7 @@ flowchart TD;
     Hosting --> Cloud[<a href='https://github.com/agnesoft/agdb/blob/main/docs/cloud.md'>Cloud</a>]
 ```
 
-## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 
 The following are planned features:
 
@@ -202,7 +202,7 @@ The following are planned features:
 | #\[no_std]                            | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. |
 | Public Cloud Offering                 | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     |
 
-## <img width="25" src="./agdb_web/static/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
+## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
 - [API](/docs/api.md)
 

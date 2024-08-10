@@ -28,7 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
-      - run: npx nuxt prepare
       - run: npm run lint
 
   agdb_web_coverage:
@@ -41,8 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
-      - run: npx nuxt prepare
-      - run: npm run test:unit
+      - run: npm run test
       - uses: actions/upload-artifact@v4
         if: always()
         with:

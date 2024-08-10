@@ -13,6 +13,7 @@ use axum::Json;
 
 #[utoipa::path(get,
     path = "/api/v1/status",
+    tag = "agdb",
     params(
         ("cluster" = bool, description = "get cluster status"),
     ),

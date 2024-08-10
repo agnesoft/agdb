@@ -21,6 +21,7 @@ pub(crate) struct DbUserRoleParam {
 #[utoipa::path(put,
     path = "/api/v1/db/{owner}/{db}/user/{username}/add",
     operation_id = "db_user_add",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -51,6 +52,7 @@ pub(crate) async fn add(
 #[utoipa::path(get,
     path = "/api/v1/db/{owner}/{db}/user/list",
     operation_id = "db_user_list",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -75,6 +77,7 @@ pub(crate) async fn list(
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/user/{username}/remove",
     operation_id = "db_user_remove",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),

@@ -356,7 +356,7 @@ impl<T: HttpClient> AgdbApi<T> {
         &self,
         owner: &str,
         db: &str,
-        queries: &Vec<QueryType>,
+        queries: &[QueryType],
     ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
         self.client
             .post(

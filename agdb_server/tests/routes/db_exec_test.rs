@@ -1,5 +1,6 @@
 use crate::TestServer;
 use crate::ADMIN;
+use agdb::CountComparison;
 use agdb::DbElement;
 use agdb::DbId;
 use agdb::QueryBuilder;
@@ -409,6 +410,187 @@ async fn use_result_in_search() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn use_result_in_insert_ids() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .nodes()
+            .ids(
+                QueryBuilder::search()
+                    .from("root")
+                    .where_()
+                    .node()
+                    .and()
+                    .distance(CountComparison::Equal(2))
+                    .query(),
+            )
+            .count(3)
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .ids(
+                QueryBuilder::search()
+                    .from("root")
+                    .to(":1")
+                    .where_()
+                    .edge()
+                    .query(),
+            )
+            .from(":0")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+    ];
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[3],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-5),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn reentrant_queries() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Mapped).await?;
+    let queries = &vec![
+        QueryBuilder::insert()
+            .nodes()
+            .aliases("root")
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .nodes()
+            .ids(
+                QueryBuilder::search()
+                    .from(":0")
+                    .where_()
+                    .node()
+                    .and()
+                    .distance(CountComparison::Equal(2))
+                    .query(),
+            )
+            .count(3)
+            .query()
+            .into(),
+        QueryBuilder::search()
+            .from(":0")
+            .to(":1")
+            .where_()
+            .edge()
+            .query()
+            .into(),
+        QueryBuilder::insert()
+            .edges()
+            .ids(":2")
+            .from(":0")
+            .to(":1")
+            .query()
+            .into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+        QueryBuilder::search().from(":0").to(":1").query().into(),
+    ];
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[4],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-5),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(2)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(2),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    assert_eq!(status, 200);
+    assert_eq!(
+        results[4],
+        QueryResult {
+            result: 3,
+            elements: vec![
+                DbElement {
+                    id: DbId(1),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(-7),
+                    from: Some(DbId(1)),
+                    to: Some(DbId(4)),
+                    values: vec![]
+                },
+                DbElement {
+                    id: DbId(4),
+                    from: None,
+                    to: None,
+                    values: vec![]
+                }
+            ]
+        }
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn use_result_in_search_bad_query() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
@@ -544,7 +726,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .db_exec(owner, "db", &vec![])
+        .db_exec(owner, "db", &[])
         .await
         .unwrap_err()
         .status;
@@ -557,7 +739,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_exec("user", "db", &vec![])
+        .db_exec("user", "db", &[])
         .await
         .unwrap_err()
         .status;

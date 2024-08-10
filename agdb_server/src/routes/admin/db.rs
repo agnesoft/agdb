@@ -19,6 +19,7 @@ use axum::Json;
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/add",
     operation_id = "admin_db_add",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -49,6 +50,7 @@ pub(crate) async fn add(
 #[utoipa::path(get,
     path = "/api/v1/admin/db/{owner}/{db}/audit",
     operation_id = "admin_db_audit",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -74,6 +76,7 @@ pub(crate) async fn audit(
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/backup",
     operation_id = "admin_db_backup",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -101,6 +104,7 @@ pub(crate) async fn backup(
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/copy",
     operation_id = "admin_db_copy",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -133,6 +137,7 @@ pub(crate) async fn copy(
 #[utoipa::path(delete,
     path = "/api/v1/admin/db/{owner}/{db}/delete",
     operation_id = "admin_db_delete",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -159,6 +164,7 @@ pub(crate) async fn delete(
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/exec",
     operation_id = "admin_db_exec",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -190,6 +196,7 @@ pub(crate) async fn exec(
 #[utoipa::path(get,
     path = "/api/v1/admin/db/list",
     operation_id = "admin_db_list",
+    tag = "agdb",
     security(("Token" = [])),
     responses(
          (status = 200, description = "ok", body = Vec<ServerDatabase>),
@@ -208,6 +215,7 @@ pub(crate) async fn list(
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/optimize",
     operation_id = "admin_db_optimize",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -232,6 +240,7 @@ pub(crate) async fn optimize(
 #[utoipa::path(delete,
     path = "/api/v1/admin/db/{owner}/{db}/remove",
     operation_id = "admin_db_remove",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),
@@ -257,6 +266,7 @@ pub(crate) async fn remove(
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/rename",
     operation_id = "admin_db_rename",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "db owner user name"),
@@ -289,6 +299,7 @@ pub(crate) async fn rename(
 #[utoipa::path(post,
     path = "/api/v1/db/admin/{owner}/{db}/restore",
     operation_id = "admin_db_restore",
+    tag = "agdb",
     security(("Token" = [])),
     params(
         ("owner" = String, Path, description = "user name"),

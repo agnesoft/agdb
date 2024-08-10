@@ -12,6 +12,7 @@ use axum::Json;
 #[utoipa::path(post,
     path = "/api/v1/user/login",
     operation_id = "user_login",
+    tag = "agdb",
     request_body = UserLogin,
     responses(
          (status = 200, description = "login successful", body = String),
@@ -40,6 +41,7 @@ pub(crate) async fn login(
 #[utoipa::path(post,
     path = "/api/v1/user/logout",
     operation_id = "user_logout",
+    tag = "agdb",
     security(("Token" = [])),
     responses(
          (status = 201, description = "user logged out"),
@@ -58,6 +60,7 @@ pub(crate) async fn logout(user: UserId, State(db_pool): State<DbPool>) -> Serve
 #[utoipa::path(put,
     path = "/api/v1/user/change_password",
     operation_id = "user_change_password",
+    tag = "agdb",
     security(("Token" = [])),
     request_body = ChangePassword,
     responses(

@@ -15,8 +15,10 @@ cluster: []" > agdb_server.yaml
     cargo run --release -p agdb_server &
     sleep 3
     
-    local output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
-    local error_code=$?   
+    local output
+    output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
+    local error_code=$?
+    echo "ERROR CODE: $error_code"
     echo "$output"
     echo ""
 
@@ -24,21 +26,21 @@ cluster: []" > agdb_server.yaml
         echo "Line coverage OK";
     else
         echo "Insufficient line coverage";
-        error_code=1
+        error_code=2
     fi
     
     if echo "$output" | grep "Methods:" | head -1 | grep -q "100.00%"; then
         echo "Methods coverage OK";
     else 
         echo "Insufficient methods coverage";
-        error_code=1
+        error_code=2
     fi
     
     if echo "$output" | grep "Classes:" | head -1 | grep -q "100.00%"; then
         echo "Classes coverage OK";
     else 
         echo "Insufficient classes coverage"; 
-        error_code=1
+        error_code=2
     fi
     
     echo ""
@@ -50,6 +52,14 @@ cluster: []" > agdb_server.yaml
     rm -f .agdb_server.agdb
     rm -f agdb_server.agdb
     rm -rf agdb_server_data
+
+    echo ""
+
+    if (( $error_code == 1 )); then
+        echo "Tests failed"
+    else
+        echo "Tests passed"
+    fi
 
     exit $error_code
 }

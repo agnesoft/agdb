@@ -49,19 +49,24 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 
+// Configure Bearer authorization: Token
+$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
-$apiInstance = new Agdb\Api\RoutesApi(
+
+$apiInstance = new Agdb\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
-    new GuzzleHttp\Client()
+    new GuzzleHttp\Client(),
+    $config
 );
-$cluster = True; // bool | get cluster status
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+$db_type = new \Agdb\Model\DbType(); // DbType
 
 try {
-    $result = $apiInstance->status($cluster);
-    print_r($result);
+    $apiInstance->adminDbAdd($owner, $db, $db_type);
 } catch (Exception $e) {
-    echo 'Exception when calling RoutesApi->status: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling AgdbApi->adminDbAdd: ', $e->getMessage(), PHP_EOL;
 }
 
 ```
@@ -72,44 +77,44 @@ All URIs are relative to *http://localhost:3000*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*RoutesApi* | [**status**](docs/Api/RoutesApi.md#status) | **GET** /api/v1/status | 
-*RoutesadminApi* | [**adminShutdown**](docs/Api/RoutesadminApi.md#adminshutdown) | **POST** /api/v1/admin/shutdown | 
-*RoutesadmindbApi* | [**adminDbAdd**](docs/Api/RoutesadmindbApi.md#admindbadd) | **POST** /api/v1/admin/db/{owner}/{db}/add | 
-*RoutesadmindbApi* | [**adminDbAudit**](docs/Api/RoutesadmindbApi.md#admindbaudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit | 
-*RoutesadmindbApi* | [**adminDbBackup**](docs/Api/RoutesadmindbApi.md#admindbbackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup | 
-*RoutesadmindbApi* | [**adminDbCopy**](docs/Api/RoutesadmindbApi.md#admindbcopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy | 
-*RoutesadmindbApi* | [**adminDbDelete**](docs/Api/RoutesadmindbApi.md#admindbdelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete | 
-*RoutesadmindbApi* | [**adminDbExec**](docs/Api/RoutesadmindbApi.md#admindbexec) | **POST** /api/v1/admin/db/{owner}/{db}/exec | 
-*RoutesadmindbApi* | [**adminDbList**](docs/Api/RoutesadmindbApi.md#admindblist) | **GET** /api/v1/admin/db/list | 
-*RoutesadmindbApi* | [**adminDbOptimize**](docs/Api/RoutesadmindbApi.md#admindboptimize) | **POST** /api/v1/admin/db/{owner}/{db}/optimize | 
-*RoutesadmindbApi* | [**adminDbRemove**](docs/Api/RoutesadmindbApi.md#admindbremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove | 
-*RoutesadmindbApi* | [**adminDbRename**](docs/Api/RoutesadmindbApi.md#admindbrename) | **POST** /api/v1/admin/db/{owner}/{db}/rename | 
-*RoutesadmindbApi* | [**adminDbRestore**](docs/Api/RoutesadmindbApi.md#admindbrestore) | **POST** /api/v1/db/admin/{owner}/{db}/restore | 
-*RoutesadmindbuserApi* | [**adminDbUserAdd**](docs/Api/RoutesadmindbuserApi.md#admindbuseradd) | **PUT** /api/v1/admin/db/{owner}/{db}/user/{username}/add | 
-*RoutesadmindbuserApi* | [**adminDbUserList**](docs/Api/RoutesadmindbuserApi.md#admindbuserlist) | **GET** /api/v1/admin/db/{owner}/{db}/user/list | 
-*RoutesadmindbuserApi* | [**adminDbUserRemove**](docs/Api/RoutesadmindbuserApi.md#admindbuserremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/user/{username}/remove | 
-*RoutesadminuserApi* | [**adminUserAdd**](docs/Api/RoutesadminuserApi.md#adminuseradd) | **POST** /api/v1/admin/user/{username}/add | 
-*RoutesadminuserApi* | [**adminUserChangePassword**](docs/Api/RoutesadminuserApi.md#adminuserchangepassword) | **PUT** /api/v1/admin/user/{username}/change_password | 
-*RoutesadminuserApi* | [**adminUserList**](docs/Api/RoutesadminuserApi.md#adminuserlist) | **GET** /api/v1/admin/user/list | 
-*RoutesadminuserApi* | [**adminUserRemove**](docs/Api/RoutesadminuserApi.md#adminuserremove) | **DELETE** /api/v1/admin/user/{username}/remove | 
-*RoutesdbApi* | [**dbAdd**](docs/Api/RoutesdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
-*RoutesdbApi* | [**dbAudit**](docs/Api/RoutesdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
-*RoutesdbApi* | [**dbBackup**](docs/Api/RoutesdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 
-*RoutesdbApi* | [**dbClear**](docs/Api/RoutesdbApi.md#dbclear) | **POST** /api/v1/db/{owner}/{db}/clear | 
-*RoutesdbApi* | [**dbCopy**](docs/Api/RoutesdbApi.md#dbcopy) | **POST** /api/v1/db/{owner}/{db}/copy | 
-*RoutesdbApi* | [**dbDelete**](docs/Api/RoutesdbApi.md#dbdelete) | **DELETE** /api/v1/db/{owner}/{db}/delete | 
-*RoutesdbApi* | [**dbExec**](docs/Api/RoutesdbApi.md#dbexec) | **POST** /api/v1/db/{owner}/{db}/exec | 
-*RoutesdbApi* | [**dbList**](docs/Api/RoutesdbApi.md#dblist) | **GET** /api/v1/db/list | 
-*RoutesdbApi* | [**dbOptimize**](docs/Api/RoutesdbApi.md#dboptimize) | **POST** /api/v1/db/{owner}/{db}/optimize | 
-*RoutesdbApi* | [**dbRemove**](docs/Api/RoutesdbApi.md#dbremove) | **DELETE** /api/v1/db/{owner}/{db}/remove | 
-*RoutesdbApi* | [**dbRename**](docs/Api/RoutesdbApi.md#dbrename) | **POST** /api/v1/db/{owner}/{db}/rename | 
-*RoutesdbApi* | [**dbRestore**](docs/Api/RoutesdbApi.md#dbrestore) | **POST** /api/v1/db/{owner}/{db}/restore | 
-*RoutesdbuserApi* | [**dbUserAdd**](docs/Api/RoutesdbuserApi.md#dbuseradd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add | 
-*RoutesdbuserApi* | [**dbUserList**](docs/Api/RoutesdbuserApi.md#dbuserlist) | **GET** /api/v1/db/{owner}/{db}/user/list | 
-*RoutesdbuserApi* | [**dbUserRemove**](docs/Api/RoutesdbuserApi.md#dbuserremove) | **POST** /api/v1/db/{owner}/{db}/user/{username}/remove | 
-*RoutesuserApi* | [**userChangePassword**](docs/Api/RoutesuserApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 
-*RoutesuserApi* | [**userLogin**](docs/Api/RoutesuserApi.md#userlogin) | **POST** /api/v1/user/login | 
-*RoutesuserApi* | [**userLogout**](docs/Api/RoutesuserApi.md#userlogout) | **POST** /api/v1/user/logout | 
+*AgdbApi* | [**adminDbAdd**](docs/Api/AgdbApi.md#admindbadd) | **POST** /api/v1/admin/db/{owner}/{db}/add | 
+*AgdbApi* | [**adminDbAudit**](docs/Api/AgdbApi.md#admindbaudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit | 
+*AgdbApi* | [**adminDbBackup**](docs/Api/AgdbApi.md#admindbbackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup | 
+*AgdbApi* | [**adminDbCopy**](docs/Api/AgdbApi.md#admindbcopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy | 
+*AgdbApi* | [**adminDbDelete**](docs/Api/AgdbApi.md#admindbdelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete | 
+*AgdbApi* | [**adminDbExec**](docs/Api/AgdbApi.md#admindbexec) | **POST** /api/v1/admin/db/{owner}/{db}/exec | 
+*AgdbApi* | [**adminDbList**](docs/Api/AgdbApi.md#admindblist) | **GET** /api/v1/admin/db/list | 
+*AgdbApi* | [**adminDbOptimize**](docs/Api/AgdbApi.md#admindboptimize) | **POST** /api/v1/admin/db/{owner}/{db}/optimize | 
+*AgdbApi* | [**adminDbRemove**](docs/Api/AgdbApi.md#admindbremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove | 
+*AgdbApi* | [**adminDbRename**](docs/Api/AgdbApi.md#admindbrename) | **POST** /api/v1/admin/db/{owner}/{db}/rename | 
+*AgdbApi* | [**adminDbRestore**](docs/Api/AgdbApi.md#admindbrestore) | **POST** /api/v1/db/admin/{owner}/{db}/restore | 
+*AgdbApi* | [**adminDbUserAdd**](docs/Api/AgdbApi.md#admindbuseradd) | **PUT** /api/v1/admin/db/{owner}/{db}/user/{username}/add | 
+*AgdbApi* | [**adminDbUserList**](docs/Api/AgdbApi.md#admindbuserlist) | **GET** /api/v1/admin/db/{owner}/{db}/user/list | 
+*AgdbApi* | [**adminDbUserRemove**](docs/Api/AgdbApi.md#admindbuserremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/user/{username}/remove | 
+*AgdbApi* | [**adminShutdown**](docs/Api/AgdbApi.md#adminshutdown) | **POST** /api/v1/admin/shutdown | 
+*AgdbApi* | [**adminUserAdd**](docs/Api/AgdbApi.md#adminuseradd) | **POST** /api/v1/admin/user/{username}/add | 
+*AgdbApi* | [**adminUserChangePassword**](docs/Api/AgdbApi.md#adminuserchangepassword) | **PUT** /api/v1/admin/user/{username}/change_password | 
+*AgdbApi* | [**adminUserList**](docs/Api/AgdbApi.md#adminuserlist) | **GET** /api/v1/admin/user/list | 
+*AgdbApi* | [**adminUserRemove**](docs/Api/AgdbApi.md#adminuserremove) | **DELETE** /api/v1/admin/user/{username}/remove | 
+*AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
+*AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
+*AgdbApi* | [**dbBackup**](docs/Api/AgdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 
+*AgdbApi* | [**dbClear**](docs/Api/AgdbApi.md#dbclear) | **POST** /api/v1/db/{owner}/{db}/clear | 
+*AgdbApi* | [**dbCopy**](docs/Api/AgdbApi.md#dbcopy) | **POST** /api/v1/db/{owner}/{db}/copy | 
+*AgdbApi* | [**dbDelete**](docs/Api/AgdbApi.md#dbdelete) | **DELETE** /api/v1/db/{owner}/{db}/delete | 
+*AgdbApi* | [**dbExec**](docs/Api/AgdbApi.md#dbexec) | **POST** /api/v1/db/{owner}/{db}/exec | 
+*AgdbApi* | [**dbList**](docs/Api/AgdbApi.md#dblist) | **GET** /api/v1/db/list | 
+*AgdbApi* | [**dbOptimize**](docs/Api/AgdbApi.md#dboptimize) | **POST** /api/v1/db/{owner}/{db}/optimize | 
+*AgdbApi* | [**dbRemove**](docs/Api/AgdbApi.md#dbremove) | **DELETE** /api/v1/db/{owner}/{db}/remove | 
+*AgdbApi* | [**dbRename**](docs/Api/AgdbApi.md#dbrename) | **POST** /api/v1/db/{owner}/{db}/rename | 
+*AgdbApi* | [**dbRestore**](docs/Api/AgdbApi.md#dbrestore) | **POST** /api/v1/db/{owner}/{db}/restore | 
+*AgdbApi* | [**dbUserAdd**](docs/Api/AgdbApi.md#dbuseradd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add | 
+*AgdbApi* | [**dbUserList**](docs/Api/AgdbApi.md#dbuserlist) | **GET** /api/v1/db/{owner}/{db}/user/list | 
+*AgdbApi* | [**dbUserRemove**](docs/Api/AgdbApi.md#dbuserremove) | **POST** /api/v1/db/{owner}/{db}/user/{username}/remove | 
+*AgdbApi* | [**status**](docs/Api/AgdbApi.md#status) | **GET** /api/v1/status | 
+*AgdbApi* | [**userChangePassword**](docs/Api/AgdbApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 
+*AgdbApi* | [**userLogin**](docs/Api/AgdbApi.md#userlogin) | **POST** /api/v1/user/login | 
+*AgdbApi* | [**userLogout**](docs/Api/AgdbApi.md#userlogout) | **POST** /api/v1/user/logout | 
 
 ## Models
 

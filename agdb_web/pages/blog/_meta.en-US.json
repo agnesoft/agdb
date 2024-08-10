@@ -1,0 +1,13 @@
+{
+    "*": {
+        "display": "hidden"
+    },
+    "blog": {
+        "title": "Blog",
+        "display": "normal"
+    },
+    "why-not-sql": {
+        "title": "Why Not SQL?",
+        "display": "normal"
+    }
+}

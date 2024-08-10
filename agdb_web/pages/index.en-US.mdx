@@ -1,0 +1,52 @@
+---
+title: agdb
+description: agdb homepage
+---
+
+<p align="center">The graph database.</p>
+
+<p align="center">
+    <a href="/docs/docs">
+        <img width="100" src="./images/db.png" alt="db" />
+    </a>
+    <a href="/api-docs/openapi">
+        <img width="100" src="./images/api.png" alt="api" />
+    </a>
+    <a href="docs/references/studio">
+        <img width="100" src="./images/studio.png" alt="studio" />
+    </a>
+    <a href="docs/references/server">
+        <img width="100" src="./images/server.png" alt="server" />
+    </a>
+    <a href="/enterprise/enterprise">
+        <img width="100" src="./images/cloud.png" alt="cloud" />
+    </a>
+</p>
+
+<p align="center">
+    <a href="/docs/guides/quickstart">Quickstart</a>
+    <a href="/blog/blog">Why agdb?</a>
+</p>
+
+## Mermaid example
+
+```mermaid
+graph TD;
+subgraph AA [Consumers]
+A[Mobile app];
+B[Web app];
+C[Node.js client];
+end
+subgraph BB [Services]
+E[REST API];
+F[GraphQL API];
+G[SOAP API];
+end
+Z[GraphQL API];
+A --> Z;
+B --> Z;
+C --> Z;
+Z --> E;
+Z --> F;
+Z --> G;
+```

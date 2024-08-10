@@ -55,7 +55,7 @@ cluster: []" > agdb_server.yaml
 }
 
 function analyse() {
-    ./vendor/bin/phpstan analyse --level=9 src tests
+    ./vendor/bin/phpstan analyse --level=9 -v src tests
 }
 
 function format() {

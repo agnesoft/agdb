@@ -16,20 +16,15 @@ class T
 
 final class QueryTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var array<array<int, mixed>> $test_queries */
-    private static $test_queries;
+    private static $test_queries; // @phpstan-ignore missingType.property
 
     public static function setUpBeforeClass(): void
     {
-        $queries = (array) json_decode(
+        self::$test_queries = json_decode(
             (string) file_get_contents(
                 "../../agdb_server/openapi/test_queries.json"
             )
         );
-        $test_queries = array_map(function ($query) {
-            return [$query];
-        }, $queries);
-        self::$test_queries = $test_queries;
     }
     public function testQueryBuilder0(): void
     {

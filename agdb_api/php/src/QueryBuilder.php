@@ -149,7 +149,7 @@ function to_query_ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $i
     } else if (get_class($ids) === QueryId::class) {
         $query_ids->setIds(array($ids));
     } else if (get_class($ids) === QueryType::class) {
-        $query_ids->setSearch($ids['search']);
+        $query_ids->setSearch($ids->getSearch());
     } else if (get_class($ids) == SearchQuery::class) {
         $query_ids->setSearch($ids);
     }
@@ -288,13 +288,13 @@ class InsertEdgesToEachBuilder
         $this->data = $data;
     }
 
-    public function values($values): InsertEdgesValuesBuilder
+    public function values(array $values): InsertEdgesValuesBuilder
     {
         $this->data->setValues(to_multi_values($values));
         return new InsertEdgesValuesBuilder($this->data);
     }
 
-    public function values_uniform($values): InsertEdgesValuesBuilder
+    public function values_uniform(array $values): InsertEdgesValuesBuilder
     {
         $this->data->setValues(to_single_values($values));
         return new InsertEdgesValuesBuilder($this->data);
@@ -445,13 +445,13 @@ class InsertNodesAliasesBuilder
         $this->data = $data;
     }
 
-    public function values($values): InsertNodesValuesBuilder
+    public function values(array $values): InsertNodesValuesBuilder
     {
         $this->data->setValues(to_multi_values($values));
         return new InsertNodesValuesBuilder($this->data);
     }
 
-    public function values_uniform($values): InsertNodesValuesBuilder
+    public function values_uniform(array $values): InsertNodesValuesBuilder
     {
         $this->data->setValues(to_single_values($values));
         return new InsertNodesValuesBuilder($this->data);
@@ -641,7 +641,7 @@ class InsertBuilder
         return new InsertEdgesBuilder();
     }
 
-    public function index(mixed $key): InsertIndexBuilder
+    public function index(int|float|string|array|DbValue $key): InsertIndexBuilder
     {
         return new InsertIndexBuilder(to_db_value($key));
     }
@@ -802,8 +802,8 @@ class SearchIndexBuilder
     public function value(int|float|string|array|DbValue $v): SearchIndexValueBuilder
     {
         $condition = new QueryCondition();
-        $condition->setLogic(QueryConditionLogic::_AND);
-        $condition->setModifier(QueryConditionModifier::NONE);
+        $condition->setLogic(QueryConditionLogic::_AND); // @phpstan-ignore argument.type
+        $condition->setModifier(QueryConditionModifier::NONE); // @phpstan-ignore argument.type
         $condition_data = new QueryConditionData();
         $kv = new QueryConditionDataOneOf5KeyValue();
         $kv->setKey($this->key);
@@ -956,7 +956,7 @@ class SearchWhereBuilder
 
     public function ids(string|int|array|QueryId|QueryIds $ids): SearchWhereLogicBuilder
     {
-        $this->__push_condition(new QueryConditionData(["ids" => to_query_ids($ids)['ids']]));
+        $this->__push_condition(new QueryConditionData(["ids" => to_query_ids($ids)->getIds()]));
         return new SearchWhereLogicBuilder($this);
     }
 
@@ -996,7 +996,7 @@ class SearchWhereBuilder
         return $this;
     }
 
-    public function __push_condition($data)
+    public function __push_condition(string|QueryConditionData $data): void
     {
         $count = count($this->__conditions);
         array_push($this->__conditions[$count - 1], new QueryCondition(['data' => $data, 'modifier' => $this->__modifier, 'logic' => $this->__logic]));
@@ -1041,7 +1041,7 @@ class SearchFromBuilder
         return new SearchOffsetBuilder($this->data);
     }
 
-    public function order_by(array $data): SearchOrderByBuilder
+    public function order_by(DbKeyOrder|array $data): SearchOrderByBuilder
     {
         $this->data->setOrderBy(is_array($data) ? $data : array($data));
         return new SearchOrderByBuilder($this->data);
@@ -1131,7 +1131,7 @@ class SearchToBuilder
         return new SearchOffsetBuilder($this->data);
     }
 
-    public function order_by(array $data): SearchOrderByBuilder
+    public function order_by(DbKeyOrder|array $data): SearchOrderByBuilder
     {
         $this->data->setOrderBy(is_array($data) ? $data : array($data));
         return new SearchOrderByBuilder($this->data);
@@ -1159,14 +1159,14 @@ class SearchBuilder
     public function depth_first(): SearchAlgorithmBuilder
     {
         $search = self::new_search();
-        $search->setAlgorithm(SearchQueryAlgorithm::DEPTH_FIRST);
+        $search->setAlgorithm(SearchQueryAlgorithm::DEPTH_FIRST); // @phpstan-ignore argument.type
         return new SearchAlgorithmBuilder($search);
     }
 
     public function elements(): SearchToBuilder
     {
         $search = self::new_search();
-        $search->setAlgorithm(SearchQueryAlgorithm::ELEMENTS);
+        $search->setAlgorithm(SearchQueryAlgorithm::ELEMENTS); // @phpstan-ignore argument.type
         return new SearchToBuilder($search);
     }
 
@@ -1180,7 +1180,7 @@ class SearchBuilder
     public function index(int|float|string|array|DbValue $key): SearchIndexBuilder
     {
         $search = self::new_search();
-        $search->setAlgorithm(SearchQueryAlgorithm::INDEX);
+        $search->setAlgorithm(SearchQueryAlgorithm::INDEX); // @phpstan-ignore argument.type
         return new SearchIndexBuilder($search, to_db_value($key));
     }
 
@@ -1194,7 +1194,7 @@ class SearchBuilder
     private static function new_search(): SearchQuery
     {
         $query = new SearchQuery();
-        $query->setAlgorithm(SearchQueryAlgorithm::BREADTH_FIRST);
+        $query->setAlgorithm(SearchQueryAlgorithm::BREADTH_FIRST); // @phpstan-ignore argument.type
         $query->setOrigin(new QueryId(['id' => 0]));
         $query->setDestination(new QueryId(['id' => 0]));
         $query->setOffset(0);

@@ -1,8 +1,7 @@
 <?php
-use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
 
-final class AgdbTest extends TestCase
+final class ApiTest extends TestCase
 {
     public function testStatus(): void
     {
@@ -11,12 +10,5 @@ final class AgdbTest extends TestCase
         $response = $client->status(false);
 
         $this->assertIsArray($response);
-    }
-
-    public function testQueryBuilder(): void
-    {
-        $builder = new QueryBuilder();
-
-        $this->assertIsArray($builder->query);
     }
 }

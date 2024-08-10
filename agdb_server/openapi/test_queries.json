@@ -265,7 +265,7 @@
     }
   ],
   [
-    "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().values_uniform(vec![(\"k\",1).into(),(\"k\",2).into()]).query()",
+    "QueryBuilder::insert().edges().from(vec![1,2]).to(vec![2,3]).each().values_uniform(vec![(\"k\",1).into(),(1,10).into()]).query()",
     {
       "InsertEdges": {
         "from": {
@@ -303,10 +303,10 @@
             },
             {
               "key": {
-                "String": "k"
+                "I64": 1
               },
               "value": {
-                "I64": 2
+                "I64": 10
               }
             }
           ]

@@ -308,7 +308,7 @@ class InsertNodesBuilder {
         return new InsertNodesCountBuilder(this.data);
     }
 
-    ids(ids: BuilderQueryIds) {
+    ids(ids: BuilderQueryIds): InsertNodesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertNodesIdsBuilder(this.data);
     }
@@ -476,7 +476,7 @@ class InsertEdgesBuilder {
         return new InsertEdgesFromBuilder(this.data);
     }
 
-    ids(ids: BuilderQueryIds) {
+    ids(ids: BuilderQueryIds): InsertEdgesIdsBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertEdgesIdsBuilder(this.data);
     }
@@ -1172,7 +1172,7 @@ class SearchOffsetBuilder {
     }
 }
 
-class SearchOrderBy {
+class SearchOrderByBuilder {
     private data: Components.Schemas.SearchQuery;
 
     constructor(data: Components.Schemas.SearchQuery) {
@@ -1217,9 +1217,9 @@ class SearchFromBuilder {
 
     order_by(
         keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
-    ): SearchOrderBy {
+    ): SearchOrderByBuilder {
         this.data.order_by = intoDbKeyOrder(keys);
-        return new SearchOrderBy(this.data);
+        return new SearchOrderByBuilder(this.data);
     }
 
     to(id: BuilderQueryId): SearchToBuilder {
@@ -1255,9 +1255,9 @@ class SearchToBuilder {
 
     order_by(
         keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
-    ): SearchOrderBy {
+    ): SearchOrderByBuilder {
         this.data.order_by = intoDbKeyOrder(keys);
-        return new SearchOrderBy(this.data);
+        return new SearchOrderByBuilder(this.data);
     }
 
     where(): SearchWhereBuilder {

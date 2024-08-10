@@ -55,7 +55,7 @@ cluster: []" > agdb_server.yaml
 }
 
 function analyse() {
-    ./vendor/bin/phpstan analyse --level=9 src tests
+    ./vendor/bin/phpstan analyse --level=9 -v src tests
 }
 
 function format() {
@@ -72,7 +72,7 @@ function generate_api() {
 }
 
 function generate_tests() {
-    echo "TODO"
+    node query_test_generator.js && prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
 }
 
 if [[ "$1" == "coverage" ]]; then

@@ -10,13 +10,13 @@ use Agdb\Model\QueryId;
 
 class TNoDbId
 {
-    public $value = 1;
+    public mixed $value = 1;
 }
 
 class TDbId
 {
-    public $db_id = 1;
-    public $value = 1;
+    public mixed $db_id = 1;
+    public int $value = 1;
 }
 
 final class QueryBuilderTest extends TestCase

@@ -10,13 +10,23 @@ use Agnesoft\\Agdb\\DbKeyOrderBuilder;
 use Agnesoft\\Agdb\\CountComparisonBuilder;
 use Agnesoft\\Agdb\\ComparisonBuilder;
 
-class T { public $db_id = null; public string $value1 = ""; public int $value2 = 0; }
+class T { public mixed $db_id = null; public string $value1 = ""; public int $value2 = 0; }
 
 final class QueryTest extends \\PHPUnit\\Framework\\TestCase {
+    /** @var array<array<int, mixed>> $test_queries */
     private static $test_queries;
 
-    public static function setUpBeforeClass(): void {
-        self::$test_queries = json_decode(file_get_contents('../../agdb_server/openapi/test_queries.json'));
+    public static function setUpBeforeClass(): void
+    {
+        $queries = (array) json_decode(
+            (string) file_get_contents(
+                "../../agdb_server/openapi/test_queries.json"
+            )
+        );
+        $test_queries = array_map(function ($query) {
+            return array($query);
+        }, $queries);
+        self::$test_queries = $test_queries;
     }`;
 
 for (let index in test_queries) {

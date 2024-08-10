@@ -1,3 +1,4 @@
+
 // GENERATED. DO NOT MODIFY AS ANY CHANGES WILL BE LOST.
 // query_test_generator.js
 <?php
@@ -8,20 +9,27 @@ use Agnesoft\Agdb\ComparisonBuilder;
 
 class T
 {
-    public $db_id = null;
+    public mixed $db_id = null;
     public string $value1 = "";
     public int $value2 = 0;
 }
 
 final class QueryTest extends \PHPUnit\Framework\TestCase
 {
+    /** @var array<array<int, mixed>> $test_queries */
     private static $test_queries;
 
     public static function setUpBeforeClass(): void
     {
-        self::$test_queries = json_decode(
-            file_get_contents("../../agdb_server/openapi/test_queries.json")
+        $queries = (array) json_decode(
+            (string) file_get_contents(
+                "../../agdb_server/openapi/test_queries.json"
+            )
         );
+        $test_queries = array_map(function ($query) {
+            return [$query];
+        }, $queries);
+        self::$test_queries = $test_queries;
     }
     public function testQueryBuilder0(): void
     {

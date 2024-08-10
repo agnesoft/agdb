@@ -120,11 +120,8 @@ function to_query_id(string|int|QueryId $id): QueryId
         return new QueryId(['id' => $id]);
     }
 
-    if (get_class($id) === QueryId::class) {
-        return $id;
-    }
 
-    throw new \InvalidArgumentException('Unsupported $id type', 1);
+    return $id;
 }
 
 function to_query_ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): QueryIds
@@ -192,11 +189,7 @@ function to_db_value(bool|int|float|string|array|DbValue $value): DbValue
         }
     }
 
-    if (get_class($value) === DbValue::class) {
-        return $value;
-    }
-
-    throw new \InvalidArgumentException('Unsupported $value type', 1);
+    return $value;
 }
 
 function to_db_keys(array $data): array
@@ -615,31 +608,26 @@ class InsertBuilder
         $values = [];
         $ids = [];
 
-
         foreach ($elems as $elem) {
-            if (property_exists($elem, 'db_id')) {
-                $element_values = [];
+            $element_values = [];
 
-                if (!property_exists($elem, 'db_id')) {
-                    $ids[] = new QueryId(['id' => 0]);
-                }
-
-                foreach ($elem as $key => $value) {
-                    if ($key === 'db_id') {
-                        if (is_null($value) || $value === 0) {
-                            $ids[] = new QueryId(['id' => 0]);
-                        } else if (is_int($value)) {
-                            $ids[] = new QueryId(['id' => $value]);
-                        } else {
-                            $ids[] = new QueryId(['alias' => $value]);
-                        }
-                    } else {
-                        $element_values[] = new DbKeyValue(['key' => new DbValue(['string' => $key]), 'value' => to_db_value($value)]);
-                    }
-                }
-
-                $values[] = $element_values;
+            if (!property_exists($elem, 'db_id')) {
+                $ids[] = new QueryId(['id' => 0]);
             }
+
+            foreach ($elem as $key => $value) {
+                if ($key === 'db_id') {
+                    if (is_null($value) || $value === 0) {
+                        $ids[] = new QueryId(['id' => 0]);
+                    } else {
+                        $ids[] = to_query_id($value);
+                    }
+                } else {
+                    $element_values[] = new DbKeyValue(['key' => new DbValue(['string' => $key]), 'value' => to_db_value($value)]);
+                }
+            }
+
+            $values[] = $element_values;
         }
 
         $data->setValues(new QueryValues(['multi' => $values]));

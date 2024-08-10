@@ -1,10 +1,8 @@
 <?php
-use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
-use Agnesoft\Agdb\DbKeyOrderBuilder;
 
 
-final class AgdbTest extends TestCase
+final class ApiTest extends TestCase
 {
     public function testStatus(): void
     {

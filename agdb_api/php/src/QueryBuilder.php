@@ -30,127 +30,146 @@ class CountComparisonBuilder
 {
     public static function Equal(int $value): CountComparison
     {
-        return new CountComparison(['equal' => $value]);
+        return new CountComparison(["equal" => $value]);
     }
 
     public static function GreaterThan(int $value): CountComparison
     {
-        return new CountComparison(['greater_than' => $value]);
+        return new CountComparison(["greater_than" => $value]);
     }
 
     public static function GreaterThanOrEqual(int $value): CountComparison
     {
-        return new CountComparison(['greater_than_or_equal' => $value]);
+        return new CountComparison(["greater_than_or_equal" => $value]);
     }
 
     public static function LessThan(int $value): CountComparison
     {
-        return new CountComparison(['less_than' => $value]);
+        return new CountComparison(["less_than" => $value]);
     }
 
     public static function LessThanOrEqual(int $value): CountComparison
     {
-        return new CountComparison(['less_than_or_equal' => $value]);
+        return new CountComparison(["less_than_or_equal" => $value]);
     }
 
     public static function NotEqual(int $value): CountComparison
     {
-        return new CountComparison(['not_equal' => $value]);
+        return new CountComparison(["not_equal" => $value]);
     }
 }
 
 class ComparisonBuilder
 {
-    public static function Contains(bool|int|float|string|array|DbValue $value): Comparison
-    {
-        return new Comparison(['contains' => to_db_value($value)]);
+    public static function Contains(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["contains" => to_db_value($value)]);
     }
 
-    public static function Equal(bool|int|float|string|array|DbValue $value): Comparison
-    {
-        return new Comparison(['equal' => to_db_value($value)]);
+    public static function Equal(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["equal" => to_db_value($value)]);
     }
 
-    public static function GreaterThan(bool|int|float|string|array|DbValue $value): Comparison
-    {
-        return new Comparison(['greater_than' => to_db_value($value)]);
+    public static function GreaterThan(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["greater_than" => to_db_value($value)]);
     }
 
-    public static function GreaterThanOrEqual(bool|int|float|string|array|DbValue $value): Comparison
-    {
-        return new Comparison(['greater_than_or_equal' => to_db_value($value)]);
+    public static function GreaterThanOrEqual(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["greater_than_or_equal" => to_db_value($value)]);
     }
 
-    public static function LessThan(bool|int|float|string|array|DbValue $value): Comparison
-    {
-        return new Comparison(['less_than' => to_db_value($value)]);
+    public static function LessThan(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["less_than" => to_db_value($value)]);
     }
 
-    public static function LessThanOrEqual(bool|int|float|string|array|DbValue $value): Comparison
-    {
-        return new Comparison(['less_than_or_equal' => to_db_value($value)]);
+    public static function LessThanOrEqual(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["less_than_or_equal" => to_db_value($value)]);
     }
 
-    public static function NotEqual(bool|int|float|string|array|DbValue $value): Comparison
-    {
-        return new Comparison(['not_equal' => to_db_value($value)]);
+    public static function NotEqual(
+        bool|int|float|string|array|DbValue $value
+    ): Comparison {
+        return new Comparison(["not_equal" => to_db_value($value)]);
     }
 }
 
 class DbKeyOrderBuilder
 {
-    public static function Asc(int|float|string|array|DbValue $value): DbKeyOrder
-    {
-        return new DbKeyOrder(['asc' => to_db_value($value)]);
+    public static function Asc(
+        int|float|string|array|DbValue $value
+    ): DbKeyOrder {
+        return new DbKeyOrder(["asc" => to_db_value($value)]);
     }
 
-    public static function Desc(int|float|string|array|DbValue $value): DbKeyOrder
-    {
-        return new DbKeyOrder(['desc' => to_db_value($value)]);
+    public static function Desc(
+        int|float|string|array|DbValue $value
+    ): DbKeyOrder {
+        return new DbKeyOrder(["desc" => to_db_value($value)]);
     }
 }
 
 function to_query_id(string|int|QueryId $id): QueryId
 {
     if (is_string($id)) {
-        return new QueryId(['alias' => $id]);
+        return new QueryId(["alias" => $id]);
     }
 
     if (is_int($id)) {
-        return new QueryId(['id' => $id]);
+        return new QueryId(["id" => $id]);
     }
-
 
     return $id;
 }
 
-function to_query_ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): QueryIds
-{
+function to_query_ids(
+    string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+): QueryIds {
     $query_ids = new QueryIds();
 
     if (is_string($ids)) {
         $id = new QueryId();
         $id->setAlias($ids);
-        $query_ids->setIds(array($id));
-    } else if (is_int($ids)) {
+        $query_ids->setIds([$id]);
+    } elseif (is_int($ids)) {
         $id = new QueryId();
         $id->setId($ids);
-        $query_ids->setIds(array($id));
-    } else if (is_array($ids)) {
+        $query_ids->setIds([$id]);
+    } elseif (is_array($ids)) {
         if (count($ids) !== 0) {
             if (is_int($ids[0])) {
-                return new QueryIds(['ids' => array_map(fn($id) => new QueryId(['id' => $id]), $ids)]);
+                return new QueryIds([
+                    "ids" => array_map(
+                        fn($id) => new QueryId(["id" => $id]),
+                        $ids
+                    ),
+                ]);
             } else {
-                return new QueryIds(['ids' => array_map(fn($id) => new QueryId(['alias' => $id]), $ids)]);
+                return new QueryIds([
+                    "ids" => array_map(
+                        fn($id) => new QueryId(["alias" => $id]),
+                        $ids
+                    ),
+                ]);
             }
         } else {
             $query_ids->setIds([]);
         }
-    } else if (get_class($ids) === QueryId::class) {
-        $query_ids->setIds(array($ids));
-    } else if (get_class($ids) === QueryType::class) {
+    } elseif (get_class($ids) === QueryId::class) {
+        $query_ids->setIds([$ids]);
+    } elseif (get_class($ids) === QueryType::class) {
         $query_ids->setSearch($ids->getSearch());
-    } else if (get_class($ids) == SearchQuery::class) {
+    } elseif (get_class($ids) == SearchQuery::class) {
         $query_ids->setSearch($ids);
     }
 
@@ -160,31 +179,31 @@ function to_query_ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $i
 function to_db_value(bool|int|float|string|array|DbValue $value): DbValue
 {
     if (is_string($value)) {
-        return new DbValue(['string' => $value]);
+        return new DbValue(["string" => $value]);
     }
 
     if (is_int($value)) {
-        return new DbValue(['i64' => $value]);
+        return new DbValue(["i64" => $value]);
     }
 
     if (is_float($value)) {
-        return new DbValue(['f64' => $value]);
+        return new DbValue(["f64" => $value]);
     }
 
     if (is_bool($value)) {
-        return new DbValue(['string' => $value ? 'true' : 'false']);
+        return new DbValue(["string" => $value ? "true" : "false"]);
     }
 
     if (is_array($value)) {
         if (count($value) === 0) {
-            return new DbValue(['vec_i64' => []]);
+            return new DbValue(["vec_i64" => []]);
         } else {
             if (is_int($value[0])) {
-                return new DbValue(['vec_i64' => $value]);
-            } else if (is_float($value[0])) {
-                return new DbValue(['vec_f64' => $value]);
+                return new DbValue(["vec_i64" => $value]);
+            } elseif (is_float($value[0])) {
+                return new DbValue(["vec_f64" => $value]);
             } else {
-                return new DbValue(['vec_str' => $value]);
+                return new DbValue(["vec_str" => $value]);
             }
         }
     }
@@ -201,7 +220,6 @@ function to_db_keys(array $data): array
     }
 
     return $keys;
-
 }
 
 function to_multi_values(array $data): QueryValues
@@ -212,13 +230,16 @@ function to_multi_values(array $data): QueryValues
         $element_values = [];
 
         foreach ($element as $key => $value) {
-            $element_values[] = new DbKeyValue(['key' => to_db_value($key), 'value' => to_db_value($value)]);
+            $element_values[] = new DbKeyValue([
+                "key" => to_db_value($key),
+                "value" => to_db_value($value),
+            ]);
         }
 
         $values[] = $element_values;
     }
 
-    return new QueryValues(['multi' => $values]);
+    return new QueryValues(["multi" => $values]);
 }
 
 function to_single_values(array $data): QueryValues
@@ -226,10 +247,13 @@ function to_single_values(array $data): QueryValues
     $values = [];
 
     foreach ($data as $key => $value) {
-        $values[] = new DbKeyValue(['key' => to_db_value($key), 'value' => to_db_value($value)]);
+        $values[] = new DbKeyValue([
+            "key" => to_db_value($key),
+            "value" => to_db_value($value),
+        ]);
     }
 
-    return new QueryValues(['single' => $values]);
+    return new QueryValues(["single" => $values]);
 }
 
 class InsertAliasesIdsBuilder
@@ -243,7 +267,7 @@ class InsertAliasesIdsBuilder
 
     function query(): QueryType
     {
-        return new QueryType(['insert_alias' => $this->data]);
+        return new QueryType(["insert_alias" => $this->data]);
     }
 }
 
@@ -257,8 +281,9 @@ class InsertAliasesBuilder
         $this->data->setAliases($names);
     }
 
-    function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): InsertAliasesIdsBuilder
-    {
+    function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): InsertAliasesIdsBuilder {
         $this->data->setIds(to_query_ids($ids));
         return new InsertAliasesIdsBuilder($this->data);
     }
@@ -275,7 +300,7 @@ class InsertValuesIdsBuilder
 
     function query(): QueryType
     {
-        return new QueryType(['insert_values' => $this->data]);
+        return new QueryType(["insert_values" => $this->data]);
     }
 }
 
@@ -302,7 +327,7 @@ class InsertEdgesToEachBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['insert_edges' => $this->data]);
+        return new QueryType(["insert_edges" => $this->data]);
     }
 }
 
@@ -317,7 +342,7 @@ class InsertEdgesValuesBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['insert_edges' => $this->data]);
+        return new QueryType(["insert_edges" => $this->data]);
     }
 }
 
@@ -350,7 +375,7 @@ class InsertEdgesToBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['insert_edges' => $this->data]);
+        return new QueryType(["insert_edges" => $this->data]);
     }
 }
 
@@ -363,8 +388,9 @@ class InsertEdgesFromBuilder
         $this->data = $data;
     }
 
-    public function to(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): InsertEdgesToBuilder
-    {
+    public function to(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): InsertEdgesToBuilder {
         $this->data->setTo(to_query_ids($ids));
         return new InsertEdgesToBuilder($this->data);
     }
@@ -379,8 +405,9 @@ class InsertEdgesIdsBuilder
         $this->data = $data;
     }
 
-    public function from(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): InsertEdgesFromBuilder
-    {
+    public function from(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): InsertEdgesFromBuilder {
         $this->data->setFrom(to_query_ids($ids));
         return new InsertEdgesFromBuilder($this->data);
     }
@@ -395,14 +422,16 @@ class InsertEdgesBuilder
         $this->data = self::new_query();
     }
 
-    public function from(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): InsertEdgesFromBuilder
-    {
+    public function from(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): InsertEdgesFromBuilder {
         $this->data->setFrom(to_query_ids($ids));
         return new InsertEdgesFromBuilder($this->data);
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): InsertEdgesIdsBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): InsertEdgesIdsBuilder {
         $this->data->setIds(to_query_ids($ids));
         return new InsertEdgesIdsBuilder($this->data);
     }
@@ -432,7 +461,7 @@ class InsertNodesValuesBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['insert_nodes' => $this->data]);
+        return new QueryType(["insert_nodes" => $this->data]);
     }
 }
 
@@ -459,7 +488,7 @@ class InsertNodesAliasesBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['insert_nodes' => $this->data]);
+        return new QueryType(["insert_nodes" => $this->data]);
     }
 }
 
@@ -480,7 +509,7 @@ class InsertNodesCountBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['insert_nodes' => $this->data]);
+        return new QueryType(["insert_nodes" => $this->data]);
     }
 }
 
@@ -495,7 +524,7 @@ class InsertNodesIdsBuilder
 
     public function aliases(string|array $names): InsertNodesAliasesBuilder
     {
-        $this->data->setAliases(is_array($names) ? $names : array($names));
+        $this->data->setAliases(is_array($names) ? $names : [$names]);
         return new InsertNodesAliasesBuilder($this->data);
     }
 
@@ -537,7 +566,7 @@ class InsertNodesBuilder
 
     public function aliases(string|array $names): InsertNodesAliasesBuilder
     {
-        $this->data->setAliases(is_array($names) ? $names : array($names));
+        $this->data->setAliases(is_array($names) ? $names : [$names]);
         return new InsertNodesAliasesBuilder($this->data);
     }
 
@@ -547,8 +576,9 @@ class InsertNodesBuilder
         return new InsertNodesCountBuilder($this->data);
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): InsertNodesIdsBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): InsertNodesIdsBuilder {
         $this->data->setIds(to_query_ids($ids));
         return new InsertNodesIdsBuilder($this->data);
     }
@@ -571,7 +601,7 @@ class InsertIndexBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['insert_index' => $this->data]);
+        return new QueryType(["insert_index" => $this->data]);
     }
 }
 
@@ -584,9 +614,15 @@ class InsertValuesBuilder
         $this->data = $data;
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): InsertValuesIdsBuilder
-    {
-        return new InsertValuesIdsBuilder(new InsertValuesQuery(['values' => $this->data, 'ids' => to_query_ids($ids)]));
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): InsertValuesIdsBuilder {
+        return new InsertValuesIdsBuilder(
+            new InsertValuesQuery([
+                "values" => $this->data,
+                "ids" => to_query_ids($ids),
+            ])
+        );
     }
 }
 
@@ -594,12 +630,12 @@ class InsertBuilder
 {
     public function aliases(string|array $names): InsertAliasesBuilder
     {
-        return new InsertAliasesBuilder(is_array($names) ? $names : array($names));
+        return new InsertAliasesBuilder(is_array($names) ? $names : [$names]);
     }
 
     public function element(mixed $elem): InsertValuesIdsBuilder
     {
-        return $this->elements(array($elem));
+        return $this->elements([$elem]);
     }
 
     public function elements(array $elems): InsertValuesIdsBuilder
@@ -611,27 +647,30 @@ class InsertBuilder
         foreach ($elems as $elem) {
             $element_values = [];
 
-            if (!property_exists($elem, 'db_id')) {
-                $ids[] = new QueryId(['id' => 0]);
+            if (!property_exists($elem, "db_id")) {
+                $ids[] = new QueryId(["id" => 0]);
             }
 
             foreach ($elem as $key => $value) {
-                if ($key === 'db_id') {
+                if ($key === "db_id") {
                     if (is_null($value) || $value === 0) {
-                        $ids[] = new QueryId(['id' => 0]);
+                        $ids[] = new QueryId(["id" => 0]);
                     } else {
                         $ids[] = to_query_id($value);
                     }
                 } else {
-                    $element_values[] = new DbKeyValue(['key' => new DbValue(['string' => $key]), 'value' => to_db_value($value)]);
+                    $element_values[] = new DbKeyValue([
+                        "key" => new DbValue(["string" => $key]),
+                        "value" => to_db_value($value),
+                    ]);
                 }
             }
 
             $values[] = $element_values;
         }
 
-        $data->setValues(new QueryValues(['multi' => $values]));
-        $data->setIds(new QueryIds(['ids' => $ids]));
+        $data->setValues(new QueryValues(["multi" => $values]));
+        $data->setIds(new QueryIds(["ids" => $ids]));
 
         return new InsertValuesIdsBuilder($data);
     }
@@ -641,8 +680,9 @@ class InsertBuilder
         return new InsertEdgesBuilder();
     }
 
-    public function index(int|float|string|array|DbValue $key): InsertIndexBuilder
-    {
+    public function index(
+        int|float|string|array|DbValue $key
+    ): InsertIndexBuilder {
         return new InsertIndexBuilder(to_db_value($key));
     }
 
@@ -673,7 +713,7 @@ class RemoveAliasesBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['remove_aliases' => $this->data]);
+        return new QueryType(["remove_aliases" => $this->data]);
     }
 }
 
@@ -688,7 +728,7 @@ class RemoveIdsBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['remove' => $this->data]);
+        return new QueryType(["remove" => $this->data]);
     }
 }
 
@@ -703,7 +743,7 @@ class RemoveIndexBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['remove_index' => $this->data]);
+        return new QueryType(["remove_index" => $this->data]);
     }
 }
 
@@ -716,15 +756,16 @@ class RemoveValuesBuilder
         $this->data = $data;
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): RemoveValuesBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): RemoveValuesBuilder {
         $this->data->setIds(to_query_ids($ids));
         return $this;
     }
 
     public function query(): QueryType
     {
-        return new QueryType(['remove_values' => $this->data]);
+        return new QueryType(["remove_values" => $this->data]);
     }
 }
 
@@ -732,11 +773,12 @@ class RemoveBuilder
 {
     public function aliases(string|array $names): RemoveAliasesBuilder
     {
-        return new RemoveAliasesBuilder(is_array($names) ? $names : array($names));
+        return new RemoveAliasesBuilder(is_array($names) ? $names : [$names]);
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): RemoveIdsBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): RemoveIdsBuilder {
         return new RemoveIdsBuilder(to_query_ids($ids));
     }
 
@@ -747,7 +789,9 @@ class RemoveBuilder
 
     public function values(array $data): RemoveValuesBuilder
     {
-        return new RemoveValuesBuilder(new SelectValuesQuery(['keys' => to_db_keys($data)]));
+        return new RemoveValuesBuilder(
+            new SelectValuesQuery(["keys" => to_db_keys($data)])
+        );
     }
 }
 
@@ -784,7 +828,7 @@ class SearchIndexValueBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['search' => $this->data]);
+        return new QueryType(["search" => $this->data]);
     }
 }
 
@@ -799,18 +843,19 @@ class SearchIndexBuilder
         $this->key = $key;
     }
 
-    public function value(int|float|string|array|DbValue $v): SearchIndexValueBuilder
-    {
+    public function value(
+        int|float|string|array|DbValue $v
+    ): SearchIndexValueBuilder {
         $condition = new QueryCondition();
         $condition->setLogic(QueryConditionLogic::_AND); // @phpstan-ignore argument.type
         $condition->setModifier(QueryConditionModifier::NONE); // @phpstan-ignore argument.type
         $condition_data = new QueryConditionData();
         $kv = new QueryConditionDataOneOf5KeyValue();
         $kv->setKey($this->key);
-        $kv->setValue(new Comparison(['equal' => to_db_value($v)]));
+        $kv->setValue(new Comparison(["equal" => to_db_value($v)]));
         $condition_data->setKeyValue($kv);
         $condition->setData($condition_data);
-        $this->data->setConditions(array($condition));
+        $this->data->setConditions([$condition]);
         return new SearchIndexValueBuilder($this->data);
     }
 }
@@ -843,7 +888,7 @@ class SearchOrderByBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['search' => $this->data]);
+        return new QueryType(["search" => $this->data]);
     }
 }
 
@@ -902,7 +947,7 @@ class SearchWhereLogicBuilder
         while ($this->data->__collapse_conditions()) {
         }
         $this->data->__data->setConditions($this->data->__conditions[0]);
-        return new QueryType(['search' => $this->data->__data]);
+        return new QueryType(["search" => $this->data->__data]);
     }
 }
 
@@ -911,7 +956,7 @@ class SearchWhereBuilder
     public SearchQuery $__data;
     public string $__modifier = QueryConditionModifier::NONE;
     public string $__logic = QueryConditionLogic::_AND;
-    public array $__conditions = array(array());
+    public array $__conditions = [[]];
 
     public function __construct(SearchQuery $data)
     {
@@ -924,56 +969,79 @@ class SearchWhereBuilder
         return $this;
     }
 
-    public function distance(CountComparison $comparison): SearchWhereLogicBuilder
-    {
-        $this->__push_condition(new QueryConditionData(["distance" => $comparison]));
+    public function distance(
+        CountComparison $comparison
+    ): SearchWhereLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData(["distance" => $comparison])
+        );
         return new SearchWhereLogicBuilder($this);
     }
 
     public function edge(): SearchWhereLogicBuilder
     {
-        $this->__push_condition('Edge');
+        $this->__push_condition("Edge");
         return new SearchWhereLogicBuilder($this);
     }
 
-    public function edge_count(CountComparison $comparison): SearchWhereLogicBuilder
-    {
-        $this->__push_condition(new QueryConditionData(["edge_count" => $comparison]));
+    public function edge_count(
+        CountComparison $comparison
+    ): SearchWhereLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData(["edge_count" => $comparison])
+        );
         return new SearchWhereLogicBuilder($this);
     }
 
-    public function edge_count_from(CountComparison $comparison): SearchWhereLogicBuilder
-    {
-        $this->__push_condition(new QueryConditionData(["edge_count_from" => $comparison]));
+    public function edge_count_from(
+        CountComparison $comparison
+    ): SearchWhereLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData(["edge_count_from" => $comparison])
+        );
         return new SearchWhereLogicBuilder($this);
     }
 
-    public function edge_count_to(CountComparison $comparison): SearchWhereLogicBuilder
-    {
-        $this->__push_condition(new QueryConditionData(["edge_count_to" => $comparison]));
+    public function edge_count_to(
+        CountComparison $comparison
+    ): SearchWhereLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData(["edge_count_to" => $comparison])
+        );
         return new SearchWhereLogicBuilder($this);
     }
 
-    public function ids(string|int|array|QueryId|QueryIds $ids): SearchWhereLogicBuilder
-    {
-        $this->__push_condition(new QueryConditionData(["ids" => to_query_ids($ids)->getIds()]));
+    public function ids(
+        string|int|array|QueryId|QueryIds $ids
+    ): SearchWhereLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData(["ids" => to_query_ids($ids)->getIds()])
+        );
         return new SearchWhereLogicBuilder($this);
     }
 
-    public function key(int|float|string|array|DbValue $key): SearchWhereKeyBuilder
-    {
+    public function key(
+        int|float|string|array|DbValue $key
+    ): SearchWhereKeyBuilder {
         return new SearchWhereKeyBuilder($this, to_db_value($key));
     }
 
-    public function keys(int|float|string|array|DbValue $keys): SearchWhereLogicBuilder
-    {
-        $this->__push_condition(new QueryConditionData(["keys" => is_array($keys) ? to_db_keys($keys) : array(to_db_value($keys))]));
+    public function keys(
+        int|float|string|array|DbValue $keys
+    ): SearchWhereLogicBuilder {
+        $this->__push_condition(
+            new QueryConditionData([
+                "keys" => is_array($keys)
+                    ? to_db_keys($keys)
+                    : [to_db_value($keys)],
+            ])
+        );
         return new SearchWhereLogicBuilder($this);
     }
 
     public function node(): SearchWhereLogicBuilder
     {
-        $this->__push_condition('Node');
+        $this->__push_condition("Node");
         return new SearchWhereLogicBuilder($this);
     }
 
@@ -991,15 +1059,22 @@ class SearchWhereBuilder
 
     public function where(): SearchWhereBuilder
     {
-        $this->__push_condition(new QueryConditionData(['where' => []]));
-        $this->__conditions[] = array();
+        $this->__push_condition(new QueryConditionData(["where" => []]));
+        $this->__conditions[] = [];
         return $this;
     }
 
     public function __push_condition(string|QueryConditionData $data): void
     {
         $count = count($this->__conditions);
-        array_push($this->__conditions[$count - 1], new QueryCondition(['data' => $data, 'modifier' => $this->__modifier, 'logic' => $this->__logic]));
+        array_push(
+            $this->__conditions[$count - 1],
+            new QueryCondition([
+                "data" => $data,
+                "modifier" => $this->__modifier,
+                "logic" => $this->__logic,
+            ])
+        );
         $this->__modifier = QueryConditionModifier::NONE;
         $this->__logic = QueryConditionLogic::_AND;
     }
@@ -1012,7 +1087,9 @@ class SearchWhereBuilder
             $last = array_pop($this->__conditions);
             $current = end($this->__conditions);
             $last_condition = end($current);
-            $last_condition->setData(new QueryConditionData(['where' => $last]));
+            $last_condition->setData(
+                new QueryConditionData(["where" => $last])
+            );
             return true;
         }
 
@@ -1043,7 +1120,7 @@ class SearchFromBuilder
 
     public function order_by(DbKeyOrder|array $data): SearchOrderByBuilder
     {
-        $this->data->setOrderBy(is_array($data) ? $data : array($data));
+        $this->data->setOrderBy(is_array($data) ? $data : [$data]);
         return new SearchOrderByBuilder($this->data);
     }
 
@@ -1060,7 +1137,7 @@ class SearchFromBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['search' => $this->data]);
+        return new QueryType(["search" => $this->data]);
     }
 }
 
@@ -1080,7 +1157,7 @@ class SearchLimitBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['search' => $this->data]);
+        return new QueryType(["search" => $this->data]);
     }
 }
 
@@ -1106,7 +1183,7 @@ class SearchOffsetBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['search' => $this->data]);
+        return new QueryType(["search" => $this->data]);
     }
 }
 
@@ -1133,7 +1210,7 @@ class SearchToBuilder
 
     public function order_by(DbKeyOrder|array $data): SearchOrderByBuilder
     {
-        $this->data->setOrderBy(is_array($data) ? $data : array($data));
+        $this->data->setOrderBy(is_array($data) ? $data : [$data]);
         return new SearchOrderByBuilder($this->data);
     }
 
@@ -1144,7 +1221,7 @@ class SearchToBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['search' => $this->data]);
+        return new QueryType(["search" => $this->data]);
     }
 }
 
@@ -1177,8 +1254,9 @@ class SearchBuilder
         return new SearchFromBuilder($search);
     }
 
-    public function index(int|float|string|array|DbValue $key): SearchIndexBuilder
-    {
+    public function index(
+        int|float|string|array|DbValue $key
+    ): SearchIndexBuilder {
         $search = self::new_search();
         $search->setAlgorithm(SearchQueryAlgorithm::INDEX); // @phpstan-ignore argument.type
         return new SearchIndexBuilder($search, to_db_value($key));
@@ -1195,8 +1273,8 @@ class SearchBuilder
     {
         $query = new SearchQuery();
         $query->setAlgorithm(SearchQueryAlgorithm::BREADTH_FIRST); // @phpstan-ignore argument.type
-        $query->setOrigin(new QueryId(['id' => 0]));
-        $query->setDestination(new QueryId(['id' => 0]));
+        $query->setOrigin(new QueryId(["id" => 0]));
+        $query->setDestination(new QueryId(["id" => 0]));
         $query->setOffset(0);
         $query->setLimit(0);
         $query->setOrderBy([]);
@@ -1216,20 +1294,21 @@ class SelectAliasesIdsBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['select_aliases' => $this->data]);
+        return new QueryType(["select_aliases" => $this->data]);
     }
 }
 
 class SelectAliasesBuilder
 {
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): SelectAliasesIdsBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): SelectAliasesIdsBuilder {
         return new SelectAliasesIdsBuilder(to_query_ids($ids));
     }
 
     public function query(): QueryType
     {
-        return new QueryType(['select_all_aliases' => new stdClass()]);
+        return new QueryType(["select_all_aliases" => new stdClass()]);
     }
 }
 
@@ -1244,7 +1323,7 @@ class SelectEdgeCountIdsBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['select_edge_count' => $this->data]);
+        return new QueryType(["select_edge_count" => $this->data]);
     }
 }
 
@@ -1259,9 +1338,16 @@ class SelectEdgeCountBuilder
         $this->to = $to;
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): SelectEdgeCountIdsBuilder
-    {
-        return new SelectEdgeCountIdsBuilder(new SelectEdgeCountQuery(['from' => $this->from, 'to' => $this->to, 'ids' => to_query_ids($ids)]));
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): SelectEdgeCountIdsBuilder {
+        return new SelectEdgeCountIdsBuilder(
+            new SelectEdgeCountQuery([
+                "from" => $this->from,
+                "to" => $this->to,
+                "ids" => to_query_ids($ids),
+            ])
+        );
     }
 }
 
@@ -1276,7 +1362,7 @@ class SelectValuesIdsBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['select_values' => $this->data]);
+        return new QueryType(["select_values" => $this->data]);
     }
 }
 
@@ -1289,8 +1375,9 @@ class SelectValuesBuilder
         $this->data = $data;
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): SelectValuesIdsBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): SelectValuesIdsBuilder {
         $this->data->setIds(to_query_ids($ids));
         return new SelectValuesIdsBuilder($this->data);
     }
@@ -1300,7 +1387,7 @@ class SelectIndexesBuilder
 {
     public function query(): QueryType
     {
-        return new QueryType(['select_indexes' => new stdClass()]);
+        return new QueryType(["select_indexes" => new stdClass()]);
     }
 }
 
@@ -1315,14 +1402,15 @@ class SelectKeysIdsBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['select_keys' => $this->data]);
+        return new QueryType(["select_keys" => $this->data]);
     }
 }
 
 class SelectKeysBuilder
 {
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): SelectKeysIdsBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): SelectKeysIdsBuilder {
         return new SelectKeysIdsBuilder(to_query_ids($ids));
     }
 }
@@ -1338,14 +1426,15 @@ class SelectKeyCountIdsBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(['select_key_count' => $this->data]);
+        return new QueryType(["select_key_count" => $this->data]);
     }
 }
 
 class SelectKeyCountBuilder
 {
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): SelectKeyCountIdsBuilder
-    {
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): SelectKeyCountIdsBuilder {
         return new SelectKeyCountIdsBuilder(to_query_ids($ids));
     }
 }
@@ -1354,7 +1443,7 @@ class SelectNodeCountBuilder
 {
     public function query(): QueryType
     {
-        return new QueryType(['select_node_count' => new stdClass()]);
+        return new QueryType(["select_node_count" => new stdClass()]);
     }
 }
 
@@ -1380,9 +1469,12 @@ class SelectBuilder
         return new SelectEdgeCountBuilder(true, true);
     }
 
-    public function ids(string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids): SelectValuesIdsBuilder
-    {
-        return new SelectValuesIdsBuilder(new SelectValuesQuery(['ids' => to_query_ids($ids), 'keys' => []]));
+    public function ids(
+        string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
+    ): SelectValuesIdsBuilder {
+        return new SelectValuesIdsBuilder(
+            new SelectValuesQuery(["ids" => to_query_ids($ids), "keys" => []])
+        );
     }
 
     public function indexes(): SelectIndexesBuilder
@@ -1407,7 +1499,9 @@ class SelectBuilder
 
     public function values(array $data): SelectValuesBuilder
     {
-        return new SelectValuesBuilder(new SelectValuesQuery(['ids' => [], 'keys' => to_db_keys($data)]));
+        return new SelectValuesBuilder(
+            new SelectValuesQuery(["ids" => [], "keys" => to_db_keys($data)])
+        );
     }
 }
 

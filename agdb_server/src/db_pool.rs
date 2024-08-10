@@ -1446,6 +1446,7 @@ fn t_exec_mut(
         }
         QueryType::InsertEdges(q) => {
             do_audit = true;
+            inject_results(&mut q.ids, results)?;
             inject_results(&mut q.from, results)?;
             inject_results(&mut q.to, results)?;
 
@@ -1453,6 +1454,7 @@ fn t_exec_mut(
         }
         QueryType::InsertNodes(q) => {
             do_audit = true;
+            inject_results(&mut q.ids, results)?;
             t.exec_mut(q)
         }
         QueryType::InsertValues(q) => {

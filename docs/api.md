@@ -32,7 +32,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "license": {
       "name": "Apache-2.0"
     },
-    "version": "0.7.2"
+    "version": "0.8.0"
   },
   "servers": [
     {

@@ -11,12 +11,12 @@ class Agdb
         $ar = [];
 
         foreach ($reflect->getProperties() as $prop) {
-            $props[$prop->getName()] = $prop->getType()->getName();
+            $props[$prop->getName()] = $prop->getType()->getName(); // @phpstan-ignore method.nonObject
         }
 
         foreach ($result->getElements() as $element) {
             $e = new $type();
-            $e->db_id = $element->getId();
+            $e->db_id = $element->getId(); // @phpstan-ignore property.notFound
 
             foreach ($element->getValues() as $kv) {
                 $key_name = $kv->getKey()->getString();
@@ -32,10 +32,10 @@ class Agdb
                     $v = $kv->getValue()->getString();
                     $e->$key_name = $v === "true" ? true : false;
                 } elseif ($value_type === "array") {
-                    $v = $v = $kv->getValue()->getVecString();
-                    if ($v === null) {
+                    $v = $kv->getValue()->getVecString();
+                    if ($v === null) { // @phpstan-ignore identical.alwaysFalse
                         $v = $kv->getValue()->getVecI64();
-                        if ($v === null) {
+                        if ($v === null) { // @phpstan-ignore identical.alwaysFalse
                             $v = $kv->getValue()->getVecF64();
                         }
                     }

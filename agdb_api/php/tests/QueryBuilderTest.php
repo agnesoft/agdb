@@ -1,12 +1,12 @@
 <?php
-use Agdb\Model\Comparison;
-use Agdb\Model\CountComparison;
-use Agdb\Model\DbValue;
-use Agnesoft\Agdb\ComparisonBuilder;
-use Agnesoft\Agdb\CountComparisonBuilder;
-use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
-use Agdb\Model\QueryId;
+use Agnesoft\AgdbApi\Model\Comparison;
+use Agnesoft\AgdbApi\Model\CountComparison;
+use Agnesoft\AgdbApi\Model\DbValue;
+use Agnesoft\AgdbApi\ComparisonBuilder;
+use Agnesoft\AgdbApi\CountComparisonBuilder;
+use Agnesoft\AgdbApi\QueryBuilder;
+use Agnesoft\AgdbApi\Model\QueryId;
 
 class TNoDbId
 {

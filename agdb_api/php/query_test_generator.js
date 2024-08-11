@@ -5,10 +5,10 @@ let tests = `
 // GENERATED. DO NOT MODIFY AS ANY CHANGES WILL BE LOST.
 // query_test_generator.js
 <?php
-use Agnesoft\\Agdb\\QueryBuilder;
-use Agnesoft\\Agdb\\DbKeyOrderBuilder;
-use Agnesoft\\Agdb\\CountComparisonBuilder;
-use Agnesoft\\Agdb\\ComparisonBuilder;
+use Agnesoft\\AgdbApi\\QueryBuilder;
+use Agnesoft\\AgdbApi\\DbKeyOrderBuilder;
+use Agnesoft\\AgdbApi\\CountComparisonBuilder;
+use Agnesoft\\AgdbApi\\ComparisonBuilder;
 
 class T { public mixed $db_id = null; public string $value1 = ""; public int $value2 = 0; }
 

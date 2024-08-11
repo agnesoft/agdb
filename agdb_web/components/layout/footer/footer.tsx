@@ -1,7 +1,7 @@
 import styles from "./footer.module.scss";
-import { LinkItem } from "../common/link-item";
+import { LinkItem } from "@/components/common/link-item";
 
-export default function Footer() {
+export const Footer = () => {
     return (
         <footer
             className={
@@ -30,4 +30,4 @@ export default function Footer() {
             </div>
         </footer>
     );
-}
+};

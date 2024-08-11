@@ -1,0 +1,28 @@
+body {
+    --grey-color-0: #000;
+    --grey-color-1: #334155;
+    --grey-color-2: #4f5d75;
+    --grey-color-3: #7b8794;
+    --grey-color-4: #b0b7c3;
+    --grey-color-5: #e2e8f0;
+    --grey-color-6: #fff;
+}
+
+:is(html[class~="dark"] body) {
+    --grey-color-0: #fff;
+    --grey-color-1: #e2e8f0;
+    --grey-color-2: #b0b7c3;
+    --grey-color-3: #7b8794;
+    --grey-color-4: #4f5d75;
+    --grey-color-5: #334155;
+    --grey-color-6: #000;
+}
+
+.flex-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1rem 0;
+}

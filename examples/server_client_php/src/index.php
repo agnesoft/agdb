@@ -1,6 +1,6 @@
 <?php
 // Needed to load the libraries installed by composer
-require 'vendor/autoload.php';
+require "vendor/autoload.php";
 
 use Agnesoft\AgdbApi\Api\AgdbApi;
 use Agnesoft\AgdbApi\Model\DbType;
@@ -41,12 +41,15 @@ $token = $client->userLogin(
 $client->getConfig()->setAccessToken($token);
 
 // Creates memory mapped database "db1" for user "php_user1"
-$client->dbAdd("php_user1", "db1", DbType::MAPPED);
+$client->dbAdd("php_user1", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
 
 // Prepare the queries to be executed on the remote database.
 $queries = [
     // :0: Inserts a root node aliased "users"
-    QueryBuilder::insert()->nodes()->aliases(["users"])->query(),
+    QueryBuilder::insert()
+        ->nodes()
+        ->aliases(["users"])
+        ->query(),
 
     // :1: Inserts more nodes with some data
     QueryBuilder::insert()

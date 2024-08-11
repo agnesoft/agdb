@@ -33,9 +33,11 @@ class Agdb
                     $e->$key_name = $v === "true" ? true : false;
                 } elseif ($value_type === "array") {
                     $v = $kv->getValue()->getVecString();
-                    if ($v === null) { // @phpstan-ignore identical.alwaysFalse
+                    if ($v === null) {
+                        // @phpstan-ignore identical.alwaysFalse
                         $v = $kv->getValue()->getVecI64();
-                        if ($v === null) { // @phpstan-ignore identical.alwaysFalse
+                        if ($v === null) {
+                            // @phpstan-ignore identical.alwaysFalse
                             $v = $kv->getValue()->getVecF64();
                         }
                     }

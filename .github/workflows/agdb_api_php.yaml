@@ -22,26 +22,22 @@ jobs:
     runs-on: ubuntu-24.04
     needs: diff
     if: needs.diff.outputs.diff == 'true'
-    defaults:
-      run:
-        working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
-      - run: composer install --no-interaction
+      - run: composer install
       - run: ./ci.sh analyse
+        working-directory: agdb_api/php
 
   agdb_api_php_coverage:
     runs-on: ubuntu-24.04
     needs: diff
     if: needs.diff.outputs.diff == 'true'
-    defaults:
-      run:
-        working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: composer install --no-interaction
+      - run: composer install
       - run: ./ci.sh coverage
+        working-directory: agdb_api/php
       - uses: actions/upload-artifact@v4
         if: always()
         with:

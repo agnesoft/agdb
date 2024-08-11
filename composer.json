@@ -1,5 +1,6 @@
 {
-    "version": "0.7.2",
+    "name": "agnesoft/agdb_api",
+    "type": "library",
     "description": "Agnesoft Graph Database API client for PHP",
     "keywords": [
         "openapitools",
@@ -12,16 +13,10 @@
     ],
     "homepage": "https://github.com/agnesoft/agdb",
     "license": "Apache-2.0",
-    "authors": [
-        {
-            "name": "Agnesoft",
-            "homepage": "https://github.com/agnesoft/agdb"
-        }
-    ],
     "autoload": {
         "classmap": [
-            "src",
-            "lib"
+            "agdb_api/php/src",
+            "agdb_api/php/lib"
         ]
     },
     "config": {
@@ -29,6 +24,12 @@
             "php-http/discovery": true
         }
     },
+    "authors": [
+        {
+            "name": "Agnesoft",
+            "homepage": "https://github.com/agnesoft/agdb"
+        }
+    ],
     "require": {
         "php": "^7.4 || ^8.0",
         "ext-curl": "*",

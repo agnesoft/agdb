@@ -69,7 +69,7 @@ function analyse() {
 }
 
 function format() {
-    npx prettier --plugin '@prettier/plugin-php' --write src tests
+    npx prettier --plugin '@prettier/plugin-php' $1 src tests
 }
 
 function generate_api() {
@@ -91,9 +91,9 @@ if [[ "$1" == "coverage" ]]; then
 elif [[ "$1" == "analyse" ]]; then
     analyse
 elif [[ "$1" == "format" ]]; then
-    format
+    format "--write"
 elif [[ "$1" == "format:check" ]]; then
-    npx prettier --plugin '@prettier/plugin-php' --check src tests
+    format "--check"
 elif [[ "$1" == "generate" ]]; then
     if [[ "$2" == "api" ]]; then
         generate_api

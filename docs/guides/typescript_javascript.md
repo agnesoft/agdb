@@ -99,7 +99,7 @@ await client.db_add({
 ```ts
 // Prepare the queries to be executed on the remote database.
 let queries = [
-  // :0: Inserts a root node aliase "users"
+  // :0: Inserts a root node aliased "users"
   QueryBuilder.insert().nodes().aliases(["users"]).query(),
 
   // :1: Inserts more nodes with some data

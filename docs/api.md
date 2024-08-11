@@ -13,6 +13,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     <a href="/docs/guides/rust.md"><img width="50" src="/docs/images/rust.png" alt="rust"></a>
     <a href="/docs/guides/typescript_javascript.md"><img width="50" src="/docs/images/ts.png" alt="ts"></a>
     <a href="/docs/guides/typescript_javascript.md"><img width="50" src="/docs/images/js.png" alt="js"></a>
+  <a href="/docs/guides/php.md"><img width="90" src="/docs/images/php.svg" alt="js"></a>
     <img width="50" src="/docs/images/python.png" alt="python">
     <img width="50" src="/docs/images/java.png" alt="java">
     <img width="50" src="/docs/images/c.png" alt="c">
@@ -43,7 +44,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/list": {
       "get": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_list",
         "responses": {
@@ -74,7 +75,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/add": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_add",
         "parameters": [
@@ -129,7 +130,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/audit": {
       "get": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_audit",
         "parameters": [
@@ -177,7 +178,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/backup": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_backup",
         "parameters": [
@@ -224,7 +225,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/copy": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_copy",
         "parameters": [
@@ -282,7 +283,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/delete": {
       "delete": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_delete",
         "parameters": [
@@ -326,7 +327,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/exec": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_exec",
         "parameters": [
@@ -390,7 +391,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/optimize": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_optimize",
         "parameters": [
@@ -438,7 +439,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/remove": {
       "delete": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_remove",
         "parameters": [
@@ -482,7 +483,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/rename": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_rename",
         "parameters": [
@@ -540,7 +541,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
-          "crate::routes::admin::db::user"
+          "agdb"
         ],
         "operationId": "admin_db_user_list",
         "parameters": [
@@ -594,7 +595,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/user/{username}/add": {
       "put": {
         "tags": [
-          "crate::routes::admin::db::user"
+          "agdb"
         ],
         "operationId": "admin_db_user_add",
         "parameters": [
@@ -658,7 +659,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/db/{owner}/{db}/user/{username}/remove": {
       "delete": {
         "tags": [
-          "crate::routes::admin::db::user"
+          "agdb"
         ],
         "operationId": "admin_db_user_remove",
         "parameters": [
@@ -714,7 +715,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/shutdown": {
       "post": {
         "tags": [
-          "crate::routes::admin"
+          "agdb"
         ],
         "operationId": "admin_shutdown",
         "responses": {
@@ -735,7 +736,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/user/list": {
       "get": {
         "tags": [
-          "crate::routes::admin::user"
+          "agdb"
         ],
         "operationId": "admin_user_list",
         "responses": {
@@ -766,7 +767,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/user/{username}/add": {
       "post": {
         "tags": [
-          "crate::routes::admin::user"
+          "agdb"
         ],
         "operationId": "admin_user_add",
         "parameters": [
@@ -817,7 +818,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/user/{username}/change_password": {
       "put": {
         "tags": [
-          "crate::routes::admin::user"
+          "agdb"
         ],
         "operationId": "admin_user_change_password",
         "parameters": [
@@ -865,7 +866,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/admin/user/{username}/remove": {
       "delete": {
         "tags": [
-          "crate::routes::admin::user"
+          "agdb"
         ],
         "operationId": "admin_user_remove",
         "parameters": [
@@ -910,7 +911,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/admin/{owner}/{db}/restore": {
       "post": {
         "tags": [
-          "crate::routes::admin::db"
+          "agdb"
         ],
         "operationId": "admin_db_restore",
         "parameters": [
@@ -954,7 +955,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/list": {
       "get": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_list",
         "responses": {
@@ -985,7 +986,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/add": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_add",
         "parameters": [
@@ -1043,7 +1044,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/audit": {
       "get": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_audit",
         "parameters": [
@@ -1094,7 +1095,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/backup": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_backup",
         "parameters": [
@@ -1138,10 +1139,72 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         ]
       }
     },
+    "/api/v1/db/{owner}/{db}/clear": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_clear",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbResource"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db resource(s) cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must be a db admin"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/db/{owner}/{db}/copy": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_copy",
         "parameters": [
@@ -1200,9 +1263,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       }
     },
     "/api/v1/db/{owner}/{db}/delete": {
-      "post": {
+      "delete": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_delete",
         "parameters": [
@@ -1249,7 +1312,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/exec": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_exec",
         "parameters": [
@@ -1313,7 +1376,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/optimize": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_optimize",
         "parameters": [
@@ -1362,9 +1425,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       }
     },
     "/api/v1/db/{owner}/{db}/remove": {
-      "post": {
+      "delete": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_remove",
         "parameters": [
@@ -1411,7 +1474,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/rename": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_rename",
         "parameters": [
@@ -1472,7 +1535,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/restore": {
       "post": {
         "tags": [
-          "crate::routes::db"
+          "agdb"
         ],
         "operationId": "db_restore",
         "parameters": [
@@ -1519,7 +1582,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
-          "crate::routes::db::user"
+          "agdb"
         ],
         "operationId": "db_user_list",
         "parameters": [
@@ -1561,9 +1624,9 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
       }
     },
     "/api/v1/db/{owner}/{db}/user/{username}/add": {
-      "post": {
+      "put": {
         "tags": [
-          "crate::routes::db::user"
+          "agdb"
         ],
         "operationId": "db_user_add",
         "parameters": [
@@ -1627,7 +1690,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/db/{owner}/{db}/user/{username}/remove": {
       "post": {
         "tags": [
-          "crate::routes::db::user"
+          "agdb"
         ],
         "operationId": "db_user_remove",
         "parameters": [
@@ -1683,7 +1746,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/status": {
       "get": {
         "tags": [
-          "crate::routes"
+          "agdb"
         ],
         "operationId": "status",
         "parameters": [
@@ -1717,7 +1780,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/user/change_password": {
       "put": {
         "tags": [
-          "crate::routes::user"
+          "agdb"
         ],
         "operationId": "user_change_password",
         "requestBody": {
@@ -1751,7 +1814,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/user/login": {
       "post": {
         "tags": [
-          "crate::routes::user"
+          "agdb"
         ],
         "operationId": "user_login",
         "requestBody": {
@@ -1784,7 +1847,7 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
     "/api/v1/user/logout": {
       "post": {
         "tags": [
-          "crate::routes::user"
+          "agdb"
         ],
         "operationId": "user_logout",
         "responses": {
@@ -2119,6 +2182,15 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
             "$ref": "#/components/schemas/DbValue"
           }
         }
+      },
+      "DbResource": {
+        "type": "string",
+        "enum": [
+          "all",
+          "db",
+          "audit",
+          "backup"
+        ]
       },
       "DbType": {
         "type": "string",
@@ -3105,6 +3177,17 @@ The [agdb server](/docs/server.md) can be accessed using OpenAPI (REST) via any 
         "properties": {
           "new_name": {
             "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseResource": {
+        "type": "object",
+        "required": [
+          "resource"
+        ],
+        "properties": {
+          "resource": {
+            "$ref": "#/components/schemas/DbResource"
           }
         }
       },

@@ -1,0 +1,21 @@
+{
+    "name": "agnesoft/examples_server_client",
+    "autoload": {
+        "psr-4": {
+            "agnesoft\\examples_server_client\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Agnesoft",
+            "homepage": "https://github.com/agnesoft/agdb"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "agnesoft/agdb_api": "dev-main"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.11"
+    }
+}

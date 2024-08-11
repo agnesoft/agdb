@@ -27,7 +27,7 @@ jobs:
         working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
-      - run: echo Y | composer install
+      - run: composer install --no-interaction
       - run: ./ci.sh analyse
 
   agdb_api_php_coverage:
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: echo Y | composer install
+      - run: composer install --no-interaction
       - run: ./ci.sh coverage
       - uses: actions/upload-artifact@v4
         if: always()

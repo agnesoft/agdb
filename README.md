@@ -21,7 +21,7 @@
     <a href="/docs/guides/rust.md"><img width="25" src="/docs/images/rust.png" alt="rust"></a>
     <a href="/docs/guides/typescript_javascript.md"><img width="25" src="/docs/images/ts.png" alt="ts"></a>
     <a href="/docs/guides/typescript_javascript.md"><img width="25" src="/docs/images/js.png" alt="js"></a>
-    <a href="/docs/guides/php.md"><img width="25" src="/docs/images/php.svg" alt="js"></a>
+    <a href="/docs/guides/php.md"><img width="45" src="/docs/images/php.svg" alt="js"></a>
     <img width="25" src="/docs/images/python.png" alt="python">
     <img width="25" src="/docs/images/java.png" alt="java">
     <img width="25" src="/docs/images/c.png" alt="c">

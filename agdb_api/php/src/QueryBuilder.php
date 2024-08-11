@@ -2,7 +2,9 @@
 
 namespace Agnesoft\AgdbApi;
 
+use ReflectionClass;
 use stdClass;
+use Agnesoft\AgdbApi\Model\QueryResult;
 use Agnesoft\AgdbApi\Model\CountComparison;
 use Agnesoft\AgdbApi\Model\QueryConditionLogic;
 use Agnesoft\AgdbApi\Model\QueryConditionModifier;
@@ -197,15 +199,17 @@ function to_db_value(bool|int|float|string|array|DbValue $value): DbValue
     if (is_array($value)) {
         if (count($value) === 0) {
             return new DbValue(["vec_i64" => []]);
-        } else {
-            if (is_int($value[0])) {
-                return new DbValue(["vec_i64" => $value]);
-            } elseif (is_float($value[0])) {
-                return new DbValue(["vec_f64" => $value]);
-            } else {
-                return new DbValue(["vec_str" => $value]);
-            }
         }
+
+        if (is_int($value[0])) {
+            return new DbValue(["vec_i64" => $value]);
+        }
+
+        if (is_float($value[0])) {
+            return new DbValue(["vec_f64" => $value]);
+        }
+
+        return new DbValue(["vec_string" => $value]);
     }
 
     return $value;

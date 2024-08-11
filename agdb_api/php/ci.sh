@@ -18,7 +18,6 @@ cluster: []" > agdb_server.yaml
     local output
     output=$(XDEBUG_MODE=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
     local error_code=$?
-    echo "ERROR CODE: $error_code"
     echo "$output"
     echo ""
 

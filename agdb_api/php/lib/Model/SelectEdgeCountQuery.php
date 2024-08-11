@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * SelectEdgeCountQuery Class Doc Comment
  *
  * @category Class
  * @description Query to select number of edges of given node ids. All of the ids must exist in the database. If any of the ids is not a node the result will be 0 (not an error).  The result will be number of elements returned and the list of elements with a single property &#x60;String(\&quot;edge_count\&quot;)&#x60; with a value &#x60;u64&#x60;.  NOTE: Self-referential edges are counted twice as if they were coming from another edge. Therefore the edge count might be greater than number of unique db elements.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -59,7 +59,7 @@ class SelectEdgeCountQuery implements ModelInterface, ArrayAccess, \JsonSerializ
       */
     protected static $openAPITypes = [
         'from' => 'bool',
-        'ids' => '\Agdb\Model\QueryIds',
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryIds',
         'to' => 'bool'
     ];
 
@@ -343,7 +343,7 @@ class SelectEdgeCountQuery implements ModelInterface, ArrayAccess, \JsonSerializ
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getIds()
     {
@@ -353,7 +353,7 @@ class SelectEdgeCountQuery implements ModelInterface, ArrayAccess, \JsonSerializ
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryIds $ids ids
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $ids ids
      *
      * @return self
      */

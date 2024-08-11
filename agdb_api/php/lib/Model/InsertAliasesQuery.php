@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * InsertAliasesQuery Class Doc Comment
  *
  * @category Class
  * @description Query to insert or update aliases of existing nodes. All &#x60;ids&#x60; must exist. None of the &#x60;aliases&#x60; can be empty. If there is an existing alias for any of the elements it will be overwritten with a new one.  NOTE: Setting &#x60;ids&#x60; to a search query will result in an error.  The result will contain number of aliases inserted/updated but no elements.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -59,7 +59,7 @@ class InsertAliasesQuery implements ModelInterface, ArrayAccess, \JsonSerializab
       */
     protected static $openAPITypes = [
         'aliases' => 'string[]',
-        'ids' => '\Agdb\Model\QueryIds'
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryIds'
     ];
 
     /**
@@ -333,7 +333,7 @@ class InsertAliasesQuery implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getIds()
     {
@@ -343,7 +343,7 @@ class InsertAliasesQuery implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryIds $ids ids
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $ids ids
      *
      * @return self
      */

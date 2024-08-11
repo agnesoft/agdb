@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf9 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf9 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'select_aliases' => '\Agdb\Model\QueryIds'
+        'select_aliases' => '\Agnesoft\AgdbApi\Model\QueryIds'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf9 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_aliases
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getSelectAliases()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf9 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_aliases
      *
-     * @param \Agdb\Model\QueryIds $select_aliases select_aliases
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $select_aliases select_aliases
      *
      * @return self
      */

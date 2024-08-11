@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * InsertEdgesQuery Class Doc Comment
  *
  * @category Class
  * @description Query to inserts edges to the database. The &#x60;from&#x60; and &#x60;to&#x60; ids must exist in the database. There must be enough &#x60;values&#x60; for all new edges unless set to &#x60;Single&#x60; in which case they will be uniformly applied to all new edges. The &#x60;each&#x60; flag is only useful if &#x60;from and &#x60;to&#x60; are symmetric (same length) but you still want to connect every origin to every destination. By default it would connect only the pairs. For asymmetric inserts &#x60;each&#x60; is assumed.  If the &#x60;ids&#x60; member is empty the query will insert new edges otherwise it will update the existing edges. The rules for length of &#x60;values&#x60; still apply and the search yield or static list must have equal length to the &#x60;values&#x60; (or the &#x60;Single&#x60; variant must be used).  The result will contain number of edges inserted or udpated and elements with their ids, origin and destination, but no properties.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -59,10 +59,10 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static $openAPITypes = [
         'each' => 'bool',
-        'from' => '\Agdb\Model\QueryIds',
-        'ids' => '\Agdb\Model\QueryIds',
-        'to' => '\Agdb\Model\QueryIds',
-        'values' => '\Agdb\Model\QueryValues'
+        'from' => '\Agnesoft\AgdbApi\Model\QueryIds',
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryIds',
+        'to' => '\Agnesoft\AgdbApi\Model\QueryIds',
+        'values' => '\Agnesoft\AgdbApi\Model\QueryValues'
     ];
 
     /**
@@ -363,7 +363,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets from
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getFrom()
     {
@@ -373,7 +373,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets from
      *
-     * @param \Agdb\Model\QueryIds $from from
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $from from
      *
      * @return self
      */
@@ -390,7 +390,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getIds()
     {
@@ -400,7 +400,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryIds $ids ids
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $ids ids
      *
      * @return self
      */
@@ -417,7 +417,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets to
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getTo()
     {
@@ -427,7 +427,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets to
      *
-     * @param \Agdb\Model\QueryIds $to to
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $to to
      *
      * @return self
      */
@@ -444,7 +444,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets values
      *
-     * @return \Agdb\Model\QueryValues
+     * @return \Agnesoft\AgdbApi\Model\QueryValues
      */
     public function getValues()
     {
@@ -454,7 +454,7 @@ class InsertEdgesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets values
      *
-     * @param \Agdb\Model\QueryValues $values values
+     * @param \Agnesoft\AgdbApi\Model\QueryValues $values values
      *
      * @return self
      */

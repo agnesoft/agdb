@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryValuesOneOf1 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryValuesOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializabl
       * @var string[]
       */
     protected static $openAPITypes = [
-        'multi' => '\Agdb\Model\DbKeyValue[][]'
+        'multi' => '\Agnesoft\AgdbApi\Model\DbKeyValue[][]'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryValuesOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Gets multi
      *
-     * @return \Agdb\Model\DbKeyValue[][]
+     * @return \Agnesoft\AgdbApi\Model\DbKeyValue[][]
      */
     public function getMulti()
     {
@@ -305,7 +305,7 @@ class QueryValuesOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Sets multi
      *
-     * @param \Agdb\Model\DbKeyValue[][] $multi List of lists of properties (key-value pairs) to be applied to all elements in a query. There must be as many lists of properties as ids in a query.
+     * @param \Agnesoft\AgdbApi\Model\DbKeyValue[][] $multi List of lists of properties (key-value pairs) to be applied to all elements in a query. There must be as many lists of properties as ids in a query.
      *
      * @return self
      */

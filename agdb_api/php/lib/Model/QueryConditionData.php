@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionData Class Doc Comment
  *
  * @category Class
  * @description Query condition data
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,14 +58,14 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
       * @var string[]
       */
     protected static $openAPITypes = [
-        'distance' => '\Agdb\Model\CountComparison',
-        'edge_count' => '\Agdb\Model\CountComparison',
-        'edge_count_from' => '\Agdb\Model\CountComparison',
-        'edge_count_to' => '\Agdb\Model\CountComparison',
-        'ids' => '\Agdb\Model\QueryId[]',
-        'key_value' => '\Agdb\Model\QueryConditionDataOneOf5KeyValue',
-        'keys' => '\Agdb\Model\DbValue[]',
-        'where' => '\Agdb\Model\QueryCondition[]'
+        'distance' => '\Agnesoft\AgdbApi\Model\CountComparison',
+        'edge_count' => '\Agnesoft\AgdbApi\Model\CountComparison',
+        'edge_count_from' => '\Agnesoft\AgdbApi\Model\CountComparison',
+        'edge_count_to' => '\Agnesoft\AgdbApi\Model\CountComparison',
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryId[]',
+        'key_value' => '\Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue',
+        'keys' => '\Agnesoft\AgdbApi\Model\DbValue[]',
+        'where' => '\Agnesoft\AgdbApi\Model\QueryCondition[]'
     ];
 
     /**
@@ -366,7 +366,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets distance
      *
-     * @return \Agdb\Model\CountComparison
+     * @return \Agnesoft\AgdbApi\Model\CountComparison
      */
     public function getDistance()
     {
@@ -376,7 +376,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets distance
      *
-     * @param \Agdb\Model\CountComparison $distance distance
+     * @param \Agnesoft\AgdbApi\Model\CountComparison $distance distance
      *
      * @return self
      */
@@ -393,7 +393,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets edge_count
      *
-     * @return \Agdb\Model\CountComparison
+     * @return \Agnesoft\AgdbApi\Model\CountComparison
      */
     public function getEdgeCount()
     {
@@ -403,7 +403,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets edge_count
      *
-     * @param \Agdb\Model\CountComparison $edge_count edge_count
+     * @param \Agnesoft\AgdbApi\Model\CountComparison $edge_count edge_count
      *
      * @return self
      */
@@ -420,7 +420,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets edge_count_from
      *
-     * @return \Agdb\Model\CountComparison
+     * @return \Agnesoft\AgdbApi\Model\CountComparison
      */
     public function getEdgeCountFrom()
     {
@@ -430,7 +430,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets edge_count_from
      *
-     * @param \Agdb\Model\CountComparison $edge_count_from edge_count_from
+     * @param \Agnesoft\AgdbApi\Model\CountComparison $edge_count_from edge_count_from
      *
      * @return self
      */
@@ -447,7 +447,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets edge_count_to
      *
-     * @return \Agdb\Model\CountComparison
+     * @return \Agnesoft\AgdbApi\Model\CountComparison
      */
     public function getEdgeCountTo()
     {
@@ -457,7 +457,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets edge_count_to
      *
-     * @param \Agdb\Model\CountComparison $edge_count_to edge_count_to
+     * @param \Agnesoft\AgdbApi\Model\CountComparison $edge_count_to edge_count_to
      *
      * @return self
      */
@@ -474,7 +474,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryId[]
+     * @return \Agnesoft\AgdbApi\Model\QueryId[]
      */
     public function getIds()
     {
@@ -484,7 +484,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryId[] $ids Tests if the current id is in the list of ids.
+     * @param \Agnesoft\AgdbApi\Model\QueryId[] $ids Tests if the current id is in the list of ids.
      *
      * @return self
      */
@@ -501,7 +501,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets key_value
      *
-     * @return \Agdb\Model\QueryConditionDataOneOf5KeyValue
+     * @return \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue
      */
     public function getKeyValue()
     {
@@ -511,7 +511,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets key_value
      *
-     * @param \Agdb\Model\QueryConditionDataOneOf5KeyValue $key_value key_value
+     * @param \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue $key_value key_value
      *
      * @return self
      */
@@ -528,7 +528,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets keys
      *
-     * @return \Agdb\Model\DbValue[]
+     * @return \Agnesoft\AgdbApi\Model\DbValue[]
      */
     public function getKeys()
     {
@@ -538,7 +538,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets keys
      *
-     * @param \Agdb\Model\DbValue[] $keys Test if the current element has **all** of the keys listed.
+     * @param \Agnesoft\AgdbApi\Model\DbValue[] $keys Test if the current element has **all** of the keys listed.
      *
      * @return self
      */
@@ -555,7 +555,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Gets where
      *
-     * @return \Agdb\Model\QueryCondition[]
+     * @return \Agnesoft\AgdbApi\Model\QueryCondition[]
      */
     public function getWhere()
     {
@@ -565,7 +565,7 @@ class QueryConditionData implements ModelInterface, ArrayAccess, \JsonSerializab
     /**
      * Sets where
      *
-     * @param \Agdb\Model\QueryCondition[] $where Nested list of conditions (equivalent to brackets).
+     * @param \Agnesoft\AgdbApi\Model\QueryCondition[] $where Nested list of conditions (equivalent to brackets).
      *
      * @return self
      */

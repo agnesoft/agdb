@@ -1,30 +1,30 @@
 <?php
 
-namespace Agnesoft\Agdb;
+namespace Agnesoft\AgdbApi;
 
 use stdClass;
-use Agdb\Model\CountComparison;
-use Agdb\Model\QueryConditionLogic;
-use Agdb\Model\QueryConditionModifier;
-use Agdb\Model\Comparison;
-use Agdb\Model\QueryCondition;
-use Agdb\Model\QueryConditionData;
-use Agdb\Model\DbKeyValue;
-use Agdb\Model\DbValue;
-use Agdb\Model\InsertAliasesQuery;
-use Agdb\Model\InsertEdgesQuery;
-use Agdb\Model\InsertNodesQuery;
-use Agdb\Model\InsertValuesQuery;
-use Agdb\Model\QueryId;
-use Agdb\Model\QueryIds;
-use Agdb\Model\QueryType;
-use Agdb\Model\QueryValues;
-use Agdb\Model\SearchQuery;
-use Agdb\Model\SelectValuesQuery;
-use Agdb\Model\SelectEdgeCountQuery;
-use Agdb\Model\SearchQueryAlgorithm;
-use Agdb\Model\QueryConditionDataOneOf5KeyValue;
-use Agdb\Model\DbKeyOrder;
+use Agnesoft\AgdbApi\Model\CountComparison;
+use Agnesoft\AgdbApi\Model\QueryConditionLogic;
+use Agnesoft\AgdbApi\Model\QueryConditionModifier;
+use Agnesoft\AgdbApi\Model\Comparison;
+use Agnesoft\AgdbApi\Model\QueryCondition;
+use Agnesoft\AgdbApi\Model\QueryConditionData;
+use Agnesoft\AgdbApi\Model\DbKeyValue;
+use Agnesoft\AgdbApi\Model\DbValue;
+use Agnesoft\AgdbApi\Model\InsertAliasesQuery;
+use Agnesoft\AgdbApi\Model\InsertEdgesQuery;
+use Agnesoft\AgdbApi\Model\InsertNodesQuery;
+use Agnesoft\AgdbApi\Model\InsertValuesQuery;
+use Agnesoft\AgdbApi\Model\QueryId;
+use Agnesoft\AgdbApi\Model\QueryIds;
+use Agnesoft\AgdbApi\Model\QueryType;
+use Agnesoft\AgdbApi\Model\QueryValues;
+use Agnesoft\AgdbApi\Model\SearchQuery;
+use Agnesoft\AgdbApi\Model\SelectValuesQuery;
+use Agnesoft\AgdbApi\Model\SelectEdgeCountQuery;
+use Agnesoft\AgdbApi\Model\SearchQueryAlgorithm;
+use Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue;
+use Agnesoft\AgdbApi\Model\DbKeyOrder;
 
 class CountComparisonBuilder
 {

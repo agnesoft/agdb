@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionDataOneOf5KeyValue Class Doc Comment
  *
  * @category Class
  * @description Tests if the current element has a property &#x60;key&#x60; with a value that evaluates true against &#x60;comparison&#x60;.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,8 +58,8 @@ class QueryConditionDataOneOf5KeyValue implements ModelInterface, ArrayAccess, \
       * @var string[]
       */
     protected static $openAPITypes = [
-        'key' => '\Agdb\Model\DbValue',
-        'value' => '\Agdb\Model\Comparison'
+        'key' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'value' => '\Agnesoft\AgdbApi\Model\Comparison'
     ];
 
     /**
@@ -306,7 +306,7 @@ class QueryConditionDataOneOf5KeyValue implements ModelInterface, ArrayAccess, \
     /**
      * Gets key
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getKey()
     {
@@ -316,7 +316,7 @@ class QueryConditionDataOneOf5KeyValue implements ModelInterface, ArrayAccess, \
     /**
      * Sets key
      *
-     * @param \Agdb\Model\DbValue $key key
+     * @param \Agnesoft\AgdbApi\Model\DbValue $key key
      *
      * @return self
      */
@@ -333,7 +333,7 @@ class QueryConditionDataOneOf5KeyValue implements ModelInterface, ArrayAccess, \
     /**
      * Gets value
      *
-     * @return \Agdb\Model\Comparison
+     * @return \Agnesoft\AgdbApi\Model\Comparison
      */
     public function getValue()
     {
@@ -343,7 +343,7 @@ class QueryConditionDataOneOf5KeyValue implements ModelInterface, ArrayAccess, \
     /**
      * Sets value
      *
-     * @param \Agdb\Model\Comparison $value value
+     * @param \Agnesoft\AgdbApi\Model\Comparison $value value
      *
      * @return self
      */

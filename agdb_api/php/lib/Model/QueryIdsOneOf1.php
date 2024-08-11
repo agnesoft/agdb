@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryIdsOneOf1 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryIdsOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'search' => '\Agdb\Model\SearchQuery'
+        'search' => '\Agnesoft\AgdbApi\Model\SearchQuery'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryIdsOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets search
      *
-     * @return \Agdb\Model\SearchQuery
+     * @return \Agnesoft\AgdbApi\Model\SearchQuery
      */
     public function getSearch()
     {
@@ -305,7 +305,7 @@ class QueryIdsOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets search
      *
-     * @param \Agdb\Model\SearchQuery $search search
+     * @param \Agnesoft\AgdbApi\Model\SearchQuery $search search
      *
      * @return self
      */

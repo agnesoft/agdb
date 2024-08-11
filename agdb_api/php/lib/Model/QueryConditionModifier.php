@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,15 +26,15 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
-use \Agdb\ObjectSerializer;
+namespace Agnesoft\AgdbApi\Model;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionModifier Class Doc Comment
  *
  * @category Class
  * @description Query condition modifier
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */

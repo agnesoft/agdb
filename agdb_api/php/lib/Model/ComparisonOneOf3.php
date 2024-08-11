@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * ComparisonOneOf3 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class ComparisonOneOf3 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'less_than' => '\Agdb\Model\DbValue'
+        'less_than' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -295,7 +295,7 @@ class ComparisonOneOf3 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets less_than
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getLessThan()
     {
@@ -305,7 +305,7 @@ class ComparisonOneOf3 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets less_than
      *
-     * @param \Agdb\Model\DbValue $less_than less_than
+     * @param \Agnesoft\AgdbApi\Model\DbValue $less_than less_than
      *
      * @return self
      */

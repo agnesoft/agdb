@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * DbKeyOrderOneOf Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class DbKeyOrderOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'asc' => '\Agdb\Model\DbValue'
+        'asc' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -295,7 +295,7 @@ class DbKeyOrderOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets asc
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getAsc()
     {
@@ -305,7 +305,7 @@ class DbKeyOrderOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets asc
      *
-     * @param \Agdb\Model\DbValue $asc asc
+     * @param \Agnesoft\AgdbApi\Model\DbValue $asc asc
      *
      * @return self
      */

@@ -50,10 +50,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -61,7 +61,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agdb\Model\DbType(); // DbType
+$db_type = new \Agnesoft\\AgdbApi\Model\DbType(); // DbType
 
 try {
     $apiInstance->adminDbAdd($owner, $db, $db_type);

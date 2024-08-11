@@ -4,7 +4,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -25,7 +25,7 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Api;
+namespace Agnesoft\AgdbApi\Api;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
@@ -34,16 +34,16 @@ use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
-use Agdb\ApiException;
-use Agdb\Configuration;
-use Agdb\HeaderSelector;
-use Agdb\ObjectSerializer;
+use Agnesoft\AgdbApi\ApiException;
+use Agnesoft\AgdbApi\Configuration;
+use Agnesoft\AgdbApi\HeaderSelector;
+use Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * AgdbApi Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -241,7 +241,7 @@ class AgdbApi
      * @param  DbType $db_type db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -258,7 +258,7 @@ class AgdbApi
      * @param  DbType $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -506,9 +506,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAudit'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\QueryAudit[]
+     * @return \Agnesoft\AgdbApi\Model\QueryAudit[]
      */
     public function adminDbAudit($owner, $db, string $contentType = self::contentTypes['adminDbAudit'][0])
     {
@@ -523,9 +523,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbAudit'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\QueryAudit[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\QueryAudit[], HTTP status code, HTTP response headers (array of strings)
      */
     public function adminDbAuditWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbAudit'][0])
     {
@@ -568,11 +568,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\QueryAudit[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\QueryAudit[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\QueryAudit[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\QueryAudit[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -590,13 +590,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\QueryAudit[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\QueryAudit[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\QueryAudit[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\QueryAudit[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -629,7 +629,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\QueryAudit[]',
+                        '\Agnesoft\AgdbApi\Model\QueryAudit[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -671,7 +671,7 @@ class AgdbApi
      */
     public function adminDbAuditAsyncWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbAudit'][0])
     {
-        $returnType = '\Agdb\Model\QueryAudit[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\QueryAudit[]';
         $request = $this->adminDbAuditRequest($owner, $db, $contentType);
 
         return $this->client
@@ -829,7 +829,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbBackup'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -845,7 +845,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbBackup'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -1075,7 +1075,7 @@ class AgdbApi
      * @param  string $new_name new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbCopy'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -1092,7 +1092,7 @@ class AgdbApi
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbCopy'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -1340,7 +1340,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbDelete'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -1356,7 +1356,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbDelete'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -1583,12 +1583,12 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExec'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\QueryResult[]
+     * @return \Agnesoft\AgdbApi\Model\QueryResult[]
      */
     public function adminDbExec($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExec'][0])
     {
@@ -1601,12 +1601,12 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExec'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\QueryResult[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\QueryResult[], HTTP status code, HTTP response headers (array of strings)
      */
     public function adminDbExecWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExec'][0])
     {
@@ -1649,11 +1649,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\QueryResult[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\QueryResult[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\QueryResult[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\QueryResult[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -1671,13 +1671,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\QueryResult[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\QueryResult[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\QueryResult[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -1710,7 +1710,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\QueryResult[]',
+                        '\Agnesoft\AgdbApi\Model\QueryResult[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -1725,7 +1725,7 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExec'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1746,7 +1746,7 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExec'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1754,7 +1754,7 @@ class AgdbApi
      */
     public function adminDbExecAsyncWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExec'][0])
     {
-        $returnType = '\Agdb\Model\QueryResult[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
         $request = $this->adminDbExecRequest($owner, $db, $query_type, $contentType);
 
         return $this->client
@@ -1798,7 +1798,7 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExec'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -1925,9 +1925,9 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\ServerDatabase[]
+     * @return \Agnesoft\AgdbApi\Model\ServerDatabase[]
      */
     public function adminDbList(string $contentType = self::contentTypes['adminDbList'][0])
     {
@@ -1940,9 +1940,9 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\ServerDatabase[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase[], HTTP status code, HTTP response headers (array of strings)
      */
     public function adminDbListWithHttpInfo(string $contentType = self::contentTypes['adminDbList'][0])
     {
@@ -1985,11 +1985,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\ServerDatabase[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\ServerDatabase[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\ServerDatabase[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\ServerDatabase[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -2007,13 +2007,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\ServerDatabase[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\ServerDatabase[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\ServerDatabase[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -2046,7 +2046,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\ServerDatabase[]',
+                        '\Agnesoft\AgdbApi\Model\ServerDatabase[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -2084,7 +2084,7 @@ class AgdbApi
      */
     public function adminDbListAsyncWithHttpInfo(string $contentType = self::contentTypes['adminDbList'][0])
     {
-        $returnType = '\Agdb\Model\ServerDatabase[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase[]';
         $request = $this->adminDbListRequest($contentType);
 
         return $this->client
@@ -2210,9 +2210,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbOptimize'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\ServerDatabase
+     * @return \Agnesoft\AgdbApi\Model\ServerDatabase
      */
     public function adminDbOptimize($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
@@ -2227,9 +2227,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbOptimize'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
      */
     public function adminDbOptimizeWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
@@ -2272,11 +2272,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\ServerDatabase' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\ServerDatabase' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\ServerDatabase' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\ServerDatabase' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -2294,13 +2294,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\ServerDatabase', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\ServerDatabase', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\ServerDatabase';
+            $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -2333,7 +2333,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\ServerDatabase',
+                        '\Agnesoft\AgdbApi\Model\ServerDatabase',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -2375,7 +2375,7 @@ class AgdbApi
      */
     public function adminDbOptimizeAsyncWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbOptimize'][0])
     {
-        $returnType = '\Agdb\Model\ServerDatabase';
+        $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
         $request = $this->adminDbOptimizeRequest($owner, $db, $contentType);
 
         return $this->client
@@ -2533,7 +2533,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -2549,7 +2549,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -2779,7 +2779,7 @@ class AgdbApi
      * @param  string $new_name new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRename'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -2796,7 +2796,7 @@ class AgdbApi
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRename'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -3044,7 +3044,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRestore'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -3060,7 +3060,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRestore'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -3291,7 +3291,7 @@ class AgdbApi
      * @param  DbUserRole $db_role db_role (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbUserAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -3309,7 +3309,7 @@ class AgdbApi
      * @param  DbUserRole $db_role (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbUserAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -3575,9 +3575,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbUserList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\DbUser[]
+     * @return \Agnesoft\AgdbApi\Model\DbUser[]
      */
     public function adminDbUserList($owner, $db, string $contentType = self::contentTypes['adminDbUserList'][0])
     {
@@ -3592,9 +3592,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbUserList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\DbUser[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\DbUser[], HTTP status code, HTTP response headers (array of strings)
      */
     public function adminDbUserListWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbUserList'][0])
     {
@@ -3637,11 +3637,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\DbUser[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\DbUser[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\DbUser[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\DbUser[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -3659,13 +3659,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\DbUser[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\DbUser[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\DbUser[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\DbUser[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -3698,7 +3698,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\DbUser[]',
+                        '\Agnesoft\AgdbApi\Model\DbUser[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -3740,7 +3740,7 @@ class AgdbApi
      */
     public function adminDbUserListAsyncWithHttpInfo($owner, $db, string $contentType = self::contentTypes['adminDbUserList'][0])
     {
-        $returnType = '\Agdb\Model\DbUser[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\DbUser[]';
         $request = $this->adminDbUserListRequest($owner, $db, $contentType);
 
         return $this->client
@@ -3899,7 +3899,7 @@ class AgdbApi
      * @param  string $username user name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbUserRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -3916,7 +3916,7 @@ class AgdbApi
      * @param  string $username user name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbUserRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -4161,7 +4161,7 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminShutdown'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -4175,7 +4175,7 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminShutdown'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -4365,10 +4365,10 @@ class AgdbApi
      * Operation adminUserAdd
      *
      * @param  string $username desired user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -4381,10 +4381,10 @@ class AgdbApi
      * Operation adminUserAddWithHttpInfo
      *
      * @param  string $username desired user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -4440,7 +4440,7 @@ class AgdbApi
      * Operation adminUserAddAsync
      *
      * @param  string $username desired user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -4460,7 +4460,7 @@ class AgdbApi
      * Operation adminUserAddAsyncWithHttpInfo
      *
      * @param  string $username desired user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -4498,7 +4498,7 @@ class AgdbApi
      * Create request for operation 'adminUserAdd'
      *
      * @param  string $username desired user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserAdd'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -4609,10 +4609,10 @@ class AgdbApi
      * Operation adminUserChangePassword
      *
      * @param  string $username user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserChangePassword'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -4625,10 +4625,10 @@ class AgdbApi
      * Operation adminUserChangePasswordWithHttpInfo
      *
      * @param  string $username user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserChangePassword'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -4684,7 +4684,7 @@ class AgdbApi
      * Operation adminUserChangePasswordAsync
      *
      * @param  string $username user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserChangePassword'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -4704,7 +4704,7 @@ class AgdbApi
      * Operation adminUserChangePasswordAsyncWithHttpInfo
      *
      * @param  string $username user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserChangePassword'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -4742,7 +4742,7 @@ class AgdbApi
      * Create request for operation 'adminUserChangePassword'
      *
      * @param  string $username user name (required)
-     * @param  \Agdb\Model\UserCredentials $user_credentials (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserCredentials $user_credentials (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserChangePassword'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -4854,9 +4854,9 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\UserStatus[]
+     * @return \Agnesoft\AgdbApi\Model\UserStatus[]
      */
     public function adminUserList(string $contentType = self::contentTypes['adminUserList'][0])
     {
@@ -4869,9 +4869,9 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\UserStatus[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\UserStatus[], HTTP status code, HTTP response headers (array of strings)
      */
     public function adminUserListWithHttpInfo(string $contentType = self::contentTypes['adminUserList'][0])
     {
@@ -4914,11 +4914,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\UserStatus[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\UserStatus[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\UserStatus[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\UserStatus[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -4936,13 +4936,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\UserStatus[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\UserStatus[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\UserStatus[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -4975,7 +4975,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\UserStatus[]',
+                        '\Agnesoft\AgdbApi\Model\UserStatus[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5013,7 +5013,7 @@ class AgdbApi
      */
     public function adminUserListAsyncWithHttpInfo(string $contentType = self::contentTypes['adminUserList'][0])
     {
-        $returnType = '\Agdb\Model\UserStatus[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
         $request = $this->adminUserListRequest($contentType);
 
         return $this->client
@@ -5138,9 +5138,9 @@ class AgdbApi
      * @param  string $username user name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\UserStatus[]
+     * @return \Agnesoft\AgdbApi\Model\UserStatus[]
      */
     public function adminUserRemove($username, string $contentType = self::contentTypes['adminUserRemove'][0])
     {
@@ -5154,9 +5154,9 @@ class AgdbApi
      * @param  string $username user name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\UserStatus[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\UserStatus[], HTTP status code, HTTP response headers (array of strings)
      */
     public function adminUserRemoveWithHttpInfo($username, string $contentType = self::contentTypes['adminUserRemove'][0])
     {
@@ -5199,11 +5199,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 204:
-                    if ('\Agdb\Model\UserStatus[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\UserStatus[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\UserStatus[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\UserStatus[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -5221,13 +5221,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\UserStatus[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\UserStatus[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\UserStatus[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -5260,7 +5260,7 @@ class AgdbApi
                 case 204:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\UserStatus[]',
+                        '\Agnesoft\AgdbApi\Model\UserStatus[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5300,7 +5300,7 @@ class AgdbApi
      */
     public function adminUserRemoveAsyncWithHttpInfo($username, string $contentType = self::contentTypes['adminUserRemove'][0])
     {
-        $returnType = '\Agdb\Model\UserStatus[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
         $request = $this->adminUserRemoveRequest($username, $contentType);
 
         return $this->client
@@ -5443,7 +5443,7 @@ class AgdbApi
      * @param  DbType $db_type db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -5460,7 +5460,7 @@ class AgdbApi
      * @param  DbType $db_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -5708,9 +5708,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAudit'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\QueryAudit[]
+     * @return \Agnesoft\AgdbApi\Model\QueryAudit[]
      */
     public function dbAudit($owner, $db, string $contentType = self::contentTypes['dbAudit'][0])
     {
@@ -5725,9 +5725,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbAudit'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\QueryAudit[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\QueryAudit[], HTTP status code, HTTP response headers (array of strings)
      */
     public function dbAuditWithHttpInfo($owner, $db, string $contentType = self::contentTypes['dbAudit'][0])
     {
@@ -5770,11 +5770,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\QueryAudit[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\QueryAudit[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\QueryAudit[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\QueryAudit[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -5792,13 +5792,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\QueryAudit[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\QueryAudit[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\QueryAudit[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\QueryAudit[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -5831,7 +5831,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\QueryAudit[]',
+                        '\Agnesoft\AgdbApi\Model\QueryAudit[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5873,7 +5873,7 @@ class AgdbApi
      */
     public function dbAuditAsyncWithHttpInfo($owner, $db, string $contentType = self::contentTypes['dbAudit'][0])
     {
-        $returnType = '\Agdb\Model\QueryAudit[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\QueryAudit[]';
         $request = $this->dbAuditRequest($owner, $db, $contentType);
 
         return $this->client
@@ -6031,7 +6031,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbBackup'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -6047,7 +6047,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbBackup'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -6277,9 +6277,9 @@ class AgdbApi
      * @param  DbResource $resource resource (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbClear'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\ServerDatabase
+     * @return \Agnesoft\AgdbApi\Model\ServerDatabase
      */
     public function dbClear($owner, $db, $resource, string $contentType = self::contentTypes['dbClear'][0])
     {
@@ -6295,9 +6295,9 @@ class AgdbApi
      * @param  DbResource $resource (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbClear'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
      */
     public function dbClearWithHttpInfo($owner, $db, $resource, string $contentType = self::contentTypes['dbClear'][0])
     {
@@ -6340,11 +6340,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 201:
-                    if ('\Agdb\Model\ServerDatabase' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\ServerDatabase' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\ServerDatabase' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\ServerDatabase' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -6362,13 +6362,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\ServerDatabase', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\ServerDatabase', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\ServerDatabase';
+            $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -6401,7 +6401,7 @@ class AgdbApi
                 case 201:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\ServerDatabase',
+                        '\Agnesoft\AgdbApi\Model\ServerDatabase',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -6445,7 +6445,7 @@ class AgdbApi
      */
     public function dbClearAsyncWithHttpInfo($owner, $db, $resource, string $contentType = self::contentTypes['dbClear'][0])
     {
-        $returnType = '\Agdb\Model\ServerDatabase';
+        $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
         $request = $this->dbClearRequest($owner, $db, $resource, $contentType);
 
         return $this->client
@@ -6621,7 +6621,7 @@ class AgdbApi
      * @param  string $new_name new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbCopy'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -6638,7 +6638,7 @@ class AgdbApi
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbCopy'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -6886,7 +6886,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbDelete'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -6902,7 +6902,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbDelete'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -7129,12 +7129,12 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExec'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\QueryResult[]
+     * @return \Agnesoft\AgdbApi\Model\QueryResult[]
      */
     public function dbExec($owner, $db, $query_type, string $contentType = self::contentTypes['dbExec'][0])
     {
@@ -7147,12 +7147,12 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExec'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\QueryResult[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\QueryResult[], HTTP status code, HTTP response headers (array of strings)
      */
     public function dbExecWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['dbExec'][0])
     {
@@ -7195,11 +7195,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\QueryResult[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\QueryResult[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\QueryResult[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\QueryResult[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -7217,13 +7217,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\QueryResult[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\QueryResult[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\QueryResult[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -7256,7 +7256,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\QueryResult[]',
+                        '\Agnesoft\AgdbApi\Model\QueryResult[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -7271,7 +7271,7 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExec'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -7292,7 +7292,7 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExec'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -7300,7 +7300,7 @@ class AgdbApi
      */
     public function dbExecAsyncWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['dbExec'][0])
     {
-        $returnType = '\Agdb\Model\QueryResult[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
         $request = $this->dbExecRequest($owner, $db, $query_type, $contentType);
 
         return $this->client
@@ -7344,7 +7344,7 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  \Agdb\Model\QueryType[] $query_type (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExec'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -7471,9 +7471,9 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\ServerDatabase[]
+     * @return \Agnesoft\AgdbApi\Model\ServerDatabase[]
      */
     public function dbList(string $contentType = self::contentTypes['dbList'][0])
     {
@@ -7486,9 +7486,9 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\ServerDatabase[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase[], HTTP status code, HTTP response headers (array of strings)
      */
     public function dbListWithHttpInfo(string $contentType = self::contentTypes['dbList'][0])
     {
@@ -7531,11 +7531,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\ServerDatabase[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\ServerDatabase[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\ServerDatabase[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\ServerDatabase[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -7553,13 +7553,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\ServerDatabase[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\ServerDatabase[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\ServerDatabase[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -7592,7 +7592,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\ServerDatabase[]',
+                        '\Agnesoft\AgdbApi\Model\ServerDatabase[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -7630,7 +7630,7 @@ class AgdbApi
      */
     public function dbListAsyncWithHttpInfo(string $contentType = self::contentTypes['dbList'][0])
     {
-        $returnType = '\Agdb\Model\ServerDatabase[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase[]';
         $request = $this->dbListRequest($contentType);
 
         return $this->client
@@ -7756,9 +7756,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbOptimize'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\ServerDatabase
+     * @return \Agnesoft\AgdbApi\Model\ServerDatabase
      */
     public function dbOptimize($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
     {
@@ -7773,9 +7773,9 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbOptimize'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
      */
     public function dbOptimizeWithHttpInfo($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
     {
@@ -7818,11 +7818,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\ServerDatabase' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\ServerDatabase' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\ServerDatabase' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\ServerDatabase' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -7840,13 +7840,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\ServerDatabase', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\ServerDatabase', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\ServerDatabase';
+            $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -7879,7 +7879,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\ServerDatabase',
+                        '\Agnesoft\AgdbApi\Model\ServerDatabase',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -7921,7 +7921,7 @@ class AgdbApi
      */
     public function dbOptimizeAsyncWithHttpInfo($owner, $db, string $contentType = self::contentTypes['dbOptimize'][0])
     {
-        $returnType = '\Agdb\Model\ServerDatabase';
+        $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
         $request = $this->dbOptimizeRequest($owner, $db, $contentType);
 
         return $this->client
@@ -8079,7 +8079,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -8095,7 +8095,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -8325,7 +8325,7 @@ class AgdbApi
      * @param  string $new_name new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRename'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -8342,7 +8342,7 @@ class AgdbApi
      * @param  string $new_name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRename'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -8590,7 +8590,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRestore'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -8606,7 +8606,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRestore'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -8837,7 +8837,7 @@ class AgdbApi
      * @param  DbUserRole $db_role db_role (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbUserAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -8855,7 +8855,7 @@ class AgdbApi
      * @param  DbUserRole $db_role (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbUserAdd'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -9121,7 +9121,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbUserList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -9137,7 +9137,7 @@ class AgdbApi
      * @param  string $db db name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbUserList'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -9367,7 +9367,7 @@ class AgdbApi
      * @param  string $username user name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbUserRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -9384,7 +9384,7 @@ class AgdbApi
      * @param  string $username user name (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbUserRemove'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -9630,9 +9630,9 @@ class AgdbApi
      * @param  bool $cluster get cluster status (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['status'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return \Agdb\Model\ClusterStatus[]
+     * @return \Agnesoft\AgdbApi\Model\ClusterStatus[]
      */
     public function status($cluster, string $contentType = self::contentTypes['status'][0])
     {
@@ -9646,9 +9646,9 @@ class AgdbApi
      * @param  bool $cluster get cluster status (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['status'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
-     * @return array of \Agdb\Model\ClusterStatus[], HTTP status code, HTTP response headers (array of strings)
+     * @return array of \Agnesoft\AgdbApi\Model\ClusterStatus[], HTTP status code, HTTP response headers (array of strings)
      */
     public function statusWithHttpInfo($cluster, string $contentType = self::contentTypes['status'][0])
     {
@@ -9691,11 +9691,11 @@ class AgdbApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\Agdb\Model\ClusterStatus[]' === '\SplFileObject') {
+                    if ('\Agnesoft\AgdbApi\Model\ClusterStatus[]' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
-                        if ('\Agdb\Model\ClusterStatus[]' !== 'string') {
+                        if ('\Agnesoft\AgdbApi\Model\ClusterStatus[]' !== 'string') {
                             try {
                                 $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
                             } catch (\JsonException $exception) {
@@ -9713,13 +9713,13 @@ class AgdbApi
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\Agdb\Model\ClusterStatus[]', []),
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\ClusterStatus[]', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\Agdb\Model\ClusterStatus[]';
+            $returnType = '\Agnesoft\AgdbApi\Model\ClusterStatus[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -9752,7 +9752,7 @@ class AgdbApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\Agdb\Model\ClusterStatus[]',
+                        '\Agnesoft\AgdbApi\Model\ClusterStatus[]',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -9792,7 +9792,7 @@ class AgdbApi
      */
     public function statusAsyncWithHttpInfo($cluster, string $contentType = self::contentTypes['status'][0])
     {
-        $returnType = '\Agdb\Model\ClusterStatus[]';
+        $returnType = '\Agnesoft\AgdbApi\Model\ClusterStatus[]';
         $request = $this->statusRequest($cluster, $contentType);
 
         return $this->client
@@ -9926,10 +9926,10 @@ class AgdbApi
     /**
      * Operation userChangePassword
      *
-     * @param  \Agdb\Model\ChangePassword $change_password change_password (required)
+     * @param  \Agnesoft\AgdbApi\Model\ChangePassword $change_password change_password (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userChangePassword'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -9941,10 +9941,10 @@ class AgdbApi
     /**
      * Operation userChangePasswordWithHttpInfo
      *
-     * @param  \Agdb\Model\ChangePassword $change_password (required)
+     * @param  \Agnesoft\AgdbApi\Model\ChangePassword $change_password (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userChangePassword'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
@@ -9999,7 +9999,7 @@ class AgdbApi
     /**
      * Operation userChangePasswordAsync
      *
-     * @param  \Agdb\Model\ChangePassword $change_password (required)
+     * @param  \Agnesoft\AgdbApi\Model\ChangePassword $change_password (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userChangePassword'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -10018,7 +10018,7 @@ class AgdbApi
     /**
      * Operation userChangePasswordAsyncWithHttpInfo
      *
-     * @param  \Agdb\Model\ChangePassword $change_password (required)
+     * @param  \Agnesoft\AgdbApi\Model\ChangePassword $change_password (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userChangePassword'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -10055,7 +10055,7 @@ class AgdbApi
     /**
      * Create request for operation 'userChangePassword'
      *
-     * @param  \Agdb\Model\ChangePassword $change_password (required)
+     * @param  \Agnesoft\AgdbApi\Model\ChangePassword $change_password (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userChangePassword'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -10150,10 +10150,10 @@ class AgdbApi
     /**
      * Operation userLogin
      *
-     * @param  \Agdb\Model\UserLogin $user_login user_login (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserLogin $user_login user_login (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogin'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return string
      */
@@ -10166,10 +10166,10 @@ class AgdbApi
     /**
      * Operation userLoginWithHttpInfo
      *
-     * @param  \Agdb\Model\UserLogin $user_login (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserLogin $user_login (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogin'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of string, HTTP status code, HTTP response headers (array of strings)
      */
@@ -10288,7 +10288,7 @@ class AgdbApi
     /**
      * Operation userLoginAsync
      *
-     * @param  \Agdb\Model\UserLogin $user_login (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserLogin $user_login (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogin'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -10307,7 +10307,7 @@ class AgdbApi
     /**
      * Operation userLoginAsyncWithHttpInfo
      *
-     * @param  \Agdb\Model\UserLogin $user_login (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserLogin $user_login (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogin'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -10357,7 +10357,7 @@ class AgdbApi
     /**
      * Create request for operation 'userLogin'
      *
-     * @param  \Agdb\Model\UserLogin $user_login (required)
+     * @param  \Agnesoft\AgdbApi\Model\UserLogin $user_login (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogin'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
@@ -10450,7 +10450,7 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogout'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
@@ -10464,7 +10464,7 @@ class AgdbApi
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['userLogout'] to see the possible values for this operation
      *
-     * @throws \Agdb\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */

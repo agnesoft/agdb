@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf5 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf5 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'remove' => '\Agdb\Model\QueryIds'
+        'remove' => '\Agnesoft\AgdbApi\Model\QueryIds'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf5 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets remove
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getRemove()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf5 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets remove
      *
-     * @param \Agdb\Model\QueryIds $remove remove
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $remove remove
      *
      * @return self
      */

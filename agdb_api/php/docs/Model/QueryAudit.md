@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**query** | [**\Agdb\Model\QueryType**](QueryType.md) |  |
+**query** | [**\Agnesoft\\AgdbApi\Model\QueryType**](QueryType.md) |  |
 **timestamp** | **int** |  |
 **user** | **string** |  |
 

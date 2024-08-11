@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * ServerDatabase Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,9 +58,9 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static $openAPITypes = [
         'backup' => 'int',
-        'db_type' => '\Agdb\Model\DbType',
+        'db_type' => '\Agnesoft\AgdbApi\Model\DbType',
         'name' => 'string',
-        'role' => '\Agdb\Model\DbUserRole',
+        'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
         'size' => 'int'
     ];
 
@@ -375,7 +375,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets db_type
      *
-     * @return \Agdb\Model\DbType
+     * @return \Agnesoft\AgdbApi\Model\DbType
      */
     public function getDbType()
     {
@@ -385,7 +385,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets db_type
      *
-     * @param \Agdb\Model\DbType $db_type db_type
+     * @param \Agnesoft\AgdbApi\Model\DbType $db_type db_type
      *
      * @return self
      */
@@ -429,7 +429,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets role
      *
-     * @return \Agdb\Model\DbUserRole
+     * @return \Agnesoft\AgdbApi\Model\DbUserRole
      */
     public function getRole()
     {
@@ -439,7 +439,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets role
      *
-     * @param \Agdb\Model\DbUserRole $role role
+     * @param \Agnesoft\AgdbApi\Model\DbUserRole $role role
      *
      * @return self
      */

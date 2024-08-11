@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * InsertValuesQuery Class Doc Comment
  *
  * @category Class
  * @description Query to insert or update key-value pairs (properties) to existing elements in the database. All &#x60;ids&#x60; must exist in the database. If &#x60;values&#x60; is set to &#x60;Single&#x60; the properties will be inserted uniformly to all &#x60;ids&#x60; otherwise there must be enough &#x60;values&#x60; for all &#x60;ids&#x60;.  The result will be number of inserted/updated values and inserted new elements (nodes).  NOTE: The result is NOT number of affected elements but individual properties.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,8 +58,8 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
       * @var string[]
       */
     protected static $openAPITypes = [
-        'ids' => '\Agdb\Model\QueryIds',
-        'values' => '\Agdb\Model\QueryValues'
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryIds',
+        'values' => '\Agnesoft\AgdbApi\Model\QueryValues'
     ];
 
     /**
@@ -306,7 +306,7 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getIds()
     {
@@ -316,7 +316,7 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryIds $ids ids
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $ids ids
      *
      * @return self
      */
@@ -333,7 +333,7 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Gets values
      *
-     * @return \Agdb\Model\QueryValues
+     * @return \Agnesoft\AgdbApi\Model\QueryValues
      */
     public function getValues()
     {
@@ -343,7 +343,7 @@ class InsertValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Sets values
      *
-     * @param \Agdb\Model\QueryValues $values values
+     * @param \Agnesoft\AgdbApi\Model\QueryValues $values values
      *
      * @return self
      */

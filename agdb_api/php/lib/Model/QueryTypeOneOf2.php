@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf2 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf2 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'insert_index' => '\Agdb\Model\DbValue'
+        'insert_index' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf2 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_index
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getInsertIndex()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf2 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_index
      *
-     * @param \Agdb\Model\DbValue $insert_index insert_index
+     * @param \Agnesoft\AgdbApi\Model\DbValue $insert_index insert_index
      *
      * @return self
      */

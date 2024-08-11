@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryValues Class Doc Comment
  *
  * @category Class
  * @description Helper type distinguishing uniform (&#x60;Single&#x60;) values and multiple (&#x60;Multi&#x60;) values in database queries.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,8 +58,8 @@ class QueryValues implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'single' => '\Agdb\Model\DbKeyValue[]',
-        'multi' => '\Agdb\Model\DbKeyValue[][]'
+        'single' => '\Agnesoft\AgdbApi\Model\DbKeyValue[]',
+        'multi' => '\Agnesoft\AgdbApi\Model\DbKeyValue[][]'
     ];
 
     /**
@@ -306,7 +306,7 @@ class QueryValues implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets single
      *
-     * @return \Agdb\Model\DbKeyValue[]
+     * @return \Agnesoft\AgdbApi\Model\DbKeyValue[]
      */
     public function getSingle()
     {
@@ -316,7 +316,7 @@ class QueryValues implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets single
      *
-     * @param \Agdb\Model\DbKeyValue[] $single Single list of properties (key-value pairs) to be applied to all elements in a query.
+     * @param \Agnesoft\AgdbApi\Model\DbKeyValue[] $single Single list of properties (key-value pairs) to be applied to all elements in a query.
      *
      * @return self
      */
@@ -333,7 +333,7 @@ class QueryValues implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets multi
      *
-     * @return \Agdb\Model\DbKeyValue[][]
+     * @return \Agnesoft\AgdbApi\Model\DbKeyValue[][]
      */
     public function getMulti()
     {
@@ -343,7 +343,7 @@ class QueryValues implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets multi
      *
-     * @param \Agdb\Model\DbKeyValue[][] $multi List of lists of properties (key-value pairs) to be applied to all elements in a query. There must be as many lists of properties as ids in a query.
+     * @param \Agnesoft\AgdbApi\Model\DbKeyValue[][] $multi List of lists of properties (key-value pairs) to be applied to all elements in a query. There must be as many lists of properties as ids in a query.
      *
      * @return self
      */

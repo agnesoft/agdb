@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf13 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf13 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'select_keys' => '\Agdb\Model\QueryIds'
+        'select_keys' => '\Agnesoft\AgdbApi\Model\QueryIds'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf13 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_keys
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getSelectKeys()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf13 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_keys
      *
-     * @param \Agdb\Model\QueryIds $select_keys select_keys
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $select_keys select_keys
      *
      * @return self
      */

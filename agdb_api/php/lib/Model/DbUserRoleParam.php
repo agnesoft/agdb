@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * DbUserRoleParam Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class DbUserRoleParam implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'db_role' => '\Agdb\Model\DbUserRole'
+        'db_role' => '\Agnesoft\AgdbApi\Model\DbUserRole'
     ];
 
     /**
@@ -295,7 +295,7 @@ class DbUserRoleParam implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets db_role
      *
-     * @return \Agdb\Model\DbUserRole
+     * @return \Agnesoft\AgdbApi\Model\DbUserRole
      */
     public function getDbRole()
     {
@@ -305,7 +305,7 @@ class DbUserRoleParam implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets db_role
      *
-     * @param \Agdb\Model\DbUserRole $db_role db_role
+     * @param \Agnesoft\AgdbApi\Model\DbUserRole $db_role db_role
      *
      * @return self
      */

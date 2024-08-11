@@ -1,4 +1,4 @@
-# Agdb\AgdbApi
+# Agnesoft\\AgdbApi\AgdbApi
 
 All URIs are relative to http://localhost:3000, except if the operation defines another base path.
 
@@ -60,10 +60,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -71,7 +71,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agdb\Model\DbType(); // DbType
+$db_type = new \Agnesoft\\AgdbApi\Model\DbType(); // DbType
 
 try {
     $apiInstance->adminDbAdd($owner, $db, $db_type);
@@ -108,7 +108,7 @@ void (empty response body)
 ## `adminDbAudit()`
 
 ```php
-adminDbAudit($owner, $db): \Agdb\Model\QueryAudit[]
+adminDbAudit($owner, $db): \Agnesoft\\AgdbApi\Model\QueryAudit[]
 ```
 
 
@@ -121,10 +121,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -150,7 +150,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\QueryAudit[]**](../Model/QueryAudit.md)
+[**\Agnesoft\\AgdbApi\Model\QueryAudit[]**](../Model/QueryAudit.md)
 
 ### Authorization
 
@@ -181,10 +181,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -240,10 +240,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -301,10 +301,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -347,7 +347,7 @@ void (empty response body)
 ## `adminDbExec()`
 
 ```php
-adminDbExec($owner, $db, $query_type): \Agdb\Model\QueryResult[]
+adminDbExec($owner, $db, $query_type): \Agnesoft\\AgdbApi\Model\QueryResult[]
 ```
 
 
@@ -360,10 +360,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -371,7 +371,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
-$query_type = array(new \Agdb\Model\QueryType()); // \Agdb\Model\QueryType[]
+$query_type = array(new \Agnesoft\\AgdbApi\Model\QueryType()); // \Agnesoft\\AgdbApi\Model\QueryType[]
 
 try {
     $result = $apiInstance->adminDbExec($owner, $db, $query_type);
@@ -387,11 +387,11 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
-| **query_type** | [**\Agdb\Model\QueryType[]**](../Model/QueryType.md)|  | |
+| **query_type** | [**\Agnesoft\\AgdbApi\Model\QueryType[]**](../Model/QueryType.md)|  | |
 
 ### Return type
 
-[**\Agdb\Model\QueryResult[]**](../Model/QueryResult.md)
+[**\Agnesoft\\AgdbApi\Model\QueryResult[]**](../Model/QueryResult.md)
 
 ### Authorization
 
@@ -409,7 +409,7 @@ try {
 ## `adminDbList()`
 
 ```php
-adminDbList(): \Agdb\Model\ServerDatabase[]
+adminDbList(): \Agnesoft\\AgdbApi\Model\ServerDatabase[]
 ```
 
 
@@ -422,10 +422,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -446,7 +446,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**\Agdb\Model\ServerDatabase[]**](../Model/ServerDatabase.md)
+[**\Agnesoft\\AgdbApi\Model\ServerDatabase[]**](../Model/ServerDatabase.md)
 
 ### Authorization
 
@@ -464,7 +464,7 @@ This endpoint does not need any parameter.
 ## `adminDbOptimize()`
 
 ```php
-adminDbOptimize($owner, $db): \Agdb\Model\ServerDatabase
+adminDbOptimize($owner, $db): \Agnesoft\\AgdbApi\Model\ServerDatabase
 ```
 
 
@@ -477,10 +477,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -506,7 +506,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\ServerDatabase**](../Model/ServerDatabase.md)
+[**\Agnesoft\\AgdbApi\Model\ServerDatabase**](../Model/ServerDatabase.md)
 
 ### Authorization
 
@@ -537,10 +537,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -596,10 +596,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -657,10 +657,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -716,10 +716,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -728,7 +728,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
 $username = 'username_example'; // string | user name
-$db_role = new \Agdb\Model\DbUserRole(); // DbUserRole
+$db_role = new \Agnesoft\\AgdbApi\Model\DbUserRole(); // DbUserRole
 
 try {
     $apiInstance->adminDbUserAdd($owner, $db, $username, $db_role);
@@ -766,7 +766,7 @@ void (empty response body)
 ## `adminDbUserList()`
 
 ```php
-adminDbUserList($owner, $db): \Agdb\Model\DbUser[]
+adminDbUserList($owner, $db): \Agnesoft\\AgdbApi\Model\DbUser[]
 ```
 
 
@@ -779,10 +779,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -808,7 +808,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\DbUser[]**](../Model/DbUser.md)
+[**\Agnesoft\\AgdbApi\Model\DbUser[]**](../Model/DbUser.md)
 
 ### Authorization
 
@@ -839,10 +839,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -900,10 +900,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -954,17 +954,17 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
     $config
 );
 $username = 'username_example'; // string | desired user name
-$user_credentials = new \Agdb\Model\UserCredentials(); // \Agdb\Model\UserCredentials
+$user_credentials = new \Agnesoft\\AgdbApi\Model\UserCredentials(); // \Agnesoft\\AgdbApi\Model\UserCredentials
 
 try {
     $apiInstance->adminUserAdd($username, $user_credentials);
@@ -978,7 +978,7 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **username** | **string**| desired user name | |
-| **user_credentials** | [**\Agdb\Model\UserCredentials**](../Model/UserCredentials.md)|  | |
+| **user_credentials** | [**\Agnesoft\\AgdbApi\Model\UserCredentials**](../Model/UserCredentials.md)|  | |
 
 ### Return type
 
@@ -1013,17 +1013,17 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
     $config
 );
 $username = 'username_example'; // string | user name
-$user_credentials = new \Agdb\Model\UserCredentials(); // \Agdb\Model\UserCredentials
+$user_credentials = new \Agnesoft\\AgdbApi\Model\UserCredentials(); // \Agnesoft\\AgdbApi\Model\UserCredentials
 
 try {
     $apiInstance->adminUserChangePassword($username, $user_credentials);
@@ -1037,7 +1037,7 @@ try {
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | **username** | **string**| user name | |
-| **user_credentials** | [**\Agdb\Model\UserCredentials**](../Model/UserCredentials.md)|  | |
+| **user_credentials** | [**\Agnesoft\\AgdbApi\Model\UserCredentials**](../Model/UserCredentials.md)|  | |
 
 ### Return type
 
@@ -1059,7 +1059,7 @@ void (empty response body)
 ## `adminUserList()`
 
 ```php
-adminUserList(): \Agdb\Model\UserStatus[]
+adminUserList(): \Agnesoft\\AgdbApi\Model\UserStatus[]
 ```
 
 
@@ -1072,10 +1072,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1096,7 +1096,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**\Agdb\Model\UserStatus[]**](../Model/UserStatus.md)
+[**\Agnesoft\\AgdbApi\Model\UserStatus[]**](../Model/UserStatus.md)
 
 ### Authorization
 
@@ -1114,7 +1114,7 @@ This endpoint does not need any parameter.
 ## `adminUserRemove()`
 
 ```php
-adminUserRemove($username): \Agdb\Model\UserStatus[]
+adminUserRemove($username): \Agnesoft\\AgdbApi\Model\UserStatus[]
 ```
 
 
@@ -1127,10 +1127,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1154,7 +1154,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\UserStatus[]**](../Model/UserStatus.md)
+[**\Agnesoft\\AgdbApi\Model\UserStatus[]**](../Model/UserStatus.md)
 
 ### Authorization
 
@@ -1185,10 +1185,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1196,7 +1196,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agdb\Model\DbType(); // DbType
+$db_type = new \Agnesoft\\AgdbApi\Model\DbType(); // DbType
 
 try {
     $apiInstance->dbAdd($owner, $db, $db_type);
@@ -1233,7 +1233,7 @@ void (empty response body)
 ## `dbAudit()`
 
 ```php
-dbAudit($owner, $db): \Agdb\Model\QueryAudit[]
+dbAudit($owner, $db): \Agnesoft\\AgdbApi\Model\QueryAudit[]
 ```
 
 
@@ -1246,10 +1246,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1275,7 +1275,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\QueryAudit[]**](../Model/QueryAudit.md)
+[**\Agnesoft\\AgdbApi\Model\QueryAudit[]**](../Model/QueryAudit.md)
 
 ### Authorization
 
@@ -1306,10 +1306,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1352,7 +1352,7 @@ void (empty response body)
 ## `dbClear()`
 
 ```php
-dbClear($owner, $db, $resource): \Agdb\Model\ServerDatabase
+dbClear($owner, $db, $resource): \Agnesoft\\AgdbApi\Model\ServerDatabase
 ```
 
 
@@ -1365,10 +1365,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1376,7 +1376,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$resource = new \Agdb\Model\DbResource(); // DbResource
+$resource = new \Agnesoft\\AgdbApi\Model\DbResource(); // DbResource
 
 try {
     $result = $apiInstance->dbClear($owner, $db, $resource);
@@ -1396,7 +1396,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\ServerDatabase**](../Model/ServerDatabase.md)
+[**\Agnesoft\\AgdbApi\Model\ServerDatabase**](../Model/ServerDatabase.md)
 
 ### Authorization
 
@@ -1427,10 +1427,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1488,10 +1488,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1534,7 +1534,7 @@ void (empty response body)
 ## `dbExec()`
 
 ```php
-dbExec($owner, $db, $query_type): \Agdb\Model\QueryResult[]
+dbExec($owner, $db, $query_type): \Agnesoft\\AgdbApi\Model\QueryResult[]
 ```
 
 
@@ -1547,10 +1547,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1558,7 +1558,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
-$query_type = array(new \Agdb\Model\QueryType()); // \Agdb\Model\QueryType[]
+$query_type = array(new \Agnesoft\\AgdbApi\Model\QueryType()); // \Agnesoft\\AgdbApi\Model\QueryType[]
 
 try {
     $result = $apiInstance->dbExec($owner, $db, $query_type);
@@ -1574,11 +1574,11 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
-| **query_type** | [**\Agdb\Model\QueryType[]**](../Model/QueryType.md)|  | |
+| **query_type** | [**\Agnesoft\\AgdbApi\Model\QueryType[]**](../Model/QueryType.md)|  | |
 
 ### Return type
 
-[**\Agdb\Model\QueryResult[]**](../Model/QueryResult.md)
+[**\Agnesoft\\AgdbApi\Model\QueryResult[]**](../Model/QueryResult.md)
 
 ### Authorization
 
@@ -1596,7 +1596,7 @@ try {
 ## `dbList()`
 
 ```php
-dbList(): \Agdb\Model\ServerDatabase[]
+dbList(): \Agnesoft\\AgdbApi\Model\ServerDatabase[]
 ```
 
 
@@ -1609,10 +1609,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1633,7 +1633,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**\Agdb\Model\ServerDatabase[]**](../Model/ServerDatabase.md)
+[**\Agnesoft\\AgdbApi\Model\ServerDatabase[]**](../Model/ServerDatabase.md)
 
 ### Authorization
 
@@ -1651,7 +1651,7 @@ This endpoint does not need any parameter.
 ## `dbOptimize()`
 
 ```php
-dbOptimize($owner, $db): \Agdb\Model\ServerDatabase
+dbOptimize($owner, $db): \Agnesoft\\AgdbApi\Model\ServerDatabase
 ```
 
 
@@ -1664,10 +1664,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1693,7 +1693,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\ServerDatabase**](../Model/ServerDatabase.md)
+[**\Agnesoft\\AgdbApi\Model\ServerDatabase**](../Model/ServerDatabase.md)
 
 ### Authorization
 
@@ -1724,10 +1724,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1783,10 +1783,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1844,10 +1844,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1903,10 +1903,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -1915,7 +1915,7 @@ $apiInstance = new Agdb\Api\AgdbApi(
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
 $username = 'username_example'; // string | user name
-$db_role = new \Agdb\Model\DbUserRole(); // DbUserRole
+$db_role = new \Agnesoft\\AgdbApi\Model\DbUserRole(); // DbUserRole
 
 try {
     $apiInstance->dbUserAdd($owner, $db, $username, $db_role);
@@ -1966,10 +1966,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -2025,10 +2025,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
@@ -2073,7 +2073,7 @@ void (empty response body)
 ## `status()`
 
 ```php
-status($cluster): \Agdb\Model\ClusterStatus[]
+status($cluster): \Agnesoft\\AgdbApi\Model\ClusterStatus[]
 ```
 
 
@@ -2086,7 +2086,7 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client()
@@ -2109,7 +2109,7 @@ try {
 
 ### Return type
 
-[**\Agdb\Model\ClusterStatus[]**](../Model/ClusterStatus.md)
+[**\Agnesoft\\AgdbApi\Model\ClusterStatus[]**](../Model/ClusterStatus.md)
 
 ### Authorization
 
@@ -2140,16 +2140,16 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),
     $config
 );
-$change_password = new \Agdb\Model\ChangePassword(); // \Agdb\Model\ChangePassword
+$change_password = new \Agnesoft\\AgdbApi\Model\ChangePassword(); // \Agnesoft\\AgdbApi\Model\ChangePassword
 
 try {
     $apiInstance->userChangePassword($change_password);
@@ -2162,7 +2162,7 @@ try {
 
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
-| **change_password** | [**\Agdb\Model\ChangePassword**](../Model/ChangePassword.md)|  | |
+| **change_password** | [**\Agnesoft\\AgdbApi\Model\ChangePassword**](../Model/ChangePassword.md)|  | |
 
 ### Return type
 
@@ -2197,12 +2197,12 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client()
 );
-$user_login = new \Agdb\Model\UserLogin(); // \Agdb\Model\UserLogin
+$user_login = new \Agnesoft\\AgdbApi\Model\UserLogin(); // \Agnesoft\\AgdbApi\Model\UserLogin
 
 try {
     $result = $apiInstance->userLogin($user_login);
@@ -2216,7 +2216,7 @@ try {
 
 | Name | Type | Description  | Notes |
 | ------------- | ------------- | ------------- | ------------- |
-| **user_login** | [**\Agdb\Model\UserLogin**](../Model/UserLogin.md)|  | |
+| **user_login** | [**\Agnesoft\\AgdbApi\Model\UserLogin**](../Model/UserLogin.md)|  | |
 
 ### Return type
 
@@ -2251,10 +2251,10 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 
 // Configure Bearer authorization: Token
-$config = Agdb\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+$config = Agnesoft\\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
 
 
-$apiInstance = new Agdb\Api\AgdbApi(
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client(),

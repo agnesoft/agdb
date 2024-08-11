@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf1 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'insert_edges' => '\Agdb\Model\InsertEdgesQuery'
+        'insert_edges' => '\Agnesoft\AgdbApi\Model\InsertEdgesQuery'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_edges
      *
-     * @return \Agdb\Model\InsertEdgesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertEdgesQuery
      */
     public function getInsertEdges()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_edges
      *
-     * @param \Agdb\Model\InsertEdgesQuery $insert_edges insert_edges
+     * @param \Agnesoft\AgdbApi\Model\InsertEdgesQuery $insert_edges insert_edges
      *
      * @return self
      */

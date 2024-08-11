@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf4 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf4 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'insert_values' => '\Agdb\Model\InsertValuesQuery'
+        'insert_values' => '\Agnesoft\AgdbApi\Model\InsertValuesQuery'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf4 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_values
      *
-     * @return \Agdb\Model\InsertValuesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertValuesQuery
      */
     public function getInsertValues()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf4 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_values
      *
-     * @param \Agdb\Model\InsertValuesQuery $insert_values insert_values
+     * @param \Agnesoft\AgdbApi\Model\InsertValuesQuery $insert_values insert_values
      *
      * @return self
      */

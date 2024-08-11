@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf16 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf16 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'select_values' => '\Agdb\Model\SelectValuesQuery'
+        'select_values' => '\Agnesoft\AgdbApi\Model\SelectValuesQuery'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf16 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_values
      *
-     * @return \Agdb\Model\SelectValuesQuery
+     * @return \Agnesoft\AgdbApi\Model\SelectValuesQuery
      */
     public function getSelectValues()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf16 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_values
      *
-     * @param \Agdb\Model\SelectValuesQuery $select_values select_values
+     * @param \Agnesoft\AgdbApi\Model\SelectValuesQuery $select_values select_values
      *
      * @return self
      */

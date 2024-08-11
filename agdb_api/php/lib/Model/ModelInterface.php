@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb\Model
+ * @package  Agnesoft\AgdbApi\Model
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,12 +26,12 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 /**
  * Interface abstracting model access.
  *
- * @package Agdb\Model
+ * @package Agnesoft\AgdbApi\Model
  * @author  OpenAPI Generator team
  */
 interface ModelInterface

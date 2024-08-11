@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * ServerDatabaseResource Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
       * @var string[]
       */
     protected static $openAPITypes = [
-        'resource' => '\Agdb\Model\DbResource'
+        'resource' => '\Agnesoft\AgdbApi\Model\DbResource'
     ];
 
     /**
@@ -295,7 +295,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
     /**
      * Gets resource
      *
-     * @return \Agdb\Model\DbResource
+     * @return \Agnesoft\AgdbApi\Model\DbResource
      */
     public function getResource()
     {
@@ -305,7 +305,7 @@ class ServerDatabaseResource implements ModelInterface, ArrayAccess, \JsonSerial
     /**
      * Sets resource
      *
-     * @param \Agdb\Model\DbResource $resource resource
+     * @param \Agnesoft\AgdbApi\Model\DbResource $resource resource
      *
      * @return self
      */

@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * Comparison Class Doc Comment
  *
  * @category Class
  * @description Comparison of database values ([&#x60;DbValue&#x60;]) used by &#x60;key()&#x60; condition. Supports the usual set of named comparisons: &#x60;&#x3D;&#x3D;, !&#x3D;, &lt;, &lt;&#x3D;, &gt;, &#x3D;&gt;&#x60; plus &#x60;contains()&#x60;. The comparisons are type strict except for the &#x60;contains&#x60; comparison which allows vectorized version of the base type. Notably however it does not support the &#x60;bytes&#x60; and integral types where the \&quot;contains\&quot; makes little sense (i.e. does 3 contain 1?).
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,13 +58,13 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'equal' => '\Agdb\Model\DbValue',
-        'greater_than' => '\Agdb\Model\DbValue',
-        'greater_than_or_equal' => '\Agdb\Model\DbValue',
-        'less_than' => '\Agdb\Model\DbValue',
-        'less_than_or_equal' => '\Agdb\Model\DbValue',
-        'not_equal' => '\Agdb\Model\DbValue',
-        'contains' => '\Agdb\Model\DbValue'
+        'equal' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'greater_than' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'greater_than_or_equal' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'less_than' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'less_than_or_equal' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'not_equal' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'contains' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -356,7 +356,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets equal
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getEqual()
     {
@@ -366,7 +366,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets equal
      *
-     * @param \Agdb\Model\DbValue $equal equal
+     * @param \Agnesoft\AgdbApi\Model\DbValue $equal equal
      *
      * @return self
      */
@@ -383,7 +383,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets greater_than
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getGreaterThan()
     {
@@ -393,7 +393,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets greater_than
      *
-     * @param \Agdb\Model\DbValue $greater_than greater_than
+     * @param \Agnesoft\AgdbApi\Model\DbValue $greater_than greater_than
      *
      * @return self
      */
@@ -410,7 +410,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets greater_than_or_equal
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getGreaterThanOrEqual()
     {
@@ -420,7 +420,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets greater_than_or_equal
      *
-     * @param \Agdb\Model\DbValue $greater_than_or_equal greater_than_or_equal
+     * @param \Agnesoft\AgdbApi\Model\DbValue $greater_than_or_equal greater_than_or_equal
      *
      * @return self
      */
@@ -437,7 +437,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets less_than
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getLessThan()
     {
@@ -447,7 +447,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets less_than
      *
-     * @param \Agdb\Model\DbValue $less_than less_than
+     * @param \Agnesoft\AgdbApi\Model\DbValue $less_than less_than
      *
      * @return self
      */
@@ -464,7 +464,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets less_than_or_equal
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getLessThanOrEqual()
     {
@@ -474,7 +474,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets less_than_or_equal
      *
-     * @param \Agdb\Model\DbValue $less_than_or_equal less_than_or_equal
+     * @param \Agnesoft\AgdbApi\Model\DbValue $less_than_or_equal less_than_or_equal
      *
      * @return self
      */
@@ -491,7 +491,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets not_equal
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getNotEqual()
     {
@@ -501,7 +501,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets not_equal
      *
-     * @param \Agdb\Model\DbValue $not_equal not_equal
+     * @param \Agnesoft\AgdbApi\Model\DbValue $not_equal not_equal
      *
      * @return self
      */
@@ -518,7 +518,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets contains
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getContains()
     {
@@ -528,7 +528,7 @@ class Comparison implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets contains
      *
-     * @param \Agdb\Model\DbValue $contains contains
+     * @param \Agnesoft\AgdbApi\Model\DbValue $contains contains
      *
      * @return self
      */

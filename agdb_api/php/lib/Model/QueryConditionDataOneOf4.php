@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionDataOneOf4 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryConditionDataOneOf4 implements ModelInterface, ArrayAccess, \JsonSeri
       * @var string[]
       */
     protected static $openAPITypes = [
-        'ids' => '\Agdb\Model\QueryId[]'
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryId[]'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryConditionDataOneOf4 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryId[]
+     * @return \Agnesoft\AgdbApi\Model\QueryId[]
      */
     public function getIds()
     {
@@ -305,7 +305,7 @@ class QueryConditionDataOneOf4 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryId[] $ids Tests if the current id is in the list of ids.
+     * @param \Agnesoft\AgdbApi\Model\QueryId[] $ids Tests if the current id is in the list of ids.
      *
      * @return self
      */

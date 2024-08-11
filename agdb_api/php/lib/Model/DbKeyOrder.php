@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * DbKeyOrder Class Doc Comment
  *
  * @category Class
  * @description Ordering for search queries
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,8 +58,8 @@ class DbKeyOrder implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'asc' => '\Agdb\Model\DbValue',
-        'desc' => '\Agdb\Model\DbValue'
+        'asc' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'desc' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -306,7 +306,7 @@ class DbKeyOrder implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets asc
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getAsc()
     {
@@ -316,7 +316,7 @@ class DbKeyOrder implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets asc
      *
-     * @param \Agdb\Model\DbValue $asc asc
+     * @param \Agnesoft\AgdbApi\Model\DbValue $asc asc
      *
      * @return self
      */
@@ -333,7 +333,7 @@ class DbKeyOrder implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets desc
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getDesc()
     {
@@ -343,7 +343,7 @@ class DbKeyOrder implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets desc
      *
-     * @param \Agdb\Model\DbValue $desc desc
+     * @param \Agnesoft\AgdbApi\Model\DbValue $desc desc
      *
      * @return self
      */

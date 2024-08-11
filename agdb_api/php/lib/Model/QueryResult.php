@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryResult Class Doc Comment
  *
  * @category Class
  * @description Universal database result. Successful execution of a query will always yield this type. The &#x60;result&#x60; field is a numerical representation of the result while the &#x60;elements&#x60; are the list of &#x60;DbElement&#x60;s with database ids and properties (key-value pairs).
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,7 +58,7 @@ class QueryResult implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'elements' => '\Agdb\Model\DbElement[]',
+        'elements' => '\Agnesoft\AgdbApi\Model\DbElement[]',
         'result' => 'int'
     ];
 
@@ -306,7 +306,7 @@ class QueryResult implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets elements
      *
-     * @return \Agdb\Model\DbElement[]
+     * @return \Agnesoft\AgdbApi\Model\DbElement[]
      */
     public function getElements()
     {
@@ -316,7 +316,7 @@ class QueryResult implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets elements
      *
-     * @param \Agdb\Model\DbElement[] $elements List of elements yielded by the query possibly with a list of properties.
+     * @param \Agnesoft\AgdbApi\Model\DbElement[] $elements List of elements yielded by the query possibly with a list of properties.
      *
      * @return self
      */

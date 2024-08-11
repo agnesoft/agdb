@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryIds Class Doc Comment
  *
  * @category Class
  * @description List of database ids used in queries. It can either represent a list of [&#x60;QueryId&#x60;]s or a search query. Search query allows query nesting and sourcing the ids dynamically for another query most commonly with the select queries.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,8 +58,8 @@ class QueryIds implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'ids' => '\Agdb\Model\QueryId[]',
-        'search' => '\Agdb\Model\SearchQuery'
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryId[]',
+        'search' => '\Agnesoft\AgdbApi\Model\SearchQuery'
     ];
 
     /**
@@ -306,7 +306,7 @@ class QueryIds implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryId[]
+     * @return \Agnesoft\AgdbApi\Model\QueryId[]
      */
     public function getIds()
     {
@@ -316,7 +316,7 @@ class QueryIds implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryId[] $ids List of [`QueryId`]s
+     * @param \Agnesoft\AgdbApi\Model\QueryId[] $ids List of [`QueryId`]s
      *
      * @return self
      */
@@ -333,7 +333,7 @@ class QueryIds implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets search
      *
-     * @return \Agdb\Model\SearchQuery
+     * @return \Agnesoft\AgdbApi\Model\SearchQuery
      */
     public function getSearch()
     {
@@ -343,7 +343,7 @@ class QueryIds implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets search
      *
-     * @param \Agdb\Model\SearchQuery $search search
+     * @param \Agnesoft\AgdbApi\Model\SearchQuery $search search
      *
      * @return self
      */

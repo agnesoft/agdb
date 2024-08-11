@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * ComparisonOneOf5 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class ComparisonOneOf5 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'not_equal' => '\Agdb\Model\DbValue'
+        'not_equal' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -295,7 +295,7 @@ class ComparisonOneOf5 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets not_equal
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getNotEqual()
     {
@@ -305,7 +305,7 @@ class ComparisonOneOf5 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets not_equal
      *
-     * @param \Agdb\Model\DbValue $not_equal not_equal
+     * @param \Agnesoft\AgdbApi\Model\DbValue $not_equal not_equal
      *
      * @return self
      */

@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionDataOneOf Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryConditionDataOneOf implements ModelInterface, ArrayAccess, \JsonSeria
       * @var string[]
       */
     protected static $openAPITypes = [
-        'distance' => '\Agdb\Model\CountComparison'
+        'distance' => '\Agnesoft\AgdbApi\Model\CountComparison'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryConditionDataOneOf implements ModelInterface, ArrayAccess, \JsonSeria
     /**
      * Gets distance
      *
-     * @return \Agdb\Model\CountComparison
+     * @return \Agnesoft\AgdbApi\Model\CountComparison
      */
     public function getDistance()
     {
@@ -305,7 +305,7 @@ class QueryConditionDataOneOf implements ModelInterface, ArrayAccess, \JsonSeria
     /**
      * Sets distance
      *
-     * @param \Agdb\Model\CountComparison $distance distance
+     * @param \Agnesoft\AgdbApi\Model\CountComparison $distance distance
      *
      * @return self
      */

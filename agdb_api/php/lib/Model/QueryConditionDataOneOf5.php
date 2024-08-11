@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionDataOneOf5 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
       * @var string[]
       */
     protected static $openAPITypes = [
-        'key_value' => '\Agdb\Model\QueryConditionDataOneOf5KeyValue'
+        'key_value' => '\Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Gets key_value
      *
-     * @return \Agdb\Model\QueryConditionDataOneOf5KeyValue
+     * @return \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue
      */
     public function getKeyValue()
     {
@@ -305,7 +305,7 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Sets key_value
      *
-     * @param \Agdb\Model\QueryConditionDataOneOf5KeyValue $key_value key_value
+     * @param \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue $key_value key_value
      *
      * @return self
      */

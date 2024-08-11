@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * ComparisonOneOf2 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class ComparisonOneOf2 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'greater_than_or_equal' => '\Agdb\Model\DbValue'
+        'greater_than_or_equal' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -295,7 +295,7 @@ class ComparisonOneOf2 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets greater_than_or_equal
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getGreaterThanOrEqual()
     {
@@ -305,7 +305,7 @@ class ComparisonOneOf2 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets greater_than_or_equal
      *
-     * @param \Agdb\Model\DbValue $greater_than_or_equal greater_than_or_equal
+     * @param \Agnesoft\AgdbApi\Model\DbValue $greater_than_or_equal greater_than_or_equal
      *
      * @return self
      */

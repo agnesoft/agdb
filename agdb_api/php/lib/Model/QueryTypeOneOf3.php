@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf3 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf3 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'insert_nodes' => '\Agdb\Model\InsertNodesQuery'
+        'insert_nodes' => '\Agnesoft\AgdbApi\Model\InsertNodesQuery'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf3 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_nodes
      *
-     * @return \Agdb\Model\InsertNodesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertNodesQuery
      */
     public function getInsertNodes()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf3 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_nodes
      *
-     * @param \Agdb\Model\InsertNodesQuery $insert_nodes insert_nodes
+     * @param \Agnesoft\AgdbApi\Model\InsertNodesQuery $insert_nodes insert_nodes
      *
      * @return self
      */

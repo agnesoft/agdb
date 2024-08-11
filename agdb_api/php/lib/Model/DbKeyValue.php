@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * DbKeyValue Class Doc Comment
  *
  * @category Class
  * @description Database key-value pair (aka property) attached to database elements. It can be constructed from a tuple of types that are convertible to &#x60;DbValue&#x60;.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,8 +58,8 @@ class DbKeyValue implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'key' => '\Agdb\Model\DbValue',
-        'value' => '\Agdb\Model\DbValue'
+        'key' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'value' => '\Agnesoft\AgdbApi\Model\DbValue'
     ];
 
     /**
@@ -306,7 +306,7 @@ class DbKeyValue implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets key
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getKey()
     {
@@ -316,7 +316,7 @@ class DbKeyValue implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets key
      *
-     * @param \Agdb\Model\DbValue $key key
+     * @param \Agnesoft\AgdbApi\Model\DbValue $key key
      *
      * @return self
      */
@@ -333,7 +333,7 @@ class DbKeyValue implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets value
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getValue()
     {
@@ -343,7 +343,7 @@ class DbKeyValue implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets value
      *
-     * @param \Agdb\Model\DbValue $value value
+     * @param \Agnesoft\AgdbApi\Model\DbValue $value value
      *
      * @return self
      */

@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * DbElement Class Doc Comment
  *
  * @category Class
  * @description Database element used in [&#x60;QueryResult&#x60;] that represents a node or an edge.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -61,7 +61,7 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
         'from' => 'int',
         'id' => 'int',
         'to' => 'int',
-        'values' => '\Agdb\Model\DbKeyValue[]'
+        'values' => '\Agnesoft\AgdbApi\Model\DbKeyValue[]'
     ];
 
     /**
@@ -415,7 +415,7 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets values
      *
-     * @return \Agdb\Model\DbKeyValue[]
+     * @return \Agnesoft\AgdbApi\Model\DbKeyValue[]
      */
     public function getValues()
     {
@@ -425,7 +425,7 @@ class DbElement implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets values
      *
-     * @param \Agdb\Model\DbKeyValue[] $values List of key-value pairs associated with the element.
+     * @param \Agnesoft\AgdbApi\Model\DbKeyValue[] $values List of key-value pairs associated with the element.
      *
      * @return self
      */

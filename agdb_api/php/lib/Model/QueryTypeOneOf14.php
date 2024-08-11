@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf14 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf14 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'select_key_count' => '\Agdb\Model\QueryIds'
+        'select_key_count' => '\Agnesoft\AgdbApi\Model\QueryIds'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf14 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_key_count
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getSelectKeyCount()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf14 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_key_count
      *
-     * @param \Agdb\Model\QueryIds $select_key_count select_key_count
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $select_key_count select_key_count
      *
      * @return self
      */

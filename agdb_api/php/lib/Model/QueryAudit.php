@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryAudit Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryAudit implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'query' => '\Agdb\Model\QueryType',
+        'query' => '\Agnesoft\AgdbApi\Model\QueryType',
         'timestamp' => 'int',
         'user' => 'string'
     ];
@@ -319,7 +319,7 @@ class QueryAudit implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets query
      *
-     * @return \Agdb\Model\QueryType
+     * @return \Agnesoft\AgdbApi\Model\QueryType
      */
     public function getQuery()
     {
@@ -329,7 +329,7 @@ class QueryAudit implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets query
      *
-     * @param \Agdb\Model\QueryType $query query
+     * @param \Agnesoft\AgdbApi\Model\QueryType $query query
      *
      * @return self
      */

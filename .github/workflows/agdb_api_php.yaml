@@ -16,7 +16,7 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- agdb_api/php/ agdb_server/openapi/schema.json .github/workflows/agdb_api_php.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
+          if [[ "$(git diff origin/main --name-only -- composer.json agdb_api/php/ .github/workflows/agdb_api_php.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_api_php_analyse:
     runs-on: ubuntu-24.04

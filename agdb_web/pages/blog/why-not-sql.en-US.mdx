@@ -13,7 +13,7 @@ The following items provide explanations for some of the design choices of `agdb
 -   [Why single file?](#why-single-file)
 -   [What about sharding, replication and performance at scale?](#what-about-sharding-replication-and-performance-at-scale)
 
-# Why graph?
+## Why graph?
 
 The database area is dominated by relational database systems (tables) and text queries since the 1970s. However the issues with the relational database systems are numerous and they even gave rise the the regular SW profession - database engineer. This is because contrary to their name they are very awkward at representing actual relations between data which is always demanded by the real world applications. They typically use foreign keys and/or proxy tables to represent them. Additionally the tables naturally enforce fixed immutable data schema upon the data they store. To change the schema one needs to create a new database with the changed schema and copy the data over (this is called database migration). Such operation is very costly and most database systems fair poorly when there are foreign keys involved (requiring them to be disabled for the migration to happen). As it turns out nowadays no database schema is truly immutable. New and changed requirements happen so often that the database schemas usually need updating (migrating) nearly every time there is an update to the systems using it.
 
@@ -33,7 +33,7 @@ That is in a nutshell why the graph database is the best choice for most problem
 
 Everything has the cost and graph databases are no exception. Some operations and some data representations may be costlier in them as opposed to table based databases. For example if you had immutable schema that never updates then table based database might a better fit as the representation in form of tables is more storage efficient. or if you always read the whole table or whole rows then once again the table based databases might be more performant. Typically though these are uncommon edge cases unlikely to be found in the real world applications. The data is almost always sparse and diverse in nature, the schema is never truly stable etc. On the other hand most use cases benefit greatly from graph based representation and thus such a database is well worth it despite some (often more theoretical) costs.
 
-# Why not use an existing graph database?
+## Why not use an existing graph database?
 
 The following is the list of requirements for an ideal graph database:
 
@@ -46,7 +46,7 @@ The following is the list of requirements for an ideal graph database:
 
 Surprisingly there is no database that would fit the bill. Even the most popular graph databases such as `Neo4J` or `OrientDB` fall short on several of these requirements. They do have their own text based language (e.g. Cypher for Neo4J). They lack the drivers for C++/Rust. They are not particularly efficient (being mostly written in Java). Even the recent addition built in Rust - `SurrealDb` - is using text based SQL queries. Quite incomprehensibly its driver support for Rust itself is not very mature so far and was added only later despite the system being written in Rust. Something which is oddly common in the database world, e.g. `RethinkDb`, itself a document database, written mostly in C++, has no C++ support but does officially support for example Ruby. Atop of these issues they often do not leverage the graph structure very well (except for Neo4J which does great job at this) still leaning heavily towards tables.
 
-# Why object queries?
+## Why object queries?
 
 The most ubiquitous database query language is SQL which is text based language created in the 1970s. Its biggest advantage is that being text based it can be used from any language to communicate with the database. However just like relational (table) bases databases from the same era it has some major flaws:
 
@@ -61,7 +61,7 @@ The solutions include heavily sanitizing the user inputs in an attempt to preven
 
 Using native objects representing the queries eliminate all of the SQL issues sacrificing the portability between languages. However that can be relatively easily be made up via already very mature (de)serialization of native objects available in most languages. Using builder pattern to construct these objects further improve their correctness and readability. Native objects carry no additional cognitive load on the programmer and can be easily used just like any other code.
 
-# Why single file?
+## Why single file?
 
 All operating systems have fairly low limit on number of open file descriptors for a program and for all programs in total making this system resource one of the rarest. Furthermore operating over multiple files does not seem to bring in any substantial benefit for the database while it complicates its implementation significantly. The graph database typically needs to have access to the full graph at all times unlike say key-value stores or document databases. Splitting the data into multiple files would therefore be actually detrimental. Lastly overall storage taken by the multiple files would not actually change as the amount of data would be the same.
 
@@ -69,7 +69,7 @@ Conversely using just a single file (with a second temporary write ahead log fil
 
 The one file is the database and the data.
 
-# What about sharding, replication and performance at scale?
+## What about sharding, replication and performance at scale?
 
 Most databases tackle the issue of (poor) performance at scale by scaling up using replication/sharding strategies. While these techniques are definitely useful and they are planned for `agdb` they should be avoided as much as possible. The increase in complexity when using replication and/or sharding is dramatic and it has adverse performance impact meaning it is only worth it if there is no other choice.
 
@@ -77,4 +77,4 @@ The `agdb` is designed so that it performs well regardless of the data set size.
 
 The point here is that scaling has significant cost regardless of technology or clever tricks. Only when the database starts exceeding limits of a single machine they shall be considered because adding data replication/backup will mean huge performance hit. To mitigate it to some extent caching can be used but it can never be as performant as local database. The features "at scale" are definitely coming you should avoid using them as much as possible even if available.
 
-[For real world performance see dedicated documentation.](performance.md)
+[For real world performance see dedicated documentation.](/docs/references/performance)

@@ -200,7 +200,7 @@ pub struct QueryResult {
 
 The `result` field holds numerical result of the query. It typically returns the number of database items affected. For example when selecting from the database it will hold a positive number of elements returned. When removing from the database it will hold a negative number of elements deleted from the database. The optional `from` and `to` fields will hold origin/destination id of an edge and will be `None` for nodes.
 
-The `elements` field hold the [database elements](concepts.md#graph) returned. Each element looks like:
+The `elements` field hold the [database elements](/docs/guides/concepts#graph) returned. Each element looks like:
 
 ```Rust
 pub struct DbElement {
@@ -1150,4 +1150,4 @@ Path search (`from().to()`) uses A\* algorithm. Every element (node or edge) has
 
 ---
 
-For further examples and use cases see the [efficient agdb](docs/efficient_agdb.md).
+For further examples and use cases see the [efficient agdb](/docs/references/efficient-agdb).

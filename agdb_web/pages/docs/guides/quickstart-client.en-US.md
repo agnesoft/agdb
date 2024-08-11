@@ -5,9 +5,9 @@ description: "Quickstart - client, Agnesoft Graph Database."
 
 # Quickstart
 
-The following is the quickstart guide for the agdb client in Rust (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](docs/guides/server) to learn how to run the server.
+The following is the quickstart guide for the agdb client in Rust (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how-to-run-server) to learn how to run the server.
 
-Looking for... [how to run a server?](docs/guides/how_to_run_server) | [another language?](/api) | [embedded/application guide?](/docs/guides/quickstart)
+Looking for... [how to run a server?](/docs/guides/how-to-run-server) | [another language?](/api-docs/openapi) | [embedded/application guide?](/docs/guides/quickstart)
 
 <br/>1. First install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install) (mininum required version is `1.75.0`).
 <br/>

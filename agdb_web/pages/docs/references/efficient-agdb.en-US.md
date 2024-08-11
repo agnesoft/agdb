@@ -7,7 +7,7 @@ description: "Efficient agdb, Agnesoft Graph Database"
 
 In this document we will explore more realistic use of the `agdb`. It should help you understand how to make the best use of the `graph` data schema and how to build complex queries.
 
-The premise that we will be working on is building a database for a social network. The users of the network can create posts and share them with other users to comment and like. You can see the complete code under [tests/efficient_agdb.rs](../tests/efficient_agdb.rs).
+The premise that we will be working on is building a database for a social network. The users of the network can create posts and share them with other users to comment and like. You can see the complete code under [tests/efficient_agdb.rs](https://github.com/agnesoft/agdb/blob/main/agdb/tests/efficient_agdb.rs).
 
 -   [The setup](#the-setup)
     -   [Users](#users)
@@ -571,4 +571,4 @@ We have also discovered issues with the schema and were able to seamlessly fix t
 
 Lastly we have seen that the queries can be simple, readable, statically checked and completely native while still providing complex functionality such as filtering through conditions, paging, ordering etc. Moreover while the features of object queries won't make them always logically correct they eliminate entire categories of issues like syntax errors, type errors, security issues like SQL injection, and even certain logic errors etc.
 
-For the comprehensive overview of all queries see the [query reference](queries.md). For the code used in this document see [tests/efficient_agdb.rs](../tests/efficient_agdb.rs).
+For the comprehensive overview of all queries see the [query reference](/docs/references/queries). For the code used in this document see [tests/efficient_agdb.rs](https://github.com/agnesoft/agdb/blob/main/agdb/tests/efficient_agdb.rs).

@@ -33,7 +33,7 @@ Let's see if the `agdb` lives up to these principles.
 
 ## The benchmark
 
-The `agdb_benchmarks` project is building upon the [Effective agdb](effective_agdb.md) simulating the traffic in a "social network" database. It simulates concurrent read & write operations on the same database:
+The `agdb_benchmarks` project is building upon the [Efficient agdb](/docs/references/efficient-agdb) simulating the traffic in a "social network" database. It simulates concurrent read & write operations on the same database:
 
 -   Posters: Writes social media posts
 -   Commenters: Writes comments to the existing posts

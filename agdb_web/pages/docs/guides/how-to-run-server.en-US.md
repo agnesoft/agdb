@@ -82,7 +82,7 @@ curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/use
 token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"my_db_user","password":"password123"}')
 ```
 
-<br/>9. To interact with the database you can either continue using `curl`, interactive OpenAPI GUI from any browser `localhost:3000/api/v1` (provided by `rapidoc`) or choose one of the [available API clients](/api.md). The raw OpenAPI specification can be downloaded from the server at `localhost:3000/api/v1/openapi.json`.
+<br/>9. To interact with the database you can either continue using `curl`, interactive OpenAPI GUI from any browser `localhost:3000/api/v1` (provided by `rapidoc`) or choose one of the [available API clients](/api-docs/openapi). The raw OpenAPI specification can be downloaded from the server at `localhost:3000/api/v1/openapi.json`.
 <br/><br/>
 
 <br/>10. The server can be shutdown with `CTRL+C` or programmatically posting to the shutdown endpoint as logged in server admin:

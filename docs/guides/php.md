@@ -42,30 +42,69 @@ NOTE: Consider using other dev packages such as `phpunit/phpunit` and `phpstan/p
 <br><br>
 
 ```php
+<?php
+// Needed to load the libraries installed by composer
+require 'vendor/autoload.php';
 
+use Agnesoft\AgdbApi\Api\AgdbApi;
+use Agnesoft\AgdbApi\Model\DbType;
+use Agnesoft\AgdbApi\Model\UserLogin;
+use Agnesoft\AgdbApi\Model\UserCredentials;
+use Agnesoft\AgdbApi\QueryBuilder;
+use Agnesoft\AgdbApi\ComparisonBuilder;
+
+// Defayult config will look for the server at http://localhost:3000
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
+
+// Using GuzzleHttp client. You can use any other like Symfony.
+$client = new AgdbApi(new GuzzleHttp\Client(), $config);
+
+// Runs the status query against the database
+// and throws if the server is not accessible.
+$client->status(false);
 ```
 
-<br/>7. To create a user using the default admin user:
+<br/>6. To create a user using the default admin user:
 <br><br>
 
 ```php
+// Login as server admin
+$token = self::$client->userLogin(
+    new UserLogin(["username" => "admin", "password" => "admin"])
+);
+$client->getConfig()->setAccessToken($token);
 
+// Creat user "php_user1"
+$client->adminUserAdd(
+    "php_user1",
+    new UserCredentials(["password" => "php_user1"])
+);
+
+// Login as "php_user1"
+$token = self::$client->userLogin(
+    new UserLogin([
+        "username" => "php_user1",
+        "password" => "php_user1",
+    ])
+);
+$client->getConfig()->setAccessToken($token);
 ```
 
-<br/>8. To create a database:
+<br/>7. To create a database:
 <br><br>
 
 ```php
-
+// Creates memory mapped database "db1" for user "php_user1"
+$client->dbAdd("php_user1", "db1", DbType::MAPPED);
 ```
 
-<br/>9. To execute queries against the database. Notice we are feeding results of the previous query to the next one with special alias `":0"` and `":1"` referencing first and second result respectively:
+<br/>8. To execute queries against the database. Notice we are feeding results of the previous query to the next one with special alias `":0"` and `":1"` referencing first and second result respectively:
 <br><br>
 
-```ts
+```php
 // Prepare the queries to be executed on the remote database.
 let queries = [
-  // :0: Inserts a root node aliase "users"
+  // :0: Inserts a root node aliased "users"
   QueryBuilder.insert().nodes().aliases(["users"]).query(),
 
   // :1: Inserts more nodes with some data
@@ -73,12 +112,12 @@ let queries = [
     .nodes()
     .values([
       [
-        ["username", "user1"],
-        ["password", "password123"],
+        "username" => "user1",
+        "password" => "password123",
       ],
       [
-        ["username", "user1"],
-        ["password", "password456"],
+        "username" => "user2",
+        "password" => "password456",
       ],
     ])
     .query(),
@@ -100,18 +139,53 @@ let queries = [
 ];
 
 // Execute queries.
-let results = (await client.db_exec({ owner: "user1", db: "db1" }, queries))
-  .data;
+$result = $client->dbExec("php_user1", "db1", $queries);
 ```
 
-<br/>10. Print the the result of the final query to the console:
+<br/>9. Print the the result of the final query to the console:
 <br><br>
 
-```ts
-console.log(`User (id: ${results[3].elements[0].id})`);
-for (let { key, value } of results[3].elements[0].values) {
-  console.log(`${key["String"]}: ${value["String"]}`);
-}
+```php
+// Print the result of the last query
+printf($result[3]);
+
+// {
+//     "elements": [
+//         {
+//             "from": null,
+//             "id": 3,
+//             "to": null,
+//             "values": [
+//                 {
+//                     "key": {
+//                         "String": "username"
+//                     },
+//                     "value": {
+//                         "String": "user1"
+//                     }
+//                 },
+//                 {
+//                     "key": {
+//                         "String": "password"
+//                     },
+//                     "value": {
+//                         "String": "password456"
+//                     }
+//                 }
+//             ]
+//         },
+//     ],
+//     "result": 1
+// }
+```
+
+<br>10. Run the program:
+<br><br>
+
+```bash
+# Make sure the agdb_server is running at http://localhost:3000
+#composer install # if you want to just run the example run the composer install first
+php src/index.php
 ```
 
 <br/>11. Full program: https://github.com/agnesoft/agdb/tree/main/examples/server_client_php

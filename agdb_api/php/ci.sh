@@ -16,7 +16,7 @@ cluster: []" > agdb_server.yaml
     sleep 3
     
     local output
-    output=$(XDEBUG_MODE=coverage ./vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
+    output=$(XDEBUG_MODE=coverage ../../vendor/bin/phpunit tests --coverage-filter src/ --coverage-text --coverage-html coverage/)
     local error_code=$?
     echo "ERROR CODE: $error_code"
     echo "$output"
@@ -65,7 +65,7 @@ cluster: []" > agdb_server.yaml
 }
 
 function analyse() {
-    ./vendor/bin/phpstan analyse --level=9 -v src tests
+    ../../vendor/bin/phpstan analyse --level=9 -v src tests
 }
 
 function format() {
@@ -78,7 +78,7 @@ function generate_api() {
         -g php \
         -o ./ \
         --additional-properties=invokerPackage=Agdb,artifactVersion=0.7.2
-    composer dump-autoload -o
+    echo "Y" | composer dump-autoload -o
 }
 
 function generate_tests() {

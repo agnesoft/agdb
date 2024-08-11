@@ -16,32 +16,28 @@ jobs:
       - id: diff
         shell: bash
         run: |
-          if [[ "$(git diff origin/main --name-only -- agdb_api/php/ agdb_server/openapi/schema.json .github/workflows/agdb_api_php.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
+          if [[ "$(git diff origin/main --name-only -- composer.json agdb_api/php/ .github/workflows/agdb_api_php.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
   agdb_api_php_analyse:
     runs-on: ubuntu-24.04
     needs: diff
     if: needs.diff.outputs.diff == 'true'
-    defaults:
-      run:
-        working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
       - run: composer install
       - run: ./ci.sh analyse
+        working-directory: agdb_api/php
 
   agdb_api_php_coverage:
     runs-on: ubuntu-24.04
     needs: diff
     if: needs.diff.outputs.diff == 'true'
-    defaults:
-      run:
-        working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: composer install
       - run: ./ci.sh coverage
+        working-directory: agdb_api/php
       - uses: actions/upload-artifact@v4
         if: always()
         with:

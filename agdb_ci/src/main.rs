@@ -6,8 +6,9 @@ const CARGO_TOML: &str = "Cargo.toml";
 const PACKAGE_JSON: &str = "package.json";
 const OPENAPI_JSON: &str = "schema.json";
 const API_MD: &str = "api.md";
-const IGNORE: [&str; 8] = [
+const IGNORE: [&str; 9] = [
     "node_modules",
+    "vendor",
     "tests",
     "target",
     "src",

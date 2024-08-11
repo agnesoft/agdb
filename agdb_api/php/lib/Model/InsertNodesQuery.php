@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * InsertNodesQuery Class Doc Comment
  *
  * @category Class
  * @description Query to insert nodes to the database. Only one of &#x60;count&#x60;, &#x60;values&#x60; or &#x60;aliases&#x60; need to be given as the implementation will derive the count from the other parameters. If &#x60;values&#x60; is set to &#x60;Single&#x60; either &#x60;count&#x60; or &#x60;aliases&#x60; must be provided however. If &#x60;values&#x60; are not set to &#x60;Single&#x60; there must be enough value for &#x60;count/aliases&#x60; unless they are not se and the count is derived from &#x60;values.  If the &#x60;ids&#x60; member is empty the query will insert new nodes otherwise it will update the existing nodes. The rules for length of &#x60;values&#x60; still apply and the search yield or static list must have equal length to the &#x60;values&#x60; (or the &#x60;Single&#x60; variant must be used).  The result will contain number of nodes inserted or updated and elements with their ids but no properties.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -60,8 +60,8 @@ class InsertNodesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'aliases' => 'string[]',
         'count' => 'int',
-        'ids' => '\Agdb\Model\QueryIds',
-        'values' => '\Agdb\Model\QueryValues'
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryIds',
+        'values' => '\Agnesoft\AgdbApi\Model\QueryValues'
     ];
 
     /**
@@ -389,7 +389,7 @@ class InsertNodesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getIds()
     {
@@ -399,7 +399,7 @@ class InsertNodesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryIds $ids ids
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $ids ids
      *
      * @return self
      */
@@ -416,7 +416,7 @@ class InsertNodesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets values
      *
-     * @return \Agdb\Model\QueryValues
+     * @return \Agnesoft\AgdbApi\Model\QueryValues
      */
     public function getValues()
     {
@@ -426,7 +426,7 @@ class InsertNodesQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets values
      *
-     * @param \Agdb\Model\QueryValues $values values
+     * @param \Agnesoft\AgdbApi\Model\QueryValues $values values
      *
      * @return self
      */

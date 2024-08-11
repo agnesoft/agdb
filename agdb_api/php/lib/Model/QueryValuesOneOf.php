@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryValuesOneOf Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryValuesOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'single' => '\Agdb\Model\DbKeyValue[]'
+        'single' => '\Agnesoft\AgdbApi\Model\DbKeyValue[]'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryValuesOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets single
      *
-     * @return \Agdb\Model\DbKeyValue[]
+     * @return \Agnesoft\AgdbApi\Model\DbKeyValue[]
      */
     public function getSingle()
     {
@@ -305,7 +305,7 @@ class QueryValuesOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets single
      *
-     * @param \Agdb\Model\DbKeyValue[] $single Single list of properties (key-value pairs) to be applied to all elements in a query.
+     * @param \Agnesoft\AgdbApi\Model\DbKeyValue[] $single Single list of properties (key-value pairs) to be applied to all elements in a query.
      *
      * @return self
      */

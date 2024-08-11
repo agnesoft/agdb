@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'insert_alias' => '\Agdb\Model\InsertAliasesQuery'
+        'insert_alias' => '\Agnesoft\AgdbApi\Model\InsertAliasesQuery'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_alias
      *
-     * @return \Agdb\Model\InsertAliasesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertAliasesQuery
      */
     public function getInsertAlias()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_alias
      *
-     * @param \Agdb\Model\InsertAliasesQuery $insert_alias insert_alias
+     * @param \Agnesoft\AgdbApi\Model\InsertAliasesQuery $insert_alias insert_alias
      *
      * @return self
      */

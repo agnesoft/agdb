@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryCondition Class Doc Comment
  *
  * @category Class
  * @description Query condition. The condition consists of &#x60;data&#x60;, logic operator and a modifier.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,9 +58,9 @@ class QueryCondition implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'data' => '\Agdb\Model\QueryConditionData',
-        'logic' => '\Agdb\Model\QueryConditionLogic',
-        'modifier' => '\Agdb\Model\QueryConditionModifier'
+        'data' => '\Agnesoft\AgdbApi\Model\QueryConditionData',
+        'logic' => '\Agnesoft\AgdbApi\Model\QueryConditionLogic',
+        'modifier' => '\Agnesoft\AgdbApi\Model\QueryConditionModifier'
     ];
 
     /**
@@ -316,7 +316,7 @@ class QueryCondition implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets data
      *
-     * @return \Agdb\Model\QueryConditionData
+     * @return \Agnesoft\AgdbApi\Model\QueryConditionData
      */
     public function getData()
     {
@@ -326,7 +326,7 @@ class QueryCondition implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets data
      *
-     * @param \Agdb\Model\QueryConditionData $data data
+     * @param \Agnesoft\AgdbApi\Model\QueryConditionData $data data
      *
      * @return self
      */
@@ -343,7 +343,7 @@ class QueryCondition implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets logic
      *
-     * @return \Agdb\Model\QueryConditionLogic
+     * @return \Agnesoft\AgdbApi\Model\QueryConditionLogic
      */
     public function getLogic()
     {
@@ -353,7 +353,7 @@ class QueryCondition implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets logic
      *
-     * @param \Agdb\Model\QueryConditionLogic $logic logic
+     * @param \Agnesoft\AgdbApi\Model\QueryConditionLogic $logic logic
      *
      * @return self
      */
@@ -370,7 +370,7 @@ class QueryCondition implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets modifier
      *
-     * @return \Agdb\Model\QueryConditionModifier
+     * @return \Agnesoft\AgdbApi\Model\QueryConditionModifier
      */
     public function getModifier()
     {
@@ -380,7 +380,7 @@ class QueryCondition implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets modifier
      *
-     * @param \Agdb\Model\QueryConditionModifier $modifier modifier
+     * @param \Agnesoft\AgdbApi\Model\QueryConditionModifier $modifier modifier
      *
      * @return self
      */

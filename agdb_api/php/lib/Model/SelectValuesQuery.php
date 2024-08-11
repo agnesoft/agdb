@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * SelectValuesQuery Class Doc Comment
  *
  * @category Class
  * @description Query to select elements with only certain properties of given ids. All ids must exist in the database and all of them must have the requested properties.  The result will be number of elements and the list of elements with the requested properties.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,8 +58,8 @@ class SelectValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
       * @var string[]
       */
     protected static $openAPITypes = [
-        'ids' => '\Agdb\Model\QueryIds',
-        'keys' => '\Agdb\Model\DbValue[]'
+        'ids' => '\Agnesoft\AgdbApi\Model\QueryIds',
+        'keys' => '\Agnesoft\AgdbApi\Model\DbValue[]'
     ];
 
     /**
@@ -306,7 +306,7 @@ class SelectValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Gets ids
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getIds()
     {
@@ -316,7 +316,7 @@ class SelectValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Sets ids
      *
-     * @param \Agdb\Model\QueryIds $ids ids
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $ids ids
      *
      * @return self
      */
@@ -333,7 +333,7 @@ class SelectValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Gets keys
      *
-     * @return \Agdb\Model\DbValue[]
+     * @return \Agnesoft\AgdbApi\Model\DbValue[]
      */
     public function getKeys()
     {
@@ -343,7 +343,7 @@ class SelectValuesQuery implements ModelInterface, ArrayAccess, \JsonSerializabl
     /**
      * Sets keys
      *
-     * @param \Agdb\Model\DbValue[] $keys keys
+     * @param \Agnesoft\AgdbApi\Model\DbValue[] $keys keys
      *
      * @return self
      */

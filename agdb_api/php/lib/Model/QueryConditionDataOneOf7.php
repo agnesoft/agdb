@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionDataOneOf7 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryConditionDataOneOf7 implements ModelInterface, ArrayAccess, \JsonSeri
       * @var string[]
       */
     protected static $openAPITypes = [
-        'where' => '\Agdb\Model\QueryCondition[]'
+        'where' => '\Agnesoft\AgdbApi\Model\QueryCondition[]'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryConditionDataOneOf7 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Gets where
      *
-     * @return \Agdb\Model\QueryCondition[]
+     * @return \Agnesoft\AgdbApi\Model\QueryCondition[]
      */
     public function getWhere()
     {
@@ -305,7 +305,7 @@ class QueryConditionDataOneOf7 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Sets where
      *
-     * @param \Agdb\Model\QueryCondition[] $where Nested list of conditions (equivalent to brackets).
+     * @param \Agnesoft\AgdbApi\Model\QueryCondition[] $where Nested list of conditions (equivalent to brackets).
      *
      * @return self
      */

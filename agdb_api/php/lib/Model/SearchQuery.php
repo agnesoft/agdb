@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * SearchQuery Class Doc Comment
  *
  * @category Class
  * @description Query to search for ids in the database following the graph.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,13 +58,13 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'algorithm' => '\Agdb\Model\SearchQueryAlgorithm',
-        'conditions' => '\Agdb\Model\QueryCondition[]',
-        'destination' => '\Agdb\Model\QueryId',
+        'algorithm' => '\Agnesoft\AgdbApi\Model\SearchQueryAlgorithm',
+        'conditions' => '\Agnesoft\AgdbApi\Model\QueryCondition[]',
+        'destination' => '\Agnesoft\AgdbApi\Model\QueryId',
         'limit' => 'int',
         'offset' => 'int',
-        'order_by' => '\Agdb\Model\DbKeyOrder[]',
-        'origin' => '\Agdb\Model\QueryId'
+        'order_by' => '\Agnesoft\AgdbApi\Model\DbKeyOrder[]',
+        'origin' => '\Agnesoft\AgdbApi\Model\QueryId'
     ];
 
     /**
@@ -364,7 +364,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets algorithm
      *
-     * @return \Agdb\Model\SearchQueryAlgorithm
+     * @return \Agnesoft\AgdbApi\Model\SearchQueryAlgorithm
      */
     public function getAlgorithm()
     {
@@ -374,7 +374,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets algorithm
      *
-     * @param \Agdb\Model\SearchQueryAlgorithm $algorithm algorithm
+     * @param \Agnesoft\AgdbApi\Model\SearchQueryAlgorithm $algorithm algorithm
      *
      * @return self
      */
@@ -391,7 +391,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets conditions
      *
-     * @return \Agdb\Model\QueryCondition[]
+     * @return \Agnesoft\AgdbApi\Model\QueryCondition[]
      */
     public function getConditions()
     {
@@ -401,7 +401,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets conditions
      *
-     * @param \Agdb\Model\QueryCondition[] $conditions Set of conditions every element must satisfy to be included in the result. Some conditions also influence the search path as well.
+     * @param \Agnesoft\AgdbApi\Model\QueryCondition[] $conditions Set of conditions every element must satisfy to be included in the result. Some conditions also influence the search path as well.
      *
      * @return self
      */
@@ -418,7 +418,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets destination
      *
-     * @return \Agdb\Model\QueryId
+     * @return \Agnesoft\AgdbApi\Model\QueryId
      */
     public function getDestination()
     {
@@ -428,7 +428,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets destination
      *
-     * @param \Agdb\Model\QueryId $destination destination
+     * @param \Agnesoft\AgdbApi\Model\QueryId $destination destination
      *
      * @return self
      */
@@ -509,7 +509,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets order_by
      *
-     * @return \Agdb\Model\DbKeyOrder[]
+     * @return \Agnesoft\AgdbApi\Model\DbKeyOrder[]
      */
     public function getOrderBy()
     {
@@ -519,7 +519,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets order_by
      *
-     * @param \Agdb\Model\DbKeyOrder[] $order_by Order of the elements in the result. The sorting happens before `offset` and `limit` are applied.
+     * @param \Agnesoft\AgdbApi\Model\DbKeyOrder[] $order_by Order of the elements in the result. The sorting happens before `offset` and `limit` are applied.
      *
      * @return self
      */
@@ -536,7 +536,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets origin
      *
-     * @return \Agdb\Model\QueryId
+     * @return \Agnesoft\AgdbApi\Model\QueryId
      */
     public function getOrigin()
     {
@@ -546,7 +546,7 @@ class SearchQuery implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets origin
      *
-     * @param \Agdb\Model\QueryId $origin origin
+     * @param \Agnesoft\AgdbApi\Model\QueryId $origin origin
      *
      * @return self
      */

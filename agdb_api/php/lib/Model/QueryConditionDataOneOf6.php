@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionDataOneOf6 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryConditionDataOneOf6 implements ModelInterface, ArrayAccess, \JsonSeri
       * @var string[]
       */
     protected static $openAPITypes = [
-        'keys' => '\Agdb\Model\DbValue[]'
+        'keys' => '\Agnesoft\AgdbApi\Model\DbValue[]'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryConditionDataOneOf6 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Gets keys
      *
-     * @return \Agdb\Model\DbValue[]
+     * @return \Agnesoft\AgdbApi\Model\DbValue[]
      */
     public function getKeys()
     {
@@ -305,7 +305,7 @@ class QueryConditionDataOneOf6 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Sets keys
      *
-     * @param \Agdb\Model\DbValue[] $keys Test if the current element has **all** of the keys listed.
+     * @param \Agnesoft\AgdbApi\Model\DbValue[] $keys Test if the current element has **all** of the keys listed.
      *
      * @return self
      */

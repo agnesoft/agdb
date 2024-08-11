@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryConditionDataOneOf2 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryConditionDataOneOf2 implements ModelInterface, ArrayAccess, \JsonSeri
       * @var string[]
       */
     protected static $openAPITypes = [
-        'edge_count_from' => '\Agdb\Model\CountComparison'
+        'edge_count_from' => '\Agnesoft\AgdbApi\Model\CountComparison'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryConditionDataOneOf2 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Gets edge_count_from
      *
-     * @return \Agdb\Model\CountComparison
+     * @return \Agnesoft\AgdbApi\Model\CountComparison
      */
     public function getEdgeCountFrom()
     {
@@ -305,7 +305,7 @@ class QueryConditionDataOneOf2 implements ModelInterface, ArrayAccess, \JsonSeri
     /**
      * Sets edge_count_from
      *
-     * @param \Agdb\Model\CountComparison $edge_count_from edge_count_from
+     * @param \Agnesoft\AgdbApi\Model\CountComparison $edge_count_from edge_count_from
      *
      * @return self
      */

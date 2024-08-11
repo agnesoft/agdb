@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * DbTypeParam Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class DbTypeParam implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'db_type' => '\Agdb\Model\DbType'
+        'db_type' => '\Agnesoft\AgdbApi\Model\DbType'
     ];
 
     /**
@@ -295,7 +295,7 @@ class DbTypeParam implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets db_type
      *
-     * @return \Agdb\Model\DbType
+     * @return \Agnesoft\AgdbApi\Model\DbType
      */
     public function getDbType()
     {
@@ -305,7 +305,7 @@ class DbTypeParam implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets db_type
      *
-     * @param \Agdb\Model\DbType $db_type db_type
+     * @param \Agnesoft\AgdbApi\Model\DbType $db_type db_type
      *
      * @return self
      */

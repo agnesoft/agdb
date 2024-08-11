@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,16 +26,16 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryTypeOneOf11 Class Doc Comment
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -57,7 +57,7 @@ class QueryTypeOneOf11 implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'select_edge_count' => '\Agdb\Model\SelectEdgeCountQuery'
+        'select_edge_count' => '\Agnesoft\AgdbApi\Model\SelectEdgeCountQuery'
     ];
 
     /**
@@ -295,7 +295,7 @@ class QueryTypeOneOf11 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_edge_count
      *
-     * @return \Agdb\Model\SelectEdgeCountQuery
+     * @return \Agnesoft\AgdbApi\Model\SelectEdgeCountQuery
      */
     public function getSelectEdgeCount()
     {
@@ -305,7 +305,7 @@ class QueryTypeOneOf11 implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_edge_count
      *
-     * @param \Agdb\Model\SelectEdgeCountQuery $select_edge_count select_edge_count
+     * @param \Agnesoft\AgdbApi\Model\SelectEdgeCountQuery $select_edge_count select_edge_count
      *
      * @return self
      */

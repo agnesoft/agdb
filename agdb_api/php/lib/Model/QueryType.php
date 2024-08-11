@@ -5,7 +5,7 @@
  * PHP version 7.4
  *
  * @category Class
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  */
@@ -26,17 +26,17 @@
  * Do not edit the class manually.
  */
 
-namespace Agdb\Model;
+namespace Agnesoft\AgdbApi\Model;
 
 use \ArrayAccess;
-use \Agdb\ObjectSerializer;
+use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
  * QueryType Class Doc Comment
  *
  * @category Class
  * @description Convenience enum for serializing/deserializing queries.
- * @package  Agdb
+ * @package  Agnesoft\AgdbApi
  * @author   OpenAPI Generator team
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
@@ -58,24 +58,24 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'insert_alias' => '\Agdb\Model\InsertAliasesQuery',
-        'insert_edges' => '\Agdb\Model\InsertEdgesQuery',
-        'insert_index' => '\Agdb\Model\DbValue',
-        'insert_nodes' => '\Agdb\Model\InsertNodesQuery',
-        'insert_values' => '\Agdb\Model\InsertValuesQuery',
-        'remove' => '\Agdb\Model\QueryIds',
+        'insert_alias' => '\Agnesoft\AgdbApi\Model\InsertAliasesQuery',
+        'insert_edges' => '\Agnesoft\AgdbApi\Model\InsertEdgesQuery',
+        'insert_index' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'insert_nodes' => '\Agnesoft\AgdbApi\Model\InsertNodesQuery',
+        'insert_values' => '\Agnesoft\AgdbApi\Model\InsertValuesQuery',
+        'remove' => '\Agnesoft\AgdbApi\Model\QueryIds',
         'remove_aliases' => 'string[]',
-        'remove_index' => '\Agdb\Model\DbValue',
-        'remove_values' => '\Agdb\Model\SelectValuesQuery',
-        'search' => '\Agdb\Model\SearchQuery',
-        'select_aliases' => '\Agdb\Model\QueryIds',
+        'remove_index' => '\Agnesoft\AgdbApi\Model\DbValue',
+        'remove_values' => '\Agnesoft\AgdbApi\Model\SelectValuesQuery',
+        'search' => '\Agnesoft\AgdbApi\Model\SearchQuery',
+        'select_aliases' => '\Agnesoft\AgdbApi\Model\QueryIds',
         'select_all_aliases' => 'object',
-        'select_edge_count' => '\Agdb\Model\SelectEdgeCountQuery',
+        'select_edge_count' => '\Agnesoft\AgdbApi\Model\SelectEdgeCountQuery',
         'select_indexes' => 'object',
-        'select_keys' => '\Agdb\Model\QueryIds',
-        'select_key_count' => '\Agdb\Model\QueryIds',
+        'select_keys' => '\Agnesoft\AgdbApi\Model\QueryIds',
+        'select_key_count' => '\Agnesoft\AgdbApi\Model\QueryIds',
         'select_node_count' => 'object',
-        'select_values' => '\Agdb\Model\SelectValuesQuery'
+        'select_values' => '\Agnesoft\AgdbApi\Model\SelectValuesQuery'
     ];
 
     /**
@@ -466,7 +466,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_alias
      *
-     * @return \Agdb\Model\InsertAliasesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertAliasesQuery
      */
     public function getInsertAlias()
     {
@@ -476,7 +476,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_alias
      *
-     * @param \Agdb\Model\InsertAliasesQuery $insert_alias insert_alias
+     * @param \Agnesoft\AgdbApi\Model\InsertAliasesQuery $insert_alias insert_alias
      *
      * @return self
      */
@@ -493,7 +493,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_edges
      *
-     * @return \Agdb\Model\InsertEdgesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertEdgesQuery
      */
     public function getInsertEdges()
     {
@@ -503,7 +503,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_edges
      *
-     * @param \Agdb\Model\InsertEdgesQuery $insert_edges insert_edges
+     * @param \Agnesoft\AgdbApi\Model\InsertEdgesQuery $insert_edges insert_edges
      *
      * @return self
      */
@@ -520,7 +520,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_index
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getInsertIndex()
     {
@@ -530,7 +530,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_index
      *
-     * @param \Agdb\Model\DbValue $insert_index insert_index
+     * @param \Agnesoft\AgdbApi\Model\DbValue $insert_index insert_index
      *
      * @return self
      */
@@ -547,7 +547,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_nodes
      *
-     * @return \Agdb\Model\InsertNodesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertNodesQuery
      */
     public function getInsertNodes()
     {
@@ -557,7 +557,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_nodes
      *
-     * @param \Agdb\Model\InsertNodesQuery $insert_nodes insert_nodes
+     * @param \Agnesoft\AgdbApi\Model\InsertNodesQuery $insert_nodes insert_nodes
      *
      * @return self
      */
@@ -574,7 +574,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets insert_values
      *
-     * @return \Agdb\Model\InsertValuesQuery
+     * @return \Agnesoft\AgdbApi\Model\InsertValuesQuery
      */
     public function getInsertValues()
     {
@@ -584,7 +584,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets insert_values
      *
-     * @param \Agdb\Model\InsertValuesQuery $insert_values insert_values
+     * @param \Agnesoft\AgdbApi\Model\InsertValuesQuery $insert_values insert_values
      *
      * @return self
      */
@@ -601,7 +601,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets remove
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getRemove()
     {
@@ -611,7 +611,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets remove
      *
-     * @param \Agdb\Model\QueryIds $remove remove
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $remove remove
      *
      * @return self
      */
@@ -655,7 +655,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets remove_index
      *
-     * @return \Agdb\Model\DbValue
+     * @return \Agnesoft\AgdbApi\Model\DbValue
      */
     public function getRemoveIndex()
     {
@@ -665,7 +665,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets remove_index
      *
-     * @param \Agdb\Model\DbValue $remove_index remove_index
+     * @param \Agnesoft\AgdbApi\Model\DbValue $remove_index remove_index
      *
      * @return self
      */
@@ -682,7 +682,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets remove_values
      *
-     * @return \Agdb\Model\SelectValuesQuery
+     * @return \Agnesoft\AgdbApi\Model\SelectValuesQuery
      */
     public function getRemoveValues()
     {
@@ -692,7 +692,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets remove_values
      *
-     * @param \Agdb\Model\SelectValuesQuery $remove_values remove_values
+     * @param \Agnesoft\AgdbApi\Model\SelectValuesQuery $remove_values remove_values
      *
      * @return self
      */
@@ -709,7 +709,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets search
      *
-     * @return \Agdb\Model\SearchQuery
+     * @return \Agnesoft\AgdbApi\Model\SearchQuery
      */
     public function getSearch()
     {
@@ -719,7 +719,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets search
      *
-     * @param \Agdb\Model\SearchQuery $search search
+     * @param \Agnesoft\AgdbApi\Model\SearchQuery $search search
      *
      * @return self
      */
@@ -736,7 +736,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_aliases
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getSelectAliases()
     {
@@ -746,7 +746,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_aliases
      *
-     * @param \Agdb\Model\QueryIds $select_aliases select_aliases
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $select_aliases select_aliases
      *
      * @return self
      */
@@ -790,7 +790,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_edge_count
      *
-     * @return \Agdb\Model\SelectEdgeCountQuery
+     * @return \Agnesoft\AgdbApi\Model\SelectEdgeCountQuery
      */
     public function getSelectEdgeCount()
     {
@@ -800,7 +800,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_edge_count
      *
-     * @param \Agdb\Model\SelectEdgeCountQuery $select_edge_count select_edge_count
+     * @param \Agnesoft\AgdbApi\Model\SelectEdgeCountQuery $select_edge_count select_edge_count
      *
      * @return self
      */
@@ -844,7 +844,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_keys
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getSelectKeys()
     {
@@ -854,7 +854,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_keys
      *
-     * @param \Agdb\Model\QueryIds $select_keys select_keys
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $select_keys select_keys
      *
      * @return self
      */
@@ -871,7 +871,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_key_count
      *
-     * @return \Agdb\Model\QueryIds
+     * @return \Agnesoft\AgdbApi\Model\QueryIds
      */
     public function getSelectKeyCount()
     {
@@ -881,7 +881,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_key_count
      *
-     * @param \Agdb\Model\QueryIds $select_key_count select_key_count
+     * @param \Agnesoft\AgdbApi\Model\QueryIds $select_key_count select_key_count
      *
      * @return self
      */
@@ -925,7 +925,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Gets select_values
      *
-     * @return \Agdb\Model\SelectValuesQuery
+     * @return \Agnesoft\AgdbApi\Model\SelectValuesQuery
      */
     public function getSelectValues()
     {
@@ -935,7 +935,7 @@ class QueryType implements ModelInterface, ArrayAccess, \JsonSerializable
     /**
      * Sets select_values
      *
-     * @param \Agdb\Model\SelectValuesQuery $select_values select_values
+     * @param \Agnesoft\AgdbApi\Model\SelectValuesQuery $select_values select_values
      *
      * @return self
      */

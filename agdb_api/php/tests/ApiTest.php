@@ -1,11 +1,11 @@
 <?php
-use Agdb\Model\DbElement;
-use Agdb\Model\DbType;
-use Agdb\Model\UserCredentials;
-use Agnesoft\Agdb\QueryBuilder;
 use PHPUnit\Framework\TestCase;
-use Agdb\Api\AgdbApi;
-use Agdb\Model\UserLogin;
+use Agnesoft\AgdbApi\Model\DbElement;
+use Agnesoft\AgdbApi\Model\DbType;
+use Agnesoft\AgdbApi\Model\UserCredentials;
+use Agnesoft\AgdbApi\QueryBuilder;
+use Agnesoft\AgdbApi\Api\AgdbApi;
+use Agnesoft\AgdbApi\Model\UserLogin;
 
 class Person
 {
@@ -21,7 +21,7 @@ final class ApiTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        $config = Agdb\Configuration::getDefaultConfiguration();
+        $config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
         self::$client = new AgdbApi(new GuzzleHttp\Client(), $config);
     }
 

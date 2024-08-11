@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-export default function Logo() {
+export const Logo = () => {
     return (
         <>
             <Image
@@ -13,4 +13,4 @@ export default function Logo() {
             <span style={{ marginLeft: ".8rem" }}>agdb</span>
         </>
     );
-}
+};

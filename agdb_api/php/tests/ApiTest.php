@@ -7,12 +7,16 @@ use Agnesoft\AgdbApi\QueryBuilder;
 use Agnesoft\AgdbApi\Api\AgdbApi;
 use Agnesoft\AgdbApi\Model\UserLogin;
 
-class Person
+class User
 {
-    public mixed $db_id = null;
+    public int $db_id = 0;
     public string $name;
     public int $age;
-    public array $list;
+    public float $value;
+    public bool $flag;
+    public array $listInt;
+    public array $listFloat;
+    public array $listString;
 }
 
 final class ApiTest extends TestCase
@@ -21,6 +25,7 @@ final class ApiTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
+        new Agdb();
         $config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
         self::$client = new AgdbApi(new GuzzleHttp\Client(), $config);
     }
@@ -76,15 +81,23 @@ final class ApiTest extends TestCase
         self::$client->getConfig()->setAccessToken($token);
         self::$client->dbAdd("php_user2", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
 
-        $person1 = new Person();
+        $person1 = new User();
         $person1->name = "John";
         $person1->age = 30;
-        $person1->list = [1, 2, 2];
+        $person1->value = 1.1;
+        $person1->flag = true;
+        $person1->listInt = [1, 2, 2];
+        $person1->listFloat = [-1.111, -3.333, 2.0];
+        $person1->listString = ["hello", "world"];
 
-        $person2 = new Person();
+        $person2 = new User();
         $person2->name = "Jane";
         $person2->age = 25;
-        $person2->list = [3, 2, 1];
+        $person2->value = -2.3;
+        $person2->flag = false;
+        $person2->listInt = [3, 2, 1];
+        $person2->listFloat = [3.0, 2.2, 1.785];
+        $person2->listString = ["a", "b", "c"];
 
         $res = self::$client->dbExec("php_user2", "db1", [
             QueryBuilder::insert()
@@ -93,23 +106,9 @@ final class ApiTest extends TestCase
             QueryBuilder::select()->ids(":0")->query(),
         ]);
 
-        $persons = [];
-
-        foreach ($res[1]->getElements() as $element) {
-            $person = new Person();
-
-            foreach ($element->getValues() as $kv) {
-                if ($kv->getKey()->getString() === "name") {
-                    $person->name = $kv->getValue()->getString();
-                } elseif ($kv->getKey()->getString() === "age") {
-                    $person->age = $kv->getValue()->getI64();
-                } elseif ($kv->getKey()->getString() === "list") {
-                    $person->list = $kv->getValue()->getVecI64();
-                }
-            }
-
-            $persons[] = $person;
-        }
+        $persons = Agdb::try_into("User", $res[1]);
+        $person1->db_id = 1;
+        $person2->db_id = 2;
 
         $this->assertEquals([$person1, $person2], $persons);
     }

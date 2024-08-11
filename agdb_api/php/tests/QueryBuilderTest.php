@@ -152,7 +152,7 @@ final class QueryBuilderTest extends TestCase
             ->where()
             ->key("array_str")
             ->value(
-                ComparisonBuilder::Equal(new DbValue(["vec_str" => ["str"]]))
+                ComparisonBuilder::Equal(new DbValue(["vec_string" => ["str"]]))
             )
             ->query();
         $json1 = $query1->jsonSerialize();

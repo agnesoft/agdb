@@ -7,7 +7,7 @@ description: "Server, Agnesoft Graph Database"
 
 The `agdb_server` is the OpenAPI REST server that provides remote `agdb` database management. Running the server is trivial as there are no dependencies, no complicated configuration etc. It can be run on any platform supported by Rust. Please follow the guide:
 
-[How to run he server?](/docs/guides/how_to_run_server)
+[How to run he server?](/docs/guides/how-to-run-server)
 
 The server is based on [`axum`](https://github.com/tokio-rs/axum) and uses OpenAPI to specify its API (via [`utoipa`](https://github.com/juhaku/utoipa)) and [`rapidoc`](https://rapidocweb.com/) for the OpenAPI GUI. To interact with the server you can use the rapidoc GUI, `curl` or any of the [available API clients](/agdb_api/). Internally it uses the `agdb` database:
 

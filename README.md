@@ -1,5 +1,5 @@
 <p align="center">
-    <img width="300" src="./docs/images/logo.svg" alt="agdb logo">
+    <a href=""><img width="300" src="/agdb_web/public/images/logo.svg" alt="agdb logo"></a>
 </p>
 <h1 align="center">
     agdb
@@ -10,23 +10,23 @@
 
 <p align="center">
     <br/>
-    <a href="/docs/queries.md"><img width="100" src="/docs/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="/docs/api.md"><img width="100" src="/docs/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="/docs/studio.md"><img width="100" src="/docs/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="/docs/server.md"><img width="100" src="/docs/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="/docs/cloud.md"><img width="100" src="/docs/images/cloud.png" alt="cloud"></a> 
+    <a href="https://agdb.agnesoft.com/docs/references/queries"><img width="100" src="/agdb_web/public/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="https://agdb.agnesoft.com/api-docs/openapi"><img width="100" src="/agdb_web/public/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="https://agdb.agnesoft.com/docs/references/studio"><img width="100" src="/agdb_web/public/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="https://agdb.agnesoft.com/docs/references/server"><img width="100" src="/agdb_web/public/images/server.png" alt="server"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="https://agdb.agnesoft.com/enterprise/cloud"><img width="100" src="/agdb_web/public/images/cloud.png" alt="cloud"></a> 
 </p>
 
 <p align="center">
-    <a href="/docs/guides/rust.md"><img width="25" src="/docs/images/rust.png" alt="rust"></a>
-    <a href="/docs/guides/typescript_javascript.md"><img width="25" src="/docs/images/ts.png" alt="ts"></a>
-    <a href="/docs/guides/typescript_javascript.md"><img width="25" src="/docs/images/js.png" alt="js"></a>
-    <a href="/docs/guides/php.md"><img width="45" src="/docs/images/php.svg" alt="js"></a>
-    <img width="25" src="/docs/images/python.png" alt="python">
-    <img width="25" src="/docs/images/java.png" alt="java">
-    <img width="25" src="/docs/images/c.png" alt="c">
-    <img width="25" src="/docs/images/cpp.png" alt="cpp">
-    <img width="25" src="/docs/images/csharp.png" alt="csharp">
+    <a href="https://agdb.agnesoft.com/api-docs/rust"><img width="25" src="/agdb_web/public/images/rust.png" alt="rust"></a>
+    <a href="https://agdb.agnesoft.com/api-docs/typescript"><img width="25" src="/agdb_web/public/images/ts.png" alt="ts"></a>
+    <a href="https://agdb.agnesoft.com/api-docs/typescript"><img width="25" src="/agdb_web/public/images/js.png" alt="js"></a>
+    <a href="https://agdb.agnesoft.com/api-docs/php"><img width="45" src="/agdb_web/public/images/php.svg" alt="js"></a>
+    <img width="25" src="/agdb_web/public/images/python.png" alt="python">
+    <img width="25" src="/agdb_web/public/images/java.png" alt="java">
+    <img width="25" src="/agdb_web/public/images/c.png" alt="c">
+    <img width="25" src="/agdb_web/public/images/cpp.png" alt="cpp">
+    <img width="25" src="/agdb_web/public/images/csharp.png" alt="csharp">
 </p>
 
 <p align="center">
@@ -39,19 +39,19 @@
 </p>
 
 <!-- <p align="center">
-    <img width="25" src="/docs/images/reddit.png" alt="reddit"> &nbsp;
-    <img width="25" src="/docs/images/x.png" alt="x"> &nbsp;
-    <img width="25" src="/docs/images/linkedin.png" alt="lkinkedin"> &nbsp;
-    <img width="25" src="/docs/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
+    <img width="25" src="/agdb_web/public/images/reddit.png" alt="reddit"> &nbsp;
+    <img width="25" src="/agdb_web/public/images/x.png" alt="x"> &nbsp;
+    <img width="25" src="/agdb_web/public/images/linkedin.png" alt="lkinkedin"> &nbsp;
+    <img width="25" src="/agdb_web/public/images/stackoverflow.png" alt="stackoverflow"> &nbsp;
 </p> -->
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
+## <img width="25" src="/agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Agnesoft Graph Database
 
 <p align="center">
-    <a href="/docs/guides/quickstart.md">Quickstart Db</a> | <a href="/docs/guides/rust.md">Quickstart Client</a> | <a href="/docs/queries.md">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
+    <a href="https://agdb.agnesoft.com/docs/guides/quickstart">Quickstart Db</a> | <a href="https://agdb.agnesoft.com/api-docs/rust">Quickstart Client</a> | <a href="https://agdb.agnesoft.com/docs/references/queries">QUERIES</a> | <a href="#decision-tree">DECISION TREE</a>
 </p>
 <p align="center">
-    <a href="/docs/but_why.md">Why not SQL?</a>
+    <a href="https://agdb.agnesoft.com/blog/blog">Why not SQL?</a>
 </p>
 
 The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
@@ -63,26 +63,26 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 - [Roadmap](#roadmap)
 - [Reference](#reference)
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
+## <img width="25" src="/agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
 - Data plotted on a graph
-- Typed [key-value properties](/docs/concepts.md#data-types) attached to graph elements (nodes & edges)
+- Typed [key-value properties](https://agdb.agnesoft.com/docs/guides/concepts) attached to graph elements (nodes & edges)
 - Persistent platform agnostic file based storage (transferable between platforms)
 - ACID compliant
-- [Object queries](/docs/queries.md) with builder pattern (no text, no query language)
+- [Object queries](https://agdb.agnesoft.com/docs/references/queries) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
-- [Server mode](/docs/server.md)
-- [OpenAPI clients](/docs/api.md) in any programming language
-- [Cloud](/docs/cloud.md) hosted SaaS database
+- [Server mode](https://agdb.agnesoft.com/docs/references/server)
+- [OpenAPI clients](https://agdb.agnesoft.com/api-docs/openapi) in any programming language
+- [Cloud](https://agdb.agnesoft.com/enterprise/cloud) hosted SaaS database
 - _Db itself has no dependencies_
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
+## <img width="25" src="/agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;At a glance [Db]
 
 ```
 cargo add agdb
 ```
 
-Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](/docs/queries.md#queryerror) error types for operator `?` to work:
+Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](https://agdb.agnesoft.com/docs/references/queries#queryerror) error types for operator `?` to work:
 
 ```Rust
 use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
@@ -151,9 +151,9 @@ println!("{:?}", user);
 // User { db_id: Some(DbId(3)), username: "Bob" }
 ```
 
-For database concepts and primitive data types see [concepts](/docs/concepts.md). For comprehensive overview of all queries see the [queries](/docs/queries.md) reference or continue with more in-depth [efficient agdb](/docs/guides/efficient_agdb.md).
+For database concepts and primitive data types see [concepts](https://agdb.agnesoft.com/docs/guides/concepts). For comprehensive overview of all queries see the [queries](https://agdb.agnesoft.com/docs/references/queries) reference or continue with more in-depth [efficient agdb](https://agdb.agnesoft.com/docs/references/efficient-agdb).
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
+## <img width="25" src="/agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Crate Features
 
 ### agdb
 
@@ -169,24 +169,24 @@ For database concepts and primitive data types see [concepts](/docs/concepts.md)
 | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | reqwest | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
+## <img width="25" src="/agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
 ```mermaid
 flowchart TD;
     A[Embedded or server?] --> Embedded
     A --> B[Client or hosting?]
-    Embedded --> Studio[<a href='https://github.com/agnesoft/agdb/blob/main/docs/studio.md'>Studio</a>]
-    Embedded --> Queries[<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md'>Queries</a>]
+    Embedded --> Studio[<a href='https://agdb.agnesoft.com/docs/references/studio'>Studio</a>]
+    Embedded --> Queries[<a href='https://agdb.agnesoft.com/docs/references/queries'>Queries</a>]
     B --> Client
     B --> Hosting
-    Client --> API[<a href='https://github.com/agnesoft/agdb/blob/main/docs/api.md'>API</a>]
+    Client --> API[<a href='https://agdb.agnesoft.com/api-docs/openapi'>API</a>]
     Client --> Studio
     Client --> Queries
-    Hosting --> Server[<a href='https://github.com/agnesoft/agdb/blob/main/docs/server.md'>Server</a>]
-    Hosting --> Cloud[<a href='https://github.com/agnesoft/agdb/blob/main/docs/cloud.md'>Cloud</a>]
+    Hosting --> Server[<a href='https://agdb.agnesoft.com/docs/references/server'>Server</a>]
+    Hosting --> Cloud[<a href='https://agdb.agnesoft.com/enterprise/cloud'>Cloud</a>]
 ```
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
+## <img width="25" src="/agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Roadmap
 
 The following are planned features:
 
@@ -203,26 +203,26 @@ The following are planned features:
 | #\[no_std]                            | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. |
 | Public Cloud Offering                 | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     |
 
-## <img width="25" src="./docs/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
+## <img width="25" src="/agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 
-- [API](/docs/api.md)
+- [API](https://agdb.agnesoft.com/api-docs/openapi)
 
-- [But why?](/docs/but_why.md)
+- [But why?](https://agdb.agnesoft.com/blog/blog)
 
-- [Cloud](/docs/cloud.md)
+- [Cloud](https://agdb.agnesoft.com/enterprise/cloud)
 
-- [Concepts](/docs/concepts.md)
+- [Concepts](https://agdb.agnesoft.com/docs/guides/concepts)
 
-- [Efficient agdb](/docs/guides/efficient_agdb.md)
+- [Efficient agdb](https://agdb.agnesoft.com/docs/references/efficient-agdb)
 
-- [Guides](/docs/guides/)
+- [Guides](https://agdb.agnesoft.com/docs/guides)
 
-- [Performance](/docs/performance.md)
+- [Performance](https://agdb.agnesoft.com/docs/references/performance)
 
-- [Queries](/docs/queries.md)
+- [Queries](https://agdb.agnesoft.com/docs/references/queries)
 
-- [Server](/docs/server.md)
+- [Server](https://agdb.agnesoft.com/docs/references/server)
 
-- [Studio](/docs/studio.md)
+- [Studio](https://agdb.agnesoft.com/docs/references/studio)
 
-- [Troubleshooting](/docs/troubleshooting.md)
+- [Troubleshooting](https://agdb.agnesoft.com/docs/guides/troubleshooting)

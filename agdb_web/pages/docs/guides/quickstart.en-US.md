@@ -7,7 +7,7 @@ description: "Quickstart, Agensoft Graph Database"
 
 The following is the quickstart guide for the agdb emebedded/application database.
 
-[Looking for server client guide instead?](/docs/guides/quickstart-client)
+[Looking for server client guide instead?](/api-docs/rust)
 
 1. First install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install) (mininum required version is `1.75.0`).
 

@@ -1,5 +1,5 @@
 <p align="center">
-    <a href=""><img width="300" src="/agdb_web/public/images/logo.svg" alt="agdb logo"></a>
+    <a href="https://agdb.agnesoft.com/"><img width="300" src="/agdb_web/public/images/logo.svg" alt="agdb logo"></a>
 </p>
 <h1 align="center">
     agdb

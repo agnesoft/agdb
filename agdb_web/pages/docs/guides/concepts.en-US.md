@@ -3,9 +3,9 @@ title: "Concepts"
 description: "Concepts, Agnesoft Graph Database"
 ---
 
-# concepts
+# Concepts
 
-## graph
+## Graph
 
 _Related:_ [Why graph?](/blog/why-not-sql#why-graph)
 
@@ -13,7 +13,7 @@ Graph is a set of nodes (also vertices, points) that are connected to each other
 
 Nodes and edges are `graph elements` and each can have key-value pairs associated with them usually referred to as `values`. Each graph element has a signed integer id (db id) - nodes having positive values while edges negative values. Note that upon removal of a graph element its id is freed and can be reused by subsequent inserts of new graph elements.
 
-**terminology:**
+**Terminology:**
 
 -   Graph (set of nodes and edges)
 -   Node (point on a graph)
@@ -22,9 +22,7 @@ Nodes and edges are `graph elements` and each can have key-value pairs associate
 -   db id (graph element id, positive for nodes, negative for edges)
 -   Values (key-value pairs associated with a node or an edge)
 
-<br/>
-
-## query
+## Query
 
 _Related:_ [Why object queries?](/blog/why-not-sql#why-object-queries), [Queries](/docs/references/queries)
 
@@ -36,16 +34,14 @@ In case of a failure the database execution yields an error detailing what went 
 
 See dedicated [queries](/docs/references/queries) documentation for details.
 
-**terminology:**
+**Terminology:**
 
 -   Query (request to retrieve or manipulate data)
 -   Immutable query (request to retrieve data)
 -   Mutable query (request to manipulate data)
 -   Result (result of a query)
 
-<br/>
-
-## transaction
+## Transaction
 
 _Related_: [Queries](/docs/references/queries)
 
@@ -55,15 +51,13 @@ _"There can be either unlimited number of concurrent immutable transactions or e
 
 In multithreaded environment you can easily synchronize the access to the database by using [`RwLock`](https://doc.rust-lang.org/std/sync/struct.RwLock.html). Furthermore unlike traditional transactions implemented in other database systems the `agdb` transactions are immediately executed requiring a closure containing (minimum) amount of code and queries required for the transaction to be performed. This forces the client to optimize their transactions and reduce the time the database is locked, which is particularly important for mutable transactions as they lock the entire database for their execution.
 
-**terminology:**
+**Terminology:**
 
 -   Transaction (set of queries to be executed atomically against a database wrapped in a closure)
 -   Mutable transaction (set of mutable & immutable queries wrapped in a closure)
 -   Immutable transaction (set of immutable queries wrapped in a closure)
 
-<br/>
-
-## storage
+## Storage
 
 _Related_: [Why single file?](/blog/why-not-sql#why-single-file)
 
@@ -85,14 +79,12 @@ The size of the graph elements (nodes & edges) is fixed. The size of the propert
 
 The reason for values taking 16 bytes at minimum instead of 8 is that the value needs to store a type information for which 1 byte is required. 9 bytes is an awkward and very inefficient (as measured where 16 byte values were much faster) size even if it could save some file space. The next alignment is therefore 16 bytes which also allows the aforementioned small value optimization.
 
-**terminology:**
+**Terminology:**
 
 -   File storage (underlying single data file)
 -   Write ahead log (WAL, shadowing file storage to provide durability)
 
-<br/>
-
-## data types
+## Data types
 
 Supported types of both keys and values are:
 

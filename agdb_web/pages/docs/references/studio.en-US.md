@@ -3,6 +3,6 @@ title: "Studio"
 description: "Studio, Agnesoft Graph Database"
 ---
 
-# studio
+# Studio
 
 TBD

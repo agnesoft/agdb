@@ -5,7 +5,7 @@ const AGDB_PROJECT: &str = "agdb";
 const CARGO_TOML: &str = "Cargo.toml";
 const PACKAGE_JSON: &str = "package.json";
 const OPENAPI_JSON: &str = "schema.json";
-const API_MD: &str = "api.md";
+const API_MD: &str = "openapi.en-US.mdx";
 const IGNORE: [&str; 9] = [
     "node_modules",
     "vendor",

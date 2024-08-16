@@ -3,7 +3,7 @@ title: "Queries"
 description: "Queries, Agnesoft Graph Database"
 ---
 
-# queries
+# Queries
 
 ```mermaid
 flowchart LR
@@ -15,6 +15,8 @@ flowchart LR
 
     insert --> i_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>aliases</a>") --> i_a_ids("ids") --> InsertAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-aliases'>InsertAliasesQuery</a>"]
     insert --> i_edges("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>edges</a>") --> i_e_from("from") --> i_e_to("to") --> InsertEdgesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-edges'>InsertEdgesQuery</a>"]
+    i_edges --> i_e_ids("ids")
+    i_e_ids --> i_e_from
     i_e_to --> each("each") --> InsertEdgesQuery
     i_e_to --> i_e_values("values")
     each --> i_e_values_uniform("values_uniform") --> InsertEdgesQuery
@@ -23,10 +25,14 @@ flowchart LR
     insert --> i_nodes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>nodes</a>")
     i_nodes --> i_n_values("values") --> InsertNodesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-nodes'>InsertNodesQuery</a>"]
     i_nodes --> i_n_aliases("aliases")
+    i_nodes --> i_n_ids("ids")
     i_n_count --> i_n_values_uniform("values_uniform")
     i_n_aliases --> i_n_values
     i_n_aliases --> InsertNodesQuery
     i_n_aliases --> i_n_values_uniform
+    i_n_ids --> i_n_values
+    i_n_ids --> i_n_aliases
+    i_n_ids --> i_n_count
     i_nodes --> i_n_count("count") --> InsertNodesQuery
     insert --> i_element("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>element</a>") --> InsertValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>InsertValuesQuery</a>"]
     insert --> i_elements("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#insert-values'>elements</a>") --> InsertValuesQuery
@@ -41,14 +47,20 @@ flowchart LR
 
     select --> s_aliases("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>aliases</a>") --> SelectAllAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-all-aliases'>SelectAllAliasesQuery</a>"]
     s_aliases --> s_a_ids("ids") --> SelectAliasesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-aliases'>SelectAliasesQuery</a>"]
-    select --> s_ids("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>ids</a>") --> SelectQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-elements'>SelectQuery</a>"]
+    select --> s_ids("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>ids</a>") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
     select --> s_indexes("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>indexes</a>") --> SelectIndexesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-indexes'>SelectIndexesQuery</a>"]
     select --> s_keys("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>keys</a>") --> s_k_ids("ids") --> SelectKeysQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-keys'>SelectKeysQuery</a>"]
     select --> key_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>key_count</a>") --> s_k_c_ids("ids") --> SelectKeyCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-key-count'>SelectKeyCountQuery</a>"]
+    select --> edge_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids") ---> SelectEdgeCountQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>SelectEdgeCountQuery</a>"]
+    select --> edge_count_from("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
+    select --> edge_count_to("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
+    select --> select_node_count("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-node-count'>node_count</a>")
     select --> values("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>values</a>") --> s_v_ids("ids") --> SelectValuesQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>SelectValuesQuery</a>"]
+    select --> elements("<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#select-values'>values</a>) --> s_v_ids("ids")
 
     search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='https://github.com/agnesoft/agdb/blob/main/docs/queries.md#search'>SearchQuery</a>"]
     search --> from("from") --> SearchQuery
+    search --> elements("elements") --> to
     from --> limit("limit") --> SearchQuery
     from --> offset("offset")
     offset --> limit
@@ -106,10 +118,11 @@ flowchart LR
     -   [Select](#select)
         -   [Select aliases](#select-aliases)
         -   [Select all aliases](#select-all-aliases)
-        -   [Select elements](#select-elements)
+        -   [Select edge count](#select-edge-count)
         -   [Select indexes](#select-indexes)
         -   [Select keys](#select-keys)
         -   [Select key count](#select-key-count)
+        -   [Select node count](#select-node_count)
         -   [Select values](#select-values)
     -   [Search](#search)
         -   [Conditions](#conditions)
@@ -162,7 +175,7 @@ pub trait DbUserValue: Sized {
 
 Typically you would derive this trait with `agdb::UserValue` procedural macro that uses the field names as keys (of type `String`) and loss-lessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
 
-It is recommended but optional to have `db_id` field of type `Option<DbId>` in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders:
+It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders:
 
 ```Rust
 #[derive(UserValue)]
@@ -186,6 +199,13 @@ Types not directly used in the database but for which the conversions are suppor
 -   Vec<f32> <=> Vec<f64>
 -   &str => String (only one way conversion to `String`)
 -   Vec<&str> => Vec<String> (only one way conversion to `Vec<String>`)
+-   bool (\*)
+
+\* The boolean type is not a native type in the `agdb` but you can still use it in your types in any language. The `bool` type will be converted to `u64` (0 == false, 1 == true). The `Vec<bool>` type will be converted to `Vec<u8>` (bytes, 0 == false, 1 == true). The conversion back to `bool` is possible from wider range of values - the same rules apply for vectorized version which however cannot be converted to from single values:
+
+-   u64 / i64: any non-zero value will be `true`
+-   f64: any value except `0.0` will be `true`
+-   string: only `"true"` or `"1"` will be `true`
 
 # QueryResult
 
@@ -244,6 +264,7 @@ The enum variants can be conveniently accessed through methods named after each 
 
 ```Rust
 fn bytes(&self) -> Result<&Vec<u8>, DbError>;
+fn to_bool(&self) -> Result<bool, DbError>;
 fn to_f64(&self) -> Result<DbF64, DbError>;
 fn to_i64(&self) -> Result<i64, DbError>;
 fn to_u64(&self) -> Result<u64, DbError>;
@@ -253,10 +274,10 @@ fn vec_f64(&self) -> Result<&Vec<DbF64>, DbError>;
 fn vec_i64(&self) -> Result<&Vec<i64>, DbError>;
 fn vec_u64(&self) -> Result<&Vec<u64>, DbError>;
 fn vec_string(&self) -> Result<&Vec<String>, DbError>;
-
+fn vec_bool(&self) -> Result<Vec<bool>, DbError>;
 ```
 
-The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string.
+The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For bool conversion details refer to [DbUserValue](#dbuservalue) section.
 
 # QueryError
 
@@ -382,6 +403,7 @@ Note that this query is also used for updating existing aliases. Byt inserting a
 pub struct InsertEdgesQuery {
     pub from: QueryIds,
     pub to: QueryIds,
+    pub ids: QueryIds,
     pub values: QueryValues,
     pub each: bool,
 }
@@ -409,11 +431,14 @@ QueryBuilder::insert().edges().from("a").to(vec![1, 2]).values_uniform(vec![("k"
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).query();
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
+QueryBuilder::insert().edges().ids(-3).from(1).to(2).query();
+QueryBuilder::insert().edges().ids(vec![-3, -4]).from(1).to(2).query();
+QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge().query()).from(1).to(2).query();
 ```
 
 </td></tr></table>
 
-The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert edges as normal. If the list is not empty all ids must exist and refer to existing edges and the query will perform update of values instead. Note: the specified from/to (origin/destination) for the updated edges is not checked against those supplied via `ids`.
 
 ### Insert index
 
@@ -453,6 +478,7 @@ pub struct InsertNodesQuery {
     pub count: u64,
     pub values: QueryValues,
     pub aliases: Vec<String>,
+    pub ids: QueryIds,
 }
 ```
 
@@ -474,11 +500,21 @@ QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).query();
 QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
 QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
 QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
+QueryBuilder::insert().nodes().ids(1).count(1).query();
+QueryBuilder::insert().nodes().ids(vec![1, 2]).count(1).query();
+QueryBuilder::insert().nodes().ids("a").count(1).query();
+QueryBuilder::insert().nodes().ids("a").aliases("a").query(),
+QueryBuilder::insert().nodes().ids(vec!["a", "b"]).count(1).query();
+QueryBuilder::insert().nodes().ids(vec![1, 2]).values(vec![vec![("k", "v").into()], vec![(1, 10).into()]]).query(),
+QueryBuilder::insert().nodes().ids(vec![1, 2]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query(),
+QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count(1).query();
 ```
 
 </td></tr></table>
 
-The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is a logic error if the count cannot be inferred and is set to `0`. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must match, otherwise it will result in a logic error. Empty alias (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be a no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must be compatible (aliases <= values), otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal. If the list is not empty all ids must exist and must refer to nodes and the query will perform update instead - both aliases (replacing existing ones if applicable) and values.
+
+If an alias already exists in the database its values will be amended (inserted or replaced) with the provided values.
 
 ### Insert values
 
@@ -497,7 +533,7 @@ pub struct InsertValuesQuery {
 ```Rust
 pub struct QueryResult {
     pub result: i64, // number of inserted key-value pairs
-    pub elements: Vec<DbElement>, // empty
+    pub elements: Vec<DbElement>, // list of new elements
 }
 ```
 
@@ -514,9 +550,12 @@ QueryBuilder::insert().values_uniform(vec![("k", "v").into(), (1, 10).into()]).i
 
 </td></tr></table>
 
-Inserts or updates key-value pairs (properties) of existing elements. You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<DbId>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your types. All the rules as if specified manually still apply (e.g. the ids must exist in the database). The `values()` can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your types. The `values()` will be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
 
-Note that this query is also used for updating existing values. By inserting the same `key` its old value will be overwritten with the new one.
+-   If an id is non-0 or an existing alias that element will be updated in the database with provided values.
+-   If an id is `0` or an non-existent alias new element (node) will be inserted into the database with that alias.
+
+Note: that this query is insert-or-update for both nodes and existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
 ## Remove
 
@@ -612,7 +651,7 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::remove().index("key").query()
+QueryBuilder::remove().index("key").query();
 ```
 
 </td></tr></table>
@@ -662,10 +701,11 @@ The `select` queries are used to read the data from the database using known `id
 
 ## Select
 
-There are 7 select queries:
+There are following select queries:
 
 -   select aliases
 -   select all aliases
+-   select edge count
 -   select (elements)
 -   select indexes
 -   select keys
@@ -709,7 +749,7 @@ Selects aliases of the `ids` [`QueryIds`](#queryids--queryid) or a search. If an
 <tr><td>
 
 ```Rust
-pub struct SelectAllAliases {}
+pub struct SelectAllAliasesQuery {}
 ```
 
 </td><td>
@@ -726,43 +766,50 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::select().aliases().query()
+QueryBuilder::select().aliases().query();
 ```
 
 </td></tr></table>
 
 Selects all aliases in the database.
 
-### Select elements
+### Select edge count
 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
 ```Rust
-pub struct SelectQuery(pub QueryIds);
+pub struct SelectEdgeCountQuery {
+    pub ids: Ids,
+    pub from: bool,
+    pub to: bool
+}
 ```
 
 </td><td>
 
 ```Rust
 pub struct QueryResult {
-    pub result: i64, // number of returned elements
-    pub elements: Vec<DbElement>, // list of elements with
-                                  // all properties
+    pub result: i64, // number of elements with aliases
+    pub elements: Vec<DbElement>, // list of elements with an
+                                  // alias each with a single
+                                  // property (`String("edge_count"): String`)
 }
 ```
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
-QueryBuilder::select().ids("a").query();
-QueryBuilder::select().ids(vec![1, 2]).query();
-QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().edge_count().ids(vec![1, 2]).query();
+QueryBuilder::select().edge_count_from().ids(vec![1, 2]).query();
+QueryBuilder::select().edge_count_to().ids(vec![1, 2]).query();
 ```
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with all their properties. If any of the ids does not exist in the database running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select.
+Selects count of edges of nodes (ids). The `edge_count` variant counts all edges (outgoing & incoming). The `edge_count_from` counts only outgoing edges. The `edge_count_to` counts only incoming edges.
+
+NOTE: Self-referential edges (going from the same node to the same node) will be counted twice in the first variant (`edge_count`) as the query counts ountgoing/incoming edges rather than unique database elements. As a result the `edge_count` result may be higher than the actual number of physical edges in such a case.
 
 ### Select indexes
 
@@ -859,6 +906,34 @@ QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).q
 
 Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only key count returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing how many properties there are associated with the graph elements.
 
+### Select node count
+
+<table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
+<tr><td>
+
+```Rust
+pub struct SelectNodeCountQuery {}
+```
+
+</td><td>
+
+```Rust
+pub struct QueryResult {
+    pub result: i64, // Always  1
+    pub elements: Vec<DbElement>, // single element with single property (`String("node_count"): String`)
+}
+```
+
+</td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
+
+```Rust
+QueryBuilder::select().node_count().query();
+```
+
+</td></tr></table>
+
+Selects number (count) of nodes in the database.
+
 ### Select values
 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
@@ -884,14 +959,18 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```Rust
+QueryBuilder::select().ids("a").query();
+QueryBuilder::select().ids(vec![1, 2]).query();
+QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids("a").query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(vec![1, 2]).query();
 QueryBuilder::select().values(vec!["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().elements::<T>().ids(1).query();
 ```
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. While the search query is most commonly used to find, filter or otherwise limit what elements to select, using this particular query can limit what properties will be returned. If you plan to convert the result into your user defined type(s) you should use `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
 
 ## Search
 
@@ -926,6 +1005,7 @@ pub enum SearchQueryAlgorithm {
     BreadthFirst,
     DepthFirst,
     Index,
+    Elements
 }
 
 pub enum DbKeyOrder {
@@ -942,8 +1022,9 @@ QueryBuilder::search().to(1).query(); //reverse search
 QueryBuilder::search().from("a").to("b").query(); //path search using A* algorithm
 QueryBuilder::search().breadth_first().from("a").query(); //breadth first is the default and can be omitted
 QueryBuilder::search().depth_first().from("a").query();
+QueryBuilder::search().elements().query();
 QueryBuilder::search().index("age").value(20).query(); //index search
-//limit, offset and order_by can be applied similarly to all the search variants
+//limit, offset and order_by can be applied similarly to all the search variants except search index
 QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()
 QueryBuilder::search().from(1).offset(10).query();
 QueryBuilder::search().from(1).limit(5).query();
@@ -955,11 +1036,13 @@ QueryBuilder::search().from(1).offset(10).limit(5).query();
 
 </td></tr></table>
 
-There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`.
+There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`. For searching disregarding the graph structure and indexes (full search) the algorithm is `elements`.
 
 If the index search is done the graph traversal is skipped entirely as are most of the parameters including like limit, offset, ordering and conditions.
 
 The graph search query is made up of the `origin` and `destination` of the search and the algorithm. Specifying only `origin` (from) will result in a search along `from->to` edges. Specifying only `destination` (to) will result in the reverse search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm used will be `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element ids. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
+
+When searching `elements` the database is being scanned in linerly one element (node & edge) at a time which can be very slow. Consider using `limit` in this case. However this search can be useful in exploration, when thethe database structure is not known, when searching for abandoned/lost elements and other edge cases not covered by regular search algorithms. The default order of returned elements is from lowest internal db id to the highest which does not necessarily indicate age of the elements as the ids can be reused when elements are deleted.
 
 Finally the list of `conditions` that each examined graph element must satisfy to be included in the result (and subjected to the `limit` and `offset`).
 
@@ -1029,19 +1112,19 @@ pub enum Comparison {
 //not() and not_beyond() can be applied to all conditions including nested where_()
 QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query();
 QueryBuilder::search().from(1).where_().edge().query();
-QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2))().query();
-QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1))().query();
-QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1))().query();
+QueryBuilder::search().from(1).where_().edge_count(CountComparison::GreaterThan(2)).query();
+QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query();
+QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::NotEqual(1)).query();
 QueryBuilder::search().from(1).where_().node().query();
 QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
 QueryBuilder::search().from(1).where_().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().not().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().ids(vec![1, 2]).query();
-QueryBuilder::search().from(1).where_().beyond().keys(vec!["k"]).query();
+QueryBuilder::search().from(1).where_().beyond().keys(vec!["k".into()]).query();
 QueryBuilder::search().from(1).where_().not().ids(vec![1, 2]).query();
 QueryBuilder::search().from(1).where_().not_beyond().ids("a").query();
 QueryBuilder::search().from(1).where_().node().or().edge().query();
-QueryBuilder::search().from(1).where_().node().and().distance().query(CountComparison::GreaterThanOrEqual(3)).query();
+QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Equal(1.into())).end_where().query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(1.into())).end_where().query();
 QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k").value(Comparison::Contains(vec![1, 2].into())).end_where().query();

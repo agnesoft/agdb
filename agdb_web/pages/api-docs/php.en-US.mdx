@@ -1,27 +1,30 @@
 ---
 title: "PHP"
 description: "PHP, Agnesoft Graph Database"
-navigation:
-  title: "PHP"
 ---
 
-# php
+# PHP
 
-The php agdb API client is generated with [openapi-generator](https://github.com/OpenAPITools/openapi-generator/blob/master/docs/generators/php.md). The following is the quickstart guide for the agdb client in PHP (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how_to_run_server.md) to learn how to run the server.
+The php agdb API client is generated with [openapi-generator](https://github.com/OpenAPITools/openapi-generator/blob/master/docs/generators/php.md). The following is the quickstart guide for the agdb client in PHP (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how_to_run_server) to learn how to run the server.
 
-Looking for... [how to run a server?](/docs/guides/how_to_run_server.md) | [another language?](/docs/api.md) | [embedded db guide?](/docs/guides/quickstart.md)
+Looking for... [how to run a server?](/docs/guides/how_to_run_server) | [another language?](/api-docs/openapi) | [embedded db guide?](/docs/guides/quickstart)
 
 # Usage
 
 The following is the from-scratch guide to use `agdb-api` php package.
 
-<br/>1. Install [PHP](https://www.php.net/manual/en/install.php)
+<br />
+1. Install [PHP](https://www.php.net/manual/en/install.php)
 
-<br/>2. Install [Composer](https://nodejs.org/en).
-<br><br>
+<br />
+2. Install [Composer](https://nodejs.org/en).
+<br />
+<br />
 
-<br/>3. Create your project's folder (e.g. `my_agdb`) and nitialize a package:
-<br><br>
+<br />
+3. Create your project's folder (e.g. `my_agdb`) and nitialize a package:
+<br />
+<br />
 
 ```bash
 mkdir my_agdb
@@ -29,8 +32,10 @@ cd my_agdb
 composer init # follow the steps & prompts
 ```
 
-<br/>4. Add `agnesoft/agdb_api` as a dependency:
-<br><br>
+<br />
+4. Add `agnesoft/agdb_api` as a dependency:
+<br />
+<br />
 
 ```bash
 composer install agnesoft/agdb_api
@@ -38,8 +43,11 @@ composer install agnesoft/agdb_api
 
 NOTE: Consider using other dev packages such as `phpunit/phpunit` and `phpstan/phpstan`.
 
-<br/>5. Create your main script (e.g. `src/index.php`) and create a client to connect to the server:
-<br><br>
+<br />
+5. Create your main script (e.g. `src/index.php`) and create a client to connect
+to the server:
+<br />
+<br />
 
 ```php
 <?php
@@ -64,8 +72,10 @@ $client = new AgdbApi(new GuzzleHttp\Client(), $config);
 $client->status(false);
 ```
 
-<br/>6. To create a user using the default admin user:
-<br><br>
+<br />
+6. To create a user using the default admin user:
+<br />
+<br />
 
 ```php
 // Login as server admin
@@ -90,16 +100,22 @@ $token = self::$client->userLogin(
 $client->getConfig()->setAccessToken($token);
 ```
 
-<br/>7. To create a database:
-<br><br>
+<br />
+7. To create a database:
+<br />
+<br />
 
 ```php
 // Creates memory mapped database "db1" for user "php_user1"
 $client->dbAdd("php_user1", "db1", DbType::MAPPED);
 ```
 
-<br/>8. To execute queries against the database. Notice we are feeding results of the previous query to the next one with special alias `":0"` and `":1"` referencing first and second result respectively:
-<br><br>
+<br />
+8. To execute queries against the database. Notice we are feeding results of the
+previous query to the next one with special alias `":0"` and `":1"` referencing first
+and second result respectively:
+<br />
+<br />
 
 ```php
 // Prepare the queries to be executed on the remote database.
@@ -142,8 +158,10 @@ let queries = [
 $result = $client->dbExec("php_user1", "db1", $queries);
 ```
 
-<br/>9. Print the the result of the final query to the console:
-<br><br>
+<br />
+9. Print the the result of the final query to the console:
+<br />
+<br />
 
 ```php
 // Print the result of the last query
@@ -179,8 +197,10 @@ printf($result[3]);
 // }
 ```
 
-<br>10. Run the program:
-<br><br>
+<br />
+10. Run the program:
+<br />
+<br />
 
 ```bash
 # Make sure the agdb_server is running at http://localhost:3000
@@ -188,5 +208,7 @@ printf($result[3]);
 php src/index.php
 ```
 
-<br/>11. Full program: https://github.com/agnesoft/agdb/tree/main/examples/server_client_php
-<br><br>
+<br />
+11. Full program: https://github.com/agnesoft/agdb/tree/main/examples/server_client_php
+<br />
+<br />

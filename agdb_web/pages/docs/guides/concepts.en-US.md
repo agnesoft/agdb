@@ -7,7 +7,7 @@ description: "Concepts, Agnesoft Graph Database"
 
 ## Graph
 
-_Related:_ [Why graph?](/blog/why-not-sql#why-graph)
+_Related:_ [Why graph?](/blog/why-graph)
 
 Graph is a set of nodes (also vertices, points) that are connected to each other through edges (also arcs, links). In `agdb` the data is plotted on directed graphs and there are no restrictions on their structure. They can be cyclic (forming a cycle), acyclic (being open ended), sparse (having only some connections between nodes), disjointed (thus forming multiple graphs), having self-referential edges (nodes being connected to themselves), having multiple edges to the same node (even itself) and/or in the same same direction.
 
@@ -24,7 +24,7 @@ Nodes and edges are `graph elements` and each can have key-value pairs associate
 
 ## Query
 
-_Related:_ [Why object queries?](/blog/why-not-sql#why-object-queries), [Queries](/docs/references/queries)
+_Related:_ [Why object queries?](/blog/object-queries), [Queries](/docs/references/queries)
 
 Query is a request to retrieve or manipulate data in a database (both the graph structure and `values` associated with the nodes and edges). In `agdb` queries are not texts (like in SQL) but rather objects that contain details about what is being requested. These objects are typically constructed via a query builder but it is also possible to create them like any other object. The builder steps resemble, and often indeed are, direct translations of a well known SQL equivalents (e.g. `QueryBuilder::select() == SELECT`, `QueryBuilder::insert() == INSERT INTO`).
 
@@ -59,7 +59,7 @@ In multithreaded environment you can easily synchronize the access to the databa
 
 ## Storage
 
-_Related_: [Why single file?](/blog/why-not-sql#why-single-file)
+_Related_: [Why single file?](/blog/single-file)
 
 Every persistent database eventually stores its data somewhere on disk in one or more files. the `agdb` stores its data in a single file (that is being shadowed by another temporary write ahead log file). Its internal structure is very similar to that of a memory which makes it very easy to map between the two. The file format is fully platform agnostic and the file can be safely transferred to another machine and loaded there. Similarly the `agdb` is by default memory mapped database but it could just as easily operate purely on the file itself at the cost of read performance (might be implemented as a feature in the future).
 

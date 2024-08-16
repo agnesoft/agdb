@@ -9,38 +9,26 @@ The rust agdb API client is **async only** and can be used with any HTTP client 
 
 Looking for... [how to run a server?](/docs/guides/how_to_run_server) | [another language?](/api-docs/openapi) | [embedded db guide?](/docs/guides/quickstart)
 
-<br />
 1. First install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install)
-(mininum required version is `1.75.0`).
-<br />
-<br />
+   (mininum required version is `1.75.0`).
 
-<br />
 2. Create an applicaiton folder, for example `agdb_client` and initialize your application
-using cargo:
-<br />
-<br />
+   using cargo:
 
 ```
 cargo add agdb_client
 ```
 
-<br />
 3. Add `agdb`, `agdb_api`, `tokio` and `anyhow` as a dependencies:
-<br />
-<br />
 
 ```bash
 cargo add agdb --features serde,openapi
 cargo add agdb_api --features reqwest
-cargo add tokio --features full
+cargo add tokio --features  full
 cargo add anyhow
 ```
 
-<br />
 4. Create the client pointing to an `agdb` server:
-<br />
-<br />
 
 ```rs
 use agdb_api::AgdbApi;
@@ -54,10 +42,7 @@ async fn main() -> anyhow::Result<()> {
 }
 ```
 
-<br />
 5. Login as admin and setup the user:
-<br />
-<br />
 
 ```rs
 client.user_login("admin", "admin").await?; // The authentication login is stored in
@@ -67,10 +52,7 @@ client.admin_user_add("my_user", "password123").await?;
 client.user_login("my_user", "password123").await?; // Login as our newly created user.
 ```
 
-<br />
 6. Create a database:
-<br />
-<br />
 
 ```rs
 use agdb_api::DbType;
@@ -79,11 +61,8 @@ client.db_add("my_user", "my_db", DbType::Mapped).await?; // Memory mapped datab
                                                           // will be created under our "my_user".
 ```
 
-<br />
 7. Run our first queries against the database inserting a node with alias "users"
-and some users connecting them together:
-<br />
-<br />
+   and some users connecting them together:
 
 ```rs
 // We derive from agdb::UserValue
@@ -116,11 +95,8 @@ let queries: Vec<QueryType> = vec![QueryBuilder::insert().nodes().aliases("users
 client.exec("my_user", "my_db", &queries).await?;
 ```
 
-<br />
 8. Run another query searching & selecting the users and converting them back to
-the native local object:
-<br />
-<br />
+   the native local object:
 
 ```rs
 let queries = vec![QueryBuilder::select()
@@ -142,7 +118,4 @@ let users: Vec<User> = client.exec("my_user", "my_db", &queries).await?[0].try_i
 println!("{:?}", users);
 ```
 
-<br />
 9. Full program: https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust
-<br />
-<br />

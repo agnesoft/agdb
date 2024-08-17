@@ -13,11 +13,18 @@ Looking for... [how to run a server?](/docs/guides/how-to-run-server) | [another
 
 The following is the from-scratch guide to use `agdb-api` php package.
 
-1. Install [PHP](https://www.php.net/manual/en/install.php)
+<steps>
+### Install PHP
 
-2. Install [Composer](https://nodejs.org/en).
+https://www.php.net/manual/en/install.php
 
-3. Create your project's folder (e.g. `my_agdb`) and nitialize a package:
+### Install Composer
+
+https://getcomposer.org/download/
+
+### Create your project
+
+Create your project's folder (e.g. `my_agdb`) and initialize the package:
 
 ```bash
 mkdir my_agdb
@@ -25,16 +32,20 @@ cd my_agdb
 composer init # follow the steps & prompts
 ```
 
-4. Add `agnesoft/agdb_api` as a dependency:
+### Add `agnesoft/agdb_api` as a dependency
 
 ```bash
 composer install agnesoft/agdb_api
 ```
 
-NOTE: Consider using other dev packages such as `phpunit/phpunit` and `phpstan/phpstan`.
+<callout>
+    Consider using other dev packages such as `phpunit/phpunit` and
+    `phpstan/phpstan`.
+</callout>
 
-5. Create your main script (e.g. `src/index.php`) and create a client to connect
-   to the server:
+### Create your main script
+
+E.g. `src/index.php` and create a client to connect to the server:
 
 ```php
 <?php
@@ -48,7 +59,7 @@ use Agnesoft\AgdbApi\Model\UserCredentials;
 use Agnesoft\AgdbApi\QueryBuilder;
 use Agnesoft\AgdbApi\ComparisonBuilder;
 
-// Defayult config will look for the server at http://localhost:3000
+// Default config will look for the server at http://localhost:3000
 $config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration();
 
 // Using GuzzleHttp client. You can use any other like Symfony.
@@ -59,7 +70,9 @@ $client = new AgdbApi(new GuzzleHttp\Client(), $config);
 $client->status(false);
 ```
 
-6. To create a user using the default admin user:
+### Create a database user
+
+To create a database user we use the default admin user:
 
 ```php
 // Login as server admin
@@ -84,16 +97,24 @@ $token = self::$client->userLogin(
 $client->getConfig()->setAccessToken($token);
 ```
 
-7. To create a database:
+### Create a database
+
+To create a database we associate it with a user and give it a name and type (one of `MAPPED`, `MEMORY`, `FILE`):
 
 ```php
 // Creates memory mapped database "db1" for user "php_user1"
 $client->dbAdd("php_user1", "db1", DbType::MAPPED);
 ```
 
-8. To execute queries against the database. Notice we are feeding results of the
-   previous query to the next one with special alias `":0"` and `":1"` referencing first
-   and second result respectively:
+### Execute queries
+
+To execute queries against the database we call `dbExec` with the user and their database.
+
+<callout type="info">
+    Notice we are feeding results of the previous query to the next one with
+    special alias `":0"` and `":1"` referencing first and second result
+    respectively.
+</callout>
 
 ```php
 // Prepare the queries to be executed on the remote database.
@@ -136,7 +157,9 @@ let queries = [
 $result = $client->dbExec("php_user1", "db1", $queries);
 ```
 
-9. Print the the result of the final query to the console:
+### Print the the result
+
+We print the result of the of the final query to the console:
 
 ```php
 // Print the result of the last query
@@ -172,12 +195,23 @@ printf($result[3]);
 // }
 ```
 
-10. Run the program:
+### Run the program
+
+<callout type="warning">
+    Make sure the agdb_server is running at http://localhost:3000
+</callout>
+
+<callout>
+    If you are running this from the examples you may need to call `composer
+    install` first
+</callout>
 
 ```bash
-# Make sure the agdb_server is running at http://localhost:3000
-#composer install # if you want to just run the example run the composer install first
 php src/index.php
 ```
 
-11. Full program: https://github.com/agnesoft/agdb/tree/main/examples/server_client_php
+### Full program
+
+https://github.com/agnesoft/agdb/tree/main/examples/server_client_php
+
+</steps>

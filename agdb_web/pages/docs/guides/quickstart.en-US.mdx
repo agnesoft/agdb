@@ -3,15 +3,23 @@ title: "Quickstart"
 description: "Quickstart, Agensoft Graph Database"
 ---
 
+import { Callout, Steps } from "nextra/components";
+
 # Quickstart
 
 The following is the quickstart guide for the agdb emebedded/application database.
 
 [Looking for server client guide instead?](/api-docs/rust)
 
-1. First install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install) (mininum required version is `1.75.0`).
+<Steps>
 
-2. Create an applicaiton folder, for example `agdb_app` and initialize your application using cargo:
+### Install Rust toolchain
+
+From the [official source](https://www.rust-lang.org/tools/install).
+
+### Create an applicaiton
+
+First we initialize an application called `agdb_app` with cargo:
 
 ```bash
 mkdir agdb_app
@@ -19,26 +27,33 @@ cd agdb_app
 cargo init
 ```
 
-3. Add `agdb` as a dependency:
+### Add dependencies
 
 ```bash
 cargo add agdb
 ```
 
-4. Create the memory mapped database in your code:
+### Create the database
+
+In `main.rs` we create a memory mapped database:
 
 ```rs
 use agdb::QueryError;
 
 fn main() -> Result<(), QueryError> {
-    let mut db = Db::new("agdb_app.agdb")?; // The namesake file "agdb_app.agdb" will
-                                            // be created in your working directory.
-                                            // The .agdb extension is conventional.
+    let mut db = Db::new("agdb_app.agdb")?;
     Ok(())
 }
 ```
 
-5. Run your first query against the database inserting a node with alias "users":
+<Callout type="info">
+    The namesake file "agdb_app.agdb" will be created in your working directory.
+    The .agdb extension is conventional.
+</Callout>
+
+### Run queries
+
+We run our first query against the database inserting a node with alias "users":
 
 ```rs
 db.exec_mut(&QueryBuilder::insert()
@@ -47,8 +62,7 @@ db.exec_mut(&QueryBuilder::insert()
                 .query())?;
 ```
 
-6. Insert additional nodes representing some users and connect them with the "users" node:
-   <br><br>
+We then insert additional nodes representing some users and connect them with the "users" node:
 
 ```rs
 // We derive from agdb::UserValue
@@ -84,7 +98,13 @@ db.exec_mut(
 )?;
 ```
 
-7. Find a user in the database matching some conditions:
+<Callout>
+    We could also run all the queries as a single transaction with
+    `transaction()` / `transaction_mut()` instead of exec variants that operate
+    on a single query each time.
+</Callout>
+
+### Find a user in the database matching some conditions
 
 ```rust
 // We combine search & select into a single query like so:
@@ -110,4 +130,14 @@ println!("{:?}", users);
 // Vec [User { db_id: Some(DbId(3)), username: "John", age: 20 }, User { db_id: Some(DbId(3)), username: "Bob", age: 30 }]
 ```
 
-8. Full program: https://github.com/agnesoft/agdb/tree/main/examples/app_db
+### Run the program
+
+```
+cargo run
+```
+
+### Full program
+
+https://github.com/agnesoft/agdb/tree/main/examples/app_db
+
+</Steps>

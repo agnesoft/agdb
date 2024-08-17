@@ -3,6 +3,8 @@ title: "Rust"
 description: "Client, Agnesoft Graph Database."
 ---
 
+import { Callout, Steps } from "nextra/components";
+
 # Rust
 
 The rust agdb API client is **async only** and can be used with any HTTP client that would implement the `agdb_api::HttpClient` trait. The default implementation uses [reqwest](https://crates.io/crates/reqwest). The following is the quickstart guide for the agdb client in Rust (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how-to-run-server) to learn how to run the server.
@@ -11,17 +13,21 @@ Looking for... [how to run a server?](/docs/guides/how-to-run-server) | [another
 
 ## Usage
 
-1. First install Rust toolchain from the [official source](https://www.rust-lang.org/tools/install)
-   (mininum required version is `1.75.0`).
+<Steps>
 
-2. Create an applicaiton folder, for example `agdb_client` and initialize your application
-   using cargo:
+### Install Rust
+
+Please install the Rust toolchain from the [official source](https://www.rust-lang.org/tools/install).
+
+### Create an applicaiton
+
+First we initialize an application called `agdb_client` with cargo:
 
 ```
-cargo add agdb_client
+cargo init agdb_client
 ```
 
-3. Add `agdb`, `agdb_api`, `tokio` and `anyhow` as a dependencies:
+### Add dependencies:
 
 ```bash
 cargo add agdb --features serde,openapi
@@ -30,7 +36,9 @@ cargo add tokio --features  full
 cargo add anyhow
 ```
 
-4. Create the client pointing to an `agdb` server:
+### Create the client
+
+The client should point to a running `agdb_server`:
 
 ```rs
 use agdb_api::AgdbApi;
@@ -44,7 +52,9 @@ async fn main() -> anyhow::Result<()> {
 }
 ```
 
-5. Login as admin and setup the user:
+### Create a database user
+
+First we need to login as default admin user and create our database user and then login as them:
 
 ```rs
 client.user_login("admin", "admin").await?; // The authentication login is stored in
@@ -54,7 +64,7 @@ client.admin_user_add("my_user", "password123").await?;
 client.user_login("my_user", "password123").await?; // Login as our newly created user.
 ```
 
-6. Create a database:
+### Create a database
 
 ```rs
 use agdb_api::DbType;
@@ -63,8 +73,15 @@ client.db_add("my_user", "my_db", DbType::Mapped).await?; // Memory mapped datab
                                                           // will be created under our "my_user".
 ```
 
-7. Run our first queries against the database inserting a node with alias "users"
-   and some users connecting them together:
+### Run our first queries
+
+To run queries against the database we call `exec`. In this case we will insert node "users" and 3 user nodes and connect them together.
+
+<Callout>
+    Note that we can feed the result of a previous query directly to the next
+    one referencing it with an index into the (previous) results starting with
+    semicolon followed by the index, e.g. `:0`, `:1`.
+</Callout>
 
 ```rs
 // We derive from agdb::UserValue
@@ -89,16 +106,14 @@ let users = vec![User { db_id: None, username: "Alice".to_string(), age: 40 },
 let queries: Vec<QueryType> = vec![QueryBuilder::insert().nodes().aliases("users").query().into(),
                                    QueryBuilder::insert().nodes().values(&users).query().into(),
                                    QueryBuilder::insert().edges().from("users").to(":1").query().into(),
-                                   // We can feed the result of a previous query directly to the next one
-                                   // referencing with as index into the (previous) results starting
-                                   // with semicolon followed by the index, e.g. :1.
                             ];
 
 client.exec("my_user", "my_db", &queries).await?;
 ```
 
-8. Run another query searching & selecting the users and converting them back to
-   the native local object:
+## Run more queries
+
+Run another query searching & selecting the users and converting them back to the native local object and printing the result:
 
 ```rs
 let queries = vec![QueryBuilder::select()
@@ -120,4 +135,14 @@ let users: Vec<User> = client.exec("my_user", "my_db", &queries).await?[0].try_i
 println!("{:?}", users);
 ```
 
-9. Full program: https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust
+### Run the program
+
+```
+cargo run
+```
+
+### Full program
+
+https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust
+
+</Steps>

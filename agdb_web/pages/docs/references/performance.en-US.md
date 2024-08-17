@@ -3,19 +3,7 @@ title: "Performance"
 description: "Performance, Agnesoft Graph Database"
 ---
 
-# performance
-
--   [The benchmark](#the-benchmark)
-    -   [Default settings](#default-settings)
-    -   [Measured operations](#measured-operations)
-    -   [Run command](#run-command)
--   [Results](#results)
-    -   [Memory mapped (default)](#memory-mapped-default)
-    -   [File only](#file-only)
-    -   [In memory (cache only)](#in-memory-cache-only)
-    -   [In Memory (10x)](#in-memory-10x)
--   [Flamegraph](#flamegraph)
--   [Conclusion](#conclusion)
+# Performance
 
 Database performance is one of the key metrics when judging the suitability of the solution for a given use case. Individual metrics such as how many inserts or selects can a database handle in a tight loop are not very interesting or indicative of real performance. In this document we will therefore examine the performance of `agdb` in more realistic use cases via `agdb_benchmarks` that simulate real world usage.
 

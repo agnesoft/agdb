@@ -10,12 +10,12 @@
         "title": "Rust",
         "display": "normal"
     },
-    "typescript": {
-        "title": "TypeScript",
+    "php": {
+        "title": "PHP",
         "display": "normal"
     },
-    "python": {
-        "title": "Python",
+    "typescript": {
+        "title": "Javasscipt/Typescript",
         "display": "normal"
     }
 }

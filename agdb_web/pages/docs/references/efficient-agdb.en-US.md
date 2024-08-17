@@ -3,26 +3,11 @@ title: "Efficient agdb"
 description: "Efficient agdb, Agnesoft Graph Database"
 ---
 
-# efficient agdb
+# Efficient agdb
 
 In this document we will explore more realistic use of the `agdb`. It should help you understand how to make the best use of the `graph` data schema and how to build complex queries.
 
 The premise that we will be working on is building a database for a social network. The users of the network can create posts and share them with other users to comment and like. You can see the complete code under [tests/efficient_agdb.rs](https://github.com/agnesoft/agdb/blob/main/agdb/tests/efficient_agdb.rs).
-
--   [The setup](#the-setup)
-    -   [Users](#users)
-    -   [Posts](#posts)
-    -   [Comments](#comments)
-    -   [Likes](#likes)
--   [Selects \& Searches](#selects--searches)
-    -   [Login](#login)
-    -   [User content](#user-content)
-    -   [Posts](#posts-1)
-    -   [Comments](#comments-1)
--   [Schema updates](#schema-updates)
-    -   [Likes](#likes-1)
-    -   [Comments](#comments-2)
--   [Summary](#summary)
 
 ## The setup
 
@@ -96,8 +81,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
         let user = t
             .exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![user.to_db_values()])
+                    .element(user)
                     .query(),
             )?
             .elements[0]
@@ -145,8 +129,7 @@ fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError>
         let post = t
             .exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![post.to_db_values()])
+                    .element(post)
                     .query(),
             )?
             .elements[0]
@@ -198,8 +181,7 @@ fn create_comment(
         let comment = t
             .exec_mut(
                 &QueryBuilder::insert()
-                    .nodes()
-                    .values(vec![comment.to_db_values()])
+                    .element(comment)
                     .query(),
             )?
             .elements[0]

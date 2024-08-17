@@ -5,9 +5,9 @@ description: "API, Agnesoft Graph Database"
 
 # api
 
-The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
+The [agdb server](/docs/references/server) can be accessed using OpenAPI (REST) via any HTTP client. In addition to the API specification `agdb` offers wide range of clients for many languages that uses the same API but provides convenience and ease-of-use:
 
-<p class="flex-row">
+<p className="flex-row">
     <a href="/api-docs/rust">
         <img width="50" src="/images/rust.png" alt="rust" />
     </a>
@@ -17,9 +17,10 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
     <a href="/api-docs/typescript">
         <img width="50" src="/images/js.png" alt="js" />
     </a>
-    <a href="/api-docs/python">
-        <img width="50" src="/images/python.png" alt="python" />
+    <a href="/api-docs/php">
+        <img width="90" src="/images/php.svg" alt="php" />
     </a>
+    <img width="50" src="/images/python.png" alt="python" />
     <img width="50" src="/images/java.png" alt="java" />
     <img width="50" src="/images/c.png" alt="c" />
     <img width="50" src="/images/cpp.png" alt="cpp" />
@@ -37,7 +38,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         "license": {
             "name": "Apache-2.0"
         },
-        "version": "0.1.0"
+        "version": "0.8.0"
     },
     "servers": [
         {
@@ -48,7 +49,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
     "paths": {
         "/api/v1/admin/db/list": {
             "get": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_list",
                 "responses": {
                     "200": {
@@ -77,7 +78,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/add": {
             "post": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_add",
                 "parameters": [
                     {
@@ -128,9 +129,55 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                 ]
             }
         },
+        "/api/v1/admin/db/{owner}/{db}/audit": {
+            "get": {
+                "tags": ["agdb"],
+                "operationId": "admin_db_audit",
+                "parameters": [
+                    {
+                        "name": "owner",
+                        "in": "path",
+                        "description": "user name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "db",
+                        "in": "path",
+                        "description": "db name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DbAudit"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "Token": []
+                    }
+                ]
+            }
+        },
         "/api/v1/admin/db/{owner}/{db}/backup": {
             "post": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_backup",
                 "parameters": [
                     {
@@ -175,7 +222,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/copy": {
             "post": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_copy",
                 "parameters": [
                     {
@@ -231,7 +278,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/delete": {
             "delete": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_delete",
                 "parameters": [
                     {
@@ -273,7 +320,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/exec": {
             "post": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_exec",
                 "parameters": [
                     {
@@ -335,7 +382,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/optimize": {
             "post": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_optimize",
                 "parameters": [
                     {
@@ -381,7 +428,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/remove": {
             "delete": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_remove",
                 "parameters": [
                     {
@@ -423,7 +470,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/rename": {
             "post": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_rename",
                 "parameters": [
                     {
@@ -479,7 +526,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/user/list": {
             "get": {
-                "tags": ["crate::routes::admin::db::user"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_user_list",
                 "parameters": [
                     {
@@ -531,7 +578,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/user/{username}/add": {
             "put": {
-                "tags": ["crate::routes::admin::db::user"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_user_add",
                 "parameters": [
                     {
@@ -593,7 +640,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/db/{owner}/{db}/user/{username}/remove": {
             "delete": {
-                "tags": ["crate::routes::admin::db::user"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_user_remove",
                 "parameters": [
                     {
@@ -647,7 +694,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/shutdown": {
             "post": {
-                "tags": ["crate::routes::admin"],
+                "tags": ["agdb"],
                 "operationId": "admin_shutdown",
                 "responses": {
                     "202": {
@@ -666,7 +713,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/user/list": {
             "get": {
-                "tags": ["crate::routes::admin::user"],
+                "tags": ["agdb"],
                 "operationId": "admin_user_list",
                 "responses": {
                     "200": {
@@ -695,7 +742,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/user/{username}/add": {
             "post": {
-                "tags": ["crate::routes::admin::user"],
+                "tags": ["agdb"],
                 "operationId": "admin_user_add",
                 "parameters": [
                     {
@@ -744,7 +791,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/user/{username}/change_password": {
             "put": {
-                "tags": ["crate::routes::admin::user"],
+                "tags": ["agdb"],
                 "operationId": "admin_user_change_password",
                 "parameters": [
                     {
@@ -790,7 +837,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/admin/user/{username}/remove": {
             "delete": {
-                "tags": ["crate::routes::admin::user"],
+                "tags": ["agdb"],
                 "operationId": "admin_user_remove",
                 "parameters": [
                     {
@@ -833,7 +880,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/admin/{owner}/{db}/restore": {
             "post": {
-                "tags": ["crate::routes::admin::db"],
+                "tags": ["agdb"],
                 "operationId": "admin_db_restore",
                 "parameters": [
                     {
@@ -875,7 +922,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/list": {
             "get": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_list",
                 "responses": {
                     "200": {
@@ -904,7 +951,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/{owner}/{db}/add": {
             "post": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_add",
                 "parameters": [
                     {
@@ -958,9 +1005,58 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                 ]
             }
         },
+        "/api/v1/db/{owner}/{db}/audit": {
+            "get": {
+                "tags": ["agdb"],
+                "operationId": "db_audit",
+                "parameters": [
+                    {
+                        "name": "owner",
+                        "in": "path",
+                        "description": "user name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "db",
+                        "in": "path",
+                        "description": "db name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DbAudit"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    },
+                    "404": {
+                        "description": "user / db not found"
+                    }
+                },
+                "security": [
+                    {
+                        "Token": []
+                    }
+                ]
+            }
+        },
         "/api/v1/db/{owner}/{db}/backup": {
             "post": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_backup",
                 "parameters": [
                     {
@@ -1003,9 +1099,69 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                 ]
             }
         },
+        "/api/v1/db/{owner}/{db}/clear": {
+            "post": {
+                "tags": ["agdb"],
+                "operationId": "db_clear",
+                "parameters": [
+                    {
+                        "name": "owner",
+                        "in": "path",
+                        "description": "user name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "db",
+                        "in": "path",
+                        "description": "db name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "resource",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/DbResource"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "db resource(s) cleared",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServerDatabase"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized"
+                    },
+                    "403": {
+                        "description": "must be a db admin"
+                    },
+                    "404": {
+                        "description": "user / db not found"
+                    }
+                },
+                "security": [
+                    {
+                        "Token": []
+                    }
+                ]
+            }
+        },
         "/api/v1/db/{owner}/{db}/copy": {
             "post": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_copy",
                 "parameters": [
                     {
@@ -1063,8 +1219,8 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             }
         },
         "/api/v1/db/{owner}/{db}/delete": {
-            "post": {
-                "tags": ["crate::routes::db"],
+            "delete": {
+                "tags": ["agdb"],
                 "operationId": "db_delete",
                 "parameters": [
                     {
@@ -1109,7 +1265,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/{owner}/{db}/exec": {
             "post": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_exec",
                 "parameters": [
                     {
@@ -1171,7 +1327,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/{owner}/{db}/optimize": {
             "post": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_optimize",
                 "parameters": [
                     {
@@ -1219,8 +1375,8 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             }
         },
         "/api/v1/db/{owner}/{db}/remove": {
-            "post": {
-                "tags": ["crate::routes::db"],
+            "delete": {
+                "tags": ["agdb"],
                 "operationId": "db_remove",
                 "parameters": [
                     {
@@ -1265,7 +1421,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/{owner}/{db}/rename": {
             "post": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_rename",
                 "parameters": [
                     {
@@ -1324,7 +1480,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/{owner}/{db}/restore": {
             "post": {
-                "tags": ["crate::routes::db"],
+                "tags": ["agdb"],
                 "operationId": "db_restore",
                 "parameters": [
                     {
@@ -1369,7 +1525,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/{owner}/{db}/user/list": {
             "get": {
-                "tags": ["crate::routes::db::user"],
+                "tags": ["agdb"],
                 "operationId": "db_user_list",
                 "parameters": [
                     {
@@ -1410,8 +1566,8 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             }
         },
         "/api/v1/db/{owner}/{db}/user/{username}/add": {
-            "post": {
-                "tags": ["crate::routes::db::user"],
+            "put": {
+                "tags": ["agdb"],
                 "operationId": "db_user_add",
                 "parameters": [
                     {
@@ -1473,7 +1629,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/db/{owner}/{db}/user/{username}/remove": {
             "post": {
-                "tags": ["crate::routes::db::user"],
+                "tags": ["agdb"],
                 "operationId": "db_user_remove",
                 "parameters": [
                     {
@@ -1527,18 +1683,39 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/status": {
             "get": {
-                "tags": ["crate::routes"],
+                "tags": ["agdb"],
                 "operationId": "status",
+                "parameters": [
+                    {
+                        "name": "cluster",
+                        "in": "path",
+                        "description": "get cluster status",
+                        "required": true,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Server is ready"
+                        "description": "Server is ready",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ClusterStatus"
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         },
         "/api/v1/user/change_password": {
             "put": {
-                "tags": ["crate::routes::user"],
+                "tags": ["agdb"],
                 "operationId": "user_change_password",
                 "requestBody": {
                     "content": {
@@ -1570,7 +1747,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/user/login": {
             "post": {
-                "tags": ["crate::routes::user"],
+                "tags": ["agdb"],
                 "operationId": "user_login",
                 "requestBody": {
                     "content": {
@@ -1601,7 +1778,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
         },
         "/api/v1/user/logout": {
             "post": {
-                "tags": ["crate::routes::user"],
+                "tags": ["agdb"],
                 "operationId": "user_logout",
                 "responses": {
                     "201": {
@@ -1633,6 +1810,31 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                     },
                     "password": {
                         "type": "string"
+                    }
+                }
+            },
+            "ClusterStatus": {
+                "type": "object",
+                "required": ["address", "status", "leader", "term", "commit"],
+                "properties": {
+                    "address": {
+                        "type": "string"
+                    },
+                    "commit": {
+                        "type": "integer",
+                        "format": "int64",
+                        "minimum": 0
+                    },
+                    "leader": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "boolean"
+                    },
+                    "term": {
+                        "type": "integer",
+                        "format": "int64",
+                        "minimum": 0
                     }
                 }
             },
@@ -1781,6 +1983,12 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                 ],
                 "description": "Comparison of unsigned integers (`u64`) used\nby `distance()` and `edge_count*()` conditions. Supports\nthe usual set of named comparisons: `==, !=, <, <=, >, =>`."
             },
+            "DbAudit": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/components/schemas/QueryAudit"
+                }
+            },
             "DbElement": {
                 "type": "object",
                 "description": "Database element used in [`QueryResult`]\nthat represents a node or an edge.",
@@ -1859,6 +2067,10 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                         "$ref": "#/components/schemas/DbValue"
                     }
                 }
+            },
+            "DbResource": {
+                "type": "string",
+                "enum": ["all", "db", "audit", "backup"]
             },
             "DbType": {
                 "type": "string",
@@ -2030,14 +2242,17 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             },
             "InsertEdgesQuery": {
                 "type": "object",
-                "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nThe result will contain number of edges inserted and elements with\ntheir ids but no properties.",
-                "required": ["from", "to", "values", "each"],
+                "description": "Query to inserts edges to the database. The `from`\nand `to` ids must exist in the database. There must be\nenough `values` for all new edges unless set to `Single`\nin which case they will be uniformly applied to all new\nedges. The `each` flag is only useful if `from and `to` are\nsymmetric (same length) but you still want to connect every\norigin to every destination. By default it would connect only\nthe pairs. For asymmetric inserts `each` is assumed.\n\nIf the `ids` member is empty the query will insert new edges\notherwise it will update the existing edges. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of edges inserted or udpated and elements\nwith their ids, origin and destination, but no properties.",
+                "required": ["from", "to", "ids", "values", "each"],
                 "properties": {
                     "each": {
                         "type": "boolean",
                         "description": "If `true` create an edge between each origin\nand destination."
                     },
                     "from": {
+                        "$ref": "#/components/schemas/QueryIds"
+                    },
+                    "ids": {
                         "$ref": "#/components/schemas/QueryIds"
                     },
                     "to": {
@@ -2053,8 +2268,8 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             },
             "InsertNodesQuery": {
                 "type": "object",
-                "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nThe result will contain number of nodes inserted and elements with\ntheir ids but no properties.",
-                "required": ["count", "values", "aliases"],
+                "description": "Query to insert nodes to the database. Only one of\n`count`, `values` or `aliases` need to be given as the\nimplementation will derive the count from the other\nparameters. If `values` is set to `Single` either `count`\nor `aliases` must be provided however. If `values` are not\nset to `Single` there must be enough value for `count/aliases`\nunless they are not se and the count is derived from `values.\n\nIf the `ids` member is empty the query will insert new nodes\notherwise it will update the existing nodes. The rules for length\nof `values` still apply and the search yield or static list must\nhave equal length to the `values` (or the `Single` variant must\nbe used).\n\nThe result will contain number of nodes inserted or updated and elements\nwith their ids but no properties.",
+                "required": ["count", "values", "aliases", "ids"],
                 "properties": {
                     "aliases": {
                         "type": "array",
@@ -2069,6 +2284,9 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                         "description": "Number of nodes to be inserted.",
                         "minimum": 0
                     },
+                    "ids": {
+                        "$ref": "#/components/schemas/QueryIds"
+                    },
                     "values": {
                         "$ref": "#/components/schemas/QueryValues"
                     }
@@ -2076,7 +2294,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             },
             "InsertValuesQuery": {
                 "type": "object",
-                "description": "Query to insert or update key-value pairs (properties)\nto existing elements in the database. All `ids` must exist\nin the database. If `values` is set to `Single` the properties\nwill be inserted uniformly to all `ids` otherwise there must be\nenough `values` for all `ids`.\n\nThe result will be number of inserted/update values and no elements.\n\nNOTE: The result is NOT number of affected elements but individual properties.",
+                "description": "Query to insert or update key-value pairs (properties)\nto existing elements in the database. All `ids` must exist\nin the database. If `values` is set to `Single` the properties\nwill be inserted uniformly to all `ids` otherwise there must be\nenough `values` for all `ids`.\n\nThe result will be number of inserted/updated values and inserted new\nelements (nodes).\n\nNOTE: The result is NOT number of affected elements but individual properties.",
                 "required": ["ids", "values"],
                 "properties": {
                     "ids": {
@@ -2097,6 +2315,23 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                 "type": "array",
                 "items": {
                     "$ref": "#/components/schemas/QueryResult"
+                }
+            },
+            "QueryAudit": {
+                "type": "object",
+                "required": ["timestamp", "user", "query"],
+                "properties": {
+                    "query": {
+                        "$ref": "#/components/schemas/QueryType"
+                    },
+                    "timestamp": {
+                        "type": "integer",
+                        "format": "int64",
+                        "minimum": 0
+                    },
+                    "user": {
+                        "type": "string"
+                    }
                 }
             },
             "QueryCondition": {
@@ -2398,15 +2633,6 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                     },
                     {
                         "type": "object",
-                        "required": ["Select"],
-                        "properties": {
-                            "Select": {
-                                "$ref": "#/components/schemas/SelectQuery"
-                            }
-                        }
-                    },
-                    {
-                        "type": "object",
                         "required": ["SelectAliases"],
                         "properties": {
                             "SelectAliases": {
@@ -2420,6 +2646,15 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                         "properties": {
                             "SelectAllAliases": {
                                 "$ref": "#/components/schemas/SelectAllAliasesQuery"
+                            }
+                        }
+                    },
+                    {
+                        "type": "object",
+                        "required": ["SelectEdgeCount"],
+                        "properties": {
+                            "SelectEdgeCount": {
+                                "$ref": "#/components/schemas/SelectEdgeCountQuery"
                             }
                         }
                     },
@@ -2447,6 +2682,15 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                         "properties": {
                             "SelectKeyCount": {
                                 "$ref": "#/components/schemas/SelectKeyCountQuery"
+                            }
+                        }
+                    },
+                    {
+                        "type": "object",
+                        "required": ["SelectNodeCount"],
+                        "properties": {
+                            "SelectNodeCount": {
+                                "$ref": "#/components/schemas/SelectNodeCountQuery"
                             }
                         }
                     },
@@ -2565,7 +2809,7 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             "SearchQueryAlgorithm": {
                 "type": "string",
                 "description": "Search algorithm to be used",
-                "enum": ["BreadthFirst", "DepthFirst", "Index"]
+                "enum": ["BreadthFirst", "DepthFirst", "Index", "Elements"]
             },
             "SelectAliasesQuery": {
                 "$ref": "#/components/schemas/QueryIds"
@@ -2573,6 +2817,24 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             "SelectAllAliasesQuery": {
                 "type": "object",
                 "description": "Query to select all aliases in the database.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
+            },
+            "SelectEdgeCountQuery": {
+                "type": "object",
+                "description": "Query to select number of edges of given node ids.\nAll of the ids must exist in the database. If any\nof the ids is not a node the result will be 0 (not\nan error).\n\nThe result will be number of elements returned and the list\nof elements with a single property `String(\"edge_count\")` with\na value `u64`.\n\nNOTE: Self-referential edges are counted twice as if they\nwere coming from another edge. Therefore the edge count\nmight be greater than number of unique db elements.",
+                "required": ["ids", "from", "to"],
+                "properties": {
+                    "from": {
+                        "type": "boolean",
+                        "description": "If set to `true` the query will count outgoing edges\nfrom the nodes."
+                    },
+                    "ids": {
+                        "$ref": "#/components/schemas/QueryIds"
+                    },
+                    "to": {
+                        "type": "boolean",
+                        "description": "If set to `true` the query will count incoming edges\nto the nodes."
+                    }
+                }
             },
             "SelectIndexesQuery": {
                 "type": "object",
@@ -2584,8 +2846,9 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
             "SelectKeysQuery": {
                 "$ref": "#/components/schemas/QueryIds"
             },
-            "SelectQuery": {
-                "$ref": "#/components/schemas/QueryIds"
+            "SelectNodeCountQuery": {
+                "type": "object",
+                "description": "Query to select number of nodes in the database.\n\nThe result will be 1 and elements with a single element\nof id 0 and a single property `String(\"node_count\")` with\na value `u64` represneting number of nodes in teh database."
             },
             "SelectValuesQuery": {
                 "type": "object",
@@ -2634,6 +2897,24 @@ The [agdb server](/docs/guides/how-to-run-server) can be accessed using OpenAPI 
                 "properties": {
                     "new_name": {
                         "type": "string"
+                    }
+                }
+            },
+            "ServerDatabaseResource": {
+                "type": "object",
+                "required": ["resource"],
+                "properties": {
+                    "resource": {
+                        "$ref": "#/components/schemas/DbResource"
+                    }
+                }
+            },
+            "StatusParams": {
+                "type": "object",
+                "properties": {
+                    "cluster": {
+                        "type": "boolean",
+                        "nullable": true
                     }
                 }
             },

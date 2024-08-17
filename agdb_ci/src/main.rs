@@ -5,7 +5,6 @@ const AGDB_PROJECT: &str = "agdb";
 const CARGO_TOML: &str = "Cargo.toml";
 const PACKAGE_JSON: &str = "package.json";
 const OPENAPI_JSON: &str = "schema.json";
-const API_MD: &str = "api.md";
 const IGNORE: [&str; 9] = [
     "node_modules",
     "vendor",
@@ -18,10 +17,6 @@ const IGNORE: [&str; 9] = [
     "test-results",
 ];
 const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
-#[cfg(windows)]
-const LN: &str = "\r\n";
-#[cfg(not(windows))]
-const LN: &str = "\n";
 
 #[derive(Debug)]
 struct CIError {
@@ -34,7 +29,6 @@ struct ProjectFiles {
     tomls: Vec<std::path::PathBuf>,
     jsons: Vec<std::path::PathBuf>,
     schema: std::path::PathBuf,
-    api: std::path::PathBuf,
 }
 
 impl<E: std::error::Error> From<E> for CIError {
@@ -77,8 +71,6 @@ fn project_files(path: &std::path::Path, files: &mut ProjectFiles) -> Result<(),
             } else if dir.path().join(OPENAPI_JSON).exists() {
                 files.jsons.push(dir.path().join(OPENAPI_JSON));
                 files.schema = dir.path().join(OPENAPI_JSON);
-            } else if dir.path().join(API_MD).exists() {
-                files.api = dir.path().join(API_MD);
             }
 
             project_files(&dir.path(), files)?;
@@ -170,22 +162,6 @@ fn update_jsons(
     Ok(())
 }
 
-fn update_api_md(schema: &std::path::PathBuf, api: &std::path::PathBuf) -> Result<(), CIError> {
-    let schema_content = std::fs::read_to_string(schema)?;
-    let api_content = std::fs::read_to_string(api)?;
-    let api_docs = api_content
-        .split_once("## openapi.json")
-        .expect("invalid api.md")
-        .0;
-    let new_api = format!(
-        "{}## openapi.json{LN}{LN}```json{LN}{}{LN}```",
-        api_docs,
-        schema_content.trim()
-    );
-    std::fs::write(api, new_api)?;
-    Ok(())
-}
-
 fn main() -> Result<(), CIError> {
     let current_version = current_version()?;
     let new_version = std::fs::read_to_string(std::path::Path::new("Version"))?
@@ -199,7 +175,6 @@ fn main() -> Result<(), CIError> {
     project_files(std::path::Path::new("."), &mut files)?;
     update_tomls(&current_version, &new_version, &files.tomls)?;
     update_jsons(&current_version, &new_version, &files.jsons)?;
-    update_api_md(&files.schema, &files.api)?;
 
     println!("DONE");
 

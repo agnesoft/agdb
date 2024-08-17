@@ -17,6 +17,16 @@
             "breadcrumb": true
         }
     },
+    "docs": {
+        "title": "Docs",
+        "type": "page",
+        "display": "normal",
+        "theme": {
+            "sidebar": true,
+            "toc": true,
+            "breadcrumb": true
+        }
+    },
     "enterprise": {
         "title": "Enterprise",
         "type": "page",
@@ -29,16 +39,6 @@
     },
     "blog": {
         "title": "Blog",
-        "type": "page",
-        "display": "normal",
-        "theme": {
-            "sidebar": true,
-            "toc": true,
-            "breadcrumb": true
-        }
-    },
-    "docs": {
-        "title": "Docs",
         "type": "page",
         "display": "normal",
         "theme": {

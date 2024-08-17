@@ -13,7 +13,7 @@ Looking for... [how to run a server?](/docs/guides/how-to-run-server) | [another
 
 The following is the from-scratch guide to use `agdb-api` php package.
 
-<steps>
+<Steps>
 ### Install PHP
 
 https://www.php.net/manual/en/install.php
@@ -38,10 +38,10 @@ composer init # follow the steps & prompts
 composer install agnesoft/agdb_api
 ```
 
-<callout>
+<Callout>
     Consider using other dev packages such as `phpunit/phpunit` and
     `phpstan/phpstan`.
-</callout>
+</Callout>
 
 ### Create your main script
 
@@ -110,11 +110,11 @@ $client->dbAdd("php_user1", "db1", DbType::MAPPED);
 
 To execute queries against the database we call `dbExec` with the user and their database.
 
-<callout type="info">
+<Callout type="info">
     Notice we are feeding results of the previous query to the next one with
     special alias `":0"` and `":1"` referencing first and second result
     respectively.
-</callout>
+</Callout>
 
 ```php
 // Prepare the queries to be executed on the remote database.
@@ -197,14 +197,14 @@ printf($result[3]);
 
 ### Run the program
 
-<callout type="warning">
+<Callout type="warning">
     Make sure the agdb_server is running at http://localhost:3000
-</callout>
+</Callout>
 
-<callout>
+<Callout>
     If you are running this from the examples you may need to call `composer
     install` first
-</callout>
+</Callout>
 
 ```bash
 php src/index.php
@@ -214,4 +214,4 @@ php src/index.php
 
 https://github.com/agnesoft/agdb/tree/main/examples/server_client_php
 
-</steps>
+</Steps>

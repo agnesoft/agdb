@@ -9,7 +9,6 @@
 </h3>
 
 <p align="center">
-    
     <a href="https://agdb.agnesoft.com/docs/references/queries"><img width="100" src="/agdb_web/public/images/db.png" alt="db"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <a href="https://agdb.agnesoft.com/api-docs/openapi"><img width="100" src="/agdb_web/public/images/api.png" alt="api"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <a href="https://agdb.agnesoft.com/docs/references/studio"><img width="100" src="/agdb_web/public/images/studio.png" alt="studio"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

@@ -35,6 +35,7 @@
     "@types/node": "^20.14.10",
     "@typescript-eslint/parser": "^7.16.0",
     "@vitest/coverage-v8": "^2.0.2",
+    "openapicmd": "^2.4.0",
     "copyfiles": "^2.4.1",
     "eslint": "^8.56.0",
     "prettier": "^3.3.3",

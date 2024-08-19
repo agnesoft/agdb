@@ -1,6 +1,3 @@
-Need to install the following packages:
-openapicmd@2.3.3
-Ok to proceed? (y) 
 import type {
   OpenAPIClient,
   Parameters,
@@ -1242,9 +1239,6 @@ declare namespace Components {
         export interface ServerDatabaseResource {
             resource: DbResource;
         }
-        export interface StatusParams {
-            cluster?: boolean | null;
-        }
         export interface UserCredentials {
             password: string;
         }
@@ -1914,8 +1908,7 @@ declare namespace Paths {
     }
     namespace Status {
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.ClusterStatus[];
         }
     }
     namespace UserChangePassword {
@@ -2094,6 +2087,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
+  /**
+   * status
+   */
+  'status'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.Status.Responses.$200>
   /**
    * admin_db_restore
    */
@@ -2436,6 +2437,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
+  }
+  ['/api/v1/cluster/status']: {
+    /**
+     * status
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.Status.Responses.$200>
   }
   ['/api/v1/db/admin/{owner}/{db}/restore']: {
     /**

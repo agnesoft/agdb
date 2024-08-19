@@ -18,7 +18,6 @@ pub use api_types::Queries;
 pub use api_types::QueriesResults;
 pub use api_types::QueryAudit;
 pub use api_types::ServerDatabase;
-pub use api_types::StatusParams;
 pub use api_types::UserCredentials;
 pub use api_types::UserLogin;
 pub use api_types::UserStatus;

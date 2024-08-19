@@ -23,7 +23,6 @@ pub(crate) async fn status(
             true
         } else {
             let url = format!("{}api/v1/status", node.as_str());
-            tracing::info!("URL: {}", url);
             let response = client
                 .get(&url)
                 .timeout(std::time::Duration::from_secs(1))

@@ -88,11 +88,6 @@ pub struct ServerDatabase {
     pub backup: u64,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct StatusParams {
-    pub cluster: Option<bool>,
-}
-
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct UserCredentials {
     pub password: String,
@@ -235,7 +230,6 @@ mod tests {
                 commit: 0,
             }
         );
-        format!("{:?}", StatusParams { cluster: None });
     }
 
     #[test]

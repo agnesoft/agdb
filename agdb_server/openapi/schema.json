@@ -882,6 +882,29 @@
         ]
       }
     },
+    "/api/v1/cluster/status": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "Cluster status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClusterStatus"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/db/admin/{owner}/{db}/restore": {
       "post": {
         "tags": [
@@ -1723,30 +1746,9 @@
           "agdb"
         ],
         "operationId": "status",
-        "parameters": [
-          {
-            "name": "cluster",
-            "in": "path",
-            "description": "get cluster status",
-            "required": true,
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
         "responses": {
           "200": {
-            "description": "Server is ready",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ClusterStatus"
-                  }
-                }
-              }
-            }
+            "description": "Server is ready"
           }
         }
       }
@@ -3162,15 +3164,6 @@
         "properties": {
           "resource": {
             "$ref": "#/components/schemas/DbResource"
-          }
-        }
-      },
-      "StatusParams": {
-        "type": "object",
-        "properties": {
-          "cluster": {
-            "type": "boolean",
-            "nullable": true
           }
         }
       },

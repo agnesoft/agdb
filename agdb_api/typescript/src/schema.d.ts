@@ -1239,9 +1239,6 @@ declare namespace Components {
         export interface ServerDatabaseResource {
             resource: DbResource;
         }
-        export interface StatusParams {
-            cluster?: boolean | null;
-        }
         export interface UserCredentials {
             password: string;
         }
@@ -1910,12 +1907,6 @@ declare namespace Paths {
         }
     }
     namespace Status {
-        namespace Parameters {
-            export type Cluster = boolean;
-        }
-        export interface PathParameters {
-            cluster: Parameters.Cluster;
-        }
         namespace Responses {
             export type $200 = Components.Schemas.ClusterStatus[];
         }
@@ -2097,6 +2088,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
   /**
+   * status
+   */
+  'status'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.Status.Responses.$200>
+  /**
    * admin_db_restore
    */
   'admin_db_restore'(
@@ -2228,7 +2227,7 @@ export interface OperationMethods {
    * status
    */
   'status'(
-    parameters?: Parameters<Paths.Status.PathParameters> | null,
+    parameters?: Parameters<UnknownParamsObject> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.Status.Responses.$200>
@@ -2439,6 +2438,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
   }
+  ['/api/v1/cluster/status']: {
+    /**
+     * status
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.Status.Responses.$200>
+  }
   ['/api/v1/db/admin/{owner}/{db}/restore']: {
     /**
      * admin_db_restore
@@ -2604,7 +2613,7 @@ export interface PathsDictionary {
      * status
      */
     'get'(
-      parameters?: Parameters<Paths.Status.PathParameters> | null,
+      parameters?: Parameters<UnknownParamsObject> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.Status.Responses.$200>

@@ -41,9 +41,9 @@ async fn db_cluster_established() -> anyhow::Result<()> {
     let client2 = AgdbApi::new(ReqwestClient::new(), &server2.address);
     let client3 = AgdbApi::new(ReqwestClient::new(), &server3.address);
 
-    let status1 = client1.status_cluster().await?;
-    let status2 = client2.status_cluster().await?;
-    let status3 = client3.status_cluster().await?;
+    let status1 = client1.cluster_status().await?;
+    let status2 = client2.cluster_status().await?;
+    let status3 = client3.cluster_status().await?;
 
     assert_eq!(status1.0, 200);
     assert_eq!(status2.0, 200);

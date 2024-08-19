@@ -124,6 +124,7 @@ pub(crate) fn app(
             "/db/:user/:db/user/:other/remove",
             routing::delete(routes::db::user::remove),
         )
+        .route("/cluster/status", routing::get(routes::cluster::status))
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))
         .route(

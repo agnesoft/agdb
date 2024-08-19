@@ -1685,30 +1685,9 @@ The [agdb server](/docs/references/server) can be accessed using OpenAPI (REST) 
             "get": {
                 "tags": ["agdb"],
                 "operationId": "status",
-                "parameters": [
-                    {
-                        "name": "cluster",
-                        "in": "path",
-                        "description": "get cluster status",
-                        "required": true,
-                        "schema": {
-                            "type": "boolean"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
-                        "description": "Server is ready",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/ClusterStatus"
-                                    }
-                                }
-                            }
-                        }
+                        "description": "Server is ready"
                     }
                 }
             }

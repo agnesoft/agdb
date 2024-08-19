@@ -49,6 +49,7 @@ use utoipa::OpenApi;
         routes::db::user::add,
         routes::db::user::list,
         routes::db::user::remove,
+        routes::cluster::status,
     ),
     components(schemas(
         routes::db::DbTypeParam,
@@ -66,7 +67,6 @@ use utoipa::OpenApi;
         agdb_api::QueriesResults,
         agdb_api::QueryAudit,
         agdb_api::ServerDatabase,
-        agdb_api::StatusParams,
         agdb_api::UserCredentials,
         agdb_api::UserLogin,
         agdb_api::UserStatus,

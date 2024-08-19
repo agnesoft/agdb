@@ -2073,7 +2073,7 @@ void (empty response body)
 ## `status()`
 
 ```php
-status($cluster): \Agnesoft\\AgdbApi\Model\ClusterStatus[]
+status()
 ```
 
 
@@ -2091,11 +2091,9 @@ $apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
     // This is optional, `GuzzleHttp\Client` will be used as default.
     new GuzzleHttp\Client()
 );
-$cluster = True; // bool | get cluster status
 
 try {
-    $result = $apiInstance->status($cluster);
-    print_r($result);
+    $apiInstance->status();
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->status: ', $e->getMessage(), PHP_EOL;
 }
@@ -2103,13 +2101,11 @@ try {
 
 ### Parameters
 
-| Name | Type | Description  | Notes |
-| ------------- | ------------- | ------------- | ------------- |
-| **cluster** | **bool**| get cluster status | |
+This endpoint does not need any parameter.
 
 ### Return type
 
-[**\Agnesoft\\AgdbApi\Model\ClusterStatus[]**](../Model/ClusterStatus.md)
+void (empty response body)
 
 ### Authorization
 
@@ -2118,7 +2114,7 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: `application/json`
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

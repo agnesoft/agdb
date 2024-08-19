@@ -11,9 +11,8 @@ class MyClass {
 describe("openapi test", () => {
     it("status", async () => {
         let client = await AgdbApi.client("http://localhost:3000");
-        let res = await client.status({ cluster: true });
+        let res = await client.status();
         expect(res.status).toEqual(200);
-        expect(res.data).toEqual([]);
     });
 
     it("insert nodes with edges", async () => {

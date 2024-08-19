@@ -51,7 +51,7 @@ async function main() {
           .where()
           .key("username")
           .value(Comparison.Equal("user1"))
-          .query()
+          .query(),
       )
       .query(),
   ];

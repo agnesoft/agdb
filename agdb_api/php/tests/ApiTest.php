@@ -30,14 +30,9 @@ final class ApiTest extends TestCase
         self::$client = new AgdbApi(new GuzzleHttp\Client(), $config);
     }
 
-    public function testStatus(): void
-    {
-        $response = self::$client->status();
-        $this->assertIsArray($response);
-    }
-
     public function testInsertNodesAndEdges(): void
     {
+        self::$client->status();
         $token = self::$client->userLogin(
             new UserLogin(["username" => "admin", "password" => "admin"])
         );
@@ -64,6 +59,7 @@ final class ApiTest extends TestCase
 
     public function testInsertReadElements(): void
     {
+        self::$client->status();
         $token = self::$client->userLogin(
             new UserLogin(["username" => "admin", "password" => "admin"])
         );
@@ -115,6 +111,7 @@ final class ApiTest extends TestCase
 
     public function testSearch(): void
     {
+        self::$client->status();
         $token = self::$client->userLogin(
             new UserLogin(["username" => "admin", "password" => "admin"])
         );

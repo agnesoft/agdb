@@ -72,7 +72,11 @@ impl HttpClient for ReqwestClient {
         let response = request.send().await?;
         let status = response.status().as_u16();
         if response.status().is_success() {
-            let body = response.json::<T>().await?;
+            let body = if response.content_length().unwrap_or(0) != 0 {
+                response.json::<T>().await?
+            } else {
+                serde_json::from_value(serde_json::Value::default())?
+            };
             Ok((status, body))
         } else {
             Err(AgdbApiError {

@@ -32,7 +32,7 @@ final class ApiTest extends TestCase
 
     public function testStatus(): void
     {
-        $response = self::$client->status(false);
+        $response = self::$client->status();
         $this->assertIsArray($response);
     }
 

@@ -456,17 +456,11 @@ impl<T: HttpClient> AgdbApi<T> {
     }
 
     pub async fn status(&self) -> AgdbApiResult<u16> {
-        Ok(self
-            .client
-            .get::<Vec<ClusterStatus>>(&self.url("/status"), &None)
-            .await?
-            .0)
+        Ok(self.client.get::<()>(&self.url("/status"), &None).await?.0)
     }
 
-    pub async fn status_cluster(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
-        self.client
-            .get(&self.url("/status?cluster=true"), &None)
-            .await
+    pub async fn cluster_status(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
+        self.client.get(&self.url("/cluster/status"), &None).await
     }
 
     pub async fn user_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {

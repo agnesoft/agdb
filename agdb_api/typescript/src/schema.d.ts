@@ -1,3 +1,6 @@
+Need to install the following packages:
+openapicmd@2.3.3
+Ok to proceed? (y) 
 import type {
   OpenAPIClient,
   Parameters,
@@ -1910,14 +1913,9 @@ declare namespace Paths {
         }
     }
     namespace Status {
-        namespace Parameters {
-            export type Cluster = boolean;
-        }
-        export interface PathParameters {
-            cluster: Parameters.Cluster;
-        }
         namespace Responses {
-            export type $200 = Components.Schemas.ClusterStatus[];
+            export interface $200 {
+            }
         }
     }
     namespace UserChangePassword {
@@ -2228,7 +2226,7 @@ export interface OperationMethods {
    * status
    */
   'status'(
-    parameters?: Parameters<Paths.Status.PathParameters> | null,
+    parameters?: Parameters<UnknownParamsObject> | null,
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.Status.Responses.$200>
@@ -2604,7 +2602,7 @@ export interface PathsDictionary {
      * status
      */
     'get'(
-      parameters?: Parameters<Paths.Status.PathParameters> | null,
+      parameters?: Parameters<UnknownParamsObject> | null,
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.Status.Responses.$200>

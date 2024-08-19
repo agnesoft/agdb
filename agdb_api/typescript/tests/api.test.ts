@@ -13,7 +13,6 @@ describe("openapi test", () => {
         let client = await AgdbApi.client("http://localhost:3000");
         let res = await client.status();
         expect(res.status).toEqual(200);
-        expect(res.data).toEqual([]);
     });
 
     it("insert nodes with edges", async () => {

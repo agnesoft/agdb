@@ -17,6 +17,9 @@ pub(crate) struct UserId(pub(crate) DbId);
 #[allow(dead_code)]
 pub(crate) struct AdminId(pub(crate) DbId);
 
+#[allow(dead_code)]
+pub(crate) struct ClusterId();
+
 #[derive(Default)]
 pub(crate) struct UserName(pub(crate) String);
 
@@ -83,6 +86,27 @@ where
         }
 
         Ok(Self(admin.db_id.unwrap()))
+    }
+}
+
+#[axum::async_trait]
+impl<S: Sync + Send> FromRequestParts<S> for ClusterId
+where
+    S: Send + Sync,
+    Config: FromRef<S>,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let expected_token = &Config::from_ref(state).cluster_token;
+        let bearer: TypedHeader<Authorization<Bearer>> =
+            parts.extract().await.map_err(unauthorized)?;
+
+        if expected_token != utilities::unquote(bearer.token()) {
+            return Err(unauthorized(()));
+        }
+
+        Ok(Self())
     }
 }
 

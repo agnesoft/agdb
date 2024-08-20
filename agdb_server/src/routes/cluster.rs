@@ -1,9 +1,14 @@
 use crate::config::Config;
 use crate::server_error::ServerResult;
+use crate::user_id::ClusterId;
 use agdb_api::ClusterStatus;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+
+pub(crate) async fn heartbeat(_cluster_id: ClusterId) -> ServerResult<StatusCode> {
+    Ok(StatusCode::OK)
+}
 
 #[utoipa::path(get,
     path = "/api/v1/cluster/status",

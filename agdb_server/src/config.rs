@@ -16,6 +16,7 @@ pub(crate) struct ConfigImpl {
     pub(crate) basepath: String,
     pub(crate) admin: String,
     pub(crate) data_dir: String,
+    pub(crate) cluster_token: String,
     pub(crate) cluster: Vec<Url>,
 }
 
@@ -39,6 +40,7 @@ pub(crate) fn new() -> ServerResult<Config> {
         basepath: "".to_string(),
         admin: "admin".to_string(),
         data_dir: "agdb_server_data".to_string(),
+        cluster_token: "cluster".to_string(),
         cluster: vec![],
     };
 

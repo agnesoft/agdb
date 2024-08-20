@@ -162,6 +162,7 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("admin", ADMIN.into());
     config.insert("data_dir", SERVER_DATA_DIR.into());
     config.insert("basepath", "/public".into());
+    config.insert("cluster_token", "test".into());
     config.insert("cluster", Vec::<String>::new().into());
 
     let _server = TestServerImpl::with_config(config).await?;

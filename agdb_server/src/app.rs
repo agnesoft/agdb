@@ -125,6 +125,10 @@ pub(crate) fn app(
             routing::delete(routes::db::user::remove),
         )
         .route("/cluster/status", routing::get(routes::cluster::status))
+        .route(
+            "/cluster/heartbeat",
+            routing::get(routes::cluster::heartbeat),
+        )
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))
         .route(

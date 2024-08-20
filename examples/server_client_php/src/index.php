@@ -17,7 +17,7 @@ $client = new AgdbApi(new GuzzleHttp\Client(), $config);
 
 // Runs the status query against the database
 // and throws if the server is not accessible.
-$client->status(false);
+$client->status();
 
 // Login as server admin
 $token = $client->userLogin(

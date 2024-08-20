@@ -1,3 +1,4 @@
+use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
 use crate::HOST;
@@ -7,7 +8,7 @@ use agdb_api::ReqwestClient;
 use std::collections::HashMap;
 
 #[tokio::test]
-async fn db_cluster_established() -> anyhow::Result<()> {
+async fn cluster_established() -> anyhow::Result<()> {
     let port1 = TestServerImpl::next_port();
     let port2 = TestServerImpl::next_port();
     let port3 = TestServerImpl::next_port();
@@ -23,6 +24,7 @@ async fn db_cluster_established() -> anyhow::Result<()> {
     config1.insert("admin", ADMIN.into());
     config1.insert("basepath", "".into());
     config1.insert("data_dir", SERVER_DATA_DIR.into());
+    config1.insert("cluster_token", "test".into());
     config1.insert("cluster", cluster.into());
 
     let mut config2 = config1.clone();
@@ -53,6 +55,37 @@ async fn db_cluster_established() -> anyhow::Result<()> {
     assert_eq!(status1.1, status3.1);
 
     //assert!(status1.1.iter().any(|s| s.leader));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn cluster_user() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+    let status = client
+        .get(server.full_url("/cluster/heartbeat"))
+        .bearer_auth("test")
+        .send()
+        .await?
+        .status();
+
+    assert_eq!(status, 200);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn cluster_user_no_token() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+    let status = client
+        .get(server.full_url("/cluster/heartbeat"))
+        .send()
+        .await?
+        .status();
+
+    assert_eq!(status, 401);
 
     Ok(())
 }

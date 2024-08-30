@@ -77,7 +77,7 @@ mod tests {
     use super::*;
     #[test]
     fn derived_from_debug() {
-        format!(
+        let _ = format!(
             "{:?}",
             DbKeyValue {
                 key: DbValue::I64(0),

@@ -48,7 +48,7 @@ mod test {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", QueryResult::default());
+        let _ = format!("{:?}", QueryResult::default());
     }
 
     #[test]

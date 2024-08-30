@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!(
+        let _ = format!(
             "{:?}",
             QueryCondition {
                 logic: QueryConditionLogic::And,
@@ -278,9 +278,9 @@ mod tests {
             }
         );
 
-        format!("{:?}", Comparison::Equal(DbValue::I64(0)));
+        let _ = format!("{:?}", Comparison::Equal(DbValue::I64(0)));
 
-        format!("{:?}", CountComparison::Equal(0));
+        let _ = format!("{:?}", CountComparison::Equal(0));
     }
 
     #[test]

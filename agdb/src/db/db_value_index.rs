@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", DbValueIndex::new());
+        let _ = format!("{:?}", DbValueIndex::new());
     }
 
     #[test]

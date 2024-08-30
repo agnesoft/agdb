@@ -54,7 +54,7 @@ async fn cluster_established() -> anyhow::Result<()> {
     assert_eq!(status1.1, status2.1);
     assert_eq!(status1.1, status3.1);
 
-    //assert!(status1.1.iter().any(|s| s.leader));
+    assert!(status1.1.iter().any(|s| s.leader));
 
     Ok(())
 }

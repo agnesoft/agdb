@@ -122,8 +122,8 @@ mod tests {
     }
 
     #[test]
-    fn derived_from_debug_and_default() {
-        format!("{:?}", QueryError::default());
+    fn derived_from_debug() {
+        let _ = format!("{:?}", QueryError::default());
     }
 
     #[test]

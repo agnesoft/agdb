@@ -18,7 +18,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", DbKeyOrder::Asc(DbValue::default()));
+        let _ = format!("{:?}", DbKeyOrder::Asc(DbValue::default()));
     }
 
     #[test]

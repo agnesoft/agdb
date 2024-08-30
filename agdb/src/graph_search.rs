@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", SearchControl::Continue(false));
+        let _ = format!("{:?}", SearchControl::Continue(false));
     }
 
     #[test]

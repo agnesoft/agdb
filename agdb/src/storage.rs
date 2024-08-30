@@ -643,7 +643,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", StorageIndex::default());
+        let _ = format!("{:?}", StorageIndex::default());
     }
 
     #[test]

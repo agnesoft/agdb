@@ -628,7 +628,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", DbValue::from(""));
+        let _ = format!("{:?}", DbValue::from(""));
     }
 
     #[test]

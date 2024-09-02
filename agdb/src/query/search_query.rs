@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!(
+        let _ = format!(
             "{:?}",
             SearchQuery {
                 algorithm: SearchQueryAlgorithm::BreadthFirst,

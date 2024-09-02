@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", QueryIds::Ids(vec![QueryId::from(0)]));
+        let _ = format!("{:?}", QueryIds::Ids(vec![QueryId::from(0)]));
     }
 
     #[test]

@@ -961,7 +961,7 @@ mod tests {
     #[test]
     fn derived_from_debug() {
         let index = GraphIndex::default();
-        format!("{index:?}");
+        let _ = format!("{index:?}");
     }
 
     #[test]

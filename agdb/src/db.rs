@@ -1224,6 +1224,6 @@ mod tests {
     fn derived_from_debug() {
         let test_file = TestFile::new();
         let db = Db::new(test_file.file_name()).unwrap();
-        format!("{:?}", db);
+        let _ = format!("{:?}", db);
     }
 }

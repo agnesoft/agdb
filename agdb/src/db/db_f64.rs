@@ -97,7 +97,7 @@ mod tests {
     }
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", DbF64::from(1.0_f64));
+        let _ = format!("{:?}", DbF64::from(1.0_f64));
     }
 
     #[test]

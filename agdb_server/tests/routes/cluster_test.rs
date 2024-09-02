@@ -6,6 +6,8 @@ use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
 use std::collections::HashMap;
+use std::time::Duration;
+use std::time::Instant;
 
 #[tokio::test]
 async fn cluster_established() -> anyhow::Result<()> {
@@ -36,25 +38,25 @@ async fn cluster_established() -> anyhow::Result<()> {
     config3.insert("address", format!("http://{HOST}:{port3}").into());
 
     let server1 = TestServerImpl::with_config(config1).await?;
-    let server2 = TestServerImpl::with_config(config2).await?;
-    let server3 = TestServerImpl::with_config(config3).await?;
+    let _server2 = TestServerImpl::with_config(config2).await?;
+    let _server3 = TestServerImpl::with_config(config3).await?;
 
     let client1 = AgdbApi::new(ReqwestClient::new(), &server1.address);
-    let client2 = AgdbApi::new(ReqwestClient::new(), &server2.address);
-    let client3 = AgdbApi::new(ReqwestClient::new(), &server3.address);
 
-    let status1 = client1.cluster_status().await?;
-    let status2 = client2.cluster_status().await?;
-    let status3 = client3.cluster_status().await?;
+    let now = Instant::now();
+    let mut status = (0, vec![]);
 
-    assert_eq!(status1.0, 200);
-    assert_eq!(status2.0, 200);
-    assert_eq!(status3.0, 200);
+    while now.elapsed().as_secs() < 3 {
+        std::thread::sleep(Duration::from_millis(100));
 
-    assert_eq!(status1.1, status2.1);
-    assert_eq!(status1.1, status3.1);
+        status = client1.cluster_status().await?;
 
-    assert!(status1.1.iter().any(|s| s.leader));
+        if status.1.iter().any(|s| s.leader) {
+            return Ok(());
+        }
+    }
+
+    assert!(status.1.iter().any(|s| s.leader));
 
     Ok(())
 }

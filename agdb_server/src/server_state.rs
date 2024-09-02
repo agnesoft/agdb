@@ -30,3 +30,9 @@ impl FromRef<ServerState> for Config {
         input.config.clone()
     }
 }
+
+impl FromRef<ServerState> for Cluster {
+    fn from_ref(input: &ServerState) -> Self {
+        input.cluster.clone()
+    }
+}

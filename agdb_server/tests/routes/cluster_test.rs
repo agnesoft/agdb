@@ -38,51 +38,68 @@ async fn cluster_established() -> anyhow::Result<()> {
     config3.insert("address", format!("http://{HOST}:{port3}").into());
 
     let server1 = TestServerImpl::with_config(config1).await?;
-    let _server2 = TestServerImpl::with_config(config2).await?;
-    let _server3 = TestServerImpl::with_config(config3).await?;
+    let server2 = TestServerImpl::with_config(config2).await?;
+    let server3 = TestServerImpl::with_config(config3).await?;
 
     let client1 = AgdbApi::new(ReqwestClient::new(), &server1.address);
 
     let now = Instant::now();
-    let mut status = (0, vec![]);
+    let mut status1 = (0, vec![]);
 
     while now.elapsed().as_secs() < 3 {
         std::thread::sleep(Duration::from_millis(100));
 
-        status = client1.cluster_status().await?;
+        status1 = client1.cluster_status().await?;
 
-        if status.1.iter().any(|s| s.leader) {
+        if status1.1.iter().any(|s| s.leader) {
             return Ok(());
         }
     }
 
-    assert!(status.1.iter().any(|s| s.leader));
+    assert!(status1.1.iter().any(|s| s.leader));
+
+    let client2 = AgdbApi::new(ReqwestClient::new(), &server2.address);
+    let client3 = AgdbApi::new(ReqwestClient::new(), &server3.address);
+
+    let status2 = client2.cluster_status().await?;
+    let status3 = client3.cluster_status().await?;
+
+    assert_eq!(status1, status2);
+    assert_eq!(status1, status3);
 
     Ok(())
 }
 
 #[tokio::test]
-async fn cluster_user() -> anyhow::Result<()> {
+async fn cluster_status() {
+    let server = TestServer::new().await.unwrap();
+    let (code, status) = server.api.cluster_status().await.unwrap();
+
+    assert_eq!(code, 200);
+    assert_eq!(status.len(), 0);
+}
+
+#[tokio::test]
+async fn heartbeat_no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest::Client::new();
     let status = client
-        .get(server.full_url("/cluster/heartbeat"))
-        .bearer_auth("test")
+        .post(server.full_url("/cluster/heartbeat?cluster_hash=test&term=1&leader=0"))
         .send()
         .await?
         .status();
 
-    assert_eq!(status, 200);
+    assert_eq!(status, 401);
 
     Ok(())
 }
 
 #[tokio::test]
-async fn cluster_user_no_token() -> anyhow::Result<()> {
+async fn vote_no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest::Client::new();
     let status = client
-        .get(server.full_url("/cluster/heartbeat"))
+        .get(server.full_url("/cluster/vote?cluster_hash=test&term=1&leader=0"))
         .send()
         .await?
         .status();

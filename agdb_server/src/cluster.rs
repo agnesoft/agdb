@@ -166,7 +166,7 @@ pub(crate) fn new(config: &Config) -> ServerResult<Cluster> {
 }
 
 async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> ServerResult<()> {
-    if cluster.nodes.is_empty() {
+    if cluster.nodes.len() < 2 {
         return Ok(());
     }
 
@@ -230,12 +230,18 @@ async fn heartbeat(cluster: &Cluster, shutdown_signal: Arc<AtomicBool>) -> Serve
                             );
                         }
                     }
-                    Err(e) => tracing::error!(
-                        "[{cluster_index}] Heartbeat error on node {}: ({}) {}",
-                        node.index,
-                        e.status,
-                        e.description
-                    ),
+                    Err(e) => {
+                        let message = format!(
+                            "[{cluster_index}] Heartbeat error on node {}: ({}) {}",
+                            node.index, e.status, e.description
+                        );
+
+                        if e.status.is_client_error() {
+                            tracing::warn!(message);
+                        } else {
+                            tracing::error!(message);
+                        }
+                    }
                 }
 
                 std::thread::sleep(HEARTBEAT_TIMEOUT);
@@ -274,15 +280,17 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
         let cluster = cluster.clone();
 
         tokio::spawn(async move {
-            tracing::info!("[{}] Requesting vote from {}", cluster.index, node.index);
-
             match node.vote(cluster_hash, election_term, index).await {
                 Ok(_) => {
-                    tracing::info!("[{}] Vote accepted by {}", cluster.index, node.index);
+                    tracing::info!(
+                        "[{}] Vote for term {election_term} ACCEPTED by {}",
+                        cluster.index,
+                        node.index
+                    );
 
                     if (votes.fetch_add(1, Ordering::Relaxed) + 1) == quorum {
                         tracing::info!(
-                            "[{index}] Elected as leader ({}ms)",
+                            "[{index}] Elected as leader for term {election_term} ({}ms)",
                             timer.elapsed().as_millis()
                         );
 
@@ -296,7 +304,7 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
                 Err(e) => {
                     if e.status.is_client_error() {
                         tracing::warn!(
-                            "[{}] Vote declined by {}: ({}) {}",
+                            "[{}] Vote for term {election_term} REJECTED by {}: ({}) {}",
                             cluster.index,
                             node.index,
                             e.status,
@@ -304,7 +312,7 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
                         );
                     } else {
                         tracing::error!(
-                            "[{}] Vote error on node {}: ({}) {}",
+                            "[{}] Vote for term {election_term} FAILED on {}: ({}) {}",
                             cluster.index,
                             node.index,
                             e.status,
@@ -318,7 +326,7 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
                 let is_leader = cluster.data.read().await.leader.load(Ordering::Relaxed);
 
                 if !is_leader {
-                    tracing::info!(
+                    tracing::warn!(
                         "[{index}] Election for term {election_term} failed - {}/{} (quorum: {quorum}/{}) ({}ms)",
                         votes.load(Ordering::Relaxed),
                         cluster.nodes.len() + 1,

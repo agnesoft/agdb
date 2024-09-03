@@ -34,11 +34,7 @@ impl LogRecord {
 
         match self.status {
             ..=399 => {
-                if self.uri.contains("cluster/heartbeat") {
-                    tracing::debug!(message)
-                } else {
-                    tracing::info!(message)
-                }
+                tracing::info!(message)
             }
             400..=499 => tracing::warn!(message),
             500.. => tracing::error!(message),

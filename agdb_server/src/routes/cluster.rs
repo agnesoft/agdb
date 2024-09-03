@@ -50,7 +50,7 @@ pub(crate) async fn heartbeat(
     let state = cluster.data.read().await.state;
 
     if let ClusterState::Follower(leader) = state {
-        if leader == request.leader {
+        if leader == request.leader && request.term == current_term {
             return Ok((StatusCode::OK, Json(String::new())));
         }
     }

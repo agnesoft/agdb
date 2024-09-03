@@ -37,6 +37,7 @@ pub(crate) enum ClusterState {
     Follower(usize),
     Candidate,
     Election,
+    Voted,
 }
 
 pub(crate) struct ClusterData {
@@ -59,7 +60,7 @@ impl ClusterImpl {
         match self.data.read().await.state {
             ClusterState::Leader | ClusterState::LeaderElect => Some(self.index),
             ClusterState::Follower(leader) => Some(leader),
-            ClusterState::Candidate | ClusterState::Election => None,
+            ClusterState::Candidate | ClusterState::Election | ClusterState::Voted => None,
         }
     }
 }
@@ -171,26 +172,21 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     }
 
     while !shutdown_signal.load(Ordering::Relaxed) {
-        let timer;
-        let state;
-
-        {
-            let data = cluster.data.read().await;
-            timer = data.timer;
-            state = data.state;
-        }
+        let state = cluster.data.read().await.state;
 
         match state {
             ClusterState::LeaderElect => heartbeat(&cluster, shutdown_signal.clone()).await?,
-            ClusterState::Follower(_) => {
-                if timer.elapsed() > TERM_TIMEOUT {
+            ClusterState::Voted | ClusterState::Follower(_) => {
+                if cluster.data.read().await.timer.elapsed() > TERM_TIMEOUT {
                     let mut data = cluster.data.write().await;
                     data.state = ClusterState::Election;
                     data.timer = Instant::now();
                 }
             }
             ClusterState::Election => {
-                if timer.elapsed() >= Duration::from_secs(cluster.index as u64) {
+                if cluster.data.read().await.timer.elapsed()
+                    >= Duration::from_secs(cluster.index as u64)
+                {
                     election(&cluster).await?;
                 }
             }

@@ -120,6 +120,7 @@ pub(crate) async fn vote(
     }
 
     let mut data = cluster.data.write().await;
+    data.state = ClusterState::Voted;
     data.term = request.term;
     data.voted = request.term;
     data.timer = Instant::now();

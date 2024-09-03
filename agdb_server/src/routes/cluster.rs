@@ -47,6 +47,21 @@ pub(crate) async fn heartbeat(
         ));
     }
 
+    let state = cluster.data.read().await.state;
+
+    if let ClusterState::Follower(leader) = state {
+        if leader == request.leader {
+            return Ok((StatusCode::OK, Json(String::new())));
+        }
+    }
+
+    tracing::info!(
+        "[{}] Becoming a follower of node {}, term: {}",
+        cluster.index,
+        request.leader,
+        request.term
+    );
+
     let mut data = cluster.data.write().await;
     data.term = request.term;
     data.state = ClusterState::Follower(request.leader);
@@ -160,7 +175,7 @@ pub(crate) async fn status(
                     ClusterStatus {
                         address,
                         status,
-                        leader: Some(index) == leader,
+                        leader: status && Some(index) == leader,
                         term,
                         commit: 0,
                     },

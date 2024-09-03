@@ -10,7 +10,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 #[tokio::test]
-async fn cluster_established() -> anyhow::Result<()> {
+async fn cluster_test() -> anyhow::Result<()> {
     let port1 = TestServerImpl::next_port();
     let port2 = TestServerImpl::next_port();
     let port3 = TestServerImpl::next_port();
@@ -37,13 +37,13 @@ async fn cluster_established() -> anyhow::Result<()> {
     config3.insert("bind", format!("{HOST}:{port3}").into());
     config3.insert("address", format!("http://{HOST}:{port3}").into());
 
-    let server1 = TestServerImpl::with_config(config1).await?;
+    let mut server1 = TestServerImpl::with_config(config1).await?;
     let server2 = TestServerImpl::with_config(config2).await?;
     let server3 = TestServerImpl::with_config(config3).await?;
 
-    let client1 = AgdbApi::new(ReqwestClient::new(), &server1.address);
+    let mut client1 = AgdbApi::new(ReqwestClient::new(), &server1.address);
 
-    let now = Instant::now();
+    let mut now = Instant::now();
     let mut status1 = (0, vec![]);
 
     while now.elapsed().as_secs() < 3 {
@@ -52,7 +52,7 @@ async fn cluster_established() -> anyhow::Result<()> {
         status1 = client1.cluster_status().await?;
 
         if status1.1.iter().any(|s| s.leader) {
-            return Ok(());
+            break;
         }
     }
 
@@ -61,11 +61,33 @@ async fn cluster_established() -> anyhow::Result<()> {
     let client2 = AgdbApi::new(ReqwestClient::new(), &server2.address);
     let client3 = AgdbApi::new(ReqwestClient::new(), &server3.address);
 
-    let status2 = client2.cluster_status().await?;
-    let status3 = client3.cluster_status().await?;
+    let mut status2 = client2.cluster_status().await?;
+    let mut status3 = client3.cluster_status().await?;
 
     assert_eq!(status1, status2);
     assert_eq!(status1, status3);
+
+    client1.user_login(ADMIN, ADMIN).await?;
+    client1.admin_shutdown().await?;
+
+    assert!(server1.process.wait()?.success());
+
+    now = Instant::now();
+
+    while now.elapsed().as_secs() < 5 {
+        std::thread::sleep(Duration::from_millis(100));
+
+        status2 = client2.cluster_status().await?;
+
+        if status2.1.iter().any(|s| s.leader) {
+            break;
+        }
+    }
+
+    status3 = client3.cluster_status().await?;
+
+    assert!(status2.1.iter().any(|s| s.leader));
+    assert_eq!(status2, status3);
 
     Ok(())
 }

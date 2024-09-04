@@ -47,4 +47,4 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           cargo run --release --package agdb_ci
-          if [[ "$(git diff --name-only)" != "" ]]; then git diff -w; echo "ERROR: Some packages have not been updated. Have you forgotten to run agdb_ci?"; exit 1; fi
+          if [[ "$(git diff --name-only)" != "" ]]; then git diff -w; git diff --name-only -w; echo "ERROR: Some packages have not been updated. Have you forgotten to run agdb_ci?"; exit 1; fi

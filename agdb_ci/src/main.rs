@@ -1,5 +1,7 @@
 use std::io::BufRead;
+use std::io::Write;
 use std::path::Path;
+use std::process::Command;
 
 const IGNORE: [&str; 10] = [
     "node_modules",
@@ -122,6 +124,20 @@ fn update_projects(path: &Path, current_version: &str, new_version: &str) -> Res
     Ok(())
 }
 
+fn run_command(command: &mut Command) -> Result<(), CIError> {
+    let out = command.output()?;
+    std::io::stdout().write_all(&out.stdout)?;
+    std::io::stderr().write_all(&out.stderr)?;
+
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(CIError {
+            description: format!("Command '{:?}' failed: {:?}", command, out.status),
+        })
+    }
+}
+
 fn main() -> Result<(), CIError> {
     let current_version = current_version()?;
     let new_version = new_version()?;
@@ -136,52 +152,58 @@ fn main() -> Result<(), CIError> {
     )?;
 
     println!("Generating openapi.json");
-    std::process::Command::new("cargo")
-        .arg("test")
-        .arg("-p")
-        .arg("agdb_server")
-        .arg("tests::openapi")
-        .arg("--")
-        .arg("--exact")
-        .output()?;
+    run_command(
+        Command::new("cargo")
+            .arg("test")
+            .arg("-p")
+            .arg("agdb_server")
+            .arg("tests::openapi")
+            .arg("--")
+            .arg("--exact"),
+    )?;
 
     println!("Generating Typescript openapi");
-    std::process::Command::new("bash")
-        .arg("-c")
-        .arg("npm run openapi")
-        .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript"))
-        .output()?;
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("npm run openapi")
+            .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript")),
+    )?;
 
     println!("Generating PHP openapi");
-    std::process::Command::new("bash")
-        .arg("-c")
-        .arg("./ci.sh openapi")
-        .current_dir(std::env::current_dir()?.join("agdb_api").join("php"))
-        .output()?;
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("./ci.sh openapi")
+            .current_dir(std::env::current_dir()?.join("agdb_api").join("php")),
+    )?;
 
     println!("Generating test_queries.json");
-    std::process::Command::new("cargo")
-        .arg("test")
-        .arg("-p")
-        .arg("agdb_server")
-        .arg("tests::test_queries")
-        .arg("--")
-        .arg("--exact")
-        .output()?;
+    run_command(
+        Command::new("cargo")
+            .arg("test")
+            .arg("-p")
+            .arg("agdb_server")
+            .arg("tests::test_queries")
+            .arg("--")
+            .arg("--exact"),
+    )?;
 
     println!("Generating Typescript test_queries");
-    std::process::Command::new("bash")
-        .arg("-c")
-        .arg("npm run test_queries")
-        .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript"))
-        .output()?;
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("npm run test_queries")
+            .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript")),
+    )?;
 
     println!("Generating PHP test_queries");
-    std::process::Command::new("bash")
-        .arg("-c")
-        .arg("./ci.sh test_queries")
-        .current_dir(std::env::current_dir()?.join("agdb_api").join("php"))
-        .output()?;
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("./ci.sh test_queries")
+            .current_dir(std::env::current_dir()?.join("agdb_api").join("php")),
+    )?;
 
     println!("DONE");
 

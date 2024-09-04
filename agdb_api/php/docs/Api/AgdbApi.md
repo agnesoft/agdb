@@ -23,6 +23,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminUserChangePassword()**](AgdbApi.md#adminUserChangePassword) | **PUT** /api/v1/admin/user/{username}/change_password |  |
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
 | [**adminUserRemove()**](AgdbApi.md#adminUserRemove) | **DELETE** /api/v1/admin/user/{username}/remove |  |
+| [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
@@ -1159,6 +1160,57 @@ try {
 ### Authorization
 
 [Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterStatus()`
+
+```php
+clusterStatus(): \Agnesoft\\AgdbApi\Model\ClusterStatus[]
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+
+$apiInstance = new Agnesoft\\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client()
+);
+
+try {
+    $result = $apiInstance->clusterStatus();
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterStatus: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**\Agnesoft\\AgdbApi\Model\ClusterStatus[]**](../Model/ClusterStatus.md)
+
+### Authorization
+
+No authorization required
 
 ### HTTP request headers
 

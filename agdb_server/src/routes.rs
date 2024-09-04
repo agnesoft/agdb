@@ -8,6 +8,7 @@ use axum::http::StatusCode;
 
 #[utoipa::path(get,
     path = "/api/v1/status",
+    operation_id = "status",
     tag = "agdb",
     responses(
          (status = 200, description = "Server is ready"),

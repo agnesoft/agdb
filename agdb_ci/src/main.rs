@@ -5,16 +5,17 @@ const AGDB_PROJECT: &str = "agdb";
 const CARGO_TOML: &str = "Cargo.toml";
 const PACKAGE_JSON: &str = "package.json";
 const OPENAPI_JSON: &str = "schema.json";
-const IGNORE: [&str; 9] = [
+const IGNORE: [&str; 10] = [
     "node_modules",
     "vendor",
     "tests",
     "target",
     "src",
     "dist",
-    ".nuxt",
     "playwright-report",
     "test-results",
+    ".openapi-generator",
+    "coverage",
 ];
 const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
 

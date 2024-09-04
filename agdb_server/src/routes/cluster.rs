@@ -12,6 +12,7 @@ pub(crate) async fn heartbeat(_cluster_id: ClusterId) -> ServerResult<StatusCode
 
 #[utoipa::path(get,
     path = "/api/v1/cluster/status",
+    operation_id = "cluster_status",
     tag = "agdb",
     responses(
          (status = 200, description = "Cluster status", body = Vec<ClusterStatus>),

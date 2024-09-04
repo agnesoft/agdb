@@ -1594,6 +1594,11 @@ declare namespace Paths {
             }
         }
     }
+    namespace ClusterStatus {
+        namespace Responses {
+            export type $200 = Components.Schemas.ClusterStatus[];
+        }
+    }
     namespace DbAdd {
         namespace Parameters {
             export type Db = string;
@@ -1908,7 +1913,8 @@ declare namespace Paths {
     }
     namespace Status {
         namespace Responses {
-            export type $200 = Components.Schemas.ClusterStatus[];
+            export interface $200 {
+            }
         }
     }
     namespace UserChangePassword {
@@ -2088,13 +2094,13 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
   /**
-   * status
+   * cluster_status
    */
-  'status'(
+  'cluster_status'(
     parameters?: Parameters<UnknownParamsObject> | null,
     data?: any,
     config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.Status.Responses.$200>
+  ): OperationResponse<Paths.ClusterStatus.Responses.$200>
   /**
    * admin_db_restore
    */
@@ -2440,13 +2446,13 @@ export interface PathsDictionary {
   }
   ['/api/v1/cluster/status']: {
     /**
-     * status
+     * cluster_status
      */
     'get'(
       parameters?: Parameters<UnknownParamsObject> | null,
       data?: any,
       config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.Status.Responses.$200>
+    ): OperationResponse<Paths.ClusterStatus.Responses.$200>
   }
   ['/api/v1/db/admin/{owner}/{db}/restore']: {
     /**

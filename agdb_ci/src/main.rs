@@ -139,11 +139,7 @@ fn main() -> Result<(), CIError> {
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
-    update_projects(
-        std::env::current_dir()?.as_path(),
-        &current_version,
-        &new_version,
-    )?;
+    update_projects(Path::new("./"), &current_version, &new_version)?;
 
     println!("Generating openapi.json");
     run_command(
@@ -161,7 +157,7 @@ fn main() -> Result<(), CIError> {
         Command::new("bash")
             .arg("-c")
             .arg("npm run openapi")
-            .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript")),
+            .current_dir(Path::new("agdb_api").join("typescript")),
     )?;
 
     println!("Generating PHP openapi");
@@ -169,7 +165,7 @@ fn main() -> Result<(), CIError> {
         Command::new("bash")
             .arg("-c")
             .arg("./ci.sh openapi")
-            .current_dir(std::env::current_dir()?.join("agdb_api").join("php")),
+            .current_dir(Path::new("agdb_api").join("php")),
     )?;
 
     println!("Generating test_queries.json");
@@ -188,7 +184,7 @@ fn main() -> Result<(), CIError> {
         Command::new("bash")
             .arg("-c")
             .arg("npm run test_queries")
-            .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript")),
+            .current_dir(Path::new("agdb_api").join("typescript")),
     )?;
 
     println!("Generating PHP test_queries");
@@ -196,7 +192,7 @@ fn main() -> Result<(), CIError> {
         Command::new("bash")
             .arg("-c")
             .arg("./ci.sh test_queries")
-            .current_dir(std::env::current_dir()?.join("agdb_api").join("php")),
+            .current_dir(Path::new("agdb_api").join("php")),
     )?;
 
     println!("DONE");

@@ -918,12 +918,17 @@ impl<Store: StorageData> DbImpl<Store> {
         db_id: DbId,
         keys: &[DbValue],
     ) -> Result<Vec<DbKeyValue>, DbError> {
-        Ok(self
+        let mut sortable_values: Vec<(usize, DbKeyValue)> = self
             .values
             .iter_key(&self.storage, &db_id)
-            .filter(|kv| keys.contains(&kv.1.key))
-            .map(|kv| kv.1)
-            .collect())
+            .filter_map(|kv| {
+                keys.iter()
+                    .position(|k| *k == kv.1.key)
+                    .map(|pos| (pos, kv.1))
+            })
+            .collect();
+        sortable_values.sort_by_key(|(i, _)| *i);
+        Ok(sortable_values.into_iter().map(|(_, kv)| kv).collect())
     }
 
     fn graph_index(&self, id: i64) -> Result<GraphIndex, QueryError> {

@@ -9,7 +9,7 @@ export default mergeConfig(
                 all: true,
                 exclude: [
                     ".eslintrc.cjs",
-                    "src/schema.d.ts",
+                    "src/openapi.d.ts",
                     "query_test_generator.js",
                     "tests/**",
                     "vite.config.ts",

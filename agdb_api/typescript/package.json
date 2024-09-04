@@ -17,7 +17,7 @@
     "/dist"
   ],
   "scripts": {
-    "build": "tsc && npx copyfiles -f src/schema.d.ts dist/",
+    "build": "tsc && npx copyfiles -f src/openapi.d.ts dist/",
     "test": "bash test.sh",
     "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
     "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",

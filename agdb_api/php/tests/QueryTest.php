@@ -21,9 +21,7 @@ final class QueryTest extends \PHPUnit\Framework\TestCase
     public static function setUpBeforeClass(): void
     {
         self::$test_queries = json_decode(
-            (string) file_get_contents(
-                "../../agdb_server/openapi/test_queries.json"
-            )
+            (string) file_get_contents("../../agdb_server/test_queries.json")
         );
     }
     public function testQueryBuilder0(): void

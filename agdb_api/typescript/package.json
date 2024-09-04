@@ -24,7 +24,7 @@
     "format": "prettier --write src/ tests/",
     "format:check": "prettier --check src/ tests/",
     "before-commit": "npm run openapi && npm run format && npm run lint && npm run test",
-    "openapi": "npx openapicmd typegen ../../agdb_server/openapi.json > src/schema.d.ts",
+    "openapi": "npx openapicmd typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
     "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
   },
   "dependencies": {

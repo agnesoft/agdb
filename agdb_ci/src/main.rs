@@ -1,4 +1,5 @@
 use std::io::BufRead;
+use std::io::Write;
 use std::path::Path;
 
 const IGNORE: [&str; 10] = [
@@ -74,17 +75,23 @@ fn update_npm_project(
     current_version: &str,
     new_version: &str,
 ) -> Result<(), CIError> {
-    println!("Updating '{:?}'", json);
     let content = std::fs::read_to_string(json)?.replace(
         &format!("\"version\": \"{current_version}\""),
         &format!("\"version\": \"{new_version}\""),
     );
     std::fs::write(json, content)?;
+
+    let project_dir = json.parent().expect("Parent directory not found");
+    println!(
+        "Installing dependencies in '{}'",
+        project_dir.to_string_lossy()
+    );
     std::process::Command::new("bash")
         .arg("-c")
-        .arg("\"npm install\"")
-        .current_dir(json.parent().expect("Parent directory not found"))
+        .arg("npm install")
+        .current_dir(project_dir)
         .output()?;
+
     Ok(())
 }
 
@@ -142,13 +149,14 @@ fn main() -> Result<(), CIError> {
     println!("Generating Typescript openapi");
     std::process::Command::new("bash")
         .arg("-c")
-        .arg("\"npm run openapi\"")
+        .arg("npm run openapi")
         .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript"))
         .output()?;
 
-    println!("Generating Typescript openapi");
+    println!("Generating PHP openapi");
     std::process::Command::new("bash")
-        .arg("\"ci.sh openapi\"")
+        .arg("-c")
+        .arg("./ci.sh openapi")
         .current_dir(std::env::current_dir()?.join("agdb_api").join("php"))
         .output()?;
 
@@ -165,13 +173,14 @@ fn main() -> Result<(), CIError> {
     println!("Generating Typescript test_queries");
     std::process::Command::new("bash")
         .arg("-c")
-        .arg("\"npm run test:queries\"")
+        .arg("npm run test_queries")
         .current_dir(std::env::current_dir()?.join("agdb_api").join("typescript"))
         .output()?;
 
     println!("Generating PHP test_queries");
     std::process::Command::new("bash")
-        .arg("\"ci.sh test_quries\"")
+        .arg("-c")
+        .arg("./ci.sh test_queries")
         .current_dir(std::env::current_dir()?.join("agdb_api").join("php"))
         .output()?;
 

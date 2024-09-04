@@ -93,9 +93,9 @@ elif [[ "$1" == "format" ]]; then
     format "--write"
 elif [[ "$1" == "format:check" ]]; then
     format "--check"
-elif [[ "$2" == "openapi" ]]; then
+elif [[ "$1" == "openapi" ]]; then
     openapi
-elif [[ "$2" == "tests_queries" ]]; then
+elif [[ "$1" == "test_queries" ]]; then
     test_queries
 else
     echo "Usage: $0 [coverage|analysis|format|format:check|openapi|test_queries]"

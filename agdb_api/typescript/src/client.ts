@@ -1,5 +1,5 @@
 import { OpenAPIClientAxios } from "openapi-client-axios";
-import type { Client } from "./schema";
+import type { Client } from "./openapi";
 
 export type AgdbApiClient = Client & AgdbApi;
 

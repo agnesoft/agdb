@@ -42,7 +42,8 @@ jobs:
     if: needs.diff.outputs.diff == 'true'
     steps:
       - uses: actions/checkout@v4
-        fetch-tags: true
+        with:
+          fetch-tags: true
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           cargo run --release --package agdb_ci

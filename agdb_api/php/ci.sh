@@ -9,6 +9,7 @@ address: localhost:3000
 basepath: \"\"
 admin: admin
 data_dir: agdb_server_data
+cluster_token: test
 cluster: []" > agdb_server.yaml
 
     cargo build --release -p agdb_server

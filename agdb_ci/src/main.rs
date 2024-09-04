@@ -1,5 +1,4 @@
 use std::io::BufRead;
-use std::io::Write;
 use std::path::Path;
 
 const IGNORE: [&str; 10] = [

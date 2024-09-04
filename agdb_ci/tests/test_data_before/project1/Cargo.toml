@@ -1,7 +1,0 @@
-[package]
-name = "project1"
-edition = "2021"
-
-[dependencies]
-agdb = "0.2.0"
-agdb_api = { version = "0.2.0", features = ["reqwest"] }

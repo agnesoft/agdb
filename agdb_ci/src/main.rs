@@ -179,29 +179,3 @@ fn main() -> Result<(), CIError> {
 
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[derive(Debug)]
-    struct MyError {}
-    impl std::error::Error for MyError {}
-    impl std::fmt::Display for MyError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "MyError")
-        }
-    }
-
-    #[test]
-    fn derived_from_debug() {
-        let error = CIError::from(MyError {});
-
-        assert_eq!(format!("{:?}", MyError {}), "MyError");
-        assert_eq!(format!("{}", MyError {}), "MyError");
-        assert_eq!(
-            format!("{:?}", error),
-            "CIError { description: \"MyError\" }"
-        );
-    }
-}

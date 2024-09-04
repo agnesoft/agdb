@@ -78,7 +78,9 @@ function openapi() {
         -g php \
         -o ./ \
         --additional-properties=invokerPackage="Agnesoft\AgdbApi",artifactVersion=0.7.2
-    for f in $(find lib/ -name '*.php'); do sed -i -e 's/Agnesoft\\\\AgdbApi/Agnesoft\\AgdbApi/g' $f; done
+    if [[ "$OSTYPE" == "msys" ]]; then
+        for f in $(find lib/ -name '*.php'); do sed -i -e 's/Agnesoft\\\\AgdbApi/Agnesoft\\AgdbApi/g' $f; done
+    fi
     echo "Y" | composer dump-autoload -o
 }
 

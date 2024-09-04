@@ -78,14 +78,14 @@ mod tests {
     }
 
     #[test]
-    fn generate_openapi_schema() {
+    fn openapi() {
         let schema = Api::openapi().to_pretty_json().unwrap();
-        let mut file = File::create("openapi/schema.json").unwrap();
+        let mut file = File::create("openapi.json").unwrap();
         file.write_all(schema.as_bytes()).unwrap();
     }
 
     #[test]
-    fn generate_test_suite() {
+    fn test_queries() {
         #[rustfmt::skip]
         let queries = queries![
 QueryBuilder::insert().aliases("a").ids(1).query(),
@@ -199,7 +199,6 @@ QueryBuilder::search().to(1).where_().node().query(),
 QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).where_().node().query()
         ];
 
-        serde_json::to_writer_pretty(File::create("openapi/test_queries.json").unwrap(), &queries)
-            .unwrap();
+        serde_json::to_writer_pretty(File::create("test_queries.json").unwrap(), &queries).unwrap();
     }
 }

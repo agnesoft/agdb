@@ -71,9 +71,9 @@ function format() {
     npx prettier --plugin '@prettier/plugin-php' $1 src tests
 }
 
-function generate_api() {
+function openapi() {
     npx @openapitools/openapi-generator-cli generate \
-        -i ../../agdb_server/openapi/schema.json \
+        -i ../../agdb_server/openapi.json \
         -g php \
         -o ./ \
         --additional-properties=invokerPackage="Agnesoft\AgdbApi",artifactVersion=0.7.2
@@ -81,7 +81,7 @@ function generate_api() {
     echo "Y" | composer dump-autoload -o
 }
 
-function generate_tests() {
+function test_queries() {
     node query_test_generator.js && prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
 }
 
@@ -93,16 +93,11 @@ elif [[ "$1" == "format" ]]; then
     format "--write"
 elif [[ "$1" == "format:check" ]]; then
     format "--check"
-elif [[ "$1" == "generate" ]]; then
-    if [[ "$2" == "api" ]]; then
-        generate_api
-    elif [[ "$2" == "tests" ]]; then
-        generate_tests
-    else
-        echo "Usage: $0 generate [api|tests]"
-        exit 1
-    fi
+elif [[ "$2" == "openapi" ]]; then
+    openapi
+elif [[ "$2" == "tests_queries" ]]; then
+    test_queries
 else
-    echo "Usage: $0 [coverage|analysis|format|format:check|generate api|generate tests]"
+    echo "Usage: $0 [coverage|analysis|format|format:check|openapi|test_queries]"
     exit 1
 fi

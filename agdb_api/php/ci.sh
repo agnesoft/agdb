@@ -79,7 +79,7 @@ function openapi() {
     if [[ "$OSTYPE" == "msys" ]]; then
         local package="Agnesoft\AgdbApi"
     else
-        local package="Agnesoft\\AgdbApi"
+        local package="Agnesoft\\\\AgdbApi"
     fi
 
     echo "PACKAGE: $package"

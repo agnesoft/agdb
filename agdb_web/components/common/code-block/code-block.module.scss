@@ -1,0 +1,18 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.copyButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background-color: var(--grey-color-5);
+    color: var(--grey-color-1);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}

@@ -1,3 +1,5 @@
+@use "sass:meta";
+
 body {
     --grey-color-0: #000;
     --grey-color-1: #334155;
@@ -16,6 +18,11 @@ body {
     --grey-color-4: #4f5d75;
     --grey-color-5: #334155;
     --grey-color-6: #000;
+
+    @include meta.load-css("highlight.js/styles/base16/edge-dark");
+}
+:is(html[class~="light"] body) {
+    @include meta.load-css("highlight.js/styles/base16/edge-light");
 }
 
 .flex-row {

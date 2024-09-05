@@ -83,7 +83,7 @@ function openapi() {
 }
 
 function test_queries() {
-    node query_test_generator.js && prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
+    node query_test_generator.js && npx prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
 }
 
 if [[ "$1" == "coverage" ]]; then

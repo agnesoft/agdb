@@ -47,4 +47,4 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           cargo run --release --package agdb_ci
-          if [[ "$(git diff --name-only -- \":(exclude)agdb_api/php/lib/*\" \":(exclude)agdb_api/php/README.md\" \":(exclude)agdb_api/php/docs/*\")" != "" ]]; then git diff -w; git diff --name-only -w; echo "ERROR: Some packages have not been updated. Have you forgotten to run agdb_ci?"; exit 1; fi
+          if [[ "$(git diff --name-only -- package.json package-lock.json cargo.toml openapi.json test_queries.json)" != "" ]]; then git diff -w; git diff --name-only -w; echo "ERROR: Some packages have not been updated. Have you forgotten to run agdb_ci?"; exit 1; fi

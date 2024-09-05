@@ -99,13 +99,6 @@ async fn cluster_rebalance() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
-async fn cluster_of_seven() -> anyhow::Result<()> {
-    create_cluster(7).await?;
-    Ok(())
-}
-
-#[tokio::test]
 async fn cluster_status() {
     let server = TestServer::new().await.unwrap();
     let (code, status) = server.api.cluster_status().await.unwrap();

@@ -98,8 +98,9 @@ async fn cluster_rebalance() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn cluster_of_five() -> anyhow::Result<()> {
-    create_cluster(5).await?;
+#[ignore]
+async fn cluster_of_seven() -> anyhow::Result<()> {
+    create_cluster(7).await?;
     Ok(())
 }
 

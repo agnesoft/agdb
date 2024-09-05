@@ -36,11 +36,10 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: |
-          cargo llvm-cov clean --workspace
-          cargo llvm-cov --package agdb_server --all-features --no-report
-          cargo llvm-cov --package agdb_server --all-features --no-report -- --ignored
-          cargo llvm-cov report --ignore-filename-regex \"agdb(.|..)src|agdb_derive|agdb_api|api.rs\" --fail-uncovered-functions 1 --show-missing-lines
+      - run: cargo llvm-cov clean --workspace
+      - run: cargo llvm-cov --package agdb_server --all-features --no-report
+      - run: cargo llvm-cov --package agdb_server --all-features --no-report -- --ignored
+      - run: cargo llvm-cov report --ignore-filename-regex \"agdb(.|..)src|agdb_derive|agdb_api|api.rs\" --fail-uncovered-functions 1 --show-missing-lines
 
   agdb_server_test:
     runs-on: ubuntu-latest

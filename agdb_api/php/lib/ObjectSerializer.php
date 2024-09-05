@@ -235,7 +235,7 @@ class ObjectSerializer
         }
 
         # Handle DateTime objects in query
-        if($openApiType === "\DateTime" && $value instanceof \DateTime) {
+        if($openApiType === "\\DateTime" && $value instanceof \DateTime) {
             return ["{$paramName}" => $value->format(self::$dateTimeFormat)];
         }
 

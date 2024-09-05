@@ -81,6 +81,8 @@ function openapi() {
     else
         local package="Agnesoft\\AgdbApi"
     fi
+
+    echo "PACKAGE: $package"
     
     npx @openapitools/openapi-generator-cli generate \
         -i ../../agdb_server/openapi.json \
@@ -90,7 +92,6 @@ function openapi() {
     
     if [[ "$OSTYPE" == "msys" ]]; then
         for f in $(find lib/ -name '*.*'); do sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' $f; done
-        for f in $(find lib/ -name '*.*'); do sed -i -e 's~\\\\DateTime~\\DateTime~g' $f; done
         for f in $(find docs/ -name '*.*'); do sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' $f; done
         sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' README.md
     fi

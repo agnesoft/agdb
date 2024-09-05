@@ -186,16 +186,16 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", DbType::Memory);
-        format!("{:?}", DbUserRole::Admin);
-        format!(
+        let _ = format!("{:?}", DbType::Memory);
+        let _ = format!("{:?}", DbUserRole::Admin);
+        let _ = format!(
             "{:?}",
             DbUser {
                 user: "user".to_string(),
                 role: DbUserRole::Admin
             }
         );
-        format!(
+        let _ = format!(
             "{:?}",
             ServerDatabase {
                 name: "db".to_string(),
@@ -205,13 +205,13 @@ mod tests {
                 backup: 0
             }
         );
-        format!(
+        let _ = format!(
             "{:?}",
             UserStatus {
                 name: "user".to_string()
             }
         );
-        format!(
+        let _ = format!(
             "{:?}",
             QueryAudit {
                 timestamp: 0,
@@ -219,8 +219,8 @@ mod tests {
                 query: QueryType::SelectIndexes(SelectIndexesQuery {})
             }
         );
-        format!("{:?}", DbAudit(vec![]));
-        format!(
+        let _ = format!("{:?}", DbAudit(vec![]));
+        let _ = format!(
             "{:?}",
             ClusterStatus {
                 address: "localhost".to_string(),

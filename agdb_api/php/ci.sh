@@ -80,9 +80,9 @@ function openapi() {
         -g php \
         -o ./ \
         --additional-properties=invokerPackage="Agnesoft\AgdbApi",artifactVersion=0.7.2
-    for f in $(find lib/ -name '*.*'); do sed -i -e 's/Agnesoft\\\\AgdbApi/Agnesoft\\AgdbApi/g' $f; done
-    for f in $(find docs/ -name '*.*'); do sed -i -e 's/Agnesoft\\\\AgdbApi/Agnesoft\\AgdbApi/g' $f; done
-    sed -i -e 's/Agnesoft\\\\AgdbApi/Agnesoft\\AgdbApi/g' README.md
+    for f in $(find lib/ -name '*.*'); do sed -i -e 's~\\\\~\\~g' $f; done
+    for f in $(find docs/ -name '*.*'); do sed -i -e 's~\\\\~\\~g' $f; done
+    sed -i -e 's~\\\\~\\~g' README.md
     echo "Y" | composer dump-autoload -o
 }
 

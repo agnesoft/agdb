@@ -4,6 +4,6 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**edge_count** | [**\Agnesoft\\AgdbApi\Model\CountComparison**](CountComparison.md) |  |
+**edge_count** | [**\Agnesoft\AgdbApi\Model\CountComparison**](CountComparison.md) |  |
 
 [[Back to Model list]](../../README.md#models) [[Back to API list]](../../README.md#endpoints) [[Back to README]](../../README.md)

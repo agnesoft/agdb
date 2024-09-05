@@ -75,14 +75,26 @@ function format() {
 function openapi() {
     rm -rf lib/
     rm -rf docs/
+    
+    if [[ "$OSTYPE" == "msys" ]]; then
+        local package="Agnesoft\AgdbApi"
+    else
+        local package="Agnesoft\\AgdbApi"
+    fi
+    
     npx @openapitools/openapi-generator-cli generate \
         -i ../../agdb_server/openapi.json \
         -g php \
         -o ./ \
-        --additional-properties=invokerPackage="Agnesoft\AgdbApi",artifactVersion=0.7.2
-    for f in $(find lib/ -name '*.*'); do sed -i -e 's~\\\\~\\~g' $f; done
-    for f in $(find docs/ -name '*.*'); do sed -i -e 's~\\\\~\\~g' $f; done
-    sed -i -e 's~\\\\~\\~g' README.md
+        --additional-properties=invokerPackage=$package,artifactVersion=0.7.2
+    
+    if [[ "$OSTYPE" == "msys" ]]; then
+        for f in $(find lib/ -name '*.*'); do sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' $f; done
+        for f in $(find lib/ -name '*.*'); do sed -i -e 's~\\\\DateTime~\\DateTime~g' $f; done
+        for f in $(find docs/ -name '*.*'); do sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' $f; done
+        sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' README.md
+    fi
+
     echo "Y" | composer dump-autoload -o
 }
 

@@ -93,6 +93,12 @@ fn update_npm_project(
             .arg("npm install")
             .current_dir(project_dir),
     )?;
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("npm audit fix")
+            .current_dir(project_dir),
+    )?;
 
     Ok(())
 }

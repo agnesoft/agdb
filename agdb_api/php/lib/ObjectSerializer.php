@@ -123,7 +123,7 @@ class ObjectSerializer
      */
     public static function sanitizeFilename($filename)
     {
-        if (preg_match("/.*[\/\\](.*)$/", $filename, $match)) {
+        if (preg_match("/.*[\/\\\\](.*)$/", $filename, $match)) {
             return $match[1];
         } else {
             return $filename;
@@ -517,7 +517,7 @@ class ObjectSerializer
             // If a discriminator is defined and points to a valid subclass, use it.
             $discriminator = $class::DISCRIMINATOR;
             if (!empty($discriminator) && isset($data->{$discriminator}) && is_string($data->{$discriminator})) {
-                $subclass = '\Agnesoft\AgdbApi\Model\' . $data->{$discriminator};
+                $subclass = '\Agnesoft\AgdbApi\Model\\' . $data->{$discriminator};
                 if (is_subclass_of($subclass, $class)) {
                     $class = $subclass;
                 }

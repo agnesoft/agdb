@@ -130,6 +130,7 @@ pub(crate) async fn vote(
 
 #[utoipa::path(get,
     path = "/api/v1/cluster/status",
+    operation_id = "cluster_status",
     tag = "agdb",
     responses(
          (status = 200, description = "Cluster status", body = Vec<ClusterStatus>),

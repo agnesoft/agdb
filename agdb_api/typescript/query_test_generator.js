@@ -1,11 +1,11 @@
-import test_queries from "../../agdb_server/openapi/test_queries.json" assert { type: "json" };
+import test_queries from "../../agdb_server/test_queries.json" assert { type: "json" };
 import * as fs from "fs";
 
 let tests = `
 // GENERATED. DO NOT MODIFY AS ANY CHANGES WILL BE LOST.\n
 //query_test_generator.js
 \n\n
-import { describe, expect, it } from "vitest";import test_queries from "../../../agdb_server/openapi/test_queries.json";
+import { describe, expect, it } from "vitest";import test_queries from "../../../agdb_server/test_queries.json";
 import { QueryBuilder, CountComparison, Comparison, DbKeyOrder } from "../src/index";
 \n\n
 class T { db_id: undefined = undefined; value1: string = ""; value2: number = 0; }

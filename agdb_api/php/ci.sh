@@ -9,6 +9,7 @@ address: localhost:3000
 basepath: \"\"
 admin: admin
 data_dir: agdb_server_data
+cluster_token: test
 cluster: []" > agdb_server.yaml
 
     cargo build --release -p agdb_server
@@ -71,18 +72,35 @@ function format() {
     npx prettier --plugin '@prettier/plugin-php' $1 src tests
 }
 
-function generate_api() {
+function openapi() {
+    rm -rf lib/
+    rm -rf docs/
+    
+    if [[ "$OSTYPE" == "msys" ]]; then
+        local package="Agnesoft\AgdbApi"
+    else
+        local package="Agnesoft\\\\AgdbApi"
+    fi
+
+    echo "PACKAGE: $package"
+    
     npx @openapitools/openapi-generator-cli generate \
-        -i ../../agdb_server/openapi/schema.json \
+        -i ../../agdb_server/openapi.json \
         -g php \
         -o ./ \
-        --additional-properties=invokerPackage="Agnesoft\AgdbApi",artifactVersion=0.7.2
-    for f in $(find lib/ -name '*.php'); do sed -i -e 's/Agnesoft\\\\AgdbApi/Agnesoft\\AgdbApi/g' $f; done
+        --additional-properties=invokerPackage=$package,artifactVersion=0.7.2
+    
+    if [[ "$OSTYPE" == "msys" ]]; then
+        for f in $(find lib/ -name '*.*'); do sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' $f; done
+        for f in $(find docs/ -name '*.*'); do sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' $f; done
+        sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' README.md
+    fi
+
     echo "Y" | composer dump-autoload -o
 }
 
-function generate_tests() {
-    node query_test_generator.js && prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
+function test_queries() {
+    node query_test_generator.js && npx prettier --plugin '@prettier/plugin-php' --write tests/QueryTest.php
 }
 
 if [[ "$1" == "coverage" ]]; then
@@ -93,16 +111,11 @@ elif [[ "$1" == "format" ]]; then
     format "--write"
 elif [[ "$1" == "format:check" ]]; then
     format "--check"
-elif [[ "$1" == "generate" ]]; then
-    if [[ "$2" == "api" ]]; then
-        generate_api
-    elif [[ "$2" == "tests" ]]; then
-        generate_tests
-    else
-        echo "Usage: $0 generate [api|tests]"
-        exit 1
-    fi
+elif [[ "$1" == "openapi" ]]; then
+    openapi
+elif [[ "$1" == "test_queries" ]]; then
+    test_queries
 else
-    echo "Usage: $0 [coverage|analysis|format|format:check|generate api|generate tests]"
+    echo "Usage: $0 [coverage|analysis|format|format:check|openapi|test_queries]"
     exit 1
 fi

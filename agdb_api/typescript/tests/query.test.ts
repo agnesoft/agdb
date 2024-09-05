@@ -3,7 +3,7 @@
 //query_test_generator.js
 
 import { describe, expect, it } from "vitest";
-import test_queries from "../../../agdb_server/openapi/test_queries.json";
+import test_queries from "../../../agdb_server/test_queries.json";
 import {
     QueryBuilder,
     CountComparison,

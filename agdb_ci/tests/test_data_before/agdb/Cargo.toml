@@ -1,7 +1,0 @@
-[package]
-name = "agdb"
-version = "0.2.0"
-edition = "2021"
-
-[dependencies]
-agdb_derive = { version = "0.2.0", optional = true }

@@ -6,7 +6,7 @@
     "license": {
       "name": "Apache-2.0"
     },
-    "version": "0.8.0"
+    "version": "0.8.1"
   },
   "servers": [
     {
@@ -887,7 +887,7 @@
         "tags": [
           "agdb"
         ],
-        "operationId": "status",
+        "operationId": "cluster_status",
         "responses": {
           "200": {
             "description": "Cluster status",

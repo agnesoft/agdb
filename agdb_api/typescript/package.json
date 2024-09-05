@@ -1,6 +1,6 @@
 {
   "name": "@agnesoft/agdb_api",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "license": "Apache-2.0",
   "description": "Agnesoft Graph Database API client for typescript/javascript",
   "author": "Agnesoft",
@@ -17,15 +17,15 @@
     "/dist"
   ],
   "scripts": {
-    "build": "tsc && npx copyfiles -f src/schema.d.ts dist/",
+    "build": "tsc && npx copyfiles -f src/openapi.d.ts dist/",
     "test": "bash test.sh",
     "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
     "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
     "format": "prettier --write src/ tests/",
     "format:check": "prettier --check src/ tests/",
-    "openapi": "npx openapicmd typegen ../../agdb_server/openapi/schema.json > src/schema.d.ts",
     "before-commit": "npm run openapi && npm run format && npm run lint && npm run test",
-    "generate-query-tests": "node query_test_generator.js && prettier --write tests/query.test.ts"
+    "openapi": "npx openapicmd typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
+    "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
   },
   "dependencies": {
     "openapi-client-axios": "^7.5.5"

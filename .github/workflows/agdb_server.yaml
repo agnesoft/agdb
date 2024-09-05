@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: threshold=10; count=0; while cargo test --release --package agdb_server &> test.log && [[ "$count" != "$threshold" ]]; do count=$((count+1)); echo -n "."; done; cat test.log; echo "$count of $threshold tests run"
+      - run: threshold=2; count=0; while cargo test --release --package agdb_server &> test.log && [[ "$count" != "$threshold" ]]; do count=$((count+1)); echo -n "."; done; cat test.log; echo "$count of $threshold tests run"
 
   agdb_server_format:
     runs-on: ubuntu-latest

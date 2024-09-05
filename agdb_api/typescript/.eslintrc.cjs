@@ -6,7 +6,7 @@ module.exports = {
     env: {
         node: true,
     },
-    ignorePatterns: ["src/schema.d.ts", ".gitignore", "dist/"],
+    ignorePatterns: ["src/openapi.d.ts", ".gitignore", "dist/"],
     parser: "@typescript-eslint/parser",
     parserOptions: {
         ecmaVersion: "latest"

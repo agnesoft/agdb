@@ -1,34 +1,25 @@
 use std::io::BufRead;
+use std::io::Write;
+use std::path::Path;
+use std::process::Command;
 
-const RUST_RELEASE_PROJECTS: [&str; 4] = ["agdb", "agdb_derive", "agdb_api", "agdb_server"];
-const AGDB_PROJECT: &str = "agdb";
-const CARGO_TOML: &str = "Cargo.toml";
-const PACKAGE_JSON: &str = "package.json";
-const OPENAPI_JSON: &str = "schema.json";
-const IGNORE: [&str; 9] = [
+const IGNORE: [&str; 10] = [
     "node_modules",
     "vendor",
     "tests",
     "target",
     "src",
     "dist",
-    ".nuxt",
     "playwright-report",
     "test-results",
+    ".openapi-generator",
+    "coverage",
 ];
-const TYPESCRIPT_PROJECTS: [&str; 1] = ["@agnesoft/agdb_api"];
 
 #[derive(Debug)]
 struct CIError {
     #[allow(dead_code)]
     description: String,
-}
-
-#[derive(Default)]
-struct ProjectFiles {
-    tomls: Vec<std::path::PathBuf>,
-    jsons: Vec<std::path::PathBuf>,
-    schema: std::path::PathBuf,
 }
 
 impl<E: std::error::Error> From<E> for CIError {
@@ -40,169 +31,177 @@ impl<E: std::error::Error> From<E> for CIError {
 }
 
 fn current_version() -> Result<String, CIError> {
-    let cargo_toml = std::path::Path::new(AGDB_PROJECT).join(CARGO_TOML);
-    std::io::BufReader::new(std::fs::File::open(cargo_toml)?)
+    Ok(std::process::Command::new("git")
+        .arg("tag")
+        .arg("--sort=taggerdate")
+        .output()?
+        .stdout
+        .trim_ascii()
         .lines()
-        .find_map(|line| {
-            line.ok().and_then(|line| {
-                if line.starts_with("version = ") {
-                    return Some(line.split('"').nth(1).unwrap_or("").to_string());
-                }
-
-                None
-            })
-        })
+        .last()
         .ok_or(CIError {
-            description: "Current version not found".to_string(),
-        })
+            description: "tags not found".to_string(),
+        })??[1..]
+        .to_string())
 }
 
-fn project_files(path: &std::path::Path, files: &mut ProjectFiles) -> Result<(), CIError> {
-    for dir in std::fs::read_dir(path)? {
-        let dir = dir?;
+fn new_version() -> Result<String, CIError> {
+    Ok(std::fs::read_to_string(std::path::Path::new("Version"))?
+        .trim()
+        .to_string())
+}
 
-        if dir.file_type()?.is_dir()
-            && !IGNORE.contains(&dir.file_name().to_string_lossy().as_ref())
-        {
-            if dir.path().join(CARGO_TOML).exists() {
-                files.tomls.push(dir.path().join(CARGO_TOML));
-            } else if dir.path().join(PACKAGE_JSON).exists() {
-                files.jsons.push(dir.path().join(PACKAGE_JSON));
-            } else if dir.path().join(OPENAPI_JSON).exists() {
-                files.jsons.push(dir.path().join(OPENAPI_JSON));
-                files.schema = dir.path().join(OPENAPI_JSON);
-            }
+fn update_rust_project(
+    toml: &Path,
+    current_version: &str,
+    new_version: &str,
+) -> Result<(), CIError> {
+    let mut content = std::fs::read_to_string(toml)?.replace(
+        &format!("\nversion = \"{current_version}\""),
+        &format!("\nversion = \"{new_version}\""),
+    );
+    for line in content.clone().lines() {
+        let line = line.trim();
+        if line.starts_with("agdb") {
+            content = content.replace(line, &line.replace(current_version, new_version));
+        }
+    }
+    std::fs::write(toml, content)?;
 
-            project_files(&dir.path(), files)?;
+    Ok(())
+}
+
+fn update_npm_project(
+    json: &Path,
+    current_version: &str,
+    new_version: &str,
+) -> Result<(), CIError> {
+    let content = std::fs::read_to_string(json)?.replace(
+        &format!("\"version\": \"{current_version}\""),
+        &format!("\"version\": \"{new_version}\""),
+    );
+    std::fs::write(json, content)?;
+
+    let project_dir = json.parent().expect("Parent directory not found");
+    println!(
+        "Installing dependencies in '{}'",
+        project_dir.to_string_lossy()
+    );
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("npm install")
+            .current_dir(project_dir),
+    )?;
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("npm audit fix")
+            .current_dir(project_dir),
+    )?;
+
+    Ok(())
+}
+
+fn update_projects(path: &Path, current_version: &str, new_version: &str) -> Result<(), CIError> {
+    for entry in std::fs::read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+        let filename = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        if IGNORE.contains(&filename.as_str()) {
+            continue;
+        }
+
+        if path.is_dir() {
+            update_projects(path.as_path(), current_version, new_version)?;
+        } else if filename.ends_with(".toml") {
+            println!("Updating '{}'", path.to_string_lossy().replace('\\', "/"));
+            update_rust_project(path.as_path(), current_version, new_version)?;
+        } else if filename == "package.json" {
+            println!("Updating '{}'", path.to_string_lossy().replace('\\', "/"));
+            update_npm_project(path.as_path(), current_version, new_version)?;
         }
     }
 
     Ok(())
 }
 
-fn update_tomls(
-    current_version: &str,
-    new_version: &str,
-    tomls: &[std::path::PathBuf],
-) -> Result<(), CIError> {
-    for toml in tomls {
-        println!("Updating... {:?}", toml);
-
-        let mut content = std::fs::read_to_string(toml)?.replace(
-            &format!("\nversion = \"{current_version}\""),
-            &format!("\nversion = \"{new_version}\""),
-        );
-
-        for project in RUST_RELEASE_PROJECTS {
-            content = content
-                .replace(
-                    &format!("{project} = \"{current_version}\""),
-                    &format!("{project} = \"{new_version}\""),
-                )
-                .replace(
-                    &format!("{project} = {{ version = \"{current_version}\""),
-                    &format!("{project} = {{ version = \"{new_version}\""),
-                );
-        }
-
-        std::fs::write(toml, content)?;
-    }
-
-    Ok(())
-}
-
-fn update_jsons(
-    current_version: &str,
-    new_version: &str,
-    jsons: &[std::path::PathBuf],
-) -> Result<(), CIError> {
-    for json in jsons {
-        println!("Updating... {:?}", json);
-
-        let mut content = std::fs::read_to_string(json)?.replace(
-            &format!("\"version\": \"{current_version}\""),
-            &format!("\"version\": \"{new_version}\""),
-        );
-
-        if json.ends_with("package.json") {
-            content = content
-                .replace(
-                    &format!("\"version\": \"{current_version}\""),
-                    &format!("\"version\": \"{new_version}\""),
-                )
-                .replace(
-                    &format!("\"version\": \"^{current_version}\""),
-                    &format!("\"version\": \"^{new_version}\""),
-                );
-
-            for project in TYPESCRIPT_PROJECTS {
-                content = content
-                    .replace(
-                        &format!("\"{project}\": \"{current_version}\""),
-                        &format!("\"{project}\": \"{new_version}\""),
-                    )
-                    .replace(
-                        &format!("\"{project}\": \"^{current_version}\""),
-                        &format!("\"{project}\": \"^{new_version}\""),
-                    );
-            }
-        }
-
-        std::fs::write(json, content)?;
-
-        if json.ends_with("package.json") {
-            std::process::Command::new("bash")
-                .arg("-c")
-                .arg("npm install")
-                .current_dir(json.parent().expect("Parent directory not found"))
-                .spawn()?
-                .wait()?;
-        }
-    }
+fn run_command(command: &mut Command) -> Result<(), CIError> {
+    let out = command.output()?;
+    std::io::stdout().write_all(&out.stdout)?;
+    std::io::stderr().write_all(&out.stderr)?;
     Ok(())
 }
 
 fn main() -> Result<(), CIError> {
     let current_version = current_version()?;
-    let new_version = std::fs::read_to_string(std::path::Path::new("Version"))?
-        .trim()
-        .to_string();
+    let new_version = new_version()?;
 
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
-    let mut files = ProjectFiles::default();
-    project_files(std::path::Path::new("."), &mut files)?;
-    update_tomls(&current_version, &new_version, &files.tomls)?;
-    update_jsons(&current_version, &new_version, &files.jsons)?;
+    update_projects(Path::new("./"), &current_version, &new_version)?;
+
+    println!("Generating openapi.json");
+    run_command(
+        Command::new("cargo")
+            .arg("test")
+            .arg("-p")
+            .arg("agdb_server")
+            .arg("tests::openapi")
+            .arg("--")
+            .arg("--exact"),
+    )?;
+
+    println!("Generating Typescript openapi");
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("npm run openapi")
+            .current_dir(Path::new("agdb_api").join("typescript")),
+    )?;
+
+    println!("Generating PHP openapi");
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("./ci.sh openapi")
+            .current_dir(Path::new("agdb_api").join("php")),
+    )?;
+
+    println!("Generating test_queries.json");
+    run_command(
+        Command::new("cargo")
+            .arg("test")
+            .arg("-p")
+            .arg("agdb_server")
+            .arg("tests::test_queries")
+            .arg("--")
+            .arg("--exact"),
+    )?;
+
+    println!("Generating Typescript test_queries");
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("npm run test_queries")
+            .current_dir(Path::new("agdb_api").join("typescript")),
+    )?;
+
+    println!("Generating PHP test_queries");
+    run_command(
+        Command::new("bash")
+            .arg("-c")
+            .arg("./ci.sh test_queries")
+            .current_dir(Path::new("agdb_api").join("php")),
+    )?;
 
     println!("DONE");
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[derive(Debug)]
-    struct MyError {}
-    impl std::error::Error for MyError {}
-    impl std::fmt::Display for MyError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "MyError")
-        }
-    }
-
-    #[test]
-    fn derived_from_debug() {
-        let error = CIError::from(MyError {});
-
-        assert_eq!(format!("{:?}", MyError {}), "MyError");
-        assert_eq!(format!("{}", MyError {}), "MyError");
-        assert_eq!(
-            format!("{:?}", error),
-            "CIError { description: \"MyError\" }"
-        );
-    }
 }

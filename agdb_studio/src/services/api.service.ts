@@ -1,4 +1,4 @@
-import type { Client } from "../../../agdb_api/typescript/src/schema";
+import type { Client } from "../../../agdb_api/typescript/src/openapi";
 import OpenAPIClientAxios from "openapi-client-axios";
 import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 

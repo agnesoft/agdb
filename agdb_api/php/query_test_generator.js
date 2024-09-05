@@ -1,4 +1,4 @@
-import test_queries from "../../agdb_server/openapi/test_queries.json" assert { type: "json" };
+import test_queries from "../../agdb_server/test_queries.json" assert { type: "json" };
 import * as fs from "fs";
 
 let tests = `
@@ -16,7 +16,7 @@ final class QueryTest extends \\PHPUnit\\Framework\\TestCase {
     private static $test_queries; // @phpstan-ignore missingType.property
 
     public static function setUpBeforeClass(): void {
-    self::$test_queries = json_decode((string) file_get_contents("../../agdb_server/openapi/test_queries.json"));
+    self::$test_queries = json_decode((string) file_get_contents("../../agdb_server/test_queries.json"));
 }`;
 
 for (let index in test_queries) {

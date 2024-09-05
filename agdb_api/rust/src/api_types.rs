@@ -314,4 +314,18 @@ mod tests {
 
         assert_eq!(status.cmp(&status), std::cmp::Ordering::Equal);
     }
+
+    #[test]
+    fn derived_from_serde() {
+        let cs1 = ClusterStatus {
+            address: "localhost".to_string(),
+            status: true,
+            leader: false,
+            term: 0,
+            commit: 0,
+        };
+        let data = serde_json::to_string(&cs1).unwrap();
+        let cs2: ClusterStatus = serde_json::from_str(&data).unwrap();
+        assert_eq!(cs1, cs2);
+    }
 }

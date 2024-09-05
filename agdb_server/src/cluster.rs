@@ -254,9 +254,8 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
 
     {
         let mut data = cluster.data.write().await;
-        data.state = ClusterState::Candidate;
         election_term = data.term + 1;
-        data.term = election_term;
+        data.state = ClusterState::Candidate;
         data.voted = election_term;
     }
 

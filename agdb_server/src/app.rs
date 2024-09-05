@@ -127,8 +127,9 @@ pub(crate) fn app(
         .route("/cluster/status", routing::get(routes::cluster::status))
         .route(
             "/cluster/heartbeat",
-            routing::get(routes::cluster::heartbeat),
+            routing::post(routes::cluster::heartbeat),
         )
+        .route("/cluster/vote", routing::get(routes::cluster::vote))
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))
         .route(

@@ -27,17 +27,23 @@
     },
     {
       "label": "Coverage Server",
-      "type": "process",
-      "command": "cargo",
-      "args": ["llvm-cov", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_derive|agdb_api|api.rs", "--show-missing-lines"],
+      "type": "shell",
+      "command": "bash",
+      "args": [
+          "-c",
+          "cargo llvm-cov clean --workspace && cargo llvm-cov -p agdb_server --all-features --no-report && cargo llvm-cov -p agdb_server --all-features --no-report -- --ignored && cargo llvm-cov report --ignore-filename-regex \"agdb(.|..)src|agdb_derive|agdb_api|api.rs\" --show-missing-lines"
+      ],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },
     {
       "label": "Coverage Server HTML",
-      "type": "process",
-      "command": "cargo",
-      "args": ["llvm-cov", "--package", "agdb_server", "--all-features", "--ignore-filename-regex", "agdb(.|..)src|agdb_derive|agdb_api|api.rs", "--html", "--open"],
+      "type": "shell",
+      "command": "bash",
+      "args": [
+          "-c",
+          "cargo llvm-cov clean --workspace && cargo llvm-cov -p agdb_server --all-features --no-report && cargo llvm-cov -p agdb_server --all-features --no-report -- --ignored && cargo llvm-cov report --ignore-filename-regex \"agdb(.|..)src|agdb_derive|agdb_api|api.rs\" --html --open"
+      ],
       "problemMatcher": ["$rustc"],
       "group": "build"
     },

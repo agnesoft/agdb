@@ -254,7 +254,7 @@ mod tests {
                 .into(),
             QueryBuilder::remove().ids("node1").query().into(),
         ];
-        format!("{:?}", queries);
+        let _ = format!("{:?}", queries);
         assert_eq!(queries, queries);
     }
 }

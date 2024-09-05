@@ -54,7 +54,7 @@ pub struct ChangePassword {
     pub new_password: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
 pub struct ClusterStatus {
     pub address: String,
     pub status: bool,
@@ -186,16 +186,16 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", DbType::Memory);
-        format!("{:?}", DbUserRole::Admin);
-        format!(
+        let _ = format!("{:?}", DbType::Memory);
+        let _ = format!("{:?}", DbUserRole::Admin);
+        let _ = format!(
             "{:?}",
             DbUser {
                 user: "user".to_string(),
                 role: DbUserRole::Admin
             }
         );
-        format!(
+        let _ = format!(
             "{:?}",
             ServerDatabase {
                 name: "db".to_string(),
@@ -205,13 +205,13 @@ mod tests {
                 backup: 0
             }
         );
-        format!(
+        let _ = format!(
             "{:?}",
             UserStatus {
                 name: "user".to_string()
             }
         );
-        format!(
+        let _ = format!(
             "{:?}",
             QueryAudit {
                 timestamp: 0,
@@ -219,8 +219,8 @@ mod tests {
                 query: QueryType::SelectIndexes(SelectIndexesQuery {})
             }
         );
-        format!("{:?}", DbAudit(vec![]));
-        format!(
+        let _ = format!("{:?}", DbAudit(vec![]));
+        let _ = format!(
             "{:?}",
             ClusterStatus {
                 address: "localhost".to_string(),
@@ -313,5 +313,19 @@ mod tests {
         };
 
         assert_eq!(status.cmp(&status), std::cmp::Ordering::Equal);
+    }
+
+    #[test]
+    fn derived_from_serde() {
+        let cs1 = ClusterStatus {
+            address: "localhost".to_string(),
+            status: true,
+            leader: false,
+            term: 0,
+            commit: 0,
+        };
+        let data = serde_json::to_string(&cs1).unwrap();
+        let cs2: ClusterStatus = serde_json::from_str(&data).unwrap();
+        assert_eq!(cs1, cs2);
     }
 }

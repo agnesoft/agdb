@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!(
+        let _ = format!(
             "{:?}",
             AgdbApiError {
                 status: 0,

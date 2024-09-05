@@ -146,6 +146,7 @@ mod tests {
         let _test_file_rename_dot = TestFile::new(".file_storage_rename.agdb");
         let test_file_backup = TestFile::new("file_storage_backup.agdb");
         let mut storage = ServerDbStorage::new(&format!("file:{}", test_file.0))?;
+        let _ = format!("{:?}", storage);
         storage.backup(&test_file_backup.0)?;
         assert!(std::path::Path::new(&test_file_backup.0).exists());
         let other = storage.copy(&test_file_copy.0)?;
@@ -173,6 +174,7 @@ mod tests {
         let _test_file_rename_dot = TestFile::new(".mapped_storage_rename.agdb");
         let test_file2 = TestFile::new("mapped_storage_backup.agdb");
         let mut storage = ServerDbStorage::new(&format!("mapped:{}", test_file.0))?;
+        let _ = format!("{:?}", storage);
         storage.backup(&test_file2.0)?;
         assert!(std::path::Path::new(&test_file2.0).exists());
         let other = storage.copy(&test_file_copy.0)?;
@@ -193,6 +195,7 @@ mod tests {
     #[test]
     fn memory_storage() -> anyhow::Result<()> {
         let mut storage = ServerDbStorage::new("memory:db_test.agdb")?;
+        let _ = format!("{:?}", storage);
         storage.backup("backup_test")?;
         let other = storage.copy("db_test_copy.agdb")?;
         assert_eq!(other.name(), "db_test_copy.agdb");

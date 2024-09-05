@@ -1,3 +1,4 @@
+mod cluster;
 mod routes;
 
 use agdb_api::AgdbApi;

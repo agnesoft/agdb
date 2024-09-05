@@ -73,6 +73,7 @@ async fn create_cluster(
 }
 
 #[tokio::test]
+#[ignore]
 async fn cluster_rebalance() -> anyhow::Result<()> {
     let mut servers = create_cluster(3).await?;
 

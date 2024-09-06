@@ -3,6 +3,27 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    padding: 0.5rem 1rem;
+    background-color: var(--grey-color-6);
+    font-size: 0.75rem;
+}
+
+.codeBlock {
+    margin-top: 1.5rem;
+    border-radius: 0.75rem;
+    background-color: var(--grey-color-7);
+    color: var(--grey-color-1);
+    overflow-x: auto;
+    position: relative;
+    > pre {
+        padding: 1rem;
+        > code {
+            font-size: 0.8em;
+        }
+    }
 }
 
 .copyButton {
@@ -15,4 +36,10 @@
     color: var(--grey-color-1);
     cursor: pointer;
     transition: background-color 0.2s;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    &:hover {
+        background-color: var(--grey-color-4);
+    }
 }

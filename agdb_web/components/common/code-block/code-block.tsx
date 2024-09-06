@@ -51,7 +51,7 @@ export const CodeBlock: FC<CodeBlockProps> = ({
     }, [code]);
 
     return (
-        <div>
+        <div className={styles.codeBlock}>
             {header && <div className={styles.header}>{header}</div>}
             <pre>
                 <code ref={codeRef} className={language}>

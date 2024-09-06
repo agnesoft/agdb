@@ -6,8 +6,10 @@ body {
     --grey-color-2: #4f5d75;
     --grey-color-3: #7b8794;
     --grey-color-4: #b0b7c3;
-    --grey-color-5: #e2e8f0;
-    --grey-color-6: #fff;
+    --grey-color-5: #c8cfda;
+    --grey-color-6: #e6f0f9;
+    --grey-color-7: #f2f7fc;
+    --grey-color-8: #fff;
 }
 
 :is(html[class~="dark"] body) {
@@ -17,7 +19,9 @@ body {
     --grey-color-3: #7b8794;
     --grey-color-4: #4f5d75;
     --grey-color-5: #334155;
-    --grey-color-6: #000;
+    --grey-color-6: #29363f;
+    --grey-color-7: #1d2429;
+    --grey-color-8: #000;
 
     @include meta.load-css("highlight.js/styles/base16/edge-dark");
 }

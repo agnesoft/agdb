@@ -122,7 +122,7 @@ Alternatively you can run a series of queries as a [transaction](#transactions).
 
 All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#queryresult) is the universal data structure holding results of all queries in an uniform structure. The [`QueryError`](#queryerror) is the singular error type holding information of any failure or problem encountered when running the query.
 
-## Structs
+## Types
 
 ### DbUserValue
 
@@ -243,31 +243,9 @@ fn vec_bool(&self) -> Result<Vec<bool>, DbError>;
 
 The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For bool conversion details refer to [DbUserValue](#dbuservalue) section.
 
-### QueryError
+### QueryError, DbError
 
-Failure when running a query is reported through a single `QueryError` object which can optionally hold internal error (or chain of errors) that led to the failure. Most commonly it will represent **data error** or **logic error** in your query. Less commonly it may also report a failure to perform the requested operation due to underlying infrastructure issue (e.g. out of memory). It is up to the client code to handle the error.
-
-### Transactions
-
-You can run a series of queries as a transaction invoking corresponding methods on the database object:
-
-```rs
-impl Db {
-    // immutable transactions
-    pub fn transaction<T, E>(&self, mut f: impl FnMut(&Transaction) -> Result<T, E>) -> Result<T, E>
-
-    // mutable transactions
-    pub fn transaction_mut<T, E: From<QueryError>>(&mut self, mut f: impl FnMut(&mut TransactionMut) -> Result<T, E>) -> Result<T, E>
-}
-```
-
-The transaction methods take a closure that itself takes a transaction object as an argument. This is to prevent long lived transactions and force them to be as concise as possible. The transaction objects implement much the same methods as the `Db` itself (`exec` / `exec_mut`). It is not possible to nest transactions but you can run immutable queries within a mutable transaction `TransactionMut`.
-
-Note that you cannot manually abort, rollback or commit the transaction. These are handled by the database itself based on the result of the closure. If it's `Ok` the transaction will be committed (in case `mutable` queries as there is nothing to commit for `immutable` queries). If the result is `Err` the transaction will be rolled back.
-
-In both cases the result will be returned and the signature of the transaction methods allows for custom mapping of the default `Result<QueryResult, QueryError>` to an arbitrary `<T, E>` result-error pair.
-
-Worth noting is that regular `exec / exec_mut` methods on the `Db` object are actually implemented as transactions.
+Failure when running a query is reported through a single `QueryError` object which can optionally hold internal error (or chain of errors) that led to the failure. Most commonly it will represent **data error** or **logic error** in your query. Less commonly it may also report a failure to perform the requested operation due to underlying infrastructure issue (e.g. out of memory) in which case the nested error would be of type `DbError`. It is up to the client code to handle the errors.
 
 ### QueryId, QueryIds
 
@@ -302,7 +280,29 @@ pub enum QueryValues {
 }
 ```
 
-This is especially important because it can change the meaning of query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely `QueryValues::Multi` will initialize each element with a different provided set of properties bu the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
+This is especially important because it can change the meaning of a query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely `QueryValues::Multi` will initialize each element with a different provided set of properties but the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
+
+### Transactions
+
+You can run a series of queries as a transaction invoking corresponding methods on the database object:
+
+```rs
+impl Db {
+    // immutable transactions
+    pub fn transaction<T, E>(&self, mut f: impl FnMut(&Transaction) -> Result<T, E>) -> Result<T, E>
+
+    // mutable transactions
+    pub fn transaction_mut<T, E: From<QueryError>>(&mut self, mut f: impl FnMut(&mut TransactionMut) -> Result<T, E>) -> Result<T, E>
+}
+```
+
+The transaction methods take a closure that itself takes a transaction object as an argument. This is to prevent long lived transactions and force them to be as concise as possible. The transaction objects implement much the same methods as the `Db` itself (`exec` / `exec_mut`). It is not possible to nest transactions but you can run immutable queries within a mutable transaction `TransactionMut`.
+
+Note that you cannot manually abort, rollback or commit the transaction. These are handled by the database itself based on the result of the closure. If it's `Ok` the transaction will be committed (in case `mutable` queries as there is nothing to commit for `immutable` queries). If the result is `Err` the transaction will be rolled back.
+
+In both cases the result will be returned and the signature of the transaction methods allows for custom mapping of the default `Result<QueryResult, QueryError>` to an arbitrary `<T, E>` result-error pair.
+
+Worth noting is that regular `exec / exec_mut` methods on the `Db` object are actually implemented as transactions.
 
 ## Mutable queries
 

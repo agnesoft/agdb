@@ -970,7 +970,7 @@ QueryBuilder::select().elements::<T>().ids(1).query();
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()`.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()` otherwise the keys may not be in an expected order even if they are otherwise present.
 
 ## Search
 
@@ -1037,6 +1037,8 @@ QueryBuilder::search().from(1).offset(10).limit(5).query();
 </td></tr></table>
 
 There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`. For searching disregarding the graph structure and indexes (full search) the algorithm is `elements`.
+
+Very often you would want the values / elements to be returned from the search query. To accomplish it you need to nest the search query in the select query's `ids()` step. That fetches the data as the search query only traverses the graph. E.g. `QueryBuilder::select().ids(QueryBuilder::search().from("alias").query()).query()`. Refer to the [Select Values](#select-values) query for details.
 
 If the index search is done the graph traversal is skipped entirely as are most of the parameters including like limit, offset, ordering and conditions.
 

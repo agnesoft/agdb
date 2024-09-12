@@ -291,7 +291,7 @@ pub enum QueryId {
 
 This is because you can refer to the database elements via their numerical identifier or by the `string` alias (name). The `DbId` is then just a wrapper type: `pub struct DbId(pub i64)`. Both `QueryIds` and `QueryId` can be constructed from large number of different types like raw `i64`, `&str`, `String` or vectors of those etc.
 
-## QueryValues
+### QueryValues
 
 The `QueryValues` is a an enum type that makes a distinction between singular and multiple values like so:
 
@@ -304,7 +304,7 @@ pub enum QueryValues {
 
 This is especially important because it can change the meaning of query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely `QueryValues::Multi` will initialize each element with a different provided set of properties bu the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
 
-### Mutable queries
+## Mutable queries
 
 Mutable queries are the way to modify the data in the database. Remember there can only be a mutable query running against the database at any one time preventing all other mutable or immutable queries running concurrently. There are two types of mutable queries:
 

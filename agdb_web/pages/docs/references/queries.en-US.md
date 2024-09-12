@@ -56,7 +56,7 @@ flowchart LR
     select --> edge_count_to("<a href='#select-edge-count'>edge_count</a>") ---> s_e_c_ids("ids")
     select --> select_node_count("<a href='#select-node-count'>node_count</a>")
     select --> values("<a href='#select-values'>values</a>") --> s_v_ids("ids") --> SelectValuesQuery["<a href='#select-values'>SelectValuesQuery</a>"]
-    select --> elements("<a href='#select-values'>values</a>) --> s_v_ids("ids")
+    select --> elements("<a href='#select-values'>values</a>") --> s_v_ids("ids")
 
     search --> index("index") --> s_i_value("value") --> SearchQuery["<a href='#search'>SearchQuery</a>"]
     search --> from("from") --> SearchQuery

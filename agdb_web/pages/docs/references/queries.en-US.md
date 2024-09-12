@@ -282,6 +282,24 @@ pub enum QueryValues {
 
 This is especially important because it can change the meaning of a query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely `QueryValues::Multi` will initialize each element with a different provided set of properties but the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
 
+## Mutable queries
+
+Mutable queries are the way to modify the data in the database. Remember there can only be a mutable query running against the database at any one time preventing all other mutable or immutable queries running concurrently. There are two types of mutable queries:
+
+-   insert
+-   remove
+
+The `insert` queries are used for both insert and updating data while `remove` queries are used to delete data from the database.
+
+## Immutable queries
+
+Immutable queries read the data from the database and there can be unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
+
+-   select
+-   search
+
+The `select` queries are used to read the data from the database using known `id`s of elements. The `search` queries are used to find the `id`s and the result of search queries is thus often combined with the `select` queries.
+
 ## Transactions
 
 You can run a series of queries as a transaction invoking corresponding methods on the database object:
@@ -303,24 +321,6 @@ Note that you cannot manually abort, rollback or commit the transaction. These a
 In both cases the result will be returned and the signature of the transaction methods allows for custom mapping of the default `Result<QueryResult, QueryError>` to an arbitrary `<T, E>` result-error pair.
 
 Worth noting is that regular `exec / exec_mut` methods on the `Db` object are actually implemented as transactions.
-
-## Mutable queries
-
-Mutable queries are the way to modify the data in the database. Remember there can only be a mutable query running against the database at any one time preventing all other mutable or immutable queries running concurrently. There are two types of mutable queries:
-
--   insert
--   remove
-
-The `insert` queries are used for both insert and updating data while `remove` queries are used to delete data from the database.
-
-## Immutable queries
-
-Immutable queries read the data from the database and there can be unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
-
--   select
--   search
-
-The `select` queries are used to read the data from the database using known `id`s of elements. The `search` queries are used to find the `id`s and the result of search queries is thus often combined with the `select` queries.
 
 ## Insert
 

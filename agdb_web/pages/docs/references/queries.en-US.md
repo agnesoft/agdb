@@ -95,44 +95,6 @@ flowchart LR
     logic --> where
 ```
 
--   [Queries](#queries)
--   [DbUserValue](#dbuservalue)
--   [QueryResult](#queryresult)
--   [QueryError](#queryerror)
--   [Transactions](#transactions)
--   [QueryIds \& QueryId](#queryids--queryid)
--   [QueryValues](#queryvalues)
--   [Mutable queries](#mutable-queries)
-    -   [Insert](#insert)
-        -   [Insert aliases](#insert-aliases)
-        -   [Insert edges](#insert-edges)
-        -   [Insert index](#insert-index)
-        -   [Insert nodes](#insert-nodes)
-        -   [Insert values](#insert-values)
-    -   [Remove](#remove)
-        -   [Remove aliases](#remove-aliases)
-        -   [Remove elements](#remove-elements)
-        -   [Remove index](#remove-index)
-        -   [Remove values](#remove-values)
--   [Immutable queries](#immutable-queries)
-    -   [Select](#select)
-        -   [Select aliases](#select-aliases)
-        -   [Select all aliases](#select-all-aliases)
-        -   [Select edge count](#select-edge-count)
-        -   [Select indexes](#select-indexes)
-        -   [Select keys](#select-keys)
-        -   [Select key count](#select-key-count)
-        -   [Select node count](#select-node_count)
-        -   [Select values](#select-values)
-    -   [Search](#search)
-        -   [Conditions](#conditions)
-        -   [Truth tables](#truth-tables)
-            -   [And](#and)
-            -   [Or](#or)
-            -   [Modifiers](#modifiers)
-            -   [Results](#results)
-        -   [Paths](#paths)
-
 All interactions with the `agdb` are realized through queries. There are two kinds of queries:
 
 -   Immutable queries
@@ -160,7 +122,9 @@ Alternatively you can run a series of queries as a [transaction](#transactions).
 
 All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#queryresult) is the universal data structure holding results of all queries in an uniform structure. The [`QueryError`](#queryerror) is the singular error type holding information of any failure or problem encountered when running the query.
 
-# DbUserValue
+## Structs
+
+### DbUserValue
 
 The `DbUserValue` trait is an interface that can be implemented for user defined types so that they can be seamlessly used with the database:
 
@@ -207,7 +171,7 @@ Types not directly used in the database but for which the conversions are suppor
 -   f64: any value except `0.0` will be `true`
 -   string: only `"true"` or `"1"` will be `true`
 
-# QueryResult
+### QueryResult
 
 The `QueryResult` is the universal result type for all successful queries. It can be converted to user defined types that implement [`DbUserValue`](#dbuservalue) with `try_into()`. It looks like this:
 
@@ -279,11 +243,11 @@ fn vec_bool(&self) -> Result<Vec<bool>, DbError>;
 
 The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For bool conversion details refer to [DbUserValue](#dbuservalue) section.
 
-# QueryError
+### QueryError
 
 Failure when running a query is reported through a single `QueryError` object which can optionally hold internal error (or chain of errors) that led to the failure. Most commonly it will represent **data error** or **logic error** in your query. Less commonly it may also report a failure to perform the requested operation due to underlying infrastructure issue (e.g. out of memory). It is up to the client code to handle the error.
 
-# Transactions
+### Transactions
 
 You can run a series of queries as a transaction invoking corresponding methods on the database object:
 
@@ -305,7 +269,7 @@ In both cases the result will be returned and the signature of the transaction m
 
 Worth noting is that regular `exec / exec_mut` methods on the `Db` object are actually implemented as transactions.
 
-# QueryIds & QueryId
+### QueryId, QueryIds
 
 Most queries operate over a set of database ids. The `QueryIds` type is actually an enum:
 
@@ -327,7 +291,7 @@ pub enum QueryId {
 
 This is because you can refer to the database elements via their numerical identifier or by the `string` alias (name). The `DbId` is then just a wrapper type: `pub struct DbId(pub i64)`. Both `QueryIds` and `QueryId` can be constructed from large number of different types like raw `i64`, `&str`, `String` or vectors of those etc.
 
-# QueryValues
+## QueryValues
 
 The `QueryValues` is a an enum type that makes a distinction between singular and multiple values like so:
 
@@ -340,7 +304,7 @@ pub enum QueryValues {
 
 This is especially important because it can change the meaning of query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely `QueryValues::Multi` will initialize each element with a different provided set of properties bu the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
 
-# Mutable queries
+### Mutable queries
 
 Mutable queries are the way to modify the data in the database. Remember there can only be a mutable query running against the database at any one time preventing all other mutable or immutable queries running concurrently. There are two types of mutable queries:
 
@@ -690,7 +654,7 @@ NOTE: See [`SelectValuesQuery`](#select-values) for more details.
 
 The properties (key-value pairs) identified by `keys` and associated with `ids` [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is an error if any of the `ids` do not exist in the database but it is NOT an error if any of the keys does not exist or is not associated as property to any of the `ids`.
 
-# Immutable queries
+## Immutable queries
 
 Immutable queries read the data from the database and there can be unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
 

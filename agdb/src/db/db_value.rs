@@ -468,6 +468,7 @@ impl<T: Into<DbValue>> From<Vec<T>> for DbValue {
 impl TryFrom<DbValue> for Vec<u8> {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         Ok(value.bytes()?.clone())
     }
@@ -476,6 +477,7 @@ impl TryFrom<DbValue> for Vec<u8> {
 impl TryFrom<DbValue> for u64 {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         value.to_u64()
     }
@@ -484,6 +486,7 @@ impl TryFrom<DbValue> for u64 {
 impl TryFrom<DbValue> for u32 {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         Ok(value.to_u64()?.try_into()?)
     }
@@ -492,6 +495,7 @@ impl TryFrom<DbValue> for u32 {
 impl TryFrom<DbValue> for i64 {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         value.to_i64()
     }
@@ -500,6 +504,7 @@ impl TryFrom<DbValue> for i64 {
 impl TryFrom<DbValue> for i32 {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         Ok(value.to_i64()?.try_into()?)
     }
@@ -508,6 +513,7 @@ impl TryFrom<DbValue> for i32 {
 impl TryFrom<DbValue> for f64 {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         Ok(value.to_f64()?.to_f64())
     }
@@ -516,6 +522,7 @@ impl TryFrom<DbValue> for f64 {
 impl TryFrom<DbValue> for f32 {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         Ok(value.to_f64()?.to_f64() as f32)
     }
@@ -524,6 +531,7 @@ impl TryFrom<DbValue> for f32 {
 impl TryFrom<DbValue> for String {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         Ok(value.string()?.clone())
     }
@@ -532,6 +540,7 @@ impl TryFrom<DbValue> for String {
 impl TryFrom<DbValue> for bool {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         value.to_bool()
     }
@@ -540,6 +549,7 @@ impl TryFrom<DbValue> for bool {
 impl<T: TryFrom<DbValue, Error = DbError>> TryFrom<DbValue> for Vec<T> {
     type Error = DbError;
 
+    #[track_caller]
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
         let db_values: Vec<DbValue> = match value {
             DbValue::VecI64(v) => Ok(v.into_iter().map(DbValue::from).collect()),

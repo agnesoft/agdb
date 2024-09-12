@@ -11,7 +11,7 @@ The premise that we will be working on is building a database for a social netwo
 
 ## The setup
 
-```Rust
+```rs
 fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
     let db = Arc::new(RwLock::new(Db::new("social.agdb")?));
     db.write()?.transaction_mut(|t| -> Result<(), QueryError> {
@@ -47,7 +47,7 @@ The users of our social network will be nodes connected to the `users` node. The
 
 Lets firs define the `User` struct to hold this information:
 
-```Rust
+```rs
 #[derive(UserValue)]
 struct User {
     username: String,
@@ -58,7 +58,7 @@ struct User {
 
 We derive from `agdb::UserValue` so we can use the `User` type directly in our queries. A query creating the user would therefore look like this:
 
-```Rust
+```rs
 fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         if t.exec(
@@ -112,7 +112,7 @@ The users should be able to create posts. The data we want to store about the po
 
 Once again lets define the `Post` type. The specially treated `db_id` field wil become useful later on:
 
-```Rust
+```rs
 #[derive(UserValue)]
 struct Post {
     db_id: Option<DbId>,
@@ -123,7 +123,7 @@ struct Post {
 
 The first two will become properties while the `author` will be represented as an edge. To create a post:
 
-```Rust
+```rs
 fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let post = t
@@ -161,7 +161,7 @@ The comments are created by the users and are either top level comments on a pos
 
 We define the comment type:
 
-```Rust
+```rs
 #[derive(UserValue)]
 struct Comment {
     body: String,
@@ -170,7 +170,7 @@ struct Comment {
 
 To create a comment:
 
-```Rust
+```rs
 fn create_comment(
     db: &mut Db,
     user: DbId,
@@ -207,7 +207,7 @@ The `parent` parameter can be either a post id or a comment id. The edges from t
 
 Likes can be best modelled as connections from users to posts and comments:
 
-```Rust
+```rs
 fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.exec_mut(
         &QueryBuilder::insert()
@@ -225,7 +225,7 @@ The query is fairly self-explanatory. The edge has the `liked` property that dis
 
 Since users can decide that they no longer like a post or comment we need to have the ability to remove it:
 
-```Rust
+```rs
 fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
@@ -253,7 +253,7 @@ This query removes elements returned by the search. The search is the "path sear
 
 Still if we were unsure the `id` exists or if we wanted to limit the search area as much as possible we could create a chain of conditions to only restrict the search to a particular distance and prevent the other edges to be followed:
 
-```Rust
+```rs
 .where_()
 .distance(CountComparison::LessThanOrEqual(2))
 .and()
@@ -276,7 +276,7 @@ Now that we have the data in our database and means to add (or remove) more it i
 
 First the user login which means searching the database for a particular username and matching its password:
 
-```Rust
+```rs
 fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
     let result = db
         .exec(
@@ -327,7 +327,7 @@ You may be wondering why we do not check the password in the query directly. The
 
 Showing users their content or content they liked can be done with a following query first retrieving the ids of the posts:
 
-```Rust
+```rs
 fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<QueryId>, QueryError> {
     Ok(db
         .exec(
@@ -358,7 +358,7 @@ Similarly to `user_posts` we can fetch the user comments and liked posts with sl
 
 Notice as well that the function returns the `ids` of the elements we were interested in which gives us flexibility in what we want to retrieve about the posts. In order to retrieve say titles of the posts we would need to feed it to a select query:
 
-```Rust
+```rs
 fn post_titles(db: &Db, ids: Vec<QueryId>) -> Result<Vec<String>, QueryError> {
     Ok(db
         .exec(
@@ -380,7 +380,7 @@ Here we take advantage of the fact that we have selected a single property so ev
 
 Selecting all posts is a fairly straightforward query but we would rarely need all of them at once. A common need for large collections of data is "paging". That means returning only a chunk of data at a time. Similarly to SQL we can use both `offset` and `limit` to achieve this:
 
-```Rust
+```rs
 fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, QueryError> {
     Ok(db
         .exec(
@@ -409,7 +409,7 @@ There is something missing though as we would want to also order the posts by th
 
 Now that we have the posts we will want to fetch the comments on them. Our schema says that the only outgoing edges from posts are the comments so getting the comments can be done like this:
 
-```Rust
+```rs
 fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, QueryError> {
     Ok(db
         .exec(
@@ -450,7 +450,7 @@ We can perhaps already come up with more such as getting the authors of posts or
 
 Lets start with the likes. The query to make use of the `liked` edges would not be terribly difficult (counting the `liked` edges incoming to a post or comment) but it certainly does not seem that easy or fast. Especially as we would be doing it over and over. Instead we could simply introduce a counter property called `likes` and essentially cache the information on the posts (or comments) themselves. That would simplify and speed up things:
 
-```Rust
+```rs
 fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         let posts = t.exec(
@@ -485,7 +485,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
 
 We are doing a mutable transaction to prevent any new posts, likes or other modifications to interfere while we do this. First we get the ids of all the posts. Then we count the `liked` edges of each post (exactly what we would be doing if we did not want to change the schema) and finally we insert a new `likes` property with that count back to the posts. Furthermore we should update our definition of `Post`:
 
-```Rust
+```rs
 #[derive(UserValue)]
 struct PostLiked {
     db_id: Option<DbId>,
@@ -497,7 +497,7 @@ struct PostLiked {
 
 This allows us to select and order posts based on likes:
 
-```Rust
+```rs
 fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, QueryError> {
     Ok(db
         .exec(
@@ -525,7 +525,7 @@ However this change is not "free" in that caching any information means it now e
 
 Another issue we found was that comments do not track their level and we cannot present them hierarchically. To make things simpler let's add only a simple distinction between top level comments and replies disregarding any further nesting. To do that we would simply mark the top level comments with a new property:
 
-```Rust
+```rs
 fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
     db.exec_mut(
         &QueryBuilder::insert()

@@ -146,7 +146,7 @@ There can be unlimited number of immutable concurrent queries or exactly one mut
 
 The queries are executed against the database by calling the corresponding method on the database object:
 
-```Rust
+```rs
 impl Db {
     // immutable queries only
     pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError>
@@ -164,7 +164,7 @@ All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#query
 
 The `DbUserValue` trait is an interface that can be implemented for user defined types so that they can be seamlessly used with the database:
 
-```Rust
+```rs
 pub trait DbUserValue: Sized {
     fn db_id(&self) -> Option<DbId>;
     fn db_keys() -> Vec<DbValue>;
@@ -177,7 +177,7 @@ Typically you would derive this trait with `agdb::UserValue` procedural macro th
 
 It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders:
 
-```Rust
+```rs
 #[derive(UserValue)]
 struct User { db_id: Option<DbId>, name: String, }
 let user = User { db_id: None, name: "Bob".to_string() };
@@ -211,7 +211,7 @@ Types not directly used in the database but for which the conversions are suppor
 
 The `QueryResult` is the universal result type for all successful queries. It can be converted to user defined types that implement [`DbUserValue`](#dbuservalue) with `try_into()`. It looks like this:
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64,
     pub elements: Vec<DbElement>,
@@ -222,7 +222,7 @@ The `result` field holds numerical result of the query. It typically returns the
 
 The `elements` field hold the [database elements](/docs/guides/concepts#graph) returned. Each element looks like:
 
-```Rust
+```rs
 pub struct DbElement {
     pub id: DbId,
     pub from: Option<DbId>,
@@ -235,7 +235,7 @@ The `id` (i.e. `pub struct DbId(i64)`) is a numerical identifier of a database e
 
 The values are `key-value` pairs (properties) associated with the given element:
 
-```Rust
+```rs
 pub struct DbKeyValue {
     pub key: DbValue,
     pub value: DbValue,
@@ -244,7 +244,7 @@ pub struct DbKeyValue {
 
 Where `DbValue` is:
 
-```Rust
+```rs
 pub enum DbValue {
     Bytes(Vec<u8>),
     I64(i64),
@@ -262,7 +262,7 @@ Note the `DbF64` type (i.e. `pub struct DbF64(f64)`) which is a convenient wrapp
 
 The enum variants can be conveniently accessed through methods named after each variant:
 
-```Rust
+```rs
 fn bytes(&self) -> Result<&Vec<u8>, DbError>;
 fn to_bool(&self) -> Result<bool, DbError>;
 fn to_f64(&self) -> Result<DbF64, DbError>;
@@ -287,7 +287,7 @@ Failure when running a query is reported through a single `QueryError` object wh
 
 You can run a series of queries as a transaction invoking corresponding methods on the database object:
 
-```Rust
+```rs
 impl Db {
     // immutable transactions
     pub fn transaction<T, E>(&self, mut f: impl FnMut(&Transaction) -> Result<T, E>) -> Result<T, E>
@@ -309,7 +309,7 @@ Worth noting is that regular `exec / exec_mut` methods on the `Db` object are ac
 
 Most queries operate over a set of database ids. The `QueryIds` type is actually an enum:
 
-```Rust
+```rs
 pub enum QueryIds {
     Ids(Vec<QueryId>),
     Search(SearchQuery),
@@ -318,7 +318,7 @@ pub enum QueryIds {
 
 It represents either a set of actual `ids` or a `search` query that will be executed as the larger query and its results fed as ids to the larger query. The `QueryId` is defined as another enum:
 
-```Rust
+```rs
 pub enum QueryId {
     Id(DbId),
     Alias(String),
@@ -331,7 +331,7 @@ This is because you can refer to the database elements via their numerical ident
 
 The `QueryValues` is a an enum type that makes a distinction between singular and multiple values like so:
 
-```Rust
+```rs
 pub enum QueryValues {
     Single(Vec<DbKeyValue>),
     Multi(Vec<Vec<DbKeyValue>>),
@@ -364,7 +364,7 @@ There are 5 distinct insert queries:
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct InsertAliasesQuery {
     pub ids: QueryIds,
     pub aliases: Vec<String>,
@@ -373,7 +373,7 @@ pub struct InsertAliasesQuery {
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of inserted/updated aliases
     pub elements: Vec<DbElement>, // empty
@@ -382,7 +382,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::insert().aliases("a").ids(1).query();
 QueryBuilder::insert().aliases("a").ids("b").query(); // alias "b" is replaced  with "a"
 QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]).query();
@@ -399,7 +399,7 @@ Note that this query is also used for updating existing aliases. Byt inserting a
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct InsertEdgesQuery {
     pub from: QueryIds,
     pub to: QueryIds,
@@ -411,7 +411,7 @@ pub struct InsertEdgesQuery {
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of inserted edges
     pub elements: Vec<DbElement>, // list of inserted edges (only ids)
@@ -420,7 +420,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::insert().edges().from(1).to(2).query();
 QueryBuilder::insert().edges().from("a").to("b").query();
 QueryBuilder::insert().edges().from("a").to(vec![1, 2]).query();
@@ -445,13 +445,13 @@ The `from` and `to` represents list of origins and destinations of the edges to 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct InsertIndexQuery(pub DbValue);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of indexed values
     pub elements: Vec<DbElement>, // empty
@@ -460,7 +460,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::insert().index("key").query();
 ```
 
@@ -473,7 +473,7 @@ Creates an index for a key. The index is valid for the entire database including
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct InsertNodesQuery {
     pub count: u64,
     pub values: QueryValues,
@@ -484,7 +484,7 @@ pub struct InsertNodesQuery {
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of inserted nodes
     pub elements: Vec<DbElement>, // list of inserted nodes (only ids)
@@ -493,7 +493,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::insert().nodes().count(2).query();
 QueryBuilder::insert().nodes().count(2).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
 QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).query();
@@ -521,7 +521,7 @@ If an alias already exists in the database its values will be amended (inserted 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct InsertValuesQuery {
     pub ids: QueryIds,
     pub values: QueryValues,
@@ -530,7 +530,7 @@ pub struct InsertValuesQuery {
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of inserted key-value pairs
     pub elements: Vec<DbElement>, // list of new elements
@@ -539,7 +539,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::insert().element(&T { ... }).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
 QueryBuilder::insert().elements(&vec![T {...}, T {...}]).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
 QueryBuilder::insert().values(vec![vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(vec![1, 2]).query();
@@ -571,13 +571,13 @@ There are 4 distinct remove queries:
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct RemoveAliasesQuery(pub Vec<String>);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // negative number of removed aliases
     pub elements: Vec<DbElement>, // empty
@@ -586,7 +586,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::remove().aliases("a").query();
 QueryBuilder::remove().aliases(vec!["a", "b"]).query();
 ```
@@ -600,13 +600,13 @@ The aliases listed will be removed from the database if they exist. It is NOT an
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct RemoveQuery(pub QueryIds);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // negative number of removed ids
                      // (does not include removed edges
@@ -617,7 +617,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::remove().ids(1).query();
 QueryBuilder::remove().ids("a").query();
 QueryBuilder::remove().ids(vec![1, 2]).query();
@@ -634,13 +634,13 @@ The elements identified by [`QueryIds`](#queryids--queryid) will be removed from
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct RemoveIndexQuery(pub DbValue);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // negative number of values removed
                      // from the index
@@ -650,7 +650,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::remove().index("key").query();
 ```
 
@@ -663,13 +663,13 @@ Removes an index from the database. It is NOT an error if the index does not exi
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct RemoveValuesQuery(pub SelectValuesQuery);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // negative number of actually removed
                      // key-value pairs
@@ -679,7 +679,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).ids(vec![1, 2]).query();
 QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).ids(QueryBuilder::search().from("a").query()).query();
 ```
@@ -717,13 +717,13 @@ There are following select queries:
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectAliasesQuery(pub QueryIds);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of returned elements
     pub elements: Vec<DbElement>, // list of elements each with
@@ -734,7 +734,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().aliases().ids(vec![1, 2]).query();
 QueryBuilder::select().aliases().ids(QueryBuilder::search().from(1).query()).query();
 ```
@@ -748,13 +748,13 @@ Selects aliases of the `ids` [`QueryIds`](#queryids--queryid) or a search. If an
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectAllAliasesQuery {}
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of elements with aliases
     pub elements: Vec<DbElement>, // list of elements with an
@@ -765,7 +765,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().aliases().query();
 ```
 
@@ -778,7 +778,7 @@ Selects all aliases in the database.
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectEdgeCountQuery {
     pub ids: Ids,
     pub from: bool,
@@ -788,7 +788,7 @@ pub struct SelectEdgeCountQuery {
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of elements with aliases
     pub elements: Vec<DbElement>, // list of elements with an
@@ -799,7 +799,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().edge_count().ids(vec![1, 2]).query();
 QueryBuilder::select().edge_count_from().ids(vec![1, 2]).query();
 QueryBuilder::select().edge_count_to().ids(vec![1, 2]).query();
@@ -816,13 +816,13 @@ NOTE: Self-referential edges (going from the same node to the same node) will be
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectIndexesQuery {};
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of indexes in the database
     pub elements: Vec<DbElement>, // single element with id 0 and list of
@@ -835,7 +835,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().indexes().query();
 ```
 
@@ -848,13 +848,13 @@ Selects all indexes in the database.
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectKeysQuery(pub QueryIds);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of returned elements
     pub elements: Vec<DbElement>, // list of elements with only keys
@@ -864,7 +864,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().keys().ids("a").query();
 QueryBuilder::select().keys().ids(vec![1, 2]).query();
 QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query();
@@ -879,13 +879,13 @@ Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectKeyCountQuery(pub QueryIds);
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of returned elements
     pub elements: Vec<DbElement>, // list of elements each with a
@@ -896,7 +896,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().key_count().ids("a").query();
 QueryBuilder::select().key_count().ids(vec![1, 2]).query();
 QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query();
@@ -911,13 +911,13 @@ Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectNodeCountQuery {}
 ```
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // Always  1
     pub elements: Vec<DbElement>, // single element with single property (`String("node_count"): String`)
@@ -926,7 +926,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().node_count().query();
 ```
 
@@ -939,7 +939,7 @@ Selects number (count) of nodes in the database.
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SelectValuesQuery {
     pub keys: Vec<DbValue>,
     pub ids: QueryIds,
@@ -948,7 +948,7 @@ pub struct SelectValuesQuery {
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of returned elements
     pub elements: Vec<DbElement>, // list of elements with only
@@ -958,7 +958,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::select().ids("a").query();
 QueryBuilder::select().ids(vec![1, 2]).query();
 QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
@@ -977,7 +977,7 @@ Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search 
 <table><tr><td><b>Struct</b></td><td><b>Result</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct SearchQuery {
     pub algorithm: SearchQueryAlgorithm,
     pub origin: QueryId,
@@ -991,7 +991,7 @@ pub struct SearchQuery {
 
 </td><td>
 
-```Rust
+```rs
 pub struct QueryResult {
     pub result: i64, // number of elements found
     pub elements: Vec<DbElement>, // list of elements found (only ids)
@@ -1000,7 +1000,7 @@ pub struct QueryResult {
 
 </td></tr><tr><td>
 
-```Rust
+```rs
 pub enum SearchQueryAlgorithm {
     BreadthFirst,
     DepthFirst,
@@ -1016,7 +1016,7 @@ pub enum DbKeyOrder {
 
 </td><td></td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
-```Rust
+```rs
 QueryBuilder::search().from("a").query();
 QueryBuilder::search().to(1).query(); //reverse search
 QueryBuilder::search().from("a").to("b").query(); //path search using A* algorithm
@@ -1053,7 +1053,7 @@ Finally the list of `conditions` that each examined graph element must satisfy t
 <table><tr><td><b>Struct</b></td></tr>
 <tr><td>
 
-```Rust
+```rs
 pub struct QueryCondition {
     pub logic: QueryConditionLogic,
     pub modifier: QueryConditionModifier,
@@ -1107,7 +1107,7 @@ pub enum Comparison {
 
 </td></tr><tr><td><b>Builder</b></td></tr><tr><td>
 
-```Rust
+```rs
 //the where_() can be applied to any of the basic search queries after order_by/offset/limit
 //not() and not_beyond() can be applied to all conditions including nested where_()
 QueryBuilder::search().from(1).where_().distance(CountComparison::LessThan(3)).query();
@@ -1167,7 +1167,7 @@ The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` ar
 
 The following information should help with reasoning about the query conditions. Most of it should be intuitive but there are some aspects that might not be obvious especially when combining logic operators and condition modifiers. The search is using the following `enum` when evaluating conditions:
 
-```Rust
+```rs
 pub enum SearchControl {
     Continue(bool),
     Finish(bool),

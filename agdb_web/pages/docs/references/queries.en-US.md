@@ -282,23 +282,23 @@ pub enum QueryValues {
 
 This is especially important because it can change the meaning of a query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely `QueryValues::Multi` will initialize each element with a different provided set of properties but the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
 
-### Transactions
+## Transactions
 
 You can run a series of queries as a transaction invoking corresponding methods on the database object:
 
 ```rs
 impl Db {
-    // immutable transactions
+    // immutable transaction
     pub fn transaction<T, E>(&self, mut f: impl FnMut(&Transaction) -> Result<T, E>) -> Result<T, E>
 
-    // mutable transactions
+    // mutable transaction
     pub fn transaction_mut<T, E: From<QueryError>>(&mut self, mut f: impl FnMut(&mut TransactionMut) -> Result<T, E>) -> Result<T, E>
 }
 ```
 
-The transaction methods take a closure that itself takes a transaction object as an argument. This is to prevent long lived transactions and force them to be as concise as possible. The transaction objects implement much the same methods as the `Db` itself (`exec` / `exec_mut`). It is not possible to nest transactions but you can run immutable queries within a mutable transaction `TransactionMut`.
+The transaction methods take a closure that itself takes a transaction object as an argument. This is to prevent long lived transactions and force them to be as concise as possible. The transaction objects implement the same execution methods as the `Db` itself (`exec` / `exec_mut`). It is not possible to nest transactions but you can run immutable queries within a mutable transaction `TransactionMut`.
 
-Note that you cannot manually abort, rollback or commit the transaction. These are handled by the database itself based on the result of the closure. If it's `Ok` the transaction will be committed (in case `mutable` queries as there is nothing to commit for `immutable` queries). If the result is `Err` the transaction will be rolled back.
+Note that you cannot manually abort, rollback or commit the transaction. These are handled by the database itself based on the result of the closure. If it's `Ok` the transaction will be committed (in case of the `mutable` queries as there is nothing to commit for `immutable` queries). If the result is `Err` the transaction will be rolled back.
 
 In both cases the result will be returned and the signature of the transaction methods allows for custom mapping of the default `Result<QueryResult, QueryError>` to an arbitrary `<T, E>` result-error pair.
 
@@ -312,6 +312,15 @@ Mutable queries are the way to modify the data in the database. Remember there c
 -   remove
 
 The `insert` queries are used for both insert and updating data while `remove` queries are used to delete data from the database.
+
+## Immutable queries
+
+Immutable queries read the data from the database and there can be unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
+
+-   select
+-   search
+
+The `select` queries are used to read the data from the database using known `id`s of elements. The `search` queries are used to find the `id`s and the result of search queries is thus often combined with the `select` queries.
 
 ## Insert
 
@@ -653,15 +662,6 @@ QueryBuilder::remove().values(vec!["k1".into(), "k2".into()]).ids(QueryBuilder::
 NOTE: See [`SelectValuesQuery`](#select-values) for more details.
 
 The properties (key-value pairs) identified by `keys` and associated with `ids` [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is an error if any of the `ids` do not exist in the database but it is NOT an error if any of the keys does not exist or is not associated as property to any of the `ids`.
-
-## Immutable queries
-
-Immutable queries read the data from the database and there can be unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
-
--   select
--   search
-
-The `select` queries are used to read the data from the database using known `id`s of elements. The `search` queries are used to find the `id`s and the result of search queries is thus often combined with the `select` queries.
 
 ## Select
 
@@ -1014,6 +1014,10 @@ Finally the list of `conditions` that each examined graph element must satisfy t
 
 **NOTE:** When both `origin` and `destination` are specified and the algorithm is switched to the `A*` the `limit` and `offset` are applied differently. In regular (open-ended) search the search will end when the `limit` is reached but with the path search (A\*) the `destination` must be reached first before they are applied.
 
+### Paths
+
+Path search (`from().to()`) uses A\* algorithm. Every element (node or edge) has a cost of `1` by default. If it passes all the conditions (the `SearchControl` value `true`) the cost will remain `1` and would be included in the result (if the path it is on would be selected). If it fails any of the conditions (the `SearchControl` value `false`) its cost will be `2`. This means that the algorithm will prefer paths where elements match the conditions rather than the absolutely shortest path (that can be achieved with no conditions). If the search is not to continue beyond certain element (through `beyond()`, `not_beyond()` or `distance()` conditions) its cost will be `0` and the paths it is on will no longer be considered for that search.
+
 ### Conditions
 
 <table><tr><td><b>Struct</b></td></tr>
@@ -1192,10 +1196,6 @@ Most conditions result in `Continue(bool)` except for `distance()` and nested `w
 | Ids         | YES      | NO   |
 | Key(Value)  | YES      | NO   |
 | Keys        | YES      | NO   |
-
-### Paths
-
-Path search (`from().to()`) uses A\* algorithm. Every element (node or edge) has a cost of `1` by default. If it passes all the conditions (the `SearchControl` value `true`) the cost will remain `1` and would be included in the result (if the path it is on would be selected). If it fails any of the conditions (the `SearchControl` value `false`) its cost will be `2`. This means that the algorithm will prefer paths where elements match the conditions rather than the absolutely shortest path (that can be achieved with no conditions). If the search is not to continue beyond certain element (through `beyond()`, `not_beyond()` or `distance()` conditions) its cost will be `0` and the paths it is on will no longer be considered for that search.
 
 ---
 

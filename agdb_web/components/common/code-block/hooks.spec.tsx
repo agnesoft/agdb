@@ -48,6 +48,27 @@ describe("useHighlight", () => {
                 container.firstChild,
             );
         });
+
+        it("should not highlight the code again", async () => {
+            const highlightElementMock = vi.fn();
+            const hljs = await import("highlight.js/lib/core");
+            hljs.default.highlightElement = highlightElementMock;
+
+            const code = (
+                <div>{`{
+                    "name": "John Doe",
+                    "age": 30,
+                    "email": "
+                }`}</div>
+            );
+            const { container } = render(code);
+            if (container.firstChild)
+                (container.firstChild as HTMLElement).dataset.highlighted =
+                    "true";
+            const { result } = renderHook(() => useHighlight());
+            result.current.highlight(container.firstChild as HTMLElement);
+            expect(highlightElementMock).not.toHaveBeenCalled();
+        });
     });
 
     describe("setLanguage", () => {

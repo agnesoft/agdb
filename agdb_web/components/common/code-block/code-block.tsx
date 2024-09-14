@@ -20,6 +20,7 @@ export const CodeBlock: FC<CodeBlockProps> = ({
     const { t } = useI18n();
 
     const { highlight, setLanguage } = useHighlight();
+
     setLanguage(language);
     const codeRef = useRef(null);
 
@@ -41,7 +42,7 @@ export const CodeBlock: FC<CodeBlockProps> = ({
                         className={styles.copyButton}
                         onClick={() => navigator.clipboard.writeText(code)}
                         title={t("button.copy-code")}
-                        data-testId="copy-code"
+                        data-testid="copy-code"
                     >
                         <CopyIcon />
                     </button>

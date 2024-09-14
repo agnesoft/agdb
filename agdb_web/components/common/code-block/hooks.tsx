@@ -2,7 +2,9 @@ import hljs from "highlight.js/lib/core";
 
 export const useHighlight = () => {
     const highlight = (code: HTMLElement) => {
-        return hljs.highlightElement(code);
+        if (!code.dataset.highlighted) {
+            hljs.highlightElement(code);
+        }
     };
 
     const setLanguage = (language: string) => {

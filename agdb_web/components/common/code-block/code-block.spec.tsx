@@ -1,13 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { CodeBlock } from "./code-block";
 
-// vi.mock("next/router", () => ({
-//     useRouter: () => ({
-//         pathname: "/",
-//         locale: "en-US",
-//     }),
-// }));
+const writeText = vi.fn();
+
+Object.assign(navigator, {
+    clipboard: {
+        writeText,
+    },
+});
 vi.mock("@/hooks/i18n", () => ({
     useI18n: () => ({
         t: (key: string) => {
@@ -17,6 +18,10 @@ vi.mock("@/hooks/i18n", () => ({
     }),
 }));
 describe("CodeBlock", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        cleanup();
+    });
     it("should render the code block with correct code and language", () => {
         const code = `{
             "name": "John Doe",
@@ -28,5 +33,16 @@ describe("CodeBlock", () => {
         expect(text).toBeDefined();
         const copyButton = screen.getByTitle("Copy code");
         expect(copyButton).toBeDefined();
+    });
+    it("should copy the code to clipboard", () => {
+        const code = `{
+            "name": "John Doe",
+            "age": 30,
+            "email": "
+        }`;
+        const component = render(<CodeBlock code={code} language="json" />);
+        const copyButton = component.queryByTestId("copy-code");
+        copyButton?.click();
+        expect(writeText).toHaveBeenCalledWith(code);
     });
 });

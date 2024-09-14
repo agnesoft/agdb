@@ -24,9 +24,7 @@ export const CodeBlock: FC<CodeBlockProps> = ({
     const codeRef = useRef(null);
 
     useEffect(() => {
-        if (codeRef.current) {
-            highlight(codeRef.current);
-        }
+        codeRef.current && highlight(codeRef.current);
     }, [code, highlight]);
 
     return (
@@ -43,6 +41,7 @@ export const CodeBlock: FC<CodeBlockProps> = ({
                         className={styles.copyButton}
                         onClick={() => navigator.clipboard.writeText(code)}
                         title={t("button.copy-code")}
+                        data-testId="copy-code"
                     >
                         <CopyIcon />
                     </button>

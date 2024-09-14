@@ -1,5 +1,5 @@
 import styles from "./footer.module.scss";
-import { LinkItem } from "@/components/common/link-item";
+import LinkItem from "@/components/common/link-item";
 
 export const Footer = () => {
     return (

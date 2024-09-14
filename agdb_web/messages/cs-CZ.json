@@ -22,5 +22,8 @@
         "terms-and-conditions": "Podmínky užití",
         "privacy-policy": "Ochrana osobních údajů",
         "license": "Licence"
+    },
+    "button": {
+        "copy-code": "Kopírovat kód"
     }
 }

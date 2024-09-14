@@ -13,7 +13,7 @@ export default defineConfig({
         exclude: [...configDefaults.exclude, "e2e/*"],
         root: path.resolve(__dirname, "."),
         coverage: {
-            provider: "v8",
+            provider: "istanbul",
             all: true,
             exclude: [
                 ...coverageConfigDefaults.exclude,
@@ -21,6 +21,7 @@ export default defineConfig({
                 "*.config.*",
                 "middleware.ts",
             ],
+            // reporter: ["text", ["html", { subdir: "coverage" }]],
         },
     },
     build: {

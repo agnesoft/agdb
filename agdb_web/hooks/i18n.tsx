@@ -19,6 +19,10 @@ const iterateMessages = (
     }
 };
 
+export const getDefaultLocale = (): string => {
+    return DEFAULT_LOCALE;
+};
+
 export const useI18n = () => {
     const { locale } = useRouter();
     const [fallbackMessages, setFallbackMessages] = useState(
@@ -26,27 +30,31 @@ export const useI18n = () => {
     );
     const [messages, setMessages] = useState(new Map<string, string>());
 
-    const defaultLocale = DEFAULT_LOCALE;
+    const defaultLocale = getDefaultLocale();
+
+    const processFallbackMessages = (data: MessagesStructure): void => {
+        const messages = new Map<string, string>();
+        iterateMessages(null, data, messages);
+        setFallbackMessages(messages);
+    };
+
+    const processMessages = (data: MessagesStructure): void => {
+        const messages = new Map<string, string>();
+        iterateMessages(null, data, messages);
+        setMessages(messages);
+    };
 
     useEffect(() => {
         import(`../messages/${defaultLocale}.json`)
-            .then((data) => {
-                const messages = new Map<string, string>();
-                iterateMessages(null, data, messages);
-                setFallbackMessages(messages);
-            })
+            .then(processFallbackMessages)
             .catch(() => setFallbackMessages(new Map<string, string>()));
     }, [defaultLocale]);
 
     useEffect(() => {
         import(`../messages/${locale}.json`)
-            .then((data) => {
-                const messages = new Map<string, string>();
-                iterateMessages(null, data, messages);
-                setMessages(messages);
-            })
+            .then(processMessages)
             .catch(() => setMessages(new Map<string, string>()));
-    }, [locale]);
+    }, [locale, defaultLocale]);
 
     const t = (key: string): string => {
         return messages.get(key) || fallbackMessages.get(key) || "";

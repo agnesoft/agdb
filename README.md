@@ -83,7 +83,7 @@ cargo add agdb
 
 Basic usage demonstrating creating a database, inserting graph elements with data and querying them back with select and search. The function using this code must handle `agdb::DbError` and [`agdb::QueryError`](https://agdb.agnesoft.com/docs/references/queries#queryerror) error types for operator `?` to work:
 
-```Rust
+```rs
 use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
 
 let mut db = Db::new("db_file.agdb")?;
@@ -111,7 +111,7 @@ This code creates a database called `user_db.agdb` with a simple graph of 4 node
 
 You can select the graph elements (both nodes & edges) with their ids to get them back with their associated data (key-value properties). Lets select our users and convert the result into the list (notice we select only values relevant to our `User` type with passing `User::db_keys()`):
 
-```Rust
+```rs
 let users: Vec<User> = db
     .exec(
         &QueryBuilder::select()
@@ -129,7 +129,7 @@ println!("{:?}", users);
 
 You can also search through the graph to get back only certain elements based on conditions. For example:
 
-```Rust
+```rs
 let user: User = db
     .exec(
         &QueryBuilder::select()

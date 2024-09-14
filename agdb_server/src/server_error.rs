@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn derived_from_debug() {
-        format!("{:?}", ServerError::from("my error"));
+        let _ = format!("{:?}", ServerError::from("my error"));
     }
 
     #[test]

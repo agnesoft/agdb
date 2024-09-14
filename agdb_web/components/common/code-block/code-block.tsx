@@ -1,13 +1,8 @@
 import { FC, useRef, useEffect } from "react";
-import hljs from "highlight.js/lib/core";
-import json from "highlight.js/lib/languages/json";
-import rust from "highlight.js/lib/languages/rust";
-import python from "highlight.js/lib/languages/python";
-import php from "highlight.js/lib/languages/php";
-import javascript from "highlight.js/lib/languages/javascript";
-import typescript from "highlight.js/lib/languages/typescript";
 import styles from "./code-block.module.scss";
 import { CopyIcon } from "nextra/icons";
+import { useI18n } from "@/hooks/i18n";
+import { useHighlight } from "./hooks";
 
 export interface CodeBlockProps {
     code: string;
@@ -22,50 +17,37 @@ export const CodeBlock: FC<CodeBlockProps> = ({
     header,
     copy = true,
 }) => {
-    switch (language) {
-        case "json":
-            hljs.registerLanguage("json", json);
-            break;
-        case "rust":
-            hljs.registerLanguage("rust", rust);
-            break;
-        case "python":
-            hljs.registerLanguage("python", python);
-            break;
-        case "php":
-            hljs.registerLanguage("php", php);
-            break;
-        case "javascript":
-            hljs.registerLanguage("javascript", javascript);
-            break;
-        case "typescript":
-            hljs.registerLanguage("typescript", typescript);
-            break;
-    }
+    const { t } = useI18n();
+
+    const { highlight, setLanguage } = useHighlight();
+    setLanguage(language);
     const codeRef = useRef(null);
 
     useEffect(() => {
         if (codeRef.current) {
-            hljs.highlightElement(codeRef.current);
+            highlight(codeRef.current);
         }
-    }, [code]);
+    }, [code, highlight]);
 
     return (
         <div className={styles.codeBlock}>
             {header && <div className={styles.header}>{header}</div>}
-            <pre>
-                <code ref={codeRef} className={language}>
-                    {code}
-                </code>
-            </pre>
-            {copy && (
-                <button
-                    className={styles.copyButton}
-                    onClick={() => navigator.clipboard.writeText(code)}
-                >
-                    <CopyIcon />
-                </button>
-            )}
+            <div className={styles.wrapper}>
+                <pre>
+                    <code ref={codeRef} className={language}>
+                        {code}
+                    </code>
+                </pre>
+                {copy && (
+                    <button
+                        className={styles.copyButton}
+                        onClick={() => navigator.clipboard.writeText(code)}
+                        title={t("button.copy-code")}
+                    >
+                        <CopyIcon />
+                    </button>
+                )}
+            </div>
         </div>
     );
 };

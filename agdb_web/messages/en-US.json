@@ -22,5 +22,8 @@
         "terms-and-conditions": "Terms and Conditions",
         "privacy-policy": "Privacy Policy",
         "license": "License"
+    },
+    "button": {
+        "copy-code": "Copy code"
     }
 }

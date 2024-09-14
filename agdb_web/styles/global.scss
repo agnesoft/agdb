@@ -10,13 +10,16 @@ body {
     --grey-color-6: #e6f0f9;
     --grey-color-7: #f2f7fc;
     --grey-color-8: #fff;
+
+    --blue-0: #1414db;
+    --white: #fff;
 }
 
 :is(html[class~="dark"] body) {
     --grey-color-0: #fff;
     --grey-color-1: #e2e8f0;
     --grey-color-2: #b0b7c3;
-    --grey-color-3: #7b8794;
+    --grey-color-3: #767e89;
     --grey-color-4: #4f5d75;
     --grey-color-5: #334155;
     --grey-color-6: #29363f;

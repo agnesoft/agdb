@@ -16,25 +16,9 @@ const mocks = vi.hoisted(() => {
         },
     };
 });
-// const openapiFile = {
-//     openapi: "3.0.0",
-//     info: {
-//         title: "AGDB API",
-//         version: "1.0.0",
-//     },
-//     paths: {},
-// };
-// vi.hoisted(() => {
 vi.mock("../../../../agdb_server/openapi.json", () => ({
     default: mocks.openapiFile,
 }));
-// vi.mock("@/components/common/code-block", () => ({
-//     default: () => <div>CodeBlock</div>,
-// }));
-// });
-// vi.mock("../../../../agdb_server/openapi.json", () => ({
-//     default: openapiFile,
-// }));
 vi.mock("next/router", () => ({
     useRouter: () => ({
         pathname: "/",

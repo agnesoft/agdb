@@ -4,6 +4,7 @@ use crate::storage::Storage;
 use crate::storage::StorageIndex;
 use crate::utilities::stable_hash::StableHash;
 use crate::DbError;
+use crate::DbUserValueMarker;
 use crate::StorageData;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -408,6 +409,12 @@ impl From<u64> for DbValue {
     }
 }
 
+impl From<usize> for DbValue {
+    fn from(value: usize) -> Self {
+        DbValue::U64(value as u64)
+    }
+}
+
 impl From<String> for DbValue {
     fn from(value: String) -> Self {
         DbValue::String(value)
@@ -438,7 +445,217 @@ impl From<Vec<u8>> for DbValue {
     }
 }
 
-impl<T: Into<DbValue>> From<Vec<T>> for DbValue {
+impl From<Vec<i64>> for DbValue {
+    fn from(value: Vec<i64>) -> Self {
+        DbValue::VecI64(value)
+    }
+}
+
+impl From<Vec<i32>> for DbValue {
+    fn from(value: Vec<i32>) -> Self {
+        DbValue::VecI64(value.into_iter().map(|x| x.into()).collect())
+    }
+}
+
+impl From<Vec<u64>> for DbValue {
+    fn from(value: Vec<u64>) -> Self {
+        DbValue::VecU64(value)
+    }
+}
+
+impl From<Vec<u32>> for DbValue {
+    fn from(value: Vec<u32>) -> Self {
+        DbValue::VecU64(value.into_iter().map(|x| x.into()).collect())
+    }
+}
+
+impl From<Vec<usize>> for DbValue {
+    fn from(value: Vec<usize>) -> Self {
+        DbValue::VecU64(value.into_iter().map(|x| x as u64).collect())
+    }
+}
+
+impl From<Vec<f64>> for DbValue {
+    fn from(value: Vec<f64>) -> Self {
+        DbValue::VecF64(value.into_iter().map(DbF64::from).collect())
+    }
+}
+
+impl From<Vec<f32>> for DbValue {
+    fn from(value: Vec<f32>) -> Self {
+        DbValue::VecF64(value.into_iter().map(DbF64::from).collect())
+    }
+}
+
+impl From<Vec<DbF64>> for DbValue {
+    fn from(value: Vec<DbF64>) -> Self {
+        DbValue::VecF64(value)
+    }
+}
+
+impl From<Vec<String>> for DbValue {
+    fn from(value: Vec<String>) -> Self {
+        DbValue::VecString(value)
+    }
+}
+
+impl From<Vec<&str>> for DbValue {
+    fn from(value: Vec<&str>) -> Self {
+        DbValue::VecString(value.into_iter().map(|s| s.to_string()).collect())
+    }
+}
+
+impl From<Vec<bool>> for DbValue {
+    fn from(value: Vec<bool>) -> Self {
+        DbValue::VecU64(value.into_iter().map(|b| if b { 1 } else { 0 }).collect())
+    }
+}
+
+impl From<&[u8]> for DbValue {
+    fn from(value: &[u8]) -> Self {
+        DbValue::Bytes(value.to_vec())
+    }
+}
+
+impl From<&[i64]> for DbValue {
+    fn from(value: &[i64]) -> Self {
+        DbValue::VecI64(value.to_vec())
+    }
+}
+
+impl From<&[i32]> for DbValue {
+    fn from(value: &[i32]) -> Self {
+        DbValue::VecI64(value.iter().map(|x| *x as i64).collect())
+    }
+}
+
+impl From<&[u64]> for DbValue {
+    fn from(value: &[u64]) -> Self {
+        DbValue::VecU64(value.to_vec())
+    }
+}
+
+impl From<&[u32]> for DbValue {
+    fn from(value: &[u32]) -> Self {
+        DbValue::VecU64(value.iter().map(|x| *x as u64).collect())
+    }
+}
+
+impl From<&[usize]> for DbValue {
+    fn from(value: &[usize]) -> Self {
+        DbValue::VecU64(value.iter().map(|x| *x as u64).collect())
+    }
+}
+
+impl From<&[f64]> for DbValue {
+    fn from(value: &[f64]) -> Self {
+        DbValue::VecF64(value.iter().map(|f| DbF64::from(*f)).collect())
+    }
+}
+
+impl From<&[f32]> for DbValue {
+    fn from(value: &[f32]) -> Self {
+        DbValue::VecF64(value.iter().map(|f| DbF64::from(*f)).collect())
+    }
+}
+
+impl From<&[DbF64]> for DbValue {
+    fn from(value: &[DbF64]) -> Self {
+        DbValue::VecF64(value.to_vec())
+    }
+}
+
+impl From<&[String]> for DbValue {
+    fn from(value: &[String]) -> Self {
+        DbValue::VecString(value.to_vec())
+    }
+}
+
+impl From<&[&str]> for DbValue {
+    fn from(value: &[&str]) -> Self {
+        DbValue::VecString(value.iter().map(|s| s.to_string()).collect())
+    }
+}
+
+impl From<&[bool]> for DbValue {
+    fn from(value: &[bool]) -> Self {
+        DbValue::VecU64(value.iter().map(|b| if *b { 1 } else { 0 }).collect())
+    }
+}
+
+impl<const N: usize> From<[u8; N]> for DbValue {
+    fn from(value: [u8; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[i32; N]> for DbValue {
+    fn from(value: [i32; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[i64; N]> for DbValue {
+    fn from(value: [i64; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[u64; N]> for DbValue {
+    fn from(value: [u64; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[u32; N]> for DbValue {
+    fn from(value: [u32; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[usize; N]> for DbValue {
+    fn from(value: [usize; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[f32; N]> for DbValue {
+    fn from(value: [f32; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[f64; N]> for DbValue {
+    fn from(value: [f64; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[DbF64; N]> for DbValue {
+    fn from(value: [DbF64; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[String; N]> for DbValue {
+    fn from(value: [String; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[&str; N]> for DbValue {
+    fn from(value: [&str; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<const N: usize> From<[bool; N]> for DbValue {
+    fn from(value: [bool; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl<T: Into<DbValue> + DbUserValueMarker> From<Vec<T>> for DbValue {
     fn from(value: Vec<T>) -> Self {
         let db_values = value
             .into_iter()
@@ -462,6 +679,12 @@ impl<T: Into<DbValue>> From<Vec<T>> for DbValue {
             ),
             _ => DbValue::Bytes(Vec::new()),
         }
+    }
+}
+
+impl<T: Into<DbValue> + Clone + DbUserValueMarker> From<&[T]> for DbValue {
+    fn from(value: &[T]) -> Self {
+        value.to_vec().into()
     }
 }
 
@@ -630,6 +853,23 @@ mod tests {
     use std::cmp::Ordering;
     use std::collections::HashSet;
 
+    #[derive(Clone)]
+    enum TestEnumString {
+        A,
+        B,
+    }
+
+    impl DbUserValueMarker for TestEnumString {}
+
+    impl From<TestEnumString> for DbValue {
+        fn from(value: TestEnumString) -> Self {
+            match value {
+                TestEnumString::A => DbValue::from("A"),
+                TestEnumString::B => DbValue::from("B"),
+            }
+        }
+    }
+
     #[test]
     fn derived_from_eq() {
         let mut map = HashSet::<DbValue>::new();
@@ -748,10 +988,6 @@ mod tests {
             DbValue::VecF64 { .. }
         ));
         assert!(matches!(DbValue::from(vec![""]), DbValue::VecString { .. }));
-        assert!(matches!(
-            DbValue::from(Vec::<String>::new()),
-            DbValue::Bytes { .. }
-        ));
     }
 
     #[test]
@@ -780,6 +1016,7 @@ mod tests {
     fn to_u64() {
         assert_eq!(DbValue::from(1_u64).to_u64().unwrap(), 1_u64);
         assert_eq!(DbValue::from(1_i64).to_u64().unwrap(), 1_u64);
+        assert_eq!(DbValue::from(1_usize).to_u64().unwrap(), 1_u64);
         assert_eq!(
             DbValue::from(-1_i64).to_u64(),
             Err(DbError::from(
@@ -952,6 +1189,13 @@ mod tests {
             DbValue::from(vec![-1_i64]).vec_i64().unwrap(),
             &vec![-1_i64]
         );
+        assert_eq!(DbValue::from([-1_i64]).vec_i64().unwrap(), &vec![-1_i64]);
+        assert_eq!(
+            DbValue::from(vec![-1_i32]).vec_i64().unwrap(),
+            &vec![-1_i64]
+        );
+        assert_eq!(DbValue::from([-1_i32]).vec_i64().unwrap(), &vec![-1_i64]);
+
         assert_eq!(
             DbValue::from(-1_i64).vec_i64(),
             Err(DbError::from(
@@ -1005,6 +1249,15 @@ mod tests {
     #[test]
     fn vec_u64() {
         assert_eq!(DbValue::from(vec![1_u64]).vec_u64().unwrap(), &vec![1_u64]);
+        assert_eq!(DbValue::from([1_u64]).vec_u64().unwrap(), &vec![1_u64]);
+        assert_eq!(
+            DbValue::from(vec![1_usize]).vec_u64().unwrap(),
+            &vec![1_u64]
+        );
+        assert_eq!(DbValue::from([1_usize]).vec_u64().unwrap(), &vec![1_u64]);
+        assert_eq!(DbValue::from(vec![1_u32]).vec_u64().unwrap(), &vec![1_u64]);
+        assert_eq!(DbValue::from([1_u32]).vec_u64().unwrap(), &vec![1_u64]);
+
         assert_eq!(
             DbValue::from(-1_i64).vec_u64(),
             Err(DbError::from(
@@ -1062,6 +1315,27 @@ mod tests {
             &vec![DbF64::from(1.1_f64)]
         );
         assert_eq!(
+            DbValue::from([1.1]).vec_f64().unwrap(),
+            &vec![DbF64::from(1.1_f64)]
+        );
+        assert_eq!(
+            DbValue::from(vec![1.0_f32]).vec_f64().unwrap(),
+            &vec![DbF64::from(1.0_f64)]
+        );
+        assert_eq!(
+            DbValue::from([1.0_f32]).vec_f64().unwrap(),
+            &vec![DbF64::from(1.0_f64)]
+        );
+        assert_eq!(
+            DbValue::from(vec![DbF64::from(1.1)]).vec_f64().unwrap(),
+            &vec![DbF64::from(1.1_f64)]
+        );
+        assert_eq!(
+            DbValue::from([DbF64::from(1.1)]).vec_f64().unwrap(),
+            &vec![DbF64::from(1.1_f64)]
+        );
+
+        assert_eq!(
             DbValue::from(-1_i64).vec_f64(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'i64' to 'vec<f64>'."
@@ -1118,6 +1392,19 @@ mod tests {
             &vec!["".to_string()]
         );
         assert_eq!(
+            DbValue::from([""]).vec_string().unwrap(),
+            &vec!["".to_string()]
+        );
+        assert_eq!(
+            DbValue::from(vec![String::new()]).vec_string().unwrap(),
+            &vec!["".to_string()]
+        );
+        assert_eq!(
+            DbValue::from([String::new()]).vec_string().unwrap(),
+            &vec!["".to_string()]
+        );
+
+        assert_eq!(
             DbValue::from(-1_i64).vec_string(),
             Err(DbError::from(
                 "Type mismatch. Cannot convert 'i64' to 'vec<string>'."
@@ -1170,6 +1457,8 @@ mod tests {
     #[test]
     fn bytes() {
         assert_eq!(DbValue::from(vec![1_u8]).bytes().unwrap(), &vec![1_u8]);
+        assert_eq!(DbValue::from([1_u8]).bytes().unwrap(), &vec![1_u8]);
+
         assert_eq!(
             DbValue::from(-1_i64).bytes(),
             Err(DbError::from(
@@ -1358,6 +1647,10 @@ mod tests {
             DbValue::from(vec![0_u8, 1, 2]).vec_bool().unwrap(),
             vec![false, true, true]
         );
+        assert_eq!(
+            DbValue::from([true, false]).vec_bool().unwrap(),
+            vec![true, false]
+        );
 
         assert_eq!(
             DbValue::from(1_i64).vec_bool(),
@@ -1431,5 +1724,101 @@ mod tests {
                 "Type mismatch. Cannot convert 'string' to 'Vec<DbValue>'."
             ))
         );
+    }
+
+    #[test]
+    fn vec_of_user_values_as_strings() {
+        let vec = vec![TestEnumString::A, TestEnumString::B];
+        let db_value: DbValue = vec.into();
+        let vec: Vec<String> = db_value.vec_string().unwrap().clone();
+        assert_eq!(vec, vec!["A", "B"]);
+    }
+
+    #[test]
+    fn vec_of_user_values_as_f64() {
+        enum TestEnum {
+            A,
+            B,
+        }
+
+        impl DbUserValueMarker for TestEnum {}
+
+        impl From<TestEnum> for DbValue {
+            fn from(value: TestEnum) -> Self {
+                match value {
+                    TestEnum::A => DbValue::from(1.0),
+                    TestEnum::B => DbValue::from(2.0),
+                }
+            }
+        }
+
+        let vec = vec![TestEnum::A, TestEnum::B];
+        let db_value: DbValue = vec.into();
+        let vec: Vec<DbF64> = db_value.vec_f64().unwrap().clone();
+        assert_eq!(vec, vec![DbF64::from(1.0), DbF64::from(2.0)]);
+    }
+
+    #[test]
+    fn vec_of_user_values_as_u64() {
+        enum TestEnum {
+            A,
+            B,
+        }
+
+        impl DbUserValueMarker for TestEnum {}
+
+        impl From<TestEnum> for DbValue {
+            fn from(value: TestEnum) -> Self {
+                match value {
+                    TestEnum::A => DbValue::from(1_u64),
+                    TestEnum::B => DbValue::from(2_u64),
+                }
+            }
+        }
+
+        let vec = vec![TestEnum::A, TestEnum::B];
+        let db_value: DbValue = vec.into();
+        let vec: Vec<u64> = db_value.vec_u64().unwrap().clone();
+        assert_eq!(vec, vec![1, 2]);
+    }
+
+    #[test]
+    fn vec_of_user_values_as_i64() {
+        enum TestEnum {
+            A,
+            B,
+        }
+
+        impl DbUserValueMarker for TestEnum {}
+
+        impl From<TestEnum> for DbValue {
+            fn from(value: TestEnum) -> Self {
+                match value {
+                    TestEnum::A => DbValue::from(1_i64),
+                    TestEnum::B => DbValue::from(2_i64),
+                }
+            }
+        }
+
+        let vec = vec![TestEnum::A, TestEnum::B];
+        let db_value: DbValue = vec.into();
+        let vec: Vec<i64> = db_value.vec_i64().unwrap().clone();
+        assert_eq!(vec, vec![1, 2]);
+    }
+
+    #[test]
+    fn vec_of_user_values_empty() {
+        let vec = Vec::<TestEnumString>::new();
+        let db_value: DbValue = vec.into();
+        let vec = db_value.bytes().unwrap().clone();
+        assert_eq!(vec, Vec::<u8>::new());
+    }
+
+    #[test]
+    fn vec_of_user_values_slice() {
+        let vec = Vec::<TestEnumString>::new();
+        let db_value: DbValue = vec.as_slice().into();
+        let vec = db_value.bytes().unwrap().clone();
+        assert_eq!(vec, Vec::<u8>::new());
     }
 }

@@ -6,6 +6,10 @@
         "title": "Docs",
         "display": "normal"
     },
+    "---": {
+        "type": "separator",
+        "display": "normal"
+    },
     "guides": {
         "title": "Guides",
         "display": "normal"

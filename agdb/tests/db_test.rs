@@ -490,3 +490,82 @@ fn copy_file() {
         1
     );
 }
+
+#[test]
+fn queries_as_reference() {
+    let test_file = TestFile::new();
+    let mut db = DbFile::new(test_file.file_name()).unwrap();
+
+    let query = QueryBuilder::insert()
+        .nodes()
+        .aliases(vec!["root", "users"])
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert().aliases("root").ids("root").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert()
+        .edges()
+        .from("root")
+        .to("users")
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert().index("username").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert()
+        .values(vec![vec![("username", "admin").into()]])
+        .ids("users")
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove().aliases("new_root").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove().index("username").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove()
+        .values(vec!["username".into()])
+        .ids("users")
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove().ids("users").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::search().from("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().aliases().query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().aliases().ids(1).query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().edge_count().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().edge_count_from().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().edge_count_to().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().indexes().query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().key_count().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().keys().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().node_count().query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().ids("root").query();
+    db.exec(&query).unwrap();
+}

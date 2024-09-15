@@ -10,7 +10,7 @@ fn main() -> Result<(), QueryError> {
     // Inserts root node for users with an alias. You can loosely
     // think of it akin to a table in relational databases.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(vec!["users"])
             .query(),
@@ -20,7 +20,7 @@ fn main() -> Result<(), QueryError> {
     // for each node. Notice we can easily create sparse data
     // omitting certain fields as there is no schema to enforce.
     let users = db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .values(vec![
                 vec![
@@ -41,7 +41,7 @@ fn main() -> Result<(), QueryError> {
     // the new user nodes by supplying the result of the previous query directly.
     // One could also use the `QueryResult::ids()` method to extract the ids.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from("users")
             .to(users)
@@ -67,7 +67,7 @@ fn main() -> Result<(), QueryError> {
     // and/or additional condition on `distance(Equal(2))` to stop search beyond users. But since
     // we know the structure of our data (graph) we can safely omit them as unnecessary here.
     let user_result = db.exec(
-        &QueryBuilder::select()
+        QueryBuilder::select()
             .ids(
                 QueryBuilder::search()
                     .depth_first()

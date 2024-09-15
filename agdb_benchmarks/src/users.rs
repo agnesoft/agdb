@@ -40,7 +40,7 @@ pub(crate) fn setup_users<S: StorageData>(
             for i in 0..user_count {
                 user_ids.push(
                     t.exec_mut(
-                        &QueryBuilder::insert()
+                        QueryBuilder::insert()
                             .nodes()
                             .values(&User {
                                 name: format!("u{i}"),
@@ -54,7 +54,7 @@ pub(crate) fn setup_users<S: StorageData>(
             }
 
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .edges()
                     .from("users")
                     .to(user_ids)

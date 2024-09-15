@@ -33,3 +33,9 @@ impl Query for SelectIndexesQuery {
         Ok(result)
     }
 }
+
+impl Query for &SelectIndexesQuery {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}

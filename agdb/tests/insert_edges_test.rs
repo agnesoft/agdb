@@ -13,7 +13,7 @@ fn insert_edges_from_to_rollback() {
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::insert().edges().from("alias1").to(2).query())?;
+            t.exec_mut(QueryBuilder::insert().edges().from("alias1").to(2).query())?;
             Err("error".into())
         },
         "error".into(),

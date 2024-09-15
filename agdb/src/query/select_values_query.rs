@@ -70,3 +70,9 @@ impl Query for SelectValuesQuery {
         Ok(result)
     }
 }
+
+impl Query for &SelectValuesQuery {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}

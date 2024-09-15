@@ -1,7 +1,10 @@
 use crate::DbElement;
+use crate::DbImpl;
 use crate::Query;
+use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
+use crate::StorageData;
 
 /// Query to select number of edges of given node ids.
 /// All of the ids must exist in the database. If any
@@ -32,10 +35,7 @@ pub struct SelectEdgeCountQuery {
 }
 
 impl Query for SelectEdgeCountQuery {
-    fn process<Store: crate::StorageData>(
-        &self,
-        db: &crate::DbImpl<Store>,
-    ) -> Result<crate::QueryResult, crate::QueryError> {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         let mut result = QueryResult::default();
 
         let db_ids = match &self.ids {
@@ -64,5 +64,11 @@ impl Query for SelectEdgeCountQuery {
         }
 
         Ok(result)
+    }
+}
+
+impl Query for &SelectEdgeCountQuery {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
     }
 }

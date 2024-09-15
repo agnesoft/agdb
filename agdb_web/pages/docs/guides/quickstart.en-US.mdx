@@ -56,7 +56,7 @@ fn main() -> Result<(), QueryError> {
 We run our first query against the database inserting a node with alias "users":
 
 ```rs
-db.exec_mut(&QueryBuilder::insert()
+db.exec_mut(QueryBuilder::insert()
                 .nodes()
                 .aliases("users")
                 .query())?;
@@ -80,7 +80,7 @@ let users = vec![User { db_id: None, username: "Alice".to_string(), age: 40 },
                  User { db_id: None, username: "Bob".to_string(), age: 30 },
                  User { db_id: None, username: "John".to_string(), age: 20 }];
 
-let db_users = db.exec_mut(&QueryBuilder::insert()
+let db_users = db.exec_mut(QueryBuilder::insert()
                                 .nodes()
                                 .values(&users) // We can pass users directly as
                                                 // query paramter thanks to the
@@ -89,7 +89,7 @@ let db_users = db.exec_mut(&QueryBuilder::insert()
                                 .query())?;
 
 db.exec_mut(
-    &QueryBuilder::insert()
+    QueryBuilder::insert()
         .edges()
         .from("users")
         .to(&db_users) // We can feed result of a previous
@@ -110,7 +110,7 @@ db.exec_mut(
 // We combine search & select into a single query like so:
 let users: Vec<User> = db
     .exec(
-        &QueryBuilder::select()
+        QueryBuilder::select()
             .values(User::db_keys()) // Select only relevant properties for the User struct.
             .ids(
                 QueryBuilder::search()

@@ -37,11 +37,11 @@ fn remove_aliases_rollback() {
     db.transaction_mut_error(
         |t| -> Result<QueryResult, QueryError> {
             t.exec_mut(
-                &QueryBuilder::remove()
+                QueryBuilder::remove()
                     .aliases(vec!["alias", "alias2"])
                     .query(),
             )?;
-            t.exec(&QueryBuilder::select().ids("alias2").query())
+            t.exec(QueryBuilder::select().ids("alias2").query())
         },
         "Alias 'alias2' not found".into(),
     );
@@ -60,7 +60,7 @@ fn remove_missing_alias_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().aliases("alias").query())?;
+            t.exec_mut(QueryBuilder::remove().aliases("alias").query())?;
             Err("error".into())
         },
         "error".into(),

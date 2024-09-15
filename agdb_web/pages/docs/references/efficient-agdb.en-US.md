@@ -16,13 +16,13 @@ fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
     let db = Arc::new(RwLock::new(Db::new("social.agdb")?));
     db.write()?.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .nodes()
                 .aliases(vec!["root", "users", "posts"])
                 .query(),
         )?;
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from("root")
                 .to(vec!["users", "posts"])
@@ -62,7 +62,7 @@ We derive from `agdb::UserValue` so we can use the `User` type directly in our q
 fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         if t.exec(
-            &QueryBuilder::search()
+            QueryBuilder::search()
                 .from("users")
                 .where_()
                 .key("username")
@@ -80,7 +80,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
 
         let user = t
             .exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .element(user)
                     .query(),
             )?
@@ -88,7 +88,7 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
             .id;
 
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from("users")
                 .to(user)
@@ -128,7 +128,7 @@ fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError>
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let post = t
             .exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .element(post)
                     .query(),
             )?
@@ -136,7 +136,7 @@ fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError>
             .id;
 
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from(vec![QueryId::from("posts"), user.into()])
                 .to(post)
@@ -180,7 +180,7 @@ fn create_comment(
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let comment = t
             .exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .element(comment)
                     .query(),
             )?
@@ -188,7 +188,7 @@ fn create_comment(
             .id;
 
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from(vec![parent, user])
                 .to(comment)
@@ -210,7 +210,7 @@ Likes can be best modelled as connections from users to posts and comments:
 ```rs
 fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from(user)
             .to(id)
@@ -229,7 +229,7 @@ Since users can decide that they no longer like a post or comment we need to hav
 fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
-            &QueryBuilder::remove()
+            QueryBuilder::remove()
                 .ids(
                     QueryBuilder::search()
                         .from(user)
@@ -280,7 +280,7 @@ First the user login which means searching the database for a particular usernam
 fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
     let result = db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(vec!["password".into()])
                 .ids(
                     QueryBuilder::search()
@@ -331,7 +331,7 @@ Showing users their content or content they liked can be done with a following q
 fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<QueryId>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::search()
+            QueryBuilder::search()
                 .from(user)
                 .where_()
                 .distance(CountComparison::Equal(2))
@@ -362,7 +362,7 @@ Notice as well that the function returns the `ids` of the elements we were inter
 fn post_titles(db: &Db, ids: Vec<QueryId>) -> Result<Vec<String>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(vec!["title".into()])
                 .ids(ids)
                 .query(),
@@ -384,7 +384,7 @@ Selecting all posts is a fairly straightforward query but we would rarely need a
 fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(Post::db_keys())
                 .ids(
                     QueryBuilder::search()
@@ -413,7 +413,7 @@ Now that we have the posts we will want to fetch the comments on them. Our schem
 fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(Comment::db_keys())
                 .ids(
                     QueryBuilder::search()
@@ -454,7 +454,7 @@ Lets start with the likes. The query to make use of the `liked` edges would not 
 fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         let posts = t.exec(
-            &QueryBuilder::search()
+            QueryBuilder::search()
                 .from("posts")
                 .where_()
                 .distance(CountComparison::Equal(2))
@@ -465,7 +465,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
         for post in posts.ids() {
             let post_likes = t
                 .exec(
-                    &QueryBuilder::search()
+                    QueryBuilder::search()
                         .to(post)
                         .where_()
                         .distance(CountComparison::Equal(1))
@@ -477,7 +477,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
             likes.push(vec![("likes", post_likes).into()]);
         }
 
-        t.exec_mut(&QueryBuilder::insert().values(likes).ids(posts).query())?;
+        t.exec_mut(QueryBuilder::insert().values(likes).ids(posts).query())?;
         Ok(())
     })
 }
@@ -501,7 +501,7 @@ This allows us to select and order posts based on likes:
 fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(PostLiked::db_keys())
                 .ids(
                     QueryBuilder::search()
@@ -528,7 +528,7 @@ Another issue we found was that comments do not track their level and we cannot 
 ```rs
 fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .values_uniform(vec![("level", 1).into()])
             .ids(
                 QueryBuilder::search()

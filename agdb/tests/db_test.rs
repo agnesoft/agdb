@@ -100,18 +100,18 @@ fn data_persistence() {
     {
         let mut db = Db::new(test_file.file_name()).unwrap();
         db.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .nodes()
                 .aliases(vec!["alias", "alias2"])
                 .values_uniform(values.clone())
                 .query(),
         )
         .unwrap();
-        db.exec_mut(&QueryBuilder::insert().edges().from(1).to(2).query())
+        db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query())
             .unwrap();
         let result = db
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
@@ -145,7 +145,7 @@ fn data_persistence() {
     let db = Db::new(test_file.file_name()).unwrap();
     let result = db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                 .query(),
         )
@@ -183,18 +183,18 @@ fn data_remove_persistence() {
     {
         let mut db = Db::new(test_file.file_name()).unwrap();
         db.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .nodes()
                 .aliases(vec!["alias", "alias2"])
                 .values_uniform(vec![("key", 100).into()])
                 .query(),
         )
         .unwrap();
-        db.exec_mut(&QueryBuilder::insert().edges().from(1).to(2).query())
+        db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query())
             .unwrap();
         let result = db
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
@@ -224,10 +224,9 @@ fn data_remove_persistence() {
             ]
         );
 
-        db.exec_mut(&QueryBuilder::remove().ids(-3).query())
-            .unwrap();
+        db.exec_mut(QueryBuilder::remove().ids(-3).query()).unwrap();
         db.exec_mut(
-            &QueryBuilder::remove()
+            QueryBuilder::remove()
                 .values(vec!["key".into()])
                 .ids(1)
                 .query(),
@@ -237,7 +236,7 @@ fn data_remove_persistence() {
 
     let db = Db::new(test_file.file_name()).unwrap();
     let result = db
-        .exec(&QueryBuilder::select().ids(vec!["alias", "alias2"]).query())
+        .exec(QueryBuilder::select().ids(vec!["alias", "alias2"]).query())
         .unwrap();
 
     assert_eq!(
@@ -258,9 +257,7 @@ fn data_remove_persistence() {
         ]
     );
 
-    let error = db
-        .exec(&QueryBuilder::select().ids(-3).query())
-        .unwrap_err();
+    let error = db.exec(QueryBuilder::select().ids(-3).query()).unwrap_err();
     assert_eq!(error.description, "Id '-3' not found");
 }
 
@@ -287,14 +284,14 @@ fn optimize_on_drop() {
         let mut db = Db::new(test_file.file_name()).unwrap();
         let result = db
             .exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .nodes()
                     .count(1000)
                     .values_uniform(vec![("key", "value").into()])
                     .query(),
             )
             .unwrap();
-        db.exec_mut(&QueryBuilder::remove().ids(result).query())
+        db.exec_mut(QueryBuilder::remove().ids(result).query())
             .unwrap();
         db_file_size = std::fs::File::open(test_file.file_name())
             .unwrap()
@@ -318,20 +315,20 @@ fn share_between_threads() {
     let db = Arc::new(RwLock::new(Db::new(test_file.file_name()).unwrap()));
     db.write()
         .unwrap()
-        .exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+        .exec_mut(QueryBuilder::insert().nodes().count(1).query())
         .unwrap();
     let db2 = db.clone();
 
     let t1 = std::thread::spawn(move || {
         db.read()
             .unwrap()
-            .exec(&QueryBuilder::search().from(1).query())
+            .exec(QueryBuilder::search().from(1).query())
             .unwrap()
     });
     let t2 = std::thread::spawn(move || {
         db2.read()
             .unwrap()
-            .exec(&QueryBuilder::search().from(1).query())
+            .exec(QueryBuilder::search().from(1).query())
             .unwrap()
     });
 
@@ -346,7 +343,7 @@ fn hot_backup() {
     let db = Arc::new(RwLock::new(Db::new(test_file.file_name()).unwrap()));
     db.write()
         .unwrap()
-        .exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+        .exec_mut(QueryBuilder::insert().nodes().count(1).query())
         .unwrap();
 
     let db2 = db.clone();
@@ -355,7 +352,7 @@ fn hot_backup() {
         while *signal2.read().unwrap() {
             db2.write()
                 .unwrap()
-                .exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+                .exec_mut(QueryBuilder::insert().nodes().count(1).query())
                 .unwrap();
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
@@ -366,7 +363,7 @@ fn hot_backup() {
     *signal.write().unwrap() = false;
     let db = Db::new(test_file2.file_name()).unwrap();
     assert_eq!(
-        db.exec(&QueryBuilder::select().ids(1).query())
+        db.exec(QueryBuilder::select().ids(1).query())
             .unwrap()
             .result,
         1
@@ -423,11 +420,11 @@ fn rename_file() {
     let test_file2 = TestFile::new();
     {
         let mut db = DbFile::new(test_file.file_name()).unwrap();
-        db.exec_mut(&QueryBuilder::insert().nodes().count(1).query())
+        db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
             .unwrap();
         db.rename(test_file2.file_name()).unwrap();
         assert_eq!(
-            db.exec(&QueryBuilder::select().ids(1).query())
+            db.exec(QueryBuilder::select().ids(1).query())
                 .unwrap()
                 .result,
             1
@@ -435,7 +432,7 @@ fn rename_file() {
     }
     let db = DbFile::new(test_file2.file_name()).unwrap();
     assert_eq!(
-        db.exec(&QueryBuilder::select().ids(1).query())
+        db.exec(QueryBuilder::select().ids(1).query())
             .unwrap()
             .result,
         1
@@ -445,13 +442,13 @@ fn rename_file() {
 #[test]
 fn copy_memory() {
     let mut db = DbMemory::new("memdb").unwrap();
-    db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query())
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy("mydb").unwrap();
     assert_eq!(other.filename(), "mydb");
     assert_eq!(
         other
-            .exec(&QueryBuilder::select().ids("root").query())
+            .exec(QueryBuilder::select().ids("root").query())
             .unwrap()
             .result,
         1
@@ -463,13 +460,13 @@ fn copy_mapped() {
     let test_file = TestFile::new();
     let test_file2 = TestFile::new();
     let mut db = Db::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query())
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy(test_file2.file_name()).unwrap();
     assert_eq!(other.filename(), test_file2.file_name());
     assert_eq!(
         other
-            .exec(&QueryBuilder::select().ids("root").query())
+            .exec(QueryBuilder::select().ids("root").query())
             .unwrap()
             .result,
         1
@@ -481,15 +478,94 @@ fn copy_file() {
     let test_file = TestFile::new();
     let test_file2 = TestFile::new();
     let mut db = DbFile::new(test_file.file_name()).unwrap();
-    db.exec_mut(&QueryBuilder::insert().nodes().aliases("root").query())
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("root").query())
         .unwrap();
     let other = db.copy(test_file2.file_name()).unwrap();
     assert_eq!(other.filename(), test_file2.file_name());
     assert_eq!(
         other
-            .exec(&QueryBuilder::select().ids("root").query())
+            .exec(QueryBuilder::select().ids("root").query())
             .unwrap()
             .result,
         1
     );
+}
+
+#[test]
+fn queries_as_reference() {
+    let test_file = TestFile::new();
+    let mut db = DbFile::new(test_file.file_name()).unwrap();
+
+    let query = QueryBuilder::insert()
+        .nodes()
+        .aliases(vec!["root", "users"])
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert().aliases("root").ids("root").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert()
+        .edges()
+        .from("root")
+        .to("users")
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert().index("username").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::insert()
+        .values(vec![vec![("username", "admin").into()]])
+        .ids("users")
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove().aliases("new_root").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove().index("username").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove()
+        .values(vec!["username".into()])
+        .ids("users")
+        .query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::remove().ids("users").query();
+    db.exec_mut(&query).unwrap();
+
+    let query = QueryBuilder::search().from("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().aliases().query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().aliases().ids(1).query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().edge_count().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().edge_count_from().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().edge_count_to().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().indexes().query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().key_count().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().keys().ids("root").query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().node_count().query();
+    db.exec(&query).unwrap();
+
+    let query = QueryBuilder::select().ids("root").query();
+    db.exec(&query).unwrap();
 }

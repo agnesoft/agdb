@@ -113,6 +113,15 @@ impl QueryMut for InsertEdgesQuery {
     }
 }
 
+impl QueryMut for &InsertEdgesQuery {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}
+
 impl InsertEdgesQuery {
     fn db_ids<Store: StorageData>(
         query_ids: &QueryIds,

@@ -14,7 +14,7 @@ fn insert_values_ids_rollback() {
         |t| -> Result<(), QueryError> {
             assert_eq!(
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .values(vec![vec![
                             ("key", vec![1.1, 2.1]).into(),
                             (vec!["a".to_string(), "b".to_string()], vec![1, 2]).into(),
@@ -30,7 +30,7 @@ fn insert_values_ids_rollback() {
                 6
             );
             assert_eq!(
-                t.exec(&QueryBuilder::select().ids(1).query())?.elements,
+                t.exec(QueryBuilder::select().ids(1).query())?.elements,
                 vec![DbElement {
                     id: DbId(1),
                     from: None,
@@ -308,7 +308,7 @@ fn insert_values_overwrite_transaction() {
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .values_uniform(vec![("key", 20).into(), ("key2", 30).into()])
                     .ids(1)
                     .query(),

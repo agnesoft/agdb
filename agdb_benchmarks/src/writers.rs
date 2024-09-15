@@ -49,7 +49,7 @@ impl<S: StorageData> Writer<S> {
             self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
                 let id = t
                     .exec_mut(
-                        &QueryBuilder::insert()
+                        QueryBuilder::insert()
                             .nodes()
                             .values(&Post {
                                 title: title.to_string(),
@@ -61,7 +61,7 @@ impl<S: StorageData> Writer<S> {
                     .id;
 
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .edges()
                         .from(vec![QueryId::from("posts"), self.id.into()])
                         .to(id)
@@ -86,7 +86,7 @@ impl<S: StorageData> Writer<S> {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
                     let id = t
                         .exec_mut(
-                            &QueryBuilder::insert()
+                            QueryBuilder::insert()
                                 .nodes()
                                 .values(&Comment {
                                     body: body.to_string(),
@@ -97,7 +97,7 @@ impl<S: StorageData> Writer<S> {
                         .id;
 
                     t.exec_mut(
-                        &QueryBuilder::insert()
+                        QueryBuilder::insert()
                             .edges()
                             .from(vec![post_id, self.id])
                             .to(id)
@@ -124,7 +124,7 @@ impl<S: StorageData> Writer<S> {
             .0
             .read()?
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .depth_first()
                     .from("posts")
                     .limit(1)
@@ -186,7 +186,7 @@ pub(crate) fn start_post_writers<S: StorageData + Send + Sync + 'static>(
     let tasks =
         db.0.read()?
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from("users")
                     .limit(config.posters.count)
                     .where_()
@@ -232,7 +232,7 @@ pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
     let tasks =
         db.0.read()?
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from("users")
                     .offset(config.posters.count)
                     .limit(config.commenters.count)

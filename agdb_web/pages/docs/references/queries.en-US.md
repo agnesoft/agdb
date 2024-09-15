@@ -149,10 +149,10 @@ Example:
 #[derive(UserValue)]
 struct User { db_id: Option<DbId>, name: String, }
 let user = User { db_id: None, name: "Bob".to_string() };
-db.exec_mut(&QueryBuilder::insert().nodes().values(vec![user]).query())?;
-let mut user: User = db.exec(&QueryBuilder::select().values(User::db_keys()).ids(1).query())?.try_into()?; // User { db_id: Some(DbId(1)), name: "Bob" }
+db.exec_mut(QueryBuilder::insert().nodes().values(vec![user]).query())?;
+let mut user: User = db.exec(QueryBuilder::select().values(User::db_keys()).ids(1).query())?.try_into()?; // User { db_id: Some(DbId(1)), name: "Bob" }
 user.name = "Alice".to_string();
-db.exec_mut(&QueryBuilder::insert().element(&user).query())?; //updates the user element with new name
+db.exec_mut(QueryBuilder::insert().element(&user).query())?; //updates the user element with new name
 ```
 
 In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field enitrely or construct it based on other values.

@@ -60,6 +60,15 @@ impl QueryMut for InsertAliasesQuery {
     }
 }
 
+impl QueryMut for &InsertAliasesQuery {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -91,7 +91,7 @@ impl DbPool {
                 .get()
                 .await
                 .exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .elements::<Database>()
                         .ids(
                             QueryBuilder::search()
@@ -116,18 +116,18 @@ impl DbPool {
             let admin_password = Password::create(&config.admin, &config.admin);
 
             db_pool.0.server_db.get_mut().await.transaction_mut(|t| {
-                t.exec_mut(&QueryBuilder::insert().index("username").query())?;
-                t.exec_mut(&QueryBuilder::insert().index("token").query())?;
+                t.exec_mut(QueryBuilder::insert().index("username").query())?;
+                t.exec_mut(QueryBuilder::insert().index("token").query())?;
 
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .nodes()
                         .aliases(vec!["users", "dbs"])
                         .query(),
                 )?;
 
                 let admin = t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .element(&ServerUser {
                             db_id: None,
                             username: config.admin.clone(),
@@ -139,7 +139,7 @@ impl DbPool {
                 )?;
 
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .edges()
                         .from("users")
                         .to(admin)
@@ -184,7 +184,7 @@ impl DbPool {
         self.get_pool_mut().await.insert(db_name.clone(), server_db);
         self.db_mut().await.transaction_mut(|t| {
             let db = t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .element(&Database {
                         db_id: None,
                         name: db_name.clone(),
@@ -195,7 +195,7 @@ impl DbPool {
             )?;
 
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .edges()
                     .from(vec![QueryId::from(owner_id), "dbs".into()])
                     .to(db)
@@ -230,7 +230,7 @@ impl DbPool {
 
         self.db_mut().await.transaction_mut(|t| {
             let existing_role = t.exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from(user_id)
                     .to(db_id)
                     .limit(1)
@@ -241,14 +241,14 @@ impl DbPool {
 
             if existing_role.result == 1 {
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .values(vec![vec![("role", role).into()]])
                         .ids(existing_role)
                         .query(),
                 )?;
             } else {
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .edges()
                         .from(user_id)
                         .to(db_id)
@@ -263,10 +263,10 @@ impl DbPool {
 
     pub(crate) async fn add_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut().await.transaction_mut(|t| {
-            let user = t.exec_mut(&QueryBuilder::insert().element(&user).query())?;
+            let user = t.exec_mut(QueryBuilder::insert().element(&user).query())?;
 
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .edges()
                     .from("users")
                     .to(user)
@@ -518,7 +518,7 @@ impl DbPool {
             .insert(target_db.clone(), server_db);
         self.db_mut().await.transaction_mut(|t| {
             let db = t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .element(&Database {
                         db_id: None,
                         name: target_db.clone(),
@@ -529,7 +529,7 @@ impl DbPool {
             )?;
 
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .edges()
                     .from(vec![QueryId::from(user), "dbs".into()])
                     .to(db)
@@ -658,7 +658,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<Database>()
                     .ids(
                         QueryBuilder::search()
@@ -696,7 +696,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .values(vec!["username".into()])
                     .ids(
                         QueryBuilder::search()
@@ -722,7 +722,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
                             .depth_first()
@@ -769,7 +769,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<ServerUser>()
                     .ids(user_id)
                     .query(),
@@ -781,7 +781,7 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&QueryBuilder::search().index("username").value(name).query())?
+            .exec(QueryBuilder::search().index("username").value(name).query())?
             .elements
             .first()
             .ok_or(user_not_found(name))?
@@ -792,7 +792,7 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&QueryBuilder::search().index("token").value(token).query())?
+            .exec(QueryBuilder::search().index("token").value(token).query())?
             .elements
             .first()
             .ok_or(format!("No user found for token '{token}'"))?
@@ -804,7 +804,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<ServerUser>()
                     .ids(user)
                     .query(),
@@ -824,7 +824,7 @@ impl DbPool {
         self.db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
                             .depth_first()
@@ -903,7 +903,7 @@ impl DbPool {
         }
 
         self.db_mut().await.exec_mut(
-            &QueryBuilder::remove()
+            QueryBuilder::remove()
                 .ids(
                     QueryBuilder::search()
                         .from(user_id)
@@ -935,7 +935,7 @@ impl DbPool {
 
         self.db_mut()
             .await
-            .exec_mut(&QueryBuilder::remove().ids(db_id).query())?;
+            .exec_mut(QueryBuilder::remove().ids(db_id).query())?;
 
         Ok(self.get_pool_mut().await.remove(&db_name).unwrap())
     }
@@ -950,7 +950,7 @@ impl DbPool {
         ids.push(user_id);
         self.db_mut()
             .await
-            .exec_mut(&QueryBuilder::remove().ids(ids).query())?;
+            .exec_mut(QueryBuilder::remove().ids(ids).query())?;
 
         for db in dbs.into_iter() {
             self.get_pool_mut().await.remove(&db.name);
@@ -1033,7 +1033,7 @@ impl DbPool {
         database.name = new_name.to_string();
         self.db_mut()
             .await
-            .exec_mut(&QueryBuilder::insert().element(&database).query())?;
+            .exec_mut(QueryBuilder::insert().element(&database).query())?;
 
         self.get_pool_mut().await.remove(&db_name).unwrap();
 
@@ -1087,7 +1087,7 @@ impl DbPool {
         self.db_mut().await.transaction_mut(|t| {
             let mut user_token = t
                 .exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .values(vec!["token".into()])
                         .ids(user)
                         .query(),
@@ -1101,7 +1101,7 @@ impl DbPool {
                 let token_uuid = Uuid::new_v4();
                 user_token = token_uuid.to_string();
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .values_uniform(vec![("token", &user_token.clone()).into()])
                         .ids(user)
                         .query(),
@@ -1115,7 +1115,7 @@ impl DbPool {
     pub(crate) async fn save_user(&self, user: ServerUser) -> ServerResult {
         self.db_mut()
             .await
-            .exec_mut(&QueryBuilder::insert().element(&user).query())?;
+            .exec_mut(QueryBuilder::insert().element(&user).query())?;
         Ok(())
     }
 
@@ -1124,7 +1124,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .values(vec!["username".into()])
                     .ids(id)
                     .query(),
@@ -1148,7 +1148,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .depth_first()
                     .to(db)
                     .where_()
@@ -1184,13 +1184,13 @@ impl DbPool {
             .await
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
-                    .exec(&db_id_query)?
+                    .exec(db_id_query)?
                     .elements
                     .first()
                     .ok_or(db_not_found(db))?
                     .id;
                 Ok(t.exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .elements::<Database>()
                         .ids(db_id)
                         .query(),
@@ -1204,7 +1204,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<Database>()
                     .ids(
                         QueryBuilder::search()
@@ -1224,7 +1224,7 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&db_id_query)?
+            .exec(db_id_query)?
             .elements
             .first()
             .ok_or(db_not_found(db))?
@@ -1238,14 +1238,14 @@ impl DbPool {
             .await
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
-                    .exec(&db_id_query)?
+                    .exec(db_id_query)?
                     .elements
                     .first()
                     .ok_or(db_not_found(db))?
                     .id;
 
                 Ok(t.exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .ids(
                             QueryBuilder::search()
                                 .depth_first()
@@ -1280,7 +1280,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from(user)
                     .to(db)
                     .limit(1)
@@ -1298,7 +1298,7 @@ impl DbPool {
     async fn save_db(&self, db: &Database) -> ServerResult {
         self.db_mut()
             .await
-            .exec_mut(&QueryBuilder::insert().element(db).query())?;
+            .exec_mut(QueryBuilder::insert().element(db).query())?;
         Ok(())
     }
 }
@@ -1379,27 +1379,27 @@ fn t_exec(
     match q {
         QueryType::Search(q) => {
             inject_results_search(q, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectAliases(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectAllAliases(q) => t.exec(q),
-        QueryType::SelectEdgeCount(q) => t.exec(q),
-        QueryType::SelectIndexes(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectEdgeCount(q) => t.exec(&*q),
+        QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectKeyCount(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectNodeCount(q) => t.exec(q),
+        QueryType::SelectNodeCount(q) => t.exec(&*q),
         QueryType::SelectValues(q) => {
             inject_results(&mut q.ids, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         _ => unreachable!(),
     }
@@ -1417,32 +1417,32 @@ fn t_exec_mut(
     let r = match &mut q {
         QueryType::Search(q) => {
             inject_results_search(q, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectAliases(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectAllAliases(q) => t.exec(q),
-        QueryType::SelectEdgeCount(q) => t.exec(q),
-        QueryType::SelectIndexes(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectEdgeCount(q) => t.exec(&*q),
+        QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectKeyCount(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectNodeCount(q) => t.exec(q),
+        QueryType::SelectNodeCount(q) => t.exec(&*q),
         QueryType::SelectValues(q) => {
             inject_results(&mut q.ids, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::InsertAlias(q) => {
             do_audit = true;
             inject_results(&mut q.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertEdges(q) => {
             do_audit = true;
@@ -1450,39 +1450,39 @@ fn t_exec_mut(
             inject_results(&mut q.from, results)?;
             inject_results(&mut q.to, results)?;
 
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertNodes(q) => {
             do_audit = true;
             inject_results(&mut q.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertValues(q) => {
             do_audit = true;
             inject_results(&mut q.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::Remove(q) => {
             do_audit = true;
             inject_results(&mut q.0, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertIndex(q) => {
             do_audit = true;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::RemoveAliases(q) => {
             do_audit = true;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::RemoveIndex(q) => {
             do_audit = true;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::RemoveValues(q) => {
             do_audit = true;
             inject_results(&mut q.0.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
     };
 

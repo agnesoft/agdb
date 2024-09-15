@@ -16,7 +16,7 @@ fn main() -> Result<(), QueryError> {
 
     // Inserts root node for databases and the user.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(vec!["user", "dbs"])
             .query(),
@@ -24,7 +24,7 @@ fn main() -> Result<(), QueryError> {
 
     // Create two databases.
     let dbs = db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .values(vec![
                 vec![("name", "db1").into()],
@@ -35,7 +35,7 @@ fn main() -> Result<(), QueryError> {
 
     // Attach the databases to the user with the roles "admin" and "read" respectively.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from("user")
             .to(dbs)
@@ -53,7 +53,7 @@ fn main() -> Result<(), QueryError> {
     // create the joined element and on each node we fill in the remaining data.
     let mut user_dbs: Vec<UserDb> = vec![];
     db.exec(
-        &QueryBuilder::select()
+        QueryBuilder::select()
             .ids(
                 QueryBuilder::search()
                     .depth_first()
@@ -92,7 +92,7 @@ fn main() -> Result<(), QueryError> {
     // which is significnatly slower.
     let user_dbs = db.transaction(|t| -> Result<Vec<UserDb>, QueryError> {
         let db_names = t.exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .ids(
                     QueryBuilder::search()
                         .from("user")
@@ -109,7 +109,7 @@ fn main() -> Result<(), QueryError> {
 
         for db_name in db_names.elements {
             let role = t.exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
                             .to(db_name.id)

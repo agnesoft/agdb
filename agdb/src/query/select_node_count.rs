@@ -29,3 +29,9 @@ impl Query for SelectNodeCountQuery {
         })
     }
 }
+
+impl Query for &SelectNodeCountQuery {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}

@@ -129,19 +129,19 @@ impl Serialize for DbStorageIndex {
 /// let mut db = Db::new("db.agdb").unwrap();
 ///
 /// // Insert single node
-/// db.exec_mut(&QueryBuilder::insert().nodes().count(1).query()).unwrap();
+/// db.exec_mut(QueryBuilder::insert().nodes().count(1).query()).unwrap();
 ///
 /// // Insert single node as a transaction
-/// db.transaction_mut(|t| -> Result<(), QueryError> { t.exec_mut(&QueryBuilder::insert().nodes().count(1).query())?; Ok(()) }).unwrap();
+/// db.transaction_mut(|t| -> Result<(), QueryError> { t.exec_mut(QueryBuilder::insert().nodes().count(1).query())?; Ok(()) }).unwrap();
 ///
 /// // Select single database element with id 1
-/// db.exec(&QueryBuilder::select().ids(1).query()).unwrap();
+/// db.exec(QueryBuilder::select().ids(1).query()).unwrap();
 ///
 /// // Select single database element with id 1 as a transaction
-/// db.transaction(|t| -> Result<(), QueryError> { t.exec(&QueryBuilder::select().ids(1).query())?; Ok(()) }).unwrap();
+/// db.transaction(|t| -> Result<(), QueryError> { t.exec(QueryBuilder::select().ids(1).query())?; Ok(()) }).unwrap();
 ///
 /// // Search the database starting at element 1
-/// db.exec(&QueryBuilder::search().from(1).query()).unwrap();
+/// db.exec(QueryBuilder::search().from(1).query()).unwrap();
 /// ```
 /// # Transactions
 ///
@@ -291,7 +291,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// It runs the query as a transaction and returns either the result or
     /// error describing what went wrong (e.g. query error, logic error, data
     /// error etc.).
-    pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
+    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, QueryError> {
         self.transaction(|transaction| transaction.exec(query))
     }
 
@@ -308,7 +308,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// It runs the query as a transaction and returns either the result or
     /// error describing what went wrong (e.g. query error, logic error, data
     /// error etc.).
-    pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
+    pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, QueryError> {
         self.transaction_mut(|transaction| transaction.exec_mut(query))
     }
 
@@ -344,7 +344,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// parameters it also allows transforming the query results into a type `T`.
     pub fn transaction<T, E>(
         &self,
-        mut f: impl FnMut(&Transaction<Store>) -> Result<T, E>,
+        f: impl FnOnce(&Transaction<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
         let transaction = Transaction::new(self);
 
@@ -369,7 +369,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// results into a type `T`.
     pub fn transaction_mut<T, E: From<QueryError>>(
         &mut self,
-        mut f: impl FnMut(&mut TransactionMut<Store>) -> Result<T, E>,
+        f: impl FnOnce(&mut TransactionMut<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
         let mut transaction = TransactionMut::new(&mut *self);
         let result = f(&mut transaction);

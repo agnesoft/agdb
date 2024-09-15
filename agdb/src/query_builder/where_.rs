@@ -1,9 +1,9 @@
+use crate::db::db_value::DbValues;
 use crate::query::query_condition::CountComparison;
 use crate::query::query_condition::QueryCondition;
 use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
-use crate::query::query_values::QueryKeys;
 use crate::query::search_query::SearchQuery;
 use crate::Comparison;
 use crate::DbValue;
@@ -218,11 +218,11 @@ impl Where {
     /// // Includes only elements with either "a" or "b" properties (keys).
     /// QueryBuilder::search().from(1).where_().keys(vec!["a".into()]).or().keys(vec!["b".into()]).query();
     /// ```
-    pub fn keys<T: Into<QueryKeys>>(mut self, keys: T) -> WhereLogicOperator {
+    pub fn keys<T: Into<DbValues>>(mut self, keys: T) -> WhereLogicOperator {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
-            data: QueryConditionData::Keys(Into::<QueryKeys>::into(keys).0),
+            data: QueryConditionData::Keys(Into::<DbValues>::into(keys).0),
         });
 
         WhereLogicOperator(self)

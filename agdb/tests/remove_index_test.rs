@@ -90,13 +90,7 @@ fn remove_indexed_key() {
             .query(),
         3,
     );
-    db.exec_mut(
-        QueryBuilder::remove()
-            .values(vec!["username".into()])
-            .ids(2)
-            .query(),
-        -1,
-    );
+    db.exec_mut(QueryBuilder::remove().values("username").ids(2).query(), -1);
     let result = db.exec_result(QueryBuilder::select().indexes().query());
     assert_eq!(result.elements[0].values[0].value, DbValue::from(2_u64));
 }
@@ -118,12 +112,7 @@ fn remove_indexed_key_rollback() {
     );
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(
-                QueryBuilder::remove()
-                    .values(vec!["username".into()])
-                    .ids(2)
-                    .query(),
-            )?;
+            t.exec_mut(QueryBuilder::remove().values("username").ids(2).query())?;
             Err(QueryError::from("error"))
         },
         QueryError::from("error"),

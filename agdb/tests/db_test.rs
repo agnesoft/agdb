@@ -225,13 +225,8 @@ fn data_remove_persistence() {
         );
 
         db.exec_mut(QueryBuilder::remove().ids(-3).query()).unwrap();
-        db.exec_mut(
-            QueryBuilder::remove()
-                .values(vec!["key".into()])
-                .ids(1)
-                .query(),
-        )
-        .unwrap();
+        db.exec_mut(QueryBuilder::remove().values("key").ids(1).query())
+            .unwrap();
     }
 
     let db = Db::new(test_file.file_name()).unwrap();
@@ -528,7 +523,7 @@ fn queries_as_reference() {
     db.exec_mut(&query).unwrap();
 
     let query = QueryBuilder::remove()
-        .values(vec!["username".into()])
+        .values("username")
         .ids("users")
         .query();
     db.exec_mut(&query).unwrap();

@@ -1,5 +1,5 @@
+use crate::db::db_value::DbValues;
 use crate::query::query_aliases::QueryAliases;
-use crate::query::query_values::QueryKeys;
 use crate::query_builder::remove_aliases::RemoveAliases;
 use crate::query_builder::remove_ids::RemoveIds;
 use crate::query_builder::remove_index::RemoveIndex;
@@ -50,9 +50,9 @@ impl Remove {
     /// QueryBuilder::remove().values(vec!["k".into()]).ids(vec![1]);
     /// QueryBuilder::remove().values(vec!["k".into()]).ids(QueryBuilder::search().from(1).query());
     /// ```
-    pub fn values<T: Into<QueryKeys>>(self, keys: T) -> RemoveValues {
+    pub fn values<T: Into<DbValues>>(self, keys: T) -> RemoveValues {
         RemoveValues(RemoveValuesQuery(SelectValuesQuery {
-            keys: Into::<QueryKeys>::into(keys).0,
+            keys: Into::<DbValues>::into(keys).0,
             ids: QueryIds::Ids(vec![]),
         }))
     }

@@ -35,7 +35,7 @@ fn remove_values_ids() {
     );
     db.exec_mut(
         QueryBuilder::remove()
-            .values(vec!["key1".into()])
+            .values("key1")
             .ids(vec!["alias", "alias2"])
             .query(),
         -2,
@@ -72,7 +72,7 @@ fn remove_values_search() {
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
     db.exec_mut(
         QueryBuilder::remove()
-            .values(vec!["key".into()])
+            .values("key")
             .ids(QueryBuilder::search().from(1).query())
             .query(),
         -2,
@@ -109,7 +109,7 @@ fn remove_missing_key() {
     );
     db.exec_mut(
         QueryBuilder::remove()
-            .values(vec!["key3".into()])
+            .values("key3")
             .ids(vec!["alias", "alias2"])
             .query(),
         0,

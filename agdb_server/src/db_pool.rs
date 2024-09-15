@@ -235,7 +235,7 @@ impl DbPool {
                     .to(db_id)
                     .limit(1)
                     .where_()
-                    .keys(vec!["role".into()])
+                    .keys("role")
                     .query(),
             )?;
 
@@ -697,14 +697,14 @@ impl DbPool {
             .await
             .exec(
                 QueryBuilder::select()
-                    .values(vec!["username".into()])
+                    .values("username")
                     .ids(
                         QueryBuilder::search()
                             .from("users")
                             .where_()
                             .distance(CountComparison::Equal(2))
                             .and()
-                            .keys(vec!["username".into()])
+                            .keys("username")
                             .query(),
                     )
                     .query(),
@@ -833,9 +833,9 @@ impl DbPool {
                             .distance(CountComparison::LessThanOrEqual(2))
                             .and()
                             .where_()
-                            .keys(vec!["role".into()])
+                            .keys("role")
                             .or()
-                            .keys(vec!["password".into()])
+                            .keys("password")
                             .query(),
                     )
                     .query(),
@@ -910,7 +910,7 @@ impl DbPool {
                         .to(db_id)
                         .limit(1)
                         .where_()
-                        .keys(vec!["role".into()])
+                        .keys("role")
                         .query(),
                 )
                 .query(),
@@ -1086,12 +1086,7 @@ impl DbPool {
     pub(crate) async fn user_token(&self, user: DbId) -> ServerResult<String> {
         self.db_mut().await.transaction_mut(|t| {
             let mut user_token = t
-                .exec(
-                    QueryBuilder::select()
-                        .values(vec!["token".into()])
-                        .ids(user)
-                        .query(),
-                )?
+                .exec(QueryBuilder::select().values("token").ids(user).query())?
                 .elements[0]
                 .values[0]
                 .value
@@ -1123,12 +1118,7 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(
-                QueryBuilder::select()
-                    .values(vec!["username".into()])
-                    .ids(id)
-                    .query(),
-            )?
+            .exec(QueryBuilder::select().values("username").ids(id).query())?
             .elements[0]
             .values[0]
             .value
@@ -1255,7 +1245,7 @@ impl DbPool {
                                 .where_()
                                 .distance(CountComparison::LessThanOrEqual(2))
                                 .and()
-                                .keys(vec!["role".into()])
+                                .keys("role")
                                 .query(),
                         )
                         .query(),

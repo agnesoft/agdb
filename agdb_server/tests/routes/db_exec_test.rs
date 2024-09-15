@@ -117,11 +117,7 @@ async fn read_queries() -> anyhow::Result<()> {
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
         QueryBuilder::select().node_count().query().into(),
-        QueryBuilder::select()
-            .values(vec!["key".into()])
-            .ids(1)
-            .query()
-            .into(),
+        QueryBuilder::select().values("key").ids(1).query().into(),
     ];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
     assert_eq!(status, 200);
@@ -172,18 +168,10 @@ async fn write_queries() -> anyhow::Result<()> {
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
         QueryBuilder::select().node_count().query().into(),
-        QueryBuilder::select()
-            .values(vec!["key".into()])
-            .ids(1)
-            .query()
-            .into(),
+        QueryBuilder::select().values("key").ids(1).query().into(),
         QueryBuilder::remove().aliases("node2").query().into(),
         QueryBuilder::remove().index("key").query().into(),
-        QueryBuilder::remove()
-            .values(vec!["key".into()])
-            .ids(1)
-            .query()
-            .into(),
+        QueryBuilder::remove().values("key").ids(1).query().into(),
         QueryBuilder::remove().ids("node1").query().into(),
     ];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
@@ -223,7 +211,7 @@ async fn use_result_of_previous_query() -> anyhow::Result<()> {
                 QueryBuilder::search()
                     .from("users")
                     .where_()
-                    .keys(vec!["key".into()])
+                    .keys("key")
                     .query(),
             )
             .query()
@@ -286,7 +274,7 @@ async fn use_result_in_subquery() -> anyhow::Result<()> {
                 QueryBuilder::search()
                     .from(":0")
                     .where_()
-                    .keys(vec!["key".into()])
+                    .keys("key")
                     .query(),
             )
             .query()

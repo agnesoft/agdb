@@ -54,6 +54,12 @@ struct MyCustomVec {
     attribtues: Vec<Attribute>,
 }
 
+#[derive(UserValue, PartialEq, Debug)]
+struct WithOption {
+    name: String,
+    value: Option<u64>,
+}
+
 impl From<Status> for DbValue {
     fn from(value: Status) -> Self {
         match value {
@@ -667,5 +673,20 @@ fn select_user_value() {
         .try_into()
         .unwrap();
     my_value.db_id = Some(result.elements[0].id.into());
+    assert_eq!(my_value, my_value_from_db);
+}
+
+#[test]
+fn with_option() {
+    let mut db = TestDb::new();
+    let my_value = WithOption {
+        name: "my name".to_string(),
+        value: Some(20),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
+    let my_value_from_db: WithOption = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into()
+        .unwrap();
     assert_eq!(my_value, my_value_from_db);
 }

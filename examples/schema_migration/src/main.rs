@@ -56,7 +56,7 @@ fn main() -> Result<(), QueryError> {
 
     // Inserts root nodes for users.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(vec!["users"])
             .query(),
@@ -82,11 +82,11 @@ fn main() -> Result<(), QueryError> {
         });
     }
 
-    let users = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
+    let users = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
 
     // Attach the users to the users node.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from("users")
             .to(users)
@@ -102,7 +102,7 @@ fn main() -> Result<(), QueryError> {
     db.transaction_mut(|t| {
         // First remove the "age" property from all the users.
         t.exec_mut(
-            &QueryBuilder::remove()
+            QueryBuilder::remove()
                 .values(vec!["age".into()])
                 .ids(QueryBuilder::search().from("users").query())
                 .query(),
@@ -128,7 +128,7 @@ fn main() -> Result<(), QueryError> {
 
         // And finally since we have defined the `From<UserStatus> for DbValue` to represent the
         // enum as numbers, we can simply re-instert the users back.
-        t.exec_mut(&QueryBuilder::insert().elements(&users).query())
+        t.exec_mut(QueryBuilder::insert().elements(&users).query())
 
         // NOTE: When migrating huge amount fo data it would be better to do it in batches using
         // the `limit` and `offset` values in the search query.

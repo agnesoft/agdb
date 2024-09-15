@@ -13,7 +13,7 @@ fn remove_nodes_rollback() {
     db.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query(), 1);
     db.transaction_mut_error(
         |t| {
-            t.exec_mut(&QueryBuilder::remove().ids("alias").query())
+            t.exec_mut(QueryBuilder::remove().ids("alias").query())
                 .unwrap();
             t.exec(QueryBuilder::select().ids(DbId(1)).query())
         },
@@ -69,7 +69,7 @@ fn remove_nodes_no_alias_rollback() {
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().ids(1).query())?;
+            t.exec_mut(QueryBuilder::remove().ids(1).query())?;
             Err("error".into())
         },
         "error".into(),
@@ -82,7 +82,7 @@ fn remove_missing_nodes_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().ids(1).query())?;
+            t.exec_mut(QueryBuilder::remove().ids(1).query())?;
             Err("error".into())
         },
         "error".into(),
@@ -94,7 +94,7 @@ fn remove_missing_nodes_alias_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().ids("alias").query())?;
+            t.exec_mut(QueryBuilder::remove().ids("alias").query())?;
             Err("error".into())
         },
         "error".into(),
@@ -124,7 +124,7 @@ fn remove_nodes_with_edges_rollback() {
     db.exec_mut(QueryBuilder::insert().edges().from(1).to(1).query(), 1);
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().ids(1).query())?;
+            t.exec_mut(QueryBuilder::remove().ids(1).query())?;
             Err("error".into())
         },
         "error".into(),
@@ -177,7 +177,7 @@ fn remove_nodes_with_values_rollback() {
 
     db.transaction_mut_error(
         |t| -> Result<QueryResult, QueryError> {
-            t.exec_mut(&QueryBuilder::remove().ids(1).query()).unwrap();
+            t.exec_mut(QueryBuilder::remove().ids(1).query()).unwrap();
             t.exec(QueryBuilder::select().ids(1).query())
         },
         QueryError::from("Id '1' not found"),
@@ -266,9 +266,9 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
     );
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().ids(2).query())?;
+            t.exec_mut(QueryBuilder::remove().ids(2).query())?;
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .edges()
                     .from(vec![1, 1])
                     .to(vec![3, 3])

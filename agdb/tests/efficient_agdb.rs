@@ -48,13 +48,13 @@ fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
     let db = Arc::new(RwLock::new(Db::new("social.agdb")?));
     db.write()?.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .nodes()
                 .aliases(vec!["root", "users", "posts"])
                 .query(),
         )?;
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from("root")
                 .to(vec!["users", "posts"])
@@ -86,12 +86,12 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
         }
 
         let user = t
-            .exec_mut(&QueryBuilder::insert().element(user).query())?
+            .exec_mut(QueryBuilder::insert().element(user).query())?
             .elements[0]
             .id;
 
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from("users")
                 .to(user)
@@ -105,12 +105,12 @@ fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
 fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let post = t
-            .exec_mut(&QueryBuilder::insert().element(post).query())?
+            .exec_mut(QueryBuilder::insert().element(post).query())?
             .elements[0]
             .id;
 
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from(vec![QueryId::from("posts"), user.into()])
                 .to(post)
@@ -130,12 +130,12 @@ fn create_comment(
 ) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         let comment = t
-            .exec_mut(&QueryBuilder::insert().element(comment).query())?
+            .exec_mut(QueryBuilder::insert().element(comment).query())?
             .elements[0]
             .id;
 
         t.exec_mut(
-            &QueryBuilder::insert()
+            QueryBuilder::insert()
                 .edges()
                 .from(vec![parent, user])
                 .to(comment)
@@ -149,7 +149,7 @@ fn create_comment(
 
 fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from(user)
             .to(id)
@@ -162,7 +162,7 @@ fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
 fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
-            &QueryBuilder::remove()
+            QueryBuilder::remove()
                 .ids(
                     QueryBuilder::search()
                         .from(user)
@@ -308,7 +308,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
             likes.push(vec![("likes", post_likes).into()]);
         }
 
-        t.exec_mut(&QueryBuilder::insert().values(likes).ids(posts).query())?;
+        t.exec_mut(QueryBuilder::insert().values(likes).ids(posts).query())?;
         Ok(())
     })
 }
@@ -335,7 +335,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
 
 fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .values_uniform(vec![("level", 1).into()])
             .ids(
                 QueryBuilder::search()

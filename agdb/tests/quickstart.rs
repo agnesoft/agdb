@@ -9,7 +9,7 @@ fn quickstart() -> Result<(), QueryError> {
     let _test_file = TestFile::from("db_file.agdb");
     let mut db = Db::new("db_file.agdb")?;
 
-    db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
+    db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query())?;
 
     #[derive(Debug, UserValue)]
     struct User {
@@ -31,10 +31,10 @@ fn quickstart() -> Result<(), QueryError> {
         },
     ];
 
-    let users_ids = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
+    let users_ids = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
 
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from("users")
             .to(&users_ids)

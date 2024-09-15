@@ -19,13 +19,13 @@ fn main() -> Result<(), QueryError> {
 
     // Create two indexes, one for username and one for token. They can just as well
     // be created later and will index all existing data as well.
-    db.exec_mut(&QueryBuilder::insert().index("username").query())?;
-    db.exec_mut(&QueryBuilder::insert().index("token").query())?;
+    db.exec_mut(QueryBuilder::insert().index("username").query())?;
+    db.exec_mut(QueryBuilder::insert().index("token").query())?;
 
     // Inserts root node for users with an alias. You can loosely
     // think of it akin to a table in relational databases.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(vec!["users"])
             .query(),
@@ -43,9 +43,9 @@ fn main() -> Result<(), QueryError> {
             token: format!("token{}", i),
         });
     }
-    let users = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
+    let users = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from("users")
             .to(users)

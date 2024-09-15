@@ -43,9 +43,9 @@ fn insert_index_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |t| {
-            t.exec_mut(&QueryBuilder::insert().index("username").query())?;
+            t.exec_mut(QueryBuilder::insert().index("username").query())?;
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .nodes()
                     .values(vec![
                         vec![("username", "user1").into()],
@@ -54,7 +54,7 @@ fn insert_index_rollback() {
                     ])
                     .query(),
             )?;
-            t.exec_mut(&QueryBuilder::insert().index("username").query())?;
+            t.exec_mut(QueryBuilder::insert().index("username").query())?;
             Ok(())
         },
         QueryError::from("Index 'username' already exists"),
@@ -110,7 +110,7 @@ fn update_indexed_value_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             t.exec_mut(
-                &QueryBuilder::insert()
+                QueryBuilder::insert()
                     .values(vec![vec![("username", "user2").into()]])
                     .ids(vec![1])
                     .query(),

@@ -49,7 +49,7 @@ impl<S: StorageData> Writer<S> {
             self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
                 let id = t
                     .exec_mut(
-                        &QueryBuilder::insert()
+                        QueryBuilder::insert()
                             .nodes()
                             .values(&Post {
                                 title: title.to_string(),
@@ -61,7 +61,7 @@ impl<S: StorageData> Writer<S> {
                     .id;
 
                 t.exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .edges()
                         .from(vec![QueryId::from("posts"), self.id.into()])
                         .to(id)
@@ -86,7 +86,7 @@ impl<S: StorageData> Writer<S> {
                 self.db.0.write()?.transaction_mut(|t| -> BenchResult<()> {
                     let id = t
                         .exec_mut(
-                            &QueryBuilder::insert()
+                            QueryBuilder::insert()
                                 .nodes()
                                 .values(&Comment {
                                     body: body.to_string(),
@@ -97,7 +97,7 @@ impl<S: StorageData> Writer<S> {
                         .id;
 
                     t.exec_mut(
-                        &QueryBuilder::insert()
+                        QueryBuilder::insert()
                             .edges()
                             .from(vec![post_id, self.id])
                             .to(id)

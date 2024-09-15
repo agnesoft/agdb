@@ -13,8 +13,8 @@ impl<S: StorageData> Database<S> {
     pub(crate) fn new(config: &Config) -> BenchResult<Self> {
         remove_db_files(&config.db_name);
         let mut db = DbImpl::new(&config.db_name)?;
-        db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
-        db.exec_mut(&QueryBuilder::insert().nodes().aliases("posts").query())?;
+        db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query())?;
+        db.exec_mut(QueryBuilder::insert().nodes().aliases("posts").query())?;
         Ok(Self(Arc::new(RwLock::new(db))))
     }
 

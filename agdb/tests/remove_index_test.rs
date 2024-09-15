@@ -47,7 +47,7 @@ fn remove_index_rollback() {
     );
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
-            t.exec_mut(&QueryBuilder::remove().index("username").query())?;
+            t.exec_mut(QueryBuilder::remove().index("username").query())?;
             Err(QueryError::from("error"))
         },
         QueryError::from("error"),
@@ -119,7 +119,7 @@ fn remove_indexed_key_rollback() {
     db.transaction_mut_error(
         |t| -> Result<(), QueryError> {
             t.exec_mut(
-                &QueryBuilder::remove()
+                QueryBuilder::remove()
                     .values(vec!["username".into()])
                     .ids(2)
                     .query(),

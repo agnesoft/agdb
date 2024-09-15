@@ -11,7 +11,7 @@ fn insert_nodes_aliases_rollback() {
     let mut db = TestDb::new();
     db.transaction_mut_error(
         |transaction| -> Result<(), QueryError> {
-            transaction.exec_mut(&QueryBuilder::insert().nodes().aliases("alias").query())?;
+            transaction.exec_mut(QueryBuilder::insert().nodes().aliases("alias").query())?;
             Err("error".into())
         },
         "error".into(),
@@ -93,7 +93,7 @@ fn insert_nodes_aliases_values_rollback() {
         |transaction| -> Result<(), QueryError> {
             transaction
                 .exec_mut(
-                    &QueryBuilder::insert()
+                    QueryBuilder::insert()
                         .nodes()
                         .aliases(vec!["alias1", "alias2"])
                         .values(vec![

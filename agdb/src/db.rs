@@ -129,10 +129,10 @@ impl Serialize for DbStorageIndex {
 /// let mut db = Db::new("db.agdb").unwrap();
 ///
 /// // Insert single node
-/// db.exec_mut(&QueryBuilder::insert().nodes().count(1).query()).unwrap();
+/// db.exec_mut(QueryBuilder::insert().nodes().count(1).query()).unwrap();
 ///
 /// // Insert single node as a transaction
-/// db.transaction_mut(|t| -> Result<(), QueryError> { t.exec_mut(&QueryBuilder::insert().nodes().count(1).query())?; Ok(()) }).unwrap();
+/// db.transaction_mut(|t| -> Result<(), QueryError> { t.exec_mut(QueryBuilder::insert().nodes().count(1).query())?; Ok(()) }).unwrap();
 ///
 /// // Select single database element with id 1
 /// db.exec(QueryBuilder::select().ids(1).query()).unwrap();

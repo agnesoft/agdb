@@ -43,7 +43,7 @@ fn quickstart() -> Result<(), QueryError> {
 
     let users: Vec<User> = db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(User::db_keys())
                 .ids(&users_ids)
                 .query(),
@@ -57,7 +57,7 @@ fn quickstart() -> Result<(), QueryError> {
 
     let user: User = db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(User::db_keys())
                 .ids(
                     QueryBuilder::search()

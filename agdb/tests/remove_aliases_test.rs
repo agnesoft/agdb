@@ -41,7 +41,7 @@ fn remove_aliases_rollback() {
                     .aliases(vec!["alias", "alias2"])
                     .query(),
             )?;
-            t.exec(&QueryBuilder::select().ids("alias2").query())
+            t.exec(QueryBuilder::select().ids("alias2").query())
         },
         "Alias 'alias2' not found".into(),
     );

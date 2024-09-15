@@ -124,7 +124,7 @@ impl<S: StorageData> Writer<S> {
             .0
             .read()?
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .depth_first()
                     .from("posts")
                     .limit(1)
@@ -186,7 +186,7 @@ pub(crate) fn start_post_writers<S: StorageData + Send + Sync + 'static>(
     let tasks =
         db.0.read()?
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from("users")
                     .limit(config.posters.count)
                     .where_()
@@ -232,7 +232,7 @@ pub(crate) fn start_comment_writers<S: StorageData + Send + Sync + 'static>(
     let tasks =
         db.0.read()?
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from("users")
                     .offset(config.posters.count)
                     .limit(config.commenters.count)

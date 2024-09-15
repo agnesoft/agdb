@@ -93,7 +93,7 @@ fn main() -> Result<(), QueryError> {
             .query(),
     )?;
 
-    let user = db.exec(&QueryBuilder::select().ids(50).query())?;
+    let user = db.exec(QueryBuilder::select().ids(50).query())?;
     println!("{:?}", user);
 
     // Migrating the schema from UserDb to UserDb2. The difference is that "age" property
@@ -114,7 +114,7 @@ fn main() -> Result<(), QueryError> {
         // users using the new schema.
         let users: Vec<UserDb2> = t
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
                             .from("users")
@@ -134,7 +134,7 @@ fn main() -> Result<(), QueryError> {
         // the `limit` and `offset` values in the search query.
     })?;
 
-    let user = db.exec(&QueryBuilder::select().ids(50).query())?;
+    let user = db.exec(QueryBuilder::select().ids(50).query())?;
     println!("{:?}", user);
 
     // Finally after you are sure the data in the "old" format is no longer needed you can remove

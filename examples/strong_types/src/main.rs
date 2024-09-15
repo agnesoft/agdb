@@ -122,7 +122,7 @@ fn main() -> Result<(), QueryError> {
     // to deriving agdb::UserValue.
     let user: User = db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(User::db_keys())
                 .ids(
                     QueryBuilder::search()

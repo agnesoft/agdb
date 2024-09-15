@@ -15,7 +15,7 @@ fn remove_nodes_rollback() {
         |t| {
             t.exec_mut(&QueryBuilder::remove().ids("alias").query())
                 .unwrap();
-            t.exec(&QueryBuilder::select().ids(DbId(1)).query())
+            t.exec(QueryBuilder::select().ids(DbId(1)).query())
         },
         "Id '1' not found".into(),
     );
@@ -178,7 +178,7 @@ fn remove_nodes_with_values_rollback() {
     db.transaction_mut_error(
         |t| -> Result<QueryResult, QueryError> {
             t.exec_mut(&QueryBuilder::remove().ids(1).query()).unwrap();
-            t.exec(&QueryBuilder::select().ids(1).query())
+            t.exec(QueryBuilder::select().ids(1).query())
         },
         QueryError::from("Id '1' not found"),
     );

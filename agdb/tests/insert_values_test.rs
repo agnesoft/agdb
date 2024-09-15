@@ -30,7 +30,7 @@ fn insert_values_ids_rollback() {
                 6
             );
             assert_eq!(
-                t.exec(&QueryBuilder::select().ids(1).query())?.elements,
+                t.exec(QueryBuilder::select().ids(1).query())?.elements,
                 vec![DbElement {
                     id: DbId(1),
                     from: None,

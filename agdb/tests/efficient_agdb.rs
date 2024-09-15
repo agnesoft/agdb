@@ -69,7 +69,7 @@ fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
 fn register_user(db: &mut Db, user: &User) -> Result<DbId, QueryError> {
     db.transaction_mut(|t| -> Result<DbId, QueryError> {
         if t.exec(
-            &QueryBuilder::search()
+            QueryBuilder::search()
                 .from("users")
                 .where_()
                 .key("username")
@@ -180,7 +180,7 @@ fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
 fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
     let result = db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(vec!["password".into()])
                 .ids(
                     QueryBuilder::search()
@@ -214,7 +214,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
 fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::search()
+            QueryBuilder::search()
                 .from(user)
                 .where_()
                 .distance(CountComparison::Equal(2))
@@ -232,7 +232,7 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
 fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(vec!["title".into()])
                 .ids(ids)
                 .query(),
@@ -246,7 +246,7 @@ fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, QueryError> {
 fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(Post::db_keys())
                 .ids(
                     QueryBuilder::search()
@@ -265,7 +265,7 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, QueryError> {
 fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(Comment::db_keys())
                 .ids(
                     QueryBuilder::search()
@@ -285,7 +285,7 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, QueryError> {
 fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         let posts = t.exec(
-            &QueryBuilder::search()
+            QueryBuilder::search()
                 .from("posts")
                 .where_()
                 .distance(CountComparison::Equal(2))
@@ -296,7 +296,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
         for post in posts.ids() {
             let post_likes = t
                 .exec(
-                    &QueryBuilder::search()
+                    QueryBuilder::search()
                         .to(post)
                         .where_()
                         .distance(CountComparison::Equal(1))
@@ -316,7 +316,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
 fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, QueryError> {
     Ok(db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .values(PostLiked::db_keys())
                 .ids(
                     QueryBuilder::search()

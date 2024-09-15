@@ -91,7 +91,7 @@ impl DbPool {
                 .get()
                 .await
                 .exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .elements::<Database>()
                         .ids(
                             QueryBuilder::search()
@@ -230,7 +230,7 @@ impl DbPool {
 
         self.db_mut().await.transaction_mut(|t| {
             let existing_role = t.exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from(user_id)
                     .to(db_id)
                     .limit(1)
@@ -658,7 +658,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<Database>()
                     .ids(
                         QueryBuilder::search()
@@ -696,7 +696,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .values(vec!["username".into()])
                     .ids(
                         QueryBuilder::search()
@@ -722,7 +722,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
                             .depth_first()
@@ -769,7 +769,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<ServerUser>()
                     .ids(user_id)
                     .query(),
@@ -781,7 +781,7 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&QueryBuilder::search().index("username").value(name).query())?
+            .exec(QueryBuilder::search().index("username").value(name).query())?
             .elements
             .first()
             .ok_or(user_not_found(name))?
@@ -792,7 +792,7 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&QueryBuilder::search().index("token").value(token).query())?
+            .exec(QueryBuilder::search().index("token").value(token).query())?
             .elements
             .first()
             .ok_or(format!("No user found for token '{token}'"))?
@@ -804,7 +804,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<ServerUser>()
                     .ids(user)
                     .query(),
@@ -824,7 +824,7 @@ impl DbPool {
         self.db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(
                         QueryBuilder::search()
                             .depth_first()
@@ -1087,7 +1087,7 @@ impl DbPool {
         self.db_mut().await.transaction_mut(|t| {
             let mut user_token = t
                 .exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .values(vec!["token".into()])
                         .ids(user)
                         .query(),
@@ -1124,7 +1124,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .values(vec!["username".into()])
                     .ids(id)
                     .query(),
@@ -1148,7 +1148,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .depth_first()
                     .to(db)
                     .where_()
@@ -1190,7 +1190,7 @@ impl DbPool {
                     .ok_or(db_not_found(db))?
                     .id;
                 Ok(t.exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .elements::<Database>()
                         .ids(db_id)
                         .query(),
@@ -1204,7 +1204,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .elements::<Database>()
                     .ids(
                         QueryBuilder::search()
@@ -1245,7 +1245,7 @@ impl DbPool {
                     .id;
 
                 Ok(t.exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .ids(
                             QueryBuilder::search()
                                 .depth_first()
@@ -1280,7 +1280,7 @@ impl DbPool {
             .db()
             .await
             .exec(
-                &QueryBuilder::search()
+                QueryBuilder::search()
                     .from(user)
                     .to(db)
                     .limit(1)

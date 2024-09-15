@@ -105,7 +105,7 @@ fn insert_nodes_aliases_values_rollback() {
                 .unwrap();
             assert_eq!(
                 transaction
-                    .exec(&QueryBuilder::select().ids(vec!["alias1", "alias2"]).query())
+                    .exec(QueryBuilder::select().ids(vec!["alias1", "alias2"]).query())
                     .unwrap()
                     .elements,
                 &[

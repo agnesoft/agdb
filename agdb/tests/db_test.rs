@@ -111,7 +111,7 @@ fn data_persistence() {
             .unwrap();
         let result = db
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
@@ -145,7 +145,7 @@ fn data_persistence() {
     let db = Db::new(test_file.file_name()).unwrap();
     let result = db
         .exec(
-            &QueryBuilder::select()
+            QueryBuilder::select()
                 .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                 .query(),
         )
@@ -194,7 +194,7 @@ fn data_remove_persistence() {
             .unwrap();
         let result = db
             .exec(
-                &QueryBuilder::select()
+                QueryBuilder::select()
                     .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
@@ -237,7 +237,7 @@ fn data_remove_persistence() {
 
     let db = Db::new(test_file.file_name()).unwrap();
     let result = db
-        .exec(&QueryBuilder::select().ids(vec!["alias", "alias2"]).query())
+        .exec(QueryBuilder::select().ids(vec!["alias", "alias2"]).query())
         .unwrap();
 
     assert_eq!(
@@ -259,7 +259,7 @@ fn data_remove_persistence() {
     );
 
     let error = db
-        .exec(&QueryBuilder::select().ids(-3).query())
+        .exec(QueryBuilder::select().ids(-3).query())
         .unwrap_err();
     assert_eq!(error.description, "Id '-3' not found");
 }
@@ -325,13 +325,13 @@ fn share_between_threads() {
     let t1 = std::thread::spawn(move || {
         db.read()
             .unwrap()
-            .exec(&QueryBuilder::search().from(1).query())
+            .exec(QueryBuilder::search().from(1).query())
             .unwrap()
     });
     let t2 = std::thread::spawn(move || {
         db2.read()
             .unwrap()
-            .exec(&QueryBuilder::search().from(1).query())
+            .exec(QueryBuilder::search().from(1).query())
             .unwrap()
     });
 
@@ -366,7 +366,7 @@ fn hot_backup() {
     *signal.write().unwrap() = false;
     let db = Db::new(test_file2.file_name()).unwrap();
     assert_eq!(
-        db.exec(&QueryBuilder::select().ids(1).query())
+        db.exec(QueryBuilder::select().ids(1).query())
             .unwrap()
             .result,
         1
@@ -427,7 +427,7 @@ fn rename_file() {
             .unwrap();
         db.rename(test_file2.file_name()).unwrap();
         assert_eq!(
-            db.exec(&QueryBuilder::select().ids(1).query())
+            db.exec(QueryBuilder::select().ids(1).query())
                 .unwrap()
                 .result,
             1
@@ -435,7 +435,7 @@ fn rename_file() {
     }
     let db = DbFile::new(test_file2.file_name()).unwrap();
     assert_eq!(
-        db.exec(&QueryBuilder::select().ids(1).query())
+        db.exec(QueryBuilder::select().ids(1).query())
             .unwrap()
             .result,
         1
@@ -451,7 +451,7 @@ fn copy_memory() {
     assert_eq!(other.filename(), "mydb");
     assert_eq!(
         other
-            .exec(&QueryBuilder::select().ids("root").query())
+            .exec(QueryBuilder::select().ids("root").query())
             .unwrap()
             .result,
         1
@@ -469,7 +469,7 @@ fn copy_mapped() {
     assert_eq!(other.filename(), test_file2.file_name());
     assert_eq!(
         other
-            .exec(&QueryBuilder::select().ids("root").query())
+            .exec(QueryBuilder::select().ids("root").query())
             .unwrap()
             .result,
         1
@@ -487,7 +487,7 @@ fn copy_file() {
     assert_eq!(other.filename(), test_file2.file_name());
     assert_eq!(
         other
-            .exec(&QueryBuilder::select().ids("root").query())
+            .exec(QueryBuilder::select().ids("root").query())
             .unwrap()
             .result,
         1
@@ -497,6 +497,6 @@ fn copy_file() {
 #[test]
 fn query_as_value() {
     let test_file = TestFile::new();
-    let mut db = Db::new(test_file.file_name()).unwrap();
+    let db = Db::new(test_file.file_name()).unwrap();
     let result = db.exec(QueryBuilder::select().aliases().query());
 }

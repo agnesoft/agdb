@@ -67,7 +67,7 @@ fn main() -> Result<(), QueryError> {
     // and/or additional condition on `distance(Equal(2))` to stop search beyond users. But since
     // we know the structure of our data (graph) we can safely omit them as unnecessary here.
     let user_result = db.exec(
-        &QueryBuilder::select()
+        QueryBuilder::select()
             .ids(
                 QueryBuilder::search()
                     .depth_first()

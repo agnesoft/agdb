@@ -48,3 +48,9 @@ impl Query for SelectKeysQuery {
         Ok(result)
     }
 }
+
+impl Query for &SelectKeysQuery {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}

@@ -493,3 +493,10 @@ fn copy_file() {
         1
     );
 }
+
+#[test]
+fn query_as_value() {
+    let test_file = TestFile::new();
+    let mut db = Db::new(test_file.file_name()).unwrap();
+    let result = db.exec(QueryBuilder::select().aliases().query());
+}

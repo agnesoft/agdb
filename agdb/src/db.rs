@@ -291,7 +291,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// It runs the query as a transaction and returns either the result or
     /// error describing what went wrong (e.g. query error, logic error, data
     /// error etc.).
-    pub fn exec<T: Query>(&self, query: &T) -> Result<QueryResult, QueryError> {
+    pub fn exec<T: Query>(&self, query: T) -> Result<QueryResult, QueryError> {
         self.transaction(|transaction| transaction.exec(query))
     }
 
@@ -344,7 +344,7 @@ impl<Store: StorageData> DbImpl<Store> {
     /// parameters it also allows transforming the query results into a type `T`.
     pub fn transaction<T, E>(
         &self,
-        mut f: impl FnMut(&Transaction<Store>) -> Result<T, E>,
+        f: impl FnOnce(&Transaction<Store>) -> Result<T, E>,
     ) -> Result<T, E> {
         let transaction = Transaction::new(self);
 

@@ -214,6 +214,12 @@ impl SearchQuery {
     }
 }
 
+impl Query for &SearchQuery {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

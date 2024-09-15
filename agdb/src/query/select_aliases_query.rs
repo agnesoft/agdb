@@ -63,3 +63,9 @@ impl Query for SelectAliasesQuery {
         Ok(result)
     }
 }
+
+impl Query for &SelectAliasesQuery {
+    fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}

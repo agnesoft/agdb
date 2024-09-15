@@ -1379,27 +1379,27 @@ fn t_exec(
     match q {
         QueryType::Search(q) => {
             inject_results_search(q, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectAliases(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectAllAliases(q) => t.exec(q),
-        QueryType::SelectEdgeCount(q) => t.exec(q),
-        QueryType::SelectIndexes(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectEdgeCount(q) => t.exec(&*q),
+        QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectKeyCount(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectNodeCount(q) => t.exec(q),
+        QueryType::SelectNodeCount(q) => t.exec(&*q),
         QueryType::SelectValues(q) => {
             inject_results(&mut q.ids, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         _ => unreachable!(),
     }
@@ -1417,27 +1417,27 @@ fn t_exec_mut(
     let r = match &mut q {
         QueryType::Search(q) => {
             inject_results_search(q, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectAliases(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectAllAliases(q) => t.exec(q),
-        QueryType::SelectEdgeCount(q) => t.exec(q),
-        QueryType::SelectIndexes(q) => t.exec(q),
+        QueryType::SelectAllAliases(q) => t.exec(&*q),
+        QueryType::SelectEdgeCount(q) => t.exec(&*q),
+        QueryType::SelectIndexes(q) => t.exec(&*q),
         QueryType::SelectKeys(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::SelectKeyCount(q) => {
             inject_results(&mut q.0, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
-        QueryType::SelectNodeCount(q) => t.exec(q),
+        QueryType::SelectNodeCount(q) => t.exec(&*q),
         QueryType::SelectValues(q) => {
             inject_results(&mut q.ids, results)?;
-            t.exec(q)
+            t.exec(&*q)
         }
         QueryType::InsertAlias(q) => {
             do_audit = true;

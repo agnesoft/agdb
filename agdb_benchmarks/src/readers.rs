@@ -33,7 +33,7 @@ impl<S: StorageData> Reader<S> {
         if let Some(post_id) = self.last_post()? {
             let duration = measured(|| {
                 let _comments = self.db.0.read()?.exec(
-                    &QueryBuilder::select()
+                    QueryBuilder::select()
                         .ids(
                             QueryBuilder::search()
                                 .from(post_id)

@@ -29,7 +29,7 @@ fn select_values_ids() {
     );
     db.exec_elements(
         QueryBuilder::select()
-            .values(vec!["key".into(), "key2".into()])
+            .values(["key", "key2"])
             .ids(vec!["alias1", "alias2"])
             .query(),
         &[
@@ -69,7 +69,7 @@ fn select_values_ids_missing_key() {
     );
     db.exec_error(
         QueryBuilder::select()
-            .values(vec!["key".into(), "key2".into()])
+            .values(["key", "key2"])
             .ids(vec!["alias1", "alias2"])
             .query(),
         "Missing key 'key2' for id '2'",
@@ -103,7 +103,7 @@ fn select_values_search() {
 
     db.exec_elements(
         QueryBuilder::select()
-            .values(vec!["key2".into()])
+            .values("key2")
             .ids(QueryBuilder::search().from(3).query())
             .query(),
         &[

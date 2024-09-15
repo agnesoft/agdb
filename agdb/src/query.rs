@@ -240,18 +240,10 @@ mod tests {
             QueryBuilder::select().key_count().ids(1).query().into(),
             QueryBuilder::select().edge_count().ids(1).query().into(),
             QueryBuilder::select().node_count().query().into(),
-            QueryBuilder::select()
-                .values(vec!["key".into()])
-                .ids(1)
-                .query()
-                .into(),
+            QueryBuilder::select().values("key").ids(1).query().into(),
             QueryBuilder::remove().aliases("node2").query().into(),
             QueryBuilder::remove().index("key").query().into(),
-            QueryBuilder::remove()
-                .values(vec!["key".into()])
-                .ids(1)
-                .query()
-                .into(),
+            QueryBuilder::remove().values("key").ids(1).query().into(),
             QueryBuilder::remove().ids("node1").query().into(),
         ];
         let _ = format!("{:?}", queries);

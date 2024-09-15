@@ -1,4 +1,4 @@
-use crate::query::query_values::QueryKeys;
+use crate::db::db_value::DbValues;
 use crate::query_builder::select_aliases::SelectAliases;
 use crate::query_builder::select_edge_count::SelectEdgeCount;
 use crate::query_builder::select_ids::SelectIds;
@@ -109,9 +109,9 @@ impl Select {
 
     /// Select elements with `ids` with only `keys` properties (key-values).
     /// All ids specified must exist in the database.
-    pub fn values<T: Into<QueryKeys>>(self, keys: T) -> SelectValues {
+    pub fn values<T: Into<DbValues>>(self, keys: T) -> SelectValues {
         SelectValues(SelectValuesQuery {
-            keys: Into::<QueryKeys>::into(keys).0,
+            keys: Into::<DbValues>::into(keys).0,
             ids: QueryIds::Ids(vec![]),
         })
     }

@@ -52,6 +52,8 @@ pub enum DbValue {
     VecString(Vec<String>),
 }
 
+pub struct DbValues(pub Vec<DbValue>);
+
 const BYTES_META_VALUE: u8 = 1_u8;
 const I64_META_VALUE: u8 = 2_u8;
 const U64_META_VALUE: u8 = 3_u8;
@@ -685,6 +687,90 @@ impl<T: Into<DbValue> + DbUserValueMarker> From<Vec<T>> for DbValue {
 impl<T: Into<DbValue> + Clone + DbUserValueMarker> From<&[T]> for DbValue {
     fn from(value: &[T]) -> Self {
         value.to_vec().into()
+    }
+}
+
+impl<T: Into<DbValue>> From<Vec<T>> for DbValues {
+    fn from(value: Vec<T>) -> Self {
+        DbValues(value.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+impl<T: Into<DbValue> + Clone> From<&[T]> for DbValues {
+    fn from(value: &[T]) -> Self {
+        DbValues(value.iter().map(|v| v.clone().into()).collect())
+    }
+}
+
+impl<T: Into<DbValue> + Clone, const N: usize> From<[T; N]> for DbValues {
+    fn from(value: [T; N]) -> Self {
+        value.as_slice().into()
+    }
+}
+
+impl From<u64> for DbValues {
+    fn from(value: u64) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<u32> for DbValues {
+    fn from(value: u32) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<usize> for DbValues {
+    fn from(value: usize) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<i64> for DbValues {
+    fn from(value: i64) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<i32> for DbValues {
+    fn from(value: i32) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<f64> for DbValues {
+    fn from(value: f64) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<f32> for DbValues {
+    fn from(value: f32) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<DbF64> for DbValues {
+    fn from(value: DbF64) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<&str> for DbValues {
+    fn from(value: &str) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<&String> for DbValues {
+    fn from(value: &String) -> Self {
+        DbValues(vec![value.into()])
+    }
+}
+
+impl From<String> for DbValues {
+    fn from(value: String) -> Self {
+        DbValues(vec![value.into()])
     }
 }
 
@@ -1820,5 +1906,51 @@ mod tests {
         let db_value: DbValue = vec.as_slice().into();
         let vec = db_value.bytes().unwrap().clone();
         assert_eq!(vec, Vec::<u8>::new());
+    }
+
+    #[test]
+    fn to_db_values() {
+        assert_eq!(DbValues::from(1_u64).0, vec![DbValue::from(1_u64)]);
+        assert_eq!(
+            DbValues::from(vec![1, 2, 3]).0,
+            vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
+        );
+        assert_eq!(
+            DbValues::from([1, 2, 3]).0,
+            vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
+        );
+        assert_eq!(
+            DbValues::from([1, 2, 3].as_slice()).0,
+            vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
+        );
+        assert_eq!(DbValues::from(1_i64).0, vec![DbValue::from(1_i64)]);
+        assert_eq!(DbValues::from(1_i32).0, vec![DbValue::from(1_i32)]);
+        assert_eq!(DbValues::from(1_u64).0, vec![DbValue::from(1_u64)]);
+        assert_eq!(DbValues::from(1_u32).0, vec![DbValue::from(1_u32)]);
+        assert_eq!(DbValues::from(1_usize).0, vec![DbValue::from(1_usize)]);
+        assert_eq!(DbValues::from(1.0).0, vec![DbValue::from(1.0)]);
+        assert_eq!(DbValues::from(1.0_f32).0, vec![DbValue::from(1.0_f32)]);
+        assert_eq!(
+            DbValues::from(DbF64::from(1.0)).0,
+            vec![DbValue::from(DbF64::from(1.0))]
+        );
+        assert_eq!(DbValues::from("Hello").0, vec![DbValue::from("Hello")]);
+        assert_eq!(
+            DbValues::from("Hello".to_string()).0,
+            vec![DbValue::from("Hello".to_string())]
+        );
+        assert_eq!(
+            DbValues::from(&String::new()).0,
+            vec![DbValue::from(&String::new())]
+        );
+        assert_eq!(
+            DbValues::from(vec!["Hello"]).0,
+            vec![DbValue::from("Hello")]
+        );
+        assert_eq!(DbValues::from(["Hello"]).0, vec![DbValue::from("Hello")]);
+        assert_eq!(
+            DbValues::from(["Hello"].as_slice()).0,
+            vec![DbValue::from("Hello")]
+        );
     }
 }

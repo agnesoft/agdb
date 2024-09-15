@@ -139,7 +139,7 @@ fn search_from_where_keys() {
         QueryBuilder::search()
             .from("users")
             .where_()
-            .keys(vec!["username".into(), "id".into()])
+            .keys(["username", "id"])
             .query(),
         &[16, 15, 14, 13, 12],
     );
@@ -465,7 +465,7 @@ fn search_from_to_where() {
             .not_beyond()
             .ids("docs")
             .and()
-            .keys(vec!["id".into()])
+            .keys("id")
             .query(),
         &[12.into()],
     )
@@ -501,7 +501,7 @@ fn search_from_to_where_filter() {
             .from("start")
             .to("end")
             .where_()
-            .keys(vec!["key".into()])
+            .keys("key")
             .query(),
         &[-4],
     );

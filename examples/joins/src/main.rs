@@ -59,9 +59,9 @@ fn main() -> Result<(), QueryError> {
                     .depth_first()
                     .from("user")
                     .where_()
-                    .keys(vec!["role".into()])
+                    .keys("role")
                     .or()
-                    .keys(vec!["name".into()])
+                    .keys("name")
                     .query(),
             )
             .query(),
@@ -99,7 +99,7 @@ fn main() -> Result<(), QueryError> {
                         .where_()
                         .distance(CountComparison::Equal(2))
                         .and()
-                        .keys(vec!["name".into()])
+                        .keys("name")
                         .query(),
                 )
                 .query(),
@@ -115,7 +115,7 @@ fn main() -> Result<(), QueryError> {
                             .to(db_name.id)
                             .limit(1)
                             .where_()
-                            .keys(vec!["role".into()])
+                            .keys("role")
                             .query(),
                     )
                     .query(),

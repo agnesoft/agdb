@@ -781,13 +781,7 @@ fn with_option_missing_value() {
         value: Some(20),
     };
     db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
-    db.exec_mut(
-        QueryBuilder::remove()
-            .values(vec!["name".into()])
-            .ids(1)
-            .query(),
-        -1,
-    );
+    db.exec_mut(QueryBuilder::remove().values("name").ids(1).query(), -1);
     let err: Result<WithOption, DbError> = db
         .exec_result(QueryBuilder::select().ids(1).query())
         .try_into();

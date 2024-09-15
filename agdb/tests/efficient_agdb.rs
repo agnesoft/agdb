@@ -168,7 +168,7 @@ fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
                         .from(user)
                         .to(id)
                         .where_()
-                        .keys(vec!["liked".into()])
+                        .keys("liked")
                         .query(),
                 )
                 .query(),
@@ -181,7 +181,7 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
     let result = db
         .exec(
             QueryBuilder::select()
-                .values(vec!["password".into()])
+                .values("password")
                 .ids(
                     QueryBuilder::search()
                         .depth_first()
@@ -221,7 +221,7 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
                 .and()
                 .beyond()
                 .where_()
-                .keys(vec!["authored".into()])
+                .keys("authored")
                 .or()
                 .node()
                 .query(),
@@ -231,12 +231,7 @@ fn user_posts_ids(db: &Db, user: DbId) -> Result<Vec<DbId>, QueryError> {
 
 fn post_titles(db: &Db, ids: Vec<DbId>) -> Result<Vec<String>, QueryError> {
     Ok(db
-        .exec(
-            QueryBuilder::select()
-                .values(vec!["title".into()])
-                .ids(ids)
-                .query(),
-        )?
+        .exec(QueryBuilder::select().values("title").ids(ids).query())?
         .elements
         .into_iter()
         .map(|post| post.values[0].value.to_string())
@@ -301,7 +296,7 @@ fn add_likes_to_posts(db: &mut Db) -> Result<(), QueryError> {
                         .where_()
                         .distance(CountComparison::Equal(1))
                         .and()
-                        .keys(vec!["liked".into()])
+                        .keys("liked")
                         .query(),
                 )?
                 .result;

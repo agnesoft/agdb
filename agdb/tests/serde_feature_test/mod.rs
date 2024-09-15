@@ -53,7 +53,11 @@ fn query_type() {
         QueryBuilder::remove().ids(1).query().into(),
         QueryBuilder::remove().aliases("").query().into(),
         QueryBuilder::remove().index("").query().into(),
-        QueryBuilder::remove().values(vec![]).ids(1).query().into(),
+        QueryBuilder::remove()
+            .values(Vec::<u64>::new())
+            .ids(1)
+            .query()
+            .into(),
         QueryBuilder::search().from(1).query().into(),
         QueryBuilder::select().ids(1).query().into(),
         QueryBuilder::select().aliases().ids(1).query().into(),
@@ -62,7 +66,11 @@ fn query_type() {
         QueryBuilder::select().keys().ids(1).query().into(),
         QueryBuilder::select().key_count().ids(1).query().into(),
         QueryBuilder::select().node_count().query().into(),
-        QueryBuilder::select().values(vec![]).ids(1).query().into(),
+        QueryBuilder::select()
+            .values(Vec::<u64>::new())
+            .ids(1)
+            .query()
+            .into(),
         QueryBuilder::select().indexes().query().into(),
     ];
 
@@ -86,7 +94,7 @@ fn conditions() {
             .distance(agdb::CountComparison::LessThan(10))
             .and()
             .where_()
-            .keys(vec!["key".into()])
+            .keys("key")
             .or()
             .key("key")
             .value(agdb::Comparison::Equal(1.1.into()))

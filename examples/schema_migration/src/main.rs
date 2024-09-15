@@ -103,7 +103,7 @@ fn main() -> Result<(), QueryError> {
         // First remove the "age" property from all the users.
         t.exec_mut(
             QueryBuilder::remove()
-                .values(vec!["age".into()])
+                .values("age")
                 .ids(QueryBuilder::search().from("users").query())
                 .query(),
         )?;

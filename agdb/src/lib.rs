@@ -37,7 +37,7 @@ pub mod test_utilities;
 pub use query::QueryType;
 
 #[cfg(feature = "derive")]
-pub use agdb_derive::UserValue;
+pub use agdb_derive::{UserValue, UserValueMarker};
 
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;

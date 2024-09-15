@@ -1,10 +1,21 @@
-import React from "react";
-import openapiFile from "../../../../agdb_server/openapi.json";
+import { useCallback, useState } from "react";
 import CodeBlock from "@/components/common/code-block";
 
 export const OpenApi = () => {
-    const openapiJson = JSON.stringify(openapiFile, null, 2);
+    const [openapiFile, setOpenapiFile] = useState<string>();
+    const handleLoadCode = useCallback(() => {
+        !openapiFile &&
+            import("../../../../agdb_server/openapi.json").then((data) => {
+                const openapiString = JSON.stringify(data.default, null, 2);
+                setOpenapiFile(openapiString);
+            });
+    }, [openapiFile]);
     return (
-        <CodeBlock code={openapiJson} language="json" header="openapi.json" />
+        <CodeBlock
+            code={openapiFile}
+            language="json"
+            header="openapi.json"
+            onLoad={handleLoadCode}
+        />
     );
 };

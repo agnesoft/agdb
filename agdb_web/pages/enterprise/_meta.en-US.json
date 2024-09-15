@@ -6,6 +6,10 @@
         "title": "Enterprise",
         "display": "normal"
     },
+    "---": {
+        "type": "separator",
+        "display": "normal"
+    },
     "pricing": {
         "title": "Pricing",
         "display": "normal"

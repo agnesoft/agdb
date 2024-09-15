@@ -6,6 +6,10 @@
         "title": "Blog",
         "display": "normal"
     },
+    "---": {
+        "type": "separator",
+        "display": "normal"
+    },
     "why-graph": {
         "title": "Why graph?",
         "display": "normal"

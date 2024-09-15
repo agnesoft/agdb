@@ -36,7 +36,7 @@ impl<'a, Store: StorageData> TransactionMut<'a, Store> {
     /// - Remove elements
     /// - Remove aliases
     /// - Remove values
-    pub fn exec_mut<T: QueryMut>(&mut self, query: &T) -> Result<QueryResult, QueryError> {
+    pub fn exec_mut<T: QueryMut>(&mut self, query: T) -> Result<QueryResult, QueryError> {
         query.process(self.db)
     }
 

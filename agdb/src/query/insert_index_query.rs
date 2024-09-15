@@ -25,3 +25,12 @@ impl QueryMut for InsertIndexQuery {
         })
     }
 }
+
+impl QueryMut for &InsertIndexQuery {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}

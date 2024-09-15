@@ -81,6 +81,15 @@ impl QueryMut for InsertValuesQuery {
     }
 }
 
+impl QueryMut for &InsertValuesQuery {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}
+
 fn insert_values<Store: StorageData>(
     db: &mut DbImpl<Store>,
     id: &QueryId,

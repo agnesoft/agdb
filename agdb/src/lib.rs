@@ -13,7 +13,7 @@
 //! let mut db = Db::new("db.agdb").unwrap();
 //! db.exec_mut(&QueryBuilder::insert().nodes().values(vec![vec![("key", 123).into()]]).query()).unwrap();
 //!
-//! let result = db.exec(&QueryBuilder::select().ids(1).query()).unwrap();
+//! let result = db.exec(QueryBuilder::select().ids(1).query()).unwrap();
 //! println!("{:?}", result);
 //! // QueryResult { result: 1, elements: [ DbElement { id: DbId(1), values: [ DbKeyValue { key: String("key"), value: Int(123) } ] } ] }
 //! ```

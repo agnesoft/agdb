@@ -1184,7 +1184,7 @@ impl DbPool {
             .await
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
-                    .exec(&db_id_query)?
+                    .exec(db_id_query)?
                     .elements
                     .first()
                     .ok_or(db_not_found(db))?
@@ -1224,7 +1224,7 @@ impl DbPool {
         Ok(self
             .db()
             .await
-            .exec(&db_id_query)?
+            .exec(db_id_query)?
             .elements
             .first()
             .ok_or(db_not_found(db))?
@@ -1238,7 +1238,7 @@ impl DbPool {
             .await
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
-                    .exec(&db_id_query)?
+                    .exec(db_id_query)?
                     .elements
                     .first()
                     .ok_or(db_not_found(db))?
@@ -1442,7 +1442,7 @@ fn t_exec_mut(
         QueryType::InsertAlias(q) => {
             do_audit = true;
             inject_results(&mut q.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertEdges(q) => {
             do_audit = true;
@@ -1450,39 +1450,39 @@ fn t_exec_mut(
             inject_results(&mut q.from, results)?;
             inject_results(&mut q.to, results)?;
 
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertNodes(q) => {
             do_audit = true;
             inject_results(&mut q.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertValues(q) => {
             do_audit = true;
             inject_results(&mut q.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::Remove(q) => {
             do_audit = true;
             inject_results(&mut q.0, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::InsertIndex(q) => {
             do_audit = true;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::RemoveAliases(q) => {
             do_audit = true;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::RemoveIndex(q) => {
             do_audit = true;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
         QueryType::RemoveValues(q) => {
             do_audit = true;
             inject_results(&mut q.0.ids, results)?;
-            t.exec_mut(q)
+            t.exec_mut(&*q)
         }
     };
 

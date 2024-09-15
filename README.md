@@ -88,7 +88,7 @@ use agdb::{Db, DbId, QueryBuilder, UserValue, DbUserValue, Comparison::Equal};
 
 let mut db = Db::new("db_file.agdb")?;
 
-db.exec_mut(&QueryBuilder::insert().nodes().aliases("users").query())?;
+db.exec_mut(QueryBuilder::insert().nodes().aliases("users").query())?;
 
 #[derive(Debug, UserValue)]
 struct User { db_id: Option<DbId>, name: String, }
@@ -96,10 +96,10 @@ let users = vec![User { db_id: None, name: "Alice".to_string(), },
                  User { db_id: None, name: "Bob".to_string(), },
                  User { db_id: None, name: "John".to_string(), }];
 
-let users_ids = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
+let users_ids = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
 
 db.exec_mut(
-    &QueryBuilder::insert()
+    QueryBuilder::insert()
         .edges()
         .from("users")
         .to(&users_ids)
@@ -114,7 +114,7 @@ You can select the graph elements (both nodes & edges) with their ids to get the
 ```rs
 let users: Vec<User> = db
     .exec(
-        &QueryBuilder::select()
+        QueryBuilder::select()
             .values(User::db_keys())
             .ids(&users_ids)
             .query(),
@@ -132,7 +132,7 @@ You can also search through the graph to get back only certain elements based on
 ```rs
 let user: User = db
     .exec(
-        &QueryBuilder::select()
+        QueryBuilder::select()
             .values(User::db_keys())
             .ids(
                 QueryBuilder::search()

@@ -31,3 +31,12 @@ impl QueryMut for RemoveAliasesQuery {
         Ok(result)
     }
 }
+
+impl QueryMut for &RemoveAliasesQuery {
+    fn process<Store: StorageData>(
+        &self,
+        db: &mut DbImpl<Store>,
+    ) -> Result<QueryResult, QueryError> {
+        (*self).process(db)
+    }
+}

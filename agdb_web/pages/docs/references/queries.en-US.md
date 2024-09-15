@@ -139,7 +139,11 @@ pub trait DbUserValue: Sized {
 
 Typically you would derive this trait with `agdb::UserValue` procedural macro that uses the field names as keys (of type `String`) and loss-lessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
 
-It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders:
+It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders.
+
+The `agdb::UserValue` macro also supports `Option`al types. When a value is `None` it will be omitted when saving the object to the database.
+
+Example:
 
 ```rs
 #[derive(UserValue)]
@@ -151,7 +155,7 @@ user.name = "Alice".to_string();
 db.exec_mut(&QueryBuilder::insert().element(&user).query())?; //updates the user element with new name
 ```
 
-In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field or construct it based on other values.
+In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field enitrely or construct it based on other values.
 
 Types not directly used in the database but for which the conversions are supported:
 

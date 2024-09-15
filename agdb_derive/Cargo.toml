@@ -15,5 +15,6 @@ categories = ["database", "database-implementations"]
 proc-macro = true
 
 [dependencies]
+proc-macro2 = "1.0.86"
 quote = "1"
 syn = "2"

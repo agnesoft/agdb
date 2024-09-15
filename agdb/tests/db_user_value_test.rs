@@ -10,7 +10,6 @@ use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::UserValue;
 #[allow(unused_imports)]
-use std::fmt::Result;
 use test_db::TestDb;
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -20,7 +19,7 @@ enum Status {
     Inactive,
 }
 
-#[derive(UserValue)]
+#[derive(UserValue, Debug)]
 struct User {
     user_id: u64,
     password: String,
@@ -52,6 +51,12 @@ struct Attribute {
 struct MyCustomVec {
     vec: Vec<Status>,
     attribtues: Vec<Attribute>,
+}
+
+#[derive(UserValue, PartialEq, Debug)]
+struct WithOption {
+    name: String,
+    value: Option<u64>,
 }
 
 impl From<Status> for DbValue {
@@ -472,7 +477,10 @@ fn derived_macro_should_not_panic() {
         .try_into();
 
     assert!(user.is_err());
-    assert_eq!(user.unwrap_err().description, "Not enough keys");
+    assert_eq!(
+        user.unwrap_err().description,
+        "Not enough keys: 'value' not found at position 0"
+    );
 }
 
 #[test]
@@ -668,4 +676,148 @@ fn select_user_value() {
         .unwrap();
     my_value.db_id = Some(result.elements[0].id.into());
     assert_eq!(my_value, my_value_from_db);
+}
+
+#[test]
+fn with_option_some() {
+    let mut db = TestDb::new();
+    let my_value = WithOption {
+        name: "my name".to_string(),
+        value: Some(20),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
+    let my_value_from_db: WithOption = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into()
+        .unwrap();
+    assert_eq!(my_value, my_value_from_db);
+}
+
+#[test]
+fn with_option_some_wrong_type() {
+    let mut db = TestDb::new();
+    let my_value = WithOption {
+        name: "my name".to_string(),
+        value: Some(20),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values(vec![vec![("value", "string").into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    let err: Result<WithOption, DbError> = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into();
+    let err_text = err
+        .unwrap_err()
+        .description
+        .split(". (")
+        .next()
+        .unwrap()
+        .to_owned();
+
+    assert_eq!(
+        err_text,
+        "Failed to convert value of 'value': Type mismatch. Cannot convert 'string' to 'u64'"
+    );
+}
+
+#[test]
+fn with_option_none() {
+    let mut db = TestDb::new();
+    let my_value = WithOption {
+        name: "my name".to_string(),
+        value: None,
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 1);
+    let my_value_from_db: WithOption = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into()
+        .unwrap();
+    assert_eq!(my_value, my_value_from_db);
+}
+
+#[test]
+fn with_option_bad_value() {
+    let mut db = TestDb::new();
+    let my_value = WithOption {
+        name: "my name".to_string(),
+        value: Some(20),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values(vec![vec![("name", 100).into()]])
+            .ids(1)
+            .query(),
+        1,
+    );
+    let err: Result<WithOption, DbError> = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into();
+    let err_text = err
+        .unwrap_err()
+        .description
+        .split(". (")
+        .next()
+        .unwrap()
+        .to_owned();
+
+    assert_eq!(
+        err_text,
+        "Failed to convert value of 'name': Type mismatch. Cannot convert 'i64' to 'string'"
+    );
+}
+
+#[test]
+fn with_option_missing_value() {
+    let mut db = TestDb::new();
+    let my_value = WithOption {
+        name: "my name".to_string(),
+        value: Some(20),
+    };
+    db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
+    db.exec_mut(
+        QueryBuilder::remove()
+            .values(vec!["name".into()])
+            .ids(1)
+            .query(),
+        -1,
+    );
+    let err: Result<WithOption, DbError> = db
+        .exec_result(QueryBuilder::select().ids(1).query())
+        .try_into();
+
+    assert_eq!(err.unwrap_err().description, "Key 'name' not found");
+}
+
+#[test]
+fn try_from_db_element_bad_conversion() {
+    let element = DbElement {
+        id: DbId(1),
+        from: None,
+        to: None,
+        values: vec![
+            ("user_id", 100_u64).into(),
+            ("password", 1_i64).into(),
+            ("status", Status::Active).into(),
+        ],
+    };
+
+    let err: Result<User, DbError> = (&element).try_into();
+    let err_text = err
+        .unwrap_err()
+        .description
+        .split(". (")
+        .next()
+        .unwrap()
+        .to_owned();
+
+    assert_eq!(
+        err_text,
+        "Failed to convert value of 'password': Type mismatch. Cannot convert 'i64' to 'string'"
+    );
 }

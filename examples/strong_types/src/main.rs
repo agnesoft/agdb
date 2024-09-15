@@ -62,7 +62,7 @@ fn main() -> Result<(), QueryError> {
     // Inserts root node for users with an alias. You can loosely
     // think of it akin to a table in relational databases.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(vec!["users"])
             .query(),
@@ -85,14 +85,14 @@ fn main() -> Result<(), QueryError> {
 
     // Inserts the users as new nodes into the database. This is made
     // possible by deriving `agdb::UserValue` for the `User` struct.
-    let users = db.exec_mut(&QueryBuilder::insert().nodes().values(&users).query())?;
+    let users = db.exec_mut(QueryBuilder::insert().nodes().values(&users).query())?;
 
     // Link the users with the "users" node. Note that we are referring to
     // the users node with an alias "users" we have given it and to
     // the new user nodes by supplying the result of the previous query directly.
     // One could also use the `QueryResult::ids()` method to extract the ids.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from("users")
             .to(users)

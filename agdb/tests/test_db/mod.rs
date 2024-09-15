@@ -65,19 +65,19 @@ impl TestDb {
 
     #[track_caller]
     pub fn exec_mut<T: QueryMut>(&mut self, query: T, result: i64) {
-        assert_eq!(self.db.exec_mut(&query).unwrap().result, result);
+        assert_eq!(self.db.exec_mut(query).unwrap().result, result);
     }
 
     #[track_caller]
     pub fn exec_mut_result<T: QueryMut>(&mut self, query: T) -> QueryResult {
-        self.db.exec_mut(&query).unwrap()
+        self.db.exec_mut(query).unwrap()
     }
 
     #[track_caller]
     pub fn exec_mut_ids<T: QueryMut>(&mut self, query: T, ids: &[i64]) {
         assert_eq!(
             self.db
-                .exec_mut(&query)
+                .exec_mut(query)
                 .unwrap()
                 .elements
                 .into_iter()
@@ -89,7 +89,7 @@ impl TestDb {
 
     #[track_caller]
     pub fn exec_mut_error<T: QueryMut>(&mut self, query: T, error: &str) {
-        assert_eq!(self.db.exec_mut(&query).unwrap_err().description, error);
+        assert_eq!(self.db.exec_mut(query).unwrap_err().description, error);
     }
 
     #[track_caller]

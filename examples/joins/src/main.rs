@@ -16,7 +16,7 @@ fn main() -> Result<(), QueryError> {
 
     // Inserts root node for databases and the user.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .aliases(vec!["user", "dbs"])
             .query(),
@@ -24,7 +24,7 @@ fn main() -> Result<(), QueryError> {
 
     // Create two databases.
     let dbs = db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .nodes()
             .values(vec![
                 vec![("name", "db1").into()],
@@ -35,7 +35,7 @@ fn main() -> Result<(), QueryError> {
 
     // Attach the databases to the user with the roles "admin" and "read" respectively.
     db.exec_mut(
-        &QueryBuilder::insert()
+        QueryBuilder::insert()
             .edges()
             .from("user")
             .to(dbs)

@@ -6,6 +6,10 @@
         "title": "OpenAPI",
         "display": "normal"
     },
+    "---": {
+        "type": "separator",
+        "display": "normal"
+    },
     "rust": {
         "title": "Rust",
         "display": "normal"

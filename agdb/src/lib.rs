@@ -46,6 +46,7 @@ pub use db::db_id::DbId;
 pub use db::db_key::DbKeyOrder;
 pub use db::db_key_value::DbKeyValue;
 pub use db::db_user_value::DbUserValue;
+pub use db::db_user_value::DbUserValueMarker;
 pub use db::db_value::DbValue;
 pub use db::Db;
 pub use db::DbFile;

@@ -7,7 +7,7 @@ const DB_ID: &str = "db_id";
 
 /// The helper derive macro to add `agdb` compatibility to
 /// user defined types. This type provides blank implementation
-/// of the `agdb::DbValueMarker` trait. This is needed for the
+/// of the `agdb::DbUserValueMarker` trait. This is needed for the
 /// vectorized custom values to be compatible with the database
 /// as the `From` trait implementation witohut it conflicts
 /// with the blanket implementations.
@@ -28,7 +28,7 @@ pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
     let name = input.ident;
 
     let tokens = quote! {
-        impl agdb::DbValueMarker for #name {}
+        impl agdb::DbUserValueMarker for #name {}
     };
 
     tokens.into()

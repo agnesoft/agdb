@@ -1910,8 +1910,47 @@ mod tests {
 
     #[test]
     fn to_db_values() {
-        let _: DbValues = vec![1, 2, 3].into();
-        let _: DbValues = [1, 2, 3].into();
-        let _: DbValues = [1, 2, 3].as_slice().into();
+        assert_eq!(DbValues::from(1_u64).0, vec![DbValue::from(1_u64)]);
+        assert_eq!(
+            DbValues::from(vec![1, 2, 3]).0,
+            vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
+        );
+        assert_eq!(
+            DbValues::from([1, 2, 3]).0,
+            vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
+        );
+        assert_eq!(
+            DbValues::from([1, 2, 3].as_slice()).0,
+            vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
+        );
+        assert_eq!(DbValues::from(1_i64).0, vec![DbValue::from(1_i64)]);
+        assert_eq!(DbValues::from(1_i32).0, vec![DbValue::from(1_i32)]);
+        assert_eq!(DbValues::from(1_u64).0, vec![DbValue::from(1_u64)]);
+        assert_eq!(DbValues::from(1_u32).0, vec![DbValue::from(1_u32)]);
+        assert_eq!(DbValues::from(1_usize).0, vec![DbValue::from(1_usize)]);
+        assert_eq!(DbValues::from(1.0).0, vec![DbValue::from(1.0)]);
+        assert_eq!(DbValues::from(1.0_f32).0, vec![DbValue::from(1.0_f32)]);
+        assert_eq!(
+            DbValues::from(DbF64::from(1.0)).0,
+            vec![DbValue::from(DbF64::from(1.0))]
+        );
+        assert_eq!(DbValues::from("Hello").0, vec![DbValue::from("Hello")]);
+        assert_eq!(
+            DbValues::from("Hello".to_string()).0,
+            vec![DbValue::from("Hello".to_string())]
+        );
+        assert_eq!(
+            DbValues::from(&String::new()).0,
+            vec![DbValue::from(&String::new())]
+        );
+        assert_eq!(
+            DbValues::from(vec!["Hello"]).0,
+            vec![DbValue::from("Hello")]
+        );
+        assert_eq!(DbValues::from(["Hello"]).0, vec![DbValue::from("Hello")]);
+        assert_eq!(
+            DbValues::from(["Hello"].as_slice()).0,
+            vec![DbValue::from("Hello")]
+        );
     }
 }

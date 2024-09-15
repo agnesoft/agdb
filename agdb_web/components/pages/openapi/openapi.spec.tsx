@@ -1,24 +1,18 @@
 import { expect, describe, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { OpenApi } from "./openapi";
 import { beforeEach } from "node:test";
 
-const mocks = vi.hoisted(() => {
-    return {
-        openapiFile: {
-            openapi: "3.0.0",
-            info: {
-                title: "AGDB API",
-                version: "1.0.0",
-            },
-            paths: {},
-        },
-    };
-});
-vi.mock("../../../../agdb_server/openapi.json", () => ({
-    default: mocks.openapiFile,
-}));
+const jsonMock = {
+    openapi: "3.0.0",
+    info: {
+        title: "AGDB API",
+        version: "1.0.0",
+    },
+    paths: {},
+};
+
 vi.mock("next/router", () => ({
     useRouter: () => ({
         pathname: "/",
@@ -29,9 +23,19 @@ describe("openapi", () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
-    it("should render the openapi", () => {
+
+    it("should render the openapi code on click", async () => {
+        const file = await import("../../../../agdb_server/openapi.json");
+
+        //@ts-ignore
+        file.default = jsonMock;
+
         render(<OpenApi />);
         expect(screen.getByText("openapi.json")).toBeDefined();
-        expect(screen.getByText('"AGDB API"')).toBeDefined();
+
+        const showButton = screen.getByText("Show code");
+        fireEvent.click(showButton);
+
+        expect(screen.getByText("Hide code")).toBeDefined();
     });
 });

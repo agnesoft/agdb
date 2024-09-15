@@ -57,3 +57,23 @@ pub trait DbUserValue: Sized {
     /// to the database key-values.
     fn to_db_values(&self) -> Vec<DbKeyValue>;
 }
+
+/// Marker trait for user values to get around
+/// conflicting trait implementations between database
+/// and blanket `std` implementations. Implement it
+/// or use the derive macro `agdb::UserValueMarker`
+/// for custom types that are to be used with the database.
+///
+/// # Examples
+///
+/// ```rust
+/// #[derive(Default, Clone, Copy, Debug)]
+/// enum MyEnum {
+///   #[default]
+///   A,
+///   B,
+/// }
+///
+/// impl agdb::DbUserValueMarker for MyEnum {}
+/// ```
+pub trait DbUserValueMarker {}

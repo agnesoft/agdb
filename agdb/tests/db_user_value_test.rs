@@ -9,10 +9,11 @@ use agdb::QueryBuilder;
 use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::UserValue;
+use agdb::UserValueMarker;
 #[allow(unused_imports)]
 use test_db::TestDb;
 
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq, UserValueMarker)]
 enum Status {
     Active,
     #[default]
@@ -41,7 +42,7 @@ struct MyValueWithBool {
     truths: Vec<bool>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, UserValueMarker)]
 struct Attribute {
     name: String,
     value: String,

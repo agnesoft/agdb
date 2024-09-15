@@ -37,7 +37,7 @@ pub mod test_utilities;
 pub use query::QueryType;
 
 #[cfg(feature = "derive")]
-pub use agdb_derive::UserValue;
+pub use agdb_derive::{UserValue, UserValueMarker};
 
 pub use db::db_element::DbElement;
 pub use db::db_error::DbError;
@@ -46,6 +46,7 @@ pub use db::db_id::DbId;
 pub use db::db_key::DbKeyOrder;
 pub use db::db_key_value::DbKeyValue;
 pub use db::db_user_value::DbUserValue;
+pub use db::db_user_value::DbUserValueMarker;
 pub use db::db_value::DbValue;
 pub use db::Db;
 pub use db::DbFile;

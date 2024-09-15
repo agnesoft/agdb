@@ -5,6 +5,35 @@ use syn::DeriveInput;
 
 const DB_ID: &str = "db_id";
 
+/// The helper derive macro to add `agdb` compatibility to
+/// user defined types. This type provides blank implementation
+/// of the `agdb::DbUserValueMarker` trait. This is needed for the
+/// vectorized custom values to be compatible with the database
+/// as the `From` trait implementation witohut it conflicts
+/// with the blanket implementations.
+///
+/// # Examples
+///
+/// ```ignore
+/// #[derive(agdb::UserValueMarker, Default, Copy, Clone, Debug)]
+/// enum MyEnum {
+///    #[default]
+///    A,
+///    B,
+/// }
+/// ```
+#[proc_macro_derive(UserValueMarker)]
+pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as DeriveInput);
+    let name = input.ident;
+
+    let tokens = quote! {
+        impl agdb::DbUserValueMarker for #name {}
+    };
+
+    tokens.into()
+}
+
 /// The derive macro to add `agdb` compatibility
 /// to user defined types. It implements [`agdb::DbUserValue`]
 /// for the type automatically to allow your type to be read and
@@ -27,7 +56,7 @@ const DB_ID: &str = "db_id";
 ///
 /// ## Standard
 /// ```ignore
-/// #[derive(agdb_derive::UserValue)]
+/// #[derive(agdb::UserValue)]
 /// struct MyValue {
 ///     num_value: i64,
 ///     string_value: String,
@@ -37,7 +66,7 @@ const DB_ID: &str = "db_id";
 ///
 /// ## With db_id
 /// ```ignore
-/// #[derive(agdb_derive::UserValue)]
+/// #[derive(agdb::UserValue)]
 /// struct MyValue {
 ///     db_id: Option<agdb::DbId>, //this field is useful but not mandatory
 ///     num_value: i64,
@@ -48,7 +77,7 @@ const DB_ID: &str = "db_id";
 ///
 /// ## With optional
 /// ```ignore
-/// #[derive(agdb_derive::UserValue)]
+/// #[derive(agdb::UserValue)]
 /// struct MyValue {
 ///     db_id: Option<agdb::DbId>, //this field is useful but not mandatory
 ///     num_value: i64,

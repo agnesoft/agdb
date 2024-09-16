@@ -78,7 +78,7 @@ impl QueryBuilder {
     /// QueryBuilder::remove().index("k");
     /// QueryBuilder::remove().aliases("a");
     /// QueryBuilder::remove().aliases(["a", "b"]);
-    /// QueryBuilder::remove().values(vec!["k".into()]);
+    /// QueryBuilder::remove().values("k");
     /// ```
     pub fn remove() -> Remove {
         Remove {}
@@ -110,6 +110,7 @@ impl QueryBuilder {
     /// ```
     /// use agdb::QueryBuilder;
     /// use agdb::UserValue;
+    /// use agdb::DbId;
     ///
     /// #[derive(UserValue)]
     /// struct MyValue { db_id: Option<DbId>, key: String }
@@ -122,7 +123,7 @@ impl QueryBuilder {
     /// QueryBuilder::select().keys();
     /// QueryBuilder::select().key_count();
     /// QueryBuilder::select().node_count();
-    /// QueryBuilder::select().values(vec!["k".into()]);
+    /// QueryBuilder::select().values("k");
     /// ```
     pub fn select() -> Select {
         Select {}

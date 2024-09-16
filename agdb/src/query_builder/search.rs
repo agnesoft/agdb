@@ -311,7 +311,7 @@ impl SearchFrom {
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().ids(1);
-    /// QueryBuilder::search().from(1).where_().keys(vec!["k".into()]);
+    /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
     /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
@@ -383,7 +383,7 @@ impl SearchOrderBy {
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().ids(1);
-    /// QueryBuilder::search().from(1).where_().keys(vec!["k".into()]);
+    /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
     /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
@@ -476,7 +476,7 @@ impl SearchTo {
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().ids(1);
-    /// QueryBuilder::search().from(1).where_().keys(vec!["k".into()]);
+    /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
     /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
@@ -508,7 +508,7 @@ impl SelectLimit {
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().ids(1);
-    /// QueryBuilder::search().from(1).where_().keys(vec!["k".into()]);
+    /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
     /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));
@@ -559,7 +559,7 @@ impl SelectOffset {
     /// QueryBuilder::search().from(1).where_().edge();
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().ids(1);
-    /// QueryBuilder::search().from(1).where_().keys(vec!["k".into()]);
+    /// QueryBuilder::search().from(1).where_().keys("k");
     /// QueryBuilder::search().from(1).where_().key("k");
     /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1));
     /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1));

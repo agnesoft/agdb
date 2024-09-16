@@ -326,7 +326,7 @@ fn search_from_ordered_by() {
             .ids(
                 QueryBuilder::search()
                     .from("users")
-                    .order_by(vec![
+                    .order_by([
                         DbKeyOrder::Desc("age".into()),
                         DbKeyOrder::Asc("name".into()),
                     ])
@@ -375,7 +375,7 @@ fn search_from_ordered_by_limit_offset() {
             .ids(
                 QueryBuilder::search()
                     .from("users")
-                    .order_by(vec![
+                    .order_by([
                         DbKeyOrder::Desc("age".into()),
                         DbKeyOrder::Asc("name".into()),
                     ])
@@ -443,7 +443,7 @@ fn search_to_ordered_by() {
             .ids(
                 QueryBuilder::search()
                     .to("users")
-                    .order_by(vec![
+                    .order_by([
                         DbKeyOrder::Asc("age".into()),
                         DbKeyOrder::Desc("name".into()),
                     ])

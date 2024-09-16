@@ -42,7 +42,7 @@ impl Where {
     /// use agdb::{QueryBuilder, CountComparison};
     ///
     /// // Only elements with `k` key will be followed during search.
-    /// QueryBuilder::search().from(1).where_().beyond().keys(vec!["k".into()]).query();
+    /// QueryBuilder::search().from(1).where_().beyond().keys("k").query();
     ///
     /// // Only edges or nodes with exactly 1 edge are followed.
     /// QueryBuilder::search().from(1).where_().beyond().edge().or().edge_count(CountComparison::Equal(1));
@@ -213,10 +213,10 @@ impl Where {
     /// use agdb::QueryBuilder;
     ///
     /// // Include only elements with "k" property (key)
-    /// QueryBuilder::search().from(1).where_().keys(vec!["k".into()]).query();
+    /// QueryBuilder::search().from(1).where_().keys("k").query();
     ///
     /// // Includes only elements with either "a" or "b" properties (keys).
-    /// QueryBuilder::search().from(1).where_().keys(vec!["a".into()]).or().keys(vec!["b".into()]).query();
+    /// QueryBuilder::search().from(1).where_().keys("a").or().keys("b").query();
     /// ```
     pub fn keys<T: Into<DbValues>>(mut self, keys: T) -> WhereLogicOperator {
         self.add_condition(QueryCondition {
@@ -256,7 +256,7 @@ impl Where {
     /// use agdb::QueryBuilder;
     ///
     /// // Includes elements WITHOUT the "k" property (key).
-    /// QueryBuilder::search().from(1).where_().not().keys(vec!["k".into()]).query();
+    /// QueryBuilder::search().from(1).where_().not().keys("k").query();
     /// ```
     pub fn not(mut self) -> Self {
         self.modifier = QueryConditionModifier::Not;
@@ -275,7 +275,7 @@ impl Where {
     /// use agdb::{QueryBuilder, CountComparison};
     ///
     /// // Elements with `k` key will NOT be followed during search.
-    /// QueryBuilder::search().from(1).where_().not_beyond().keys(vec!["k".into()]).query();
+    /// QueryBuilder::search().from(1).where_().not_beyond().keys("k").query();
     ///
     /// // Elements 1 and 2 will NOT be followed during search.
     /// QueryBuilder::search().from(1).where_().not_beyond().ids(vec![1, 2]);
@@ -306,7 +306,7 @@ impl Where {
     ///   .and()
     ///   .beyond()
     ///   .where_()
-    ///   .keys(vec!["k".into()])
+    ///   .keys("k")
     ///   .or()
     ///   .node()
     ///   .query();

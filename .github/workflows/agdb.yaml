@@ -38,6 +38,15 @@ jobs:
       - run: rustup component add llvm-tools-preview
       - run: cargo llvm-cov --package agdb --package agdb_derive --all-features --ignore-filename-regex "agdb_derive" --fail-uncovered-functions 0 --fail-uncovered-lines 0 --show-missing-lines
 
+  agdb_doctest:
+    runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo test --package agdb --package agdb_derive --all-features --doc
+
   agdb_format:
     runs-on: ubuntu-latest
     needs: diff

@@ -12,6 +12,26 @@ pub enum DbKeyOrder {
     Desc(DbValue),
 }
 
+pub struct DbKeyOrders(pub Vec<DbKeyOrder>);
+
+impl From<Vec<DbKeyOrder>> for DbKeyOrders {
+    fn from(orders: Vec<DbKeyOrder>) -> Self {
+        Self(orders)
+    }
+}
+
+impl From<&[DbKeyOrder]> for DbKeyOrders {
+    fn from(orders: &[DbKeyOrder]) -> Self {
+        Self(orders.to_vec())
+    }
+}
+
+impl<const N: usize> From<[DbKeyOrder; N]> for DbKeyOrders {
+    fn from(orders: [DbKeyOrder; N]) -> Self {
+        Self(orders.to_vec())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -36,5 +56,12 @@ mod tests {
             DbKeyOrder::Asc(DbValue::default()),
             DbKeyOrder::Asc(DbValue::default())
         );
+    }
+
+    #[test]
+    fn db_key_orders() {
+        let _orders = DbKeyOrders(vec![DbKeyOrder::Asc(1.into())]);
+        let _orders = DbKeyOrders::from([DbKeyOrder::Asc(1.into())].as_slice());
+        let _orders = DbKeyOrders::from([DbKeyOrder::Asc(1.into())]);
     }
 }

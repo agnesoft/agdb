@@ -1,6 +1,6 @@
 use super::where_::Where;
+use crate::db::db_key_order::DbKeyOrders;
 use crate::Comparison;
-use crate::DbKeyOrder;
 use crate::DbValue;
 use crate::QueryCondition;
 use crate::QueryConditionData;
@@ -104,7 +104,7 @@ impl Search {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().elements().order_by(vec![DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().elements().order_by([DbKeyOrder::Asc("k".into())]);
     /// QueryBuilder::search().elements().offset(5);
     /// QueryBuilder::search().elements().limit(10);
     /// QueryBuilder::search().elements().where_();
@@ -134,7 +134,7 @@ impl Search {
     ///
     /// QueryBuilder::search().from(1).query();
     /// QueryBuilder::search().from(1).to(2);
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]);
     /// QueryBuilder::search().from(1).offset(5);
     /// QueryBuilder::search().from(1).limit(10);
     /// QueryBuilder::search().from(1).where_();
@@ -159,7 +159,7 @@ impl Search {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]);
     /// QueryBuilder::search().to(1).offset(5);
     /// QueryBuilder::search().to(1).limit(10);
     /// QueryBuilder::search().to(1).where_();
@@ -187,7 +187,7 @@ impl SearchAlgorithm {
     ///
     /// QueryBuilder::search().depth_first().from(1).query();
     /// QueryBuilder::search().depth_first().from(1).to(2);
-    /// QueryBuilder::search().depth_first().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().depth_first().from(1).order_by([DbKeyOrder::Asc("k".into())]);
     /// QueryBuilder::search().depth_first().from(1).offset(5);
     /// QueryBuilder::search().depth_first().from(1).limit(10);
     /// QueryBuilder::search().depth_first().from(1).where_();
@@ -205,7 +205,7 @@ impl SearchAlgorithm {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().depth_first().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().depth_first().to(1).order_by([DbKeyOrder::Asc("k".into())]);
     /// QueryBuilder::search().depth_first().to(1).offset(5);
     /// QueryBuilder::search().depth_first().to(1).limit(10);
     /// QueryBuilder::search().depth_first().to(1).where_();
@@ -264,13 +264,13 @@ impl SearchFrom {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).query();
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10);
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).limit(5);
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).where_();
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).query();
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10);
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).limit(5);
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).where_();
     /// ```
-    pub fn order_by(mut self, keys: Vec<DbKeyOrder>) -> SearchOrderBy {
-        self.0.order_by = keys;
+    pub fn order_by<T: Into<DbKeyOrders>>(mut self, keys: T) -> SearchOrderBy {
+        self.0.order_by = Into::<DbKeyOrders>::into(keys).0;
 
         SearchOrderBy(self.0)
     }
@@ -289,7 +289,7 @@ impl SearchFrom {
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
     /// QueryBuilder::search().from(1).to(2).query();
-    /// QueryBuilder::search().from(1).to(2).order_by(vec![DbKeyOrder::Asc("k".into())]);
+    /// QueryBuilder::search().from(1).to(2).order_by([DbKeyOrder::Asc("k".into())]);
     /// QueryBuilder::search().from(1).to(2).offset(10);
     /// QueryBuilder::search().from(1).to(2).limit(5);
     /// QueryBuilder::search().from(1).to(2).where_();
@@ -337,8 +337,8 @@ impl SearchOrderBy {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).limit(10).query();
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).limit(10).where_();
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).query();
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).where_();
     /// ```
     pub fn limit(mut self, value: u64) -> SelectLimit {
         self.0.limit = value;
@@ -357,9 +357,9 @@ impl SearchOrderBy {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).query();
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).limit(5);
-    /// QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).where_();
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).query();
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).limit(5);
+    /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).where_();
     /// ```
     pub fn offset(mut self, value: u64) -> SelectOffset {
         self.0.offset = value;
@@ -409,8 +409,8 @@ impl SearchTo {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).limit(10).query();
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).limit(10).where_();
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).query();
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).where_();
     /// ```
     pub fn limit(mut self, value: u64) -> SelectLimit {
         self.0.limit = value;
@@ -429,9 +429,9 @@ impl SearchTo {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).query();
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).limit(5);
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).where_();
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).query();
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).limit(5);
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).where_();
     /// ```
     pub fn offset(mut self, value: u64) -> SelectOffset {
         self.0.offset = value;
@@ -450,12 +450,12 @@ impl SearchTo {
     /// ```
     /// use agdb::{QueryBuilder, DbKeyOrder};
     ///
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).query();
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).limit(5);
-    /// QueryBuilder::search().to(1).order_by(vec![DbKeyOrder::Asc("k".into())]).offset(10).where_();
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).query();
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).limit(5);
+    /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).where_();
     /// ```
-    pub fn order_by(mut self, keys: Vec<DbKeyOrder>) -> SearchOrderBy {
-        self.0.order_by = keys;
+    pub fn order_by<T: Into<DbKeyOrders>>(mut self, keys: T) -> SearchOrderBy {
+        self.0.order_by = Into::<DbKeyOrders>::into(keys).0;
 
         SearchOrderBy(self.0)
     }

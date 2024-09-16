@@ -993,12 +993,12 @@ QueryBuilder::search().depth_first().from("a").query();
 QueryBuilder::search().elements().query();
 QueryBuilder::search().index("age").value(20).query(); //index search
 //limit, offset and order_by can be applied similarly to all the search variants except search index
-QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()
+QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("age".into()), DbKeyOrder::Asc("name".into())]).query()
 QueryBuilder::search().from(1).offset(10).query();
 QueryBuilder::search().from(1).limit(5).query();
-QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).offset(10).query();
-QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).limit(5).query();
-QueryBuilder::search().from(1).order_by(vec![DbKeyOrder::Desc("k".into())]).offset(10).limit(5).query();
+QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).offset(10).query();
+QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).limit(5).query();
+QueryBuilder::search().from(1).order_by([DbKeyOrder::Desc("k".into())]).offset(10).limit(5).query();
 QueryBuilder::search().from(1).offset(10).limit(5).query();
 ```
 

@@ -18,7 +18,7 @@ fn main() -> Result<(), QueryError> {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["user", "dbs"])
+            .aliases(["user", "dbs"])
             .query(),
     )?;
 

@@ -102,7 +102,7 @@ fn data_persistence() {
         db.exec_mut(
             QueryBuilder::insert()
                 .nodes()
-                .aliases(vec!["alias", "alias2"])
+                .aliases(["alias", "alias2"])
                 .values_uniform(values.clone())
                 .query(),
         )
@@ -185,7 +185,7 @@ fn data_remove_persistence() {
         db.exec_mut(
             QueryBuilder::insert()
                 .nodes()
-                .aliases(vec!["alias", "alias2"])
+                .aliases(["alias", "alias2"])
                 .values_uniform(vec![("key", 100).into()])
                 .query(),
         )
@@ -493,7 +493,7 @@ fn queries_as_reference() {
 
     let query = QueryBuilder::insert()
         .nodes()
-        .aliases(vec!["root", "users"])
+        .aliases(["root", "users"])
         .query();
     db.exec_mut(&query).unwrap();
 

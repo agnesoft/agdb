@@ -11,14 +11,12 @@ fn remove_aliases() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(["alias", "alias2"])
             .query(),
         2,
     );
     db.exec_mut(
-        QueryBuilder::remove()
-            .aliases(vec!["alias", "alias2"])
-            .query(),
+        QueryBuilder::remove().aliases(["alias", "alias2"]).query(),
         -2,
     );
 }
@@ -29,18 +27,14 @@ fn remove_aliases_rollback() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(["alias", "alias2"])
             .query(),
         2,
     );
 
     db.transaction_mut_error(
         |t| -> Result<QueryResult, QueryError> {
-            t.exec_mut(
-                QueryBuilder::remove()
-                    .aliases(vec!["alias", "alias2"])
-                    .query(),
-            )?;
+            t.exec_mut(QueryBuilder::remove().aliases(["alias", "alias2"]).query())?;
             t.exec(QueryBuilder::select().ids("alias2").query())
         },
         "Alias 'alias2' not found".into(),

@@ -11,7 +11,7 @@ fn insert_aliases_of() {
     db.exec_mut(QueryBuilder::insert().nodes().count(2).query(), 2);
     db.exec_mut(
         QueryBuilder::insert()
-            .aliases(vec![String::from("alias"), String::from("alias2")])
+            .aliases([String::from("alias"), String::from("alias2")])
             .ids(vec![1, 2])
             .query(),
         2,
@@ -25,7 +25,7 @@ fn insert_aliases_of_alias() {
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .ids(vec![QueryId::from("alias"), 2.into()])
             .query(),
         2,
@@ -41,7 +41,7 @@ fn insert_aliases_rollback() {
         |t| -> Result<(), QueryError> {
             t.exec_mut(
                 QueryBuilder::insert()
-                    .aliases(vec!["alias1", "alias2"])
+                    .aliases(["alias1", "alias2"])
                     .ids(vec![QueryId::from("alias"), 2.into()])
                     .query(),
             )?;

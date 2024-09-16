@@ -38,7 +38,7 @@ fn insert_edges_from_to() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
+            .aliases(["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
@@ -59,7 +59,7 @@ fn insert_edges_from_to_each() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3"])
+            .aliases(["alias1", "alias2", "alias3"])
             .query(),
         3,
     );
@@ -79,7 +79,7 @@ fn insert_edges_from_to_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
+            .aliases(["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
@@ -120,7 +120,7 @@ fn insert_edges_from_to_each_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
+            .aliases(["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
@@ -176,7 +176,7 @@ fn insert_edges_from_to_each_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
+            .aliases(["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
@@ -227,7 +227,7 @@ fn insert_edges_from_to_values_bad_length() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
+            .aliases(["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
@@ -248,7 +248,7 @@ fn insert_edges_from_to_values_each_bad_length() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3", "alias4"])
+            .aliases(["alias1", "alias2", "alias3", "alias4"])
             .query(),
         4,
     );
@@ -270,7 +270,7 @@ fn insert_edges_from_to_values_asymmetric() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3"])
+            .aliases(["alias1", "alias2", "alias3"])
             .query(),
         3,
     );
@@ -311,7 +311,7 @@ fn insert_edges_from_to_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3"])
+            .aliases(["alias1", "alias2", "alias3"])
             .query(),
         3,
     );

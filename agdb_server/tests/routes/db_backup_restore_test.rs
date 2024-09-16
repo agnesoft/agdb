@@ -19,7 +19,7 @@ async fn backup() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
-        .aliases(vec!["root"])
+        .aliases(["root"])
         .query()
         .into()];
     server.api.db_exec(owner, db, queries).await?;
@@ -62,7 +62,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
-        .aliases(vec!["root"])
+        .aliases(["root"])
         .query()
         .into()];
     server.api.db_exec(owner, db, queries).await?;
@@ -106,7 +106,7 @@ async fn backup_of_backup() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
-        .aliases(vec!["root"])
+        .aliases(["root"])
         .query()
         .into()];
     server.api.db_exec(owner, db, queries).await?;

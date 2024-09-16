@@ -9,12 +9,7 @@ fn main() -> Result<(), QueryError> {
 
     // Inserts root node for users with an alias. You can loosely
     // think of it akin to a table in relational databases.
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(vec!["users"])
-            .query(),
-    )?;
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["users"]).query())?;
 
     // Inserts the raw data by providing list of keys and values
     // for each node. Notice we can easily create sparse data

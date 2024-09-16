@@ -19,7 +19,7 @@ async fn copy() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
-        .aliases(vec!["root"])
+        .aliases(["root"])
         .query()
         .into()];
     server.api.db_exec(owner, db, queries).await?;
@@ -59,7 +59,7 @@ async fn copy_from_different_user() -> anyhow::Result<()> {
         .await?;
     let queries = &vec![QueryBuilder::insert()
         .nodes()
-        .aliases(vec!["root"])
+        .aliases(["root"])
         .query()
         .into()];
     server.api.admin_db_exec(owner, db, queries).await?;

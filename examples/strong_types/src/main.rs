@@ -61,12 +61,7 @@ fn main() -> Result<(), QueryError> {
 
     // Inserts root node for users with an alias. You can loosely
     // think of it akin to a table in relational databases.
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(vec!["users"])
-            .query(),
-    )?;
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["users"]).query())?;
 
     // Prepare some data to be inserted into the database. In this
     // case a couple of users.

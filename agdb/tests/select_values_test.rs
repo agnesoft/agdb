@@ -11,7 +11,7 @@ fn select_values_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .values(vec![
                 vec![
                     ("key", "value").into(),
@@ -55,7 +55,7 @@ fn select_values_ids_missing_key() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .values(vec![
                 vec![
                     ("key", "value").into(),

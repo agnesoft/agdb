@@ -29,7 +29,7 @@ impl Insert {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().aliases("a").ids(1);
-    /// QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]);
+    /// QueryBuilder::insert().aliases(["a", "b"]).ids(vec![1, 2]);
     /// ```
     pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> InsertAliases {
         InsertAliases(InsertAliasesQuery {
@@ -110,7 +110,7 @@ impl Insert {
     ///
     /// QueryBuilder::insert().nodes().count(1);
     /// QueryBuilder::insert().nodes().aliases("a");
-    /// QueryBuilder::insert().nodes().aliases(vec!["a", "b"]);
+    /// QueryBuilder::insert().nodes().aliases(["a", "b"]);
     /// QueryBuilder::insert().nodes().ids(1);
     /// QueryBuilder::insert().nodes().ids(vec![1, 2]);
     /// QueryBuilder::insert().nodes().ids("a");

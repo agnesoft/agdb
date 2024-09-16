@@ -50,7 +50,7 @@ fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
         t.exec_mut(
             QueryBuilder::insert()
                 .nodes()
-                .aliases(vec!["root", "users", "posts"])
+                .aliases(["root", "users", "posts"])
                 .query(),
         )?;
         t.exec_mut(

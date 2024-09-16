@@ -215,7 +215,7 @@ mod tests {
         let queries: Vec<QueryType> = vec![
             QueryBuilder::insert().nodes().count(2).query().into(),
             QueryBuilder::insert()
-                .aliases(vec!["node1", "node2"])
+                .aliases(["node1", "node2"])
                 .ids(vec![1, 2])
                 .query()
                 .into(),

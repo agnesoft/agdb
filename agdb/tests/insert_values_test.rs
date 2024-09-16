@@ -111,7 +111,7 @@ fn insert_values_uniform_ids() {
     db.exec_mut_ids(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(["alias", "alias2"])
             .query(),
         &[1, 2],
     );

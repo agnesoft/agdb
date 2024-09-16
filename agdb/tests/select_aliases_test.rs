@@ -29,7 +29,7 @@ fn select_aliases_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .query(),
         2,
     );
@@ -58,7 +58,7 @@ fn select_aliases_aliases() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .query(),
         2,
     );
@@ -91,7 +91,7 @@ fn select_aliases_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3", "alias4", "alias5"])
+            .aliases(["alias1", "alias2", "alias3", "alias4", "alias5"])
             .query(),
         5,
     );
@@ -143,7 +143,7 @@ fn select_all_aliases() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2", "alias3"])
+            .aliases(["alias1", "alias2", "alias3"])
             .query(),
         3,
     );

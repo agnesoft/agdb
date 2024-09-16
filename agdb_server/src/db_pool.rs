@@ -122,7 +122,7 @@ impl DbPool {
                 t.exec_mut(
                     QueryBuilder::insert()
                         .nodes()
-                        .aliases(vec!["users", "dbs"])
+                        .aliases(["users", "dbs"])
                         .query(),
                 )?;
 

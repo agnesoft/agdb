@@ -362,7 +362,7 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::insert().aliases("a").ids(1).query();
 QueryBuilder::insert().aliases("a").ids("b").query(); // alias "b" is replaced  with "a"
-QueryBuilder::insert().aliases(vec!["a", "b"]).ids(vec![1, 2]).query();
+QueryBuilder::insert().aliases(["a", "b"]).ids(vec![1, 2]).query();
 ```
 
 </td></tr></table>
@@ -473,9 +473,9 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::insert().nodes().count(2).query();
 QueryBuilder::insert().nodes().count(2).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
-QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).query();
-QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
-QueryBuilder::insert().nodes().aliases(vec!["a", "b"]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
+QueryBuilder::insert().nodes().aliases(["a", "b"]).query();
+QueryBuilder::insert().nodes().aliases(["a", "b"]).values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
+QueryBuilder::insert().nodes().aliases(["a", "b"]).values_uniform(vec![("k", "v").into(), (1, 10).into()]).query();
 QueryBuilder::insert().nodes().values(vec![vec![("k", 1).into()], vec![("k", 2).into()]]).query();
 QueryBuilder::insert().nodes().ids(1).count(1).query();
 QueryBuilder::insert().nodes().ids(vec![1, 2]).count(1).query();
@@ -565,7 +565,7 @@ pub struct QueryResult {
 
 ```rs
 QueryBuilder::remove().aliases("a").query();
-QueryBuilder::remove().aliases(vec!["a", "b"]).query();
+QueryBuilder::remove().aliases(["a", "b"]).query();
 ```
 
 </td></tr></table>

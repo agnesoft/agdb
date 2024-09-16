@@ -54,7 +54,7 @@ impl QueryBuilder {
     /// QueryBuilder::insert().nodes();
     /// QueryBuilder::insert().edges();
     /// QueryBuilder::insert().aliases("a");
-    /// QueryBuilder::insert().aliases(vec!["a", "b"]);
+    /// QueryBuilder::insert().aliases(["a", "b"]);
     /// QueryBuilder::insert().element(&MyValue { db_id: Some(DbId(1)), key: "a".to_string(), });
     /// QueryBuilder::insert().elements(&[MyValue { db_id: Some(DbId(1)), key: "a".to_string(), }]);
     /// QueryBuilder::insert().index("k");
@@ -77,7 +77,7 @@ impl QueryBuilder {
     /// QueryBuilder::remove().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::remove().index("k");
     /// QueryBuilder::remove().aliases("a");
-    /// QueryBuilder::remove().aliases(vec!["a", "b"]);
+    /// QueryBuilder::remove().aliases(["a", "b"]);
     /// QueryBuilder::remove().values(vec!["k".into()]);
     /// ```
     pub fn remove() -> Remove {

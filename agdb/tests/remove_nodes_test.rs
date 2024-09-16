@@ -28,7 +28,7 @@ fn remove_nodes() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(["alias", "alias2"])
             .query(),
         2,
     );

@@ -42,7 +42,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let queries = vec![
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["users"])
+            .aliases(["users"])
             .query()
             .into(),
         QueryBuilder::insert().nodes().values(&users).query().into(),

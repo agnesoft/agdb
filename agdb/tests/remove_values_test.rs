@@ -11,7 +11,7 @@ fn remove_values_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(["alias", "alias2"])
             .values_uniform(vec![("key1", "value1").into()])
             .query(),
         2,
@@ -102,7 +102,7 @@ fn remove_missing_key() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(["alias", "alias2"])
             .values_uniform(vec![("key1", "value1").into(), ("key2", 100).into()])
             .query(),
         2,

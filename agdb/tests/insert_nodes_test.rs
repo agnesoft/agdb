@@ -41,7 +41,7 @@ fn insert_nodes_aliases() {
     db.exec_mut_ids(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .query(),
         &[1, 2],
     );
@@ -59,7 +59,7 @@ fn insert_nodes_aliases_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .values(vec![
                 vec![("key", "value").into(), ("key2", "value2").into()],
                 vec![("key", "value3").into()],
@@ -95,7 +95,7 @@ fn insert_nodes_aliases_values_rollback() {
                 .exec_mut(
                     QueryBuilder::insert()
                         .nodes()
-                        .aliases(vec!["alias1", "alias2"])
+                        .aliases(["alias1", "alias2"])
                         .values(vec![
                             vec![("key", "value").into(), ("key2", "value2").into()],
                             vec![("key", "value3").into()],
@@ -143,7 +143,7 @@ fn insert_nodes_aliases_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias1", "alias2"])
+            .aliases(["alias1", "alias2"])
             .values_uniform(vec![("key", "value").into(), ("key2", "value2").into()])
             .query(),
         2,
@@ -243,7 +243,7 @@ fn insert_nodes_existing_aliases_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["new_alias", "alias", "alias3"])
+            .aliases(["new_alias", "alias", "alias3"])
             .values(vec![
                 vec![("some_key", "value").into()],
                 vec![("key", 10).into(), ("new_key", 100).into()],
@@ -279,7 +279,7 @@ fn insert_nodes_aliases_values_mismatched_length() {
     db.exec_mut_error(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["alias", "alias2"])
+            .aliases(["alias", "alias2"])
             .values(vec![vec![("key", 1).into()]])
             .query(),
         "Aliases (2) and values (1) must have compatible lenghts (2 <= 1)",

@@ -55,12 +55,7 @@ fn main() -> Result<(), QueryError> {
     let mut db = DbMemory::new("agdb_example")?;
 
     // Inserts root nodes for users.
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(vec!["users"])
-            .query(),
-    )?;
+    db.exec_mut(QueryBuilder::insert().nodes().aliases(["users"]).query())?;
 
     let mut users = vec![];
 

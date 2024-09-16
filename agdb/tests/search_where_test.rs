@@ -13,7 +13,7 @@ fn create_db() -> TestDb {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["root", "users", "docs"])
+            .aliases(["root", "users", "docs"])
             .query(),
         3,
     );
@@ -477,7 +477,7 @@ fn search_from_to_where_filter() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["start", "end"])
+            .aliases(["start", "end"])
             .query(),
         2,
     );

@@ -13,7 +13,7 @@ fn select_edge_count_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["from", "to"])
+            .aliases(["from", "to"])
             .query(),
         2,
     );
@@ -49,7 +49,7 @@ fn select_edge_count_from_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["from", "to"])
+            .aliases(["from", "to"])
             .query(),
         2,
     );
@@ -85,7 +85,7 @@ fn select_edge_count_to_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["from", "to"])
+            .aliases(["from", "to"])
             .query(),
         2,
     );
@@ -121,7 +121,7 @@ fn select_edge_count_multi() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["node1", "node2", "node3"])
+            .aliases(["node1", "node2", "node3"])
             .query(),
         3,
     );
@@ -168,7 +168,7 @@ fn select_edge_count_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["node1", "node2", "node3"])
+            .aliases(["node1", "node2", "node3"])
             .query(),
         3,
     );
@@ -207,7 +207,7 @@ fn select_edge_count_non_nodes() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["from", "to"])
+            .aliases(["from", "to"])
             .query(),
         2,
     );
@@ -233,7 +233,7 @@ fn select_edge_count_invalid_query() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .aliases(vec!["from", "to"])
+            .aliases(["from", "to"])
             .query(),
         2,
     );

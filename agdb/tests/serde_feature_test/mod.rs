@@ -49,7 +49,11 @@ fn query_type() {
         QueryBuilder::insert().edges().from(1).to(1).query().into(),
         QueryBuilder::insert().index("").query().into(),
         QueryBuilder::insert().nodes().count(1).query().into(),
-        QueryBuilder::insert().values(vec![]).ids(1).query().into(),
+        QueryBuilder::insert()
+            .values([[("k", 1).into()]])
+            .ids(1)
+            .query()
+            .into(),
         QueryBuilder::remove().ids(1).query().into(),
         QueryBuilder::remove().aliases("").query().into(),
         QueryBuilder::remove().index("").query().into(),

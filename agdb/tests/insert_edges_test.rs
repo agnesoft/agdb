@@ -420,7 +420,7 @@ fn insert_or_update_mismatch_length() {
             .ids(vec![-3])
             .from(1)
             .to(2)
-            .values(vec![])
+            .values([[("k", 1).into()]])
             .query(),
         "Values len '0' do not match the insert count '1'",
     );
@@ -435,7 +435,7 @@ fn insert_or_update_unknown_edge() {
             .ids(vec![-3])
             .from(1)
             .to(2)
-            .values(vec![])
+            .values([[("k", 1).into()]])
             .query(),
         "Id '-3' not found",
     );
@@ -451,7 +451,7 @@ fn insert_or_update_node_id() {
             .ids(vec![1])
             .from(1)
             .to(2)
-            .values(vec![])
+            .values([[("k", 1).into()]])
             .query(),
         "The ids for insert or update must all refer to edges - node id '1' found",
     );

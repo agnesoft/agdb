@@ -696,6 +696,12 @@ impl<T: Into<DbValue>> From<Vec<T>> for DbValues {
     }
 }
 
+impl<T: Into<DbValue> + Clone> From<&Vec<T>> for DbValues {
+    fn from(value: &Vec<T>) -> Self {
+        value.as_slice().into()
+    }
+}
+
 impl<T: Into<DbValue> + Clone> From<&[T]> for DbValues {
     fn from(value: &[T]) -> Self {
         DbValues(value.iter().map(|v| v.clone().into()).collect())
@@ -1913,6 +1919,10 @@ mod tests {
         assert_eq!(DbValues::from(1_u64).0, vec![DbValue::from(1_u64)]);
         assert_eq!(
             DbValues::from(vec![1, 2, 3]).0,
+            vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
+        );
+        assert_eq!(
+            DbValues::from(&vec![1, 2, 3]).0,
             vec![DbValue::from(1), DbValue::from(2), DbValue::from(3)]
         );
         assert_eq!(

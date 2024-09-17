@@ -125,6 +125,8 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
 
     let tokens = quote! {
         impl agdb::DbUserValue for #name {
+            type ValueType = #name;
+
             #[track_caller]
             fn db_id(&self) -> Option<agdb::QueryId> {
                 #db_id
@@ -136,7 +138,7 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
             }
 
             #[track_caller]
-            fn from_db_element(element: &agdb::DbElement) -> std::result::Result<Self, agdb::DbError> {
+            fn from_db_element(element: &agdb::DbElement) -> std::result::Result<Self::ValueType, agdb::DbError> {
                 Ok(Self {
                     #(#from_db_element),*
                 })
@@ -147,6 +149,30 @@ pub fn db_user_value_derive(item: TokenStream) -> TokenStream {
                 let mut values = Vec::with_capacity(#counter);
                 #(#db_values)*
                 values
+            }
+        }
+
+        impl agdb::DbUserValue for &#name {
+            type ValueType = #name;
+
+            #[track_caller]
+            fn db_id(&self) -> Option<agdb::QueryId> {
+                #name::db_id(*self)
+            }
+
+            #[track_caller]
+            fn db_keys() -> Vec<agdb::DbValue> {
+                #name::db_keys()
+            }
+
+            #[track_caller]
+            fn from_db_element(element: &agdb::DbElement) -> std::result::Result<Self::ValueType, agdb::DbError> {
+                #name::from_db_element(element)
+            }
+
+            #[track_caller]
+            fn to_db_values(&self) -> Vec<agdb::DbKeyValue> {
+                #name::to_db_values(*self)
             }
         }
 

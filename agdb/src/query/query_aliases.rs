@@ -9,6 +9,12 @@ impl<T: Into<String>> From<Vec<T>> for QueryAliases {
     }
 }
 
+impl<T: Into<String> + Clone> From<&Vec<T>> for QueryAliases {
+    fn from(value: &Vec<T>) -> Self {
+        value.as_slice().into()
+    }
+}
+
 impl<T: Into<String> + Clone> From<&[T]> for QueryAliases {
     fn from(value: &[T]) -> Self {
         QueryAliases(value.iter().map(|v| v.clone().into()).collect())
@@ -46,6 +52,7 @@ mod tests {
     #[test]
     fn query_aliases() {
         let _aliases = QueryAliases::from(vec!["a".to_string()]);
+        let _aliases = QueryAliases::from(&vec!["a".to_string()]);
         let _aliases = QueryAliases::from(["a", "b"]);
         let _aliases = QueryAliases::from(["a", "b"].as_slice());
         let _aliases = QueryAliases::from("a");

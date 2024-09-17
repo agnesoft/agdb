@@ -41,6 +41,8 @@ use crate::QueryId;
 /// struct MyValue { db_id: Option<DbId>, key: String } // "key": "value"
 /// ```
 pub trait DbUserValue: Sized {
+    type ValueType;
+
     /// Returns the database id if present.
     fn db_id(&self) -> Option<QueryId>;
 
@@ -51,7 +53,7 @@ pub trait DbUserValue: Sized {
     /// Constructs the user value from the `element`
     /// extracting the values from element `values`
     /// and the `db_id` if that field is present.
-    fn from_db_element(element: &DbElement) -> Result<Self, DbError>;
+    fn from_db_element(element: &DbElement) -> Result<Self::ValueType, DbError>;
 
     /// Converts the fields (skipping `db_id` if present)
     /// to the database key-values.

@@ -32,26 +32,108 @@ impl From<Vec<DbKeyValue>> for SingleValues {
     }
 }
 
+impl<T: DbUserValue> From<T> for SingleValues {
+    fn from(value: T) -> Self {
+        SingleValues(value.to_db_values())
+    }
+}
+
+//---//
+
 impl From<Vec<Vec<DbKeyValue>>> for MultiValues {
     fn from(values: Vec<Vec<DbKeyValue>>) -> Self {
         MultiValues(values)
     }
 }
 
-impl<T: DbUserValue> From<&T> for MultiValues {
-    fn from(value: &T) -> Self {
+impl From<&Vec<Vec<DbKeyValue>>> for MultiValues {
+    fn from(values: &Vec<Vec<DbKeyValue>>) -> Self {
+        MultiValues(values.clone())
+    }
+}
+
+impl From<Vec<&[DbKeyValue]>> for MultiValues {
+    fn from(values: Vec<&[DbKeyValue]>) -> Self {
+        MultiValues(values.into_iter().map(|v| v.to_vec()).collect())
+    }
+}
+
+impl From<&Vec<&[DbKeyValue]>> for MultiValues {
+    fn from(values: &Vec<&[DbKeyValue]>) -> Self {
+        MultiValues(values.iter().map(|v| v.to_vec()).collect())
+    }
+}
+
+impl From<&[Vec<DbKeyValue>]> for MultiValues {
+    fn from(values: &[Vec<DbKeyValue>]) -> Self {
+        MultiValues(values.to_vec())
+    }
+}
+
+impl From<&[&[DbKeyValue]]> for MultiValues {
+    fn from(values: &[&[DbKeyValue]]) -> Self {
+        MultiValues(values.iter().map(|v| v.to_vec()).collect())
+    }
+}
+
+impl<const N: usize> From<[Vec<DbKeyValue>; N]> for MultiValues {
+    fn from(values: [Vec<DbKeyValue>; N]) -> Self {
+        MultiValues(values.into_iter().collect())
+    }
+}
+
+impl<const N: usize> From<[&[DbKeyValue]; N]> for MultiValues {
+    fn from(values: [&[DbKeyValue]; N]) -> Self {
+        MultiValues(values.into_iter().map(|v| v.to_vec()).collect())
+    }
+}
+
+impl<const N: usize, const N2: usize> From<[[DbKeyValue; N2]; N]> for MultiValues {
+    fn from(values: [[DbKeyValue; N2]; N]) -> Self {
+        MultiValues(values.into_iter().map(|v| v.to_vec()).collect())
+    }
+}
+
+impl<T: DbUserValue> From<T> for MultiValues {
+    fn from(value: T) -> Self {
         MultiValues(vec![value.to_db_values()])
     }
 }
 
-impl<T: DbUserValue> From<&T> for SingleValues {
-    fn from(value: &T) -> Self {
-        SingleValues(value.to_db_values())
+impl<T: DbUserValue> From<&[T]> for MultiValues {
+    fn from(value: &[T]) -> Self {
+        MultiValues(value.iter().map(|v| v.to_db_values()).collect())
+    }
+}
+
+impl<T: DbUserValue, const N: usize> From<[T; N]> for MultiValues {
+    fn from(value: [T; N]) -> Self {
+        MultiValues(value.iter().map(|v| v.to_db_values()).collect())
     }
 }
 
 impl<T: DbUserValue> From<&Vec<T>> for MultiValues {
     fn from(value: &Vec<T>) -> Self {
         MultiValues(value.iter().map(|v| v.to_db_values()).collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn multi_values() {
+        let _values = MultiValues::from(vec![vec![("k", 1).into()]]);
+        let _values = MultiValues::from(&vec![vec![("k", 1).into()]]);
+        let _values = MultiValues::from(vec![[("k", 1).into()].as_slice()]);
+        let _values = MultiValues::from(&vec![[("k", 1).into()].as_slice()]);
+
+        let _values = MultiValues::from([vec![("k", 1).into()]].as_slice());
+        let _values = MultiValues::from([[("k", 1).into()].as_slice()].as_slice());
+
+        let _values = MultiValues::from([vec![("k", 1).into()]]);
+        let _values = MultiValues::from([[("k", 1).into()].as_slice()]);
+        let _values = MultiValues::from([[("k", 1).into()]]);
     }
 }

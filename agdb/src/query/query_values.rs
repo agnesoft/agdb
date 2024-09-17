@@ -32,13 +32,29 @@ impl From<Vec<DbKeyValue>> for SingleValues {
     }
 }
 
+impl From<&Vec<DbKeyValue>> for SingleValues {
+    fn from(values: &Vec<DbKeyValue>) -> Self {
+        SingleValues(values.clone())
+    }
+}
+
+impl From<&[DbKeyValue]> for SingleValues {
+    fn from(values: &[DbKeyValue]) -> Self {
+        SingleValues(values.to_vec())
+    }
+}
+
+impl<const N: usize> From<[DbKeyValue; N]> for SingleValues {
+    fn from(values: [DbKeyValue; N]) -> Self {
+        SingleValues(values.to_vec())
+    }
+}
+
 impl<T: DbUserValue> From<T> for SingleValues {
     fn from(value: T) -> Self {
         SingleValues(value.to_db_values())
     }
 }
-
-//---//
 
 impl From<Vec<Vec<DbKeyValue>>> for MultiValues {
     fn from(values: Vec<Vec<DbKeyValue>>) -> Self {
@@ -135,5 +151,13 @@ mod tests {
         let _values = MultiValues::from([vec![("k", 1).into()]]);
         let _values = MultiValues::from([[("k", 1).into()].as_slice()]);
         let _values = MultiValues::from([[("k", 1).into()]]);
+    }
+
+    #[test]
+    fn single_values() {
+        let _values = SingleValues::from(vec![("k", 1).into()]);
+        let _values = SingleValues::from(&vec![("k", 1).into()]);
+        let _values = SingleValues::from([("k", 1).into()].as_slice());
+        let _values = SingleValues::from([("k", 1).into()]);
     }
 }

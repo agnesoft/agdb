@@ -316,7 +316,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
                 .ids(
                     QueryBuilder::search()
                         .from("posts")
-                        .order_by(vec![DbKeyOrder::Desc("likes".into())])
+                        .order_by([DbKeyOrder::Desc("likes".into())])
                         .offset(offset)
                         .limit(limit)
                         .where_()

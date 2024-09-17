@@ -468,7 +468,7 @@ fn derived_macro_should_not_panic() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![User { value: 0 }.to_db_values()])
+            .values([User { value: 0 }.to_db_values()])
             .query(),
         1,
     );

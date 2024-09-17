@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbId;
+use agdb::DbKeyValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use test_db::TestDb;
@@ -88,10 +89,7 @@ fn insert_edges_from_to_values() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
-            .values(vec![
-                vec![("key", "value").into()],
-                vec![("key", "value2").into()],
-            ])
+            .values([[("key", "value").into()], [("key", "value2").into()]])
             .query(),
         2,
     );
@@ -130,11 +128,11 @@ fn insert_edges_from_to_each_values() {
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
             .each()
-            .values(vec![
-                vec![("key", "value1").into()],
-                vec![("key", "value2").into()],
-                vec![("key", "value3").into()],
-                vec![("key", "value4").into()],
+            .values([
+                [("key", "value1").into()],
+                [("key", "value2").into()],
+                [("key", "value3").into()],
+                [("key", "value4").into()],
             ])
             .query(),
         4,
@@ -279,10 +277,7 @@ fn insert_edges_from_to_values_asymmetric() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to("alias3")
-            .values(vec![
-                vec![("key", "value").into()],
-                vec![("key", "value2").into()],
-            ])
+            .values([[("key", "value").into()], [("key", "value2").into()]])
             .query(),
         2,
     );
@@ -420,7 +415,7 @@ fn insert_or_update_mismatch_length() {
             .ids(vec![-3])
             .from(1)
             .to(2)
-            .values([[("k", 1).into()]])
+            .values(Vec::<Vec<DbKeyValue>>::new())
             .query(),
         "Values len '0' do not match the insert count '1'",
     );

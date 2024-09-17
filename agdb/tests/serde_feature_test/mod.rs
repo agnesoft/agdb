@@ -91,7 +91,7 @@ fn conditions() {
             .depth_first()
             .from(1)
             .to(2)
-            .order_by(vec![DbKeyOrder::Asc("key".into())])
+            .order_by([DbKeyOrder::Asc("key".into())])
             .offset(10)
             .limit(10)
             .where_()

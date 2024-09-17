@@ -26,10 +26,7 @@ fn main() -> Result<(), QueryError> {
     let dbs = db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
-                vec![("name", "db1").into()],
-                vec![("name", "db2").into()],
-            ])
+            .values([[("name", "db1").into()], [("name", "db2").into()]])
             .query(),
     )?;
 
@@ -39,10 +36,7 @@ fn main() -> Result<(), QueryError> {
             .edges()
             .from("user")
             .to(dbs)
-            .values(vec![
-                vec![("role", "admin").into()],
-                vec![("role", "read").into()],
-            ])
+            .values([[("role", "admin").into()], [("role", "read").into()]])
             .query(),
     )?;
 

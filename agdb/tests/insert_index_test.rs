@@ -16,7 +16,7 @@ fn insert_index_with_existing_data() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into()],
                 vec![("username", "user3").into(), ("age", 33).into()],
@@ -47,10 +47,10 @@ fn insert_index_rollback() {
             t.exec_mut(
                 QueryBuilder::insert()
                     .nodes()
-                    .values(vec![
-                        vec![("username", "user1").into()],
-                        vec![("username", "user2").into()],
-                        vec![("username", "user3").into()],
+                    .values([
+                        [("username", "user1").into()],
+                        [("username", "user2").into()],
+                        [("username", "user3").into()],
                     ])
                     .query(),
             )?;

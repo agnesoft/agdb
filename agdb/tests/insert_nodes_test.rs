@@ -60,7 +60,7 @@ fn insert_nodes_aliases_values() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias1", "alias2"])
-            .values(vec![
+            .values([
                 vec![("key", "value").into(), ("key2", "value2").into()],
                 vec![("key", "value3").into()],
             ])
@@ -96,7 +96,7 @@ fn insert_nodes_aliases_values_rollback() {
                     QueryBuilder::insert()
                         .nodes()
                         .aliases(["alias1", "alias2"])
-                        .values(vec![
+                        .values([
                             vec![("key", "value").into(), ("key2", "value2").into()],
                             vec![("key", "value3").into()],
                         ])
@@ -203,7 +203,7 @@ fn insert_nodes_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("key", "value").into(), ("key2", "value2").into()],
                 vec![("key", "value3").into()],
             ])
@@ -244,7 +244,7 @@ fn insert_nodes_existing_aliases_values() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["new_alias", "alias", "alias3"])
-            .values(vec![
+            .values([
                 vec![("some_key", "value").into()],
                 vec![("key", 10).into(), ("new_key", 100).into()],
                 vec![],
@@ -398,7 +398,7 @@ fn insert_aliases_and_normal_nodes() {
         QueryBuilder::insert()
             .nodes()
             .aliases("users")
-            .values(vec![
+            .values([
                 vec![],
                 vec![("name", "alice").into()],
                 vec![("name", "bob").into()],

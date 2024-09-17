@@ -74,10 +74,10 @@ fn search_elements_order_by() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
-                vec![("age", 20).into()],
-                vec![("age", 15).into()],
-                vec![("age", 30).into()],
+            .values([
+                [("age", 20).into()],
+                [("age", 15).into()],
+                [("age", 30).into()],
             ])
             .query(),
         3,
@@ -86,7 +86,7 @@ fn search_elements_order_by() {
     db.exec_ids(
         QueryBuilder::search()
             .elements()
-            .order_by(vec![DbKeyOrder::Asc("age".into())])
+            .order_by([DbKeyOrder::Asc("age".into())])
             .query(),
         &[2, 1, 3, -4],
     );

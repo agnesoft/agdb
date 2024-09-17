@@ -110,6 +110,12 @@ impl<const N: usize, const N2: usize> From<[[DbKeyValue; N2]; N]> for MultiValue
     }
 }
 
+impl<T: DbUserValue> From<Vec<T>> for MultiValues {
+    fn from(value: Vec<T>) -> Self {
+        MultiValues(value.into_iter().map(|v| v.to_db_values()).collect())
+    }
+}
+
 impl<T: DbUserValue> From<T> for MultiValues {
     fn from(value: T) -> Self {
         MultiValues(vec![value.to_db_values()])
@@ -137,6 +143,52 @@ impl<T: DbUserValue> From<&Vec<T>> for MultiValues {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DbId;
+
+    struct S {
+        k: i64,
+    }
+
+    impl DbUserValue for S {
+        type ValueType = S;
+
+        fn db_id(&self) -> Option<crate::QueryId> {
+            None
+        }
+
+        fn db_keys() -> Vec<crate::DbValue> {
+            vec!["k".into()]
+        }
+
+        fn from_db_element(element: &crate::DbElement) -> Result<Self::ValueType, crate::DbError> {
+            Ok(Self {
+                k: element.values[0].value.to_i64()?,
+            })
+        }
+
+        fn to_db_values(&self) -> Vec<DbKeyValue> {
+            vec![("k", self.k).into()]
+        }
+    }
+
+    #[test]
+    fn test_s() {
+        let s = S { k: 1 };
+        assert_eq!(s.db_id(), None);
+        assert_eq!(S::db_keys(), vec!["k".into()]);
+        assert_eq!(s.to_db_values(), vec![("k", 1).into()]);
+        assert_eq!(
+            S::from_db_element(&crate::DbElement {
+                id: DbId(0),
+                from: None,
+                to: None,
+                values: vec![("k", 1).into()],
+            })
+            .unwrap()
+            .k,
+            s.k
+        );
+    }
 
     #[test]
     fn multi_values() {
@@ -151,6 +203,12 @@ mod tests {
         let _values = MultiValues::from([vec![("k", 1).into()]]);
         let _values = MultiValues::from([[("k", 1).into()].as_slice()]);
         let _values = MultiValues::from([[("k", 1).into()]]);
+
+        let _values = MultiValues::from(vec![S { k: 1 }]);
+        let _values = MultiValues::from(&vec![S { k: 1 }]);
+        let _values = MultiValues::from(S { k: 1 });
+        let _values = MultiValues::from([S { k: 1 }].as_slice());
+        let _values = MultiValues::from([S { k: 1 }]);
     }
 
     #[test]

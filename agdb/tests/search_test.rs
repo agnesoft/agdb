@@ -298,17 +298,17 @@ fn search_from_ordered_by() {
     let users = db.exec_mut_result(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
-                vec![("name", "z").into(), ("age", 31).into(), ("id", 1).into()],
-                vec![("name", "x").into(), ("age", 12).into(), ("id", 2).into()],
-                vec![("name", "y").into(), ("age", 57).into(), ("id", 3).into()],
-                vec![("name", "a").into(), ("age", 60).into(), ("id", 4).into()],
-                vec![("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
-                vec![("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
-                vec![("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
-                vec![("name", "k").into(), ("age", 9).into(), ("id", 8).into()],
-                vec![("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
-                vec![("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
+            .values([
+                [("name", "z").into(), ("age", 31).into(), ("id", 1).into()],
+                [("name", "x").into(), ("age", 12).into(), ("id", 2).into()],
+                [("name", "y").into(), ("age", 57).into(), ("id", 3).into()],
+                [("name", "a").into(), ("age", 60).into(), ("id", 4).into()],
+                [("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
+                [("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
+                [("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
+                [("name", "k").into(), ("age", 9).into(), ("id", 8).into()],
+                [("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
+                [("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
             ])
             .query(),
     );
@@ -347,17 +347,17 @@ fn search_from_ordered_by_limit_offset() {
     let users = db.exec_mut_result(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
-                vec![("name", "z").into(), ("age", 31).into(), ("id", 1).into()],
-                vec![("name", "x").into(), ("age", 12).into(), ("id", 2).into()],
-                vec![("name", "y").into(), ("age", 57).into(), ("id", 3).into()],
-                vec![("name", "a").into(), ("age", 60).into(), ("id", 4).into()],
-                vec![("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
-                vec![("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
-                vec![("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
-                vec![("name", "k").into(), ("age", 9).into(), ("id", 8).into()],
-                vec![("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
-                vec![("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
+            .values([
+                [("name", "z").into(), ("age", 31).into(), ("id", 1).into()],
+                [("name", "x").into(), ("age", 12).into(), ("id", 2).into()],
+                [("name", "y").into(), ("age", 57).into(), ("id", 3).into()],
+                [("name", "a").into(), ("age", 60).into(), ("id", 4).into()],
+                [("name", "f").into(), ("age", 4).into(), ("id", 5).into()],
+                [("name", "s").into(), ("age", 18).into(), ("id", 6).into()],
+                [("name", "y").into(), ("age", 28).into(), ("id", 7).into()],
+                [("name", "k").into(), ("age", 9).into(), ("id", 8).into()],
+                [("name", "w").into(), ("age", 6).into(), ("id", 9).into()],
+                [("name", "c").into(), ("age", 5).into(), ("id", 10).into()],
             ])
             .query(),
     );
@@ -415,7 +415,7 @@ fn search_to_ordered_by() {
     let users = db.exec_mut_result(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("name", "z").into(), ("age", 31).into(), ("id", 1).into()],
                 vec![("name", "x").into(), ("id", 2).into()],
                 vec![("name", "y").into(), ("age", 57).into(), ("id", 3).into()],

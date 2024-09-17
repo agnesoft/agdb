@@ -12,13 +12,13 @@ fn select_values_ids() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias1", "alias2"])
-            .values(vec![
-                vec![
+            .values([
+                [
                     ("key", "value").into(),
                     ("key2", "value2").into(),
                     ("key3", "value3").into(),
                 ],
-                vec![
+                [
                     ("key", "value4").into(),
                     ("key2", "value5").into(),
                     ("key3", "value6").into(),
@@ -56,7 +56,7 @@ fn select_values_ids_missing_key() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias1", "alias2"])
-            .values(vec![
+            .values([
                 vec![
                     ("key", "value").into(),
                     ("key2", "value2").into(),

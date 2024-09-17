@@ -58,8 +58,8 @@ impl QueryBuilder {
     /// QueryBuilder::insert().element(&MyValue { db_id: Some(DbId(1)), key: "a".to_string(), });
     /// QueryBuilder::insert().elements(&[MyValue { db_id: Some(DbId(1)), key: "a".to_string(), }]);
     /// QueryBuilder::insert().index("k");
-    /// QueryBuilder::insert().values(vec![vec![("k", 1).into()]]);
-    /// QueryBuilder::insert().values_uniform(vec![("k", 1).into()]);
+    /// QueryBuilder::insert().values([[("k", 1).into()]]);
+    /// QueryBuilder::insert().values_uniform([("k", 1).into()]);
     /// ```
     pub fn insert() -> Insert {
         Insert {}

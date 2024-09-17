@@ -76,8 +76,8 @@ impl InsertNodes {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().nodes().aliases("a").query();
-    /// QueryBuilder::insert().nodes().aliases("a").values(vec![vec![("k", 1).into()]]);
-    /// QueryBuilder::insert().nodes().aliases("a").values_uniform(vec![("k", 1).into()]);
+    /// QueryBuilder::insert().nodes().aliases("a").values([[("k", 1).into()]]);
+    /// QueryBuilder::insert().nodes().aliases("a").values_uniform([("k", 1).into()]);
     /// ```
     pub fn aliases<T: Into<QueryAliases>>(mut self, names: T) -> InsertNodesAliases {
         self.0.aliases = Into::<QueryAliases>::into(names).0;
@@ -93,7 +93,7 @@ impl InsertNodes {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().nodes().count(1).query();
-    /// QueryBuilder::insert().nodes().count(1).values_uniform(vec![("k", 1).into()]);
+    /// QueryBuilder::insert().nodes().count(1).values_uniform([("k", 1).into()]);
     /// ```
     pub fn count(mut self, num: u64) -> InsertNodesCount {
         self.0.count = num;
@@ -114,7 +114,7 @@ impl InsertNodes {
     /// QueryBuilder::insert().nodes().ids(1);
     /// QueryBuilder::insert().nodes().ids(1).aliases("a");
     /// QueryBuilder::insert().nodes().ids(1).count(1);
-    /// QueryBuilder::insert().nodes().ids(1).values(vec![vec![("k", 1).into()]]);
+    /// QueryBuilder::insert().nodes().ids(1).values([[("k", 1).into()]]);
     /// ```
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertNodesIds {
         self.0.ids = ids.into();
@@ -141,8 +141,8 @@ impl InsertNodesIds {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().nodes().aliases("a").query();
-    /// QueryBuilder::insert().nodes().aliases("a").values(vec![vec![("k", 1).into()]]);
-    /// QueryBuilder::insert().nodes().aliases("a").values_uniform(vec![("k", 1).into()]);
+    /// QueryBuilder::insert().nodes().aliases("a").values([[("k", 1).into()]]);
+    /// QueryBuilder::insert().nodes().aliases("a").values_uniform([("k", 1).into()]);
     /// ```
     pub fn aliases<T: Into<QueryAliases>>(mut self, names: T) -> InsertNodesAliases {
         self.0.aliases = Into::<QueryAliases>::into(names).0;
@@ -158,7 +158,7 @@ impl InsertNodesIds {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().nodes().count(1).query();
-    /// QueryBuilder::insert().nodes().count(1).values_uniform(vec![("k", 1).into()]);
+    /// QueryBuilder::insert().nodes().count(1).values_uniform([("k", 1).into()]);
     /// ```
     pub fn count(mut self, num: u64) -> InsertNodesCount {
         self.0.count = num;

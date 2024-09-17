@@ -14,7 +14,7 @@ fn serialize_deserialize() {
     let insert_query_json = serde_json::to_string(
         &QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", 10).into()]])
+            .values([[("key", 10).into()]])
             .query(),
     )
     .unwrap();

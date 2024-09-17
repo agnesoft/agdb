@@ -199,7 +199,7 @@ impl DbPool {
                     .edges()
                     .from(vec![QueryId::from(owner_id), "dbs".into()])
                     .to(db)
-                    .values(vec![vec![("role", DbUserRole::Admin).into()], vec![]])
+                    .values([vec![("role", DbUserRole::Admin).into()], vec![]])
                     .query(),
             )
         })?;
@@ -242,7 +242,7 @@ impl DbPool {
             if existing_role.result == 1 {
                 t.exec_mut(
                     QueryBuilder::insert()
-                        .values(vec![vec![("role", role).into()]])
+                        .values([[("role", role).into()]])
                         .ids(existing_role)
                         .query(),
                 )?;
@@ -252,7 +252,7 @@ impl DbPool {
                         .edges()
                         .from(user_id)
                         .to(db_id)
-                        .values_uniform(vec![("role", role).into()])
+                        .values_uniform([("role", role).into()])
                         .query(),
                 )?;
             }
@@ -533,7 +533,7 @@ impl DbPool {
                     .edges()
                     .from(vec![QueryId::from(user), "dbs".into()])
                     .to(db)
-                    .values(vec![vec![("role", DbUserRole::Admin).into()], vec![]])
+                    .values([vec![("role", DbUserRole::Admin).into()], vec![]])
                     .query(),
             )
         })?;
@@ -1097,7 +1097,7 @@ impl DbPool {
                 user_token = token_uuid.to_string();
                 t.exec_mut(
                     QueryBuilder::insert()
-                        .values_uniform(vec![("token", &user_token.clone()).into()])
+                        .values_uniform([("token", &user_token.clone()).into()])
                         .ids(user)
                         .query(),
                 )?;

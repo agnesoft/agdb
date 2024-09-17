@@ -12,7 +12,7 @@ fn select_key_count_ids() {
         QueryBuilder::insert()
             .nodes()
             .aliases("alias")
-            .values(vec![vec![
+            .values([[
                 ("key", 100).into(),
                 (1, "value").into(),
                 (vec![1.1_f64], 1).into(),

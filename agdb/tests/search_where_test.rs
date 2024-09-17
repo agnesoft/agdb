@@ -486,7 +486,7 @@ fn search_from_to_where_filter() {
             .edges()
             .from(vec!["start", "start"])
             .to(vec!["end", "end"])
-            .values(vec![vec![], vec![("key", 1).into()]])
+            .values([vec![], vec![("key", 1).into()]])
             .query(),
         2,
     );

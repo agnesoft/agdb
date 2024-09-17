@@ -84,7 +84,7 @@ fn select_values_search() {
         QueryBuilder::insert()
             .nodes()
             .count(5)
-            .values_uniform(vec![
+            .values_uniform([
                 ("key1", 1).into(),
                 ("key2", 10).into(),
                 ("key3", 100).into(),

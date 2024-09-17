@@ -138,7 +138,7 @@ fn remove_nodes_with_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", "value").into()]])
+            .values([[("key", "value").into()]])
             .query(),
         1,
     );
@@ -161,7 +161,7 @@ fn remove_nodes_with_values_rollback() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", vec![1, 2, 3]).into()]])
+            .values([[("key", vec![1, 2, 3]).into()]])
             .query(),
         1,
     );
@@ -219,7 +219,7 @@ fn remove_nodes_removes_edges_with_all_values() {
             .edges()
             .from(2)
             .to(3)
-            .values(vec![vec![("some_key", 100).into()]])
+            .values([[("some_key", 100).into()]])
             .query(),
         1,
     );
@@ -260,7 +260,7 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
             .edges()
             .from(2)
             .to(3)
-            .values(vec![vec![("some_key", 100).into()]])
+            .values([[("some_key", 100).into()]])
             .query(),
         1,
     );

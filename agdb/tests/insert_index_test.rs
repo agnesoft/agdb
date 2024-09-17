@@ -69,7 +69,7 @@ fn insert_indexed_value() {
     db.exec_mut(QueryBuilder::insert().nodes().count(1).query(), 1);
     db.exec_mut(
         QueryBuilder::insert()
-            .values(vec![vec![("username", "user1").into()]])
+            .values([[("username", "user1").into()]])
             .ids(vec![1])
             .query(),
         1,
@@ -83,13 +83,13 @@ fn update_indexed_value() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("username", "user1").into()]])
+            .values([[("username", "user1").into()]])
             .query(),
         1,
     );
     db.exec_mut(
         QueryBuilder::insert()
-            .values(vec![vec![("username", "user2").into()]])
+            .values([[("username", "user2").into()]])
             .ids(vec![1])
             .query(),
         1,
@@ -103,7 +103,7 @@ fn update_indexed_value_rollback() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("username", "user1").into()]])
+            .values([[("username", "user1").into()]])
             .query(),
         1,
     );
@@ -111,7 +111,7 @@ fn update_indexed_value_rollback() {
         |t| -> Result<(), QueryError> {
             t.exec_mut(
                 QueryBuilder::insert()
-                    .values(vec![vec![("username", "user2").into()]])
+                    .values([[("username", "user2").into()]])
                     .ids(vec![1])
                     .query(),
             )?;

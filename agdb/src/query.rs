@@ -226,7 +226,7 @@ mod tests {
                 .query()
                 .into(),
             QueryBuilder::insert()
-                .values(vec![vec![("key", 1.1).into()]])
+                .values([[("key", 1.1).into()]])
                 .ids("node1")
                 .query()
                 .into(),

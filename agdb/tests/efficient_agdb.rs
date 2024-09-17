@@ -114,7 +114,7 @@ fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError>
                 .edges()
                 .from(vec![QueryId::from("posts"), user.into()])
                 .to(post)
-                .values(vec![vec![], vec![("authored", 1_u64).into()]])
+                .values([vec![], vec![("authored", 1_u64).into()]])
                 .query(),
         )?;
 
@@ -139,7 +139,7 @@ fn create_comment(
                 .edges()
                 .from(vec![parent, user])
                 .to(comment)
-                .values(vec![vec![], vec![("commented", 1_u64).into()]])
+                .values([vec![], vec![("commented", 1_u64).into()]])
                 .query(),
         )?;
 
@@ -153,7 +153,7 @@ fn like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
             .edges()
             .from(user)
             .to(id)
-            .values_uniform(vec![("liked", 1).into()])
+            .values_uniform([("liked", 1).into()])
             .query(),
     )?;
     Ok(())
@@ -331,7 +331,7 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
 fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
     db.exec_mut(
         QueryBuilder::insert()
-            .values_uniform(vec![("level", 1).into()])
+            .values_uniform([("level", 1).into()])
             .ids(
                 QueryBuilder::search()
                     .from("posts")

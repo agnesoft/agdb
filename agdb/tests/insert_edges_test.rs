@@ -186,7 +186,7 @@ fn insert_edges_from_to_each_values_uniform() {
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
             .each()
-            .values_uniform(vec![("key", "value").into(), ("key", "value2").into()])
+            .values_uniform([("key", "value").into(), ("key", "value2").into()])
             .query(),
         4,
     );
@@ -236,7 +236,7 @@ fn insert_edges_from_to_values_bad_length() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
-            .values(vec![vec![("key", "value").into()]])
+            .values([[("key", "value").into()]])
             .query(),
         "Values len '1' do not match the insert count '2'",
     );
@@ -258,7 +258,7 @@ fn insert_edges_from_to_values_each_bad_length() {
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
             .each()
-            .values(vec![vec![("key", "value").into()]])
+            .values([[("key", "value").into()]])
             .query(),
         "Values len '1' do not match the insert count '4'",
     );
@@ -320,7 +320,7 @@ fn insert_edges_from_to_values_uniform() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to("alias3")
-            .values_uniform(vec![("key", "value").into(), ("key", "value2").into()])
+            .values_uniform([("key", "value").into(), ("key", "value2").into()])
             .query(),
         2,
     );
@@ -403,7 +403,7 @@ fn insert_or_update_existing_edge() {
             .ids(vec![-3])
             .from(1)
             .to(2)
-            .values(vec![vec![("key", 1).into()]])
+            .values([[("key", 1).into()]])
             .query(),
         &[-3],
     );

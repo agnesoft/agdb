@@ -186,7 +186,7 @@ fn data_remove_persistence() {
             QueryBuilder::insert()
                 .nodes()
                 .aliases(["alias", "alias2"])
-                .values_uniform(vec![("key", 100).into()])
+                .values_uniform([("key", 100).into()])
                 .query(),
         )
         .unwrap();
@@ -282,7 +282,7 @@ fn optimize_on_drop() {
                 QueryBuilder::insert()
                     .nodes()
                     .count(1000)
-                    .values_uniform(vec![("key", "value").into()])
+                    .values_uniform([("key", "value").into()])
                     .query(),
             )
             .unwrap();
@@ -381,7 +381,7 @@ fn optimize_storage() {
         QueryBuilder::insert()
             .nodes()
             .count(100)
-            .values_uniform(vec![("key", 123).into()])
+            .values_uniform([("key", 123).into()])
             .query(),
         100,
     );
@@ -511,7 +511,7 @@ fn queries_as_reference() {
     db.exec_mut(&query).unwrap();
 
     let query = QueryBuilder::insert()
-        .values(vec![vec![("username", "admin").into()]])
+        .values([[("username", "admin").into()]])
         .ids("users")
         .query();
     db.exec_mut(&query).unwrap();

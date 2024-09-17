@@ -2,6 +2,7 @@ mod test_db;
 
 use agdb::DbElement;
 use agdb::DbId;
+use agdb::DbKeyValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use test_db::TestDb;
@@ -88,10 +89,7 @@ fn insert_edges_from_to_values() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
-            .values(vec![
-                vec![("key", "value").into()],
-                vec![("key", "value2").into()],
-            ])
+            .values([[("key", "value").into()], [("key", "value2").into()]])
             .query(),
         2,
     );
@@ -130,11 +128,11 @@ fn insert_edges_from_to_each_values() {
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
             .each()
-            .values(vec![
-                vec![("key", "value1").into()],
-                vec![("key", "value2").into()],
-                vec![("key", "value3").into()],
-                vec![("key", "value4").into()],
+            .values([
+                [("key", "value1").into()],
+                [("key", "value2").into()],
+                [("key", "value3").into()],
+                [("key", "value4").into()],
             ])
             .query(),
         4,
@@ -186,7 +184,7 @@ fn insert_edges_from_to_each_values_uniform() {
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
             .each()
-            .values_uniform(vec![("key", "value").into(), ("key", "value2").into()])
+            .values_uniform([("key", "value").into(), ("key", "value2").into()])
             .query(),
         4,
     );
@@ -236,7 +234,7 @@ fn insert_edges_from_to_values_bad_length() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
-            .values(vec![vec![("key", "value").into()]])
+            .values([[("key", "value").into()]])
             .query(),
         "Values len '1' do not match the insert count '2'",
     );
@@ -258,7 +256,7 @@ fn insert_edges_from_to_values_each_bad_length() {
             .from(vec!["alias1", "alias2"])
             .to(vec!["alias3", "alias4"])
             .each()
-            .values(vec![vec![("key", "value").into()]])
+            .values([[("key", "value").into()]])
             .query(),
         "Values len '1' do not match the insert count '4'",
     );
@@ -279,10 +277,7 @@ fn insert_edges_from_to_values_asymmetric() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to("alias3")
-            .values(vec![
-                vec![("key", "value").into()],
-                vec![("key", "value2").into()],
-            ])
+            .values([[("key", "value").into()], [("key", "value2").into()]])
             .query(),
         2,
     );
@@ -320,7 +315,7 @@ fn insert_edges_from_to_values_uniform() {
             .edges()
             .from(vec!["alias1", "alias2"])
             .to("alias3")
-            .values_uniform(vec![("key", "value").into(), ("key", "value2").into()])
+            .values_uniform([("key", "value").into(), ("key", "value2").into()])
             .query(),
         2,
     );
@@ -403,7 +398,7 @@ fn insert_or_update_existing_edge() {
             .ids(vec![-3])
             .from(1)
             .to(2)
-            .values(vec![vec![("key", 1).into()]])
+            .values([[("key", 1).into()]])
             .query(),
         &[-3],
     );
@@ -420,7 +415,7 @@ fn insert_or_update_mismatch_length() {
             .ids(vec![-3])
             .from(1)
             .to(2)
-            .values(vec![])
+            .values(Vec::<Vec<DbKeyValue>>::new())
             .query(),
         "Values len '0' do not match the insert count '1'",
     );
@@ -435,7 +430,7 @@ fn insert_or_update_unknown_edge() {
             .ids(vec![-3])
             .from(1)
             .to(2)
-            .values(vec![])
+            .values([[("k", 1).into()]])
             .query(),
         "Id '-3' not found",
     );
@@ -451,7 +446,7 @@ fn insert_or_update_node_id() {
             .ids(vec![1])
             .from(1)
             .to(2)
-            .values(vec![])
+            .values([[("k", 1).into()]])
             .query(),
         "The ids for insert or update must all refer to edges - node id '1' found",
     );

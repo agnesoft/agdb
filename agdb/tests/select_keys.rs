@@ -13,7 +13,7 @@ fn select_keys_ids() {
         QueryBuilder::insert()
             .nodes()
             .aliases("alias")
-            .values(vec![vec![
+            .values([[
                 ("key", 100).into(),
                 (1, "value").into(),
                 (vec![1.1_f64], 1).into(),
@@ -59,7 +59,7 @@ fn select_keys_search() {
         QueryBuilder::insert()
             .nodes()
             .count(5)
-            .values_uniform(vec![
+            .values_uniform([
                 ("key1", 1).into(),
                 ("key2", 10).into(),
                 ("key3", 100).into(),

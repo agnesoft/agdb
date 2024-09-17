@@ -65,7 +65,7 @@ impl<S: StorageData> Writer<S> {
                         .edges()
                         .from(vec![QueryId::from("posts"), self.id.into()])
                         .to(id)
-                        .values(vec![vec![], vec![("authored", 1).into()]])
+                        .values([[].as_slice(), &[("authored", 1).into()]])
                         .query(),
                 )?;
 
@@ -101,7 +101,7 @@ impl<S: StorageData> Writer<S> {
                             .edges()
                             .from(vec![post_id, self.id])
                             .to(id)
-                            .values(vec![vec![], vec![("commented", 1).into()]])
+                            .values([[].as_slice(), &[("commented", 1).into()]])
                             .query(),
                     )?;
 

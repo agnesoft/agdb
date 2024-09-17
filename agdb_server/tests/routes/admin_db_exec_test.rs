@@ -18,7 +18,7 @@ async fn read_write() -> anyhow::Result<()> {
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
@@ -60,7 +60,7 @@ async fn read_only() -> anyhow::Result<()> {
     let queries = &vec![QueryBuilder::insert()
         .nodes()
         .aliases("root")
-        .values(vec![vec![("key", 1.1).into()]])
+        .values([[("key", 1.1).into()]])
         .query()
         .into()];
     let (status, _) = server.api.admin_db_exec(owner, db, queries).await?;
@@ -92,7 +92,7 @@ async fn query_error() -> anyhow::Result<()> {
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),

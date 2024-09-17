@@ -21,7 +21,7 @@ async fn read_write() -> anyhow::Result<()> {
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
@@ -64,7 +64,7 @@ async fn read_only() -> anyhow::Result<()> {
     let queries = &vec![QueryBuilder::insert()
         .nodes()
         .aliases("root")
-        .values(vec![vec![("key", 1.1).into()]])
+        .values([[("key", 1.1).into()]])
         .query()
         .into()];
     let (status, _) = server.api.db_exec(owner, db, queries).await?;
@@ -97,7 +97,7 @@ async fn read_queries() -> anyhow::Result<()> {
     let queries = &vec![QueryBuilder::insert()
         .nodes()
         .aliases("node1")
-        .values(vec![vec![("key", "value").into()]])
+        .values([[("key", "value").into()]])
         .query()
         .into()];
     server.api.db_exec(owner, db, queries).await?;
@@ -148,7 +148,7 @@ async fn write_queries() -> anyhow::Result<()> {
             .query()
             .into(),
         QueryBuilder::insert()
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .ids("node1")
             .query()
             .into(),
@@ -197,7 +197,7 @@ async fn use_result_of_previous_query() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", 1.1).into()], vec![("key", 2.2).into()]])
+            .values([[("key", 1.1).into()], [("key", 2.2).into()]])
             .query()
             .into(),
         QueryBuilder::insert()
@@ -260,7 +260,7 @@ async fn use_result_in_subquery() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", 1.1).into()], vec![("key", 2.2).into()]])
+            .values([[("key", 1.1).into()], [("key", 2.2).into()]])
             .query()
             .into(),
         QueryBuilder::insert()
@@ -665,7 +665,7 @@ async fn query_error() -> anyhow::Result<()> {
     let queries = &vec![
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),
@@ -695,7 +695,7 @@ async fn permission_denied() -> anyhow::Result<()> {
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .query()
             .into(),
         QueryBuilder::select().ids("root").query().into(),

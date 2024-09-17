@@ -60,7 +60,7 @@ fn insert_nodes_aliases_values() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias1", "alias2"])
-            .values(vec![
+            .values([
                 vec![("key", "value").into(), ("key2", "value2").into()],
                 vec![("key", "value3").into()],
             ])
@@ -96,7 +96,7 @@ fn insert_nodes_aliases_values_rollback() {
                     QueryBuilder::insert()
                         .nodes()
                         .aliases(["alias1", "alias2"])
-                        .values(vec![
+                        .values([
                             vec![("key", "value").into(), ("key2", "value2").into()],
                             vec![("key", "value3").into()],
                         ])
@@ -144,7 +144,7 @@ fn insert_nodes_aliases_values_uniform() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias1", "alias2"])
-            .values_uniform(vec![("key", "value").into(), ("key2", "value2").into()])
+            .values_uniform([("key", "value").into(), ("key2", "value2").into()])
             .query(),
         2,
     );
@@ -174,7 +174,7 @@ fn insert_nodes_count_values_uniform() {
         QueryBuilder::insert()
             .nodes()
             .count(2)
-            .values_uniform(vec![("key", "value").into(), ("key2", "value2").into()])
+            .values_uniform([("key", "value").into(), ("key2", "value2").into()])
             .query(),
         2,
     );
@@ -203,7 +203,7 @@ fn insert_nodes_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("key", "value").into(), ("key2", "value2").into()],
                 vec![("key", "value3").into()],
             ])
@@ -236,7 +236,7 @@ fn insert_nodes_existing_aliases_values() {
         QueryBuilder::insert()
             .nodes()
             .aliases("alias")
-            .values(vec![vec![("key", 1).into()]])
+            .values([[("key", 1).into()]])
             .query(),
         1,
     );
@@ -244,7 +244,7 @@ fn insert_nodes_existing_aliases_values() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["new_alias", "alias", "alias3"])
-            .values(vec![
+            .values([
                 vec![("some_key", "value").into()],
                 vec![("key", 10).into(), ("new_key", 100).into()],
                 vec![],
@@ -280,7 +280,7 @@ fn insert_nodes_aliases_values_mismatched_length() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias", "alias2"])
-            .values(vec![vec![("key", 1).into()]])
+            .values([[("key", 1).into()]])
             .query(),
         "Aliases (2) and values (1) must have compatible lenghts (2 <= 1)",
     );
@@ -294,7 +294,7 @@ fn insert_or_replace_insert_new() {
         QueryBuilder::insert()
             .nodes()
             .ids(QueryBuilder::search().index("key").value(1).query())
-            .values(vec![vec![("key", 1).into()]])
+            .values([[("key", 1).into()]])
             .query(),
         &[1],
     );
@@ -322,7 +322,7 @@ fn insert_or_replace_existing() {
         QueryBuilder::insert()
             .nodes()
             .ids(QueryBuilder::search().from(1).query())
-            .values(vec![vec![("key", 1).into()]])
+            .values([[("key", 1).into()]])
             .query(),
         &[1],
     );
@@ -337,7 +337,7 @@ fn insert_or_replace_with_new_alias() {
             .nodes()
             .ids(QueryBuilder::search().from(1).query())
             .aliases("my_alias")
-            .values(vec![vec![("key", 1).into()]])
+            .values([[("key", 1).into()]])
             .query(),
         &[1],
     );
@@ -374,7 +374,7 @@ fn insert_or_replace_mismatch_length() {
         QueryBuilder::insert()
             .nodes()
             .ids(vec![1, 2])
-            .values(vec![vec![]])
+            .values([[]])
             .query(),
         "Values (1) and ids (2) must have the same length",
     );
@@ -398,7 +398,7 @@ fn insert_aliases_and_normal_nodes() {
         QueryBuilder::insert()
             .nodes()
             .aliases("users")
-            .values(vec![
+            .values([
                 vec![],
                 vec![("name", "alice").into()],
                 vec![("name", "bob").into()],
@@ -416,7 +416,7 @@ fn insert_nodes_ids_values_uniform() {
         QueryBuilder::insert()
             .nodes()
             .ids(vec![1, 2])
-            .values_uniform(vec![("key", "value").into()])
+            .values_uniform([("key", "value").into()])
             .query(),
         2,
     );

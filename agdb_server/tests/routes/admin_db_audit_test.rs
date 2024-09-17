@@ -16,7 +16,7 @@ async fn admin_audit() -> anyhow::Result<()> {
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .query()
             .into(),
         QueryBuilder::select().ids(":0").query().into(),

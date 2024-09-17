@@ -17,7 +17,7 @@ fn main() -> Result<(), QueryError> {
     let users = db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![
                     ("username", "user1").into(),
                     ("password", "password123").into(),

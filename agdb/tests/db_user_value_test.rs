@@ -468,7 +468,7 @@ fn derived_macro_should_not_panic() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![User { value: 0 }.to_db_values()])
+            .values([User { value: 0 }.to_db_values()])
             .query(),
         1,
     );
@@ -617,7 +617,7 @@ fn insert_element_to_bool_conversion() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![
+            .values([[
                 ("name", "my name").into(),
                 ("is_active", 50).into(),
                 ("truths", vec![1, 0]).into(),
@@ -704,7 +704,7 @@ fn with_option_some_wrong_type() {
     db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
     db.exec_mut(
         QueryBuilder::insert()
-            .values(vec![vec![("value", "string").into()]])
+            .values([[("value", "string").into()]])
             .ids(1)
             .query(),
         1,
@@ -751,7 +751,7 @@ fn with_option_bad_value() {
     db.exec_mut(QueryBuilder::insert().element(&my_value).query(), 2);
     db.exec_mut(
         QueryBuilder::insert()
-            .values(vec![vec![("name", 100).into()]])
+            .values([[("name", 100).into()]])
             .ids(1)
             .query(),
         1,

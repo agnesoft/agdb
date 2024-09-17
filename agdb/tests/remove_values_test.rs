@@ -12,7 +12,7 @@ fn remove_values_ids() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias", "alias2"])
-            .values_uniform(vec![("key1", "value1").into()])
+            .values_uniform([("key1", "value1").into()])
             .query(),
         2,
     );
@@ -65,7 +65,7 @@ fn remove_values_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", 1).into()], vec![("key", 2).into()]])
+            .values([[("key", 1).into()], [("key", 2).into()]])
             .query(),
         2,
     );
@@ -103,7 +103,7 @@ fn remove_missing_key() {
         QueryBuilder::insert()
             .nodes()
             .aliases(["alias", "alias2"])
-            .values_uniform(vec![("key1", "value1").into(), ("key2", 100).into()])
+            .values_uniform([("key1", "value1").into(), ("key2", 100).into()])
             .query(),
         2,
     );

@@ -42,7 +42,7 @@ pub(crate) fn setup_users<S: StorageData>(
                     t.exec_mut(
                         QueryBuilder::insert()
                             .nodes()
-                            .values(&User {
+                            .values(User {
                                 name: format!("u{i}"),
                                 email: format!("u{i}@a.com"),
                             })

@@ -20,7 +20,7 @@ fn select_indexes() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into(), ("age", 20).into()],
                 vec![("username", "user3").into()],

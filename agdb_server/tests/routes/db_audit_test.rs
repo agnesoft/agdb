@@ -17,7 +17,7 @@ async fn audit() -> anyhow::Result<()> {
         QueryBuilder::insert()
             .nodes()
             .aliases("root")
-            .values(vec![vec![("key", 1.1).into()]])
+            .values([[("key", 1.1).into()]])
             .query()
             .into(),
         QueryBuilder::select().ids(":0").query().into(),
@@ -42,7 +42,7 @@ async fn audit_delete_db() -> anyhow::Result<()> {
     let queries = vec![QueryBuilder::insert()
         .nodes()
         .aliases("root")
-        .values(vec![vec![("key", 1.1).into()]])
+        .values([[("key", 1.1).into()]])
         .query()
         .into()];
     server.api.db_exec(owner, db, &queries).await?;

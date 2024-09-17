@@ -14,7 +14,7 @@ fn search_indexes() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into(), ("age", 20).into()],
                 vec![("username", "user3").into()],
@@ -42,7 +42,7 @@ fn search_index_multiple_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into(), ("age", 20).into()],
                 vec![("username", "user3").into()],
@@ -67,7 +67,7 @@ fn search_index_missing_value() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into(), ("age", 20).into()],
                 vec![("username", "user3").into()],

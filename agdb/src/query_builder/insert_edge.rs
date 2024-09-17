@@ -118,8 +118,8 @@ impl InsertEdgesFrom {
     ///
     /// QueryBuilder::insert().edges().from(1).to(2).query();
     /// QueryBuilder::insert().edges().from(1).to(2).each();
-    /// QueryBuilder::insert().edges().from(1).to(2).values(vec![vec![("k", 1).into()]]);
-    /// QueryBuilder::insert().edges().from(1).to(2).values_uniform(vec![("k", 1).into()]);
+    /// QueryBuilder::insert().edges().from(1).to(2).values([[("k", 1).into()]]);
+    /// QueryBuilder::insert().edges().from(1).to(2).values_uniform([("k", 1).into()]);
     /// ```
     pub fn to<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFromTo {
         self.0.to = ids.into();
@@ -139,8 +139,8 @@ impl InsertEdgesFromTo {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().edges().from(1).to(2).each().query();
-    /// QueryBuilder::insert().edges().from(1).to(2).each().values(vec![vec![("k", 1).into()]]);
-    /// QueryBuilder::insert().edges().from(1).to(2).each().values_uniform(vec![("k", 1).into()]);
+    /// QueryBuilder::insert().edges().from(1).to(2).each().values([[("k", 1).into()]]);
+    /// QueryBuilder::insert().edges().from(1).to(2).each().values_uniform([("k", 1).into()]);
     /// ```
     pub fn each(mut self) -> InsertEdgesEach {
         self.0.each = true;

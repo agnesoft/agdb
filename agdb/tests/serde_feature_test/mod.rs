@@ -14,7 +14,7 @@ fn serialize_deserialize() {
     let insert_query_json = serde_json::to_string(
         &QueryBuilder::insert()
             .nodes()
-            .values(vec![vec![("key", 10).into()]])
+            .values([[("key", 10).into()]])
             .query(),
     )
     .unwrap();
@@ -49,7 +49,11 @@ fn query_type() {
         QueryBuilder::insert().edges().from(1).to(1).query().into(),
         QueryBuilder::insert().index("").query().into(),
         QueryBuilder::insert().nodes().count(1).query().into(),
-        QueryBuilder::insert().values(vec![]).ids(1).query().into(),
+        QueryBuilder::insert()
+            .values([[("k", 1).into()]])
+            .ids(1)
+            .query()
+            .into(),
         QueryBuilder::remove().ids(1).query().into(),
         QueryBuilder::remove().aliases("").query().into(),
         QueryBuilder::remove().index("").query().into(),
@@ -87,7 +91,7 @@ fn conditions() {
             .depth_first()
             .from(1)
             .to(2)
-            .order_by(vec![DbKeyOrder::Asc("key".into())])
+            .order_by([DbKeyOrder::Asc("key".into())])
             .offset(10)
             .limit(10)
             .where_()

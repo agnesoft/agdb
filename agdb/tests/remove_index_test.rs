@@ -12,7 +12,7 @@ fn remove_index_with_data() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into()],
                 vec![("username", "user2").into()],
                 vec![("username", "user3").into()],
@@ -37,10 +37,10 @@ fn remove_index_rollback() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
-                vec![("username", "user1").into()],
-                vec![("username", "user2").into()],
-                vec![("username", "user3").into()],
+            .values([
+                [("username", "user1").into()],
+                [("username", "user2").into()],
+                [("username", "user3").into()],
             ])
             .query(),
         3,
@@ -62,7 +62,7 @@ fn remove_node_with_indexed_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into(), ("age", 33).into()],
                 vec![("username", "user3").into()],
@@ -82,7 +82,7 @@ fn remove_indexed_key() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into(), ("age", 33).into()],
                 vec![("username", "user3").into()],
@@ -102,7 +102,7 @@ fn remove_indexed_key_rollback() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .values(vec![
+            .values([
                 vec![("username", "user1").into(), ("age", 20).into()],
                 vec![("username", "user2").into(), ("age", 33).into()],
                 vec![("username", "user3").into()],

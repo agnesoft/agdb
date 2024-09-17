@@ -60,7 +60,7 @@ mod tests {
 
     #[test]
     fn db_key_orders() {
-        let _orders = DbKeyOrders(vec![DbKeyOrder::Asc(1.into())]);
+        let _orders = DbKeyOrders::from(vec![DbKeyOrder::Asc(1.into())]);
         let _orders = DbKeyOrders::from([DbKeyOrder::Asc(1.into())].as_slice());
         let _orders = DbKeyOrders::from([DbKeyOrder::Asc(1.into())]);
     }

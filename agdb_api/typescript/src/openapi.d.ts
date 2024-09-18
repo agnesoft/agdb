@@ -808,19 +808,7 @@ declare namespace Components {
              */
             InsertEdgesQuery;
         } | {
-            InsertIndex: /**
-             * Database value is a strongly types value.
-             *
-             * It is an enum of limited number supported types
-             * that are universal across all platforms
-             * and programming languages.
-             *
-             * The value is constructible from large number of
-             * raw types or associated types (e.g. i32, &str, etc.).
-             * Getting the raw value back as string can be done
-             * with `to_string()` but otherwise requires a `match`.
-             */
-            DbValue;
+            InsertIndex: InsertIndexQuery;
         } | {
             InsertNodes: /**
              * Query to insert nodes to the database. Only one of
@@ -856,15 +844,7 @@ declare namespace Components {
              */
             InsertValuesQuery;
         } | {
-            Remove: /**
-             * List of database ids used in queries. It
-             * can either represent a list of [`QueryId`]s
-             * or a search query. Search query allows query
-             * nesting and sourcing the ids dynamically for
-             * another query most commonly with the
-             * select queries.
-             */
-            QueryIds;
+            Remove: RemoveQuery;
         } | {
             RemoveAliases: /**
              * Query to remove aliases from the database. It
@@ -876,41 +856,13 @@ declare namespace Components {
              */
             RemoveAliasesQuery;
         } | {
-            RemoveIndex: /**
-             * Database value is a strongly types value.
-             *
-             * It is an enum of limited number supported types
-             * that are universal across all platforms
-             * and programming languages.
-             *
-             * The value is constructible from large number of
-             * raw types or associated types (e.g. i32, &str, etc.).
-             * Getting the raw value back as string can be done
-             * with `to_string()` but otherwise requires a `match`.
-             */
-            DbValue;
+            RemoveIndex: RemoveIndexQuery;
         } | {
-            RemoveValues: /**
-             * Query to select elements with only certain properties of
-             * given ids. All ids must exist in the database and all
-             * of them must have the requested properties.
-             *
-             * The result will be number of elements and the
-             * list of elements with the requested properties.
-             */
-            SelectValuesQuery;
+            RemoveValues: RemoveValuesQuery;
         } | {
             Search: /* Query to search for ids in the database following the graph. */ SearchQuery;
         } | {
-            SelectAliases: /**
-             * List of database ids used in queries. It
-             * can either represent a list of [`QueryId`]s
-             * or a search query. Search query allows query
-             * nesting and sourcing the ids dynamically for
-             * another query most commonly with the
-             * select queries.
-             */
-            QueryIds;
+            SelectAliases: SelectAliasesQuery;
         } | {
             SelectAllAliases: /**
              * Query to select all aliases in the database.
@@ -947,25 +899,9 @@ declare namespace Components {
              */
             SelectIndexesQuery;
         } | {
-            SelectKeys: /**
-             * List of database ids used in queries. It
-             * can either represent a list of [`QueryId`]s
-             * or a search query. Search query allows query
-             * nesting and sourcing the ids dynamically for
-             * another query most commonly with the
-             * select queries.
-             */
-            QueryIds;
+            SelectKeys: SelectKeysQuery;
         } | {
-            SelectKeyCount: /**
-             * List of database ids used in queries. It
-             * can either represent a list of [`QueryId`]s
-             * or a search query. Search query allows query
-             * nesting and sourcing the ids dynamically for
-             * another query most commonly with the
-             * select queries.
-             */
-            QueryIds;
+            SelectKeyCount: SelectKeyCountQuery;
         } | {
             SelectNodeCount: /**
              * Query to select number of nodes in the database.
@@ -2658,3 +2594,57 @@ export interface PathsDictionary {
 
 export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
 
+export type ChangePassword = Components.Schemas.ChangePassword;
+export type ClusterStatus = Components.Schemas.ClusterStatus;
+export type Comparison = Components.Schemas.Comparison;
+export type CountComparison = Components.Schemas.CountComparison;
+export type DbAudit = Components.Schemas.DbAudit;
+export type DbElement = Components.Schemas.DbElement;
+export type DbF64 = Components.Schemas.DbF64;
+export type DbId = Components.Schemas.DbId;
+export type DbKeyOrder = Components.Schemas.DbKeyOrder;
+export type DbKeyValue = Components.Schemas.DbKeyValue;
+export type DbResource = Components.Schemas.DbResource;
+export type DbType = Components.Schemas.DbType;
+export type DbTypeParam = Components.Schemas.DbTypeParam;
+export type DbUser = Components.Schemas.DbUser;
+export type DbUserRole = Components.Schemas.DbUserRole;
+export type DbUserRoleParam = Components.Schemas.DbUserRoleParam;
+export type DbValue = Components.Schemas.DbValue;
+export type InsertAliasesQuery = Components.Schemas.InsertAliasesQuery;
+export type InsertEdgesQuery = Components.Schemas.InsertEdgesQuery;
+export type InsertIndexQuery = Components.Schemas.InsertIndexQuery;
+export type InsertNodesQuery = Components.Schemas.InsertNodesQuery;
+export type InsertValuesQuery = Components.Schemas.InsertValuesQuery;
+export type Queries = Components.Schemas.Queries;
+export type QueriesResults = Components.Schemas.QueriesResults;
+export type QueryAudit = Components.Schemas.QueryAudit;
+export type QueryCondition = Components.Schemas.QueryCondition;
+export type QueryConditionData = Components.Schemas.QueryConditionData;
+export type QueryConditionLogic = Components.Schemas.QueryConditionLogic;
+export type QueryConditionModifier = Components.Schemas.QueryConditionModifier;
+export type QueryId = Components.Schemas.QueryId;
+export type QueryIds = Components.Schemas.QueryIds;
+export type QueryResult = Components.Schemas.QueryResult;
+export type QueryType = Components.Schemas.QueryType;
+export type QueryValues = Components.Schemas.QueryValues;
+export type RemoveAliasesQuery = Components.Schemas.RemoveAliasesQuery;
+export type RemoveIndexQuery = Components.Schemas.RemoveIndexQuery;
+export type RemoveQuery = Components.Schemas.RemoveQuery;
+export type RemoveValuesQuery = Components.Schemas.RemoveValuesQuery;
+export type SearchQuery = Components.Schemas.SearchQuery;
+export type SearchQueryAlgorithm = Components.Schemas.SearchQueryAlgorithm;
+export type SelectAliasesQuery = Components.Schemas.SelectAliasesQuery;
+export type SelectAllAliasesQuery = Components.Schemas.SelectAllAliasesQuery;
+export type SelectEdgeCountQuery = Components.Schemas.SelectEdgeCountQuery;
+export type SelectIndexesQuery = Components.Schemas.SelectIndexesQuery;
+export type SelectKeyCountQuery = Components.Schemas.SelectKeyCountQuery;
+export type SelectKeysQuery = Components.Schemas.SelectKeysQuery;
+export type SelectNodeCountQuery = Components.Schemas.SelectNodeCountQuery;
+export type SelectValuesQuery = Components.Schemas.SelectValuesQuery;
+export type ServerDatabase = Components.Schemas.ServerDatabase;
+export type ServerDatabaseRename = Components.Schemas.ServerDatabaseRename;
+export type ServerDatabaseResource = Components.Schemas.ServerDatabaseResource;
+export type UserCredentials = Components.Schemas.UserCredentials;
+export type UserLogin = Components.Schemas.UserLogin;
+export type UserStatus = Components.Schemas.UserStatus;

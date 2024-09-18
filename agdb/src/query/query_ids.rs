@@ -1,4 +1,3 @@
-use crate::DbId;
 use crate::QueryId;
 use crate::QueryResult;
 use crate::SearchQuery;
@@ -29,56 +28,32 @@ impl QueryIds {
     }
 }
 
-impl From<Vec<QueryId>> for QueryIds {
-    fn from(value: Vec<QueryId>) -> Self {
-        QueryIds::Ids(value)
-    }
-}
-
-impl From<Vec<String>> for QueryIds {
-    fn from(value: Vec<String>) -> Self {
+impl<T: Into<QueryId>> From<Vec<T>> for QueryIds {
+    fn from(value: Vec<T>) -> Self {
         QueryIds::Ids(value.into_iter().map(|v| v.into()).collect())
     }
 }
 
-impl From<Vec<&str>> for QueryIds {
-    fn from(value: Vec<&str>) -> Self {
-        QueryIds::Ids(value.iter().map(|v| (*v).into()).collect())
+impl<T: Into<QueryId> + Clone> From<&Vec<T>> for QueryIds {
+    fn from(value: &Vec<T>) -> Self {
+        QueryIds::Ids(value.iter().map(|v| v.clone().into()).collect())
     }
 }
 
-impl From<Vec<i64>> for QueryIds {
-    fn from(value: Vec<i64>) -> Self {
+impl<T: Into<QueryId> + Clone> From<&[T]> for QueryIds {
+    fn from(value: &[T]) -> Self {
+        QueryIds::Ids(value.iter().map(|v| v.clone().into()).collect())
+    }
+}
+
+impl<T: Into<QueryId> + Clone, const N: usize> From<[T; N]> for QueryIds {
+    fn from(value: [T; N]) -> Self {
         QueryIds::Ids(value.into_iter().map(|v| v.into()).collect())
     }
 }
 
-impl From<Vec<DbId>> for QueryIds {
-    fn from(value: Vec<DbId>) -> Self {
-        QueryIds::Ids(value.into_iter().map(|v| v.into()).collect())
-    }
-}
-
-impl From<i64> for QueryIds {
-    fn from(value: i64) -> Self {
-        QueryIds::Ids(vec![value.into()])
-    }
-}
-
-impl From<DbId> for QueryIds {
-    fn from(value: DbId) -> Self {
-        QueryIds::Ids(vec![value.into()])
-    }
-}
-
-impl From<&str> for QueryIds {
-    fn from(value: &str) -> Self {
-        QueryIds::Ids(vec![value.into()])
-    }
-}
-
-impl From<String> for QueryIds {
-    fn from(value: String) -> Self {
+impl<T: Into<QueryId>> From<T> for QueryIds {
+    fn from(value: T) -> Self {
         QueryIds::Ids(vec![value.into()])
     }
 }
@@ -105,6 +80,7 @@ impl From<SearchQuery> for QueryIds {
 mod tests {
     use super::*;
     use crate::query::search_query::SearchQueryAlgorithm;
+    use crate::DbId;
 
     #[test]
     #[allow(clippy::redundant_clone)]
@@ -141,5 +117,30 @@ mod tests {
         .get_ids();
 
         assert_eq!(ids, vec![]);
+    }
+
+    #[test]
+    fn into_ids() {
+        let _ids = QueryIds::from(vec![QueryId::from(0)]);
+        let _ids = QueryIds::from(vec![0]);
+        let _ids = QueryIds::from(vec!["alias"]);
+        let _ids = QueryIds::from(vec![DbId(0)]);
+        let _ids = QueryIds::from(&vec![QueryId::from(0)]);
+        let _ids = QueryIds::from(&vec![0]);
+        let _ids = QueryIds::from(&vec!["alias"]);
+        let _ids = QueryIds::from(&vec![DbId(0)]);
+        let _ids = QueryIds::from([QueryId::from(0)].as_slice());
+        let _ids = QueryIds::from([0].as_slice());
+        let _ids = QueryIds::from(["alias"].as_slice());
+        let _ids = QueryIds::from([DbId(0)].as_slice());
+        let _ids = QueryIds::from([QueryId::from(0)]);
+        let _ids = QueryIds::from([0]);
+        let _ids = QueryIds::from(["alias"]);
+        let _ids = QueryIds::from([DbId(0)]);
+        let _ids = QueryIds::from(0);
+        let _ids = QueryIds::from("alias");
+        let _ids = QueryIds::from("alias".to_string());
+        let _ids = QueryIds::from(&"alias".to_string());
+        let _ids = QueryIds::from(DbId(0));
     }
 }

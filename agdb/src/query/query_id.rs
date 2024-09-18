@@ -26,6 +26,12 @@ impl From<String> for QueryId {
     }
 }
 
+impl From<&String> for QueryId {
+    fn from(value: &String) -> Self {
+        Self::Alias(value.clone())
+    }
+}
+
 impl From<i64> for QueryId {
     fn from(value: i64) -> Self {
         Self::Id(DbId(value))

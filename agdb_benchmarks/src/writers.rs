@@ -63,7 +63,7 @@ impl<S: StorageData> Writer<S> {
                 t.exec_mut(
                     QueryBuilder::insert()
                         .edges()
-                        .from(vec![QueryId::from("posts"), self.id.into()])
+                        .from([QueryId::from("posts"), self.id.into()])
                         .to(id)
                         .values([[].as_slice(), &[("authored", 1).into()]])
                         .query(),
@@ -99,7 +99,7 @@ impl<S: StorageData> Writer<S> {
                     t.exec_mut(
                         QueryBuilder::insert()
                             .edges()
-                            .from(vec![post_id, self.id])
+                            .from([post_id, self.id])
                             .to(id)
                             .values([[].as_slice(), &[("commented", 1).into()]])
                             .query(),

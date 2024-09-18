@@ -112,7 +112,7 @@ fn data_persistence() {
         let result = db
             .exec(
                 QueryBuilder::select()
-                    .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
+                    .ids([QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
             .unwrap();
@@ -146,7 +146,7 @@ fn data_persistence() {
     let result = db
         .exec(
             QueryBuilder::select()
-                .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
+                .ids([QueryId::from("alias"), "alias2".into(), (-3).into()])
                 .query(),
         )
         .unwrap();
@@ -195,7 +195,7 @@ fn data_remove_persistence() {
         let result = db
             .exec(
                 QueryBuilder::select()
-                    .ids(vec![QueryId::from("alias"), "alias2".into(), (-3).into()])
+                    .ids([QueryId::from("alias"), "alias2".into(), (-3).into()])
                     .query(),
             )
             .unwrap();
@@ -231,7 +231,7 @@ fn data_remove_persistence() {
 
     let db = Db::new(test_file.file_name()).unwrap();
     let result = db
-        .exec(QueryBuilder::select().ids(vec!["alias", "alias2"]).query())
+        .exec(QueryBuilder::select().ids(["alias", "alias2"]).query())
         .unwrap();
 
     assert_eq!(

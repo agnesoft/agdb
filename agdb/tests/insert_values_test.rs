@@ -67,12 +67,12 @@ fn insert_values_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .values([[("some really long key", 1000).into()], [(10, 1.1).into()]])
-            .ids(vec![1, 2])
+            .ids([1, 2])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![1, 2]).query(),
+        QueryBuilder::select().ids([1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -96,7 +96,7 @@ fn insert_values_invalid_length() {
     db.exec_mut_error(
         QueryBuilder::insert()
             .values([[("key", "value").into()]])
-            .ids(vec![1, 2])
+            .ids([1, 2])
             .query(),
         "Ids and values length do not match",
     )
@@ -115,12 +115,12 @@ fn insert_values_uniform_ids() {
     db.exec_mut(
         QueryBuilder::insert()
             .values_uniform([("key", "value").into()])
-            .ids(vec!["alias", "alias2"])
+            .ids(["alias", "alias2"])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
+        QueryBuilder::select().ids(["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -145,8 +145,8 @@ fn insert_values_uniform_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2])
-            .to(vec![2, 3])
+            .from([1, 2])
+            .to([2, 3])
             .query(),
         2,
     );
@@ -243,14 +243,7 @@ fn insert_values_search() {
 fn insert_values_search_invalid_length() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
-    db.exec_mut(
-        QueryBuilder::insert()
-            .edges()
-            .from(vec![1])
-            .to(vec![3])
-            .query(),
-        1,
-    );
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
     db.exec_mut_error(
         QueryBuilder::insert()
             .values([[("key1", "value1").into()], [("key2", "value2").into()]])

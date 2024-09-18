@@ -37,7 +37,7 @@ impl InsertEdges {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().edges().from(1).to(2);
-    /// QueryBuilder::insert().edges().from(1).to(vec![2, 3]);
+    /// QueryBuilder::insert().edges().from(1).to([2, 3]);
     /// QueryBuilder::insert().edges().from(1).to(QueryBuilder::search().from(1).query());
     /// ```
     pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {
@@ -57,7 +57,7 @@ impl InsertEdges {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().edges().ids(1).from(1);
-    /// QueryBuilder::insert().edges().ids(1).from(vec![1, 2]);
+    /// QueryBuilder::insert().edges().ids(1).from([1, 2]);
     /// QueryBuilder::insert().edges().ids(1).from(QueryBuilder::search().from(1).query());
     /// ```
     pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesIds {
@@ -76,7 +76,7 @@ impl InsertEdgesIds {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().edges().from(1).to(2);
-    /// QueryBuilder::insert().edges().from(1).to(vec![2, 3]);
+    /// QueryBuilder::insert().edges().from(1).to([2, 3]);
     /// QueryBuilder::insert().edges().from(1).to(QueryBuilder::search().from(1).query());
     /// ```
     pub fn from<T: Into<QueryIds>>(mut self, ids: T) -> InsertEdgesFrom {

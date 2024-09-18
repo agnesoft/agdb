@@ -197,7 +197,7 @@ impl DbPool {
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(vec![QueryId::from(owner_id), "dbs".into()])
+                    .from([QueryId::from(owner_id), "dbs".into()])
                     .to(db)
                     .values([vec![("role", DbUserRole::Admin).into()], vec![]])
                     .query(),
@@ -531,7 +531,7 @@ impl DbPool {
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(vec![QueryId::from(user), "dbs".into()])
+                    .from([QueryId::from(user), "dbs".into()])
                     .to(db)
                     .values([vec![("role", DbUserRole::Admin).into()], vec![]])
                     .query(),

@@ -362,7 +362,7 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::insert().aliases("a").ids(1).query();
 QueryBuilder::insert().aliases("a").ids("b").query(); // alias "b" is replaced  with "a"
-QueryBuilder::insert().aliases(["a", "b"]).ids(vec![1, 2]).query();
+QueryBuilder::insert().aliases(["a", "b"]).ids([1, 2]).query();
 ```
 
 </td></tr></table>
@@ -400,16 +400,16 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::insert().edges().from(1).to(2).query();
 QueryBuilder::insert().edges().from("a").to("b").query();
-QueryBuilder::insert().edges().from("a").to(vec![1, 2]).query();
-QueryBuilder::insert().edges().from(vec![1, 2]).to(vec![2, 3]).query();
-QueryBuilder::insert().edges().from(vec![1, 2]).to(vec![2, 3]).each().query();
-QueryBuilder::insert().edges().from("a").to(vec![1, 2]).values([[("k", 1).into()], [("k", 2).into()]]).query();
-QueryBuilder::insert().edges().from("a").to(vec![1, 2]).values_uniform([("k", "v").into(), (1, 10).into()]).query();
+QueryBuilder::insert().edges().from("a").to([1, 2]).query();
+QueryBuilder::insert().edges().from([1, 2]).to([2, 3]).query();
+QueryBuilder::insert().edges().from([1, 2]).to([2, 3]).each().query();
+QueryBuilder::insert().edges().from("a").to([1, 2]).values([[("k", 1).into()], [("k", 2).into()]]).query();
+QueryBuilder::insert().edges().from("a").to([1, 2]).values_uniform([("k", "v").into(), (1, 10).into()]).query();
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).query();
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values([[("k", 1).into()], [("k", 2).into()]]).query();
 QueryBuilder::insert().edges().from(QueryBuilder::search().from("a").where_().node().query()).to(QueryBuilder::search().from("b").where_().node().query()).values_uniform([("k", "v").into(), (1, 10).into()]).query();
 QueryBuilder::insert().edges().ids(-3).from(1).to(2).query();
-QueryBuilder::insert().edges().ids(vec![-3, -4]).from(1).to(2).query();
+QueryBuilder::insert().edges().ids([-3, -4]).from(1).to(2).query();
 QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge().query()).from(1).to(2).query();
 ```
 
@@ -478,12 +478,12 @@ QueryBuilder::insert().nodes().aliases(["a", "b"]).values([[("k", 1).into()], [(
 QueryBuilder::insert().nodes().aliases(["a", "b"]).values_uniform([("k", "v").into(), (1, 10).into()]).query();
 QueryBuilder::insert().nodes().values([[("k", 1).into()], [("k", 2).into()]]).query();
 QueryBuilder::insert().nodes().ids(1).count(1).query();
-QueryBuilder::insert().nodes().ids(vec![1, 2]).count(1).query();
+QueryBuilder::insert().nodes().ids([1, 2]).count(1).query();
 QueryBuilder::insert().nodes().ids("a").count(1).query();
 QueryBuilder::insert().nodes().ids("a").aliases("a").query(),
-QueryBuilder::insert().nodes().ids(vec!["a", "b"]).count(1).query();
-QueryBuilder::insert().nodes().ids(vec![1, 2]).values([[("k", "v").into()], [(1, 10).into()]]).query(),
-QueryBuilder::insert().nodes().ids(vec![1, 2]).values_uniform([("k", "v").into(), (1, 10).into()]).query(),
+QueryBuilder::insert().nodes().ids(["a", "b"]).count(1).query();
+QueryBuilder::insert().nodes().ids([1, 2]).values([[("k", "v").into()], [(1, 10).into()]]).query(),
+QueryBuilder::insert().nodes().ids([1, 2]).values_uniform([("k", "v").into(), (1, 10).into()]).query(),
 QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count(1).query();
 ```
 
@@ -519,9 +519,9 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::insert().element(&T { ... }).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
 QueryBuilder::insert().elements(&vec![T {...}, T {...}]).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
-QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(vec![1, 2]).query();
+QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids([1, 2]).query();
 QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(QueryBuilder::search().from("a").query()).query();
-QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).ids(vec![1, 2]).query();
+QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).ids([1, 2]).query();
 QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).ids(QueryBuilder::search().from("a").query()).query();
 ```
 
@@ -597,8 +597,8 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::remove().ids(1).query();
 QueryBuilder::remove().ids("a").query();
-QueryBuilder::remove().ids(vec![1, 2]).query();
-QueryBuilder::remove().ids(vec!["a", "b"]).query();
+QueryBuilder::remove().ids([1, 2]).query();
+QueryBuilder::remove().ids(["a", "b"]).query();
 QueryBuilder::remove().ids(QueryBuilder::search().from("a").query()).query();
 ```
 
@@ -657,7 +657,7 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```rs
-QueryBuilder::remove().values(["k1".into(), "k2".into()]).ids(vec![1, 2]).query();
+QueryBuilder::remove().values(["k1".into(), "k2".into()]).ids([1, 2]).query();
 QueryBuilder::remove().values(["k1".into(), "k2".into()]).ids(QueryBuilder::search().from("a").query()).query();
 ```
 
@@ -703,7 +703,7 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```rs
-QueryBuilder::select().aliases().ids(vec![1, 2]).query();
+QueryBuilder::select().aliases().ids([1, 2]).query();
 QueryBuilder::select().aliases().ids(QueryBuilder::search().from(1).query()).query();
 ```
 
@@ -768,9 +768,9 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```rs
-QueryBuilder::select().edge_count().ids(vec![1, 2]).query();
-QueryBuilder::select().edge_count_from().ids(vec![1, 2]).query();
-QueryBuilder::select().edge_count_to().ids(vec![1, 2]).query();
+QueryBuilder::select().edge_count().ids([1, 2]).query();
+QueryBuilder::select().edge_count_from().ids([1, 2]).query();
+QueryBuilder::select().edge_count_to().ids([1, 2]).query();
 ```
 
 </td></tr></table>
@@ -834,7 +834,7 @@ pub struct QueryResult {
 
 ```rs
 QueryBuilder::select().keys().ids("a").query();
-QueryBuilder::select().keys().ids(vec![1, 2]).query();
+QueryBuilder::select().keys().ids([1, 2]).query();
 QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query();
 ```
 
@@ -866,7 +866,7 @@ pub struct QueryResult {
 
 ```rs
 QueryBuilder::select().key_count().ids("a").query();
-QueryBuilder::select().key_count().ids(vec![1, 2]).query();
+QueryBuilder::select().key_count().ids([1, 2]).query();
 QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query();
 ```
 
@@ -928,10 +928,10 @@ pub struct QueryResult {
 
 ```rs
 QueryBuilder::select().ids("a").query();
-QueryBuilder::select().ids(vec![1, 2]).query();
+QueryBuilder::select().ids([1, 2]).query();
 QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
 QueryBuilder::select().values(["k".into(), "k2".into()]).ids("a").query();
-QueryBuilder::select().values(["k".into(), "k2".into()]).ids(vec![1, 2]).query();
+QueryBuilder::select().values(["k".into(), "k2".into()]).ids([1, 2]).query();
 QueryBuilder::select().values(["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
 QueryBuilder::select().elements::<T>().ids(1).query();
 ```
@@ -1093,9 +1093,9 @@ QueryBuilder::search().from(1).where_().node().query();
 QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
 QueryBuilder::search().from(1).where_().keys(vec!["k1".into(), "k2".into()]).query();
 QueryBuilder::search().from(1).where_().not().keys(vec!["k1".into(), "k2".into()]).query();
-QueryBuilder::search().from(1).where_().ids(vec![1, 2]).query();
+QueryBuilder::search().from(1).where_().ids([1, 2]).query();
 QueryBuilder::search().from(1).where_().beyond().keys(vec!["k".into()]).query();
-QueryBuilder::search().from(1).where_().not().ids(vec![1, 2]).query();
+QueryBuilder::search().from(1).where_().not().ids([1, 2]).query();
 QueryBuilder::search().from(1).where_().not_beyond().ids("a").query();
 QueryBuilder::search().from(1).where_().node().or().edge().query();
 QueryBuilder::search().from(1).where_().node().and().distance(CountComparison::GreaterThanOrEqual(3)).query();

@@ -25,7 +25,7 @@ fn create_db() -> Result<Arc<RwLock<Db>>, QueryError> {
             QueryBuilder::insert()
                 .edges()
                 .from("root")
-                .to(vec!["users", "posts"])
+                .to(["users", "posts"])
                 .query(),
         )?;
         Ok(())
@@ -138,7 +138,7 @@ fn create_post(db: &mut Db, user: DbId, post: &Post) -> Result<DbId, QueryError>
         t.exec_mut(
             QueryBuilder::insert()
                 .edges()
-                .from(vec![QueryId::from("posts"), user.into()])
+                .from([QueryId::from("posts"), user.into()])
                 .to(post)
                 .values([vec![], vec![("authored", 1_u64).into()]])
                 .query(),
@@ -190,7 +190,7 @@ fn create_comment(
         t.exec_mut(
             QueryBuilder::insert()
                 .edges()
-                .from(vec![parent, user])
+                .from([parent, user])
                 .to(comment)
                 .values([vec![], vec![("commented", 1_u64).into()]])
                 .query(),

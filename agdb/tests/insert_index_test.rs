@@ -70,7 +70,7 @@ fn insert_indexed_value() {
     db.exec_mut(
         QueryBuilder::insert()
             .values([[("username", "user1").into()]])
-            .ids(vec![1])
+            .ids(1)
             .query(),
         1,
     );
@@ -90,7 +90,7 @@ fn update_indexed_value() {
     db.exec_mut(
         QueryBuilder::insert()
             .values([[("username", "user2").into()]])
-            .ids(vec![1])
+            .ids(1)
             .query(),
         1,
     );
@@ -112,7 +112,7 @@ fn update_indexed_value_rollback() {
             t.exec_mut(
                 QueryBuilder::insert()
                     .values([[("username", "user2").into()]])
-                    .ids(vec![1])
+                    .ids(1)
                     .query(),
             )?;
             Err(QueryError::from("error"))

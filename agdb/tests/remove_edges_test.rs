@@ -32,12 +32,12 @@ fn remove_edges() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![QueryId::from("alias1"), 2.into()])
-            .to(vec![QueryId::from(2), "alias1".into()])
+            .from([QueryId::from("alias1"), 2.into()])
+            .to([QueryId::from(2), "alias1".into()])
             .query(),
         2,
     );
-    db.exec_mut(QueryBuilder::remove().ids(vec![-3, -4]).query(), -2);
+    db.exec_mut(QueryBuilder::remove().ids([-3, -4]).query(), -2);
 }
 
 #[test]

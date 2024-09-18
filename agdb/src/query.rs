@@ -216,7 +216,7 @@ mod tests {
             QueryBuilder::insert().nodes().count(2).query().into(),
             QueryBuilder::insert()
                 .aliases(["node1", "node2"])
-                .ids(vec![1, 2])
+                .ids([1, 2])
                 .query()
                 .into(),
             QueryBuilder::insert()

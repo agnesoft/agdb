@@ -29,7 +29,7 @@ impl Insert {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().aliases("a").ids(1);
-    /// QueryBuilder::insert().aliases(["a", "b"]).ids(vec![1, 2]);
+    /// QueryBuilder::insert().aliases(["a", "b"]).ids([1, 2]);
     /// ```
     pub fn aliases<T: Into<QueryAliases>>(self, names: T) -> InsertAliases {
         InsertAliases(InsertAliasesQuery {
@@ -46,10 +46,10 @@ impl Insert {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().edges().from(1);
-    /// QueryBuilder::insert().edges().from(vec![1, 2]);
+    /// QueryBuilder::insert().edges().from([1, 2]);
     /// QueryBuilder::insert().edges().from(QueryBuilder::search().from(1).query());
     /// QueryBuilder::insert().edges().ids(-3);
-    /// QueryBuilder::insert().edges().ids(vec![-3, -4]);
+    /// QueryBuilder::insert().edges().ids([-3, -4]);
     /// QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge().query());
     /// ```
     pub fn edges(self) -> InsertEdges {
@@ -112,9 +112,9 @@ impl Insert {
     /// QueryBuilder::insert().nodes().aliases("a");
     /// QueryBuilder::insert().nodes().aliases(["a", "b"]);
     /// QueryBuilder::insert().nodes().ids(1);
-    /// QueryBuilder::insert().nodes().ids(vec![1, 2]);
+    /// QueryBuilder::insert().nodes().ids([1, 2]);
     /// QueryBuilder::insert().nodes().ids("a");
-    /// QueryBuilder::insert().nodes().ids(vec!["a", "b"]);
+    /// QueryBuilder::insert().nodes().ids(["a", "b"]);
     /// QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::insert().nodes().values([[("k", 1).into()]]);
     /// ```
@@ -137,7 +137,7 @@ impl Insert {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().values([[("k", 1).into()]]).ids(1);
-    /// QueryBuilder::insert().values([[("k", 1).into()], [("k", 2).into()]]).ids(vec![1, 2]);
+    /// QueryBuilder::insert().values([[("k", 1).into()], [("k", 2).into()]]).ids([1, 2]);
     /// QueryBuilder::insert().values([[("k", 1).into()]]).ids(QueryBuilder::search().from(1).query());
     /// ```
     pub fn values<T: Into<MultiValues>>(self, key_values: T) -> InsertValues {
@@ -157,7 +157,7 @@ impl Insert {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::insert().values_uniform([("k", 1).into()]).ids(1);
-    /// QueryBuilder::insert().values_uniform([("k", 1).into()]).ids(vec![1, 2]);
+    /// QueryBuilder::insert().values_uniform([("k", 1).into()]).ids([1, 2]);
     /// QueryBuilder::insert().values_uniform([("k", 1).into()]).ids(QueryBuilder::search().from(1).query());
     /// ```
     pub fn values_uniform<T: Into<SingleValues>>(self, key_values: T) -> InsertValues {

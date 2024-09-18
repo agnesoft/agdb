@@ -128,8 +128,8 @@ fn select_edge_count_multi() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec!["node1", "node2", "node1"])
-            .to(vec!["node2", "node3", "node3"])
+            .from(["node1", "node2", "node1"])
+            .to(["node2", "node3", "node3"])
             .query(),
         3,
     );
@@ -137,7 +137,7 @@ fn select_edge_count_multi() {
     db.exec_elements(
         QueryBuilder::select()
             .edge_count()
-            .ids(vec!["node1", "node2", "node3"])
+            .ids(["node1", "node2", "node3"])
             .query(),
         &[
             DbElement {
@@ -175,8 +175,8 @@ fn select_edge_count_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec!["node1", "node3", "node2", "node2"])
-            .to(vec!["node3", "node2", "node1", "node2"])
+            .from(["node1", "node3", "node2", "node2"])
+            .to(["node3", "node2", "node1", "node2"])
             .query(),
         4,
     );

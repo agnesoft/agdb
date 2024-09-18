@@ -21,7 +21,7 @@ fn select_from_ids() {
         2,
     );
     db.exec_ids(
-        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
+        QueryBuilder::select().ids(["alias", "alias2"]).query(),
         &[1, 2],
     );
 }
@@ -61,8 +61,8 @@ fn select_from_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec!["alias1", "alias3"])
-            .to(vec!["alias3", "alias5"])
+            .from(["alias1", "alias3"])
+            .to(["alias3", "alias5"])
             .query(),
         2,
     );

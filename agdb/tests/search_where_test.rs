@@ -22,7 +22,7 @@ fn create_db() -> TestDb {
         QueryBuilder::insert()
             .edges()
             .from("root")
-            .to(vec!["users", "docs"])
+            .to(["users", "docs"])
             .query(),
         2,
     );
@@ -110,12 +110,12 @@ fn create_db() -> TestDb {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![
+            .from([
                 users.elements[0].id,
                 users.elements[2].id,
                 users.elements[3].id,
             ])
-            .to(vec![
+            .to([
                 docs.elements[1].id,
                 docs.elements[0].id,
                 docs.elements[2].id,
@@ -283,7 +283,7 @@ fn search_from_where_node_edge() {
             .node()
             .and()
             .not()
-            .ids(vec![1, 2, 3])
+            .ids([1, 2, 3])
             .and()
             .not_beyond()
             .ids("users")
@@ -303,10 +303,10 @@ fn search_from_where_ids() {
         QueryBuilder::search()
             .from(1)
             .where_()
-            .ids(vec!["docs", "users"])
+            .ids(["docs", "users"])
             .and()
             .not_beyond()
-            .ids(vec!["docs", "users"])
+            .ids(["docs", "users"])
             .query(),
         &[3, 2],
     );
@@ -413,7 +413,7 @@ fn search_from_limit_offset_where() {
             .node()
             .and()
             .not()
-            .ids(vec![1, 2, 3])
+            .ids([1, 2, 3])
             .and()
             .not_beyond()
             .ids("users")
@@ -428,7 +428,7 @@ fn search_from_limit_offset_where() {
             .node()
             .and()
             .not()
-            .ids(vec![1, 2, 3])
+            .ids([1, 2, 3])
             .and()
             .not_beyond()
             .ids("users")
@@ -444,7 +444,7 @@ fn search_from_limit_offset_where() {
             .node()
             .and()
             .not()
-            .ids(vec![1, 2, 3])
+            .ids([1, 2, 3])
             .and()
             .not_beyond()
             .ids("users")
@@ -484,8 +484,8 @@ fn search_from_to_where_filter() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec!["start", "start"])
-            .to(vec!["end", "end"])
+            .from(["start", "start"])
+            .to(["end", "end"])
             .values([vec![], vec![("key", 1).into()]])
             .query(),
         2,

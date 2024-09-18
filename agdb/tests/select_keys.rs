@@ -70,8 +70,8 @@ fn select_keys_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3])
-            .to(vec![3, 5])
+            .from([1, 3])
+            .to([3, 5])
             .query(),
         2,
     );

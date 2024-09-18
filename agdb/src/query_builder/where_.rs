@@ -278,7 +278,7 @@ impl Where {
     /// QueryBuilder::search().from(1).where_().not_beyond().keys("k").query();
     ///
     /// // Elements 1 and 2 will NOT be followed during search.
-    /// QueryBuilder::search().from(1).where_().not_beyond().ids(vec![1, 2]);
+    /// QueryBuilder::search().from(1).where_().not_beyond().ids([1, 2]);
     /// ```
     pub fn not_beyond(mut self) -> Self {
         self.modifier = QueryConditionModifier::NotBeyond;

@@ -47,7 +47,7 @@ impl Remove {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::remove().values("k").ids(1);
-    /// QueryBuilder::remove().values("k").ids(vec![1]);
+    /// QueryBuilder::remove().values("k").ids([1, 2]);
     /// QueryBuilder::remove().values("k").ids(QueryBuilder::search().from(1).query());
     /// ```
     pub fn values<T: Into<DbValues>>(self, keys: T) -> RemoveValues {

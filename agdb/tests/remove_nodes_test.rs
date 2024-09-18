@@ -34,7 +34,7 @@ fn remove_nodes() {
     );
     db.exec_mut(
         QueryBuilder::remove()
-            .ids(vec![String::from("alias"), String::from("alias2")])
+            .ids([String::from("alias"), String::from("alias2")])
             .query(),
         -2,
     );
@@ -108,8 +108,8 @@ fn remove_nodes_with_edges() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2])
-            .to(vec![2, 1])
+            .from([1, 2])
+            .to([2, 1])
             .query(),
         2,
     );
@@ -227,13 +227,13 @@ fn remove_nodes_removes_edges_with_all_values() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 1])
-            .to(vec![3, 3])
+            .from([1, 1])
+            .to([3, 3])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![-2, -4]).query(),
+        QueryBuilder::select().ids([-2, -4]).query(),
         &[
             DbElement {
                 id: DbId(-2),
@@ -270,8 +270,8 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
             t.exec_mut(
                 QueryBuilder::insert()
                     .edges()
-                    .from(vec![1, 1])
-                    .to(vec![3, 3])
+                    .from([1, 1])
+                    .to([3, 3])
                     .query(),
             )?;
             Err(QueryError::from("error"))
@@ -279,7 +279,7 @@ fn remove_nodes_removes_edges_with_all_values_rollback() {
         QueryError::from("error"),
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![-4]).query(),
+        QueryBuilder::select().ids(-4).query(),
         &[DbElement {
             id: DbId(-4),
             from: Some(DbId(2)),

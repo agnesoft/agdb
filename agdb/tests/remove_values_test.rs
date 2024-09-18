@@ -17,7 +17,7 @@ fn remove_values_ids() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
+        QueryBuilder::select().ids(["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -36,12 +36,12 @@ fn remove_values_ids() {
     db.exec_mut(
         QueryBuilder::remove()
             .values("key1")
-            .ids(vec!["alias", "alias2"])
+            .ids(["alias", "alias2"])
             .query(),
         -2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
+        QueryBuilder::select().ids(["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -78,7 +78,7 @@ fn remove_values_search() {
         -2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![1, 2]).query(),
+        QueryBuilder::select().ids([1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -110,12 +110,12 @@ fn remove_missing_key() {
     db.exec_mut(
         QueryBuilder::remove()
             .values("key3")
-            .ids(vec!["alias", "alias2"])
+            .ids(["alias", "alias2"])
             .query(),
         0,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec!["alias", "alias2"]).query(),
+        QueryBuilder::select().ids(["alias", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),

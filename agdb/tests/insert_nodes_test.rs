@@ -68,7 +68,7 @@ fn insert_nodes_aliases_values() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec!["alias1", "alias2"]).query(),
+        QueryBuilder::select().ids(["alias1", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -105,7 +105,7 @@ fn insert_nodes_aliases_values_rollback() {
                 .unwrap();
             assert_eq!(
                 transaction
-                    .exec(QueryBuilder::select().ids(vec!["alias1", "alias2"]).query())
+                    .exec(QueryBuilder::select().ids(["alias1", "alias2"]).query())
                     .unwrap()
                     .elements,
                 &[
@@ -149,7 +149,7 @@ fn insert_nodes_aliases_values_uniform() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec!["alias1", "alias2"]).query(),
+        QueryBuilder::select().ids(["alias1", "alias2"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -179,7 +179,7 @@ fn insert_nodes_count_values_uniform() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![1, 2]).query(),
+        QueryBuilder::select().ids([1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -211,7 +211,7 @@ fn insert_nodes_values() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![1, 2]).query(),
+        QueryBuilder::select().ids([1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -253,9 +253,7 @@ fn insert_nodes_existing_aliases_values() {
         3,
     );
     db.exec_elements(
-        QueryBuilder::select()
-            .ids(vec!["alias", "new_alias"])
-            .query(),
+        QueryBuilder::select().ids(["alias", "new_alias"]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -373,7 +371,7 @@ fn insert_or_replace_mismatch_length() {
     db.exec_mut_error(
         QueryBuilder::insert()
             .nodes()
-            .ids(vec![1, 2])
+            .ids([1, 2])
             .values([[]])
             .query(),
         "Values (1) and ids (2) must have the same length",
@@ -415,13 +413,13 @@ fn insert_nodes_ids_values_uniform() {
     db.exec_mut(
         QueryBuilder::insert()
             .nodes()
-            .ids(vec![1, 2])
+            .ids([1, 2])
             .values_uniform([("key", "value").into()])
             .query(),
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![1, 2]).query(),
+        QueryBuilder::select().ids([1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),

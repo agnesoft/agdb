@@ -42,7 +42,7 @@ fn select_node_count_after_removal() {
     let mut db = TestDb::new();
 
     db.exec_mut(QueryBuilder::insert().nodes().count(5).query(), 5);
-    db.exec_mut(QueryBuilder::remove().ids(vec![2, 4]).query(), -2);
+    db.exec_mut(QueryBuilder::remove().ids([2, 4]).query(), -2);
 
     db.exec_elements(
         QueryBuilder::select().node_count().query(),

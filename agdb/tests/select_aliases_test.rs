@@ -34,7 +34,7 @@ fn select_aliases_ids() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().aliases().ids(vec![1, 2]).query(),
+        QueryBuilder::select().aliases().ids([1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -65,7 +65,7 @@ fn select_aliases_aliases() {
     db.exec_elements(
         QueryBuilder::select()
             .aliases()
-            .ids(vec!["alias1", "alias2"])
+            .ids(["alias1", "alias2"])
             .query(),
         &[
             DbElement {
@@ -98,8 +98,8 @@ fn select_aliases_search() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3])
-            .to(vec![3, 5])
+            .from([1, 3])
+            .to([3, 5])
             .values_uniform([
                 ("key1", 1).into(),
                 ("key2", 10).into(),

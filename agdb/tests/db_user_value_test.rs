@@ -234,7 +234,7 @@ fn insert_node_values_uniform_custom() {
         2,
     );
     db.exec_elements(
-        QueryBuilder::select().ids(vec![1, 2]).query(),
+        QueryBuilder::select().ids([1, 2]).query(),
         &[
             DbElement {
                 id: DbId(1),
@@ -290,7 +290,7 @@ fn select_custom_value_keys() {
         .exec_result(
             QueryBuilder::select()
                 .values(MyValue::db_keys())
-                .ids(vec![1, 2])
+                .ids([1, 2])
                 .query(),
         )
         .try_into()
@@ -328,7 +328,7 @@ fn select_custom_value_with_id() {
         .exec_result(
             QueryBuilder::select()
                 .values(MyValue::db_keys())
-                .ids(vec![1, 2])
+                .ids([1, 2])
                 .query(),
         )
         .try_into()
@@ -432,7 +432,7 @@ fn insert_multiple_elements() {
         .exec_result(
             QueryBuilder::select()
                 .values(MyValue::db_keys())
-                .ids(vec![1, 2])
+                .ids([1, 2])
                 .query(),
         )
         .try_into()
@@ -447,7 +447,7 @@ fn insert_multiple_elements() {
         .exec_result(
             QueryBuilder::select()
                 .values(MyValue::db_keys())
-                .ids(vec![1, 2])
+                .ids([1, 2])
                 .query(),
         )
         .try_into()

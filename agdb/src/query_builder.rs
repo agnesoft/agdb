@@ -73,7 +73,7 @@ impl QueryBuilder {
     /// use agdb::QueryBuilder;
     ///
     /// QueryBuilder::remove().ids(1);
-    /// QueryBuilder::remove().ids(vec![1, 2]);
+    /// QueryBuilder::remove().ids([1, 2]);
     /// QueryBuilder::remove().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::remove().index("k");
     /// QueryBuilder::remove().aliases("a");
@@ -116,7 +116,7 @@ impl QueryBuilder {
     /// struct MyValue { db_id: Option<DbId>, key: String }
     ///
     /// QueryBuilder::select().ids(1);
-    /// QueryBuilder::select().ids(vec![1, 2]);
+    /// QueryBuilder::select().ids([1, 2]);
     /// QueryBuilder::select().ids(QueryBuilder::search().from(1).query());
     /// QueryBuilder::select().aliases();
     /// QueryBuilder::select().elements::<MyValue>();

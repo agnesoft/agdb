@@ -13,8 +13,8 @@ fn search_from() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -31,8 +31,8 @@ fn search_from_multiple_edges() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2, 3, 4, 1, 2, 3, 4])
-            .to(vec![2, 3, 4, 5, 2, 3, 4, 5])
+            .from([1, 2, 3, 4, 1, 2, 3, 4])
+            .to([2, 3, 4, 5, 2, 3, 4, 5])
             .query(),
         8,
     );
@@ -49,8 +49,8 @@ fn search_from_circular() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2, 3])
-            .to(vec![2, 3, 1])
+            .from([1, 2, 3])
+            .to([2, 3, 1])
             .query(),
         3,
     );
@@ -67,8 +67,8 @@ fn search_from_self_referential() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 1])
-            .to(vec![1, 1])
+            .from([1, 1])
+            .to([1, 1])
             .query(),
         2,
     );
@@ -82,8 +82,8 @@ fn search_from_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -100,8 +100,8 @@ fn search_from_offset() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -118,8 +118,8 @@ fn search_from_offset_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -136,8 +136,8 @@ fn search_from_to() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2, 3, 4, 1, 2, 3, 4])
-            .to(vec![2, 3, 4, 5, 2, 3, 4, 5])
+            .from([1, 2, 3, 4, 1, 2, 3, 4])
+            .to([2, 3, 4, 5, 2, 3, 4, 5])
             .query(),
         8,
     );
@@ -154,8 +154,8 @@ fn search_from_to_shortcut() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2, 3, 4, 1])
-            .to(vec![2, 3, 4, 5, 5])
+            .from([1, 2, 3, 4, 1])
+            .to([2, 3, 4, 5, 5])
             .query(),
         5,
     );
@@ -169,8 +169,8 @@ fn search_from_to_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2, 3, 4, 1, 2, 3, 4])
-            .to(vec![2, 3, 4, 5, 2, 3, 4, 5])
+            .from([1, 2, 3, 4, 1, 2, 3, 4])
+            .to([2, 3, 4, 5, 2, 3, 4, 5])
             .query(),
         8,
     );
@@ -187,8 +187,8 @@ fn search_from_to_offset() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2, 3, 4, 1, 2, 3, 4])
-            .to(vec![2, 3, 4, 5, 2, 3, 4, 5])
+            .from([1, 2, 3, 4, 1, 2, 3, 4])
+            .to([2, 3, 4, 5, 2, 3, 4, 5])
             .query(),
         8,
     );
@@ -205,8 +205,8 @@ fn search_from_to_offset_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 2, 3, 4, 1, 2, 3, 4])
-            .to(vec![2, 3, 4, 5, 2, 3, 4, 5])
+            .from([1, 2, 3, 4, 1, 2, 3, 4])
+            .to([2, 3, 4, 5, 2, 3, 4, 5])
             .query(),
         8,
     );
@@ -228,8 +228,8 @@ fn search_to() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -246,8 +246,8 @@ fn search_to_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -261,8 +261,8 @@ fn search_to_offset() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -279,8 +279,8 @@ fn search_to_offset_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9])
+            .from([1, 3, 5, 7])
+            .to([3, 5, 7, 9])
             .query(),
         4,
     );
@@ -481,8 +481,8 @@ fn search_breadth_first_from() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -499,8 +499,8 @@ fn search_depth_first_from_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -521,8 +521,8 @@ fn search_depth_first_from_offset() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -543,8 +543,8 @@ fn search_depth_first_from_offset_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -566,8 +566,8 @@ fn search_depth_first_from() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -584,8 +584,8 @@ fn search_depth_first_to() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -602,8 +602,8 @@ fn search_depth_first_to_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -620,8 +620,8 @@ fn search_depth_first_to_offset() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );
@@ -638,8 +638,8 @@ fn search_depth_first_to_offset_limit() {
     db.exec_mut(
         QueryBuilder::insert()
             .edges()
-            .from(vec![1, 3, 5, 7, 1, 3, 5, 7])
-            .to(vec![3, 5, 7, 9, 3, 5, 7, 9])
+            .from([1, 3, 5, 7, 1, 3, 5, 7])
+            .to([3, 5, 7, 9, 3, 5, 7, 9])
             .query(),
         8,
     );

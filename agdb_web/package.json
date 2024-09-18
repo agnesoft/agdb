@@ -17,7 +17,7 @@
         "@types/highlight.js": "^10.1.0",
         "@vitest/coverage-istanbul": "^2.1.1",
         "highlight.js": "^11.10.0",
-        "next": "14.1.1",
+        "next": "14.2.12",
         "nextra": "^2.13.2",
         "nextra-theme-docs": "^2.13.2",
         "react": "^18",

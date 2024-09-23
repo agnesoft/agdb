@@ -8,39 +8,48 @@ use crate::QueryId;
 use crate::SearchQuery;
 use crate::SearchQueryAlgorithm;
 
+pub trait SetSearchQueryBuilder {
+    fn set_search(self, search: SearchQuery) -> Self;
+}
+
+pub struct SearchQueryBuilder<T: SetSearchQueryBuilder> {
+    pub query: T,
+    pub search: SearchQuery,
+}
+
 /// Search builder query.
-pub struct Search {}
+pub struct Search<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-pub struct SearchFrom(pub SearchQuery);
+pub struct SearchFrom<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose search destination
 /// and other parameters.
-pub struct SearchTo(pub SearchQuery);
+pub struct SearchTo<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose an index to search
 /// instead of the graph search entirely.
-pub struct SearchIndex(pub DbValue);
+pub struct SearchIndex<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose a a value to find
 /// in the index.
-pub struct SearchIndexValue(pub (DbValue, DbValue));
+pub struct SearchIndexValue<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose limit and offset.
-pub struct SearchOrderBy(pub SearchQuery);
+pub struct SearchOrderBy<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose conditions.
-pub struct SelectLimit(pub SearchQuery);
+pub struct SelectLimit<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose limit.
-pub struct SelectOffset(pub SearchQuery);
+pub struct SelectOffset<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-pub struct SearchAlgorithm(pub SearchQuery);
+pub struct SearchAlgorithm<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
 
-impl Search {
+impl<T: SetSearchQueryBuilder> Search<T> {
     /// Use breadth-first (BFS) search algorithm. This option is redundant as
     /// BFS is the default. BFS means each level of the graph is examined in full
     /// before advancing to the next level. E.g. all edges coming from a node,
@@ -55,16 +64,9 @@ impl Search {
     /// QueryBuilder::search().breadth_first().from(1);
     /// QueryBuilder::search().breadth_first().to(1);
     /// ```
-    pub fn breadth_first(self) -> SearchAlgorithm {
-        SearchAlgorithm(SearchQuery {
-            algorithm: SearchQueryAlgorithm::BreadthFirst,
-            origin: QueryId::from(0),
-            destination: QueryId::from(0),
-            limit: 0,
-            offset: 0,
-            order_by: vec![],
-            conditions: vec![],
-        })
+    pub fn breadth_first(mut self) -> SearchAlgorithm<T> {
+        self.0.search.algorithm = SearchQueryAlgorithm::BreadthFirst;
+        SearchAlgorithm(self.0)
     }
 
     /// Use depth-first (DFS) search algorithm. DFS means each element is followed
@@ -79,16 +81,9 @@ impl Search {
     /// QueryBuilder::search().depth_first().from(1);
     /// QueryBuilder::search().depth_first().to(1);
     /// ```
-    pub fn depth_first(self) -> SearchAlgorithm {
-        SearchAlgorithm(SearchQuery {
-            algorithm: SearchQueryAlgorithm::DepthFirst,
-            origin: QueryId::from(0),
-            destination: QueryId::from(0),
-            limit: 0,
-            offset: 0,
-            order_by: vec![],
-            conditions: vec![],
-        })
+    pub fn depth_first(mut self) -> SearchAlgorithm<T> {
+        self.0.search.algorithm = SearchQueryAlgorithm::DepthFirst;
+        SearchAlgorithm(self.0)
     }
 
     /// Searches all elements (nodes & edges) in the database disregarding the graph

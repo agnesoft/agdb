@@ -4,31 +4,29 @@ use crate::query::query_condition::QueryCondition;
 use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
-use crate::query::search_query::SearchQuery;
-use crate::query_builder::search::SetSearchQueryBuilder;
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::Comparison;
 use crate::DbValue;
 use crate::QueryIds;
 
 /// Condition builder
-pub struct Where<T: SetSearchQueryBuilder> {
+pub struct Where<T: SearchQueryBuilder> {
     logic: QueryConditionLogic,
     modifier: QueryConditionModifier,
     conditions: Vec<Vec<QueryCondition>>,
     query: T,
-    search: SearchQuery,
 }
 
 /// Condition builder for `key` condition.
-pub struct WhereKey<T: SetSearchQueryBuilder> {
+pub struct WhereKey<T: SearchQueryBuilder> {
     key: DbValue,
     where_: Where<T>,
 }
 
 /// Condition builder setting the logic operator.
-pub struct WhereLogicOperator<T: SetSearchQueryBuilder>(pub Where<T>);
+pub struct WhereLogicOperator<T: SearchQueryBuilder>(pub Where<T>);
 
-impl<T: SetSearchQueryBuilder> Where<T> {
+impl<T: SearchQueryBuilder> Where<T> {
     /// Sets the condition modifier for the following condition so
     /// that the search will continue beyond current element only
     /// if the condition is satisfied. For the opposite effect see
@@ -325,17 +323,15 @@ impl<T: SetSearchQueryBuilder> Where<T> {
             modifier: QueryConditionModifier::None,
             conditions: self.conditions,
             query: self.query,
-            search: self.search,
         }
     }
 
-    pub(crate) fn new(query: T, search: SearchQuery) -> Self {
+    pub(crate) fn new(query: T) -> Self {
         Self {
             logic: QueryConditionLogic::And,
             modifier: QueryConditionModifier::None,
             conditions: vec![vec![]],
             query,
-            search,
         }
     }
 
@@ -363,7 +359,7 @@ impl<T: SetSearchQueryBuilder> Where<T> {
     }
 }
 
-impl<T: SetSearchQueryBuilder> WhereKey<T> {
+impl<T: SearchQueryBuilder> WhereKey<T> {
     /// Sets the value of the `key` condition to `comparison`.
     pub fn value(mut self, comparison: Comparison) -> WhereLogicOperator<T> {
         let condition = QueryCondition {
@@ -379,7 +375,7 @@ impl<T: SetSearchQueryBuilder> WhereKey<T> {
     }
 }
 
-impl<T: SetSearchQueryBuilder> WhereLogicOperator<T> {
+impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
     /// Sets the logic operator for the following condition
     /// to logical AND (&&). The condition passes only if
     /// both sides evaluates to `true`.
@@ -389,7 +385,6 @@ impl<T: SetSearchQueryBuilder> WhereLogicOperator<T> {
             modifier: QueryConditionModifier::None,
             conditions: self.0.conditions,
             query: self.0.query,
-            search: self.0.search,
         }
     }
 
@@ -411,21 +406,24 @@ impl<T: SetSearchQueryBuilder> WhereLogicOperator<T> {
             modifier: QueryConditionModifier::None,
             conditions: self.0.conditions,
             query: self.0.query,
-            search: self.0.search,
         }
     }
 
     /// Returns the built `SearchQuery` object.
     pub fn query(mut self) -> T {
         while self.0.collapse_conditions() {}
-        std::mem::swap(&mut self.0.search.conditions, &mut self.0.conditions[0]);
-        self.0.query.set_search(self.0.search)
+        std::mem::swap(
+            &mut self.0.query.search_mut().conditions,
+            &mut self.0.conditions[0],
+        );
+        self.0.query
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::SearchQuery;
 
     #[test]
     fn invalid_collapse() {
@@ -434,7 +432,6 @@ mod test {
             modifier: QueryConditionModifier::None,
             conditions: vec![vec![], vec![]],
             query: SearchQuery::new(),
-            search: SearchQuery::new(),
         };
         assert!(!where_.collapse_conditions());
     }

@@ -21,13 +21,11 @@ mod select_node_count;
 mod select_values;
 mod where_;
 
-use crate::query_builder::search::SearchQueryBuilder;
-use crate::SearchQuery;
-
 use self::insert::Insert;
 use self::remove::Remove;
 use self::search::Search;
 use self::select::Select;
+use crate::SearchQuery;
 
 /// The starting point of all queries.
 ///
@@ -103,10 +101,7 @@ impl QueryBuilder {
     /// QueryBuilder::search().elements();
     /// ```
     pub fn search() -> Search<SearchQuery> {
-        Search(SearchQueryBuilder {
-            query: SearchQuery::new(),
-            search: SearchQuery::new(),
-        })
+        Search(SearchQuery::new())
     }
 
     /// Selects data from the database:

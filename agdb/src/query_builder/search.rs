@@ -10,51 +10,46 @@ use crate::QueryId;
 use crate::SearchQuery;
 use crate::SearchQueryAlgorithm;
 
-pub trait SetSearchQueryBuilder {
-    fn set_search(self, search: SearchQuery) -> Self;
-}
-
-pub struct SearchQueryBuilder<T: SetSearchQueryBuilder> {
-    pub query: T,
-    pub search: SearchQuery,
+pub trait SearchQueryBuilder {
+    fn search_mut(&mut self) -> &mut SearchQuery;
 }
 
 /// Search builder query.
-pub struct Search<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct Search<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-pub struct SearchFrom<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct SearchFrom<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search destination
 /// and other parameters.
-pub struct SearchTo<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct SearchTo<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose an index to search
 /// instead of the graph search.
-pub struct SearchIndex<T: SetSearchQueryBuilder> {
+pub struct SearchIndex<T: SearchQueryBuilder> {
     pub index: DbValue,
-    pub search: SearchQueryBuilder<T>,
+    pub query: T,
 }
 
 /// Search builder query that lets you choose a a value to find
 /// in the index.
-pub struct SearchIndexValue<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct SearchIndexValue<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit and offset.
-pub struct SearchOrderBy<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct SearchOrderBy<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose conditions.
-pub struct SelectLimit<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct SelectLimit<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose limit.
-pub struct SelectOffset<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct SelectOffset<T: SearchQueryBuilder>(pub T);
 
 /// Search builder query that lets you choose search origin
 /// and other parameters.
-pub struct SearchAlgorithm<T: SetSearchQueryBuilder>(pub SearchQueryBuilder<T>);
+pub struct SearchAlgorithm<T: SearchQueryBuilder>(pub T);
 
-impl<T: SetSearchQueryBuilder> Search<T> {
+impl<T: SearchQueryBuilder> Search<T> {
     /// Use breadth-first (BFS) search algorithm. This option is redundant as
     /// BFS is the default. BFS means each level of the graph is examined in full
     /// before advancing to the next level. E.g. all edges coming from a node,
@@ -70,7 +65,7 @@ impl<T: SetSearchQueryBuilder> Search<T> {
     /// QueryBuilder::search().breadth_first().to(1);
     /// ```
     pub fn breadth_first(mut self) -> SearchAlgorithm<T> {
-        self.0.search.algorithm = SearchQueryAlgorithm::BreadthFirst;
+        self.0.search_mut().algorithm = SearchQueryAlgorithm::BreadthFirst;
         SearchAlgorithm(self.0)
     }
 
@@ -87,7 +82,7 @@ impl<T: SetSearchQueryBuilder> Search<T> {
     /// QueryBuilder::search().depth_first().to(1);
     /// ```
     pub fn depth_first(mut self) -> SearchAlgorithm<T> {
-        self.0.search.algorithm = SearchQueryAlgorithm::DepthFirst;
+        self.0.search_mut().algorithm = SearchQueryAlgorithm::DepthFirst;
         SearchAlgorithm(self.0)
     }
 
@@ -110,14 +105,14 @@ impl<T: SetSearchQueryBuilder> Search<T> {
     /// QueryBuilder::search().elements().where_();
     /// ```
     pub fn elements(mut self) -> SearchTo<T> {
-        self.0.search.algorithm = SearchQueryAlgorithm::Elements;
+        self.0.search_mut().algorithm = SearchQueryAlgorithm::Elements;
         SearchTo(self.0)
     }
 
     pub fn index<K: Into<DbValue>>(self, key: K) -> SearchIndex<T> {
         SearchIndex {
             index: key.into(),
-            search: self.0,
+            query: self.0,
         }
     }
 
@@ -136,7 +131,7 @@ impl<T: SetSearchQueryBuilder> Search<T> {
     /// QueryBuilder::search().from(1).where_();
     /// ```
     pub fn from<I: Into<QueryId>>(mut self, id: I) -> SearchFrom<T> {
-        self.0.search.origin = id.into();
+        self.0.search_mut().origin = id.into();
         SearchFrom(self.0)
     }
 
@@ -154,12 +149,12 @@ impl<T: SetSearchQueryBuilder> Search<T> {
     /// QueryBuilder::search().to(1).where_();
     /// ```
     pub fn to<I: Into<QueryId>>(mut self, id: I) -> SearchTo<T> {
-        self.0.search.destination = id.into();
+        self.0.search_mut().destination = id.into();
         SearchTo(self.0)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SearchAlgorithm<T> {
+impl<T: SearchQueryBuilder> SearchAlgorithm<T> {
     /// Sets the origin of the search.
     ///
     /// Options:
@@ -175,7 +170,7 @@ impl<T: SetSearchQueryBuilder> SearchAlgorithm<T> {
     /// QueryBuilder::search().depth_first().from(1).where_();
     /// ```
     pub fn from<I: Into<QueryId>>(mut self, id: I) -> SearchFrom<T> {
-        self.0.search.origin = id.into();
+        self.0.search_mut().origin = id.into();
         SearchFrom(self.0)
     }
 
@@ -193,12 +188,12 @@ impl<T: SetSearchQueryBuilder> SearchAlgorithm<T> {
     /// QueryBuilder::search().depth_first().to(1).where_();
     /// ```
     pub fn to<I: Into<QueryId>>(mut self, id: I) -> SearchTo<T> {
-        self.0.search.destination = id.into();
+        self.0.search_mut().destination = id.into();
         SearchTo(self.0)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SearchFrom<T> {
+impl<T: SearchQueryBuilder> SearchFrom<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
     /// However when doing a path search or requesting ordering of the result
@@ -213,7 +208,7 @@ impl<T: SetSearchQueryBuilder> SearchFrom<T> {
     /// QueryBuilder::search().from(1).limit(10).where_();
     /// ```
     pub fn limit(mut self, value: u64) -> SelectLimit<T> {
-        self.0.search.limit = value;
+        self.0.search_mut().limit = value;
         SelectLimit(self.0)
     }
 
@@ -233,7 +228,7 @@ impl<T: SetSearchQueryBuilder> SearchFrom<T> {
     /// QueryBuilder::search().from(1).offset(10).where_();
     /// ```
     pub fn offset(mut self, value: u64) -> SelectOffset<T> {
-        self.0.search.offset = value;
+        self.0.search_mut().offset = value;
         SelectOffset(self.0)
     }
 
@@ -250,13 +245,13 @@ impl<T: SetSearchQueryBuilder> SearchFrom<T> {
     /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).where_();
     /// ```
     pub fn order_by<K: Into<DbKeyOrders>>(mut self, keys: K) -> SearchOrderBy<T> {
-        self.0.search.order_by = Into::<DbKeyOrders>::into(keys).0;
+        self.0.search_mut().order_by = Into::<DbKeyOrders>::into(keys).0;
         SearchOrderBy(self.0)
     }
 
     /// Returns the built query object.
     pub fn query(self) -> T {
-        self.0.query.set_search(self.0.search)
+        self.0
     }
 
     /// Sets the destination (to) and changes the search algorithm to path search
@@ -274,7 +269,7 @@ impl<T: SetSearchQueryBuilder> SearchFrom<T> {
     /// QueryBuilder::search().from(1).to(2).where_();
     /// ```
     pub fn to<I: Into<QueryId>>(mut self, id: I) -> SearchTo<T> {
-        self.0.search.destination = id.into();
+        self.0.search_mut().destination = id.into();
         SearchTo(self.0)
     }
 
@@ -300,11 +295,11 @@ impl<T: SetSearchQueryBuilder> SearchFrom<T> {
     /// QueryBuilder::search().from(1).where_().not_beyond();
     /// ```
     pub fn where_(self) -> Where<T> {
-        Where::new(self.0.query, self.0.search)
+        Where::new(self.0)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SearchOrderBy<T> {
+impl<T: SearchQueryBuilder> SearchOrderBy<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
     /// However when doing a path search or requesting ordering of the result
@@ -319,7 +314,7 @@ impl<T: SetSearchQueryBuilder> SearchOrderBy<T> {
     /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).where_();
     /// ```
     pub fn limit(mut self, value: u64) -> SelectLimit<T> {
-        self.0.search.limit = value;
+        self.0.search_mut().limit = value;
         SelectLimit(self.0)
     }
 
@@ -339,13 +334,13 @@ impl<T: SetSearchQueryBuilder> SearchOrderBy<T> {
     /// QueryBuilder::search().from(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).where_();
     /// ```
     pub fn offset(mut self, value: u64) -> SelectOffset<T> {
-        self.0.search.offset = value;
+        self.0.search_mut().offset = value;
         SelectOffset(self.0)
     }
 
     /// Returns the built query object.
     pub fn query(self) -> T {
-        self.0.query.set_search(self.0.search)
+        self.0
     }
 
     /// Starts the condition builder.
@@ -370,11 +365,11 @@ impl<T: SetSearchQueryBuilder> SearchOrderBy<T> {
     /// QueryBuilder::search().from(1).where_().not_beyond();
     /// ```
     pub fn where_(self) -> Where<T> {
-        Where::new(self.0.query, self.0.search)
+        Where::new(self.0)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SearchTo<T> {
+impl<T: SearchQueryBuilder> SearchTo<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
     /// However when doing a path search or requesting ordering of the result
@@ -389,7 +384,7 @@ impl<T: SetSearchQueryBuilder> SearchTo<T> {
     /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).limit(10).where_();
     /// ```
     pub fn limit(mut self, value: u64) -> SelectLimit<T> {
-        self.0.search.limit = value;
+        self.0.search_mut().limit = value;
         SelectLimit(self.0)
     }
 
@@ -409,7 +404,7 @@ impl<T: SetSearchQueryBuilder> SearchTo<T> {
     /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).where_();
     /// ```
     pub fn offset(mut self, value: u64) -> SelectOffset<T> {
-        self.0.search.offset = value;
+        self.0.search_mut().offset = value;
         SelectOffset(self.0)
     }
 
@@ -429,13 +424,13 @@ impl<T: SetSearchQueryBuilder> SearchTo<T> {
     /// QueryBuilder::search().to(1).order_by([DbKeyOrder::Asc("k".into())]).offset(10).where_();
     /// ```
     pub fn order_by<K: Into<DbKeyOrders>>(mut self, keys: K) -> SearchOrderBy<T> {
-        self.0.search.order_by = Into::<DbKeyOrders>::into(keys).0;
+        self.0.search_mut().order_by = Into::<DbKeyOrders>::into(keys).0;
         SearchOrderBy(self.0)
     }
 
     /// Returns the built `SearchQuery` object.
     pub fn query(self) -> T {
-        self.0.query.set_search(self.0.search)
+        self.0
     }
 
     /// Starts the condition builder.
@@ -460,14 +455,14 @@ impl<T: SetSearchQueryBuilder> SearchTo<T> {
     /// QueryBuilder::search().from(1).where_().not_beyond();
     /// ```
     pub fn where_(self) -> Where<T> {
-        Where::new(self.0.query, self.0.search)
+        Where::new(self.0)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SelectLimit<T> {
+impl<T: SearchQueryBuilder> SelectLimit<T> {
     /// Returns the built query object.
     pub fn query(self) -> T {
-        self.0.query.set_search(self.0.search)
+        self.0
     }
 
     /// Starts the condition builder.
@@ -492,11 +487,11 @@ impl<T: SetSearchQueryBuilder> SelectLimit<T> {
     /// QueryBuilder::search().from(1).where_().not_beyond();
     /// ```
     pub fn where_(self) -> Where<T> {
-        Where::new(self.0.query, self.0.search)
+        Where::new(self.0)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SelectOffset<T> {
+impl<T: SearchQueryBuilder> SelectOffset<T> {
     /// Sets the limit to number of ids returned. If during the search
     /// the `limit + offset` is hit the search ends and the result is returned.
     /// However when doing a path search or requesting ordering of the result
@@ -511,13 +506,13 @@ impl<T: SetSearchQueryBuilder> SelectOffset<T> {
     /// QueryBuilder::search().from(1).offset(10).limit(10).where_();
     /// ```
     pub fn limit(mut self, value: u64) -> SelectLimit<T> {
-        self.0.search.limit = value;
+        self.0.search_mut().limit = value;
         SelectLimit(self.0)
     }
 
     /// Returns the built query object.
     pub fn query(self) -> T {
-        self.0.query.set_search(self.0.search)
+        self.0
     }
 
     /// Starts the condition builder.
@@ -542,15 +537,15 @@ impl<T: SetSearchQueryBuilder> SelectOffset<T> {
     /// QueryBuilder::search().from(1).where_().not_beyond();
     /// ```
     pub fn where_(self) -> Where<T> {
-        Where::new(self.0.query, self.0.search)
+        Where::new(self.0)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SearchIndex<T> {
+impl<T: SearchQueryBuilder> SearchIndex<T> {
     /// Sets the value to be searched in the index.
     pub fn value<V: Into<DbValue>>(mut self, value: V) -> SearchIndexValue<T> {
-        self.search.search.algorithm = SearchQueryAlgorithm::Index;
-        self.search.search.conditions.push(QueryCondition {
+        self.query.search_mut().algorithm = SearchQueryAlgorithm::Index;
+        self.query.search_mut().conditions.push(QueryCondition {
             data: QueryConditionData::KeyValue {
                 key: self.index,
                 value: Comparison::Equal(value.into()),
@@ -558,14 +553,13 @@ impl<T: SetSearchQueryBuilder> SearchIndex<T> {
             logic: QueryConditionLogic::And,
             modifier: QueryConditionModifier::None,
         });
-
-        SearchIndexValue(self.search)
+        SearchIndexValue(self.query)
     }
 }
 
-impl<T: SetSearchQueryBuilder> SearchIndexValue<T> {
+impl<T: SearchQueryBuilder> SearchIndexValue<T> {
     /// Returns the built q object.
     pub fn query(self) -> T {
-        self.0.query.set_search(self.0.search)
+        self.0
     }
 }

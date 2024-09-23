@@ -1,5 +1,5 @@
 use crate::db::db_key_order::DbKeyOrder;
-use crate::query_builder::search::SetSearchQueryBuilder;
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
@@ -233,9 +233,9 @@ impl Query for &SearchQuery {
     }
 }
 
-impl SetSearchQueryBuilder for SearchQuery {
-    fn set_search(self, search: SearchQuery) -> Self {
-        search
+impl SearchQueryBuilder for SearchQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        self
     }
 }
 

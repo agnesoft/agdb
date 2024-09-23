@@ -1,4 +1,5 @@
 use crate::query::query_values::QueryValues;
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
@@ -8,6 +9,7 @@ use crate::QueryId;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
+use crate::SearchQuery;
 use crate::StorageData;
 
 /// Query to insert or update key-value pairs (properties)
@@ -149,4 +151,29 @@ fn insert_values_id<Store: StorageData>(
         result.result += 1;
     }
     Ok(())
+}
+
+impl SearchQueryBuilder for InsertValuesQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        if let QueryIds::Search(search) = &mut self.ids {
+            search
+        } else {
+            panic!("Expected search query");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn missing_search() {
+        InsertValuesQuery {
+            values: QueryValues::Single(vec![]),
+            ids: QueryIds::Ids(vec![]),
+        }
+        .search_mut();
+    }
 }

@@ -66,3 +66,14 @@ impl SearchQueryBuilder for SelectKeysQuery {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn missing_search() {
+        SelectKeysQuery(QueryIds::Ids(vec![])).search_mut();
+    }
+}

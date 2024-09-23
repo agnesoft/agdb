@@ -97,6 +97,44 @@ fn remove_values_search() {
 }
 
 #[test]
+fn remove_values_search_alt() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .values([[("key", 1).into()], [("key", 2).into()]])
+            .query(),
+        2,
+    );
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(2).query(), 1);
+    db.exec_mut(
+        QueryBuilder::remove()
+            .values("key")
+            .search()
+            .from(1)
+            .query(),
+        -2,
+    );
+    db.exec_elements(
+        QueryBuilder::select().ids([1, 2]).query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![],
+            },
+            DbElement {
+                id: DbId(2),
+                from: None,
+                to: None,
+                values: vec![],
+            },
+        ],
+    );
+}
+
+#[test]
 fn remove_missing_key() {
     let mut db = TestDb::new();
     db.exec_mut(

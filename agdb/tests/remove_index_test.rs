@@ -25,7 +25,7 @@ fn remove_index_with_data() {
 }
 
 #[test]
-fn rmove_missing_index() {
+fn remove_missing_index() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::remove().index("username").query(), 0);
 }

@@ -202,6 +202,74 @@ fn select_edge_count_search() {
 }
 
 #[test]
+fn select_edge_count_search_alt() {
+    let mut db = TestDb::new();
+    db.exec_mut(
+        QueryBuilder::insert()
+            .nodes()
+            .aliases(["node1", "node2", "node3"])
+            .query(),
+        3,
+    );
+    db.exec_mut(
+        QueryBuilder::insert()
+            .edges()
+            .from(["node1", "node3", "node2", "node2"])
+            .to(["node3", "node2", "node1", "node2"])
+            .query(),
+        4,
+    );
+
+    db.exec_elements(
+        QueryBuilder::select()
+            .edge_count()
+            .search()
+            .from("node1")
+            .where_()
+            .edge_count(CountComparison::Equal(4))
+            .query(),
+        &[DbElement {
+            id: DbId(2),
+            from: None,
+            to: None,
+            values: vec![("edge_count", 4_u64).into()],
+        }],
+    );
+
+    db.exec_elements(
+        QueryBuilder::select()
+            .edge_count_from()
+            .search()
+            .from("node1")
+            .where_()
+            .edge_count(CountComparison::Equal(4))
+            .query(),
+        &[DbElement {
+            id: DbId(2),
+            from: None,
+            to: None,
+            values: vec![("edge_count", 2_u64).into()],
+        }],
+    );
+
+    db.exec_elements(
+        QueryBuilder::select()
+            .edge_count_to()
+            .search()
+            .from("node1")
+            .where_()
+            .edge_count(CountComparison::Equal(4))
+            .query(),
+        &[DbElement {
+            id: DbId(2),
+            from: None,
+            to: None,
+            values: vec![("edge_count", 2_u64).into()],
+        }],
+    );
+}
+
+#[test]
 fn select_edge_count_non_nodes() {
     let mut db = TestDb::new();
     db.exec_mut(

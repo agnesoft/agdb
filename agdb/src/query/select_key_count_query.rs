@@ -1,9 +1,11 @@
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
+use crate::SearchQuery;
 use crate::StorageData;
 
 /// Query to select number of properties (key count) of
@@ -53,5 +55,15 @@ impl Query for SelectKeyCountQuery {
 impl Query for &SelectKeyCountQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         (*self).process(db)
+    }
+}
+
+impl SearchQueryBuilder for SelectKeyCountQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        if let QueryIds::Search(search) = &mut self.0 {
+            search
+        } else {
+            panic!("Expected search query");
+        }
     }
 }

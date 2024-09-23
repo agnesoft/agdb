@@ -108,6 +108,8 @@ impl Select {
         SelectNodeCount {}
     }
 
+    /// Select with all properties (key-values) using result
+    /// of the search query as ids. Equivalent to `ids(QueryBuilder::search()/* ... */)`.
     pub fn search(self) -> Search<SelectValuesQuery> {
         Search(SelectValuesQuery {
             keys: vec![],

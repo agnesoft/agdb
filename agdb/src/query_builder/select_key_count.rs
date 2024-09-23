@@ -1,3 +1,4 @@
+use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectKeyCountQuery;
 
@@ -15,6 +16,14 @@ impl SelectKeyCount {
         self.0 .0 = ids.into();
 
         SelectKeyCountIds(self.0)
+    }
+
+    /// Select key count for elements returned from the search query.
+    /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
+    pub fn search(self) -> Search<SelectKeyCountQuery> {
+        Search(SelectKeyCountQuery(QueryIds::Search(
+            crate::SearchQuery::new(),
+        )))
     }
 }
 

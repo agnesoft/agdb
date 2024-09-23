@@ -1,3 +1,4 @@
+use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectKeysQuery;
 
@@ -15,6 +16,12 @@ impl SelectKeys {
         self.0 .0 = ids.into();
 
         SelectKeysIds(self.0)
+    }
+
+    /// Select keys of elements returned from the search query.
+    /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
+    pub fn search(self) -> Search<SelectKeysQuery> {
+        Search(SelectKeysQuery(QueryIds::Search(crate::SearchQuery::new())))
     }
 }
 

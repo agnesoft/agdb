@@ -1,3 +1,4 @@
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::DbValue;
@@ -5,6 +6,7 @@ use crate::Query;
 use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
+use crate::SearchQuery;
 use crate::StorageData;
 
 /// Query to select elements with only certain properties of
@@ -74,5 +76,15 @@ impl Query for SelectValuesQuery {
 impl Query for &SelectValuesQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         (*self).process(db)
+    }
+}
+
+impl SearchQueryBuilder for SelectValuesQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        if let QueryIds::Search(search) = &mut self.ids {
+            search
+        } else {
+            panic!("Expected search query");
+        }
     }
 }

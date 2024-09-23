@@ -1,4 +1,5 @@
 use crate::db::db_value::DbValues;
+use crate::query_builder::search::Search;
 use crate::query_builder::select_aliases::SelectAliases;
 use crate::query_builder::select_edge_count::SelectEdgeCount;
 use crate::query_builder::select_ids::SelectIds;
@@ -105,6 +106,13 @@ impl Select {
     /// as the value.
     pub fn node_count(self) -> SelectNodeCount {
         SelectNodeCount {}
+    }
+
+    pub fn search(self) -> Search<SelectValuesQuery> {
+        Search(SelectValuesQuery {
+            keys: vec![],
+            ids: QueryIds::Search(crate::SearchQuery::new()),
+        })
     }
 
     /// Select elements with `ids` with only `keys` properties (key-values).

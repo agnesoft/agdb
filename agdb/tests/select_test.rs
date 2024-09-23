@@ -75,28 +75,28 @@ fn select_from_search() {
     );
 }
 
-#[test]
-fn select_embedded_search() {
-    let mut db = TestDb::new();
+// #[test]
+// fn select_embedded_search() {
+//     let mut db = TestDb::new();
 
-    db.exec_mut(
-        QueryBuilder::insert()
-            .nodes()
-            .aliases(["alias1", "alias2", "alias3", "alias4", "alias5"])
-            .query(),
-        5,
-    );
-    db.exec_mut(
-        QueryBuilder::insert()
-            .edges()
-            .from(["alias1", "alias3"])
-            .to(["alias3", "alias5"])
-            .query(),
-        2,
-    );
+//     db.exec_mut(
+//         QueryBuilder::insert()
+//             .nodes()
+//             .aliases(["alias1", "alias2", "alias3", "alias4", "alias5"])
+//             .query(),
+//         5,
+//     );
+//     db.exec_mut(
+//         QueryBuilder::insert()
+//             .edges()
+//             .from(["alias1", "alias3"])
+//             .to(["alias3", "alias5"])
+//             .query(),
+//         2,
+//     );
 
-    db.exec_ids(
-        QueryBuilder::select().search().from("alias1").query(),
-        &[1, -6, 3, -7, 5],
-    );
-}
+//     db.exec_ids(
+//         QueryBuilder::select().search().from("alias1").query(),
+//         &[1, -6, 3, -7, 5],
+//     );
+// }

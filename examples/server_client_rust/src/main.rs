@@ -60,15 +60,12 @@ async fn main() -> Result<(), anyhow::Error> {
             .query()
             .into(),
         QueryBuilder::select()
-            .ids(
-                QueryBuilder::search()
-                    .depth_first()
-                    .from("users")
-                    .where_()
-                    .key("username")
-                    .value(Comparison::Equal("user1".into()))
-                    .query(),
-            )
+            .search()
+            .depth_first()
+            .from("users")
+            .where_()
+            .key("username")
+            .value(Comparison::Equal("user1".into()))
             .query()
             .into(),
     ];

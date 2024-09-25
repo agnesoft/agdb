@@ -48,16 +48,13 @@ fn main() -> Result<(), QueryError> {
     let mut user_dbs: Vec<UserDb> = vec![];
     db.exec(
         QueryBuilder::select()
-            .ids(
-                QueryBuilder::search()
-                    .depth_first()
-                    .from("user")
-                    .where_()
-                    .keys("role")
-                    .or()
-                    .keys("name")
-                    .query(),
-            )
+            .search()
+            .depth_first()
+            .from("user")
+            .where_()
+            .keys("role")
+            .or()
+            .keys("name")
             .query(),
     )?
     .elements
@@ -87,15 +84,12 @@ fn main() -> Result<(), QueryError> {
     let user_dbs = db.transaction(|t| -> Result<Vec<UserDb>, QueryError> {
         let db_names = t.exec(
             QueryBuilder::select()
-                .ids(
-                    QueryBuilder::search()
-                        .from("user")
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .and()
-                        .keys("name")
-                        .query(),
-                )
+                .search()
+                .from("user")
+                .where_()
+                .distance(CountComparison::Equal(2))
+                .and()
+                .keys("name")
                 .query(),
         )?;
 
@@ -104,14 +98,11 @@ fn main() -> Result<(), QueryError> {
         for db_name in db_names.elements {
             let role = t.exec(
                 QueryBuilder::select()
-                    .ids(
-                        QueryBuilder::search()
-                            .to(db_name.id)
-                            .limit(1)
-                            .where_()
-                            .keys("role")
-                            .query(),
-                    )
+                    .search()
+                    .to(db_name.id)
+                    .limit(1)
+                    .where_()
+                    .keys("role")
                     .query(),
             )?;
 

@@ -1,8 +1,10 @@
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbImpl;
 use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryMut;
 use crate::QueryResult;
+use crate::SearchQuery;
 use crate::SelectValuesQuery;
 use crate::StorageData;
 
@@ -47,5 +49,30 @@ impl QueryMut for &RemoveValuesQuery {
         db: &mut DbImpl<Store>,
     ) -> Result<QueryResult, QueryError> {
         (*self).process(db)
+    }
+}
+
+impl SearchQueryBuilder for RemoveValuesQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        if let QueryIds::Search(search) = &mut self.0.ids {
+            search
+        } else {
+            panic!("Expected search query");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn missing_search() {
+        RemoveValuesQuery(SelectValuesQuery {
+            keys: vec![],
+            ids: QueryIds::Ids(vec![]),
+        })
+        .search_mut();
     }
 }

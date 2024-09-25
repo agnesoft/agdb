@@ -58,12 +58,9 @@ fn main() -> Result<(), QueryError> {
         .exec(
             QueryBuilder::select()
                 .values(User::db_keys())
-                .ids(
-                    QueryBuilder::search()
-                        .index("username")
-                        .value("user50")
-                        .query(),
-                )
+                .search()
+                .index("username")
+                .value("user50")
                 .query(),
         )?
         .try_into()?;

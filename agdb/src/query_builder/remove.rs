@@ -4,11 +4,13 @@ use crate::query_builder::remove_aliases::RemoveAliases;
 use crate::query_builder::remove_ids::RemoveIds;
 use crate::query_builder::remove_index::RemoveIndex;
 use crate::query_builder::remove_values::RemoveValues;
+use crate::query_builder::search::Search;
 use crate::DbValue;
 use crate::QueryIds;
 use crate::RemoveAliasesQuery;
 use crate::RemoveQuery;
 use crate::RemoveValuesQuery;
+use crate::SearchQuery;
 use crate::SelectValuesQuery;
 
 /// Remove builder to choose what to delete from the database.
@@ -36,6 +38,12 @@ impl Remove {
     /// Index to be removed from the database.
     pub fn index<T: Into<DbValue>>(self, key: T) -> RemoveIndex {
         RemoveIndex(key.into())
+    }
+
+    /// Remove the elements found using the search query.
+    /// Equivalent to `ids(QueryIds::Search(search)/*...*/)`.
+    pub fn search(self) -> Search<RemoveQuery> {
+        Search(RemoveQuery(QueryIds::Search(SearchQuery::new())))
     }
 
     /// List of keys to delete from ids selected in the next step. It is not an

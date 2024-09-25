@@ -58,15 +58,12 @@ fn quickstart() -> Result<(), QueryError> {
     let user: User = db
         .exec(
             QueryBuilder::select()
-                .values(User::db_keys())
-                .ids(
-                    QueryBuilder::search()
-                        .from("users")
-                        .where_()
-                        .key("name")
-                        .value(Equal("Bob".into()))
-                        .query(),
-                )
+                .elements::<User>()
+                .search()
+                .from("users")
+                .where_()
+                .key("name")
+                .value(Equal("Bob".into()))
                 .query(),
         )?
         .try_into()?;

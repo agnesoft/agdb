@@ -110,13 +110,10 @@ fn main() -> Result<(), QueryError> {
         let users: Vec<UserDb2> = t
             .exec(
                 QueryBuilder::select()
-                    .ids(
-                        QueryBuilder::search()
-                            .from("users")
-                            .where_()
-                            .distance(CountComparison::Equal(2))
-                            .query(),
-                    )
+                    .search()
+                    .from("users")
+                    .where_()
+                    .distance(CountComparison::Equal(2))
                     .query(),
             )?
             .try_into()?;

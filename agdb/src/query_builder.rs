@@ -9,7 +9,7 @@ mod remove_aliases;
 mod remove_ids;
 mod remove_index;
 mod remove_values;
-mod search;
+pub mod search;
 mod select;
 mod select_aliases;
 mod select_edge_count;
@@ -25,6 +25,7 @@ use self::insert::Insert;
 use self::remove::Remove;
 use self::search::Search;
 use self::select::Select;
+use crate::SearchQuery;
 
 /// The starting point of all queries.
 ///
@@ -99,8 +100,8 @@ impl QueryBuilder {
     /// QueryBuilder::search().depth_first();
     /// QueryBuilder::search().elements();
     /// ```
-    pub fn search() -> Search {
-        Search {}
+    pub fn search() -> Search<SearchQuery> {
+        Search(SearchQuery::new())
     }
 
     /// Selects data from the database:

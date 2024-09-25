@@ -4,29 +4,29 @@ use crate::query::query_condition::QueryCondition;
 use crate::query::query_condition::QueryConditionData;
 use crate::query::query_condition::QueryConditionLogic;
 use crate::query::query_condition::QueryConditionModifier;
-use crate::query::search_query::SearchQuery;
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::Comparison;
 use crate::DbValue;
 use crate::QueryIds;
 
 /// Condition builder
-pub struct Where {
+pub struct Where<T: SearchQueryBuilder> {
     logic: QueryConditionLogic,
     modifier: QueryConditionModifier,
     conditions: Vec<Vec<QueryCondition>>,
-    query: SearchQuery,
+    query: T,
 }
 
 /// Condition builder for `key` condition.
-pub struct WhereKey {
+pub struct WhereKey<T: SearchQueryBuilder> {
     key: DbValue,
-    where_: Where,
+    where_: Where<T>,
 }
 
 /// Condition builder setting the logic operator.
-pub struct WhereLogicOperator(pub Where);
+pub struct WhereLogicOperator<T: SearchQueryBuilder>(pub Where<T>);
 
-impl Where {
+impl<T: SearchQueryBuilder> Where<T> {
     /// Sets the condition modifier for the following condition so
     /// that the search will continue beyond current element only
     /// if the condition is satisfied. For the opposite effect see
@@ -47,9 +47,8 @@ impl Where {
     /// // Only edges or nodes with exactly 1 edge are followed.
     /// QueryBuilder::search().from(1).where_().beyond().edge().or().edge_count(CountComparison::Equal(1));
     /// ```
-    pub fn beyond(mut self) -> Where {
+    pub fn beyond(mut self) -> Self {
         self.modifier = QueryConditionModifier::Beyond;
-
         self
     }
 
@@ -68,7 +67,7 @@ impl Where {
     /// // Start accepting elements at distance greater than 1 (2+)
     /// QueryBuilder::search().from(1).where_().distance(CountComparison::GreaterThan(1)).query();
     /// ```
-    pub fn distance(mut self, comparison: CountComparison) -> WhereLogicOperator {
+    pub fn distance(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -87,7 +86,7 @@ impl Where {
     ///
     /// QueryBuilder::search().from(1).where_().edge().query();
     /// ```
-    pub fn edge(mut self) -> WhereLogicOperator {
+    pub fn edge(mut self) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -109,7 +108,7 @@ impl Where {
     ///
     /// QueryBuilder::search().from(1).where_().edge_count(CountComparison::Equal(1)).query();
     /// ```
-    pub fn edge_count(mut self, comparison: CountComparison) -> WhereLogicOperator {
+    pub fn edge_count(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -129,7 +128,7 @@ impl Where {
     ///
     /// QueryBuilder::search().from(1).where_().edge_count_from(CountComparison::Equal(1)).query();
     /// ```
-    pub fn edge_count_from(mut self, comparison: CountComparison) -> WhereLogicOperator {
+    pub fn edge_count_from(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -149,7 +148,7 @@ impl Where {
     ///
     /// QueryBuilder::search().from(1).where_().edge_count_to(CountComparison::Equal(1)).query();
     /// ```
-    pub fn edge_count_to(mut self, comparison: CountComparison) -> WhereLogicOperator {
+    pub fn edge_count_to(mut self, comparison: CountComparison) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -175,7 +174,7 @@ impl Where {
     /// // Do not continue the search beyond "alias" element
     /// QueryBuilder::search().from(1).where_().not_beyond().ids("alias").query();
     /// ```
-    pub fn ids<T: Into<QueryIds>>(mut self, ids: T) -> WhereLogicOperator {
+    pub fn ids<I: Into<QueryIds>>(mut self, ids: I) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -196,7 +195,7 @@ impl Where {
     /// // Includes only elements with property `String("k") == 1_i64`
     /// QueryBuilder::search().from(1).where_().key("k").value(Comparison::Equal(1.into())).query();
     /// ```
-    pub fn key<T: Into<DbValue>>(self, key: T) -> WhereKey {
+    pub fn key<K: Into<DbValue>>(self, key: K) -> WhereKey<T> {
         WhereKey {
             key: key.into(),
             where_: self,
@@ -218,7 +217,7 @@ impl Where {
     /// // Includes only elements with either "a" or "b" properties (keys).
     /// QueryBuilder::search().from(1).where_().keys("a").or().keys("b").query();
     /// ```
-    pub fn keys<T: Into<DbValues>>(mut self, keys: T) -> WhereLogicOperator {
+    pub fn keys<K: Into<DbValues>>(mut self, keys: K) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -237,7 +236,7 @@ impl Where {
     ///
     /// QueryBuilder::search().from(1).where_().node().query();
     /// ```
-    pub fn node(mut self) -> WhereLogicOperator {
+    pub fn node(mut self) -> WhereLogicOperator<T> {
         self.add_condition(QueryCondition {
             logic: self.logic,
             modifier: self.modifier,
@@ -327,7 +326,7 @@ impl Where {
         }
     }
 
-    pub(crate) fn new(query: SearchQuery) -> Self {
+    pub(crate) fn new(query: T) -> Self {
         Self {
             logic: QueryConditionLogic::And,
             modifier: QueryConditionModifier::None,
@@ -360,9 +359,9 @@ impl Where {
     }
 }
 
-impl WhereKey {
+impl<T: SearchQueryBuilder> WhereKey<T> {
     /// Sets the value of the `key` condition to `comparison`.
-    pub fn value(mut self, comparison: Comparison) -> WhereLogicOperator {
+    pub fn value(mut self, comparison: Comparison) -> WhereLogicOperator<T> {
         let condition = QueryCondition {
             logic: self.where_.logic,
             modifier: self.where_.modifier,
@@ -376,11 +375,11 @@ impl WhereKey {
     }
 }
 
-impl WhereLogicOperator {
+impl<T: SearchQueryBuilder> WhereLogicOperator<T> {
     /// Sets the logic operator for the following condition
     /// to logical AND (&&). The condition passes only if
     /// both sides evaluates to `true`.
-    pub fn and(self) -> Where {
+    pub fn and(self) -> Where<T> {
         Where {
             logic: QueryConditionLogic::And,
             modifier: QueryConditionModifier::None,
@@ -392,7 +391,7 @@ impl WhereLogicOperator {
     /// Closes the current level condition level returning
     /// to the previous one. It semantically represents a
     /// closing bracket.
-    pub fn end_where(mut self) -> WhereLogicOperator {
+    pub fn end_where(mut self) -> WhereLogicOperator<T> {
         self.0.collapse_conditions();
 
         WhereLogicOperator(self.0)
@@ -401,7 +400,7 @@ impl WhereLogicOperator {
     /// Sets the logic operator for the following condition
     /// to logical OR (||). The condition passes only if
     /// both sides evaluates to `false`.
-    pub fn or(self) -> Where {
+    pub fn or(self) -> Where<T> {
         Where {
             logic: QueryConditionLogic::Or,
             modifier: QueryConditionModifier::None,
@@ -411,9 +410,12 @@ impl WhereLogicOperator {
     }
 
     /// Returns the built `SearchQuery` object.
-    pub fn query(mut self) -> SearchQuery {
+    pub fn query(mut self) -> T {
         while self.0.collapse_conditions() {}
-        std::mem::swap(&mut self.0.query.conditions, &mut self.0.conditions[0]);
+        std::mem::swap(
+            &mut self.0.query.search_mut().conditions,
+            &mut self.0.conditions[0],
+        );
         self.0.query
     }
 }
@@ -421,25 +423,15 @@ impl WhereLogicOperator {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::DbId;
-    use crate::QueryId;
-    use crate::SearchQueryAlgorithm;
+    use crate::SearchQuery;
 
     #[test]
     fn invalid_collapse() {
-        let mut where_ = Where {
+        let mut where_ = Where::<SearchQuery> {
             logic: QueryConditionLogic::And,
             modifier: QueryConditionModifier::None,
             conditions: vec![vec![], vec![]],
-            query: SearchQuery {
-                algorithm: SearchQueryAlgorithm::BreadthFirst,
-                origin: QueryId::Id(DbId(0)),
-                destination: QueryId::Id(DbId(0)),
-                limit: 0,
-                offset: 0,
-                order_by: vec![],
-                conditions: vec![],
-            },
+            query: SearchQuery::new(),
         };
         assert!(!where_.collapse_conditions());
     }

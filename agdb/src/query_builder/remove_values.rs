@@ -1,5 +1,7 @@
+use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::RemoveValuesQuery;
+use crate::SearchQuery;
 
 /// Remove values builder that lets you select the ids from
 /// which to remove the values.
@@ -16,6 +18,13 @@ impl RemoveValues {
         self.0 .0.ids = ids.into();
 
         RemoveValuesIds(self.0)
+    }
+
+    /// Remove the values from the elements found using the search query.
+    /// Equivalent to `ids(QueryIds::Search(search)/*...*/)`.
+    pub fn search(mut self) -> Search<RemoveValuesQuery> {
+        self.0 .0.ids = QueryIds::Search(SearchQuery::new());
+        Search(self.0)
     }
 }
 

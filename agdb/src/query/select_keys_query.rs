@@ -1,9 +1,11 @@
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
+use crate::SearchQuery;
 use crate::StorageData;
 
 /// Query to select only property keys of given ids. All
@@ -52,5 +54,26 @@ impl Query for SelectKeysQuery {
 impl Query for &SelectKeysQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         (*self).process(db)
+    }
+}
+
+impl SearchQueryBuilder for SelectKeysQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        if let QueryIds::Search(search) = &mut self.0 {
+            search
+        } else {
+            panic!("Expected search query");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn missing_search() {
+        SelectKeysQuery(QueryIds::Ids(vec![])).search_mut();
     }
 }

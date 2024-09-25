@@ -240,6 +240,50 @@ fn insert_values_search() {
 }
 
 #[test]
+fn insert_values_search_alt() {
+    let mut db = TestDb::new();
+    db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);
+    db.exec_mut(QueryBuilder::insert().edges().from(1).to(3).query(), 1);
+    db.exec_mut(
+        QueryBuilder::insert()
+            .values([
+                [("key1", "value1").into()],
+                [("key2", "value2").into()],
+                [("key3", "value3").into()],
+            ])
+            .search()
+            .from(1)
+            .query(),
+        3,
+    );
+    db.exec_elements(
+        QueryBuilder::select()
+            .ids(QueryBuilder::search().from(1).query())
+            .query(),
+        &[
+            DbElement {
+                id: DbId(1),
+                from: None,
+                to: None,
+                values: vec![("key1", "value1").into()],
+            },
+            DbElement {
+                id: DbId(-4),
+                from: Some(DbId(1)),
+                to: Some(DbId(3)),
+                values: vec![("key2", "value2").into()],
+            },
+            DbElement {
+                id: DbId(3),
+                from: None,
+                to: None,
+                values: vec![("key3", "value3").into()],
+            },
+        ],
+    );
+}
+
+#[test]
 fn insert_values_search_invalid_length() {
     let mut db = TestDb::new();
     db.exec_mut(QueryBuilder::insert().nodes().count(3).query(), 3);

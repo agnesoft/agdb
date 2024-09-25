@@ -1,4 +1,5 @@
 use crate::db::db_key_order::DbKeyOrder;
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbId;
 use crate::DbImpl;
@@ -212,11 +213,29 @@ impl SearchQuery {
             (_, _) => ids[self.offset as usize..(self.offset + self.limit) as usize].to_vec(),
         })
     }
+
+    pub(crate) fn new() -> Self {
+        Self {
+            algorithm: SearchQueryAlgorithm::BreadthFirst,
+            origin: QueryId::Id(DbId(0)),
+            destination: QueryId::Id(DbId(0)),
+            limit: 0,
+            offset: 0,
+            order_by: vec![],
+            conditions: vec![],
+        }
+    }
 }
 
 impl Query for &SearchQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         (*self).process(db)
+    }
+}
+
+impl SearchQueryBuilder for SearchQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        self
     }
 }
 

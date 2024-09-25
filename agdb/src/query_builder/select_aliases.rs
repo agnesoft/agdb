@@ -1,4 +1,6 @@
+use crate::query_builder::search::Search;
 use crate::QueryIds;
+use crate::SearchQuery;
 use crate::SelectAliasesQuery;
 use crate::SelectAllAliasesQuery;
 
@@ -16,6 +18,13 @@ impl SelectAliases {
         self.0 .0 = ids.into();
 
         SelectAliasesIds(self.0)
+    }
+
+    /// Select using the result of a search query as ids.
+    /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
+    pub fn search(mut self) -> Search<SelectAliasesQuery> {
+        self.0 .0 = QueryIds::Search(SearchQuery::new());
+        Search(self.0)
     }
 
     /// Returns the built `SelectAllAliases` object.

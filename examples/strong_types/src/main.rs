@@ -1,7 +1,6 @@
 use agdb::Comparison;
 use agdb::DbError;
 use agdb::DbMemory;
-use agdb::DbUserValue;
 use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
@@ -106,10 +105,10 @@ fn main() -> Result<(), QueryError> {
     // SELECT username, password, status FROM users WHERE name = "user1"
     // ```
     //
-    // It uses the `agdb::UserValue::db_keys()` to select required keys. It also
-    // changes the sarch algorithm to depth-first (default is breadth-first)
-    // which is more efficient when searching for a single item only. We could additionally
-    // limit the search by adding `limit(1)` to ensure we get only one result back
+    // Internally it uses the `agdb::DbUserValue::db_keys()` to select required keys as the `User` is
+    // required to implement the `DbUserValue` trait. It also changes the sarch algorithm to depth-first
+    // (default is breadth-first) which is more efficient when searching for a single item only. We could
+    // additionally limit the search by adding `limit(1)` to ensure we get only one result back
     // and/or additional condition on `distance(Equal(2))` to stop search beyond users. But since
     // we know the structure of our data (graph) we can safely omit them as unnecessary here.
     //
@@ -118,16 +117,13 @@ fn main() -> Result<(), QueryError> {
     let user: User = db
         .exec(
             QueryBuilder::select()
-                .values(User::db_keys())
-                .ids(
-                    QueryBuilder::search()
-                        .depth_first()
-                        .from("users")
-                        .where_()
-                        .key("username")
-                        .value(Comparison::Equal("user1".into()))
-                        .query(),
-                )
+                .elements::<User>()
+                .search()
+                .depth_first()
+                .from("users")
+                .where_()
+                .key("username")
+                .value(Comparison::Equal("user1".into()))
                 .query(),
         )?
         .try_into()?;

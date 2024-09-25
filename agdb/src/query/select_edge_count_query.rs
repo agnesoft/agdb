@@ -1,9 +1,11 @@
+use crate::query_builder::search::SearchQueryBuilder;
 use crate::DbElement;
 use crate::DbImpl;
 use crate::Query;
 use crate::QueryError;
 use crate::QueryIds;
 use crate::QueryResult;
+use crate::SearchQuery;
 use crate::StorageData;
 
 /// Query to select number of edges of given node ids.
@@ -70,5 +72,31 @@ impl Query for SelectEdgeCountQuery {
 impl Query for &SelectEdgeCountQuery {
     fn process<Store: StorageData>(&self, db: &DbImpl<Store>) -> Result<QueryResult, QueryError> {
         (*self).process(db)
+    }
+}
+
+impl SearchQueryBuilder for SelectEdgeCountQuery {
+    fn search_mut(&mut self) -> &mut SearchQuery {
+        if let QueryIds::Search(search) = &mut self.ids {
+            search
+        } else {
+            panic!("Expected search query");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn missing_search() {
+        SelectEdgeCountQuery {
+            ids: QueryIds::Ids(vec![]),
+            from: false,
+            to: false,
+        }
+        .search_mut();
     }
 }

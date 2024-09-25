@@ -1,3 +1,4 @@
+use crate::query_builder::search::Search;
 use crate::QueryIds;
 use crate::SelectEdgeCountQuery;
 
@@ -15,6 +16,13 @@ impl SelectEdgeCount {
         self.0.ids = ids.into();
 
         SelectEdgeCountIds(self.0)
+    }
+
+    /// Select keys of elements returned from the search query.
+    /// Equivalent to `ids(QueryBuilder::search()/* ... */)`.
+    pub fn search(mut self) -> Search<SelectEdgeCountQuery> {
+        self.0.ids = QueryIds::Search(crate::SearchQuery::new());
+        Search(self.0)
     }
 }
 

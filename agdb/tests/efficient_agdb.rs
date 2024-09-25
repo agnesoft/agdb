@@ -7,7 +7,6 @@ use agdb::Db;
 use agdb::DbId;
 use agdb::DbKeyOrder;
 use agdb::DbKeyValue;
-use agdb::DbUserValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::QueryId;
@@ -163,14 +162,11 @@ fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
     db.transaction_mut(|t| -> Result<(), QueryError> {
         t.exec_mut(
             QueryBuilder::remove()
-                .ids(
-                    QueryBuilder::search()
-                        .from(user)
-                        .to(id)
-                        .where_()
-                        .keys("liked")
-                        .query(),
-                )
+                .search()
+                .from(user)
+                .to(id)
+                .where_()
+                .keys("liked")
                 .query(),
         )?;
         Ok(())
@@ -182,18 +178,15 @@ fn login(db: &Db, username: &str, password: &str) -> Result<DbId, QueryError> {
         .exec(
             QueryBuilder::select()
                 .values("password")
-                .ids(
-                    QueryBuilder::search()
-                        .depth_first()
-                        .from("users")
-                        .limit(1)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .and()
-                        .key("username")
-                        .value(Equal(username.into()))
-                        .query(),
-                )
+                .search()
+                .depth_first()
+                .from("users")
+                .limit(1)
+                .where_()
+                .distance(CountComparison::Equal(2))
+                .and()
+                .key("username")
+                .value(Equal(username.into()))
                 .query(),
         )?
         .elements;
@@ -242,16 +235,13 @@ fn posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<Post>, QueryError> {
     Ok(db
         .exec(
             QueryBuilder::select()
-                .values(Post::db_keys())
-                .ids(
-                    QueryBuilder::search()
-                        .from("posts")
-                        .offset(offset)
-                        .limit(limit)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .query(),
-                )
+                .elements::<Post>()
+                .search()
+                .from("posts")
+                .offset(offset)
+                .limit(limit)
+                .where_()
+                .distance(CountComparison::Equal(2))
                 .query(),
         )?
         .try_into()?)
@@ -261,17 +251,14 @@ fn comments(db: &Db, id: DbId) -> Result<Vec<Comment>, QueryError> {
     Ok(db
         .exec(
             QueryBuilder::select()
-                .values(Comment::db_keys())
-                .ids(
-                    QueryBuilder::search()
-                        .depth_first()
-                        .from(id)
-                        .where_()
-                        .node()
-                        .and()
-                        .distance(CountComparison::GreaterThan(1))
-                        .query(),
-                )
+                .elements::<Comment>()
+                .search()
+                .depth_first()
+                .from(id)
+                .where_()
+                .node()
+                .and()
+                .distance(CountComparison::GreaterThan(1))
                 .query(),
         )?
         .try_into()?)
@@ -312,17 +299,14 @@ fn liked_posts(db: &Db, offset: u64, limit: u64) -> Result<Vec<PostLiked>, Query
     Ok(db
         .exec(
             QueryBuilder::select()
-                .values(PostLiked::db_keys())
-                .ids(
-                    QueryBuilder::search()
-                        .from("posts")
-                        .order_by([DbKeyOrder::Desc("likes".into())])
-                        .offset(offset)
-                        .limit(limit)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .query(),
-                )
+                .elements::<PostLiked>()
+                .search()
+                .from("posts")
+                .order_by([DbKeyOrder::Desc("likes".into())])
+                .offset(offset)
+                .limit(limit)
+                .where_()
+                .distance(CountComparison::Equal(2))
                 .query(),
         )?
         .try_into()?)
@@ -332,13 +316,10 @@ fn mark_top_level_comments(db: &mut Db) -> Result<(), QueryError> {
     db.exec_mut(
         QueryBuilder::insert()
             .values_uniform([("level", 1).into()])
-            .ids(
-                QueryBuilder::search()
-                    .from("posts")
-                    .where_()
-                    .distance(CountComparison::Equal(4))
-                    .query(),
-            )
+            .search()
+            .from("posts")
+            .where_()
+            .distance(CountComparison::Equal(4))
             .query(),
     )?;
     Ok(())

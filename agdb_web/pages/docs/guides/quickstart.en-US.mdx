@@ -111,16 +111,13 @@ db.exec_mut(
 let users: Vec<User> = db
     .exec(
         QueryBuilder::select()
-            .values(User::db_keys()) // Select only relevant properties for the User struct.
-            .ids(
-                QueryBuilder::search()
-                    .from("users") // Start the search from the "users" node.
-                    .where_()
-                    .key("age") // Examine "age" property.
-                    .value(LessThan(40.into())) // Include it in the search result if the value
-                                                // is less than 40.
-                    .query(),
-            )
+            .elements::<User>() // Select only relevant properties for the User struct.
+            .search()
+            .from("users") // Start the search from the "users" node.
+            .where_()
+            .key("age") // Examine "age" property.
+            .value(LessThan(40.into())) // Include it in the search result if the value
+                                        // is less than 40.
             .query(),
     )?
     .try_into()?; // Convert the result into a list of User objects.

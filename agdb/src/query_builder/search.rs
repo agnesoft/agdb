@@ -91,7 +91,7 @@ impl<T: SearchQueryBuilder> Search<T> {
     /// through the entire database which may be prohibitively expensive. Consider
     /// using `limit()`.
     ///
-    /// Note2: While the full range of conitions can be used some conditions do not
+    /// Note: While the full range of conitions can be used some conditions do not
     /// make logical sense (e.g. distance, beyond, edge_count etc.).
     ///
     /// Options:
@@ -109,6 +109,16 @@ impl<T: SearchQueryBuilder> Search<T> {
         SearchTo(self.0)
     }
 
+    /// Searches an index specified by `key`. This is to provide fast lookup of
+    /// specific elements with particular key-value pair.
+    ///
+    /// Options:
+    ///
+    /// ```
+    /// use agdb::QueryBuilder;
+    ///
+    /// QueryBuilder::search().index("k").value(1);
+    /// ```
     pub fn index<K: Into<DbValue>>(self, key: K) -> SearchIndex<T> {
         SearchIndex {
             index: key.into(),

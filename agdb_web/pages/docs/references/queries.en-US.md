@@ -521,8 +521,10 @@ QueryBuilder::insert().element(&T { ... }).query(); //Where T: DbUserValue (i.e.
 QueryBuilder::insert().elements(&vec![T {...}, T {...}]).query(); //Where T: DbUserValue (i.e. #derive(UserValue))
 QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids([1, 2]).query();
 QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).ids(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::insert().values([vec![("k", "v").into(), (1, 10).into()], vec![("k", 2).into()]]).search().from("a").query(); //Equivalent to the previous query
 QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).ids([1, 2]).query();
 QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).ids(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).search().from("a").query(); //Equivalent to the previous query
 ```
 
 </td></tr></table>
@@ -600,6 +602,7 @@ QueryBuilder::remove().ids("a").query();
 QueryBuilder::remove().ids([1, 2]).query();
 QueryBuilder::remove().ids(["a", "b"]).query();
 QueryBuilder::remove().ids(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::remove().search().from("a").query(); //Equivalent to the previous query
 ```
 
 </td></tr></table>
@@ -659,6 +662,7 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::remove().values(["k1".into(), "k2".into()]).ids([1, 2]).query();
 QueryBuilder::remove().values(["k1".into(), "k2".into()]).ids(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::remove().values(["k1".into(), "k2".into()]).search().from("a").query(); //Equivalent to the previous query
 ```
 
 </td></tr></table>
@@ -705,6 +709,7 @@ pub struct QueryResult {
 ```rs
 QueryBuilder::select().aliases().ids([1, 2]).query();
 QueryBuilder::select().aliases().ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().aliases().search().from(1).query(); //Equivalent to the previous query
 ```
 
 </td></tr></table>
@@ -771,6 +776,8 @@ pub struct QueryResult {
 QueryBuilder::select().edge_count().ids([1, 2]).query();
 QueryBuilder::select().edge_count_from().ids([1, 2]).query();
 QueryBuilder::select().edge_count_to().ids([1, 2]).query();
+QueryBuilder::select().edge_count().ids(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::select().edge_count().search().from("a").query(); // Equivalent to the previous query
 ```
 
 </td></tr></table>
@@ -836,6 +843,7 @@ pub struct QueryResult {
 QueryBuilder::select().keys().ids("a").query();
 QueryBuilder::select().keys().ids([1, 2]).query();
 QueryBuilder::select().keys().ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().keys().search().from(1).query(); // Equivalent to the previous query
 ```
 
 </td></tr></table>
@@ -868,6 +876,7 @@ pub struct QueryResult {
 QueryBuilder::select().key_count().ids("a").query();
 QueryBuilder::select().key_count().ids([1, 2]).query();
 QueryBuilder::select().key_count().ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().key_count().search().from(1).query(); // Equivalent to the previous query
 ```
 
 </td></tr></table>
@@ -927,13 +936,18 @@ pub struct QueryResult {
 </td></tr><tr><td colspan=2><b>Builder</b></td></tr><tr><td colspan=2>
 
 ```rs
+
 QueryBuilder::select().ids("a").query();
 QueryBuilder::select().ids([1, 2]).query();
 QueryBuilder::select().ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().search().from(1).query(); // Equivalent to the previous query
 QueryBuilder::select().values(["k".into(), "k2".into()]).ids("a").query();
 QueryBuilder::select().values(["k".into(), "k2".into()]).ids([1, 2]).query();
 QueryBuilder::select().values(["k".into(), "k2".into()]).ids(QueryBuilder::search().from(1).query()).query();
+QueryBuilder::select().values(["k".into(), "k2".into()]).search().from(1).query(); // Equivalent to the previous query
 QueryBuilder::select().elements::<T>().ids(1).query();
+QueryBuilder::select().elements::<T>().ids(QueryBuilder::search().from("a").query()).query();
+QueryBuilder::select().elements::<T>().search().from("a").query(); // Equivalent to the previous query
 ```
 
 </td></tr></table>

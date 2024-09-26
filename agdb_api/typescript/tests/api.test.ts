@@ -1,7 +1,6 @@
 import { convertTo, QueryBuilder } from "../src/index";
 import { describe, expect, it } from "vitest";
 import { AgdbApi } from "../src/index";
-import { AxiosError } from "openapi-client-axios";
 
 class MyClass {
     db_id: number | undefined | string;

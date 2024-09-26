@@ -1,6 +1,7 @@
 import { convertTo, QueryBuilder } from "../src/index";
 import { describe, expect, it } from "vitest";
 import { AgdbApi } from "../src/index";
+import { AxiosError } from "openapi-client-axios";
 
 class MyClass {
     db_id: number | undefined | string;
@@ -13,6 +14,28 @@ describe("openapi test", () => {
         let client = await AgdbApi.client("http://localhost:3000");
         let res = await client.status();
         expect(res.status).toEqual(200);
+    });
+
+    it("logout", async () => {
+        let client = await AgdbApi.client("http://localhost:3000");
+        await client.login("admin", "admin");
+        await client.logout();
+        expect(client.get_token()).toEqual("");
+
+        await expect(client.db_list()).rejects.toThrowError(
+            "Request failed with status code 401",
+        );
+    });
+
+    it("manual token", async () => {
+        let client = await AgdbApi.client("http://localhost:3000");
+        let token = await client.user_login(null, {
+            username: "admin",
+            password: "admin",
+        });
+        client.set_token(token.data);
+        expect(client.get_token()).toEqual(token.data);
+        expect((await client.db_list()).status).toBe(200);
     });
 
     it("insert nodes with edges", async () => {

@@ -1823,6 +1823,30 @@
     }
   ],
   [
+    "QueryBuilder::select().edge_count().search().from(1).query()",
+    {
+      "SelectEdgeCount": {
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Id": 1
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [],
+            "conditions": []
+          }
+        },
+        "from": true,
+        "to": true
+      }
+    }
+  ],
+  [
     "QueryBuilder::select().ids(\"a\").query()",
     {
       "SelectValues": {

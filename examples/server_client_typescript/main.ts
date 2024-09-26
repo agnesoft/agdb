@@ -45,14 +45,11 @@ async function main() {
   queries = [
     QueryBuilder.insert().edges().from("users").to(results[1]).query(),
     QueryBuilder.select()
-      .ids(
-        QueryBuilder.search()
-          .from("users")
-          .where()
-          .key("username")
-          .value(Comparison.Equal("user1"))
-          .query(),
-      )
+      .search()
+      .from("users")
+      .where()
+      .key("username")
+      .value(Comparison.Equal("user1"))
       .query(),
   ];
 

@@ -39,35 +39,34 @@ class SearchQueryBuilder
         $this->query = $query;
 
         if ($query) {
+            // @phpstan-ignore-next-line if.alwaysTrue
             if ($query->getInsertValues()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query
                     ->getInsertValues()
                     ->setIds(new QueryIds(["search" => $search]));
+                // @phpstan-ignore-next-line if.alwaysTrue
             } elseif ($query->getRemove()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query->getRemove()->setSearch($search);
+                // @phpstan-ignore-next-line if.alwaysTrue
             } elseif ($query->getRemoveValues()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query
                     ->getRemoveValues()
                     ->setIds(new QueryIds(["search" => $search]));
+                // @phpstan-ignore-next-line if.alwaysTrue
             } elseif ($query->getSelectAliases()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query->getSelectAliases()->setSearch($search);
+                // @phpstan-ignore-next-line if.alwaysTrue
             } elseif ($query->getSelectEdgeCount()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query
                     ->getSelectEdgeCount()
                     ->setIds(new QueryIds(["search" => $search]));
+                // @phpstan-ignore-next-line if.alwaysTrue
             } elseif ($query->getSelectKeys()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query->getSelectKeys()->setSearch($search);
+                // @phpstan-ignore-next-line if.alwaysTrue
             } elseif ($query->getSelectKeyCount()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query->getSelectKeyCount()->setSearch($search);
             } elseif ($query->getSelectValues()) {
-                // @phpstan-ignore if.alwaysTrue
                 $query
                     ->getSelectValues()
                     ->setIds(new QueryIds(["search" => $search]));

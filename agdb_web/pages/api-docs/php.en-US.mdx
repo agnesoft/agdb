@@ -120,39 +120,39 @@ To execute queries against the database we call `dbExec` with the user and their
 
 ```php
 // Prepare the queries to be executed on the remote database.
-let queries = [
-  // :0: Inserts a root node aliased "users"
-  QueryBuilder.insert().nodes().aliases(["users"]).query(),
+$queries = [
+    // :0: Inserts a root node aliased "users".
+    QueryBuilder::insert()
+        ->nodes()
+        ->aliases(["users"])
+        ->query(),
 
-  // :1: Inserts more nodes with some data
-  QueryBuilder.insert()
-    .nodes()
-    .values([
-      [
-        "username" => "user1",
-        "password" => "password123",
-      ],
-      [
-        "username" => "user2",
-        "password" => "password456",
-      ],
-    ])
-    .query(),
+    // :1: Inserts more nodes with some data.
+    QueryBuilder::insert()
+        ->nodes()
+        ->values([
+            [
+                "username" => "user1",
+                "password" => "password123",
+            ],
+            [
+                "username" => "user2",
+                "password" => "password456",
+            ],
+        ])
+        ->query(),
 
-  // :2: Connect the root to the inserted nodes with edges referencing both from previous queries
-  QueryBuilder.insert().edges().from(":0").to(":1").query(),
+    // :2: Connect the root to the inserted nodes with edges referencing both from previous queries.
+    QueryBuilder::insert()->edges()->from(":0")->to(":1")->query(),
 
-  // :3: Find a node starting at the "users" node (could also be ":0" in this instance) with specific username
-  QueryBuilder.select()
-    .ids(
-      QueryBuilder.search()
-        .from("users")
-        .where()
-        .key("username")
-        .value(Comparison.Equal("user1"))
-        .query()
-    )
-    .query(),
+    // :3: Find a node starting at the "users" node (could also be ":0" in this instance) with specific username.
+    QueryBuilder::select()
+        ->search()
+        ->from("users")
+        ->where()
+        ->key("username")
+        ->value(ComparisonBuilder::Equal("user1"))
+        ->query()
 ];
 
 // Execute queries.

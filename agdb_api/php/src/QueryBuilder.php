@@ -39,21 +39,21 @@ class SearchQueryBuilder
         $this->query = $query;
 
         if ($query) {
-            if ($query->getInsertValues()) {
+            if ($query->getInsertValues()) { // @phpstan-ignore if.alwaysTrue
                 $query->getInsertValues()->setIds(new QueryIds(["search" => $search]));
-            } else if ($query->getRemove()) {
+            } else if ($query->getRemove()) { // @phpstan-ignore if.alwaysTrue
                 $query->getRemove()->setSearch($search);
-            } else if ($query->getRemoveValues()) {
+            } else if ($query->getRemoveValues()) { // @phpstan-ignore if.alwaysTrue
                 $query->getRemoveValues()->setIds(new QueryIds(["search" => $search]));
-            } else if ($query->getSelectAliases()) {
+            } else if ($query->getSelectAliases()) { // @phpstan-ignore if.alwaysTrue
                 $query->getSelectAliases()->setSearch($search);
-            } else if ($query->getSelectEdgeCount()) {
+            } else if ($query->getSelectEdgeCount()) { // @phpstan-ignore if.alwaysTrue
                 $query->getSelectEdgeCount()->setIds(new QueryIds(["search" => $search]));
-            } else if ($query->getSelectKeys()) {
+            } else if ($query->getSelectKeys()) { // @phpstan-ignore if.alwaysTrue
                 $query->getSelectKeys()->setSearch($search);
-            } else if ($query->getSelectKeyCount()) {
+            } else if ($query->getSelectKeyCount()) { // @phpstan-ignore if.alwaysTrue
                 $query->getSelectKeyCount()->setSearch($search);
-            } else if ($query->getSelectValues()) {
+            } else if ($query->getSelectValues()) { // @phpstan-ignore if.alwaysTrue
                 $query->getSelectValues()->setIds(new QueryIds(["search" => $search]));
             }
         }

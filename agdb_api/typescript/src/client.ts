@@ -10,7 +10,7 @@ type AgdbApi = {
 };
 
 async function login(username: string, password: string): Promise<string> {
-    let token = await this.user_login(null, {
+    const token = await this.user_login(null, {
         username: username,
         password: password,
     });
@@ -42,10 +42,10 @@ function set_token(token: string) {
 export type AgdbApiClient = Client & AgdbApi;
 
 export async function client(address: String): Promise<AgdbApiClient> {
-    let api: OpenAPIClientAxios = new OpenAPIClientAxios({
+    const api: OpenAPIClientAxios = new OpenAPIClientAxios({
         definition: `${address}/api/v1/openapi.json`,
     });
-    let client = (await api.init<Client>()) as AgdbApiClient;
+    const client = await api.init<AgdbApiClient>();
     client.token = "";
     client.login = login;
     client.logout = logout;

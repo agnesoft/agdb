@@ -39,22 +39,38 @@ class SearchQueryBuilder
         $this->query = $query;
 
         if ($query) {
-            if ($query->getInsertValues()) { // @phpstan-ignore if.alwaysTrue
-                $query->getInsertValues()->setIds(new QueryIds(["search" => $search]));
-            } else if ($query->getRemove()) { // @phpstan-ignore if.alwaysTrue
+            if ($query->getInsertValues()) {
+                // @phpstan-ignore if.alwaysTrue
+                $query
+                    ->getInsertValues()
+                    ->setIds(new QueryIds(["search" => $search]));
+            } elseif ($query->getRemove()) {
+                // @phpstan-ignore if.alwaysTrue
                 $query->getRemove()->setSearch($search);
-            } else if ($query->getRemoveValues()) { // @phpstan-ignore if.alwaysTrue
-                $query->getRemoveValues()->setIds(new QueryIds(["search" => $search]));
-            } else if ($query->getSelectAliases()) { // @phpstan-ignore if.alwaysTrue
+            } elseif ($query->getRemoveValues()) {
+                // @phpstan-ignore if.alwaysTrue
+                $query
+                    ->getRemoveValues()
+                    ->setIds(new QueryIds(["search" => $search]));
+            } elseif ($query->getSelectAliases()) {
+                // @phpstan-ignore if.alwaysTrue
                 $query->getSelectAliases()->setSearch($search);
-            } else if ($query->getSelectEdgeCount()) { // @phpstan-ignore if.alwaysTrue
-                $query->getSelectEdgeCount()->setIds(new QueryIds(["search" => $search]));
-            } else if ($query->getSelectKeys()) { // @phpstan-ignore if.alwaysTrue
+            } elseif ($query->getSelectEdgeCount()) {
+                // @phpstan-ignore if.alwaysTrue
+                $query
+                    ->getSelectEdgeCount()
+                    ->setIds(new QueryIds(["search" => $search]));
+            } elseif ($query->getSelectKeys()) {
+                // @phpstan-ignore if.alwaysTrue
                 $query->getSelectKeys()->setSearch($search);
-            } else if ($query->getSelectKeyCount()) { // @phpstan-ignore if.alwaysTrue
+            } elseif ($query->getSelectKeyCount()) {
+                // @phpstan-ignore if.alwaysTrue
                 $query->getSelectKeyCount()->setSearch($search);
-            } else if ($query->getSelectValues()) { // @phpstan-ignore if.alwaysTrue
-                $query->getSelectValues()->setIds(new QueryIds(["search" => $search]));
+            } elseif ($query->getSelectValues()) {
+                // @phpstan-ignore if.alwaysTrue
+                $query
+                    ->getSelectValues()
+                    ->setIds(new QueryIds(["search" => $search]));
             }
         }
 
@@ -683,7 +699,7 @@ class InsertValuesBuilder
                 "insert_values" => new InsertValuesQuery([
                     "values" => $this->data,
                     "ids" => new QueryIds(),
-                ])
+                ]),
             ])
         );
     }
@@ -859,9 +875,7 @@ class RemoveBuilder
 
     public function search(): SearchBuilder
     {
-        return new SearchBuilder(
-            new QueryType(["remove" => new QueryIds()])
-        );
+        return new SearchBuilder(new QueryType(["remove" => new QueryIds()]));
     }
 
     public function values(array $data): RemoveValuesBuilder
@@ -905,7 +919,9 @@ class SearchIndexValueBuilder
 
     public function query(): QueryType
     {
-        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
+        return $this->data->query != null
+            ? $this->data->query
+            : new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -965,7 +981,9 @@ class SearchOrderByBuilder
 
     public function query(): QueryType
     {
-        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
+        return $this->data->query != null
+            ? $this->data->query
+            : new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -1023,8 +1041,11 @@ class SearchWhereLogicBuilder
     {
         while ($this->data->__collapse_conditions()) {
         }
-        $this->data->__data->search->setConditions($this->data->__conditions[0]);
-        return $this->data->__data->query ?: new QueryType(["search" => $this->data->__data->search]);
+        $this->data->__data->search->setConditions(
+            $this->data->__conditions[0]
+        );
+        return $this->data->__data->query ?:
+            new QueryType(["search" => $this->data->__data->search]);
     }
 }
 
@@ -1214,7 +1235,9 @@ class SearchFromBuilder
 
     public function query(): QueryType
     {
-        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
+        return $this->data->query != null
+            ? $this->data->query
+            : new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -1234,7 +1257,9 @@ class SearchLimitBuilder
 
     public function query(): QueryType
     {
-        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
+        return $this->data->query != null
+            ? $this->data->query
+            : new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -1260,7 +1285,9 @@ class SearchOffsetBuilder
 
     public function query(): QueryType
     {
-        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
+        return $this->data->query != null
+            ? $this->data->query
+            : new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -1298,7 +1325,9 @@ class SearchToBuilder
 
     public function query(): QueryType
     {
-        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
+        return $this->data->query != null
+            ? $this->data->query
+            : new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -1347,8 +1376,6 @@ class SearchBuilder
         $this->data->search->setDestination(to_query_id($id));
         return new SearchToBuilder($this->data);
     }
-
-
 }
 
 class SelectAliasesIdsBuilder
@@ -1381,7 +1408,9 @@ class SelectAliasesBuilder
 
     public function search(): SearchBuilder
     {
-        return new SearchBuilder(new QueryType(["select_aliases" => new QueryIds()]));
+        return new SearchBuilder(
+            new QueryType(["select_aliases" => new QueryIds()])
+        );
     }
 }
 
@@ -1431,7 +1460,7 @@ class SelectEdgeCountBuilder
                     "from" => $this->from,
                     "to" => $this->to,
                     "ids" => new QueryIds(),
-                ])
+                ]),
             ])
         );
     }
@@ -1509,7 +1538,9 @@ class SelectKeysBuilder
 
     public function search(): SearchBuilder
     {
-        return new SearchBuilder(new QueryType(["select_keys" => new QueryIds()]));
+        return new SearchBuilder(
+            new QueryType(["select_keys" => new QueryIds()])
+        );
     }
 }
 
@@ -1538,7 +1569,9 @@ class SelectKeyCountBuilder
 
     public function search(): SearchBuilder
     {
-        return new SearchBuilder(new QueryType(["select_key_count" => new QueryIds()]));
+        return new SearchBuilder(
+            new QueryType(["select_key_count" => new QueryIds()])
+        );
     }
 }
 
@@ -1602,7 +1635,14 @@ class SelectBuilder
 
     public function search(): SearchBuilder
     {
-        return new SearchBuilder(new QueryType(["select_values" => new SelectValuesQuery(["keys" => [], "ids" => new QueryIds()])]));
+        return new SearchBuilder(
+            new QueryType([
+                "select_values" => new SelectValuesQuery([
+                    "keys" => [],
+                    "ids" => new QueryIds(),
+                ]),
+            ])
+        );
     }
 
     public function values(array $data): SelectValuesBuilder

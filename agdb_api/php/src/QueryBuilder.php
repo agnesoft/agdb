@@ -28,6 +28,53 @@ use Agnesoft\AgdbApi\Model\SearchQueryAlgorithm;
 use Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue;
 use Agnesoft\AgdbApi\Model\DbKeyOrder;
 
+class SearchQueryBuilder
+{
+    public QueryType|null $query;
+    public SearchQuery $search;
+
+    public function __construct(QueryType|null $query)
+    {
+        $search = self::new_search();
+        $this->query = $query;
+
+        if ($query) {
+            if ($query->getInsertValues()) {
+                $query->getInsertValues()->setIds(new QueryIds(["search" => $search]));
+            } else if ($query->getRemove()) {
+                $query->getRemove()->setSearch($search);
+            } else if ($query->getRemoveValues()) {
+                $query->getRemoveValues()->setIds(new QueryIds(["search" => $search]));
+            } else if ($query->getSelectAliases()) {
+                $query->getSelectAliases()->setSearch($search);
+            } else if ($query->getSelectEdgeCount()) {
+                $query->getSelectEdgeCount()->setIds(new QueryIds(["search" => $search]));
+            } else if ($query->getSelectKeys()) {
+                $query->getSelectKeys()->setSearch($search);
+            } else if ($query->getSelectKeyCount()) {
+                $query->getSelectKeyCount()->setSearch($search);
+            } else if ($query->getSelectValues()) {
+                $query->getSelectValues()->setIds(new QueryIds(["search" => $search]));
+            }
+        }
+
+        $this->search = $search;
+    }
+
+    private static function new_search(): SearchQuery
+    {
+        $query = new SearchQuery();
+        $query->setAlgorithm(SearchQueryAlgorithm::BREADTH_FIRST); // @phpstan-ignore argument.type
+        $query->setOrigin(new QueryId(["id" => 0]));
+        $query->setDestination(new QueryId(["id" => 0]));
+        $query->setOffset(0);
+        $query->setLimit(0);
+        $query->setOrderBy([]);
+        $query->setConditions([]);
+        return $query;
+    }
+}
+
 class CountComparisonBuilder
 {
     public static function Equal(int $value): CountComparison
@@ -628,6 +675,18 @@ class InsertValuesBuilder
             ])
         );
     }
+
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(
+            new QueryType([
+                "insert_values" => new InsertValuesQuery([
+                    "values" => $this->data,
+                    "ids" => new QueryIds(),
+                ])
+            ])
+        );
+    }
 }
 
 class InsertBuilder
@@ -771,6 +830,13 @@ class RemoveValuesBuilder
     {
         return new QueryType(["remove_values" => $this->data]);
     }
+
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(
+            new QueryType(["remove_values" => $this->data])
+        );
+    }
 }
 
 class RemoveBuilder
@@ -791,6 +857,13 @@ class RemoveBuilder
         return new RemoveIndexBuilder(to_db_value($value));
     }
 
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(
+            new QueryType(["remove" => new QueryIds()])
+        );
+    }
+
     public function values(array $data): RemoveValuesBuilder
     {
         return new RemoveValuesBuilder(
@@ -801,47 +874,47 @@ class RemoveBuilder
 
 class SearchAlgorithmBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->data = $data;
     }
 
     public function from(string|int|QueryId $id): SearchFromBuilder
     {
-        $this->data->setOrigin(to_query_id($id));
+        $this->data->search->setOrigin(to_query_id($id));
         return new SearchFromBuilder($this->data);
     }
 
     public function to(string|int|QueryId $id): SearchToBuilder
     {
-        $this->data->setDestination(to_query_id($id));
+        $this->data->search->setDestination(to_query_id($id));
         return new SearchToBuilder($this->data);
     }
 }
 
 class SearchIndexValueBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->data = $data;
     }
 
     public function query(): QueryType
     {
-        return new QueryType(["search" => $this->data]);
+        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
     }
 }
 
 class SearchIndexBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
     private DbValue $key;
 
-    public function __construct(SearchQuery $data, DbValue $key)
+    public function __construct(SearchQueryBuilder $data, DbValue $key)
     {
         $this->data = $data;
         $this->key = $key;
@@ -859,29 +932,29 @@ class SearchIndexBuilder
         $kv->setValue(new Comparison(["equal" => to_db_value($v)]));
         $condition_data->setKeyValue($kv);
         $condition->setData($condition_data);
-        $this->data->setConditions([$condition]);
+        $this->data->search->setConditions([$condition]);
         return new SearchIndexValueBuilder($this->data);
     }
 }
 
 class SearchOrderByBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->data = $data;
     }
 
     public function limit(int $limit): SearchLimitBuilder
     {
-        $this->data->setLimit($limit);
+        $this->data->search->setLimit($limit);
         return new SearchLimitBuilder($this->data);
     }
 
     public function offset(int $offset): SearchOffsetBuilder
     {
-        $this->data->setOffset($offset);
+        $this->data->search->setOffset($offset);
         return new SearchOffsetBuilder($this->data);
     }
 
@@ -892,7 +965,7 @@ class SearchOrderByBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(["search" => $this->data]);
+        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
     }
 }
 
@@ -950,19 +1023,19 @@ class SearchWhereLogicBuilder
     {
         while ($this->data->__collapse_conditions()) {
         }
-        $this->data->__data->setConditions($this->data->__conditions[0]);
-        return new QueryType(["search" => $this->data->__data]);
+        $this->data->__data->search->setConditions($this->data->__conditions[0]);
+        return $this->data->__data->query ?: new QueryType(["search" => $this->data->__data->search]);
     }
 }
 
 class SearchWhereBuilder
 {
-    public SearchQuery $__data;
+    public SearchQueryBuilder $__data;
     public string $__modifier = QueryConditionModifier::NONE;
     public string $__logic = QueryConditionLogic::_AND;
     public array $__conditions = [[]];
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->__data = $data;
     }
@@ -1103,34 +1176,34 @@ class SearchWhereBuilder
 
 class SearchFromBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->data = $data;
     }
 
     public function limit(int $limit): SearchLimitBuilder
     {
-        $this->data->setLimit($limit);
+        $this->data->search->setLimit($limit);
         return new SearchLimitBuilder($this->data);
     }
 
     public function offset(int $offset): SearchOffsetBuilder
     {
-        $this->data->setOffset($offset);
+        $this->data->search->setOffset($offset);
         return new SearchOffsetBuilder($this->data);
     }
 
     public function order_by(DbKeyOrder|array $data): SearchOrderByBuilder
     {
-        $this->data->setOrderBy(is_array($data) ? $data : [$data]);
+        $this->data->search->setOrderBy(is_array($data) ? $data : [$data]);
         return new SearchOrderByBuilder($this->data);
     }
 
     public function to(string|int|QueryId $id): SearchToBuilder
     {
-        $this->data->setDestination(to_query_id($id));
+        $this->data->search->setDestination(to_query_id($id));
         return new SearchToBuilder($this->data);
     }
 
@@ -1141,15 +1214,15 @@ class SearchFromBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(["search" => $this->data]);
+        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
     }
 }
 
 class SearchLimitBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->data = $data;
     }
@@ -1161,22 +1234,22 @@ class SearchLimitBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(["search" => $this->data]);
+        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
     }
 }
 
 class SearchOffsetBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->data = $data;
     }
 
     public function limit(int $limit): SearchLimitBuilder
     {
-        $this->data->setLimit($limit);
+        $this->data->search->setLimit($limit);
         return new SearchLimitBuilder($this->data);
     }
 
@@ -1187,34 +1260,34 @@ class SearchOffsetBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(["search" => $this->data]);
+        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
     }
 }
 
 class SearchToBuilder
 {
-    private SearchQuery $data;
+    private SearchQueryBuilder $data;
 
-    public function __construct(SearchQuery $data)
+    public function __construct(SearchQueryBuilder $data)
     {
         $this->data = $data;
     }
 
     public function limit(int $limit): SearchLimitBuilder
     {
-        $this->data->setLimit($limit);
+        $this->data->search->setLimit($limit);
         return new SearchLimitBuilder($this->data);
     }
 
     public function offset(int $offset): SearchOffsetBuilder
     {
-        $this->data->setOffset($offset);
+        $this->data->search->setOffset($offset);
         return new SearchOffsetBuilder($this->data);
     }
 
     public function order_by(DbKeyOrder|array $data): SearchOrderByBuilder
     {
-        $this->data->setOrderBy(is_array($data) ? $data : [$data]);
+        $this->data->search->setOrderBy(is_array($data) ? $data : [$data]);
         return new SearchOrderByBuilder($this->data);
     }
 
@@ -1225,66 +1298,57 @@ class SearchToBuilder
 
     public function query(): QueryType
     {
-        return new QueryType(["search" => $this->data]);
+        return $this->data->query != null ? $this->data->query : new QueryType(["search" => $this->data->search]);
     }
 }
 
 class SearchBuilder
 {
+    private SearchQueryBuilder $data;
+
+    public function __construct(QueryType|null $query)
+    {
+        $this->data = new SearchQueryBuilder($query);
+    }
+
     public function breadth_first(): SearchAlgorithmBuilder
     {
-        $search = self::new_search();
-        return new SearchAlgorithmBuilder($search);
+        $this->data->search->setAlgorithm(SearchQueryAlgorithm::BREADTH_FIRST); // @phpstan-ignore argument.type
+        return new SearchAlgorithmBuilder($this->data);
     }
 
     public function depth_first(): SearchAlgorithmBuilder
     {
-        $search = self::new_search();
-        $search->setAlgorithm(SearchQueryAlgorithm::DEPTH_FIRST); // @phpstan-ignore argument.type
-        return new SearchAlgorithmBuilder($search);
+        $this->data->search->setAlgorithm(SearchQueryAlgorithm::DEPTH_FIRST); // @phpstan-ignore argument.type
+        return new SearchAlgorithmBuilder($this->data);
     }
 
     public function elements(): SearchToBuilder
     {
-        $search = self::new_search();
-        $search->setAlgorithm(SearchQueryAlgorithm::ELEMENTS); // @phpstan-ignore argument.type
-        return new SearchToBuilder($search);
+        $this->data->search->setAlgorithm(SearchQueryAlgorithm::ELEMENTS); // @phpstan-ignore argument.type
+        return new SearchToBuilder($this->data);
     }
 
     public function from(string|int|QueryId $id): SearchFromBuilder
     {
-        $search = self::new_search();
-        $search->setOrigin(to_query_id($id));
-        return new SearchFromBuilder($search);
+        $this->data->search->setOrigin(to_query_id($id));
+        return new SearchFromBuilder($this->data);
     }
 
     public function index(
         int|float|string|array|DbValue $key
     ): SearchIndexBuilder {
-        $search = self::new_search();
-        $search->setAlgorithm(SearchQueryAlgorithm::INDEX); // @phpstan-ignore argument.type
-        return new SearchIndexBuilder($search, to_db_value($key));
+        $this->data->search->setAlgorithm(SearchQueryAlgorithm::INDEX); // @phpstan-ignore argument.type
+        return new SearchIndexBuilder($this->data, to_db_value($key));
     }
 
     public function to(string|int|QueryId $id): SearchToBuilder
     {
-        $search = self::new_search();
-        $search->setDestination(to_query_id($id));
-        return new SearchToBuilder($search);
+        $this->data->search->setDestination(to_query_id($id));
+        return new SearchToBuilder($this->data);
     }
 
-    private static function new_search(): SearchQuery
-    {
-        $query = new SearchQuery();
-        $query->setAlgorithm(SearchQueryAlgorithm::BREADTH_FIRST); // @phpstan-ignore argument.type
-        $query->setOrigin(new QueryId(["id" => 0]));
-        $query->setDestination(new QueryId(["id" => 0]));
-        $query->setOffset(0);
-        $query->setLimit(0);
-        $query->setOrderBy([]);
-        $query->setConditions([]);
-        return $query;
-    }
+
 }
 
 class SelectAliasesIdsBuilder
@@ -1313,6 +1377,11 @@ class SelectAliasesBuilder
     public function query(): QueryType
     {
         return new QueryType(["select_all_aliases" => new stdClass()]);
+    }
+
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(new QueryType(["select_aliases" => new QueryIds()]));
     }
 }
 
@@ -1353,6 +1422,19 @@ class SelectEdgeCountBuilder
             ])
         );
     }
+
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(
+            new QueryType([
+                "select_edge_count" => new SelectEdgeCountQuery([
+                    "from" => $this->from,
+                    "to" => $this->to,
+                    "ids" => new QueryIds(),
+                ])
+            ])
+        );
+    }
 }
 
 class SelectValuesIdsBuilder
@@ -1384,6 +1466,13 @@ class SelectValuesBuilder
     ): SelectValuesIdsBuilder {
         $this->data->setIds(to_query_ids($ids));
         return new SelectValuesIdsBuilder($this->data);
+    }
+
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(
+            new QueryType(["select_values" => $this->data])
+        );
     }
 }
 
@@ -1417,6 +1506,11 @@ class SelectKeysBuilder
     ): SelectKeysIdsBuilder {
         return new SelectKeysIdsBuilder(to_query_ids($ids));
     }
+
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(new QueryType(["select_keys" => new QueryIds()]));
+    }
 }
 
 class SelectKeyCountIdsBuilder
@@ -1440,6 +1534,11 @@ class SelectKeyCountBuilder
         string|int|array|QueryId|SearchQuery|QueryType|QueryIds $ids
     ): SelectKeyCountIdsBuilder {
         return new SelectKeyCountIdsBuilder(to_query_ids($ids));
+    }
+
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(new QueryType(["select_key_count" => new QueryIds()]));
     }
 }
 
@@ -1501,6 +1600,11 @@ class SelectBuilder
         return new SelectNodeCountBuilder();
     }
 
+    public function search(): SearchBuilder
+    {
+        return new SearchBuilder(new QueryType(["select_values" => new SelectValuesQuery(["keys" => [], "ids" => new QueryIds()])]));
+    }
+
     public function values(array $data): SelectValuesBuilder
     {
         return new SelectValuesBuilder(
@@ -1523,7 +1627,7 @@ class QueryBuilder
 
     public static function search(): SearchBuilder
     {
-        return new SearchBuilder();
+        return new SearchBuilder(null);
     }
 
     public static function select(): SelectBuilder

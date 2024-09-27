@@ -32,6 +32,18 @@ impl<const N: usize> From<[DbKeyOrder; N]> for DbKeyOrders {
     }
 }
 
+impl From<DbKeyOrder> for DbKeyOrders {
+    fn from(value: DbKeyOrder) -> Self {
+        Self(vec![value])
+    }
+}
+
+impl From<&DbKeyOrder> for DbKeyOrders {
+    fn from(value: &DbKeyOrder) -> Self {
+        Self(vec![value.clone()])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -63,5 +75,7 @@ mod tests {
         let _orders = DbKeyOrders::from(vec![DbKeyOrder::Asc(1.into())]);
         let _orders = DbKeyOrders::from([DbKeyOrder::Asc(1.into())].as_slice());
         let _orders = DbKeyOrders::from([DbKeyOrder::Asc(1.into())]);
+        let _orders = DbKeyOrders::from(DbKeyOrder::Asc(1.into()));
+        let _orders = DbKeyOrders::from(&DbKeyOrder::Asc(1.into()));
     }
 }

@@ -10,6 +10,10 @@ type BuilderQueryIds =
 type NativeValue = boolean | string | number | string[] | number[];
 type BuilderDbValue = NativeValue | Components.Schemas.DbValue;
 type BuilderDbKeyValue = BuilderDbValue[] | Components.Schemas.DbKeyValue;
+interface SearchBuilderData {
+    query: Components.Schemas.QueryType | undefined;
+    search: Components.Schemas.SearchQuery;
+}
 
 function intoQueryIds(ids: BuilderQueryIds): Components.Schemas.QueryIds {
     if (Array.isArray(ids)) {
@@ -117,12 +121,12 @@ export function convertToNativeValue(
 }
 
 export function convertTo<T>(result: Components.Schemas.QueryResult): T | T[] {
-    let res: T[] = [];
+    const res: T[] = [];
 
-    for (let e of result.elements) {
-        let obj: T = {} as T;
+    for (const e of result.elements) {
+        const obj: T = {} as T;
 
-        for (let kv of e.values) {
+        for (const kv of e.values) {
             obj["db_id"] = e.id;
             obj[convertToNativeValue(kv.key) as string] = convertToNativeValue(
                 kv.value,
@@ -543,6 +547,10 @@ class InsertValuesBuilder {
         this.data.ids = intoQueryIds(ids);
         return new InsertValuesIdsBuilder(this.data);
     }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ InsertValues: this.data });
+    }
 }
 
 class InsertIndexBuilder {
@@ -571,7 +579,7 @@ class InsertBuilder {
     }
 
     elements(elems: any[]): InsertValuesIdsBuilder {
-        let data = {
+        const data = {
             ids: { Ids: [] },
             values: { Multi: [] },
         };
@@ -581,7 +589,7 @@ class InsertBuilder {
             multiItem = [];
             for (const key of Object.keys(elem)) {
                 if (key === "db_id") {
-                    let id = elem[key];
+                    const id = elem[key];
                     if (typeof id === "number") {
                         data.ids.Ids.push({ Id: id });
                     } else if (typeof id === "string") {
@@ -594,8 +602,8 @@ class InsertBuilder {
                         throw "Invalid db_id type";
                     }
                 } else {
-                    let keyValue = convertToDbValue(key);
-                    let valueValue = convertToDbValue(elem[key]);
+                    const keyValue = convertToDbValue(key);
+                    const valueValue = convertToDbValue(elem[key]);
                     if (keyValue !== undefined && valueValue !== undefined) {
                         multiItem.push({
                             key: keyValue,
@@ -685,6 +693,10 @@ class RemoveValuesBuilder {
         this.data.ids = intoQueryIds(ids);
         return new RemoveValuesIdsBuilder(this.data);
     }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ RemoveValues: this.data });
+    }
 }
 
 class RemoveIndexBuilder {
@@ -709,11 +721,11 @@ class RemoveBuilder {
     }
 
     ids(ids: BuilderQueryIds): RemoveIdsBuilder {
-        if (Array.isArray(ids)) {
-            return new RemoveIdsBuilder(intoQueryIds(ids));
-        } else {
-            return new RemoveIdsBuilder(intoQueryIds(ids));
-        }
+        return new RemoveIdsBuilder(intoQueryIds(ids));
+    }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ Remove: { Ids: [] } });
     }
 
     index(key: BuilderDbValue): RemoveIndexBuilder {
@@ -757,6 +769,10 @@ class SelectAliasesBuilder {
         }
     }
 
+    search(): SearchBuilder {
+        return new SearchBuilder({ SelectAliases: this.data });
+    }
+
     query(): Components.Schemas.QueryType {
         return { SelectAllAliases: {} };
     }
@@ -797,6 +813,10 @@ class SelectValuesBuilder {
         this.data.ids = intoQueryIds(ids);
         return new SelectValuesIdsBuilder(this.data);
     }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ SelectValues: this.data });
+    }
 }
 
 class SelectKeysIdsBuilder {
@@ -821,6 +841,10 @@ class SelectKeysBuilder {
     ids(ids: BuilderQueryIds): SelectKeysIdsBuilder {
         this.data = intoQueryIds(ids);
         return new SelectKeysIdsBuilder(this.data);
+    }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ SelectKeys: this.data });
     }
 }
 
@@ -859,6 +883,10 @@ class SelectEdgeCountBuilder {
         this.data.ids = intoQueryIds(ids);
         return new SelectEdgeCountIdsBuilder(this.data);
     }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ SelectEdgeCount: this.data });
+    }
 }
 
 class SelectKeyCountBuilder {
@@ -871,6 +899,10 @@ class SelectKeyCountBuilder {
     ids(ids: BuilderQueryIds): SelectKeyCountIdsBuilder {
         this.data = intoQueryIds(ids);
         return new SelectKeyCountIdsBuilder(this.data);
+    }
+
+    search(): SearchBuilder {
+        return new SearchBuilder({ SelectKeyCount: this.data });
     }
 }
 
@@ -935,6 +967,12 @@ class SelectBuilder {
         return new SelectNodeCountBuilder();
     }
 
+    search(): SearchBuilder {
+        return new SearchBuilder({
+            SelectValues: { keys: [], ids: { Ids: [] } },
+        });
+    }
+
     values(values: BuilderDbValue[]): SelectValuesBuilder {
         return new SelectValuesBuilder({
             ids: { Ids: [] },
@@ -947,9 +985,9 @@ function collapse_conditions(
     conditions: Components.Schemas.QueryCondition[][],
 ): boolean {
     if (conditions.length > 1) {
-        let last = conditions.pop();
-        let current = conditions[conditions.length - 1];
-        let last_condition = current[current.length - 1];
+        const last = conditions.pop();
+        const current = conditions[conditions.length - 1];
+        const last_condition = current[current.length - 1];
         last_condition.data = { Where: last };
         return true;
     }
@@ -992,8 +1030,8 @@ class SearchWhereLogicBuilder {
     query(): Components.Schemas.QueryType {
         // prettier-ignore
         do { /**/ } while (collapse_conditions(this.data.conditions));
-        this.data.data.conditions = this.data.conditions[0];
-        return { Search: this.data.data };
+        this.data.data.search.conditions = this.data.conditions[0];
+        return this.data.data.query ?? { Search: this.data.data.search };
     }
 }
 
@@ -1016,12 +1054,12 @@ class SearchWhereKeyBuilder {
 }
 
 class SearchWhereBuilder {
-    data: Components.Schemas.SearchQuery;
+    data: SearchBuilderData;
     modifier: Components.Schemas.QueryConditionModifier;
     logic: Components.Schemas.QueryConditionLogic;
     conditions: Components.Schemas.QueryCondition[][];
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
         this.logic = "And";
         this.modifier = "None";
@@ -1082,7 +1120,7 @@ class SearchWhereBuilder {
     }
 
     ids(ids: BuilderQueryId | BuilderQueryId[]): SearchWhereLogicBuilder {
-        let inner_ids = Array.isArray(ids)
+        const inner_ids = Array.isArray(ids)
             ? ids.map((id) => intoQueryId(id))
             : [intoQueryId(ids)];
         return push_condition(this, {
@@ -1136,9 +1174,9 @@ class SearchWhereBuilder {
 }
 
 class SearchLimitBuilder {
-    private data: Components.Schemas.SearchQuery;
+    private data: SearchBuilderData;
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
     }
 
@@ -1147,19 +1185,19 @@ class SearchLimitBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        return { Search: this.data };
+        return this.data.query ?? { Search: this.data.search };
     }
 }
 
 class SearchOffsetBuilder {
-    private data: Components.Schemas.SearchQuery;
+    private data: SearchBuilderData;
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
     }
 
     limit(limit: number): SearchLimitBuilder {
-        this.data.limit = limit;
+        this.data.search.limit = limit;
         return new SearchLimitBuilder(this.data);
     }
 
@@ -1168,24 +1206,24 @@ class SearchOffsetBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        return { Search: this.data };
+        return this.data.query ?? { Search: this.data.search };
     }
 }
 
 class SearchOrderByBuilder {
-    private data: Components.Schemas.SearchQuery;
+    private data: SearchBuilderData;
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
     }
 
     limit(limit: number): SearchLimitBuilder {
-        this.data.limit = limit;
+        this.data.search.limit = limit;
         return new SearchLimitBuilder(this.data);
     }
 
     offset(offset: number): SearchOffsetBuilder {
-        this.data.offset = offset;
+        this.data.search.offset = offset;
         return new SearchOffsetBuilder(this.data);
     }
 
@@ -1194,36 +1232,36 @@ class SearchOrderByBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        return { Search: this.data };
+        return this.data.query ?? { Search: this.data.search };
     }
 }
 
 class SearchFromBuilder {
-    private data: Components.Schemas.SearchQuery;
+    private data: SearchBuilderData;
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
     }
 
     limit(limit: number): SearchLimitBuilder {
-        this.data.limit = limit;
+        this.data.search.limit = limit;
         return new SearchLimitBuilder(this.data);
     }
 
     offset(offset: number): SearchOffsetBuilder {
-        this.data.offset = offset;
+        this.data.search.offset = offset;
         return new SearchOffsetBuilder(this.data);
     }
 
     order_by(
         keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
     ): SearchOrderByBuilder {
-        this.data.order_by = intoDbKeyOrder(keys);
+        this.data.search.order_by = intoDbKeyOrder(keys);
         return new SearchOrderByBuilder(this.data);
     }
 
     to(id: BuilderQueryId): SearchToBuilder {
-        this.data.destination = intoQueryId(id);
+        this.data.search.destination = intoQueryId(id);
         return new SearchToBuilder(this.data);
     }
 
@@ -1232,31 +1270,31 @@ class SearchFromBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        return { Search: this.data };
+        return this.data.query ?? { Search: this.data.search };
     }
 }
 
 class SearchToBuilder {
-    private data: Components.Schemas.SearchQuery;
+    private data: SearchBuilderData;
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
     }
 
     limit(limit: number): SearchLimitBuilder {
-        this.data.limit = limit;
+        this.data.search.limit = limit;
         return new SearchLimitBuilder(this.data);
     }
 
     offset(offset: number): SearchOffsetBuilder {
-        this.data.offset = offset;
+        this.data.search.offset = offset;
         return new SearchOffsetBuilder(this.data);
     }
 
     order_by(
         keys: Components.Schemas.DbKeyOrder | Components.Schemas.DbKeyOrder[],
     ): SearchOrderByBuilder {
-        this.data.order_by = intoDbKeyOrder(keys);
+        this.data.search.order_by = intoDbKeyOrder(keys);
         return new SearchOrderByBuilder(this.data);
     }
 
@@ -1265,51 +1303,52 @@ class SearchToBuilder {
     }
 
     query(): Components.Schemas.QueryType {
-        return { Search: this.data };
+        return this.data.query ?? { Search: this.data.search };
     }
 }
 
 class SearchAlgorithmBuilder {
-    private data: Components.Schemas.SearchQuery;
+    private data: SearchBuilderData;
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
     }
 
     from(id: BuilderQueryId): SearchFromBuilder {
-        this.data.origin = intoQueryId(id);
+        this.data.search.origin = intoQueryId(id);
         return new SearchFromBuilder(this.data);
     }
 
     to(id: BuilderQueryId): SearchToBuilder {
-        this.data.destination = intoQueryId(id);
+        this.data.search.destination = intoQueryId(id);
         return new SearchToBuilder(this.data);
     }
 }
 
 class SearchIndexValueBuilder {
-    private data: Components.Schemas.SearchQuery;
+    private data: SearchBuilderData;
 
-    constructor(data: Components.Schemas.SearchQuery) {
+    constructor(data: SearchBuilderData) {
         this.data = data;
     }
 
     query(): Components.Schemas.QueryType {
-        return { Search: this.data };
+        return this.data.query ?? { Search: this.data.search };
     }
 }
 
 class SearchIndexBuilder {
+    private data: SearchBuilderData;
     private key: Components.Schemas.DbValue;
 
-    constructor(key: Components.Schemas.DbValue) {
+    constructor(data: SearchBuilderData, key: Components.Schemas.DbValue) {
+        this.data = data;
         this.key = key;
     }
 
     value(value: BuilderDbValue): SearchIndexValueBuilder {
-        let data = SearchBuilder.new_data();
-        data.algorithm = "Index";
-        data.conditions.push({
+        this.data.search.algorithm = "Index";
+        this.data.search.conditions.push({
             data: {
                 KeyValue: {
                     key: this.key,
@@ -1319,13 +1358,15 @@ class SearchIndexBuilder {
             logic: "And",
             modifier: "None",
         });
-        return new SearchIndexValueBuilder(data);
+        return new SearchIndexValueBuilder(this.data);
     }
 }
 
 class SearchBuilder {
-    static new_data(): Components.Schemas.SearchQuery {
-        return {
+    private data: SearchBuilderData;
+
+    constructor(query: Components.Schemas.QueryType | undefined) {
+        const search: Components.Schemas.SearchQuery = {
             algorithm: "BreadthFirst",
             conditions: [],
             origin: { Id: 0 },
@@ -1334,40 +1375,76 @@ class SearchBuilder {
             offset: 0,
             order_by: [],
         };
+
+        if (query !== undefined) {
+            if ("InsertValues" in query) {
+                query.InsertValues.ids = {
+                    Search: search,
+                };
+            } else if ("Remove" in query) {
+                query.Remove = {
+                    Search: search,
+                };
+            } else if ("RemoveValues" in query) {
+                query.RemoveValues.ids = {
+                    Search: search,
+                };
+            } else if ("SelectAliases" in query) {
+                query.SelectAliases = {
+                    Search: search,
+                };
+            } else if ("SelectEdgeCount" in query) {
+                query.SelectEdgeCount.ids = {
+                    Search: search,
+                };
+            } else if ("SelectKeys" in query) {
+                query.SelectKeys = {
+                    Search: search,
+                };
+            } else if ("SelectKeyCount" in query) {
+                query.SelectKeyCount = {
+                    Search: search,
+                };
+            } else if ("SelectValues" in query) {
+                query.SelectValues.ids = {
+                    Search: search,
+                };
+            }
+        }
+
+        this.data = {
+            query: query,
+            search: search,
+        };
     }
 
     breadth_first(): SearchAlgorithmBuilder {
-        let data = SearchBuilder.new_data();
-        data.algorithm = "BreadthFirst";
-        return new SearchAlgorithmBuilder(data);
+        this.data.search.algorithm = "BreadthFirst";
+        return new SearchAlgorithmBuilder(this.data);
     }
 
     depth_first(): SearchAlgorithmBuilder {
-        let data = SearchBuilder.new_data();
-        data.algorithm = "DepthFirst";
-        return new SearchAlgorithmBuilder(data);
+        this.data.search.algorithm = "DepthFirst";
+        return new SearchAlgorithmBuilder(this.data);
     }
 
     elements(): SearchToBuilder {
-        let data = SearchBuilder.new_data();
-        data.algorithm = "Elements";
-        return new SearchToBuilder(data);
+        this.data.search.algorithm = "Elements";
+        return new SearchToBuilder(this.data);
     }
 
     from(id: BuilderQueryId): SearchFromBuilder {
-        let data = SearchBuilder.new_data();
-        data.origin = intoQueryId(id);
-        return new SearchFromBuilder(data);
+        this.data.search.origin = intoQueryId(id);
+        return new SearchFromBuilder(this.data);
     }
 
     index(key: BuilderDbValue): SearchIndexBuilder {
-        return new SearchIndexBuilder(convertToDbValue(key));
+        return new SearchIndexBuilder(this.data, convertToDbValue(key));
     }
 
     to(id: BuilderQueryId): SearchToBuilder {
-        let data = SearchBuilder.new_data();
-        data.destination = intoQueryId(id);
-        return new SearchToBuilder(data);
+        this.data.search.destination = intoQueryId(id);
+        return new SearchToBuilder(this.data);
     }
 }
 
@@ -1381,7 +1458,7 @@ export class QueryBuilder {
     }
 
     static search(): SearchBuilder {
-        return new SearchBuilder();
+        return new SearchBuilder(undefined);
     }
 
     static select(): SelectBuilder {

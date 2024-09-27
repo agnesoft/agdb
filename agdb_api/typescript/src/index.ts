@@ -9,4 +9,4 @@ export {
     convertToDbKeyValue,
     convertToDbValue,
 } from "./query_builder.js";
-export { AgdbApi } from "./client.js";
+export * as AgdbApi from "./client.js";

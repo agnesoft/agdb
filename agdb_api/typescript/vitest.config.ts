@@ -8,6 +8,7 @@ export default mergeConfig(
             coverage: {
                 all: true,
                 exclude: [
+                    "dist/**",
                     ".eslintrc.cjs",
                     "src/openapi.d.ts",
                     "query_test_generator.js",

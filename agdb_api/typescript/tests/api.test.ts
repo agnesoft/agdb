@@ -15,6 +15,28 @@ describe("openapi test", () => {
         expect(res.status).toEqual(200);
     });
 
+    it("logout", async () => {
+        let client = await AgdbApi.client("http://localhost:3000");
+        await client.login("admin", "admin");
+        await client.logout();
+        expect(client.get_token()).toEqual("");
+
+        await expect(client.db_list()).rejects.toThrowError(
+            "Request failed with status code 401",
+        );
+    });
+
+    it("manual token", async () => {
+        let client = await AgdbApi.client("http://localhost:3000");
+        let token = await client.user_login(null, {
+            username: "admin",
+            password: "admin",
+        });
+        client.set_token(token.data);
+        expect(client.get_token()).toEqual(token.data);
+        expect((await client.db_list()).status).toBe(200);
+    });
+
     it("insert nodes with edges", async () => {
         let admin_client = await AgdbApi.client("http://localhost:3000");
         await admin_client.login("admin", "admin");

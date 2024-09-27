@@ -121,12 +121,12 @@ export function convertToNativeValue(
 }
 
 export function convertTo<T>(result: Components.Schemas.QueryResult): T | T[] {
-    let res: T[] = [];
+    const res: T[] = [];
 
-    for (let e of result.elements) {
-        let obj: T = {} as T;
+    for (const e of result.elements) {
+        const obj: T = {} as T;
 
-        for (let kv of e.values) {
+        for (const kv of e.values) {
             obj["db_id"] = e.id;
             obj[convertToNativeValue(kv.key) as string] = convertToNativeValue(
                 kv.value,
@@ -579,7 +579,7 @@ class InsertBuilder {
     }
 
     elements(elems: any[]): InsertValuesIdsBuilder {
-        let data = {
+        const data = {
             ids: { Ids: [] },
             values: { Multi: [] },
         };
@@ -589,7 +589,7 @@ class InsertBuilder {
             multiItem = [];
             for (const key of Object.keys(elem)) {
                 if (key === "db_id") {
-                    let id = elem[key];
+                    const id = elem[key];
                     if (typeof id === "number") {
                         data.ids.Ids.push({ Id: id });
                     } else if (typeof id === "string") {
@@ -602,8 +602,8 @@ class InsertBuilder {
                         throw "Invalid db_id type";
                     }
                 } else {
-                    let keyValue = convertToDbValue(key);
-                    let valueValue = convertToDbValue(elem[key]);
+                    const keyValue = convertToDbValue(key);
+                    const valueValue = convertToDbValue(elem[key]);
                     if (keyValue !== undefined && valueValue !== undefined) {
                         multiItem.push({
                             key: keyValue,
@@ -985,9 +985,9 @@ function collapse_conditions(
     conditions: Components.Schemas.QueryCondition[][],
 ): boolean {
     if (conditions.length > 1) {
-        let last = conditions.pop();
-        let current = conditions[conditions.length - 1];
-        let last_condition = current[current.length - 1];
+        const last = conditions.pop();
+        const current = conditions[conditions.length - 1];
+        const last_condition = current[current.length - 1];
         last_condition.data = { Where: last };
         return true;
     }
@@ -1120,7 +1120,7 @@ class SearchWhereBuilder {
     }
 
     ids(ids: BuilderQueryId | BuilderQueryId[]): SearchWhereLogicBuilder {
-        let inner_ids = Array.isArray(ids)
+        const inner_ids = Array.isArray(ids)
             ? ids.map((id) => intoQueryId(id))
             : [intoQueryId(ids)];
         return push_condition(this, {

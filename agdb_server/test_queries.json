@@ -1926,6 +1926,173 @@
     }
   ],
   [
+    "QueryBuilder::select().search().to(1).query()",
+    {
+      "SelectValues": {
+        "keys": [],
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Id": 0
+            },
+            "destination": {
+              "Id": 1
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [],
+            "conditions": []
+          }
+        }
+      }
+    }
+  ],
+  [
+    "QueryBuilder::select().search().index(\"age\").value(20).query()",
+    {
+      "SelectValues": {
+        "keys": [],
+        "ids": {
+          "Search": {
+            "algorithm": "Index",
+            "origin": {
+              "Id": 0
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [],
+            "conditions": [
+              {
+                "logic": "And",
+                "modifier": "None",
+                "data": {
+                  "KeyValue": {
+                    "key": {
+                      "String": "age"
+                    },
+                    "value": {
+                      "Equal": {
+                        "I64": 20
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  [
+    "QueryBuilder::select().search().from(\"a\").limit(10).query()",
+    {
+      "SelectValues": {
+        "keys": [],
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Alias": "a"
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 10,
+            "offset": 0,
+            "order_by": [],
+            "conditions": []
+          }
+        }
+      }
+    }
+  ],
+  [
+    "QueryBuilder::select().search().from(\"a\").offset(10).query()",
+    {
+      "SelectValues": {
+        "keys": [],
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Alias": "a"
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 10,
+            "order_by": [],
+            "conditions": []
+          }
+        }
+      }
+    }
+  ],
+  [
+    "QueryBuilder::select().search().from(\"a\").order_by(DbKeyOrder::Desc(\"age\".into())).query()",
+    {
+      "SelectValues": {
+        "keys": [],
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Alias": "a"
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [
+              {
+                "Desc": {
+                  "String": "age"
+                }
+              }
+            ],
+            "conditions": []
+          }
+        }
+      }
+    }
+  ],
+  [
+    "QueryBuilder::select().search().from(\"a\").where_().node().query()",
+    {
+      "SelectValues": {
+        "keys": [],
+        "ids": {
+          "Search": {
+            "algorithm": "BreadthFirst",
+            "origin": {
+              "Alias": "a"
+            },
+            "destination": {
+              "Id": 0
+            },
+            "limit": 0,
+            "offset": 0,
+            "order_by": [],
+            "conditions": [
+              {
+                "logic": "And",
+                "modifier": "None",
+                "data": "Node"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  [
     "QueryBuilder::select().indexes().query()",
     {
       "SelectIndexes": {}

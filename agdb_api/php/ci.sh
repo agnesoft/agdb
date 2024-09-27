@@ -116,6 +116,6 @@ elif [[ "$1" == "openapi" ]]; then
 elif [[ "$1" == "test_queries" ]]; then
     test_queries
 else
-    echo "Usage: $0 [coverage|analysis|format|format:check|openapi|test_queries]"
+    echo "Usage: $0 [coverage|analyse|format|format:check|openapi|test_queries]"
     exit 1
 fi

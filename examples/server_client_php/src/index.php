@@ -71,11 +71,12 @@ $queries = [
 
     // :3: Find a node starting at the "users" node (could also be ":0" in this instance) with specific username.
     QueryBuilder::select()
-        ->search()
-        ->from("users")
-        ->where()
-        ->key("username")
-        ->value(ComparisonBuilder::Equal("user1"))
+        ->ids(QueryBuilder::search()
+            ->from("users")
+            ->where()
+            ->key("username")
+            ->value(ComparisonBuilder::Equal("user1"))
+            ->query())
         ->query()
 ];
 

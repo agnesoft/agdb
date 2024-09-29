@@ -1,5 +1,5 @@
 [package]
-name = "examples_strong_types"
+name = "examples_user_types"
 edition = "2021"
 license = "Apache-2.0"
 

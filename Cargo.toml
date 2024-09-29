@@ -12,5 +12,5 @@ members = [
     "examples/joins",
     "examples/schema_migration",
     "examples/server_client_rust",
-    "examples/strong_types",
+    "examples/user_types",
 ]

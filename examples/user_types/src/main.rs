@@ -5,6 +5,7 @@ use agdb::DbValue;
 use agdb::QueryBuilder;
 use agdb::QueryError;
 use agdb::UserValue;
+use agdb::UserValueMarker;
 
 // Enums cannot be derived from agdb::UserValue
 // directly because the underlying data type is
@@ -22,16 +23,30 @@ enum UserStatus {
     Banned,
 }
 
+// The empty trait `DbUserValueMarker` (deriveable via
+// `agdb::UserValueMarker`) is used to allow the user
+// types (structs & enums) to be used in vectorized
+// variants of the user types.
+#[derive(Debug, Clone, UserValueMarker)]
+struct Property {
+    name: String,
+    value: String,
+}
+
 // Deriving from agdb::UserValue to make it possible
-// to use directly in the database queries.
+// to use directly in the database queries. Here we
+// demonstrate usiage of custom values, vectorized
+// custom values and optional values.
 #[derive(Debug, UserValue)]
 struct User {
     username: String,
     password: String,
+    display_name: Option<String>,
     status: UserStatus,
+    extra: Vec<Property>,
 }
 
-// Example implementation of traits expected by agdb::UserValue.
+// Example implementations of traits expected by agdb::UserValue.
 impl TryFrom<DbValue> for UserStatus {
     type Error = DbError;
 
@@ -54,6 +69,25 @@ impl From<UserStatus> for DbValue {
     }
 }
 
+impl TryFrom<DbValue> for Property {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        let (name, value) = value.string()?.split_once("=").ok_or("Invalid property")?;
+
+        Ok(Self {
+            name: name.to_string(),
+            value: value.to_string(),
+        })
+    }
+}
+
+impl From<Property> for DbValue {
+    fn from(value: Property) -> Self {
+        format!("{}={}", value.name, value.value).into()
+    }
+}
+
 fn main() -> Result<(), QueryError> {
     // Creates in memory database.
     let mut db = DbMemory::new("agdb_example")?;
@@ -68,12 +102,19 @@ fn main() -> Result<(), QueryError> {
         User {
             username: "user1".to_string(),
             password: "password123".to_string(),
+            display_name: None,
             status: UserStatus::Active,
+            extra: vec![Property {
+                name: "email".to_string(),
+                value: "user1@example.com".to_string(),
+            }],
         },
         User {
             username: "user2".to_string(),
             password: "password456".to_string(),
+            display_name: Some("DbUser2".into()),
             status: UserStatus::Inactive,
+            extra: vec![],
         },
     ];
 

@@ -11,7 +11,7 @@ The `agdb_server` is the OpenAPI REST server that provides remote `agdb` databas
 
 The server is based on [`axum`](https://github.com/tokio-rs/axum) and uses OpenAPI to specify its API (via [`utoipa`](https://github.com/juhaku/utoipa)) and [`rapidoc`](https://rapidocweb.com/) for the OpenAPI GUI. To interact with the server you can use the rapidoc GUI, `curl` or any of the [available API clients](/api-docs/openapi). Internally it uses the `agdb` database:
 
-GUI accessible at (run in browser when the server is running):
+GUI accessible at (run in a browser when the server is running):
 
 `http://localhost:3000/api/v1`
 

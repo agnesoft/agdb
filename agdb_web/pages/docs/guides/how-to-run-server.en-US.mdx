@@ -21,9 +21,33 @@ From the [official source](https://www.rust-lang.org/tools/install) (mininum req
 
 ### Install `agdb_server`
 
+For non-production use:
+
 ```
 cargo install agdb_server
 ```
+
+For production a manual build & install is recommended. You would build `agdb_server` from source in release mode with a custom `pepper` file. The `pepper` file located in sources as `agdb_server/pepper` contains a random 16 character value that is used internally to additionally "season" the encrypted passwords. When building for production you should change this value to a different one and keep the pepper file as secret in case you needed to rebuild the server or build a new version.
+
+The steps for a production/manual build (use `bash` on Unix or `git bash` on Windows):
+
+```bash
+git clone https://github.com/agnesoft/agdb.git
+cd agdb/
+git checkout $(git describe --tags) # checkout the latest released version
+echo "1234567891234567" > agdb_server/pepper #use a different value, this value will be a secret
+cargo build --release -p agdb_server
+mv target/release/agdb_server "<location available on your PATH>"
+# Windows: target/release/agdb_server.exe
+```
+
+<Callout type="warning">
+    Server with a different pepper value (e.g. default non-prod version) won't
+    be able to decode passwords in the internal database. If you lose the pepper
+    value of your server and need to rebuild it you should generate a new pepper
+    and then you will need to reset passwords of all your users via
+    `/api/v1/admin/user/{username}/change_password` API.
+</Callout>
 
 ### Run the server
 

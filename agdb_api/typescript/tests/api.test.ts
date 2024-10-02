@@ -19,7 +19,7 @@ describe("openapi test", () => {
         let client = await AgdbApi.client("http://localhost:3000");
         await client.login("admin", "admin");
         await client.logout();
-        expect(client.get_token()).toEqual("");
+        expect(client.get_token()).toEqual(undefined);
 
         await expect(client.db_list()).rejects.toThrowError(
             "Request failed with status code 401",

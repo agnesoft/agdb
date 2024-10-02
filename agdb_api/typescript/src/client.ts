@@ -2,10 +2,10 @@ import { OpenAPIClientAxios } from "openapi-client-axios";
 import type { Client } from "./openapi";
 
 type AgdbApi = {
-    token: string;
+    token: string | undefined;
     login: (username: string, password: string) => Promise<string>; // eslint-disable-line no-unused-vars
     logout: () => Promise<void>;
-    get_token: () => string;
+    get_token: () => string | undefined;
     set_token: (token: string) => void; // eslint-disable-line no-unused-vars
 };
 
@@ -19,19 +19,19 @@ async function login(username: string, password: string): Promise<string> {
     return token.data;
 }
 
-function get_token(): string {
+function get_token(): string | undefined {
     return this.token;
 }
 
 async function logout(): Promise<void> {
     await this.user_logout();
-    this.token = "";
+    this.token = undefined;
     this.interceptors.request.use((config) => {
         return config;
     });
 }
 
-function set_token(token: string) {
+function set_token(token: string): void {
     this.token = token;
     this.interceptors.request.use((config) => {
         config.headers.Authorization = `Bearer ${token}`;

@@ -1,17 +1,34 @@
 <script lang="ts" setup>
 import { ref } from "vue";
+import { login } from "@/services/auth.service";
 
 const username = ref("");
 const password = ref("");
 
-const login = async () => {
-    // todo - handle login
+const loading = ref(false);
+const error = ref("");
+
+const clearError = () => {
+    error.value = "";
+};
+
+const onLogin = async () => {
+    loading.value = true;
+    clearError();
+    login(username.value, password.value)
+        .then(() => {
+            loading.value = false;
+        })
+        .catch((e) => {
+            loading.value = false;
+            error.value = e.message;
+        });
 };
 </script>
 
 <template>
     <div class="base-form login-form">
-        <form @submit.prevent="login">
+        <form @submit.prevent="onLogin">
             <div>
                 <label for="username">Username:</label>
                 <input type="text" id="username" v-model="username" required />
@@ -37,6 +54,9 @@ const login = async () => {
         width: 100%;
         font-size: 1.2rem;
         margin-top: 0.6rem;
+    }
+    input {
+        border-radius: 0.2rem;
     }
 }
 </style>

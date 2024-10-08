@@ -15,14 +15,15 @@ mod utilities;
 use crate::db_pool::DbPool;
 use server_error::ServerResult;
 use tokio::sync::broadcast;
-use tracing::Level;
 
 #[tokio::main]
 async fn main() -> ServerResult {
-    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+    let config = config::new()?;
+    tracing_subscriber::fmt()
+        .with_max_level(config.log_level.0)
+        .init();
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
-    let config = config::new()?;
     let cluster = cluster::new(&config)?;
     let db_pool = DbPool::new(&config).await?;
     let app = app::app(

@@ -41,6 +41,7 @@ async fn create_cluster(
         config.insert("address", format!("http://{HOST}:{port}").into());
         config.insert("admin", ADMIN.into());
         config.insert("basepath", "".into());
+        config.insert("log_level", "INFO".into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("cluster_token", "test".into());
 

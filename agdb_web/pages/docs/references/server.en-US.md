@@ -28,6 +28,7 @@ address: "localhost:3000" # address the incoming connections will come from
 basepath: "" # base path to append to the address in case the server is to be run behind a reverse proxy
 admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
 data_dir: agdb_server_data # directory to store user data
+log_level: INFO # Options are: OFF, ERROR, WARN, INFO, DEBUG, TRACE
 ```
 
 You can prepare it in advance in a file `agdb_server.yaml`. After the server database is created changes to the `admin` field will have no effect but the other settings can be changed later. All config changes require server restart to take effect.

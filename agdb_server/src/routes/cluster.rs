@@ -1,3 +1,4 @@
+use crate::cluster;
 use crate::cluster::Cluster;
 use crate::cluster::ClusterState;
 use crate::config::Config;
@@ -10,8 +11,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
-use std::sync::atomic::Ordering;
-use std::time::Instant;
 
 #[derive(Deserialize)]
 pub(crate) struct ClusterParams {
@@ -55,18 +54,7 @@ pub(crate) async fn heartbeat(
         }
     }
 
-    tracing::info!(
-        "[{}] Becoming a follower of node {}, term: {}",
-        cluster.index,
-        request.leader,
-        request.term
-    );
-
-    let mut data = cluster.data.write().await;
-    data.term = request.term;
-    data.state = ClusterState::Follower(request.leader);
-    data.leader.store(false, Ordering::Relaxed);
-    data.timer = Instant::now();
+    cluster::become_follower(&cluster, request.term, request.leader).await?;
 
     Ok((StatusCode::OK, Json(String::new())))
 }
@@ -119,11 +107,7 @@ pub(crate) async fn vote(
         ));
     }
 
-    let mut data = cluster.data.write().await;
-    data.state = ClusterState::Voted;
-    data.term = request.term;
-    data.voted = request.term;
-    data.timer = Instant::now();
+    cluster::vote(&cluster, request.term, request.leader).await?;
 
     Ok((StatusCode::OK, Json(String::new())))
 }

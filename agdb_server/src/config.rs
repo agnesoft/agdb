@@ -22,11 +22,19 @@ pub(crate) struct ConfigImpl {
     pub(crate) data_dir: String,
     pub(crate) cluster_token: String,
     pub(crate) cluster: Vec<Url>,
+    #[serde(skip)]
+    pub(crate) cluster_node_id: usize,
 }
 
 pub(crate) fn new() -> ServerResult<Config> {
     if let Ok(content) = std::fs::read_to_string(CONFIG_FILE) {
-        let config = Config::new(serde_yaml::from_str(&content)?);
+        let mut config_impl: ConfigImpl = serde_yaml::from_str(&content)?;
+        config_impl.cluster_node_id = config_impl
+            .cluster
+            .iter()
+            .position(|x| x == &config_impl.address)
+            .unwrap_or(0);
+        let config = Config::new(config_impl);
 
         if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
             return Err(ServerError::from(format!(
@@ -47,6 +55,7 @@ pub(crate) fn new() -> ServerResult<Config> {
         data_dir: "agdb_server_data".to_string(),
         cluster_token: "cluster".to_string(),
         cluster: vec![],
+        cluster_node_id: 0,
     };
 
     std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config)?)?;

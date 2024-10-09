@@ -74,7 +74,7 @@ async fn create_cluster(
 }
 
 #[tokio::test]
-#[ignore]
+#[ignore = "Unstable on GitHub runners when run with coverage enabled"]
 async fn cluster_rebalance() -> anyhow::Result<()> {
     let mut servers = create_cluster(3).await?;
 

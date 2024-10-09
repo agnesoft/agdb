@@ -87,9 +87,7 @@ pub(crate) struct ClusterLog {
 
 impl Display for ClusterLog {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        serde_json::to_string(self)
-            .map_err(|_| std::fmt::Error)
-            .and_then(|s| f.write_str(&s))
+        f.write_str(&serde_json::to_string(self).unwrap_or_default())
     }
 }
 

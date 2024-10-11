@@ -1,6 +1,6 @@
 <?php
 /**
- * QueryConditionDataOneOf5
+ * AdminStatus
  *
  * PHP version 7.4
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * QueryConditionDataOneOf5 Class Doc Comment
+ * AdminStatus Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSerializable
+class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
       *
       * @var string
       */
-    protected static $openAPIModelName = 'QueryConditionData_oneOf_5';
+    protected static $openAPIModelName = 'AdminStatus';
 
     /**
       * Array of property to type mappings. Used for (de)serialization
@@ -57,7 +57,11 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
       * @var string[]
       */
     protected static $openAPITypes = [
-        'key_value' => '\Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue'
+        'dbs' => 'int',
+        'logged_in_users' => 'int',
+        'size' => 'int',
+        'uptime' => 'int',
+        'users' => 'int'
     ];
 
     /**
@@ -68,7 +72,11 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'key_value' => null
+        'dbs' => 'int64',
+        'logged_in_users' => 'int64',
+        'size' => 'int64',
+        'uptime' => 'int64',
+        'users' => 'int64'
     ];
 
     /**
@@ -77,7 +85,11 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'key_value' => false
+        'dbs' => false,
+        'logged_in_users' => false,
+        'size' => false,
+        'uptime' => false,
+        'users' => false
     ];
 
     /**
@@ -166,7 +178,11 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
      * @var string[]
      */
     protected static $attributeMap = [
-        'key_value' => 'KeyValue'
+        'dbs' => 'dbs',
+        'logged_in_users' => 'logged_in_users',
+        'size' => 'size',
+        'uptime' => 'uptime',
+        'users' => 'users'
     ];
 
     /**
@@ -175,7 +191,11 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
      * @var string[]
      */
     protected static $setters = [
-        'key_value' => 'setKeyValue'
+        'dbs' => 'setDbs',
+        'logged_in_users' => 'setLoggedInUsers',
+        'size' => 'setSize',
+        'uptime' => 'setUptime',
+        'users' => 'setUsers'
     ];
 
     /**
@@ -184,7 +204,11 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
      * @var string[]
      */
     protected static $getters = [
-        'key_value' => 'getKeyValue'
+        'dbs' => 'getDbs',
+        'logged_in_users' => 'getLoggedInUsers',
+        'size' => 'getSize',
+        'uptime' => 'getUptime',
+        'users' => 'getUsers'
     ];
 
     /**
@@ -244,7 +268,11 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
      */
     public function __construct(array $data = null)
     {
-        $this->setIfExists('key_value', $data ?? [], null);
+        $this->setIfExists('dbs', $data ?? [], null);
+        $this->setIfExists('logged_in_users', $data ?? [], null);
+        $this->setIfExists('size', $data ?? [], null);
+        $this->setIfExists('uptime', $data ?? [], null);
+        $this->setIfExists('users', $data ?? [], null);
     }
 
     /**
@@ -274,9 +302,41 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
     {
         $invalidProperties = [];
 
-        if ($this->container['key_value'] === null) {
-            $invalidProperties[] = "'key_value' can't be null";
+        if ($this->container['dbs'] === null) {
+            $invalidProperties[] = "'dbs' can't be null";
         }
+        if (($this->container['dbs'] < 0)) {
+            $invalidProperties[] = "invalid value for 'dbs', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['logged_in_users'] === null) {
+            $invalidProperties[] = "'logged_in_users' can't be null";
+        }
+        if (($this->container['logged_in_users'] < 0)) {
+            $invalidProperties[] = "invalid value for 'logged_in_users', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['size'] === null) {
+            $invalidProperties[] = "'size' can't be null";
+        }
+        if (($this->container['size'] < 0)) {
+            $invalidProperties[] = "invalid value for 'size', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['uptime'] === null) {
+            $invalidProperties[] = "'uptime' can't be null";
+        }
+        if (($this->container['uptime'] < 0)) {
+            $invalidProperties[] = "invalid value for 'uptime', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['users'] === null) {
+            $invalidProperties[] = "'users' can't be null";
+        }
+        if (($this->container['users'] < 0)) {
+            $invalidProperties[] = "invalid value for 'users', must be bigger than or equal to 0.";
+        }
+
         return $invalidProperties;
     }
 
@@ -293,28 +353,161 @@ class QueryConditionDataOneOf5 implements ModelInterface, ArrayAccess, \JsonSeri
 
 
     /**
-     * Gets key_value
+     * Gets dbs
      *
-     * @return \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue
+     * @return int
      */
-    public function getKeyValue()
+    public function getDbs()
     {
-        return $this->container['key_value'];
+        return $this->container['dbs'];
     }
 
     /**
-     * Sets key_value
+     * Sets dbs
      *
-     * @param \Agnesoft\AgdbApi\Model\QueryConditionDataOneOf5KeyValue $key_value key_value
+     * @param int $dbs dbs
      *
      * @return self
      */
-    public function setKeyValue($key_value)
+    public function setDbs($dbs)
     {
-        if (is_null($key_value)) {
-            throw new \InvalidArgumentException('non-nullable key_value cannot be null');
+        if (is_null($dbs)) {
+            throw new \InvalidArgumentException('non-nullable dbs cannot be null');
         }
-        $this->container['key_value'] = $key_value;
+
+        if (($dbs < 0)) {
+            throw new \InvalidArgumentException('invalid value for $dbs when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['dbs'] = $dbs;
+
+        return $this;
+    }
+
+    /**
+     * Gets logged_in_users
+     *
+     * @return int
+     */
+    public function getLoggedInUsers()
+    {
+        return $this->container['logged_in_users'];
+    }
+
+    /**
+     * Sets logged_in_users
+     *
+     * @param int $logged_in_users logged_in_users
+     *
+     * @return self
+     */
+    public function setLoggedInUsers($logged_in_users)
+    {
+        if (is_null($logged_in_users)) {
+            throw new \InvalidArgumentException('non-nullable logged_in_users cannot be null');
+        }
+
+        if (($logged_in_users < 0)) {
+            throw new \InvalidArgumentException('invalid value for $logged_in_users when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['logged_in_users'] = $logged_in_users;
+
+        return $this;
+    }
+
+    /**
+     * Gets size
+     *
+     * @return int
+     */
+    public function getSize()
+    {
+        return $this->container['size'];
+    }
+
+    /**
+     * Sets size
+     *
+     * @param int $size size
+     *
+     * @return self
+     */
+    public function setSize($size)
+    {
+        if (is_null($size)) {
+            throw new \InvalidArgumentException('non-nullable size cannot be null');
+        }
+
+        if (($size < 0)) {
+            throw new \InvalidArgumentException('invalid value for $size when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['size'] = $size;
+
+        return $this;
+    }
+
+    /**
+     * Gets uptime
+     *
+     * @return int
+     */
+    public function getUptime()
+    {
+        return $this->container['uptime'];
+    }
+
+    /**
+     * Sets uptime
+     *
+     * @param int $uptime uptime
+     *
+     * @return self
+     */
+    public function setUptime($uptime)
+    {
+        if (is_null($uptime)) {
+            throw new \InvalidArgumentException('non-nullable uptime cannot be null');
+        }
+
+        if (($uptime < 0)) {
+            throw new \InvalidArgumentException('invalid value for $uptime when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['uptime'] = $uptime;
+
+        return $this;
+    }
+
+    /**
+     * Gets users
+     *
+     * @return int
+     */
+    public function getUsers()
+    {
+        return $this->container['users'];
+    }
+
+    /**
+     * Sets users
+     *
+     * @param int $users users
+     *
+     * @return self
+     */
+    public function setUsers($users)
+    {
+        if (is_null($users)) {
+            throw new \InvalidArgumentException('non-nullable users cannot be null');
+        }
+
+        if (($users < 0)) {
+            throw new \InvalidArgumentException('invalid value for $users when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['users'] = $users;
 
         return $this;
     }

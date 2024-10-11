@@ -8,6 +8,13 @@ import type {
 
 declare namespace Components {
     namespace Schemas {
+        export interface AdminStatus {
+            dbs: number; // int64
+            logged_in_users: number; // int64
+            size: number; // int64
+            uptime: number; // int64
+            users: number; // int64
+        }
         export interface ChangePassword {
             new_password: string;
             password: string;
@@ -1466,6 +1473,15 @@ declare namespace Paths {
             }
             export interface $401 {
             }
+            export interface $403 {
+            }
+        }
+    }
+    namespace AdminStatus {
+        namespace Responses {
+            export type $200 = Components.Schemas.AdminStatus;
+            export interface $401 {
+            }
         }
     }
     namespace AdminUserAdd {
@@ -1817,8 +1833,7 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         namespace Responses {
-            export interface $200 {
-            }
+            export type $200 = Components.Schemas.DbUser[];
             export interface $401 {
             }
             export interface $404 {
@@ -1997,6 +2012,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminShutdown.Responses.$202>
+  /**
+   * admin_status
+   */
+  'admin_status'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminStatus.Responses.$200>
   /**
    * admin_user_list
    */
@@ -2340,6 +2363,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminShutdown.Responses.$202>
   }
+  ['/api/v1/admin/status']: {
+    /**
+     * admin_status
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminStatus.Responses.$200>
+  }
   ['/api/v1/admin/user/list']: {
     /**
      * admin_user_list
@@ -2594,6 +2627,7 @@ export interface PathsDictionary {
 
 export type Client = OpenAPIClient<OperationMethods, PathsDictionary>
 
+export type AdminStatus = Components.Schemas.AdminStatus;
 export type ChangePassword = Components.Schemas.ChangePassword;
 export type ClusterStatus = Components.Schemas.ClusterStatus;
 export type Comparison = Components.Schemas.Comparison;

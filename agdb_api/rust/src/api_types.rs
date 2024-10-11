@@ -63,6 +63,15 @@ pub struct ClusterStatus {
     pub commit: u64,
 }
 
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+pub struct AdminStatus {
+    pub uptime: u64,
+    pub dbs: u64,
+    pub users: u64,
+    pub logged_in_users: u64,
+    pub size: u64,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct Queries(pub Vec<QueryType>);
 

@@ -59,7 +59,7 @@ pub(crate) async fn add(
         ("db" = String, Path, description = "db name"),
     ),
     responses(
-         (status = 200, description = "ok"),
+         (status = 200, description = "ok", body = Vec<DbUser>),
          (status = 401, description = "unauthorized"),
          (status = 404, description = "db not found"),
     )

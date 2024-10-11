@@ -9,6 +9,7 @@ use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
 use std::collections::HashMap;
+use std::path::Path;
 use std::process::Command;
 
 #[tokio::test]
@@ -143,7 +144,7 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
         assert!(server.process.wait()?.success());
     }
 
-    std::fs::remove_dir_all(&server.data_dir)?;
+    std::fs::remove_dir_all(Path::new(&server.data_dir).join("userx"))?;
 
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)

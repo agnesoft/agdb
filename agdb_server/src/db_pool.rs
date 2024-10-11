@@ -8,6 +8,7 @@ use crate::password;
 use crate::password::Password;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
+use crate::utilities::get_size;
 use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::DbId;
@@ -23,6 +24,7 @@ use agdb::SearchQuery;
 use agdb::Transaction;
 use agdb::TransactionMut;
 use agdb::UserValue;
+use agdb_api::AdminStatus;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
@@ -47,8 +49,6 @@ use tokio::sync::RwLock;
 use tokio::sync::RwLockReadGuard;
 use tokio::sync::RwLockWriteGuard;
 use uuid::Uuid;
-
-const SERVER_DB_NAME: &str = "mapped:agdb_server.agdb";
 
 #[derive(UserValue)]
 pub(crate) struct ServerUser {
@@ -77,10 +77,12 @@ pub(crate) struct DbPool(pub(crate) Arc<DbPoolImpl>);
 
 impl DbPool {
     pub(crate) async fn new(config: &Config) -> ServerResult<Self> {
-        let db_exists = Path::new("agdb_server.agdb").exists();
-
+        std::fs::create_dir_all(&config.data_dir)?;
+        let db_exists = Path::new(&config.data_dir)
+            .join("agdb_server.agdb")
+            .exists();
         let db_pool = Self(Arc::new(DbPoolImpl {
-            server_db: ServerDb::new(SERVER_DB_NAME)?,
+            server_db: ServerDb::new(&format!("mapped:{}/agdb_server.agdb", config.data_dir))?,
             pool: RwLock::new(HashMap::new()),
         }));
 
@@ -1112,6 +1114,42 @@ impl DbPool {
             .await
             .exec_mut(QueryBuilder::insert().element(&user).query())?;
         Ok(())
+    }
+
+    pub(crate) async fn status(&self, config: &Config) -> ServerResult<AdminStatus> {
+        Ok(AdminStatus {
+            uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
+            dbs: self
+                .db()
+                .await
+                .exec(QueryBuilder::select().edge_count().ids("dbs").query())?
+                .elements[0]
+                .values[0]
+                .value
+                .to_u64()?,
+            users: self
+                .db()
+                .await
+                .exec(QueryBuilder::select().edge_count().ids("users").query())?
+                .elements[0]
+                .values[0]
+                .value
+                .to_u64()?,
+            logged_in_users: self
+                .db()
+                .await
+                .exec(
+                    QueryBuilder::search()
+                        .from("users")
+                        .where_()
+                        .key("token")
+                        .value(Comparison::NotEqual("".into()))
+                        .query(),
+                )?
+                .ids()
+                .len() as u64,
+            size: get_size(&config.data_dir).await?,
+        })
     }
 
     pub(crate) async fn user_name(&self, id: DbId) -> ServerResult<String> {

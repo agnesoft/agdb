@@ -19,6 +19,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminDbUserList()**](AgdbApi.md#adminDbUserList) | **GET** /api/v1/admin/db/{owner}/{db}/user/list |  |
 | [**adminDbUserRemove()**](AgdbApi.md#adminDbUserRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/user/{username}/remove |  |
 | [**adminShutdown()**](AgdbApi.md#adminShutdown) | **POST** /api/v1/admin/shutdown |  |
+| [**adminStatus()**](AgdbApi.md#adminStatus) | **GET** /api/v1/admin/status |  |
 | [**adminUserAdd()**](AgdbApi.md#adminUserAdd) | **POST** /api/v1/admin/user/{username}/add |  |
 | [**adminUserChangePassword()**](AgdbApi.md#adminUserChangePassword) | **PUT** /api/v1/admin/user/{username}/change_password |  |
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
@@ -934,6 +935,61 @@ void (empty response body)
 
 - **Content-Type**: Not defined
 - **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminStatus()`
+
+```php
+adminStatus(): \Agnesoft\AgdbApi\Model\AdminStatus
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $result = $apiInstance->adminStatus();
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminStatus: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\AdminStatus**](../Model/AdminStatus.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)
@@ -2005,7 +2061,7 @@ void (empty response body)
 ## `dbUserList()`
 
 ```php
-dbUserList($owner, $db)
+dbUserList($owner, $db): \Agnesoft\AgdbApi\Model\DbUser[]
 ```
 
 
@@ -2031,7 +2087,8 @@ $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
 
 try {
-    $apiInstance->dbUserList($owner, $db);
+    $result = $apiInstance->dbUserList($owner, $db);
+    print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dbUserList: ', $e->getMessage(), PHP_EOL;
 }
@@ -2046,7 +2103,7 @@ try {
 
 ### Return type
 
-void (empty response body)
+[**\Agnesoft\AgdbApi\Model\DbUser[]**](../Model/DbUser.md)
 
 ### Authorization
 
@@ -2055,7 +2112,7 @@ void (empty response body)
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: `application/json`
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

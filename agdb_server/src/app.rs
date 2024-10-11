@@ -31,6 +31,7 @@ pub(crate) fn app(
         .route("/test_error", routing::get(routes::test_error))
         .route("/status", routing::get(routes::status))
         .route("/admin/shutdown", routing::post(routes::admin::shutdown))
+        .route("/admin/status", routing::get(routes::admin::status))
         .route("/admin/user/list", routing::get(routes::admin::user::list))
         .route(
             "/admin/user/:user/add",

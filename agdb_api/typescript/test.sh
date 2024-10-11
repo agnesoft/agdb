@@ -1,6 +1,4 @@
 rm -f agdb_server.yaml
-rm -f .agdb_server.agdb
-rm -f agdb_server.agdb
 rm -rf agdb_server_data
 cargo build --release -p agdb_server
 cargo run --release -p agdb_server &
@@ -12,8 +10,6 @@ token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: a
 curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown
 
 rm -f agdb_server.yaml
-rm -f .agdb_server.agdb
-rm -f agdb_server.agdb
 rm -rf agdb_server_data
 
 exit $error_code

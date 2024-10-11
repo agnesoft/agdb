@@ -3,6 +3,8 @@ use crate::server_error::ServerResult;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Arc;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use tracing::level_filters::LevelFilter;
 use url::Url;
 
@@ -24,6 +26,8 @@ pub(crate) struct ConfigImpl {
     pub(crate) cluster: Vec<Url>,
     #[serde(skip)]
     pub(crate) cluster_node_id: usize,
+    #[serde(skip)]
+    pub(crate) start_time: u64,
 }
 
 pub(crate) fn new() -> ServerResult<Config> {
@@ -34,6 +38,7 @@ pub(crate) fn new() -> ServerResult<Config> {
             .iter()
             .position(|x| x == &config_impl.address)
             .unwrap_or(0);
+        config_impl.start_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         let config = Config::new(config_impl);
 
         if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
@@ -56,6 +61,7 @@ pub(crate) fn new() -> ServerResult<Config> {
         cluster_token: "cluster".to_string(),
         cluster: vec![],
         cluster_node_id: 0,
+        start_time: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
     };
 
     std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config)?)?;

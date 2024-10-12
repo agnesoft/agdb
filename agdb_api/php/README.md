@@ -96,6 +96,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminUserAdd**](docs/Api/AgdbApi.md#adminuseradd) | **POST** /api/v1/admin/user/{username}/add | 
 *AgdbApi* | [**adminUserChangePassword**](docs/Api/AgdbApi.md#adminuserchangepassword) | **PUT** /api/v1/admin/user/{username}/change_password | 
 *AgdbApi* | [**adminUserList**](docs/Api/AgdbApi.md#adminuserlist) | **GET** /api/v1/admin/user/list | 
+*AgdbApi* | [**adminUserLogout**](docs/Api/AgdbApi.md#adminuserlogout) | **POST** /api/v1/admin/user/logout | 
 *AgdbApi* | [**adminUserRemove**](docs/Api/AgdbApi.md#adminuserremove) | **DELETE** /api/v1/admin/user/{username}/remove | 
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 

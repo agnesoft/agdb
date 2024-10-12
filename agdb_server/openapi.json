@@ -868,6 +868,41 @@
         ]
       }
     },
+    "/api/v1/admin/user/{username}/logout": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_logout",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/user/{username}/remove": {
       "delete": {
         "tags": [
@@ -1873,9 +1908,6 @@
           },
           "401": {
             "description": "invalid credentials"
-          },
-          "404": {
-            "description": "user not found"
           }
         },
         "security": [
@@ -3274,9 +3306,13 @@
       "UserStatus": {
         "type": "object",
         "required": [
-          "name"
+          "name",
+          "login"
         ],
         "properties": {
+          "login": {
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
           }

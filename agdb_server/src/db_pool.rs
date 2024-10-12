@@ -1164,12 +1164,18 @@ impl DbPool {
     }
 
     pub(crate) async fn status(&self, config: &Config) -> ServerResult<AdminStatus> {
+        let indexes = self
+            .db()
+            .await
+            .exec(QueryBuilder::select().indexes().query())?;
+        tracing::info!("{:?}", indexes);
+
         Ok(AdminStatus {
             uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
             dbs: self
                 .db()
                 .await
-                .exec(QueryBuilder::select().edge_count().ids("dbs").query())?
+                .exec(QueryBuilder::select().edge_count_from().ids("dbs").query())?
                 .elements[0]
                 .values[0]
                 .value
@@ -1177,24 +1183,32 @@ impl DbPool {
             users: self
                 .db()
                 .await
-                .exec(QueryBuilder::select().edge_count().ids("users").query())?
+                .exec(
+                    QueryBuilder::select()
+                        .edge_count_from()
+                        .ids("users")
+                        .query(),
+                )?
                 .elements[0]
                 .values[0]
                 .value
                 .to_u64()?,
-            logged_in_users: self
-                .db()
-                .await
-                .exec(
-                    QueryBuilder::search()
-                        .from("users")
-                        .where_()
-                        .key("token")
-                        .value(Comparison::NotEqual("".into()))
-                        .query(),
-                )?
-                .ids()
-                .len() as u64,
+            logged_in_users: self.db().await.transaction(|t| -> ServerResult<u64> {
+                let empty_tokens = if t
+                    .exec(QueryBuilder::search().index("token").value("").query())?
+                    .result
+                    == 0
+                {
+                    0
+                } else {
+                    1
+                };
+                let tokens = t.exec(QueryBuilder::select().indexes().query())?.elements[0].values
+                    [1]
+                .value
+                .to_u64()?;
+                Ok(tokens - empty_tokens)
+            })?,
             size: get_size(&config.data_dir).await?,
         })
     }

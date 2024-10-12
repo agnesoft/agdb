@@ -1190,6 +1190,7 @@ declare namespace Components {
             username: string;
         }
         export interface UserStatus {
+            login: boolean;
             name: string;
         }
     }
@@ -1528,6 +1529,22 @@ declare namespace Paths {
         namespace Responses {
             export type $200 = Components.Schemas.UserStatus[];
             export interface $401 {
+            }
+        }
+    }
+    namespace AdminUserLogout {
+        namespace Parameters {
+            export type Username = string;
+        }
+        export interface PathParameters {
+            username: Parameters.Username;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
             }
         }
     }
@@ -1893,8 +1910,6 @@ declare namespace Paths {
             }
             export interface $401 {
             }
-            export interface $404 {
-            }
         }
     }
 }
@@ -2044,6 +2059,14 @@ export interface OperationMethods {
     data?: Paths.AdminUserChangePassword.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
+  /**
+   * admin_user_logout
+   */
+  'admin_user_logout'(
+    parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   /**
    * admin_user_remove
    */
@@ -2402,6 +2425,16 @@ export interface PathsDictionary {
       data?: Paths.AdminUserChangePassword.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
+  }
+  ['/api/v1/admin/user/{username}/logout']: {
+    /**
+     * admin_user_logout
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   }
   ['/api/v1/admin/user/{username}/remove']: {
     /**

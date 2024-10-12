@@ -45,8 +45,7 @@ pub(crate) async fn login(
     security(("Token" = [])),
     responses(
          (status = 201, description = "user logged out"),
-         (status = 401, description = "invalid credentials"),
-         (status = 404, description = "user not found"),
+         (status = 401, description = "invalid credentials")
     )
 )]
 pub(crate) async fn logout(user: UserId, State(db_pool): State<DbPool>) -> ServerResponse {

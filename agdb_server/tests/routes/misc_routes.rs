@@ -2,6 +2,7 @@ use crate::wait_for_ready;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
+use crate::CONFIG_FILE;
 use crate::SERVER_DATA_DIR;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
@@ -217,6 +218,38 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
 
     assert_eq!(results.1.len(), 1);
     assert_eq!(results.1[0].result, 1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn reset_admin_password() -> anyhow::Result<()> {
+    let mut server = TestServerImpl::new().await?;
+    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+
+    {
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add("user1", "password123").await?;
+        client.user_change_password(ADMIN, "lostpassword").await?;
+        client.admin_shutdown().await?;
+        assert!(server.process.wait()?.success());
+    }
+
+    let config_file = Path::new(&server.dir).join(CONFIG_FILE);
+    let new_config =
+        std::fs::read_to_string(&config_file)?.replace("admin: admin", "admin: NEW_ADMIN");
+    std::fs::write(config_file, new_config)?;
+
+    server.process = Command::cargo_bin("agdb_server")?
+        .current_dir(&server.dir)
+        .spawn()?;
+    wait_for_ready(&client).await?;
+
+    client.user_login("NEW_ADMIN", "NEW_ADMIN").await?;
+    let list = client.admin_user_list().await;
+    client.admin_shutdown().await?;
+    assert!(server.process.wait()?.success());
+    assert_eq!(list?.1.len(), 3);
 
     Ok(())
 }

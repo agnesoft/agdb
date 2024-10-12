@@ -100,12 +100,7 @@ pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<UserStatus>>)> {
-    let users = db_pool
-        .find_users()
-        .await?
-        .into_iter()
-        .map(|name| UserStatus { name })
-        .collect();
+    let users = db_pool.find_users().await?;
     Ok((StatusCode::OK, Json(users)))
 }
 

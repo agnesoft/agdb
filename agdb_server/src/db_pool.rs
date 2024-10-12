@@ -33,6 +33,7 @@ use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use agdb_api::QueryAudit;
 use agdb_api::ServerDatabase;
+use agdb_api::UserStatus;
 use axum::http::StatusCode;
 use server_db::ServerDb;
 use server_db::ServerDbImpl;
@@ -693,27 +694,28 @@ impl DbPool {
         Ok(databases)
     }
 
-    pub(crate) async fn find_users(&self) -> ServerResult<Vec<String>> {
+    pub(crate) async fn find_users(&self) -> ServerResult<Vec<UserStatus>> {
         Ok(self
             .db()
             .await
             .exec(
                 QueryBuilder::select()
-                    .values("username")
+                    .values(["username", "token"])
                     .ids(
                         QueryBuilder::search()
                             .from("users")
                             .where_()
                             .distance(CountComparison::Equal(2))
-                            .and()
-                            .keys("username")
                             .query(),
                     )
                     .query(),
             )?
             .elements
             .into_iter()
-            .map(|e| e.values[0].value.to_string())
+            .map(|e| UserStatus {
+                name: e.values[0].value.to_string(),
+                login: !e.values[1].value.to_string().is_empty(),
+            })
             .collect())
     }
 

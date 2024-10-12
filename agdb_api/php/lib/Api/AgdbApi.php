@@ -5573,7 +5573,7 @@ class AgdbApi
         }
 
 
-        $resourcePath = '/api/v1/admin/user/logout';
+        $resourcePath = '/api/v1/admin/user/{username}/logout';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];

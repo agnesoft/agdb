@@ -769,41 +769,6 @@
         ]
       }
     },
-    "/api/v1/admin/user/logout": {
-      "post": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "admin_user_logout",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "user logged out"
-          },
-          "401": {
-            "description": "admin only"
-          },
-          "404": {
-            "description": "user not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
     "/api/v1/admin/user/{username}/add": {
       "post": {
         "tags": [
@@ -893,6 +858,41 @@
             "description": "password too short (<8)"
           },
           "464": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/logout": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_logout",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "admin only"
+          },
+          "404": {
             "description": "user not found"
           }
         },

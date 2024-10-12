@@ -2044,14 +2044,6 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserList.Responses.$200>
   /**
-   * admin_user_logout
-   */
-  'admin_user_logout'(
-    parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
-  /**
    * admin_user_add
    */
   'admin_user_add'(
@@ -2067,6 +2059,14 @@ export interface OperationMethods {
     data?: Paths.AdminUserChangePassword.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
+  /**
+   * admin_user_logout
+   */
+  'admin_user_logout'(
+    parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   /**
    * admin_user_remove
    */
@@ -2406,16 +2406,6 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserList.Responses.$200>
   }
-  ['/api/v1/admin/user/logout']: {
-    /**
-     * admin_user_logout
-     */
-    'post'(
-      parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
-  }
   ['/api/v1/admin/user/{username}/add']: {
     /**
      * admin_user_add
@@ -2435,6 +2425,16 @@ export interface PathsDictionary {
       data?: Paths.AdminUserChangePassword.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
+  }
+  ['/api/v1/admin/user/{username}/logout']: {
+    /**
+     * admin_user_logout
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminUserLogout.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   }
   ['/api/v1/admin/user/{username}/remove']: {
     /**

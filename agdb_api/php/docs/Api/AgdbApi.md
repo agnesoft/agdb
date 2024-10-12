@@ -23,7 +23,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminUserAdd()**](AgdbApi.md#adminUserAdd) | **POST** /api/v1/admin/user/{username}/add |  |
 | [**adminUserChangePassword()**](AgdbApi.md#adminUserChangePassword) | **PUT** /api/v1/admin/user/{username}/change_password |  |
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
-| [**adminUserLogout()**](AgdbApi.md#adminUserLogout) | **POST** /api/v1/admin/user/logout |  |
+| [**adminUserLogout()**](AgdbApi.md#adminUserLogout) | **POST** /api/v1/admin/user/{username}/logout |  |
 | [**adminUserRemove()**](AgdbApi.md#adminUserRemove) | **DELETE** /api/v1/admin/user/{username}/remove |  |
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |

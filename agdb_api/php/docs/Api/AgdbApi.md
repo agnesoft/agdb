@@ -74,7 +74,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\DbType(); // DbType
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
 
 try {
     $apiInstance->adminDbAdd($owner, $db, $db_type);
@@ -89,7 +89,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
-| **db_type** | [**DbType**](../Model/.md)|  | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
 
 ### Return type
 
@@ -731,7 +731,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
 $username = 'username_example'; // string | user name
-$db_role = new \Agnesoft\AgdbApi\Model\DbUserRole(); // DbUserRole
+$db_role = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbUserRole(); // \Agnesoft\AgdbApi\Model\DbUserRole
 
 try {
     $apiInstance->adminDbUserAdd($owner, $db, $username, $db_role);
@@ -747,7 +747,7 @@ try {
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
 | **username** | **string**| user name | |
-| **db_role** | [**DbUserRole**](../Model/.md)|  | |
+| **db_role** | [**\Agnesoft\AgdbApi\Model\DbUserRole**](../Model/.md)|  | |
 
 ### Return type
 
@@ -1362,7 +1362,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$db_type = new \Agnesoft\AgdbApi\Model\DbType(); // DbType
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
 
 try {
     $apiInstance->dbAdd($owner, $db, $db_type);
@@ -1377,7 +1377,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
-| **db_type** | [**DbType**](../Model/.md)|  | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
 
 ### Return type
 
@@ -1542,7 +1542,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | user name
 $db = 'db_example'; // string | db name
-$resource = new \Agnesoft\AgdbApi\Model\DbResource(); // DbResource
+$resource = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbResource(); // \Agnesoft\AgdbApi\Model\DbResource
 
 try {
     $result = $apiInstance->dbClear($owner, $db, $resource);
@@ -1558,7 +1558,7 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
-| **resource** | [**DbResource**](../Model/.md)|  | |
+| **resource** | [**\Agnesoft\AgdbApi\Model\DbResource**](../Model/.md)|  | |
 
 ### Return type
 
@@ -2081,7 +2081,7 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
 $username = 'username_example'; // string | user name
-$db_role = new \Agnesoft\AgdbApi\Model\DbUserRole(); // DbUserRole
+$db_role = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbUserRole(); // \Agnesoft\AgdbApi\Model\DbUserRole
 
 try {
     $apiInstance->dbUserAdd($owner, $db, $username, $db_role);
@@ -2097,7 +2097,7 @@ try {
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
 | **username** | **string**| user name | |
-| **db_role** | [**DbUserRole**](../Model/.md)|  | |
+| **db_role** | [**\Agnesoft\AgdbApi\Model\DbUserRole**](../Model/.md)|  | |
 
 ### Return type
 

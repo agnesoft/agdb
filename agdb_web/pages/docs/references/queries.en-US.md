@@ -1193,12 +1193,12 @@ Each condition contributes to the final control result as follows with the start
 
 Modifiers will change the result of a condition based on the control value (the boolean) as follows:
 
-| Modifier  | TRUE                | FALSE                  |
-| --------- | ------------------- | ---------------------- |
-| None      | -                   | -                      |
-| Beyond    | `&& Continue(true)` | `\|\| Stop(false)`     |
-| Not       | `!`                 | `!`                    |
-| NotBeyond | `&& Stop(true)`     | `\|\| Continue(false)` |
+| Modifier  | TRUE                | FALSE            |
+| --------- | ------------------- | ---------------- |
+| None      | -                   | -                |
+| Beyond    | `&& Continue(true)` | `Stop(true)`     |
+| Not       | `!`                 | `!`              |
+| NotBeyond | `&& Stop(true)`     | `Continue(true)` |
 
 #### Results
 

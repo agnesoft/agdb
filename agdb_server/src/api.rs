@@ -29,6 +29,7 @@ use utoipa::OpenApi;
         routes::admin::user::change_password,
         routes::admin::user::add,
         routes::admin::user::list,
+        routes::admin::user::logout,
         routes::admin::user::remove,
         routes::admin::shutdown,
         routes::admin::status,

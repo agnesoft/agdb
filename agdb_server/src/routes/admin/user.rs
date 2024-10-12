@@ -104,6 +104,32 @@ pub(crate) async fn list(
     Ok((StatusCode::OK, Json(users)))
 }
 
+#[utoipa::path(post,
+    path = "/api/v1/admin/user/logout",
+    operation_id = "admin_user_logout",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+    ),
+    responses(
+         (status = 201, description = "user logged out"),
+         (status = 401, description = "admin only"),
+         (status = 404, description = "user not found"),
+    )
+)]
+pub(crate) async fn logout(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    Path(username): Path<String>,
+) -> ServerResponse {
+    let mut user = db_pool.find_user(&username).await?;
+    user.token = String::new();
+    db_pool.save_user(user).await?;
+
+    Ok(StatusCode::CREATED)
+}
+
 #[utoipa::path(delete,
     path = "/api/v1/admin/user/{username}/remove",
     operation_id = "admin_user_remove",

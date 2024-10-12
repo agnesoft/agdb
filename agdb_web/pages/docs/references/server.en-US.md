@@ -149,6 +149,7 @@ Each `agdb_server` has exactly one admin account (`admin` by default) that acts 
 | /api/v1/admin/shutdown                        | gracefully shuts down the server                                                                |
 | /api/v1/admin/status                          | lists extended statiscs on the server - uptim, # dbs, # users, # logged users, server data size |
 | /api/v1/admin/user/list                       | lists the all users on the server                                                               |
+| /api/v1/admin/user/{username}/logout          | force logout of any user                                                                        |
 | /api/v1/admin/user/{username}/add             | adds new user to the server                                                                     |
 | /api/v1/admin/user/{username}/change_password | changes password of a user                                                                      |
 | /api/v1/admin/user/{username}/remove          | deletes user and all their data (databases) from the server                                     |

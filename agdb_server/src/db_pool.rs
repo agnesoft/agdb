@@ -88,6 +88,51 @@ impl DbPool {
         }));
 
         if db_exists {
+            if db_pool
+                .0
+                .server_db
+                .get()
+                .await
+                .exec(
+                    QueryBuilder::search()
+                        .depth_first()
+                        .from("users")
+                        .limit(1)
+                        .where_()
+                        .distance(CountComparison::Equal(2))
+                        .and()
+                        .key("username")
+                        .value(Comparison::Equal(config.admin.clone().into()))
+                        .query(),
+                )?
+                .result
+                == 0
+            {
+                let admin_password = Password::create(&config.admin, &config.admin);
+
+                db_pool.0.server_db.get_mut().await.transaction_mut(|t| {
+                    let admin = t.exec_mut(
+                        QueryBuilder::insert()
+                            .element(&ServerUser {
+                                db_id: None,
+                                username: config.admin.clone(),
+                                password: admin_password.password.to_vec(),
+                                salt: admin_password.user_salt.to_vec(),
+                                token: String::new(),
+                            })
+                            .query(),
+                    )?;
+
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from("users")
+                            .to(admin)
+                            .query(),
+                    )
+                })?;
+            }
+
             let dbs: Vec<Database> = db_pool
                 .0
                 .server_db

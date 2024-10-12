@@ -105,7 +105,7 @@ pub(crate) async fn list(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/user/logout",
+    path = "/api/v1/admin/user/{username}/logout",
     operation_id = "admin_user_logout",
     tag = "agdb",
     security(("Token" = [])),

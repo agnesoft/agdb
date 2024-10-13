@@ -153,7 +153,7 @@ fn main() -> Result<(), CIError> {
             .arg("test")
             .arg("-p")
             .arg("agdb_server")
-            .arg("tests::openapi")
+            .arg("api::tests::openapi")
             .arg("--")
             .arg("--exact"),
     )?;

@@ -100,13 +100,34 @@ pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<Vec<UserStatus>>)> {
-    let users = db_pool
-        .find_users()
-        .await?
-        .into_iter()
-        .map(|name| UserStatus { name })
-        .collect();
+    let users = db_pool.find_users().await?;
     Ok((StatusCode::OK, Json(users)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/user/{username}/logout",
+    operation_id = "admin_user_logout",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+    ),
+    responses(
+         (status = 201, description = "user logged out"),
+         (status = 401, description = "admin only"),
+         (status = 404, description = "user not found"),
+    )
+)]
+pub(crate) async fn logout(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    Path(username): Path<String>,
+) -> ServerResponse {
+    let mut user = db_pool.find_user(&username).await?;
+    user.token = String::new();
+    db_pool.save_user(user).await?;
+
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(delete,

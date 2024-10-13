@@ -33,6 +33,7 @@ use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use agdb_api::QueryAudit;
 use agdb_api::ServerDatabase;
+use agdb_api::UserStatus;
 use axum::http::StatusCode;
 use server_db::ServerDb;
 use server_db::ServerDbImpl;
@@ -87,6 +88,51 @@ impl DbPool {
         }));
 
         if db_exists {
+            if db_pool
+                .0
+                .server_db
+                .get()
+                .await
+                .exec(
+                    QueryBuilder::search()
+                        .depth_first()
+                        .from("users")
+                        .limit(1)
+                        .where_()
+                        .distance(CountComparison::Equal(2))
+                        .and()
+                        .key("username")
+                        .value(Comparison::Equal(config.admin.clone().into()))
+                        .query(),
+                )?
+                .result
+                == 0
+            {
+                let admin_password = Password::create(&config.admin, &config.admin);
+
+                db_pool.0.server_db.get_mut().await.transaction_mut(|t| {
+                    let admin = t.exec_mut(
+                        QueryBuilder::insert()
+                            .element(&ServerUser {
+                                db_id: None,
+                                username: config.admin.clone(),
+                                password: admin_password.password.to_vec(),
+                                salt: admin_password.user_salt.to_vec(),
+                                token: String::new(),
+                            })
+                            .query(),
+                    )?;
+
+                    t.exec_mut(
+                        QueryBuilder::insert()
+                            .edges()
+                            .from("users")
+                            .to(admin)
+                            .query(),
+                    )
+                })?;
+            }
+
             let dbs: Vec<Database> = db_pool
                 .0
                 .server_db
@@ -693,27 +739,28 @@ impl DbPool {
         Ok(databases)
     }
 
-    pub(crate) async fn find_users(&self) -> ServerResult<Vec<String>> {
+    pub(crate) async fn find_users(&self) -> ServerResult<Vec<UserStatus>> {
         Ok(self
             .db()
             .await
             .exec(
                 QueryBuilder::select()
-                    .values("username")
+                    .values(["username", "token"])
                     .ids(
                         QueryBuilder::search()
                             .from("users")
                             .where_()
                             .distance(CountComparison::Equal(2))
-                            .and()
-                            .keys("username")
                             .query(),
                     )
                     .query(),
             )?
             .elements
             .into_iter()
-            .map(|e| e.values[0].value.to_string())
+            .map(|e| UserStatus {
+                name: e.values[0].value.to_string(),
+                login: !e.values[1].value.to_string().is_empty(),
+            })
             .collect())
     }
 
@@ -1117,12 +1164,18 @@ impl DbPool {
     }
 
     pub(crate) async fn status(&self, config: &Config) -> ServerResult<AdminStatus> {
+        let indexes = self
+            .db()
+            .await
+            .exec(QueryBuilder::select().indexes().query())?;
+        tracing::info!("{:?}", indexes);
+
         Ok(AdminStatus {
             uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
             dbs: self
                 .db()
                 .await
-                .exec(QueryBuilder::select().edge_count().ids("dbs").query())?
+                .exec(QueryBuilder::select().edge_count_from().ids("dbs").query())?
                 .elements[0]
                 .values[0]
                 .value
@@ -1130,24 +1183,32 @@ impl DbPool {
             users: self
                 .db()
                 .await
-                .exec(QueryBuilder::select().edge_count().ids("users").query())?
+                .exec(
+                    QueryBuilder::select()
+                        .edge_count_from()
+                        .ids("users")
+                        .query(),
+                )?
                 .elements[0]
                 .values[0]
                 .value
                 .to_u64()?,
-            logged_in_users: self
-                .db()
-                .await
-                .exec(
-                    QueryBuilder::search()
-                        .from("users")
-                        .where_()
-                        .key("token")
-                        .value(Comparison::NotEqual("".into()))
-                        .query(),
-                )?
-                .ids()
-                .len() as u64,
+            logged_in_users: self.db().await.transaction(|t| -> ServerResult<u64> {
+                let empty_tokens = if t
+                    .exec(QueryBuilder::search().index("token").value("").query())?
+                    .result
+                    == 0
+                {
+                    0
+                } else {
+                    1
+                };
+                let tokens = t.exec(QueryBuilder::select().indexes().query())?.elements[0].values
+                    [1]
+                .value
+                .to_u64()?;
+                Ok(tokens - empty_tokens)
+            })?,
             size: get_size(&config.data_dir).await?,
         })
     }

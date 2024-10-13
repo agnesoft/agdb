@@ -279,6 +279,18 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
+    pub async fn admin_user_logout(&self, user: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/admin/user/{user}/logout")),
+                &None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     pub async fn admin_user_remove(&self, user: &str) -> AgdbApiResult<u16> {
         self.client
             .delete(

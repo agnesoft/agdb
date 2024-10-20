@@ -1,11 +1,17 @@
 import { AgdbApi } from "agdb_api";
+import type { AxiosError } from "axios";
 
-const client = await AgdbApi.client("http://localhost:3000");
+const client = await AgdbApi.client("http://localhost:3000").catch(
+    (error: AxiosError) => {
+        console.error(error.message);
+        return undefined;
+    },
+);
 
 const getLocalStorageToken = (): string | undefined => {
     const token = localStorage.getItem("token") ?? undefined;
     if (token) {
-        client.set_token(token);
+        client?.set_token(token);
     }
     return token;
 };
@@ -15,7 +21,7 @@ const setLocalStorageToken = (token: string): void => {
 };
 
 const getToken = (): string | undefined => {
-    let token = client.get_token();
+    let token = client?.get_token();
     if (!token) {
         token = getLocalStorageToken();
     }
@@ -29,8 +35,8 @@ export const isLoggedIn = (): boolean => {
 export const login = async (
     username: string,
     password: string,
-): Promise<string> => {
-    return client.login(username, password).then((token) => {
+): Promise<string | undefined> => {
+    return client?.login(username, password).then((token) => {
         setLocalStorageToken(token);
         return token;
     });

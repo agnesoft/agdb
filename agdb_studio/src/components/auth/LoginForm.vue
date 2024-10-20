@@ -20,7 +20,7 @@ const onLogin = async () => {
     login(username.value, password.value)
         .then(() => {
             loading.value = false;
-            router.push({ name: "Home" });
+            router.push({ name: "home" });
         })
         .catch((e) => {
             loading.value = false;

@@ -1,4 +1,4 @@
-import { OpenAPIClientAxios } from "openapi-client-axios";
+import { AxiosRequestConfig, OpenAPIClientAxios } from "openapi-client-axios";
 import type { Client } from "./openapi";
 
 type AgdbApi = {
@@ -7,6 +7,7 @@ type AgdbApi = {
     logout: () => Promise<void>;
     get_token: () => string | undefined;
     set_token: (token: string) => void; // eslint-disable-line no-unused-vars
+    remove_token: () => void;
 };
 
 async function login(username: string, password: string): Promise<string> {
@@ -25,16 +26,20 @@ function get_token(): string | undefined {
 
 async function logout(): Promise<void> {
     await this.user_logout();
-    this.token = undefined;
-    this.interceptors.request.use((config) => {
-        return config;
-    });
+    this.remove_token();
 }
 
 function set_token(token: string): void {
     this.token = token;
-    this.interceptors.request.use((config) => {
+    this.interceptors.request.use((config: AxiosRequestConfig) => {
         config.headers.Authorization = `Bearer ${token}`;
+        return config;
+    });
+}
+
+function remove_token(): void {
+    this.token = undefined;
+    this.interceptors.request.use((config: AxiosRequestConfig) => {
         return config;
     });
 }
@@ -51,5 +56,6 @@ export async function client(address: String): Promise<AgdbApiClient> {
     client.logout = logout;
     client.set_token = set_token;
     client.get_token = get_token;
+    client.remove_token = remove_token;
     return client;
 }

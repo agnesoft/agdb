@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { RouterLink, RouterView } from "vue-router";
+import { logout } from "@/services/auth.service";
 </script>
 
 <template>
@@ -9,8 +10,8 @@ import { RouterLink, RouterView } from "vue-router";
                 alt="agdb logo"
                 class="logo"
                 src="@/assets/logo.svg"
-                width="125"
-                height="125"
+                width="100"
+                height="100"
             />
 
             <div class="wrapper">
@@ -18,6 +19,9 @@ import { RouterLink, RouterView } from "vue-router";
                     <RouterLink to="/">Home</RouterLink>
                     <RouterLink to="/about">About</RouterLink>
                 </nav>
+                <button class="button button-warning" @click="logout">
+                    Logout
+                </button>
             </div>
         </header>
         <main>
@@ -54,12 +58,14 @@ footer {
 }
 
 .logo {
+    --logo-size: 100px;
     display: block;
     margin: 0 auto 2rem;
+    width: var(--logo-size);
+    height: var(--logo-size);
 }
 
 nav {
-    width: 100%;
     font-size: 12px;
     text-align: center;
     margin-top: 2rem;
@@ -91,13 +97,18 @@ nav a:first-of-type {
     }
 
     .logo {
-        margin: 0 2rem 0 0;
+        --logo-size: 75px;
+        margin: 0 2rem 0 1rem;
     }
 
     header .wrapper {
         display: flex;
         place-items: flex-start;
         flex-wrap: wrap;
+
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
     }
 
     nav {
@@ -106,7 +117,7 @@ nav a:first-of-type {
         font-size: 1rem;
 
         padding: 1rem 0;
-        margin-top: 1rem;
+        margin-top: 0;
     }
 }
 </style>

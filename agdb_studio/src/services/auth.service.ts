@@ -1,15 +1,16 @@
 import { AgdbApi } from "agdb_api";
 import type { AxiosError } from "axios";
 
-const client = await AgdbApi.client("http://localhost:3000").catch(
-    (error: AxiosError) => {
-        console.error(error.message);
-        return undefined;
-    },
-);
+const ACCESS_TOKEN = "studio_token";
+
+let client: AgdbApi.AgdbApiClient | undefined;
+
+export const getClient = (): AgdbApi.AgdbApiClient | undefined => {
+    return client;
+};
 
 const getLocalStorageToken = (): string | undefined => {
-    const token = localStorage.getItem("token") ?? undefined;
+    const token = localStorage.getItem(ACCESS_TOKEN) ?? undefined;
     if (token) {
         client?.set_token(token);
     }
@@ -17,7 +18,7 @@ const getLocalStorageToken = (): string | undefined => {
 };
 
 const setLocalStorageToken = (token: string): void => {
-    localStorage.setItem("token", token);
+    localStorage.setItem(ACCESS_TOKEN, token);
 };
 
 const getToken = (): string | undefined => {
@@ -26,6 +27,12 @@ const getToken = (): string | undefined => {
         token = getLocalStorageToken();
     }
     return token;
+};
+
+const removeToken = (): void => {
+    client?.remove_token();
+    localStorage.removeItem(ACCESS_TOKEN);
+    location.reload();
 };
 
 export const isLoggedIn = (): boolean => {
@@ -41,3 +48,32 @@ export const login = async (
         return token;
     });
 };
+
+export const logout = async (): Promise<void> => {
+    if (!isLoggedIn()) {
+        return;
+    }
+    await client?.logout();
+    removeToken();
+};
+
+const initClient = async () => {
+    client = await AgdbApi.client("http://localhost:3000").catch(
+        (error: AxiosError) => {
+            console.error(error.message);
+            return undefined;
+        },
+    );
+
+    client?.interceptors.response.use(
+        (response) => response,
+        (error: AxiosError) => {
+            console.error(error.message);
+            if (error.response?.status === 401) {
+                removeToken();
+            }
+            return Promise.reject(error);
+        },
+    );
+};
+await initClient();

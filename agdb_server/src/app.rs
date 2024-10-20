@@ -146,6 +146,7 @@ pub(crate) fn app(
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers(tower_http::cors::Any)
         .allow_origin(tower_http::cors::Any);
 
     let router = Router::new()

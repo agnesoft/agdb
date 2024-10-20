@@ -8,7 +8,9 @@ use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
 use axum::Router;
+use reqwest::Method;
 use tokio::sync::broadcast::Sender;
+use tower_http::cors::CorsLayer;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
@@ -142,6 +144,10 @@ pub(crate) fn app(
             routing::put(routes::user::change_password),
         );
 
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_origin(tower_http::cors::Any);
+
     let router = Router::new()
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest("/api/v1", api_v1)
@@ -149,6 +155,7 @@ pub(crate) fn app(
             state.clone(),
             logger::logger,
         ))
+        .layer(cors)
         .with_state(state);
 
     if !basepath.is_empty() {

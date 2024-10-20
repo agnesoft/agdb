@@ -57,6 +57,7 @@ use crate::{
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 #[derive(Debug, PartialEq)]
+#[expect(clippy::large_enum_variant)]
 pub enum QueryType {
     InsertAlias(InsertAliasesQuery),
     InsertEdges(InsertEdgesQuery),

@@ -11,7 +11,4 @@ export default defineConfig({
             "@": fileURLToPath(new URL("./src", import.meta.url)),
         },
     },
-    build: {
-        target: ["es2015", "edge88", "firefox78", "chrome87", "safari12"],
-    },
 });

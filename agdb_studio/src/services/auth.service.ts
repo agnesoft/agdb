@@ -30,7 +30,7 @@ const getToken = (): string | undefined => {
 };
 
 const removeToken = (): void => {
-    client?.remove_token();
+    client?.reset_token();
     localStorage.removeItem(ACCESS_TOKEN);
     location.reload();
 };

@@ -7,7 +7,7 @@ type AgdbApi = {
     logout: () => Promise<void>;
     get_token: () => string | undefined;
     set_token: (token: string) => void; // eslint-disable-line no-unused-vars
-    remove_token: () => void;
+    reset_token: () => void;
 };
 
 async function login(username: string, password: string): Promise<string> {
@@ -37,7 +37,7 @@ function set_token(token: string): void {
     });
 }
 
-function remove_token(): void {
+function reset_token(): void {
     this.token = undefined;
     this.interceptors.request.use((config: AxiosRequestConfig) => {
         return config;
@@ -56,6 +56,6 @@ export async function client(address: String): Promise<AgdbApiClient> {
     client.logout = logout;
     client.set_token = set_token;
     client.get_token = get_token;
-    client.remove_token = remove_token;
+    client.reset_token = reset_token;
     return client;
 }

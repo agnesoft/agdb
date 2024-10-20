@@ -1,16 +1,6 @@
 function coverage() {
     rm -f agdb_server.yaml
-    rm -f .agdb_server.agdb
-    rm -f agdb_server.agdb
     rm -rf agdb_server_data
-
-    echo "bind: \"0.0.0.0:3000\"
-address: localhost:3000
-basepath: \"\"
-admin: admin
-data_dir: agdb_server_data
-cluster_token: test
-cluster: []" > agdb_server.yaml
 
     cargo build --release -p agdb_server
     cargo run --release -p agdb_server &
@@ -49,8 +39,6 @@ cluster: []" > agdb_server.yaml
     curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown
 
     rm -f agdb_server.yaml
-    rm -f .agdb_server.agdb
-    rm -f agdb_server.agdb
     rm -rf agdb_server_data
 
     echo ""

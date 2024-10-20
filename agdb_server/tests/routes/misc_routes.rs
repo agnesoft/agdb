@@ -2,6 +2,7 @@ use crate::wait_for_ready;
 use crate::TestServer;
 use crate::TestServerImpl;
 use crate::ADMIN;
+use crate::CONFIG_FILE;
 use crate::SERVER_DATA_DIR;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
@@ -9,6 +10,7 @@ use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
 use std::collections::HashMap;
+use std::path::Path;
 use std::process::Command;
 
 #[tokio::test]
@@ -143,7 +145,7 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
         assert!(server.process.wait()?.success());
     }
 
-    std::fs::remove_dir_all(&server.data_dir)?;
+    std::fs::remove_dir_all(Path::new(&server.data_dir).join("userx"))?;
 
     server.process = Command::cargo_bin("agdb_server")?
         .current_dir(&server.dir)
@@ -162,6 +164,7 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("admin", ADMIN.into());
     config.insert("data_dir", SERVER_DATA_DIR.into());
     config.insert("basepath", "/public".into());
+    config.insert("log_level", "INFO".into());
     config.insert("cluster_token", "test".into());
     config.insert("cluster", Vec::<String>::new().into());
 
@@ -215,6 +218,38 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
 
     assert_eq!(results.1.len(), 1);
     assert_eq!(results.1[0].result, 1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn reset_admin_password() -> anyhow::Result<()> {
+    let mut server = TestServerImpl::new().await?;
+    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+
+    {
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add("user1", "password123").await?;
+        client.user_change_password(ADMIN, "lostpassword").await?;
+        client.admin_shutdown().await?;
+        assert!(server.process.wait()?.success());
+    }
+
+    let config_file = Path::new(&server.dir).join(CONFIG_FILE);
+    let new_config =
+        std::fs::read_to_string(&config_file)?.replace("admin: admin", "admin: NEW_ADMIN");
+    std::fs::write(config_file, new_config)?;
+
+    server.process = Command::cargo_bin("agdb_server")?
+        .current_dir(&server.dir)
+        .spawn()?;
+    wait_for_ready(&client).await?;
+
+    client.user_login("NEW_ADMIN", "NEW_ADMIN").await?;
+    let list = client.admin_user_list().await;
+    client.admin_shutdown().await?;
+    assert!(server.process.wait()?.success());
+    assert_eq!(list?.1.len(), 3);
 
     Ok(())
 }

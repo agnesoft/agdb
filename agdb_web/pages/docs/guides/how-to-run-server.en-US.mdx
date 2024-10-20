@@ -45,8 +45,10 @@ mv target/release/agdb_server "<location available on your PATH>"
     Server with a different pepper value (e.g. default non-prod version) won't
     be able to decode passwords in the internal database. If you lose the pepper
     value of your server and need to rebuild it you should generate a new pepper
-    and then you will need to reset passwords of all your users via
-    `/api/v1/admin/user/{username}/change_password` API.
+    and then you will need to create a new admin account (by changing the config
+    value to a non-existent user) and using that account you can reset passwords
+    of all your users via `/api/v1/admin/user/{username}/change_password` API
+    (including the old admin account).
 </Callout>
 
 ### Run the server

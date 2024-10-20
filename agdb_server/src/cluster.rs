@@ -5,6 +5,8 @@ use agdb::StableHash;
 use agdb_api::HttpClient;
 use agdb_api::ReqwestClient;
 use axum::http::StatusCode;
+use serde::Serialize;
+use std::fmt::Display;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -53,6 +55,40 @@ pub(crate) struct ClusterImpl {
     pub(crate) cluster_hash: u64,
     pub(crate) index: usize,
     pub(crate) data: RwLock<ClusterData>,
+}
+
+#[derive(Serialize)]
+pub(crate) enum ClusterOperation {
+    Heartbeat,
+    Election,
+    Leader,
+    Follower,
+    Vote,
+}
+
+#[derive(Serialize)]
+pub(crate) enum ClusterResult {
+    Success,
+    Reject,
+    Failure,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ClusterLog {
+    pub(crate) node: usize,
+    pub(crate) operation: ClusterOperation,
+    pub(crate) target_node: usize,
+    pub(crate) term: u64,
+    pub(crate) result: ClusterResult,
+    pub(crate) status: u16,
+    pub(crate) time: u128,
+    pub(crate) message: String,
+}
+
+impl Display for ClusterLog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&serde_json::to_string(self).unwrap_or_default())
+    }
 }
 
 impl ClusterImpl {
@@ -215,27 +251,44 @@ async fn heartbeat(cluster: &Cluster, shutdown_signal: Arc<AtomicBool>) -> Serve
 
         tokio::spawn(async move {
             while is_leader.load(Ordering::Relaxed) && !shutdown_signal.load(Ordering::Relaxed) {
+                let timer = Instant::now();
+
                 match node.heartbeat(cluster_hash, term, leader).await {
                     Ok((status, message)) => {
                         if status != 200 {
-                            tracing::warn!(
-                                "[{cluster_index}] Heartbeat rejected by {}: ({}) {}",
-                                node.index,
+                            let log = ClusterLog {
+                                node: cluster_index,
+                                operation: ClusterOperation::Heartbeat,
+                                target_node: node.index,
+                                term,
+                                result: ClusterResult::Reject,
                                 status,
-                                message
-                            );
+                                time: timer.elapsed().as_micros(),
+                                message,
+                            };
+                            tracing::warn!("{log}");
                         }
                     }
                     Err(e) => {
-                        let message = format!(
-                            "[{cluster_index}] Heartbeat error on node {}: ({}) {}",
-                            node.index, e.status, e.description
-                        );
+                        let log = ClusterLog {
+                            node: cluster_index,
+                            operation: ClusterOperation::Heartbeat,
+                            target_node: node.index,
+                            term,
+                            result: if e.status.is_client_error() {
+                                ClusterResult::Reject
+                            } else {
+                                ClusterResult::Failure
+                            },
+                            status: e.status.as_u16(),
+                            time: timer.elapsed().as_micros(),
+                            message: e.description,
+                        };
 
                         if e.status.is_client_error() {
-                            tracing::warn!(message);
+                            tracing::warn!("{log}");
                         } else {
-                            tracing::error!(message);
+                            tracing::error!("{log}");
                         }
                     }
                 }
@@ -261,9 +314,22 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
 
     let cluster_hash = cluster.cluster_hash;
     let index = cluster.index;
-    let quorum = (cluster.nodes.len() + 1) / 2 + 1;
+    let cluster_len = cluster.nodes.len() + 1;
+    let quorum = cluster_len / 2 + 1;
 
-    tracing::info!("[{index}] Starting election (cluster: {cluster_hash}, term: {election_term}, quorum: {quorum}/{})", cluster.nodes.len() + 1);
+    let log = ClusterLog {
+        node: index,
+        operation: ClusterOperation::Election,
+        target_node: index,
+        term: election_term,
+        result: ClusterResult::Success,
+        status: 0,
+        time: timer.elapsed().as_micros(),
+        message: format!(
+            "Starting election (cluster: {cluster_hash}, quorum: {quorum}/{cluster_len})"
+        ),
+    };
+    tracing::info!("{log}");
 
     let votes = Arc::new(AtomicUsize::new(1));
     let voted = Arc::new(AtomicUsize::new(1));
@@ -276,18 +342,31 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
 
         tokio::spawn(async move {
             match node.vote(cluster_hash, election_term, index).await {
-                Ok(_) => {
-                    tracing::info!(
-                        "[{}] Vote for term {election_term} ACCEPTED by {}",
-                        cluster.index,
-                        node.index
-                    );
+                Ok((status, message)) => {
+                    let log = ClusterLog {
+                        node: cluster.index,
+                        operation: ClusterOperation::Vote,
+                        target_node: node.index,
+                        term: election_term,
+                        result: ClusterResult::Success,
+                        time: timer.elapsed().as_micros(),
+                        status,
+                        message,
+                    };
+                    tracing::info!("{log}");
 
                     if (votes.fetch_add(1, Ordering::Relaxed) + 1) == quorum {
-                        tracing::info!(
-                            "[{index}] Elected as leader for term {election_term} ({}ms)",
-                            timer.elapsed().as_millis()
-                        );
+                        let log = ClusterLog {
+                            node: cluster.index,
+                            operation: ClusterOperation::Leader,
+                            target_node: cluster.index,
+                            term: election_term,
+                            result: ClusterResult::Success,
+                            status: 0,
+                            time: timer.elapsed().as_micros(),
+                            message: "Elected as leader".to_string(),
+                        };
+                        tracing::info!("{log}");
 
                         let mut data = cluster.data.write().await;
                         data.state = ClusterState::LeaderElect;
@@ -297,22 +376,25 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
                     }
                 }
                 Err(e) => {
+                    let log = ClusterLog {
+                        node: cluster.index,
+                        operation: ClusterOperation::Vote,
+                        target_node: node.index,
+                        term: election_term,
+                        result: if e.status.is_client_error() {
+                            ClusterResult::Reject
+                        } else {
+                            ClusterResult::Failure
+                        },
+                        time: timer.elapsed().as_micros(),
+                        status: e.status.as_u16(),
+                        message: e.description,
+                    };
+
                     if e.status.is_client_error() {
-                        tracing::warn!(
-                            "[{}] Vote for term {election_term} REJECTED by {}: ({}) {}",
-                            cluster.index,
-                            node.index,
-                            e.status,
-                            e.description
-                        );
+                        tracing::warn!("{log}");
                     } else {
-                        tracing::error!(
-                            "[{}] Vote for term {election_term} FAILED on {}: ({}) {}",
-                            cluster.index,
-                            node.index,
-                            e.status,
-                            e.description
-                        );
+                        tracing::error!("{log}");
                     }
                 }
             }
@@ -321,13 +403,20 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
                 let is_leader = cluster.data.read().await.leader.load(Ordering::Relaxed);
 
                 if !is_leader {
-                    tracing::warn!(
-                        "[{index}] Election for term {election_term} failed - {}/{} (quorum: {quorum}/{}) ({}ms)",
-                        votes.load(Ordering::Relaxed),
-                        cluster.nodes.len() + 1,
-                        cluster.nodes.len() + 1,
-                        timer.elapsed().as_millis(),
-                    );
+                    let log = ClusterLog {
+                        node: cluster.index,
+                        operation: ClusterOperation::Election,
+                        target_node: cluster.index,
+                        term: election_term,
+                        result: ClusterResult::Reject,
+                        status: 0,
+                        time: timer.elapsed().as_micros(),
+                        message: format!(
+                            "Election for term {election_term} failed - {}/{cluster_len} (quorum: {quorum}/{cluster_len})",
+                            votes.load(Ordering::Relaxed)
+                        ),
+                    };
+                    tracing::warn!("{log}");
 
                     let mut data = cluster.data.write().await;
                     data.state = ClusterState::Election;
@@ -336,6 +425,58 @@ async fn election(cluster: &Cluster) -> ServerResult<()> {
             };
         });
     }
+
+    Ok(())
+}
+
+pub(crate) async fn become_follower(
+    cluster: &Cluster,
+    term: u64,
+    leader: usize,
+) -> ServerResult<()> {
+    let mut data = cluster.data.write().await;
+    data.term = term;
+    data.state = ClusterState::Follower(leader);
+    data.leader.store(false, Ordering::Relaxed);
+
+    let time = data.timer;
+    data.timer = Instant::now();
+
+    let log = ClusterLog {
+        node: cluster.index,
+        operation: ClusterOperation::Follower,
+        target_node: leader,
+        term,
+        result: ClusterResult::Success,
+        status: StatusCode::OK.as_u16(),
+        time: time.elapsed().as_micros(),
+        message: "Becoming follower".to_string(),
+    };
+    tracing::info!("{}", log);
+
+    Ok(())
+}
+
+pub(crate) async fn vote(cluster: &Cluster, term: u64, leader: usize) -> ServerResult<()> {
+    let mut data = cluster.data.write().await;
+    data.state = ClusterState::Voted;
+    data.term = term;
+    data.voted = term;
+
+    let time = data.timer;
+    data.timer = Instant::now();
+
+    let log = ClusterLog {
+        node: cluster.index,
+        operation: ClusterOperation::Vote,
+        target_node: leader,
+        term,
+        result: ClusterResult::Success,
+        status: StatusCode::OK.as_u16(),
+        time: time.elapsed().as_micros(),
+        message: "Vote cast".to_string(),
+    };
+    tracing::info!("{}", log);
 
     Ok(())
 }

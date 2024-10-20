@@ -16,6 +16,7 @@ use std::time::Instant;
 
 #[derive(Default, Serialize)]
 struct LogRecord {
+    node: usize,
     method: String,
     version: String,
     user: String,
@@ -66,6 +67,7 @@ async fn request_log(
     log_record: &mut LogRecord,
     skip_body: bool,
 ) -> Result<Request, Response> {
+    log_record.node = state.config.cluster_node_id;
     log_record.method = request.method().to_string();
     log_record.uri = request.uri().to_string();
     log_record.version = format!("{:?}", request.version());
@@ -166,6 +168,7 @@ mod tests {
 
     fn log_record(uri: &str, request_body: &str) -> LogRecord {
         LogRecord {
+            node: 0,
             method: "GET".to_string(),
             uri: uri.to_string(),
             version: "HTTP/1.1".to_string(),
@@ -192,6 +195,7 @@ mod tests {
     #[test]
     fn log_error_test() {
         let log_record = LogRecord {
+            node: 0,
             method: "GET".to_string(),
             uri: "/".to_string(),
             version: "HTTP/1.1".to_string(),

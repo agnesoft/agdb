@@ -6,6 +6,7 @@ const validateLinks = async (page: Page) => {
     const links = await page
         .locator("a")
         .evaluateAll((els) => els.map((el) => el.getAttribute("href")));
+
     for (const href of links) {
         if (
             href &&
@@ -13,7 +14,7 @@ const validateLinks = async (page: Page) => {
             !href.startsWith("mailto") &&
             !href.startsWith("tel") &&
             !href.startsWith("javascript") &&
-            !href.includes("/blob/main/")
+            !href.startsWith("#")
         ) {
             await page.goto(href);
 
@@ -23,10 +24,9 @@ const validateLinks = async (page: Page) => {
 
             validatedLinks.push(href);
 
-            if (href.startsWith("https") || href.startsWith("http")) {
-                continue;
+            if (!href.startsWith("http")) {
+                await validateLinks(page);
             }
-            await validateLinks(page);
         }
     }
 };

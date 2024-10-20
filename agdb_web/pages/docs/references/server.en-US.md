@@ -28,6 +28,7 @@ address: "localhost:3000" # address the incoming connections will come from
 basepath: "" # base path to append to the address in case the server is to be run behind a reverse proxy
 admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
 data_dir: agdb_server_data # directory to store user data
+log_level: INFO # Options are: OFF, ERROR, WARN, INFO, DEBUG, TRACE
 ```
 
 You can prepare it in advance in a file `agdb_server.yaml`. After the server database is created changes to the `admin` field will have no effect but the other settings can be changed later. All config changes require server restart to take effect.
@@ -141,16 +142,18 @@ However the `agdb` is written in such a way that it performs excellently even un
 
 ## Admin
 
-Each `agdb_server` has exactly one admin account (`admin` by default) that acts as the regular user but additonally is allowed to execute APIs under `/admin/`. These mostly copies the APIs for regular users but some of the restrictions are not enforced (i.e. ownership or db role). Additionally the admin has access to the following exclusive APIs:
+Each `agdb_server` has exactly one admin account (`admin` by default) that acts as a regular user but additonally is allowed to execute APIs under `/admin/`. These mostly copies the APIs for regular users but some of the restrictions are not enforced (i.e. ownership or db role). Additionally the admin has access to the following exclusive APIs:
 
-| Action                                        | Description                                                                      |
-| --------------------------------------------- | -------------------------------------------------------------------------------- |
-| /api/v1/admin/shutdown                        | gracefully shuts down the server                                                 |
-| /api/v1/admin/user/list                       | lists the all users on the server                                                |
-| /api/v1/admin/user/{username}/add             | adds new user to the server                                                      |
-| /api/v1/admin/user/{username}/change_password | changes password of a user                                                       |
-| /api/v1/admin/user/{username}/remove          | deletes user and all their data (databases) from the server                      |
-| /api/v1/admin/db/\*                           | provides same endpoints as for regular users but without owner/role restrictions |
+| Action                                        | Description                                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| /api/v1/admin/shutdown                        | gracefully shuts down the server                                                                 |
+| /api/v1/admin/status                          | lists extended statiscs on the server - uptime, # dbs, # users, # logged users, server data size |
+| /api/v1/admin/user/list                       | lists the all users on the server                                                                |
+| /api/v1/admin/user/{username}/logout          | force logout of any user                                                                         |
+| /api/v1/admin/user/{username}/add             | adds new user to the server                                                                      |
+| /api/v1/admin/user/{username}/change_password | changes password of a user                                                                       |
+| /api/v1/admin/user/{username}/remove          | deletes user and all their data (databases) from the server                                      |
+| /api/v1/admin/db/\*                           | provides same endpoints as for regular users but without owner/role restrictions                 |
 
 ## Shutdown
 

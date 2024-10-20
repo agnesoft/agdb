@@ -3,6 +3,7 @@ use crate::api_types::DbType;
 use crate::api_types::ServerDatabase;
 use crate::api_types::UserCredentials;
 use crate::http_client::HttpClient;
+use crate::AdminStatus;
 use crate::ChangePassword;
 use crate::ClusterStatus;
 use crate::DbAudit;
@@ -236,6 +237,12 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
+    pub async fn admin_status(&self) -> AgdbApiResult<(u16, AdminStatus)> {
+        self.client
+            .get(&self.url("/admin/status"), &self.token)
+            .await
+    }
+
     pub async fn admin_user_add(&self, user: &str, password: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
@@ -270,6 +277,18 @@ impl<T: HttpClient> AgdbApi<T> {
         self.client
             .get(&self.url("/admin/user/list"), &self.token)
             .await
+    }
+
+    pub async fn admin_user_logout(&self, user: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/admin/user/{user}/logout")),
+                &None,
+                &self.token,
+            )
+            .await?
+            .0)
     }
 
     pub async fn admin_user_remove(&self, user: &str) -> AgdbApiResult<u16> {

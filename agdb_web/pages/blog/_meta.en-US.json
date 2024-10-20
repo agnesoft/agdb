@@ -7,8 +7,7 @@
         "display": "normal"
     },
     "---": {
-        "type": "separator",
-        "display": "normal"
+        "type": "separator"
     },
     "why-graph": {
         "title": "Why graph?",

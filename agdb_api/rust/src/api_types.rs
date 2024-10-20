@@ -63,6 +63,15 @@ pub struct ClusterStatus {
     pub commit: u64,
 }
 
+#[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
+pub struct AdminStatus {
+    pub uptime: u64,
+    pub dbs: u64,
+    pub users: u64,
+    pub logged_in_users: u64,
+    pub size: u64,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct Queries(pub Vec<QueryType>);
 
@@ -102,6 +111,7 @@ pub struct UserLogin {
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserStatus {
     pub name: String,
+    pub login: bool,
 }
 
 impl From<&str> for DbType {
@@ -208,7 +218,8 @@ mod tests {
         let _ = format!(
             "{:?}",
             UserStatus {
-                name: "user".to_string()
+                name: "user".to_string(),
+                login: true
             }
         );
         let _ = format!(
@@ -273,9 +284,11 @@ mod tests {
         assert!(db < other);
         let status = UserStatus {
             name: "user".to_string(),
+            login: true,
         };
         let other = UserStatus {
             name: "user2".to_string(),
+            login: true,
         };
         assert!(status < other);
     }
@@ -310,6 +323,7 @@ mod tests {
 
         let status = UserStatus {
             name: "user".to_string(),
+            login: false,
         };
 
         assert_eq!(status.cmp(&status), std::cmp::Ordering::Equal);

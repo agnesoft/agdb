@@ -369,7 +369,7 @@ QueryBuilder::insert().aliases(["a", "b"]).ids([1, 2]).query();
 
 Inserts or updates aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.
 
-Note that this query is also used for updating existing aliases. Byt inserting a different alias of an id that already has one that alias will be overwritten with the new one.
+Note that this query is also used for updating existing aliases. By inserting a different alias of an id that already has one that alias will be overwritten with the new one.
 
 ### Insert edges
 
@@ -1193,12 +1193,12 @@ Each condition contributes to the final control result as follows with the start
 
 Modifiers will change the result of a condition based on the control value (the boolean) as follows:
 
-| Modifier  | TRUE                | FALSE                  |
-| --------- | ------------------- | ---------------------- |
-| None      | -                   | -                      |
-| Beyond    | `&& Continue(true)` | `\|\| Stop(false)`     |
-| Not       | `!`                 | `!`                    |
-| NotBeyond | `&& Stop(true)`     | `\|\| Continue(false)` |
+| Modifier  | TRUE                | FALSE            |
+| --------- | ------------------- | ---------------- |
+| None      | -                   | -                |
+| Beyond    | `&& Continue(true)` | `Stop(true)`     |
+| Not       | `!`                 | `!`              |
+| NotBeyond | `&& Stop(true)`     | `Continue(true)` |
 
 #### Results
 

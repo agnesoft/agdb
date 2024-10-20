@@ -1,6 +1,6 @@
 <?php
 /**
- * CountComparisonOneOf1
+ * AdminStatus
  *
  * PHP version 7.4
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * CountComparisonOneOf1 Class Doc Comment
+ * AdminStatus Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSerializable
+class AdminStatus implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
       *
       * @var string
       */
-    protected static $openAPIModelName = 'CountComparison_oneOf_1';
+    protected static $openAPIModelName = 'AdminStatus';
 
     /**
       * Array of property to type mappings. Used for (de)serialization
@@ -57,7 +57,11 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
       * @var string[]
       */
     protected static $openAPITypes = [
-        'greater_than' => 'int'
+        'dbs' => 'int',
+        'logged_in_users' => 'int',
+        'size' => 'int',
+        'uptime' => 'int',
+        'users' => 'int'
     ];
 
     /**
@@ -68,7 +72,11 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'greater_than' => 'int64'
+        'dbs' => 'int64',
+        'logged_in_users' => 'int64',
+        'size' => 'int64',
+        'uptime' => 'int64',
+        'users' => 'int64'
     ];
 
     /**
@@ -77,7 +85,11 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'greater_than' => false
+        'dbs' => false,
+        'logged_in_users' => false,
+        'size' => false,
+        'uptime' => false,
+        'users' => false
     ];
 
     /**
@@ -166,7 +178,11 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var string[]
      */
     protected static $attributeMap = [
-        'greater_than' => 'GreaterThan'
+        'dbs' => 'dbs',
+        'logged_in_users' => 'logged_in_users',
+        'size' => 'size',
+        'uptime' => 'uptime',
+        'users' => 'users'
     ];
 
     /**
@@ -175,7 +191,11 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var string[]
      */
     protected static $setters = [
-        'greater_than' => 'setGreaterThan'
+        'dbs' => 'setDbs',
+        'logged_in_users' => 'setLoggedInUsers',
+        'size' => 'setSize',
+        'uptime' => 'setUptime',
+        'users' => 'setUsers'
     ];
 
     /**
@@ -184,7 +204,11 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
      * @var string[]
      */
     protected static $getters = [
-        'greater_than' => 'getGreaterThan'
+        'dbs' => 'getDbs',
+        'logged_in_users' => 'getLoggedInUsers',
+        'size' => 'getSize',
+        'uptime' => 'getUptime',
+        'users' => 'getUsers'
     ];
 
     /**
@@ -244,7 +268,11 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
      */
     public function __construct(array $data = null)
     {
-        $this->setIfExists('greater_than', $data ?? [], null);
+        $this->setIfExists('dbs', $data ?? [], null);
+        $this->setIfExists('logged_in_users', $data ?? [], null);
+        $this->setIfExists('size', $data ?? [], null);
+        $this->setIfExists('uptime', $data ?? [], null);
+        $this->setIfExists('users', $data ?? [], null);
     }
 
     /**
@@ -274,11 +302,39 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
     {
         $invalidProperties = [];
 
-        if ($this->container['greater_than'] === null) {
-            $invalidProperties[] = "'greater_than' can't be null";
+        if ($this->container['dbs'] === null) {
+            $invalidProperties[] = "'dbs' can't be null";
         }
-        if (($this->container['greater_than'] < 0)) {
-            $invalidProperties[] = "invalid value for 'greater_than', must be bigger than or equal to 0.";
+        if (($this->container['dbs'] < 0)) {
+            $invalidProperties[] = "invalid value for 'dbs', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['logged_in_users'] === null) {
+            $invalidProperties[] = "'logged_in_users' can't be null";
+        }
+        if (($this->container['logged_in_users'] < 0)) {
+            $invalidProperties[] = "invalid value for 'logged_in_users', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['size'] === null) {
+            $invalidProperties[] = "'size' can't be null";
+        }
+        if (($this->container['size'] < 0)) {
+            $invalidProperties[] = "invalid value for 'size', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['uptime'] === null) {
+            $invalidProperties[] = "'uptime' can't be null";
+        }
+        if (($this->container['uptime'] < 0)) {
+            $invalidProperties[] = "invalid value for 'uptime', must be bigger than or equal to 0.";
+        }
+
+        if ($this->container['users'] === null) {
+            $invalidProperties[] = "'users' can't be null";
+        }
+        if (($this->container['users'] < 0)) {
+            $invalidProperties[] = "invalid value for 'users', must be bigger than or equal to 0.";
         }
 
         return $invalidProperties;
@@ -297,33 +353,161 @@ class CountComparisonOneOf1 implements ModelInterface, ArrayAccess, \JsonSeriali
 
 
     /**
-     * Gets greater_than
+     * Gets dbs
      *
      * @return int
      */
-    public function getGreaterThan()
+    public function getDbs()
     {
-        return $this->container['greater_than'];
+        return $this->container['dbs'];
     }
 
     /**
-     * Sets greater_than
+     * Sets dbs
      *
-     * @param int $greater_than property > this
+     * @param int $dbs dbs
      *
      * @return self
      */
-    public function setGreaterThan($greater_than)
+    public function setDbs($dbs)
     {
-        if (is_null($greater_than)) {
-            throw new \InvalidArgumentException('non-nullable greater_than cannot be null');
+        if (is_null($dbs)) {
+            throw new \InvalidArgumentException('non-nullable dbs cannot be null');
         }
 
-        if (($greater_than < 0)) {
-            throw new \InvalidArgumentException('invalid value for $greater_than when calling CountComparisonOneOf1., must be bigger than or equal to 0.');
+        if (($dbs < 0)) {
+            throw new \InvalidArgumentException('invalid value for $dbs when calling AdminStatus., must be bigger than or equal to 0.');
         }
 
-        $this->container['greater_than'] = $greater_than;
+        $this->container['dbs'] = $dbs;
+
+        return $this;
+    }
+
+    /**
+     * Gets logged_in_users
+     *
+     * @return int
+     */
+    public function getLoggedInUsers()
+    {
+        return $this->container['logged_in_users'];
+    }
+
+    /**
+     * Sets logged_in_users
+     *
+     * @param int $logged_in_users logged_in_users
+     *
+     * @return self
+     */
+    public function setLoggedInUsers($logged_in_users)
+    {
+        if (is_null($logged_in_users)) {
+            throw new \InvalidArgumentException('non-nullable logged_in_users cannot be null');
+        }
+
+        if (($logged_in_users < 0)) {
+            throw new \InvalidArgumentException('invalid value for $logged_in_users when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['logged_in_users'] = $logged_in_users;
+
+        return $this;
+    }
+
+    /**
+     * Gets size
+     *
+     * @return int
+     */
+    public function getSize()
+    {
+        return $this->container['size'];
+    }
+
+    /**
+     * Sets size
+     *
+     * @param int $size size
+     *
+     * @return self
+     */
+    public function setSize($size)
+    {
+        if (is_null($size)) {
+            throw new \InvalidArgumentException('non-nullable size cannot be null');
+        }
+
+        if (($size < 0)) {
+            throw new \InvalidArgumentException('invalid value for $size when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['size'] = $size;
+
+        return $this;
+    }
+
+    /**
+     * Gets uptime
+     *
+     * @return int
+     */
+    public function getUptime()
+    {
+        return $this->container['uptime'];
+    }
+
+    /**
+     * Sets uptime
+     *
+     * @param int $uptime uptime
+     *
+     * @return self
+     */
+    public function setUptime($uptime)
+    {
+        if (is_null($uptime)) {
+            throw new \InvalidArgumentException('non-nullable uptime cannot be null');
+        }
+
+        if (($uptime < 0)) {
+            throw new \InvalidArgumentException('invalid value for $uptime when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['uptime'] = $uptime;
+
+        return $this;
+    }
+
+    /**
+     * Gets users
+     *
+     * @return int
+     */
+    public function getUsers()
+    {
+        return $this->container['users'];
+    }
+
+    /**
+     * Sets users
+     *
+     * @param int $users users
+     *
+     * @return self
+     */
+    public function setUsers($users)
+    {
+        if (is_null($users)) {
+            throw new \InvalidArgumentException('non-nullable users cannot be null');
+        }
+
+        if (($users < 0)) {
+            throw new \InvalidArgumentException('invalid value for $users when calling AdminStatus., must be bigger than or equal to 0.');
+        }
+
+        $this->container['users'] = $users;
 
         return $this;
     }

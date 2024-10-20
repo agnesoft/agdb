@@ -6,7 +6,7 @@
     "license": {
       "name": "Apache-2.0"
     },
-    "version": "0.8.2"
+    "version": "0.9.0"
   },
   "servers": [
     {
@@ -698,6 +698,37 @@
           },
           "401": {
             "description": "unauthorized"
+          },
+          "403": {
+            "description": "admin only"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/status": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_status",
+        "responses": {
+          "200": {
+            "description": "Server is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
           }
         },
         "security": [
@@ -827,6 +858,41 @@
             "description": "password too short (<8)"
           },
           "464": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/logout": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_logout",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "user logged out"
+          },
+          "401": {
+            "description": "admin only"
+          },
+          "404": {
             "description": "user not found"
           }
         },
@@ -1604,7 +1670,17 @@
         ],
         "responses": {
           "200": {
-            "description": "ok"
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DbUser"
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "unauthorized"
@@ -1832,9 +1908,6 @@
           },
           "401": {
             "description": "invalid credentials"
-          },
-          "404": {
-            "description": "user not found"
           }
         },
         "security": [
@@ -1847,6 +1920,43 @@
   },
   "components": {
     "schemas": {
+      "AdminStatus": {
+        "type": "object",
+        "required": [
+          "uptime",
+          "dbs",
+          "users",
+          "logged_in_users",
+          "size"
+        ],
+        "properties": {
+          "dbs": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "logged_in_users": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "uptime": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "users": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "ChangePassword": {
         "type": "object",
         "required": [
@@ -3196,9 +3306,13 @@
       "UserStatus": {
         "type": "object",
         "required": [
-          "name"
+          "name",
+          "login"
         ],
         "properties": {
+          "login": {
+            "type": "boolean"
+          },
           "name": {
             "type": "string"
           }

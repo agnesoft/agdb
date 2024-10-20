@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { login } from "@/services/auth.service";
 import { CgSpinnerTwo } from "@kalimahapps/vue-icons";
+import router from "@/router";
 
 const username = ref("");
 const password = ref("");
@@ -19,6 +20,7 @@ const onLogin = async () => {
     login(username.value, password.value)
         .then(() => {
             loading.value = false;
+            router.push({ name: "Home" });
         })
         .catch((e) => {
             loading.value = false;

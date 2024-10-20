@@ -1,89 +1,89 @@
 name: agdb_studio
 
 on:
-    pull_request:
-        branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
-    diff:
-        runs-on: ubuntu-latest
-        outputs:
-            diff: ${{ steps.diff.outputs.diff }}
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-            - id: diff
-              shell: bash
-              run: |
-                  if [[ "$(git diff origin/main --name-only -- agdb_studio/ agdb_api/typescript/src/ agdb_api/typescript/package.json agdb_server/openapi/schema.json .github/workflows/agdb_studio.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
+  diff:
+    runs-on: ubuntu-latest
+    outputs:
+      diff: ${{ steps.diff.outputs.diff }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        shell: bash
+        run: |
+          if [[ "$(git diff origin/main --name-only -- agdb_studio/ agdb_api/typescript/src/ agdb_api/typescript/package.json agdb_server/openapi/schema.json .github/workflows/agdb_studio.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
 
-    agdb_studio_analyse:
-        runs-on: ubuntu-latest
-        needs: diff
-        if: needs.diff.outputs.diff == 'true'
-        defaults:
-            run:
-                working-directory: agdb_studio
-        steps:
-            - uses: actions/checkout@v4
-            - run: npm ci
-            - run: npm run lint
+  agdb_studio_analyse:
+    runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
+    defaults:
+      run:
+        working-directory: agdb_studio
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run lint
 
-    agdb_studio_coverage:
-        runs-on: ubuntu-latest
-        needs: diff
-        if: needs.diff.outputs.diff == 'true'
-        defaults:
-            run:
-                working-directory: agdb_studio
-        steps:
-            - uses: actions/checkout@v4
-            - run: npm ci
-              working-directory: agdb_api/typescript
-            - run: npm run build
-              working-directory: agdb_api/typescript
-            - run: npm ci
-            - run: npm run test
-            - uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                  name: coverage
-                  path: agdb_studio/coverage/
-                  retention-days: 30
+  agdb_studio_coverage:
+    runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
+    defaults:
+      run:
+        working-directory: agdb_studio
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+        working-directory: agdb_api/typescript
+      - run: npm run build
+        working-directory: agdb_api/typescript
+      - run: npm ci
+      - run: npm run test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: agdb_studio/coverage/
+          retention-days: 30
 
-    agdb_studio_e2e:
-        runs-on: ubuntu-latest
-        needs: diff
-        if: needs.diff.outputs.diff == 'true'
-        defaults:
-            run:
-                working-directory: agdb_studio
-        steps:
-            - uses: actions/checkout@v4
-            - run: npm ci
-              working-directory: agdb_api/typescript
-            - run: npm run build
-              working-directory: agdb_api/typescript
-            - run: npm ci
-            - run: npx playwright install --with-deps
-            - run: npm run build
-            - run: npm run test:e2e
-            - uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                  name: e2e
-                  path: agdb_studio/playwright-report/
-                  retention-days: 30
+  agdb_studio_e2e:
+    runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
+    defaults:
+      run:
+        working-directory: agdb_studio
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+        working-directory: agdb_api/typescript
+      - run: npm run build
+        working-directory: agdb_api/typescript
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npm run build
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e
+          path: agdb_studio/playwright-report/
+          retention-days: 30
 
-    agdb_studio_format:
-        runs-on: ubuntu-latest
-        needs: diff
-        if: needs.diff.outputs.diff == 'true'
-        defaults:
-            run:
-                working-directory: agdb_studio
-        steps:
-            - uses: actions/checkout@v4
-            - run: npm ci
-            - run: npm run format:check
+  agdb_studio_format:
+    runs-on: ubuntu-latest
+    needs: diff
+    if: needs.diff.outputs.diff == 'true'
+    defaults:
+      run:
+        working-directory: agdb_studio
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run format:check

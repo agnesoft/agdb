@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createRouter, createWebHistory } from "vue-router";
 import { mount } from "@vue/test-utils";
-import { routes } from "@/router/index";
+import { createRoutes } from "@/router/routes";
 import type { Router } from "vue-router";
 import HomeView from "@/views/HomeView.vue";
 import AboutView from "@/views/HomeView.vue";
@@ -13,7 +13,7 @@ describe("router", () => {
     beforeEach(async () => {
         router = createRouter({
             history: createWebHistory(),
-            routes,
+            routes: createRoutes(),
         });
 
         router.push("/");

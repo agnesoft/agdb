@@ -22,6 +22,27 @@
             "open": true,
             "focus": false,
             "commands": ["cd agdb_web"]
+        },
+        {
+            "name": "studio SERVER",
+            "description": "For running web studio server",
+            "open": true,
+            "focus": false,
+            "commands": ["cd agdb_studio", "npm run dev"]
+        },
+        {
+            "name": "studio SCRIPTS",
+            "description": "For running studio scripts",
+            "open": true,
+            "focus": false,
+            "commands": ["cd agdb_studio"]
+        },
+        {
+            "name": "api SCRIPTS",
+            "description": "For running api/typescript scripts",
+            "open": true,
+            "focus": false,
+            "commands": ["cd agdb_api/typescript"]
         }
     ]
 }

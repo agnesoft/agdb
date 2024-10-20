@@ -1,35 +1,25 @@
 import { createRouter, createWebHistory } from "vue-router";
-import MainLayout from "@/layouts/MainLayout.vue";
-
-const routes = [
-    {
-        path: "/login",
-        name: "login",
-        component: () => import("@/views/LoginView.vue"),
-    },
-    {
-        path: "",
-        component: MainLayout,
-        children: [
-            {
-                path: "",
-                name: "home",
-                component: () => import("@/views/HomeView.vue"),
-            },
-            {
-                path: "/about",
-                name: "about",
-                component: () => import("@/views/AboutView.vue"),
-            },
-        ],
-    },
-];
+import { createRoutes } from "./routes";
+import { isLoggedIn, logout } from "@/services/auth.service";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
-    routes,
+    routes: createRoutes(),
 });
 
-export { routes };
+router.beforeEach((to, from, next) => {
+    if (isLoggedIn()) {
+        if (to.name === "login") {
+            logout();
+        }
+        next();
+    } else {
+        if (to.name !== "login") {
+            next({ name: "login" });
+        } else {
+            next();
+        }
+    }
+});
 
 export default router;

@@ -26,7 +26,7 @@ function get_token(): string | undefined {
 
 async function logout(): Promise<void> {
     await this.user_logout();
-    this.remove_token();
+    this.reset_token();
 }
 
 function set_token(token: string): void {

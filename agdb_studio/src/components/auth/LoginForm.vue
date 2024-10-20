@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { login } from "@/services/auth.service";
+import { CgSpinnerTwo } from "@kalimahapps/vue-icons";
 
 const username = ref("");
 const password = ref("");
@@ -42,7 +43,10 @@ const onLogin = async () => {
                     required
                 />
             </div>
-            <button type="submit" class="button button-success">Login</button>
+            <button type="submit" class="button button-success">
+                <CgSpinnerTwo v-if="loading" />
+                Login
+            </button>
         </form>
     </div>
 </template>

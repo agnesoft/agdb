@@ -1,0 +1,6 @@
+agdb_api/php/docs/* linguist-generated
+agdb_api/php/lib/* linguist-generated
+agdb_api/php/tests/QueryTest.php linguist-generated
+agdb_api/typescript/tests/query.test.ts linguist-generated
+agdb_server/openapi.json linguist-generated
+agdb_server/test_queries.json linguist-generated

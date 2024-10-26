@@ -367,6 +367,33 @@ fn hot_backup() {
 }
 
 #[test]
+fn memory_backup() {
+    let test_file = TestFile::new();
+
+    {
+        let mut db = DbMemory::new("memdb").unwrap();
+        db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
+            .unwrap();
+        db.backup(test_file.file_name()).unwrap();
+        assert!(std::fs::exists(test_file.file_name()).unwrap());
+        db.exec_mut(QueryBuilder::insert().nodes().count(1).query())
+            .unwrap();
+    }
+
+    let db = DbMemory::new(test_file.file_name()).unwrap();
+    assert_eq!(
+        db.exec(QueryBuilder::select().node_count().query())
+            .unwrap()
+            .elements[0]
+            .values[0]
+            .value
+            .to_u64()
+            .unwrap(),
+        1
+    );
+}
+
+#[test]
 fn filename() {
     let test_file = TestFile::new();
     let db = Db::new(test_file.file_name()).unwrap();

@@ -23,6 +23,11 @@ impl MemoryStorage {
 }
 
 impl StorageData for MemoryStorage {
+    fn backup(&self, name: &str) -> Result<(), DbError> {
+        std::fs::write(name, &self.buffer)?;
+        Ok(())
+    }
+
     fn copy(&self, name: &str) -> Result<Self, DbError> {
         Ok(Self {
             buffer: self.buffer.clone(),
@@ -40,7 +45,11 @@ impl StorageData for MemoryStorage {
 
     fn new(name: &str) -> Result<Self, DbError> {
         Ok(Self {
-            buffer: vec![],
+            buffer: if let Ok(true) = std::fs::exists(name) {
+                std::fs::read(name)?
+            } else {
+                vec![]
+            },
             name: name.to_string(),
         })
     }

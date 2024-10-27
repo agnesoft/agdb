@@ -49,9 +49,7 @@ pub trait StorageData: Sized {
     /// Copy the underlying data storage to a new `name`. The
     /// default implementation does nothing. File implementations
     /// might need to copy the underlying file(s).
-    fn backup(&self, _name: &str) -> Result<(), DbError> {
-        Ok(())
-    }
+    fn backup(&self, _name: &str) -> Result<(), DbError>;
 
     /// Copies the storage to a new `name`.
     fn copy(&self, name: &str) -> Result<Self, DbError>;

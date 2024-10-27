@@ -219,7 +219,7 @@ pub type DbFileTransaction<'a> = Transaction<'a, FileStorage>;
 pub type DbFileTransactionMut<'a> = TransactionMut<'a, FileStorage>;
 
 /// The purely in-memory implementation of the database. It has no persistence but offers
-/// unmatched performance
+/// unmatched performance.
 pub type DbMemory = DbImpl<MemoryStorage>;
 
 /// A convenience alias for the [`Transaction`] type for the default [`DbMemory`].
@@ -235,7 +235,8 @@ impl<Store: StorageData> std::fmt::Debug for DbImpl<Store> {
 }
 
 impl<Store: StorageData> DbImpl<Store> {
-    /// Tries to create or load `filename` file as `Db` object.
+    /// Tries to create or load `filename` file as `Db` object. For in-memory storage
+    /// this will either load the data from file once (if present) or create an empty database.
     pub fn new(filename: &str) -> Result<Self, DbError> {
         match Self::try_new(filename) {
             Ok(db) => Ok(db),
@@ -251,7 +252,9 @@ impl<Store: StorageData> DbImpl<Store> {
     /// to `filename` path. Consider calling `optimize_storage()`
     /// prior to this function to reduce the size of the storage
     /// file. If speed is of the essence you may omit that operation
-    /// at expense of the file size.
+    /// at expense of the file size. For memory based storage this will
+    /// dump the internal buffer to the `filename` which can be used to
+    /// restore back the database by `DbMemory::new()`.
     pub fn backup(&self, filename: &str) -> Result<(), DbError> {
         self.storage.backup(filename)
     }

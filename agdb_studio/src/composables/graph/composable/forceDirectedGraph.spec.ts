@@ -2,7 +2,7 @@ import useForceDirectedGraph, {
     type ForceDirectedGraph,
 } from "@/composables/graph/composable/forceDirectedGraph";
 import { describe, it, expect, beforeEach } from "vitest";
-import simpleData from "@/testData/simpleData.json" assert { type: "json" };
+import simpleData from "@/tests/data/simpleData.json" assert { type: "json" };
 
 describe("useForceDirectedGraph 2D", () => {
     let graph: ForceDirectedGraph;

@@ -51,7 +51,7 @@ export async function client(address: String): Promise<AgdbApiClient> {
         definition: `${address}/api/v1/openapi.json`,
     });
     const client = await api.init<AgdbApiClient>();
-    client.token = "";
+    client.token = undefined;
     client.login = login;
     client.logout = logout;
     client.set_token = set_token;

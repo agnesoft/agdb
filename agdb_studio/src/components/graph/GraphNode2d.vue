@@ -18,9 +18,6 @@ const coordinates = computed(() => {
 });
 
 const style = computed<StyleObject>(() => {
-    // if (!coordinates.value) {
-    //     return {} as StyleObject;
-    // }
     const left = coordinates.value.x * props.scale + props.scale;
     const top = coordinates.value.y * props.scale + props.scale;
     return {

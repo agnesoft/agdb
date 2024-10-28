@@ -28,7 +28,7 @@ const getToken = (): string | undefined => {
 const removeToken = (): void => {
     client?.reset_token();
     localStorage.removeItem(ACCESS_TOKEN);
-    // window.location.reload();
+    window.location.reload();
 };
 
 export const isLoggedIn = (): boolean => {

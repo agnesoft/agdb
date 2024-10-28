@@ -1,3 +1,7 @@
+<script setup lang="ts">
+// this page is just for router testing and will be removed
+</script>
+
 <template>
     <div class="about">
         <h1>This is an about page</h1>

@@ -40,6 +40,7 @@ use utoipa::OpenApi;
         routes::db::audit,
         routes::db::backup,
         routes::db::clear,
+        routes::db::convert,
         routes::db::copy,
         routes::db::delete,
         routes::db::exec,

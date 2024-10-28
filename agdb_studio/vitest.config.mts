@@ -25,6 +25,12 @@ export default mergeConfig(
                     "*.config.*",
                     "./src/main.ts",
                 ],
+                thresholds: {
+                    lines: 100,
+                    functions: 100,
+                    branches: 100,
+                    statements: 100,
+                },
             },
             setupFiles: ["./vitest.setup.ts"],
             globals: true,

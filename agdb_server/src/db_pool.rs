@@ -528,9 +528,23 @@ impl DbPool {
         let db_name = db_name(owner, db);
         let mut database = self.find_user_db(user, &db_name).await?;
 
+        if database.db_type == db_type {
+            return Ok(());
+        }
+
         if !self.is_db_admin(user, database.db_id.unwrap()).await? {
             return Err(permission_denied("admin only"));
         }
+
+        let mut pool = self.get_pool_mut().await;
+        pool.remove(&db_name);
+
+        let current_path = db_file(owner, db, config);
+        let server_db = ServerDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
+        pool.insert(db_name, server_db);
+
+        database.db_type = db_type;
+        self.save_db(&database).await?;
 
         Ok(())
     }

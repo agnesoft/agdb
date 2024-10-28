@@ -345,6 +345,18 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
+    pub async fn db_convert(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/db/{owner}/{db}/convert?db_type={db_type}")),
+                &None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     pub async fn db_copy(
         &self,
         owner: &str,

@@ -445,7 +445,11 @@ impl DbPool {
         config: &Config,
         database: &mut Database,
     ) -> Result<(), ServerError> {
-        let backup_file = db_backup_file(owner, db, config);
+        let backup_file = if database.db_type == DbType::Memory {
+            db_file(owner, db, config)
+        } else {
+            db_backup_file(owner, db, config)
+        };
         if backup_file.exists() {
             std::fs::remove_file(&backup_file)?;
         }

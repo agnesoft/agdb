@@ -84,6 +84,26 @@ async fn clear_db_memory() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn clear_db_memory_backup() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    server.api.db_add(owner, db, DbType::Memory).await?;
+    let db_path = Path::new(&server.data_dir).join(owner).join(db);
+    assert!(!db_path.exists());
+    server.api.db_backup(owner, db).await?;
+    assert!(db_path.exists());
+    let (status, db) = server.api.db_clear(owner, db, DbResource::Backup).await?;
+    assert!(!db_path.exists());
+    assert_eq!(status, 200);
+    assert_eq!(db.backup, 0);
+    Ok(())
+}
+
+#[tokio::test]
 async fn clear_all() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();

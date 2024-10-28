@@ -38,7 +38,7 @@ export default class Node {
         return { x: this.x, y: this.y, z: this.z };
     }
 
-    public setCoordinates(x: number, y: number, z: number = 0): Node {
+    public setCoordinates(x: number, y: number, z: number): Node {
         this.x = x;
         this.y = y;
         this.z = z;

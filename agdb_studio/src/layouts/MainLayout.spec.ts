@@ -2,7 +2,20 @@ import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
-
+const { loginMock, isLoggedInMock, logoutMock } = vi.hoisted(() => {
+    return {
+        loginMock: vi.fn(),
+        isLoggedInMock: vi.fn(),
+        logoutMock: vi.fn(),
+    };
+});
+vi.mock("@/services/auth.service", () => {
+    return {
+        login: loginMock,
+        isLoggedIn: isLoggedInMock,
+        logout: logoutMock,
+    };
+});
 const routes = [
     { path: "/", name: "home", component: { template: "<div>Home</div>" } },
     {
@@ -50,5 +63,17 @@ describe("MainLayout", () => {
         await router.isReady();
 
         expect(wrapper.text()).toContain("About");
+    });
+
+    it("logout on click", async () => {
+        const wrapper = mount(MainLayout, {
+            global: {
+                plugins: [router],
+            },
+        });
+
+        await wrapper.find(".logout-button").trigger("click");
+
+        expect(logoutMock).toHaveBeenCalled();
     });
 });

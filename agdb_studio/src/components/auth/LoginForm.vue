@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { login } from "@/services/auth.service";
-import { CgSpinnerTwo } from "@kalimahapps/vue-icons";
 import router from "@/router";
+import SpinnerIcon from "@/components/base/icons/SpinnerIcon.vue";
 
 const username = ref("");
 const password = ref("");
@@ -18,9 +18,9 @@ const onLogin = async () => {
     loading.value = true;
     clearError();
     login(username.value, password.value)
-        .then(() => {
+        .then(async () => {
+            await router.push({ name: "home" });
             loading.value = false;
-            router.push({ name: "home" });
         })
         .catch((e) => {
             loading.value = false;
@@ -46,7 +46,7 @@ const onLogin = async () => {
                 />
             </div>
             <button type="submit" class="button button-success">
-                <CgSpinnerTwo v-if="loading" />
+                <SpinnerIcon v-if="loading" />
                 Login
             </button>
         </form>
@@ -63,6 +63,13 @@ const onLogin = async () => {
     }
     input {
         border-radius: 0.2rem;
+    }
+    .button {
+        position: relative;
+        .spinner-icon {
+            position: absolute;
+            left: 0.6em;
+        }
     }
 }
 </style>

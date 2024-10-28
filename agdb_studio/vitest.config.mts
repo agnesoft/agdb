@@ -23,6 +23,7 @@ export default mergeConfig(
                     ...coverageConfigDefaults.exclude,
                     "e2e/*",
                     "*.config.*",
+                    "./src/main.ts",
                 ],
             },
             setupFiles: ["./vitest.setup.ts"],

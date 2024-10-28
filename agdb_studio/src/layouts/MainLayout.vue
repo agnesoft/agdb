@@ -1,25 +1,23 @@
 <script lang="ts" setup>
 import { RouterLink, RouterView } from "vue-router";
 import { logout } from "@/services/auth.service";
+import LogoIcon from "@/components/base/icons/LogoIcon.vue";
 </script>
 
 <template>
     <div class="main-layout">
         <header>
-            <img
-                alt="agdb logo"
-                class="logo"
-                src="@/assets/logo.svg"
-                width="100"
-                height="100"
-            />
+            <LogoIcon />
 
             <div class="wrapper">
                 <nav>
                     <RouterLink to="/">Home</RouterLink>
                     <RouterLink to="/about">About</RouterLink>
                 </nav>
-                <button class="button button-warning" @click="logout">
+                <button
+                    class="button button-warning logout-button"
+                    @click="logout"
+                >
                     Logout
                 </button>
             </div>
@@ -57,12 +55,10 @@ footer {
     grid-area: footer;
 }
 
-.logo {
-    --logo-size: 100px;
+.logo-icon {
+    --logo-icon-size: 100px;
     display: block;
     margin: 0 auto 2rem;
-    width: var(--logo-size);
-    height: var(--logo-size);
 }
 
 nav {
@@ -96,8 +92,8 @@ nav a:first-of-type {
         padding-right: calc(var(--section-gap) / 2);
     }
 
-    .logo {
-        --logo-size: 75px;
+    .logo-icon {
+        --logo-icon-size: 75px;
         margin: 0 2rem 0 1rem;
     }
 

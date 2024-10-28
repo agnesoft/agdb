@@ -1,6 +1,6 @@
-import { ForceDirectedGraph } from "@/composables/graph/prototype/forceDirectedGraph";
+import ForceDirectedGraph from "@/composables/graph/class/forceDirectedGraph";
 import { describe, it, expect, beforeEach } from "vitest";
-import simpleData from "@/testData/simpleData.json" assert { type: "json" };
+import simpleData from "@/tests/data/simpleData.json" assert { type: "json" };
 
 describe("ForceDirectedGraph 2D", () => {
     let graph: ForceDirectedGraph;
@@ -13,7 +13,7 @@ describe("ForceDirectedGraph 2D", () => {
     };
 
     beforeEach(() => {
-        graph = new (ForceDirectedGraph as any)({ is2d: true });
+        graph = new ForceDirectedGraph({ is2d: true });
     });
 
     it("should load the graph correctly", () => {
@@ -63,7 +63,7 @@ describe("ForceDirectedGraph 3D", () => {
     const graphData = JSON.parse(JSON.stringify(simpleData));
 
     beforeEach(() => {
-        graph = new (ForceDirectedGraph as any)({ is2d: false });
+        graph = new ForceDirectedGraph({ is2d: false });
     });
 
     it("should load the graph correctly", () => {

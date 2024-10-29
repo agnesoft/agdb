@@ -47,7 +47,11 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::insert().edges().from("a").to([1,2]).query()`, () => {
-        const query = QueryBuilder.insert().edges().from("a").to([1, 2]).query();
+        const query = QueryBuilder.insert()
+            .edges()
+            .from("a")
+            .to([1, 2])
+            .query();
         expect(query).toEqual(test_queries[5][1]);
     });
 
@@ -151,7 +155,12 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::insert().edges().ids(-3).from(1).to(2).query()`, () => {
-        const query = QueryBuilder.insert().edges().ids(-3).from(1).to(2).query();
+        const query = QueryBuilder.insert()
+            .edges()
+            .ids(-3)
+            .from(1)
+            .to(2)
+            .query();
         expect(query).toEqual(test_queries[15][1]);
     });
 
@@ -237,7 +246,11 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::insert().nodes().ids([1,2]).count(1).query()`, () => {
-        const query = QueryBuilder.insert().nodes().ids([1, 2]).count(1).query();
+        const query = QueryBuilder.insert()
+            .nodes()
+            .ids([1, 2])
+            .count(1)
+            .query();
         expect(query).toEqual(test_queries[26][1]);
     });
 
@@ -247,7 +260,11 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::insert().nodes().ids("a").aliases("a").query()`, () => {
-        const query = QueryBuilder.insert().nodes().ids("a").aliases("a").query();
+        const query = QueryBuilder.insert()
+            .nodes()
+            .ids("a")
+            .aliases("a")
+            .query();
         expect(query).toEqual(test_queries[28][1]);
     });
 
@@ -296,7 +313,9 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::insert().elements(&[T::default(),T::default()]).query()`, () => {
-        const query = QueryBuilder.insert().elements([new T(), new T()]).query();
+        const query = QueryBuilder.insert()
+            .elements([new T(), new T()])
+            .query();
         expect(query).toEqual(test_queries[34][1]);
     });
 
@@ -478,7 +497,10 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::select().edge_count_from().ids([1,2]).query()`, () => {
-        const query = QueryBuilder.select().edge_count_from().ids([1, 2]).query();
+        const query = QueryBuilder.select()
+            .edge_count_from()
+            .ids([1, 2])
+            .query();
         expect(query).toEqual(test_queries[58][1]);
     });
 
@@ -488,7 +510,11 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::select().edge_count().search().from(1).query()`, () => {
-        const query = QueryBuilder.select().edge_count().search().from(1).query();
+        const query = QueryBuilder.select()
+            .edge_count()
+            .search()
+            .from(1)
+            .query();
         expect(query).toEqual(test_queries[60][1]);
     });
 
@@ -529,12 +555,20 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::select().search().from("a").limit(10).query()`, () => {
-        const query = QueryBuilder.select().search().from("a").limit(10).query();
+        const query = QueryBuilder.select()
+            .search()
+            .from("a")
+            .limit(10)
+            .query();
         expect(query).toEqual(test_queries[67][1]);
     });
 
     it(`QueryBuilder::select().search().from("a").offset(10).query()`, () => {
-        const query = QueryBuilder.select().search().from("a").offset(10).query();
+        const query = QueryBuilder.select()
+            .search()
+            .from("a")
+            .offset(10)
+            .query();
         expect(query).toEqual(test_queries[68][1]);
     });
 
@@ -604,7 +638,11 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::select().key_count().search().from(1).query()`, () => {
-        const query = QueryBuilder.select().key_count().search().from(1).query();
+        const query = QueryBuilder.select()
+            .key_count()
+            .search()
+            .from(1)
+            .query();
         expect(query).toEqual(test_queries[79][1]);
     });
 
@@ -614,7 +652,10 @@ describe("query tests", () => {
     });
 
     it(`QueryBuilder::select().values(["k","k2"]).ids("a").query()`, () => {
-        const query = QueryBuilder.select().values(["k", "k2"]).ids("a").query();
+        const query = QueryBuilder.select()
+            .values(["k", "k2"])
+            .ids("a")
+            .query();
         expect(query).toEqual(test_queries[81][1]);
     });
 

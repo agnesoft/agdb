@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import { RouterLink, RouterView } from "vue-router";
-import { logout } from "@/services/auth.service";
+import { useAccountStore } from "@/stores/account";
 import LogoIcon from "@/components/base/icons/LogoIcon.vue";
+
+const accountStore = useAccountStore();
 </script>
 
 <template>
@@ -16,7 +18,7 @@ import LogoIcon from "@/components/base/icons/LogoIcon.vue";
                 </nav>
                 <button
                     class="button button-warning logout-button"
-                    @click="logout"
+                    @click="accountStore.logout"
                 >
                     Logout
                 </button>

@@ -5,6 +5,7 @@ import {
     type RouteLocationNormalizedGeneric,
 } from "vue-router";
 import { createRoutes } from "./routes";
+// import { useAccountStore } from "@/stores/account";
 import { isLoggedIn, logout } from "@/services/auth.service";
 
 const router = createRouter({
@@ -17,6 +18,7 @@ export const beforeEach = (
     from: RouteLocationNormalizedGeneric,
     next: NavigationGuardNext,
 ) => {
+    // const accountStore = useAccountStore();
     if (isLoggedIn()) {
         if (to.name === "login") {
             logout();

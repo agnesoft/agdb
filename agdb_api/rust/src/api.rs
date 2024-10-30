@@ -554,6 +554,12 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
+    pub async fn user_status(&self) -> AgdbApiResult<(u16, UserStatus)> {
+        self.client
+            .get(&self.url("/user/status"), &self.token)
+            .await
+    }
+
     fn url(&self, uri: &str) -> String {
         format!("{}{uri}", self.base_url)
     }

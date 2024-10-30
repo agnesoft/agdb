@@ -120,6 +120,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**userChangePassword**](docs/Api/AgdbApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 
 *AgdbApi* | [**userLogin**](docs/Api/AgdbApi.md#userlogin) | **POST** /api/v1/user/login | 
 *AgdbApi* | [**userLogout**](docs/Api/AgdbApi.md#userlogout) | **POST** /api/v1/user/logout | 
+*AgdbApi* | [**userStatus**](docs/Api/AgdbApi.md#userstatus) | **GET** /api/v1/user/status | 
 
 ## Models
 

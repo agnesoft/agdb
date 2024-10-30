@@ -2026,6 +2026,34 @@
           }
         ]
       }
+    },
+    "/api/v1/user/status": {
+      "get": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "user_status",
+        "responses": {
+          "200": {
+            "description": "User status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -3417,9 +3445,13 @@
         "type": "object",
         "required": [
           "name",
-          "login"
+          "login",
+          "admin"
         ],
         "properties": {
+          "admin": {
+            "type": "boolean"
+          },
           "login": {
             "type": "boolean"
           },

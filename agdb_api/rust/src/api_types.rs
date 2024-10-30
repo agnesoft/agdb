@@ -112,6 +112,7 @@ pub struct UserLogin {
 pub struct UserStatus {
     pub name: String,
     pub login: bool,
+    pub admin: bool,
 }
 
 impl From<&str> for DbType {
@@ -219,7 +220,8 @@ mod tests {
             "{:?}",
             UserStatus {
                 name: "user".to_string(),
-                login: true
+                login: true,
+                admin: false
             }
         );
         let _ = format!(
@@ -285,10 +287,12 @@ mod tests {
         let status = UserStatus {
             name: "user".to_string(),
             login: true,
+            admin: false,
         };
         let other = UserStatus {
             name: "user2".to_string(),
             login: true,
+            admin: false,
         };
         assert!(status < other);
     }
@@ -324,6 +328,7 @@ mod tests {
         let status = UserStatus {
             name: "user".to_string(),
             login: false,
+            admin: false,
         };
 
         assert_eq!(status.cmp(&status), std::cmp::Ordering::Equal);

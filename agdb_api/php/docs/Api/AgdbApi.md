@@ -47,6 +47,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**userChangePassword()**](AgdbApi.md#userChangePassword) | **PUT** /api/v1/user/change_password |  |
 | [**userLogin()**](AgdbApi.md#userLogin) | **POST** /api/v1/user/login |  |
 | [**userLogout()**](AgdbApi.md#userLogout) | **POST** /api/v1/user/logout |  |
+| [**userStatus()**](AgdbApi.md#userStatus) | **GET** /api/v1/user/status |  |
 
 
 ## `adminDbAdd()`
@@ -2571,6 +2572,61 @@ void (empty response body)
 
 - **Content-Type**: Not defined
 - **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `userStatus()`
+
+```php
+userStatus(): \Agnesoft\AgdbApi\Model\UserStatus
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $result = $apiInstance->userStatus();
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->userStatus: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\UserStatus**](../Model/UserStatus.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

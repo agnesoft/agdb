@@ -37,6 +37,7 @@ use utoipa::OpenApi;
         routes::user::login,
         routes::user::logout,
         routes::user::change_password,
+        routes::user::status,
         routes::db::add,
         routes::db::audit,
         routes::db::backup,

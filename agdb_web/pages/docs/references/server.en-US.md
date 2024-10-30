@@ -50,13 +50,14 @@ Users are allowed to change their password and to create and manipulate database
 
 Available user APIs:
 
-| Action                       | Description                                         |
-| ---------------------------- | --------------------------------------------------- |
-| /api/v1/user/change_password | changes the current user's password                 |
-| /api/v1/user/login           | logs in the user returning an API token             |
-| /api/v1/user/logout          | logs out the user and invalidating the API token \* |
+| Action                       | Description                                                         |
+| ---------------------------- | ------------------------------------------------------------------- |
+| /api/v1/user/change_password | changes the current user's password                                 |
+| /api/v1/user/login           | logs in the user returning an API token                             |
+| /api/v1/user/logout          | logs out the user and invalidating the API token \*                 |
+| /api/v1/user/status          | returns current user's username and whether it is a server admin \* |
 
-The login is shared meaning if you login twice even from different devices you will get the same sahred API token of that user. Similarly when the `logout` endpoint is used this token is invalidated across all sessions.
+The login is shared meaning if you login twice even from different devices you will get the same shared API token of that user. Similarly when the `logout` endpoint is used this token is invalidated across all sessions.
 
 ## Databases
 

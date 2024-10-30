@@ -147,7 +147,8 @@ pub(crate) fn app(
         .route(
             "/user/change_password",
             routing::put(routes::user::change_password),
-        );
+        )
+        .route("/user/status", routing::get(routes::user::status));
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])

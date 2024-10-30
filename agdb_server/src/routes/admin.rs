@@ -2,7 +2,7 @@ pub(crate) mod db;
 pub(crate) mod user;
 
 use crate::config::Config;
-use crate::db_pool;
+use crate::db_pool::DbPool;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use agdb_api::AdminStatus;
@@ -45,7 +45,7 @@ pub(crate) async fn shutdown(
 pub(crate) async fn status(
     _admin_id: AdminId,
     State(config): State<Config>,
-    State(db_pool): State<db_pool::DbPool>,
+    State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<AdminStatus>)> {
     let status = db_pool.status(&config).await?;
     Ok((StatusCode::OK, Json(status)))

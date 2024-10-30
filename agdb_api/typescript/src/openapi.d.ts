@@ -1255,6 +1255,30 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminDbConvert {
+        namespace Parameters {
+            export type Db = string;
+            export type DbType = Components.Schemas.DbType;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            db_type: Parameters.DbType;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbCopy {
         namespace Parameters {
             export type Db = string;
@@ -1654,6 +1678,30 @@ declare namespace Paths {
             }
         }
     }
+    namespace DbConvert {
+        namespace Parameters {
+            export type Db = string;
+            export type DbType = Components.Schemas.DbType;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            db_type: Parameters.DbType;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace DbCopy {
         namespace Parameters {
             export type Db = string;
@@ -1948,6 +1996,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbBackup.Responses.$201>
   /**
+   * admin_db_convert
+   */
+  'admin_db_convert'(
+    parameters?: Parameters<Paths.AdminDbConvert.QueryParameters & Paths.AdminDbConvert.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbConvert.Responses.$201>
+  /**
    * admin_db_copy
    */
   'admin_db_copy'(
@@ -2132,6 +2188,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbClear.Responses.$201>
   /**
+   * db_convert
+   */
+  'db_convert'(
+    parameters?: Parameters<Paths.DbConvert.QueryParameters & Paths.DbConvert.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DbConvert.Responses.$201>
+  /**
    * db_copy
    */
   'db_copy'(
@@ -2285,6 +2349,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbBackup.Responses.$201>
+  }
+  ['/api/v1/admin/db/{owner}/{db}/convert']: {
+    /**
+     * admin_db_convert
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbConvert.QueryParameters & Paths.AdminDbConvert.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbConvert.Responses.$201>
   }
   ['/api/v1/admin/db/{owner}/{db}/copy']: {
     /**
@@ -2515,6 +2589,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbClear.Responses.$201>
+  }
+  ['/api/v1/db/{owner}/{db}/convert']: {
+    /**
+     * db_convert
+     */
+    'post'(
+      parameters?: Parameters<Paths.DbConvert.QueryParameters & Paths.DbConvert.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DbConvert.Responses.$201>
   }
   ['/api/v1/db/{owner}/{db}/copy']: {
     /**

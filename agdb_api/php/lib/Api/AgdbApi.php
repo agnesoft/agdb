@@ -80,6 +80,9 @@ class AgdbApi
         'adminDbBackup' => [
             'application/json',
         ],
+        'adminDbConvert' => [
+            'application/json',
+        ],
         'adminDbCopy' => [
             'application/json',
         ],
@@ -147,6 +150,9 @@ class AgdbApi
             'application/json',
         ],
         'dbClear' => [
+            'application/json',
+        ],
+        'dbConvert' => [
             'application/json',
         ],
         'dbCopy' => [
@@ -976,6 +982,260 @@ class AgdbApi
         $httpBody = '';
         $multipart = false;
 
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{' . 'owner' . '}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($db !== null) {
+            $resourcePath = str_replace(
+                '{' . 'db' . '}',
+                ObjectSerializer::toPathValue($db),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDbConvert
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function adminDbConvert($owner, $db, $db_type, string $contentType = self::contentTypes['adminDbConvert'][0])
+    {
+        $this->adminDbConvertWithHttpInfo($owner, $db, $db_type, $contentType);
+    }
+
+    /**
+     * Operation adminDbConvertWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDbConvertWithHttpInfo($owner, $db, $db_type, string $contentType = self::contentTypes['adminDbConvert'][0])
+    {
+        $request = $this->adminDbConvertRequest($owner, $db, $db_type, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDbConvertAsync
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbConvertAsync($owner, $db, $db_type, string $contentType = self::contentTypes['adminDbConvert'][0])
+    {
+        return $this->adminDbConvertAsyncWithHttpInfo($owner, $db, $db_type, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDbConvertAsyncWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbConvertAsyncWithHttpInfo($owner, $db, $db_type, string $contentType = self::contentTypes['adminDbConvert'][0])
+    {
+        $returnType = '';
+        $request = $this->adminDbConvertRequest($owner, $db, $db_type, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDbConvert'
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbConvert'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDbConvertRequest($owner, $db, $db_type, string $contentType = self::contentTypes['adminDbConvert'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDbConvert'
+            );
+        }
+
+        // verify the required parameter 'db' is set
+        if ($db === null || (is_array($db) && count($db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db when calling adminDbConvert'
+            );
+        }
+
+        // verify the required parameter 'db_type' is set
+        if ($db_type === null || (is_array($db_type) && count($db_type) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db_type when calling adminDbConvert'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/db/{owner}/{db}/convert';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $db_type,
+            'db_type', // param base name
+            'DbType', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
 
 
         // path params
@@ -7185,6 +7445,260 @@ class AgdbApi
 
         $headers = $this->headerSelector->selectHeaders(
             ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation dbConvert
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    public function dbConvert($owner, $db, $db_type, string $contentType = self::contentTypes['dbConvert'][0])
+    {
+        $this->dbConvertWithHttpInfo($owner, $db, $db_type, $contentType);
+    }
+
+    /**
+     * Operation dbConvertWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of null, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function dbConvertWithHttpInfo($owner, $db, $db_type, string $contentType = self::contentTypes['dbConvert'][0])
+    {
+        $request = $this->dbConvertRequest($owner, $db, $db_type, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            return [null, $statusCode, $response->getHeaders()];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation dbConvertAsync
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dbConvertAsync($owner, $db, $db_type, string $contentType = self::contentTypes['dbConvert'][0])
+    {
+        return $this->dbConvertAsyncWithHttpInfo($owner, $db, $db_type, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation dbConvertAsyncWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dbConvertAsyncWithHttpInfo($owner, $db, $db_type, string $contentType = self::contentTypes['dbConvert'][0])
+    {
+        $returnType = '';
+        $request = $this->dbConvertRequest($owner, $db, $db_type, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    return [null, $response->getStatusCode(), $response->getHeaders()];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'dbConvert'
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbType $db_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbConvert'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function dbConvertRequest($owner, $db, $db_type, string $contentType = self::contentTypes['dbConvert'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dbConvert'
+            );
+        }
+
+        // verify the required parameter 'db' is set
+        if ($db === null || (is_array($db) && count($db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db when calling dbConvert'
+            );
+        }
+
+        // verify the required parameter 'db_type' is set
+        if ($db_type === null || (is_array($db_type) && count($db_type) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db_type when calling dbConvert'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/db/{owner}/{db}/convert';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $db_type,
+            'db_type', // param base name
+            'DbType', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{' . 'owner' . '}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($db !== null) {
+            $resourcePath = str_replace(
+                '{' . 'db' . '}',
+                ObjectSerializer::toPathValue($db),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            [],
             $contentType,
             $multipart
         );

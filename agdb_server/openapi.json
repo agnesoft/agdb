@@ -196,6 +196,61 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/convert": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_convert",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbType"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db typ changes"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/copy": {
       "post": {
         "tags": [
@@ -1269,7 +1324,7 @@
         "tags": [
           "agdb"
         ],
-        "operationId": "db_add",
+        "operationId": "db_convert",
         "parameters": [
           {
             "name": "owner",

@@ -80,6 +80,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminDbAdd**](docs/Api/AgdbApi.md#admindbadd) | **POST** /api/v1/admin/db/{owner}/{db}/add | 
 *AgdbApi* | [**adminDbAudit**](docs/Api/AgdbApi.md#admindbaudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit | 
 *AgdbApi* | [**adminDbBackup**](docs/Api/AgdbApi.md#admindbbackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup | 
+*AgdbApi* | [**adminDbConvert**](docs/Api/AgdbApi.md#admindbconvert) | **POST** /api/v1/admin/db/{owner}/{db}/convert | 
 *AgdbApi* | [**adminDbCopy**](docs/Api/AgdbApi.md#admindbcopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy | 
 *AgdbApi* | [**adminDbDelete**](docs/Api/AgdbApi.md#admindbdelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete | 
 *AgdbApi* | [**adminDbExec**](docs/Api/AgdbApi.md#admindbexec) | **POST** /api/v1/admin/db/{owner}/{db}/exec | 
@@ -103,6 +104,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
 *AgdbApi* | [**dbBackup**](docs/Api/AgdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 
 *AgdbApi* | [**dbClear**](docs/Api/AgdbApi.md#dbclear) | **POST** /api/v1/db/{owner}/{db}/clear | 
+*AgdbApi* | [**dbConvert**](docs/Api/AgdbApi.md#dbconvert) | **POST** /api/v1/db/{owner}/{db}/convert | 
 *AgdbApi* | [**dbCopy**](docs/Api/AgdbApi.md#dbcopy) | **POST** /api/v1/db/{owner}/{db}/copy | 
 *AgdbApi* | [**dbDelete**](docs/Api/AgdbApi.md#dbdelete) | **DELETE** /api/v1/db/{owner}/{db}/delete | 
 *AgdbApi* | [**dbExec**](docs/Api/AgdbApi.md#dbexec) | **POST** /api/v1/db/{owner}/{db}/exec | 

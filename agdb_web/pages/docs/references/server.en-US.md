@@ -96,6 +96,7 @@ The admin users can do some (but not all) actions that the owner can:
 | /api/v1/db/{owner}/{db}/add         | owner      | adds (from existing files) or creates a database (memory, memory mapped, file only)              |
 | /api/v1/db/{owner}/{db}/backup      | admin      | creates an automatic backup snapshot of the database (see backup docs below)                     |
 | /api/v1/db/{owner}/{db}/clear       | admin      | clears the content of the database (either all, db only, audit only, backup only)                |
+| /api/v1/db/{owner}/{db}/convert     | admin      | converts db between memory/mapped/file                                                           |
 | /api/v1/db/{owner}/{db}/copy        | read       | creates a copy of the database under the current user                                            |
 | /api/v1/db/{owner}/{db}/delete      | owner      | deletes the database including files on disk                                                     |
 | /api/v1/db/{owner}/{db}/exec        | read\*     | executes queries against the database (\*read permissions only allow immutable queries)          |

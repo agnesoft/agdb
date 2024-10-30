@@ -358,10 +358,6 @@ impl DbPool {
             return Err(permission_denied("admin only"));
         }
 
-        if database.db_type == DbType::Memory {
-            return Err(permission_denied("memory db cannot have backup"));
-        }
-
         let pool = self.get_pool().await;
         let server_db = pool
             .get(&database.name)
@@ -449,7 +445,11 @@ impl DbPool {
         config: &Config,
         database: &mut Database,
     ) -> Result<(), ServerError> {
-        let backup_file = db_backup_file(owner, db, config);
+        let backup_file = if database.db_type == DbType::Memory {
+            db_file(owner, db, config)
+        } else {
+            db_backup_file(owner, db, config)
+        };
         if backup_file.exists() {
             std::fs::remove_file(&backup_file)?;
         }
@@ -498,7 +498,11 @@ impl DbPool {
         server_db: &ServerDb,
         database: &mut Database,
     ) -> Result<(), ServerError> {
-        let backup_path = db_backup_file(owner, db, config);
+        let backup_path = if database.db_type == DbType::Memory {
+            db_file(owner, db, config)
+        } else {
+            db_backup_file(owner, db, config)
+        };
         if backup_path.exists() {
             std::fs::remove_file(&backup_path)?;
         } else {
@@ -510,6 +514,38 @@ impl DbPool {
             .backup(backup_path.to_string_lossy().as_ref())?;
         database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         self.save_db(database).await?;
+        Ok(())
+    }
+
+    pub(crate) async fn convert_db(
+        &self,
+        owner: &str,
+        db: &str,
+        user: DbId,
+        db_type: DbType,
+        config: &Config,
+    ) -> ServerResult {
+        let db_name = db_name(owner, db);
+        let mut database = self.find_user_db(user, &db_name).await?;
+
+        if database.db_type == db_type {
+            return Ok(());
+        }
+
+        if !self.is_db_admin(user, database.db_id.unwrap()).await? {
+            return Err(permission_denied("admin only"));
+        }
+
+        let mut pool = self.get_pool_mut().await;
+        pool.remove(&db_name);
+
+        let current_path = db_file(owner, db, config);
+        let server_db = ServerDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
+        pool.insert(db_name, server_db);
+
+        database.db_type = db_type;
+        self.save_db(&database).await?;
+
         Ok(())
     }
 
@@ -1103,7 +1139,11 @@ impl DbPool {
             return Err(permission_denied("admin only"));
         }
 
-        let backup_path = db_backup_file(owner, db, config);
+        let backup_path = if database.db_type == DbType::Memory {
+            db_file(owner, db, config)
+        } else {
+            db_backup_file(owner, db, config)
+        };
 
         if !backup_path.exists() {
             return Err(ServerError {
@@ -1112,21 +1152,24 @@ impl DbPool {
             });
         }
 
-        let current_path = db_file(owner, db, config);
-        let backup_temp = db_backup_dir(owner, config).join(db);
-
         let mut pool = self.get_pool_mut().await;
         pool.remove(&db_name);
-        std::fs::rename(&current_path, &backup_temp)?;
-        std::fs::rename(&backup_path, &current_path)?;
-        std::fs::rename(backup_temp, backup_path)?;
+        let current_path = db_file(owner, db, config);
+
+        if database.db_type != DbType::Memory {
+            let backup_temp = db_backup_dir(owner, config).join(db);
+            std::fs::rename(&current_path, &backup_temp)?;
+            std::fs::rename(&backup_path, &current_path)?;
+            std::fs::rename(backup_temp, backup_path)?;
+            database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        }
+
         let server_db = ServerDb::new(&format!(
             "{}:{}",
             database.db_type,
             current_path.to_string_lossy()
         ))?;
         pool.insert(db_name, server_db);
-        database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         self.save_db(&database).await?;
 
         Ok(())

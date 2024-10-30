@@ -7,6 +7,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminDbAdd()**](AgdbApi.md#adminDbAdd) | **POST** /api/v1/admin/db/{owner}/{db}/add |  |
 | [**adminDbAudit()**](AgdbApi.md#adminDbAudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit |  |
 | [**adminDbBackup()**](AgdbApi.md#adminDbBackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup |  |
+| [**adminDbConvert()**](AgdbApi.md#adminDbConvert) | **POST** /api/v1/admin/db/{owner}/{db}/convert |  |
 | [**adminDbCopy()**](AgdbApi.md#adminDbCopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy |  |
 | [**adminDbDelete()**](AgdbApi.md#adminDbDelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete |  |
 | [**adminDbExec()**](AgdbApi.md#adminDbExec) | **POST** /api/v1/admin/db/{owner}/{db}/exec |  |
@@ -30,6 +31,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
 | [**dbClear()**](AgdbApi.md#dbClear) | **POST** /api/v1/db/{owner}/{db}/clear |  |
+| [**dbConvert()**](AgdbApi.md#dbConvert) | **POST** /api/v1/db/{owner}/{db}/convert |  |
 | [**dbCopy()**](AgdbApi.md#dbCopy) | **POST** /api/v1/db/{owner}/{db}/copy |  |
 | [**dbDelete()**](AgdbApi.md#dbDelete) | **DELETE** /api/v1/db/{owner}/{db}/delete |  |
 | [**dbExec()**](AgdbApi.md#dbExec) | **POST** /api/v1/db/{owner}/{db}/exec |  |
@@ -209,6 +211,67 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| user name | |
 | **db** | **string**| db name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDbConvert()`
+
+```php
+adminDbConvert($owner, $db, $db_type)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
+
+try {
+    $apiInstance->adminDbConvert($owner, $db, $db_type);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDbConvert: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| user name | |
+| **db** | **string**| db name | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
 
 ### Return type
 
@@ -1572,6 +1635,67 @@ try {
 
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dbConvert()`
+
+```php
+dbConvert($owner, $db, $db_type)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
+
+try {
+    $apiInstance->dbConvert($owner, $db, $db_type);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dbConvert: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| user name | |
+| **db** | **string**| db name | |
+| **db_type** | [**\Agnesoft\AgdbApi\Model\DbType**](../Model/.md)|  | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

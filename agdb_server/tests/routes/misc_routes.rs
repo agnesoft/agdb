@@ -6,6 +6,7 @@ use crate::CONFIG_FILE;
 use crate::SERVER_DATA_DIR;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
+use agdb_api::DbType;
 use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
@@ -250,6 +251,51 @@ async fn reset_admin_password() -> anyhow::Result<()> {
     client.admin_shutdown().await?;
     assert!(server.process.wait()?.success());
     assert_eq!(list?.1.len(), 3);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn memory_db_from_backup() -> anyhow::Result<()> {
+    let mut server = TestServerImpl::new().await?;
+    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+    let owner = "user1";
+    let db = "db1";
+
+    {
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add(owner, "password123").await?;
+        client.user_login(owner, "password123").await?;
+        client.db_add(owner, db, DbType::Memory).await?;
+        client
+            .db_exec(
+                owner,
+                db,
+                &[QueryBuilder::insert().nodes().count(1).query().into()],
+            )
+            .await?;
+        let status = client.db_backup(owner, db).await?;
+        assert_eq!(status, 201);
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_shutdown().await?;
+        assert!(server.process.wait()?.success());
+    }
+
+    server.process = Command::cargo_bin("agdb_server")?
+        .current_dir(&server.dir)
+        .spawn()?;
+    wait_for_ready(&client).await?;
+    client.user_login(owner, "password123").await?;
+
+    let result = client
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().node_count().query().into()],
+        )
+        .await?
+        .1;
+    assert_eq!(result[0].elements[0].values[0].value.to_u64()?, 1);
 
     Ok(())
 }

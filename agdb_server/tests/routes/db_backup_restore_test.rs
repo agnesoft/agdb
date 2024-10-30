@@ -158,8 +158,37 @@ async fn in_memory() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Memory).await?;
-    let status = server.api.db_backup(owner, db).await.unwrap_err().status;
-    assert_eq!(status, 403);
+    server
+        .api
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    let status = server.api.db_backup(owner, db).await?;
+    assert_eq!(status, 201);
+    server
+        .api
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    let status = server.api.db_restore(owner, db).await?;
+    assert_eq!(status, 201);
+    let result = server
+        .api
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().node_count().query().into()],
+        )
+        .await?
+        .1;
+    assert_eq!(result[0].elements[0].values[0].value.to_u64()?, 1);
+
     Ok(())
 }
 

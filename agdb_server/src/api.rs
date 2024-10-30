@@ -15,6 +15,7 @@ use utoipa::OpenApi;
         routes::admin::db::add,
         routes::admin::db::audit,
         routes::admin::db::backup,
+        routes::admin::db::convert,
         routes::admin::db::copy,
         routes::admin::db::delete,
         routes::admin::db::exec,

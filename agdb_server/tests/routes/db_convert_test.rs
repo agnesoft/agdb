@@ -5,7 +5,7 @@ use agdb_api::DbType;
 use agdb_api::DbUserRole;
 
 #[tokio::test]
-async fn convert_memory_mapped() -> anyhow::Result<()> {
+async fn memory_to_mapped() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
     let db = &server.next_db_name();
@@ -39,7 +39,7 @@ async fn same_type() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn convert_file_memory() -> anyhow::Result<()> {
+async fn file_to_memory() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
     let db = &server.next_db_name();
@@ -73,6 +73,25 @@ async fn convert_file_memory() -> anyhow::Result<()> {
         .value
         .to_u64()?;
     assert_eq!(nodes, 1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_not_found() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.user_login(owner, owner).await?;
+    let status = server
+        .api
+        .db_convert(owner, db, DbType::Mapped)
+        .await
+        .unwrap_err()
+        .status;
+    assert_eq!(status, 404);
 
     Ok(())
 }

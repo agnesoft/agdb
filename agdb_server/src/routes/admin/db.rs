@@ -102,6 +102,38 @@ pub(crate) async fn backup(
 }
 
 #[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/convert",
+    operation_id = "admin_db_convert",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+        DbTypeParam,
+    ),
+    responses(
+         (status = 201, description = "db typ changes"),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "admin only"),
+         (status = 404, description = "user / db not found"),
+    )
+)]
+pub(crate) async fn convert(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<DbTypeParam>,
+) -> ServerResponse {
+    let owner_id = db_pool.find_user_id(&owner).await?;
+    db_pool
+        .convert_db(&owner, &db, owner_id, request.db_type, &config)
+        .await?;
+
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/copy",
     operation_id = "admin_db_copy",
     tag = "agdb",

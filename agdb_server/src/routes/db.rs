@@ -165,7 +165,7 @@ pub(crate) async fn clear(
 
 #[utoipa::path(post,
     path = "/api/v1/db/{owner}/{db}/convert",
-    operation_id = "db_add",
+    operation_id = "db_convert",
     tag = "agdb",
     security(("Token" = [])),
     params(

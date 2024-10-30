@@ -14,10 +14,9 @@ use axum_extra::TypedHeader;
 
 pub(crate) struct UserId(pub(crate) DbId);
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub(crate) struct AdminId(pub(crate) DbId);
 
-#[allow(dead_code)]
 pub(crate) struct ClusterId();
 
 #[derive(Default)]

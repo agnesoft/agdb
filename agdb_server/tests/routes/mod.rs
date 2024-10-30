@@ -37,3 +37,4 @@ mod misc_routes;
 mod user_change_password_test;
 mod user_login_test;
 mod user_logout_test;
+mod user_status;

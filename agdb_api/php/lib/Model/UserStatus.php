@@ -57,6 +57,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
+        'admin' => 'bool',
         'login' => 'bool',
         'name' => 'string'
     ];
@@ -69,6 +70,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
+        'admin' => null,
         'login' => null,
         'name' => null
     ];
@@ -79,6 +81,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var boolean[]
       */
     protected static array $openAPINullables = [
+        'admin' => false,
         'login' => false,
         'name' => false
     ];
@@ -169,6 +172,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
+        'admin' => 'admin',
         'login' => 'login',
         'name' => 'name'
     ];
@@ -179,6 +183,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
+        'admin' => 'setAdmin',
         'login' => 'setLogin',
         'name' => 'setName'
     ];
@@ -189,6 +194,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
+        'admin' => 'getAdmin',
         'login' => 'getLogin',
         'name' => 'getName'
     ];
@@ -250,6 +256,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(array $data = null)
     {
+        $this->setIfExists('admin', $data ?? [], null);
         $this->setIfExists('login', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
     }
@@ -281,6 +288,9 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
+        if ($this->container['admin'] === null) {
+            $invalidProperties[] = "'admin' can't be null";
+        }
         if ($this->container['login'] === null) {
             $invalidProperties[] = "'login' can't be null";
         }
@@ -301,6 +311,33 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         return count($this->listInvalidProperties()) === 0;
     }
 
+
+    /**
+     * Gets admin
+     *
+     * @return bool
+     */
+    public function getAdmin()
+    {
+        return $this->container['admin'];
+    }
+
+    /**
+     * Sets admin
+     *
+     * @param bool $admin admin
+     *
+     * @return self
+     */
+    public function setAdmin($admin)
+    {
+        if (is_null($admin)) {
+            throw new \InvalidArgumentException('non-nullable admin cannot be null');
+        }
+        $this->container['admin'] = $admin;
+
+        return $this;
+    }
 
     /**
      * Gets login

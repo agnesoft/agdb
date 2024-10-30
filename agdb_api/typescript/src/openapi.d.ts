@@ -1190,6 +1190,7 @@ declare namespace Components {
             username: string;
         }
         export interface UserStatus {
+            admin: boolean;
             login: boolean;
             name: string;
         }
@@ -1960,6 +1961,13 @@ declare namespace Paths {
             }
         }
     }
+    namespace UserStatus {
+        namespace Responses {
+            export type $200 = Components.Schemas.UserStatus;
+            export interface $401 {
+            }
+        }
+    }
 }
 
 export interface OperationMethods {
@@ -2307,6 +2315,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.UserLogout.Responses.$201>
+  /**
+   * user_status
+   */
+  'user_status'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.UserStatus.Responses.$200>
 }
 
 export interface PathsDictionary {
@@ -2739,6 +2755,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.UserLogout.Responses.$201>
+  }
+  ['/api/v1/user/status']: {
+    /**
+     * user_status
+     */
+    'get'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.UserStatus.Responses.$200>
   }
 }
 

@@ -99,8 +99,14 @@ pub(crate) async fn change_password(
 pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(config): State<Config>,
 ) -> ServerResponse<(StatusCode, Json<Vec<UserStatus>>)> {
-    let users = db_pool.find_users().await?;
+    let mut users = db_pool.find_users().await?;
+    users
+        .iter_mut()
+        .find(|u| u.name == config.admin)
+        .ok_or("admin user not found")?
+        .admin = true;
     Ok((StatusCode::OK, Json(users)))
 }
 

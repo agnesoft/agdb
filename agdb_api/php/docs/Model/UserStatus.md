@@ -4,6 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**admin** | **bool** |  |
 **login** | **bool** |  |
 **name** | **string** |  |
 

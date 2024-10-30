@@ -1,10 +1,13 @@
+use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::password::Password;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use crate::user_id::UserName;
 use agdb_api::ChangePassword;
 use agdb_api::UserLogin;
+use agdb_api::UserStatus;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -83,4 +86,29 @@ pub(crate) async fn change_password(
     db_pool.change_password(user, &request.new_password).await?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(get,
+    path = "/api/v1/user/status",
+    operation_id = "user_status",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 200, description = "User status", body = UserStatus),
+         (status = 401, description = "unauthorized"),
+    )
+)]
+pub(crate) async fn status(
+    _user: UserId,
+    username: UserName,
+    State(config): State<Config>,
+) -> ServerResponse<(StatusCode, Json<UserStatus>)> {
+    Ok((
+        StatusCode::OK,
+        Json(UserStatus {
+            admin: username.0 == config.admin,
+            name: username.0,
+            login: true,
+        }),
+    ))
 }

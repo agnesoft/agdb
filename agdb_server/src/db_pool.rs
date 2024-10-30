@@ -796,6 +796,7 @@ impl DbPool {
             .map(|e| UserStatus {
                 name: e.values[0].value.to_string(),
                 login: !e.values[1].value.to_string().is_empty(),
+                admin: false,
             })
             .collect())
     }

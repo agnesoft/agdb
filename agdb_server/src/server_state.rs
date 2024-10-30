@@ -5,7 +5,6 @@ use axum::extract::FromRef;
 use tokio::sync::broadcast::Sender;
 
 #[derive(Clone)]
-#[allow(dead_code)]
 pub(crate) struct ServerState {
     pub(crate) db_pool: DbPool,
     pub(crate) config: Config,

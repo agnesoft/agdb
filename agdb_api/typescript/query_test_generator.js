@@ -21,12 +21,12 @@ for (let index in test_queries) {
     builder = builder.replace(/vec!/g, "");
     builder = builder.replace(/where_/g, "where");
     builder = builder.replace(/\.into\(\)/g, "");
-    builder = builder.replace(/\("k","v"\)/g, "[\"k\", \"v\"]");
-    builder = builder.replace(/\("k",1\)/g, "[\"k\", 1]");
-    builder = builder.replace(/\("k",2\)/g, "[\"k\", 2]");
+    builder = builder.replace(/\("k","v"\)/g, '["k", "v"]');
+    builder = builder.replace(/\("k",1\)/g, '["k", 1]');
+    builder = builder.replace(/\("k",2\)/g, '["k", 2]');
     builder = builder.replace(/\(1,10\)/g, "[1, 10]");
-    
-    tests += `it(\`${name}\`, () => { let query = ${builder};\nexpect(query).toEqual(test_queries[${index}][1]); });\n\n`;
+
+    tests += `it(\`${name}\`, () => { const query = ${builder};\nexpect(query).toEqual(test_queries[${index}][1]); });\n\n`;
 }
 
 tests += `});`;

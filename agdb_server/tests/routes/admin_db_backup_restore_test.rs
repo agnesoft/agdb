@@ -132,6 +132,20 @@ async fn backup_of_backup() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn in_memory() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &server.next_user_name();
+    let db = &server.next_db_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    let status = server.api.admin_db_backup(owner, db).await?;
+    assert_eq!(status, 201);
+    assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
+    Ok(())
+}
+
+#[tokio::test]
 async fn restore_no_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &server.next_user_name();
@@ -146,24 +160,6 @@ async fn restore_no_backup() -> anyhow::Result<()> {
         .unwrap_err()
         .status;
     assert_eq!(status, 404);
-    Ok(())
-}
-
-#[tokio::test]
-async fn in_memory() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_db_add(owner, db, DbType::Memory).await?;
-    let status = server
-        .api
-        .admin_db_backup(owner, db)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 403);
     Ok(())
 }
 

@@ -1,15 +1,6 @@
-import type { AxiosError, AxiosResponse } from "axios";
-import {
-    isLoggedIn,
-    logout,
-    login,
-    ACCESS_TOKEN,
-    getClient,
-    initClient,
-    responseInterceptor,
-    errorInterceptor,
-} from "./auth.service";
-import { client, get_token } from "@/tests/authMock";
+import { isLoggedIn, logout, login } from "./auth.service";
+import { get_token } from "@/tests/authMock";
+import { ACCESS_TOKEN } from "@/constants";
 
 describe("auth service", () => {
     beforeEach(() => {
@@ -55,52 +46,6 @@ describe("auth service", () => {
             login("test", "test").catch((error) => {
                 expect(error).toBe("error");
             });
-        });
-    });
-    describe("getClient", () => {
-        it("returns client", () => {
-            expect(getClient()).toBeDefined();
-        });
-    });
-    describe("initClient", () => {
-        it("catches axios errors", async () => {
-            client.mockRejectedValueOnce("error");
-            await initClient().catch((error) => {
-                expect(error).toBe("error");
-            });
-        });
-    });
-    describe("responseInterceptor", () => {
-        it("returns response", () => {
-            const response = {
-                data: "response",
-                status: 200,
-                statusText: "OK",
-            };
-            expect(
-                responseInterceptor(
-                    response as unknown as AxiosResponse<string>,
-                ),
-            ).toBe(response);
-        });
-    });
-    describe("errorInterceptor", () => {
-        it("returns error for 401 response", () => {
-            const response = {
-                message: "error",
-                response: { status: 401 },
-            };
-            expect(
-                errorInterceptor(response as unknown as AxiosError<string>),
-            ).rejects.toBe(response);
-        });
-        it("returns error for unknown response", () => {
-            const response = {
-                message: "error",
-            };
-            expect(
-                errorInterceptor(response as unknown as AxiosError<string>),
-            ).rejects.toBe(response);
         });
     });
 });

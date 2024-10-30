@@ -46,12 +46,12 @@ function reset_token(): void {
 
 export type AgdbApiClient = Client & AgdbApi;
 
-export async function client(address: String): Promise<AgdbApiClient> {
+export async function client(address: string): Promise<AgdbApiClient> {
     const api: OpenAPIClientAxios = new OpenAPIClientAxios({
         definition: `${address}/api/v1/openapi.json`,
     });
     const client = await api.init<AgdbApiClient>();
-    client.token = "";
+    client.token = undefined;
     client.login = login;
     client.logout = logout;
     client.set_token = set_token;

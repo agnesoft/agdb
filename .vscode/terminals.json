@@ -43,6 +43,13 @@
             "open": true,
             "focus": false,
             "commands": ["cd agdb_api/typescript"]
+        },
+        {
+            "name": "api SERVER",
+            "description": "For running api server",
+            "open": true,
+            "focus": false,
+            "commands": ["cargo run --release -p agdb_server"]
         }
     ]
 }

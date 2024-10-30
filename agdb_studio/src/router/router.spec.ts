@@ -39,4 +39,11 @@ describe("router", () => {
         expect(router.currentRoute.value.name).toBe("login");
         expect(logoutMock).toHaveBeenCalled();
     });
+    it("loads the about page", async () => {
+        isLoggedInMock.mockReturnValue(true);
+
+        await router.push("/about");
+
+        expect(router.currentRoute.value.name).toBe("about");
+    });
 });

@@ -79,7 +79,7 @@ export const Node = (function () {
     Node.prototype.setCoordinates = function (
         _x: number,
         _y: number,
-        _z: number = 0,
+        _z: number,
     ): Node {
         this[symbol].x = _x;
         this[symbol].y = _y;

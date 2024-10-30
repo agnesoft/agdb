@@ -71,7 +71,7 @@ function useNode(options: NodeOptions): Node {
         return Math.sqrt(vx ** 2 + vy ** 2 + vz ** 2);
     };
 
-    const setCoordinates = (_x: number, _y: number, _z: number = 0): void => {
+    const setCoordinates = (_x: number, _y: number, _z: number): void => {
         x = _x;
         y = _y;
         z = _z;

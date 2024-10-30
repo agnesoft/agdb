@@ -1,46 +1,48 @@
 {
-  "name": "@agnesoft/agdb_api",
-  "version": "0.9.0",
-  "license": "Apache-2.0",
-  "description": "Agnesoft Graph Database API client for typescript/javascript",
-  "author": "Agnesoft",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "keywords": [
-    "graph",
-    "database",
-    "api",
-    "client"
-  ],
-  "files": [
-    "/dist"
-  ],
-  "scripts": {
-    "build": "tsc && npx copyfiles -f src/openapi.d.ts dist/",
-    "test": "bash test.sh",
-    "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
-    "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
-    "format": "prettier --write src/ tests/",
-    "format:check": "prettier --check src/ tests/",
-    "before-commit": "npm run openapi && npm run format && npm run lint && npm run test",
-    "openapi": "npx openapicmd typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
-    "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
-  },
-  "dependencies": {
-    "openapi-client-axios": "^7.5.5"
-  },
-  "devDependencies": {
-    "@rushstack/eslint-patch": "^1.10.3",
-    "@types/node": "^20.14.10",
-    "@typescript-eslint/parser": "^7.16.0",
-    "@vitest/coverage-v8": "^2.0.2",
-    "openapicmd": "^2.4.0",
-    "copyfiles": "^2.4.1",
-    "eslint": "^8.56.0",
-    "prettier": "^3.3.3",
-    "typescript": "^5.5.3",
-    "vite": "^5.3.3",
-    "vitest": "^2.0.2"
-  }
+    "name": "@agnesoft/agdb_api",
+    "version": "0.9.0",
+    "license": "Apache-2.0",
+    "description": "Agnesoft Graph Database API client for typescript/javascript",
+    "author": "Agnesoft",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "keywords": [
+        "graph",
+        "database",
+        "api",
+        "client"
+    ],
+    "files": [
+        "/dist"
+    ],
+    "scripts": {
+        "build": "tsc && npx copyfiles -f src/openapi.d.ts dist/",
+        "test": "bash test.sh",
+        "lint": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\" --fix",
+        "lint:check": "eslint --max-warnings=0 \"**/*.ts\" \"**/*.js\"",
+        "format": "prettier --write src/ tests/",
+        "format:check": "prettier --check src/ tests/",
+        "before-commit": "npm run openapi && npm run format && npm run lint && npm run test",
+        "openapi": "npx openapicmd typegen ../../agdb_server/openapi.json > src/openapi.d.ts",
+        "test_queries": "node query_test_generator.js && prettier --write tests/query.test.ts"
+    },
+    "dependencies": {
+        "openapi-client-axios": "^7.5.5"
+    },
+    "devDependencies": {
+        "@rushstack/eslint-patch": "^1.10.3",
+        "@types/node": "^20.14.10",
+        "@typescript-eslint/eslint-plugin": "^8.12.1",
+        "@typescript-eslint/parser": "^8.12.1",
+        "typescript-eslint": "^8.12.1",
+        "@vitest/coverage-v8": "^2.0.2",
+        "copyfiles": "^2.4.1",
+        "eslint": "^8.56.0",
+        "openapicmd": "^2.4.0",
+        "prettier": "^3.3.3",
+        "typescript": "^5.5.3",
+        "vite": "^5.3.3",
+        "vitest": "^2.0.2"
+    }
 }

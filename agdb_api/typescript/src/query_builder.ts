@@ -143,7 +143,15 @@ export function convertTo<T>(result: Components.Schemas.QueryResult): T | T[] {
     return res;
 }
 
-export function convertToDbValue(value: any): Components.Schemas.DbValue {
+export function convertToDbValue(
+    value:
+        | string
+        | boolean
+        | number
+        | number[]
+        | string[]
+        | Components.Schemas.DbValue,
+): Components.Schemas.DbValue {
     if (typeof value === "string") {
         return { String: value };
     }
@@ -574,11 +582,11 @@ class InsertBuilder {
         return new InsertAliasesBuilder(names);
     }
 
-    element(elem: any): InsertValuesIdsBuilder {
+    element<V>(elem: V): InsertValuesIdsBuilder {
         return this.elements([elem]);
     }
 
-    elements(elems: any[]): InsertValuesIdsBuilder {
+    elements<V>(elems: V[]): InsertValuesIdsBuilder {
         const data = {
             ids: { Ids: [] },
             values: { Multi: [] },

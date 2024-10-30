@@ -1,8 +1,10 @@
-import ForceDirectedGraph from "@/composables/graph/class/forceDirectedGraph";
+import useForceDirectedGraph, {
+    type ForceDirectedGraph,
+} from "@/composables/graph/composable/forceDirectedGraph";
 import { describe, it, expect, beforeEach } from "vitest";
-import simpleData from "@/testData/simpleData.json" assert { type: "json" };
+import simpleData from "@/tests/data/simpleData.json" assert { type: "json" };
 
-describe("ForceDirectedGraph 2D", () => {
+describe("useForceDirectedGraph 2D", () => {
     let graph: ForceDirectedGraph;
     const graphData = JSON.parse(JSON.stringify(simpleData));
     const results = {
@@ -13,7 +15,7 @@ describe("ForceDirectedGraph 2D", () => {
     };
 
     beforeEach(() => {
-        graph = new ForceDirectedGraph({ is2d: true });
+        graph = useForceDirectedGraph({ is2d: true });
     });
 
     it("should load the graph correctly", () => {
@@ -56,14 +58,37 @@ describe("ForceDirectedGraph 2D", () => {
         const foundNode = graph.findNode(118);
         expect(foundNode?.getId()).toBe(118);
     });
+
+    it("should process empty data correctly", () => {
+        graph.loadGraph({
+            result: 0,
+            elements: [],
+        });
+        expect(graph.getNodes().length).toBe(0);
+        expect(graph.getEdges().length).toBe(0);
+    });
+
+    it("should process data with only nodes correctly", () => {
+        graph.loadGraph({
+            result: 1,
+            elements: [
+                {
+                    id: 1,
+                    values: {},
+                },
+            ],
+        });
+        expect(graph.getNodes().length).toBe(1);
+        expect(graph.getEdges().length).toBe(0);
+    });
 });
 
-describe("ForceDirectedGraph 3D", () => {
+describe("useForceDirectedGraph 3D", () => {
     let graph: ForceDirectedGraph;
     const graphData = JSON.parse(JSON.stringify(simpleData));
 
     beforeEach(() => {
-        graph = new ForceDirectedGraph({ is2d: false });
+        graph = useForceDirectedGraph({ is2d: false });
     });
 
     it("should load the graph correctly", () => {

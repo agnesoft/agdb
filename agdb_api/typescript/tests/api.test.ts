@@ -10,13 +10,13 @@ class MyClass {
 
 describe("openapi test", () => {
     it("status", async () => {
-        let client = await AgdbApi.client("http://localhost:3000");
-        let res = await client.status();
+        const client = await AgdbApi.client("http://localhost:3000");
+        const res = await client.status();
         expect(res.status).toEqual(200);
     });
 
     it("logout", async () => {
-        let client = await AgdbApi.client("http://localhost:3000");
+        const client = await AgdbApi.client("http://localhost:3000");
         await client.login("admin", "admin");
         await client.logout();
         expect(client.get_token()).toEqual(undefined);
@@ -27,8 +27,8 @@ describe("openapi test", () => {
     });
 
     it("manual token", async () => {
-        let client = await AgdbApi.client("http://localhost:3000");
-        let token = await client.user_login(null, {
+        const client = await AgdbApi.client("http://localhost:3000");
+        const token = await client.user_login(null, {
             username: "admin",
             password: "admin",
         });
@@ -38,11 +38,11 @@ describe("openapi test", () => {
     });
 
     it("insert nodes with edges", async () => {
-        let admin_client = await AgdbApi.client("http://localhost:3000");
+        const admin_client = await AgdbApi.client("http://localhost:3000");
         await admin_client.login("admin", "admin");
         await admin_client.admin_user_add("user1", { password: "password123" });
 
-        let client = await AgdbApi.client("http://localhost:3000");
+        const client = await AgdbApi.client("http://localhost:3000");
         await client.login("user1", "password123");
         await client.db_add({
             owner: "user1",
@@ -50,14 +50,14 @@ describe("openapi test", () => {
             db_type: "memory",
         });
 
-        let res = await client.db_exec({ owner: "user1", db: "db1" }, [
+        const res = await client.db_exec({ owner: "user1", db: "db1" }, [
             QueryBuilder.insert().nodes().aliases("alias").query(),
             QueryBuilder.insert().nodes().count(2).query(),
         ]);
 
         expect(res.status).toEqual(200);
 
-        let res2 = await client.db_exec({ owner: "user1", db: "db1" }, [
+        const res2 = await client.db_exec({ owner: "user1", db: "db1" }, [
             QueryBuilder.insert().edges().from("alias").to(res.data[1]).query(),
         ]);
 
@@ -65,11 +65,11 @@ describe("openapi test", () => {
     });
 
     it("insert elements", async () => {
-        let admin_client = await AgdbApi.client("http://localhost:3000");
+        const admin_client = await AgdbApi.client("http://localhost:3000");
         await admin_client.login("admin", "admin");
         await admin_client.admin_user_add("user2", { password: "password123" });
 
-        let client = await AgdbApi.client("http://localhost:3000");
+        const client = await AgdbApi.client("http://localhost:3000");
         await client.login("user2", "password123");
         await client.db_add({
             owner: "user2",
@@ -77,37 +77,37 @@ describe("openapi test", () => {
             db_type: "memory",
         });
 
-        let e1: MyClass = {
+        const e1: MyClass = {
             db_id: 0,
             name: "John",
             age: 30,
         };
 
-        let e2: MyClass = {
+        const e2: MyClass = {
             db_id: "my_alias",
             name: "John",
             age: 30,
         };
 
-        let e3: MyClass = {
+        const e3: MyClass = {
             db_id: "my_alias",
             name: "John",
             age: 31,
         };
 
-        let res = await client.db_exec({ owner: "user2", db: "db1" }, [
+        const res = await client.db_exec({ owner: "user2", db: "db1" }, [
             QueryBuilder.insert().elements([e1, e2]).query(),
             QueryBuilder.insert().element(e3).query(),
         ]);
 
         expect(res.status).toEqual(200);
 
-        let res2 = await client.db_exec({ owner: "user2", db: "db1" }, [
+        const res2 = await client.db_exec({ owner: "user2", db: "db1" }, [
             QueryBuilder.select().ids([1, "my_alias"]).query(),
             QueryBuilder.select().ids("my_alias").query(),
         ]);
 
-        let expected = {
+        const expected = {
             result: 2,
             elements: [
                 {
@@ -135,13 +135,13 @@ describe("openapi test", () => {
         expect(res2.data.length).toEqual(2);
         expect(res2.data[0]).toEqual(expected);
 
-        let expected1: MyClass = {
+        const expected1: MyClass = {
             db_id: 1,
             name: "John",
             age: 30,
         };
 
-        let expected2: MyClass = {
+        const expected2: MyClass = {
             db_id: 2,
             name: "John",
             age: 31,
@@ -154,11 +154,11 @@ describe("openapi test", () => {
     });
 
     it("search elements", async () => {
-        let admin_client = await AgdbApi.client("http://localhost:3000");
+        const admin_client = await AgdbApi.client("http://localhost:3000");
         await admin_client.login("admin", "admin");
         await admin_client.admin_user_add("user3", { password: "password123" });
 
-        let client = await AgdbApi.client("http://localhost:3000");
+        const client = await AgdbApi.client("http://localhost:3000");
         await client.login("user3", "password123");
         await client.db_add({
             owner: "user3",
@@ -166,7 +166,7 @@ describe("openapi test", () => {
             db_type: "memory",
         });
 
-        let res = await client.db_exec({ owner: "user3", db: "db1" }, [
+        const res = await client.db_exec({ owner: "user3", db: "db1" }, [
             QueryBuilder.insert().nodes().count(1).query(),
             QueryBuilder.insert().nodes().count(1).query(),
             QueryBuilder.insert().edges().from(":0").to(":1").query(),

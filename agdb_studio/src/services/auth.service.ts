@@ -1,20 +1,17 @@
 import { getClient } from "./api.service";
 import { ACCESS_TOKEN } from "@/constants";
 
-const getLocalStorageToken = (): string | undefined => {
-    const token = localStorage.getItem(ACCESS_TOKEN) ?? undefined;
-    if (token) {
-        getClient()?.set_token(token);
-    }
-    return token;
-};
-
 const setLocalStorageToken = (token: string): void => {
     localStorage.setItem(ACCESS_TOKEN, token);
 };
 
 const getToken = (): string | undefined => {
-    return getClient()?.get_token() ?? getLocalStorageToken();
+    const localStorageToken = localStorage.getItem(ACCESS_TOKEN);
+    const clientToken = getClient()?.get_token();
+    if (localStorageToken && clientToken !== localStorageToken) {
+        getClient()?.set_token(localStorageToken);
+    }
+    return localStorageToken ?? undefined;
 };
 
 const removeToken = (): void => {

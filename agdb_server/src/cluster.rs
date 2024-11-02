@@ -203,9 +203,11 @@ pub(crate) fn new(config: &Config) -> ServerResult<Cluster> {
 }
 
 async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> ServerResult<()> {
-    if cluster.nodes.len() < 2 {
+    if cluster.nodes.is_empty() {
         return Ok(());
     }
+
+    cluster.data.write().await.timer = Instant::now();
 
     while !shutdown_signal.load(Ordering::Relaxed) {
         let state = cluster.data.read().await.state;

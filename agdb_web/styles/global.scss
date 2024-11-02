@@ -41,3 +41,10 @@ body {
     margin: 1rem 0;
     flex-wrap: wrap;
 }
+
+.nx-underline {
+    text-decoration: none;
+    &:hover {
+        text-decoration: underline;
+    }
+}

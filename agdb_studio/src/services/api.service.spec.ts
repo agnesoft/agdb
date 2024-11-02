@@ -1,6 +1,6 @@
 import { MAX_CONNECTION_ATTEMPTS } from "@/constants";
 import {
-    getClient,
+    client as apiClient,
     initClient,
     responseInterceptor,
     errorInterceptor,
@@ -17,9 +17,9 @@ describe("client service", () => {
         vi.clearAllMocks();
     });
 
-    describe("getClient", () => {
+    describe("client.value", () => {
         it("returns client", () => {
-            expect(getClient()).toBeDefined();
+            expect(apiClient.value).toBeDefined();
         });
     });
     describe("initClient", () => {

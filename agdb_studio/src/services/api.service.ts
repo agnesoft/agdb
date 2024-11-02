@@ -5,15 +5,16 @@ import {
     BASE_CONNECTION_TIMEOUT,
     MAX_CONNECTION_ATTEMPTS,
 } from "@/constants";
+import { computed, ref } from "vue";
 
-let client: AgdbApi.AgdbApiClient | undefined;
+const _client = ref<AgdbApi.AgdbApiClient | undefined>();
 
-export const getClient = (): AgdbApi.AgdbApiClient | undefined => {
-    return client;
-};
+export const client = computed((): AgdbApi.AgdbApiClient | undefined => {
+    return _client.value;
+});
 
 export const removeToken = (): void => {
-    client?.reset_token();
+    client.value?.reset_token();
     localStorage.removeItem(ACCESS_TOKEN);
     window.location.reload();
 };
@@ -33,7 +34,7 @@ export const errorInterceptor = (error: AxiosError) => {
 let connectionAttempts = 0;
 
 export const initClient = async (): Promise<void> => {
-    client = await AgdbApi.client(import.meta.env.VITE_API_URL).catch(
+    _client.value = await AgdbApi.client(import.meta.env.VITE_API_URL).catch(
         (error: AxiosError) => {
             console.error(error.message);
             if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
@@ -52,6 +53,9 @@ export const initClient = async (): Promise<void> => {
         },
     );
     console.log("Client initialized");
-    client?.interceptors.response.use(responseInterceptor, errorInterceptor);
+    client.value?.interceptors.response.use(
+        responseInterceptor,
+        errorInterceptor,
+    );
 };
 await initClient();

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import LoginForm from "@/components/auth/LoginForm.vue";
-import { useAuth } from "@/composables/user/auth";
 
 const { loginMock, logoutMock, pushMock } = vi.hoisted(() => {
     return {

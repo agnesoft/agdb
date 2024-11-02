@@ -1,4 +1,4 @@
-import { getClient } from "@/services/api.service";
+import { client } from "@/services/api.service";
 import { useAuth } from "@/composables/user/auth";
 import { ref, watch } from "vue";
 
@@ -17,12 +17,10 @@ const fetchUserStatus = async () => {
         return;
     }
 
-    getClient()
-        ?.user_status()
-        ?.then((status) => {
-            username.value = status.data.name;
-            admin.value = status.data.admin;
-        });
+    client.value?.user_status()?.then((status) => {
+        username.value = status.data.name;
+        admin.value = status.data.admin;
+    });
 };
 watch(() => token.value, fetchUserStatus, { immediate: true });
 

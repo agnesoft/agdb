@@ -5,7 +5,6 @@ import {
     type RouteLocationNormalizedGeneric,
 } from "vue-router";
 import { createRoutes } from "./routes";
-// import { useAccountStore } from "@/stores/account";
 import { useAuth } from "@/composables/user/auth";
 
 const router = createRouter({
@@ -34,11 +33,5 @@ export const beforeEach = (
 };
 
 router.beforeEach(beforeEach);
-
-// window.addEventListener("storage", () => {
-//     if (!isLoggedIn() && router.currentRoute.value.name !== "login") {
-//         router.push({ name: "login" });
-//     }
-// });
 
 export default router;

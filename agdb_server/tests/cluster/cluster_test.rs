@@ -10,12 +10,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
+const LEADER_TIMOUT: u128 = 10000;
+
 async fn wait_for_leader(
     client: Arc<AgdbApi<ReqwestClient>>,
 ) -> anyhow::Result<Vec<ClusterStatus>> {
     let now = Instant::now();
 
-    while now.elapsed().as_millis() < 10000 {
+    while now.elapsed().as_millis() < LEADER_TIMOUT {
         let status = client.cluster_status().await?;
         if status.1.iter().any(|s| s.leader) {
             return Ok(status.1);
@@ -23,7 +25,9 @@ async fn wait_for_leader(
         std::thread::sleep(std::time::Duration::from_millis(250));
     }
 
-    Err(anyhow::anyhow!("Leader not found within 10 seconds"))
+    Err(anyhow::anyhow!(
+        "Leader not found within {LEADER_TIMOUT}seconds"
+    ))
 }
 
 async fn create_cluster(

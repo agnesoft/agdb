@@ -24,5 +24,9 @@
     "replication-sharding-performance": {
         "title": "Sharding, replication and performance at scale",
         "display": "normal"
+    },
+    "why-not-sql": {
+        "title": "Why not SQL?",
+        "display": "normal"
     }
 }

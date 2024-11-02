@@ -1,3 +1,4 @@
+import { MAX_CONNECTION_ATTEMPTS } from "@/constants";
 import {
     getClient,
     initClient,
@@ -12,6 +13,10 @@ describe("client service", () => {
         value: { reload: vi.fn() },
     });
 
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     describe("getClient", () => {
         it("returns client", () => {
             expect(getClient()).toBeDefined();
@@ -19,10 +24,16 @@ describe("client service", () => {
     });
     describe("initClient", () => {
         it("catches axios errors", async () => {
-            client.mockRejectedValueOnce("error");
+            vi.useFakeTimers();
+            client.mockRejectedValue("error");
             await initClient().catch((error) => {
                 expect(error).toBe("error");
             });
+            expect(client).toHaveBeenCalledTimes(1);
+            await vi.runAllTimersAsync();
+            expect(client).toHaveBeenCalledTimes(MAX_CONNECTION_ATTEMPTS + 1);
+
+            vi.useRealTimers();
         });
     });
     describe("responseInterceptor", () => {

@@ -1,6 +1,10 @@
 import { AgdbApi } from "agdb_api";
 import type { AxiosError, AxiosResponse } from "axios";
-import { ACCESS_TOKEN } from "@/constants";
+import {
+    ACCESS_TOKEN,
+    BASE_CONNECTION_TIMEOUT,
+    MAX_CONNECTION_ATTEMPTS,
+} from "@/constants";
 
 let client: AgdbApi.AgdbApiClient | undefined;
 
@@ -26,14 +30,28 @@ export const errorInterceptor = (error: AxiosError) => {
     return Promise.reject(error);
 };
 
-export const initClient = async () => {
+let connectionAttempts = 0;
+
+export const initClient = async (): Promise<void> => {
     client = await AgdbApi.client(import.meta.env.VITE_API_URL).catch(
         (error: AxiosError) => {
             console.error(error.message);
+            if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
+                connectionAttempts++;
+                const timeout = BASE_CONNECTION_TIMEOUT * connectionAttempts;
+                let message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms.`;
+                if (connectionAttempts === MAX_CONNECTION_ATTEMPTS) {
+                    message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms. This is the final attempt.`;
+                }
+                console.warn(message);
+                setTimeout(() => {
+                    initClient();
+                }, timeout);
+            }
             return undefined;
         },
     );
+    console.log("Client initialized");
     client?.interceptors.response.use(responseInterceptor, errorInterceptor);
-    return client;
 };
 await initClient();

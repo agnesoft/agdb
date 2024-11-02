@@ -5,7 +5,7 @@ import {
     responseInterceptor,
     errorInterceptor,
 } from "./api.service";
-import { client } from "@/tests/authMock";
+import { client } from "@/tests/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
 
 describe("client service", () => {

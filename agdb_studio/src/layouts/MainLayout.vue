@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import { RouterLink, RouterView } from "vue-router";
-import { useAccountStore } from "@/stores/account";
+import { useAuth } from "@/composables/user/auth";
 import LogoIcon from "@/components/base/icons/LogoIcon.vue";
+import { useAccount } from "@/composables/user/account";
 
-const accountStore = useAccountStore();
+const { logout } = useAuth();
+const { username } = useAccount();
 </script>
 
 <template>
@@ -18,9 +20,9 @@ const accountStore = useAccountStore();
                 </nav>
                 <button
                     class="button button-warning logout-button"
-                    @click="accountStore.logout"
+                    @click="logout"
                 >
-                    Logout
+                    Logout {{ username }}
                 </button>
             </div>
         </header>

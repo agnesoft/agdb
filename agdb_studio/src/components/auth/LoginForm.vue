@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { ref } from "vue";
-import { useAccountStore } from "@/stores/account";
+import { useAuth } from "@/composables/user/auth";
 import router from "@/router";
 import SpinnerIcon from "@/components/base/icons/SpinnerIcon.vue";
 
-const { login } = useAccountStore();
+const { login } = useAuth();
 
 const username = ref("");
 const password = ref("");

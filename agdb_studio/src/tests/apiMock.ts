@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 
 export const get_token = vi.fn();
+export const user_status = vi.fn();
 
 export const client = vi.fn().mockResolvedValue({
     login: vi.fn().mockResolvedValue("token"),
@@ -16,6 +17,7 @@ export const client = vi.fn().mockResolvedValue({
             use: vi.fn(),
         },
     },
+    user_status,
 });
 vi.mock("agdb_api", () => {
     return {

@@ -19,12 +19,10 @@
         "@kalimahapps/vue-icons": "^1.7.1",
         "agdb_api": "file:../agdb_api/typescript",
         "openapi-client-axios": "^7.5.1",
-        "pinia": "^2.1.7",
         "vue": "^3.3.4",
         "vue-router": "^4.2.5"
     },
     "devDependencies": {
-        "@pinia/testing": "^0.1.6",
         "@playwright/test": "^1.45.3",
         "@rushstack/eslint-patch": "^1.10.3",
         "@tsconfig/node18": "^18.2.4",

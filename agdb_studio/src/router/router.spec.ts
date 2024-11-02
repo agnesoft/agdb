@@ -2,13 +2,16 @@ import { describe, it, expect, beforeEach } from "vitest";
 import router from "@/router/router";
 
 const { isLoggedInMock, logoutMock } = vi.hoisted(() => {
-    return { isLoggedInMock: vi.fn(), logoutMock: vi.fn() };
+    return { isLoggedInMock: { value: true }, logoutMock: vi.fn() };
 });
 
-vi.mock("@/services/auth.service", () => {
+vi.mock("@/composables/user/auth", () => {
     return {
-        isLoggedIn: isLoggedInMock,
-        logout: logoutMock,
+        useAuth: () => ({
+            isLoggedIn: isLoggedInMock,
+            logout: logoutMock,
+            token: { value: "test" },
+        }),
     };
 });
 
@@ -18,21 +21,21 @@ describe("router", () => {
     });
 
     it("redirects to login if not logged in", async () => {
-        isLoggedInMock.mockReturnValue(false);
+        isLoggedInMock.value = false;
 
         await router.push("/");
 
         expect(router.currentRoute.value.name).toBe("login");
     });
     it("navigates to home if logged in", async () => {
-        isLoggedInMock.mockReturnValue(true);
+        isLoggedInMock.value = true;
 
         await router.push("/");
 
         expect(router.currentRoute.value.name).toBe("home");
     });
     it("logout if logged in and navigates to login", async () => {
-        isLoggedInMock.mockReturnValue(true);
+        isLoggedInMock.value = true;
 
         await router.push("/login");
 
@@ -40,7 +43,7 @@ describe("router", () => {
         expect(logoutMock).toHaveBeenCalled();
     });
     it("loads the about page", async () => {
-        isLoggedInMock.mockReturnValue(true);
+        isLoggedInMock.value = true;
 
         await router.push("/about");
 

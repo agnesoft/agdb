@@ -5,8 +5,7 @@ import {
     type RouteLocationNormalizedGeneric,
 } from "vue-router";
 import { createRoutes } from "./routes";
-// import { useAccountStore } from "@/stores/account";
-import { isLoggedIn, logout } from "@/services/auth.service";
+import { useAuth } from "@/composables/user/auth";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,8 +17,8 @@ export const beforeEach = (
     from: RouteLocationNormalizedGeneric,
     next: NavigationGuardNext,
 ) => {
-    // const accountStore = useAccountStore();
-    if (isLoggedIn()) {
+    const { logout, isLoggedIn } = useAuth();
+    if (isLoggedIn.value) {
         if (to.name === "login") {
             logout();
         }

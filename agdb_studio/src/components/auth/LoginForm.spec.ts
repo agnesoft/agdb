@@ -1,22 +1,21 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import LoginForm from "@/components/auth/LoginForm.vue";
-import { useAccountStore } from "@/stores/account";
 
-const { loginMock, isLoggedInMock, logoutMock, pushMock } = vi.hoisted(() => {
+const { loginMock, logoutMock, pushMock } = vi.hoisted(() => {
     return {
         loginMock: vi.fn(),
-        isLoggedInMock: vi.fn(),
         logoutMock: vi.fn(),
         pushMock: vi.fn(),
     };
 });
 
-vi.mock("@/services/auth.service", () => {
+vi.mock("@/composables/user/auth", () => {
     return {
-        login: loginMock,
-        isLoggedIn: isLoggedInMock,
-        logout: logoutMock,
+        useAuth: () => ({
+            login: loginMock,
+            logout: logoutMock,
+        }),
     };
 });
 vi.mock("@/router", () => {
@@ -32,8 +31,7 @@ describe("LoginForm", () => {
         vi.clearAllMocks();
     });
     it("runs successful login on click", async () => {
-        const accountStore = useAccountStore();
-        accountStore.login = vi.fn().mockResolvedValue(true);
+        loginMock.mockResolvedValue(true);
 
         const wrapper = mount(LoginForm);
         await wrapper.find('input[type="text"]#username').setValue("test");
@@ -41,12 +39,11 @@ describe("LoginForm", () => {
 
         await wrapper.find(".login-form>form").trigger("submit");
 
-        expect(accountStore.login).toHaveBeenCalled();
+        expect(loginMock).toHaveBeenCalled();
         expect(pushMock).toHaveBeenCalledWith({ name: "home" });
     });
     it("runs failed login on click", async () => {
-        const accountStore = useAccountStore();
-        accountStore.login = vi.fn().mockRejectedValue("error");
+        loginMock.mockRejectedValue("error");
 
         const wrapper = mount(LoginForm);
         await wrapper.find('input[type="text"]#username').setValue("test");
@@ -54,7 +51,7 @@ describe("LoginForm", () => {
 
         await wrapper.find(".login-form>form").trigger("submit");
 
-        expect(accountStore.login).toHaveBeenCalled();
+        expect(loginMock).toHaveBeenCalled();
         expect(pushMock).not.toHaveBeenCalled();
     });
 });

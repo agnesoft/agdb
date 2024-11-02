@@ -2,20 +2,23 @@ import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
-import { useAccountStore } from "@/stores/account";
 
 const { loginMock, isLoggedInMock, logoutMock } = vi.hoisted(() => {
     return {
         loginMock: vi.fn(),
-        isLoggedInMock: vi.fn(),
+        isLoggedInMock: { value: true },
         logoutMock: vi.fn(),
     };
 });
-vi.mock("@/services/auth.service", () => {
+
+vi.mock("@/composables/user/auth", () => {
     return {
-        login: loginMock,
-        isLoggedIn: isLoggedInMock,
-        logout: logoutMock,
+        useAuth: () => ({
+            login: loginMock,
+            isLoggedIn: isLoggedInMock,
+            logout: logoutMock,
+            token: { value: "test" },
+        }),
     };
 });
 
@@ -69,9 +72,6 @@ describe("MainLayout", () => {
     });
 
     it("logout on click", async () => {
-        const accountStore = useAccountStore();
-        accountStore.logout = vi.fn();
-
         const wrapper = mount(MainLayout, {
             global: {
                 plugins: [router],
@@ -80,6 +80,6 @@ describe("MainLayout", () => {
 
         await wrapper.find(".logout-button").trigger("click");
 
-        expect(accountStore.logout).toHaveBeenCalled();
+        expect(logoutMock).toHaveBeenCalled();
     });
 });

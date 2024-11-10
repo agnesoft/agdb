@@ -42,11 +42,11 @@ describe("router", () => {
         expect(router.currentRoute.value.name).toBe("login");
         expect(logoutMock).toHaveBeenCalled();
     });
-    it("loads the about page", async () => {
+    it("loads the databases page", async () => {
         isLoggedInMock.value = true;
 
-        await router.push("/about");
+        await router.push("/db");
 
-        expect(router.currentRoute.value.name).toBe("about");
+        expect(router.currentRoute.value.name).toBe("db");
     });
 });

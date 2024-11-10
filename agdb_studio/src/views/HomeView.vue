@@ -14,6 +14,7 @@ const graphData = JSON.parse(JSON.stringify(data));
 <style lang="less" scoped>
 .main-wrapper {
     width: 100%;
-    height: 100%;
+    min-height: 100%;
+    overflow: auto;
 }
 </style>

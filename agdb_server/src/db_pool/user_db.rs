@@ -1,4 +1,4 @@
-use crate::db_pool::server_db_storage::ServerDbStorage;
+use crate::db_pool::user_db_storage::UserDbStorage;
 use crate::server_error::ServerResult;
 use agdb::DbImpl;
 use std::sync::Arc;
@@ -6,10 +6,10 @@ use tokio::sync::RwLock;
 use tokio::sync::RwLockReadGuard;
 use tokio::sync::RwLockWriteGuard;
 
-pub(crate) type ServerDbImpl = DbImpl<ServerDbStorage>;
-pub(crate) struct ServerDb(pub(crate) Arc<RwLock<ServerDbImpl>>);
+pub(crate) type ServerDbImpl = DbImpl<UserDbStorage>;
+pub(crate) struct UserDb(pub(crate) Arc<RwLock<ServerDbImpl>>);
 
-impl ServerDb {
+impl UserDb {
     pub(crate) fn new(name: &str) -> ServerResult<Self> {
         Ok(Self(Arc::new(RwLock::new(ServerDbImpl::new(name)?))))
     }

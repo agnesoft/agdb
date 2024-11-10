@@ -1,8 +1,8 @@
-mod server_db;
-mod server_db_storage;
+mod user_db;
+mod user_db_storage;
 
 use crate::config::Config;
-use crate::db_pool::server_db_storage::ServerDbStorage;
+use crate::db_pool::user_db_storage::UserDbStorage;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
@@ -35,8 +35,6 @@ use agdb_api::QueryAudit;
 use agdb_api::ServerDatabase;
 use agdb_api::UserStatus;
 use axum::http::StatusCode;
-use server_db::ServerDb;
-use server_db::ServerDbImpl;
 use std::collections::HashMap;
 use std::io::Seek;
 use std::io::SeekFrom;
@@ -49,6 +47,8 @@ use std::time::UNIX_EPOCH;
 use tokio::sync::RwLock;
 use tokio::sync::RwLockReadGuard;
 use tokio::sync::RwLockWriteGuard;
+use user_db::ServerDbImpl;
+use user_db::UserDb;
 use uuid::Uuid;
 
 #[derive(UserValue)]
@@ -69,8 +69,8 @@ struct Database {
 }
 
 pub(crate) struct DbPoolImpl {
-    server_db: ServerDb,
-    pool: RwLock<HashMap<String, ServerDb>>,
+    server_db: UserDb,
+    pool: RwLock<HashMap<String, UserDb>>,
 }
 
 #[derive(Clone)]
@@ -83,7 +83,7 @@ impl DbPool {
             .join("agdb_server.agdb")
             .exists();
         let db_pool = Self(Arc::new(DbPoolImpl {
-            server_db: ServerDb::new(&format!("mapped:{}/agdb_server.agdb", config.data_dir))?,
+            server_db: UserDb::new(&format!("mapped:{}/agdb_server.agdb", config.data_dir))?,
             pool: RwLock::new(HashMap::new()),
         }));
 
@@ -157,7 +157,7 @@ impl DbPool {
                 let db_path = db_file(owner, db_name, config);
                 std::fs::create_dir_all(db_audit_dir(owner, config))?;
                 let server_db =
-                    ServerDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
+                    UserDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
                 db_pool.0.pool.write().await.insert(db.name, server_db);
             }
         } else {
@@ -217,7 +217,7 @@ impl DbPool {
         std::fs::create_dir_all(db_audit_dir(owner, config))?;
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
-        let server_db = ServerDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
+        let server_db = UserDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
@@ -470,7 +470,7 @@ impl DbPool {
         let server_db = pool
             .get_mut(&database.name)
             .ok_or(db_not_found(&database.name))?;
-        *server_db = ServerDb::new(&format!("{}:{}", DbType::Memory, database.name))?;
+        *server_db = UserDb::new(&format!("{}:{}", DbType::Memory, database.name))?;
         if database.db_type != DbType::Memory {
             let main_file = db_file(owner, db, config);
             if main_file.exists() {
@@ -484,7 +484,7 @@ impl DbPool {
 
             let db_path = Path::new(&config.data_dir).join(&db_name);
             let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
-            *server_db = ServerDb::new(&format!("{}:{}", database.db_type, path))?;
+            *server_db = UserDb::new(&format!("{}:{}", database.db_type, path))?;
         }
 
         Ok(())
@@ -495,7 +495,7 @@ impl DbPool {
         owner: &str,
         db: &str,
         config: &Config,
-        server_db: &ServerDb,
+        server_db: &UserDb,
         database: &mut Database,
     ) -> Result<(), ServerError> {
         let backup_path = if database.db_type == DbType::Memory {
@@ -540,7 +540,7 @@ impl DbPool {
         pool.remove(&db_name);
 
         let current_path = db_file(owner, db, config);
-        let server_db = ServerDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
+        let server_db = UserDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
         pool.insert(db_name, server_db);
 
         database.db_type = db_type;
@@ -1009,7 +1009,7 @@ impl DbPool {
         owner: &str,
         db: &str,
         user: DbId,
-    ) -> ServerResult<ServerDb> {
+    ) -> ServerResult<UserDb> {
         let user_name = self.user_name(user).await?;
 
         if owner != user_name {
@@ -1084,7 +1084,7 @@ impl DbPool {
                 .await?;
         }
 
-        let server_db = ServerDb(
+        let server_db = UserDb(
             self.get_pool()
                 .await
                 .get(&db_name)
@@ -1165,7 +1165,7 @@ impl DbPool {
             database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         }
 
-        let server_db = ServerDb::new(&format!(
+        let server_db = UserDb::new(&format!(
             "{}:{}",
             database.db_type,
             current_path.to_string_lossy()
@@ -1400,11 +1400,11 @@ impl DbPool {
             .into())
     }
 
-    async fn get_pool(&self) -> RwLockReadGuard<HashMap<String, ServerDb>> {
+    async fn get_pool(&self) -> RwLockReadGuard<HashMap<String, UserDb>> {
         self.0.pool.read().await
     }
 
-    async fn get_pool_mut(&self) -> RwLockWriteGuard<HashMap<String, ServerDb>> {
+    async fn get_pool_mut(&self) -> RwLockWriteGuard<HashMap<String, UserDb>> {
         self.0.pool.write().await
     }
 
@@ -1505,7 +1505,7 @@ fn required_role(queries: &Queries) -> DbUserRole {
 }
 
 fn t_exec(
-    t: &Transaction<ServerDbStorage>,
+    t: &Transaction<UserDbStorage>,
     q: &mut QueryType,
     results: &[QueryResult],
 ) -> Result<QueryResult, QueryError> {
@@ -1539,7 +1539,7 @@ fn t_exec(
 }
 
 fn t_exec_mut(
-    t: &mut TransactionMut<ServerDbStorage>,
+    t: &mut TransactionMut<UserDbStorage>,
     mut q: QueryType,
     results: &[QueryResult],
     audit: &mut Vec<QueryAudit>,
@@ -1716,13 +1716,13 @@ fn audit_query(user: &str, audit: &mut Vec<QueryAudit>, query: QueryType) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db_pool::server_db::ServerDb;
+    use crate::db_pool::user_db::UserDb;
     use agdb::QueryBuilder;
 
     #[tokio::test]
     #[should_panic]
     async fn unreachable() {
-        let db = ServerDb::new("memory:test").unwrap();
+        let db = UserDb::new("memory:test").unwrap();
         db.get()
             .await
             .transaction(|t| {

@@ -60,20 +60,16 @@ const style = computed<StyleObject>(() => {
     position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
 }
 .graph-wrapper {
     position: relative;
-    overflow: auto;
-    top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
-    height: 100px;
+    transform: translate(-50%, 0);
     max-width: 100dvw;
     max-height: 80dvh;
     width: var(--size);
     height: var(--size);
+    overflow: visible;
 }
 .graph-edges,
 .graph-nodes {

@@ -47,7 +47,7 @@ const onLogin = async () => {
                     required
                 />
             </div>
-            <button type="submit" class="button button-success">
+            <button type="submit" class="button button-success button-lg">
                 <SpinnerIcon v-if="loading" />
                 Login
             </button>

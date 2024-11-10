@@ -11,12 +11,12 @@ const { username } = useAccount();
 <template>
     <div class="main-layout">
         <header>
-            <LogoIcon />
+            <RouterLink to="/"><LogoIcon /></RouterLink>
 
             <div class="wrapper">
                 <nav>
                     <RouterLink to="/">Home</RouterLink>
-                    <RouterLink to="/about">About</RouterLink>
+                    <RouterLink to="/db">Databases</RouterLink>
                 </nav>
                 <button
                     class="button button-warning logout-button"
@@ -43,6 +43,7 @@ const { username } = useAccount();
         "header"
         "main"
         "footer";
+    overflow: hidden;
 }
 
 header {
@@ -53,6 +54,7 @@ header {
 main {
     grid-area: main;
     flex-grow: 1;
+    padding: 1rem;
 }
 
 footer {
@@ -71,12 +73,8 @@ nav {
     margin-top: 2rem;
 }
 
-nav a.router-link-exact-active {
+nav a:not(.router-link-exact-active) {
     color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-    background-color: transparent;
 }
 
 nav a {

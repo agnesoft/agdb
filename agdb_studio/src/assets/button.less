@@ -1,32 +1,46 @@
 .button {
     display: inline-block;
-    padding: 10px 20px;
+    padding: 5px 15px;
     border: none;
     border-radius: 4px;
     text-align: center;
     text-decoration: none;
     cursor: pointer;
     transition: opacity 0.4s ease;
+    --backgroundColor: var(--color-background-mute);
+    --color: var(--color-text);
+    --borderColor: var(--color-text);
+    background-color: var(--backgroundColor);
+    color: var(--color);
+    border: 1px solid var(--borderColor);
+}
+
+.button-lg {
+    padding: 10px 20px;
 }
 
 .button-default {
-    background-color: #007bff;
-    color: #fff;
+    --backgroundColor: #007bff;
+    --color: #fff;
+    --borderColor: #025ec0;
 }
 
 .button-success {
-    background-color: #28a745;
-    color: #fff;
+    --backgroundColor: #28a745;
+    --color: #fff;
+    --borderColor: #1e7732;
 }
 
 .button-warning {
-    background-color: #ff9f2c;
-    color: #181818;
+    --backgroundColor: #ffa02c;
+    --color: #181818;
+    --borderColor: #d88621;
 }
 
 .button-danger {
-    background-color: #dc3545;
-    color: #fff;
+    --backgroundColor: #dc3545;
+    --color: #fff;
+    --borderColor: #af2836;
 }
 
 .button:hover {

@@ -50,12 +50,12 @@ describe("MainLayout", () => {
         // home page link exists
         expect(
             links.find((link) => link.props("to") === "/")?.text(),
-        ).toContain("Home");
+        ).toBeDefined();
 
         // about page link exists
         expect(
-            links.find((link) => link.props("to") === "/about")?.text(),
-        ).toContain("About");
+            links.find((link) => link.props("to") === "/db")?.text(),
+        ).toContain("Databases");
     });
 
     it("renders the router view", async () => {

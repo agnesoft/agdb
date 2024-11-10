@@ -17,9 +17,9 @@ export const createRoutes = () => {
                     component: () => import("@/views/HomeView.vue"),
                 },
                 {
-                    path: "/about",
-                    name: "about",
-                    component: () => import("@/views/AboutView.vue"),
+                    path: "/db",
+                    name: "db",
+                    component: () => import("@/views/DbView.vue"),
                 },
             ],
         },

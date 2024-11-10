@@ -4,7 +4,6 @@ use crate::db_pool::ServerError;
 use crate::server_error::ServerResult;
 use agdb::DbImpl;
 use agdb::QueryConditionData;
-use agdb::QueryError;
 use agdb::QueryId;
 use agdb::QueryIds;
 use agdb::QueryResult;

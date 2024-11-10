@@ -5,50 +5,50 @@ use agdb::MemoryStorage;
 use agdb::StorageData;
 use agdb::StorageSlice;
 
-pub(crate) enum ServerDbStorage {
+pub(crate) enum UserDbStorage {
     MemoryMapped(FileStorageMemoryMapped),
     Memory(MemoryStorage),
     File(FileStorage),
 }
 
-impl StorageData for ServerDbStorage {
+impl StorageData for UserDbStorage {
     fn backup(&self, name: &str) -> Result<(), DbError> {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.backup(name),
-            ServerDbStorage::Memory(s) => s.backup(name),
-            ServerDbStorage::File(s) => s.backup(name),
+            UserDbStorage::MemoryMapped(s) => s.backup(name),
+            UserDbStorage::Memory(s) => s.backup(name),
+            UserDbStorage::File(s) => s.backup(name),
         }
     }
 
     fn copy(&self, name: &str) -> Result<Self, DbError> {
         Ok(match self {
-            ServerDbStorage::MemoryMapped(s) => ServerDbStorage::MemoryMapped(s.copy(name)?),
-            ServerDbStorage::Memory(s) => ServerDbStorage::Memory(s.copy(name)?),
-            ServerDbStorage::File(s) => ServerDbStorage::File(s.copy(name)?),
+            UserDbStorage::MemoryMapped(s) => UserDbStorage::MemoryMapped(s.copy(name)?),
+            UserDbStorage::Memory(s) => UserDbStorage::Memory(s.copy(name)?),
+            UserDbStorage::File(s) => UserDbStorage::File(s.copy(name)?),
         })
     }
 
     fn flush(&mut self) -> Result<(), DbError> {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.flush(),
-            ServerDbStorage::Memory(s) => s.flush(),
-            ServerDbStorage::File(s) => s.flush(),
+            UserDbStorage::MemoryMapped(s) => s.flush(),
+            UserDbStorage::Memory(s) => s.flush(),
+            UserDbStorage::File(s) => s.flush(),
         }
     }
 
     fn len(&self) -> u64 {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.len(),
-            ServerDbStorage::Memory(s) => s.len(),
-            ServerDbStorage::File(s) => s.len(),
+            UserDbStorage::MemoryMapped(s) => s.len(),
+            UserDbStorage::Memory(s) => s.len(),
+            UserDbStorage::File(s) => s.len(),
         }
     }
 
     fn name(&self) -> &str {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.name(),
-            ServerDbStorage::Memory(s) => s.name(),
-            ServerDbStorage::File(s) => s.name(),
+            UserDbStorage::MemoryMapped(s) => s.name(),
+            UserDbStorage::Memory(s) => s.name(),
+            UserDbStorage::File(s) => s.name(),
         }
     }
 
@@ -68,41 +68,41 @@ impl StorageData for ServerDbStorage {
 
     fn read(&self, pos: u64, value_len: u64) -> Result<StorageSlice, DbError> {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.read(pos, value_len),
-            ServerDbStorage::Memory(s) => s.read(pos, value_len),
-            ServerDbStorage::File(s) => s.read(pos, value_len),
+            UserDbStorage::MemoryMapped(s) => s.read(pos, value_len),
+            UserDbStorage::Memory(s) => s.read(pos, value_len),
+            UserDbStorage::File(s) => s.read(pos, value_len),
         }
     }
 
     fn rename(&mut self, new_name: &str) -> Result<(), DbError> {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.rename(new_name),
-            ServerDbStorage::Memory(s) => s.rename(new_name),
-            ServerDbStorage::File(s) => s.rename(new_name),
+            UserDbStorage::MemoryMapped(s) => s.rename(new_name),
+            UserDbStorage::Memory(s) => s.rename(new_name),
+            UserDbStorage::File(s) => s.rename(new_name),
         }
     }
 
     fn resize(&mut self, new_len: u64) -> Result<(), DbError> {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.resize(new_len),
-            ServerDbStorage::Memory(s) => s.resize(new_len),
-            ServerDbStorage::File(s) => s.resize(new_len),
+            UserDbStorage::MemoryMapped(s) => s.resize(new_len),
+            UserDbStorage::Memory(s) => s.resize(new_len),
+            UserDbStorage::File(s) => s.resize(new_len),
         }
     }
 
     fn write(&mut self, pos: u64, bytes: &[u8]) -> Result<(), DbError> {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.write(pos, bytes),
-            ServerDbStorage::Memory(s) => s.write(pos, bytes),
-            ServerDbStorage::File(s) => s.write(pos, bytes),
+            UserDbStorage::MemoryMapped(s) => s.write(pos, bytes),
+            UserDbStorage::Memory(s) => s.write(pos, bytes),
+            UserDbStorage::File(s) => s.write(pos, bytes),
         }
     }
 
     fn is_empty(&self) -> bool {
         match self {
-            ServerDbStorage::MemoryMapped(s) => s.is_empty(),
-            ServerDbStorage::Memory(s) => s.is_empty(),
-            ServerDbStorage::File(s) => s.is_empty(),
+            UserDbStorage::MemoryMapped(s) => s.is_empty(),
+            UserDbStorage::Memory(s) => s.is_empty(),
+            UserDbStorage::File(s) => s.is_empty(),
         }
     }
 }
@@ -126,7 +126,7 @@ mod tests {
         }
     }
 
-    impl std::fmt::Debug for ServerDbStorage {
+    impl std::fmt::Debug for UserDbStorage {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 Self::MemoryMapped(_) => f.write_str("MemoryMapped"),
@@ -145,7 +145,7 @@ mod tests {
         let test_file_copy_dot = TestFile::new(".file_storage_rename_copy.agdb");
         let _test_file_rename_dot = TestFile::new(".file_storage_rename.agdb");
         let test_file_backup = TestFile::new("file_storage_backup.agdb");
-        let mut storage = ServerDbStorage::new(&format!("file:{}", test_file.0))?;
+        let mut storage = UserDbStorage::new(&format!("file:{}", test_file.0))?;
         let _ = format!("{:?}", storage);
         storage.backup(&test_file_backup.0)?;
         assert!(std::path::Path::new(&test_file_backup.0).exists());
@@ -173,7 +173,7 @@ mod tests {
         let test_file_copy_dot = TestFile::new(".mapped_storage_copy.agdb");
         let _test_file_rename_dot = TestFile::new(".mapped_storage_rename.agdb");
         let test_file2 = TestFile::new("mapped_storage_backup.agdb");
-        let mut storage = ServerDbStorage::new(&format!("mapped:{}", test_file.0))?;
+        let mut storage = UserDbStorage::new(&format!("mapped:{}", test_file.0))?;
         let _ = format!("{:?}", storage);
         storage.backup(&test_file2.0)?;
         assert!(std::path::Path::new(&test_file2.0).exists());
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn memory_storage() -> anyhow::Result<()> {
-        let mut storage = ServerDbStorage::new("memory:db_test.agdb")?;
+        let mut storage = UserDbStorage::new("memory:db_test.agdb")?;
         let _ = format!("{:?}", storage);
         storage.backup("backup_test")?;
         let other = storage.copy("db_test_copy.agdb")?;
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn invalid_db_name() {
         assert_eq!(
-            ServerDbStorage::new("db.agdb").unwrap_err().description,
+            UserDbStorage::new("db.agdb").unwrap_err().description,
             "Invalid server database name format, must be 'type:name'. Allowed types: mapped, memory, file."
         );
     }
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn invalid_db_type() {
         assert_eq!(
-            ServerDbStorage::new("sometype:db.agdb")
+            UserDbStorage::new("sometype:db.agdb")
                 .unwrap_err()
                 .description,
             "Invalid db type 'sometype', must be one of 'mapped', 'memory', 'file'."

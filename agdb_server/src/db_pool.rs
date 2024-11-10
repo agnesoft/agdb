@@ -1,8 +1,9 @@
 mod server_db;
-mod server_db_storage;
+mod user_db;
+mod user_db_storage;
 
 use crate::config::Config;
-use crate::db_pool::server_db_storage::ServerDbStorage;
+use crate::db_pool::server_db::ServerDb;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
@@ -14,15 +15,10 @@ use agdb::CountComparison;
 use agdb::DbId;
 use agdb::DbUserValue;
 use agdb::QueryBuilder;
-use agdb::QueryConditionData;
-use agdb::QueryError;
 use agdb::QueryId;
-use agdb::QueryIds;
 use agdb::QueryResult;
 use agdb::QueryType;
 use agdb::SearchQuery;
-use agdb::Transaction;
-use agdb::TransactionMut;
 use agdb::UserValue;
 use agdb_api::AdminStatus;
 use agdb_api::DbAudit;
@@ -31,12 +27,9 @@ use agdb_api::DbType;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use agdb_api::Queries;
-use agdb_api::QueryAudit;
 use agdb_api::ServerDatabase;
 use agdb_api::UserStatus;
 use axum::http::StatusCode;
-use server_db::ServerDb;
-use server_db::ServerDbImpl;
 use std::collections::HashMap;
 use std::io::Seek;
 use std::io::SeekFrom;
@@ -49,6 +42,8 @@ use std::time::UNIX_EPOCH;
 use tokio::sync::RwLock;
 use tokio::sync::RwLockReadGuard;
 use tokio::sync::RwLockWriteGuard;
+use user_db::UserDb;
+use user_db::UserDbImpl;
 use uuid::Uuid;
 
 #[derive(UserValue)]
@@ -70,7 +65,7 @@ struct Database {
 
 pub(crate) struct DbPoolImpl {
     server_db: ServerDb,
-    pool: RwLock<HashMap<String, ServerDb>>,
+    pool: RwLock<HashMap<String, UserDb>>,
 }
 
 #[derive(Clone)]
@@ -157,7 +152,7 @@ impl DbPool {
                 let db_path = db_file(owner, db_name, config);
                 std::fs::create_dir_all(db_audit_dir(owner, config))?;
                 let server_db =
-                    ServerDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
+                    UserDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
                 db_pool.0.pool.write().await.insert(db.name, server_db);
             }
         } else {
@@ -217,7 +212,7 @@ impl DbPool {
         std::fs::create_dir_all(db_audit_dir(owner, config))?;
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
-        let server_db = ServerDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
+        let server_db = UserDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
@@ -425,9 +420,8 @@ impl DbPool {
             .await
             .get(&database.name)
             .ok_or(db_not_found(&database.name))?
-            .get()
-            .await
-            .size();
+            .size()
+            .await;
 
         Ok(ServerDatabase {
             name: database.name,
@@ -470,7 +464,7 @@ impl DbPool {
         let server_db = pool
             .get_mut(&database.name)
             .ok_or(db_not_found(&database.name))?;
-        *server_db = ServerDb::new(&format!("{}:{}", DbType::Memory, database.name))?;
+        *server_db = UserDb::new(&format!("{}:{}", DbType::Memory, database.name))?;
         if database.db_type != DbType::Memory {
             let main_file = db_file(owner, db, config);
             if main_file.exists() {
@@ -484,7 +478,7 @@ impl DbPool {
 
             let db_path = Path::new(&config.data_dir).join(&db_name);
             let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
-            *server_db = ServerDb::new(&format!("{}:{}", database.db_type, path))?;
+            *server_db = UserDb::new(&format!("{}:{}", database.db_type, path))?;
         }
 
         Ok(())
@@ -495,7 +489,7 @@ impl DbPool {
         owner: &str,
         db: &str,
         config: &Config,
-        server_db: &ServerDb,
+        server_db: &UserDb,
         database: &mut Database,
     ) -> Result<(), ServerError> {
         let backup_path = if database.db_type == DbType::Memory {
@@ -509,9 +503,9 @@ impl DbPool {
             std::fs::create_dir_all(db_backup_dir(owner, config))?;
         }
         server_db
-            .get_mut()
-            .await
-            .backup(backup_path.to_string_lossy().as_ref())?;
+            .backup(backup_path.to_string_lossy().as_ref())
+            .await?;
+
         database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         self.save_db(database).await?;
         Ok(())
@@ -540,7 +534,7 @@ impl DbPool {
         pool.remove(&db_name);
 
         let current_path = db_file(owner, db, config);
-        let server_db = ServerDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
+        let server_db = UserDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
         pool.insert(db_name, server_db);
 
         database.db_type = db_type;
@@ -662,7 +656,7 @@ impl DbPool {
         owner: &str,
         db: &str,
         user: DbId,
-        mut queries: Queries,
+        queries: Queries,
         config: &Config,
     ) -> ServerResult<Vec<QueryResult>> {
         let db_name = db_name(owner, db);
@@ -678,42 +672,20 @@ impl DbPool {
                 .await
                 .get(&db_name)
                 .ok_or(db_not_found(&db_name))?
-                .get()
+                .exec(queries)
                 .await
-                .transaction(|t| {
-                    let mut results = vec![];
-
-                    for q in queries.0.iter_mut() {
-                        let result = t_exec(t, q, &results)?;
-                        results.push(result);
-                    }
-
-                    Ok(results)
-                })
         } else {
             let username = self.user_name(user).await?;
-            let mut audit = vec![];
 
-            let r = self
+            let (r, audit) = self
                 .get_pool()
                 .await
                 .get(&db_name)
                 .ok_or(db_not_found(&db_name))?
-                .get_mut()
-                .await
-                .transaction_mut(|t| {
-                    let mut results = vec![];
-                    let mut qs = vec![];
-                    std::mem::swap(&mut queries.0, &mut qs);
+                .exec_mut(queries, &username)
+                .await?;
 
-                    for q in qs {
-                        let result = t_exec_mut(t, q, &results, &mut audit, &username)?;
-                        results.push(result);
-                    }
-
-                    Ok(results)
-                });
-            if r.is_ok() && !audit.is_empty() {
+            if !audit.is_empty() {
                 let mut log = std::fs::OpenOptions::new()
                     .create(true)
                     .truncate(false)
@@ -729,9 +701,9 @@ impl DbPool {
                     log.write_all(&data)?;
                 }
             }
-            r
-        }
-        .map_err(|e: QueryError| ServerError::new(ErrorCode::QueryError.into(), &e.description))?;
+
+            Ok(r)
+        }?;
 
         Ok(results)
     }
@@ -764,9 +736,8 @@ impl DbPool {
                 size: pool
                     .get(&db.name)
                     .ok_or(db_not_found(&db.name))?
-                    .get()
-                    .await
-                    .size(),
+                    .size()
+                    .await,
                 backup: db.backup,
                 name: db.name,
             });
@@ -839,9 +810,8 @@ impl DbPool {
                     .await
                     .get(&db.name)
                     .ok_or(db_not_found(&db.name))?
-                    .get()
-                    .await
-                    .size();
+                    .size()
+                    .await;
                 server_db.name = db.name;
             }
         }
@@ -958,8 +928,8 @@ impl DbPool {
 
         let pool = self.get_pool().await;
         let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
-        server_db.get_mut().await.optimize_storage()?;
-        let size = server_db.get().await.size();
+        server_db.optimize_storage().await?;
+        let size = server_db.size().await;
 
         Ok(ServerDatabase {
             name: db.name,
@@ -1009,7 +979,7 @@ impl DbPool {
         owner: &str,
         db: &str,
         user: DbId,
-    ) -> ServerResult<ServerDb> {
+    ) -> ServerResult<UserDb> {
         let user_name = self.user_name(user).await?;
 
         if owner != user_name {
@@ -1084,7 +1054,7 @@ impl DbPool {
                 .await?;
         }
 
-        let server_db = ServerDb(
+        let server_db = UserDb(
             self.get_pool()
                 .await
                 .get(&db_name)
@@ -1094,14 +1064,11 @@ impl DbPool {
         );
 
         server_db
-            .get_mut()
-            .await
             .rename(target_name.to_string_lossy().as_ref())
-            .map_err(|e| {
-                ServerError::new(
-                    ErrorCode::DbInvalid.into(),
-                    &format!("db rename error: {}", e.description),
-                )
+            .await
+            .map_err(|mut e| {
+                e.status = ErrorCode::DbInvalid.into();
+                e
             })?;
 
         let backup_path = db_backup_file(owner, db, config);
@@ -1165,7 +1132,7 @@ impl DbPool {
             database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         }
 
-        let server_db = ServerDb::new(&format!(
+        let server_db = UserDb::new(&format!(
             "{}:{}",
             database.db_type,
             current_path.to_string_lossy()
@@ -1268,11 +1235,11 @@ impl DbPool {
             .to_string())
     }
 
-    async fn db(&self) -> RwLockReadGuard<ServerDbImpl> {
+    async fn db(&self) -> RwLockReadGuard<UserDbImpl> {
         self.0.server_db.get().await
     }
 
-    async fn db_mut(&self) -> RwLockWriteGuard<ServerDbImpl> {
+    async fn db_mut(&self) -> RwLockWriteGuard<UserDbImpl> {
         self.0.server_db.get_mut().await
     }
 
@@ -1400,11 +1367,11 @@ impl DbPool {
             .into())
     }
 
-    async fn get_pool(&self) -> RwLockReadGuard<HashMap<String, ServerDb>> {
+    async fn get_pool(&self) -> RwLockReadGuard<HashMap<String, UserDb>> {
         self.0.pool.read().await
     }
 
-    async fn get_pool_mut(&self) -> RwLockWriteGuard<HashMap<String, ServerDb>> {
+    async fn get_pool_mut(&self) -> RwLockWriteGuard<HashMap<String, UserDb>> {
         self.0.pool.write().await
     }
 
@@ -1502,236 +1469,4 @@ fn required_role(queries: &Queries) -> DbUserRole {
     }
 
     DbUserRole::Read
-}
-
-fn t_exec(
-    t: &Transaction<ServerDbStorage>,
-    q: &mut QueryType,
-    results: &[QueryResult],
-) -> Result<QueryResult, QueryError> {
-    match q {
-        QueryType::Search(q) => {
-            inject_results_search(q, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectAliases(q) => {
-            inject_results(&mut q.0, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectAllAliases(q) => t.exec(&*q),
-        QueryType::SelectEdgeCount(q) => t.exec(&*q),
-        QueryType::SelectIndexes(q) => t.exec(&*q),
-        QueryType::SelectKeys(q) => {
-            inject_results(&mut q.0, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectKeyCount(q) => {
-            inject_results(&mut q.0, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectNodeCount(q) => t.exec(&*q),
-        QueryType::SelectValues(q) => {
-            inject_results(&mut q.ids, results)?;
-            t.exec(&*q)
-        }
-        _ => unreachable!(),
-    }
-}
-
-fn t_exec_mut(
-    t: &mut TransactionMut<ServerDbStorage>,
-    mut q: QueryType,
-    results: &[QueryResult],
-    audit: &mut Vec<QueryAudit>,
-    username: &str,
-) -> Result<QueryResult, QueryError> {
-    let mut do_audit = false;
-
-    let r = match &mut q {
-        QueryType::Search(q) => {
-            inject_results_search(q, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectAliases(q) => {
-            inject_results(&mut q.0, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectAllAliases(q) => t.exec(&*q),
-        QueryType::SelectEdgeCount(q) => t.exec(&*q),
-        QueryType::SelectIndexes(q) => t.exec(&*q),
-        QueryType::SelectKeys(q) => {
-            inject_results(&mut q.0, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectKeyCount(q) => {
-            inject_results(&mut q.0, results)?;
-            t.exec(&*q)
-        }
-        QueryType::SelectNodeCount(q) => t.exec(&*q),
-        QueryType::SelectValues(q) => {
-            inject_results(&mut q.ids, results)?;
-            t.exec(&*q)
-        }
-        QueryType::InsertAlias(q) => {
-            do_audit = true;
-            inject_results(&mut q.ids, results)?;
-            t.exec_mut(&*q)
-        }
-        QueryType::InsertEdges(q) => {
-            do_audit = true;
-            inject_results(&mut q.ids, results)?;
-            inject_results(&mut q.from, results)?;
-            inject_results(&mut q.to, results)?;
-
-            t.exec_mut(&*q)
-        }
-        QueryType::InsertNodes(q) => {
-            do_audit = true;
-            inject_results(&mut q.ids, results)?;
-            t.exec_mut(&*q)
-        }
-        QueryType::InsertValues(q) => {
-            do_audit = true;
-            inject_results(&mut q.ids, results)?;
-            t.exec_mut(&*q)
-        }
-        QueryType::Remove(q) => {
-            do_audit = true;
-            inject_results(&mut q.0, results)?;
-            t.exec_mut(&*q)
-        }
-        QueryType::InsertIndex(q) => {
-            do_audit = true;
-            t.exec_mut(&*q)
-        }
-        QueryType::RemoveAliases(q) => {
-            do_audit = true;
-            t.exec_mut(&*q)
-        }
-        QueryType::RemoveIndex(q) => {
-            do_audit = true;
-            t.exec_mut(&*q)
-        }
-        QueryType::RemoveValues(q) => {
-            do_audit = true;
-            inject_results(&mut q.0.ids, results)?;
-            t.exec_mut(&*q)
-        }
-    };
-
-    if do_audit {
-        audit_query(username, audit, q);
-    }
-
-    r
-}
-
-fn id_or_result(id: QueryId, results: &[QueryResult]) -> Result<QueryId, QueryError> {
-    if let QueryId::Alias(alias) = &id {
-        if let Some(index) = alias.strip_prefix(':') {
-            if let Ok(index) = index.parse::<usize>() {
-                return Ok(QueryId::Id(
-                    results
-                        .get(index)
-                        .ok_or(QueryError::from(format!(
-                            "Results index out of bounds '{index}' (> {})",
-                            results.len()
-                        )))?
-                        .elements
-                        .first()
-                        .ok_or(QueryError::from("No element found in the result"))?
-                        .id,
-                ));
-            }
-        }
-    }
-
-    Ok(id)
-}
-
-fn inject_results(ids: &mut QueryIds, results: &[QueryResult]) -> Result<(), QueryError> {
-    match ids {
-        QueryIds::Ids(ids) => {
-            inject_results_ids(ids, results)?;
-        }
-        QueryIds::Search(search) => {
-            inject_results_search(search, results)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn inject_results_search(
-    search: &mut SearchQuery,
-    results: &[QueryResult],
-) -> Result<(), QueryError> {
-    search.origin = id_or_result(search.origin.clone(), results)?;
-    search.destination = id_or_result(search.destination.clone(), results)?;
-
-    for c in &mut search.conditions {
-        if let QueryConditionData::Ids(ids) = &mut c.data {
-            inject_results_ids(ids, results)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Result<(), QueryError> {
-    for i in 0..ids.len() {
-        if let QueryId::Alias(alias) = &ids[i] {
-            if let Some(index) = alias.strip_prefix(':') {
-                if let Ok(index) = index.parse::<usize>() {
-                    let result_ids = results
-                        .get(index)
-                        .ok_or(QueryError::from(format!(
-                            "Results index out of bounds '{index}' (> {})",
-                            results.len()
-                        )))?
-                        .ids()
-                        .into_iter()
-                        .map(QueryId::Id)
-                        .collect::<Vec<QueryId>>();
-                    ids.splice(i..i + 1, result_ids.into_iter());
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn audit_query(user: &str, audit: &mut Vec<QueryAudit>, query: QueryType) {
-    audit.push(QueryAudit {
-        timestamp: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs(),
-        user: user.to_string(),
-        query,
-    });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db_pool::server_db::ServerDb;
-    use agdb::QueryBuilder;
-
-    #[tokio::test]
-    #[should_panic]
-    async fn unreachable() {
-        let db = ServerDb::new("memory:test").unwrap();
-        db.get()
-            .await
-            .transaction(|t| {
-                t_exec(
-                    t,
-                    &mut QueryType::Remove(QueryBuilder::remove().ids(1).query()),
-                    &[],
-                )
-            })
-            .unwrap();
-    }
 }

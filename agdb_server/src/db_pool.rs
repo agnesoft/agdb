@@ -77,77 +77,35 @@ impl DbPool {
         let db_exists = Path::new(&config.data_dir)
             .join("agdb_server.agdb")
             .exists();
-        let db_pool = Self(Arc::new(DbPoolImpl {
-            server_db: ServerDb::new(&format!("mapped:{}/agdb_server.agdb", config.data_dir))?,
-            pool: RwLock::new(HashMap::new()),
-        }));
 
-        if db_exists {
+        Ok(if db_exists {
+            let db_pool = Self(Arc::new(DbPoolImpl {
+                server_db: ServerDb::load(&format!("mapped:{}/agdb_server.agdb", config.data_dir))?,
+                pool: RwLock::new(HashMap::new()),
+            }));
+
             if db_pool
                 .0
                 .server_db
-                .get()
-                .await
-                .exec(
-                    QueryBuilder::search()
-                        .depth_first()
-                        .from("users")
-                        .limit(1)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .and()
-                        .key("username")
-                        .value(Comparison::Equal(config.admin.clone().into()))
-                        .query(),
-                )?
-                .result
-                == 0
+                .find_user_id(&config.admin)
+                .await?
+                .is_none()
             {
                 let admin_password = Password::create(&config.admin, &config.admin);
-
-                db_pool.0.server_db.get_mut().await.transaction_mut(|t| {
-                    let admin = t.exec_mut(
-                        QueryBuilder::insert()
-                            .element(&ServerUser {
-                                db_id: None,
-                                username: config.admin.clone(),
-                                password: admin_password.password.to_vec(),
-                                salt: admin_password.user_salt.to_vec(),
-                                token: String::new(),
-                            })
-                            .query(),
-                    )?;
-
-                    t.exec_mut(
-                        QueryBuilder::insert()
-                            .edges()
-                            .from("users")
-                            .to(admin)
-                            .query(),
-                    )
-                })?;
+                db_pool
+                    .0
+                    .server_db
+                    .insert_user(ServerUser {
+                        db_id: None,
+                        username: config.admin.clone(),
+                        password: admin_password.password.to_vec(),
+                        salt: admin_password.user_salt.to_vec(),
+                        token: String::new(),
+                    })
+                    .await?;
             }
 
-            let dbs: Vec<Database> = db_pool
-                .0
-                .server_db
-                .get()
-                .await
-                .exec(
-                    QueryBuilder::select()
-                        .elements::<Database>()
-                        .ids(
-                            QueryBuilder::search()
-                                .from("dbs")
-                                .where_()
-                                .distance(CountComparison::Equal(2))
-                                .query(),
-                        )
-                        .query(),
-                )?
-                .try_into()?;
-
-            for db in dbs {
+            for db in db_pool.0.server_db.dbs().await? {
                 let (owner, db_name) = db.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
                 let db_path = db_file(owner, db_name, config);
                 std::fs::create_dir_all(db_audit_dir(owner, config))?;
@@ -155,43 +113,24 @@ impl DbPool {
                     UserDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
                 db_pool.0.pool.write().await.insert(db.name, server_db);
             }
+
+            db_pool
         } else {
             let admin_password = Password::create(&config.admin, &config.admin);
-
-            db_pool.0.server_db.get_mut().await.transaction_mut(|t| {
-                t.exec_mut(QueryBuilder::insert().index("username").query())?;
-                t.exec_mut(QueryBuilder::insert().index("token").query())?;
-
-                t.exec_mut(
-                    QueryBuilder::insert()
-                        .nodes()
-                        .aliases(["users", "dbs"])
-                        .query(),
-                )?;
-
-                let admin = t.exec_mut(
-                    QueryBuilder::insert()
-                        .element(&ServerUser {
-                            db_id: None,
-                            username: config.admin.clone(),
-                            password: admin_password.password.to_vec(),
-                            salt: admin_password.user_salt.to_vec(),
-                            token: String::new(),
-                        })
-                        .query(),
-                )?;
-
-                t.exec_mut(
-                    QueryBuilder::insert()
-                        .edges()
-                        .from("users")
-                        .to(admin)
-                        .query(),
-                )
-            })?;
-        }
-
-        Ok(db_pool)
+            Self(Arc::new(DbPoolImpl {
+                server_db: ServerDb::new(
+                    &format!("mapped:{}/agdb_server.agdb", config.data_dir),
+                    ServerUser {
+                        db_id: None,
+                        username: config.admin.clone(),
+                        password: admin_password.password.to_vec(),
+                        salt: admin_password.user_salt.to_vec(),
+                        token: String::new(),
+                    },
+                )?,
+                pool: RwLock::new(HashMap::new()),
+            }))
+        })
     }
 
     pub(crate) async fn add_db(

@@ -268,38 +268,12 @@ impl DbPool {
 
     pub(crate) async fn copy_db(
         &self,
-        owner: &str,
-        db: &str,
-        new_name: &str,
-        mut user: DbId,
+        source_db: &str,
+        new_owner: &str,
+        new_db: &str,
+        target_db: &str,
         config: &Config,
-        admin: bool,
     ) -> ServerResult {
-        let (new_owner, new_db) = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-        let source_db = db_name(owner, db);
-        let target_db = db_name(new_owner, new_db);
-        let database = self.0.server_db.user_db(user, &source_db).await?;
-
-        if admin {
-            user = self.0.server_db.user_id(new_owner).await?;
-        } else {
-            let username = self.0.server_db.user_name(user).await?;
-
-            if new_owner != username {
-                return Err(permission_denied("cannot copy db to another user"));
-            }
-        };
-
-        if self
-            .0
-            .server_db
-            .find_user_db_id(user, &target_db)
-            .await?
-            .is_some()
-        {
-            return Err(ErrorCode::DbExists.into());
-        }
-
         let target_file = db_file(new_owner, new_db, config);
 
         if target_file.exists() {
@@ -307,11 +281,10 @@ impl DbPool {
         }
 
         std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
+
         let server_db = self
-            .get_pool()
-            .await
-            .get(&source_db)
-            .ok_or(db_not_found(&source_db))?
+            .db(&source_db)
+            .await?
             .copy(target_file.to_string_lossy().as_ref())
             .await
             .map_err(|e| {
@@ -320,21 +293,10 @@ impl DbPool {
                     &format!("db copy error: {}", e.description),
                 )
             })?;
-        self.get_pool_mut()
-            .await
-            .insert(target_db.clone(), server_db);
         self.0
-            .server_db
-            .insert_db(
-                user,
-                Database {
-                    db_id: None,
-                    name: target_db.clone(),
-                    db_type: database.db_type,
-                    backup: 0,
-                },
-            )
-            .await?;
+            .write()
+            .await
+            .insert(target_db.to_string(), server_db);
 
         Ok(())
     }
@@ -343,10 +305,10 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        user: DbId,
+        db_name: &str,
         config: &Config,
     ) -> ServerResult {
-        self.remove_db(owner, db, user).await?;
+        self.remove_db(db_name).await?;
 
         let main_file = db_file(owner, db, config);
         if main_file.exists() {
@@ -541,21 +503,8 @@ impl DbPool {
         self.0.server_db.remove_db_user(db_id, user).await
     }
 
-    pub(crate) async fn remove_db(
-        &self,
-        owner: &str,
-        db: &str,
-        user: DbId,
-    ) -> ServerResult<UserDb> {
-        let user_name = self.0.server_db.user_name(user).await?;
-
-        if owner != user_name {
-            return Err(permission_denied("owner only"));
-        }
-
-        self.0.server_db.remove_db(user, db).await?;
-        let db_name = db_name(owner, db);
-        Ok(self.get_pool_mut().await.remove(&db_name).unwrap())
+    pub(crate) async fn remove_db(&self, db_name: &str) -> ServerResult<UserDb> {
+        Ok(self.0.write().await.remove(db_name).unwrap())
     }
 
     pub(crate) async fn remove_user_dbs(

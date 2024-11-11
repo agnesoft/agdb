@@ -299,12 +299,43 @@ pub(crate) async fn convert(
 pub(crate) async fn copy(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
+    let (new_owner, new_db) = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
+    let source_db = db_name(&owner, &db);
+    let target_db = db_name(new_owner, new_db);
+    let db_type = server_db.user_db(user.0, &source_db).await?.db_type;
+    let username = server_db.user_name(user.0).await?;
+
+    if new_owner != username {
+        return Err(permission_denied("cannot copy db to another user"));
+    }
+
+    if server_db
+        .find_user_db_id(user.0, &target_db)
+        .await?
+        .is_some()
+    {
+        return Err(ErrorCode::DbExists.into());
+    }
+
     db_pool
-        .copy_db(&owner, &db, &request.new_name, user.0, &config, false)
+        .copy_db(&source_db, new_owner, new_db, &target_db, &config)
+        .await?;
+
+    server_db
+        .save_db(&Database {
+            db_id: None,
+            name: target_db,
+            db_type,
+            backup: 0,
+        })
         .await?;
 
     Ok(StatusCode::CREATED)
@@ -329,10 +360,19 @@ pub(crate) async fn copy(
 pub(crate) async fn delete(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.delete_db(&owner, &db, user.0, &config).await?;
+    let user_name = server_db.user_name(user.0).await?;
+
+    if owner != user_name {
+        return Err(permission_denied("owner only"));
+    }
+
+    let db = db_name(&owner, &db);
+    server_db.remove_db(user.0, &db).await?;
+    db_pool.delete_db(&owner, &db, &db, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

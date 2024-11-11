@@ -11,7 +11,6 @@ use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use crate::utilities::db_name;
 use crate::utilities::required_role;
-use agdb::Db;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;

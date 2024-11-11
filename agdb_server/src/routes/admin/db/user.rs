@@ -1,7 +1,9 @@
-use crate::db_pool::DbPool;
 use crate::routes::db::user::DbUserRoleParam;
+use crate::server_db::ServerDb;
+use crate::server_error::permission_denied;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use crate::utilities::db_name;
 use agdb_api::DbUser;
 use axum::extract::Path;
 use axum::extract::Query;
@@ -29,13 +31,19 @@ use axum::Json;
 )]
 pub(crate) async fn add(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    db_pool
-        .add_db_user(&owner, &db, &username, request.0.db_role, owner_id)
+    if owner == username {
+        return Err(permission_denied("cannot change role of db owner"));
+    }
+
+    let owner_id = server_db.user_id(&owner).await?;
+    let db_id = server_db.user_db_id(owner_id, &db).await?;
+    let user_id = server_db.user_id(&username).await?;
+    server_db
+        .insert_db_user(db_id, user_id, request.db_role)
         .await?;
 
     Ok(StatusCode::CREATED)
@@ -58,13 +66,15 @@ pub(crate) async fn add(
 )]
 pub(crate) async fn list(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    let users = db_pool.db_users(&owner, &db, owner_id).await?;
+    let owner_id = server_db.user_id(&owner).await?;
+    let db_id = server_db
+        .user_db_id(owner_id, &db_name(&owner, &db))
+        .await?;
 
-    Ok((StatusCode::OK, Json(users)))
+    Ok((StatusCode::OK, Json(server_db.db_users(db_id).await?)))
 }
 
 #[utoipa::path(delete,
@@ -86,13 +96,20 @@ pub(crate) async fn list(
 )]
 pub(crate) async fn remove(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db, username)): Path<(String, String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    db_pool
-        .remove_db_user(&owner, &db, &username, owner_id)
+    if owner == username {
+        return Err(permission_denied("cannot remove owner"));
+    }
+
+    let owner_id = server_db.user_id(&owner).await?;
+    let db_id = server_db
+        .user_db_id(owner_id, &db_name(&owner, &db))
         .await?;
+    let user_id = server_db.user_id(&username).await?;
+
+    server_db.remove_db_user(db_id, user_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

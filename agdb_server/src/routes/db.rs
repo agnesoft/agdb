@@ -437,8 +437,20 @@ pub(crate) async fn exec(
 pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
-    let dbs = db_pool.find_user_dbs(user.0).await?;
+    let databases = server_db.user_dbs(user.0).await?;
+    let mut dbs = Vec::with_capacity(databases.len());
+
+    for db in databases {
+        dbs.push(ServerDatabase {
+            size: db_pool.db_size(&db.1.name).await?,
+            name: db.1.name,
+            db_type: db.1.db_type,
+            role: db.0,
+            backup: db.1.backup,
+        });
+    }
 
     Ok((StatusCode::OK, Json(dbs)))
 }
@@ -461,11 +473,29 @@ pub(crate) async fn list(
 pub(crate) async fn optimize(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
-    let db = db_pool.optimize_db(&owner, &db, user.0).await?;
+    let db_name = db_name(&owner, &db);
+    let database = server_db.user_db(user.0, &db_name).await?;
+    let role = server_db.user_db_role(user.0, &db_name).await?;
 
-    Ok((StatusCode::OK, Json(db)))
+    if role == DbUserRole::Read {
+        return Err(permission_denied("write rights required"));
+    }
+
+    let size = db_pool.optimize_db(&db_name).await?;
+
+    Ok((
+        StatusCode::OK,
+        Json(ServerDatabase {
+            name: db_name,
+            db_type: database.db_type,
+            role,
+            backup: database.backup,
+            size,
+        }),
+    ))
 }
 
 #[utoipa::path(delete,
@@ -487,9 +517,18 @@ pub(crate) async fn optimize(
 pub(crate) async fn remove(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.remove_db(&owner, &db, user.0).await?;
+    let user_name = server_db.user_name(user.0).await?;
+
+    if owner != user_name {
+        return Err(permission_denied("owner only"));
+    }
+
+    let db = db_name(&owner, &db);
+    server_db.remove_db(user.0, &db).await?;
+    db_pool.remove_db(&db).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

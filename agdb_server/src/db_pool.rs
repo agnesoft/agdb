@@ -49,17 +49,6 @@ impl DbPool {
             .ok_or_else(|| ServerError::new(StatusCode::NOT_FOUND, "db not found"))
     }
 
-    async fn db_size(&self, name: &str) -> ServerResult<u64> {
-        Ok(self
-            .0
-            .read()
-            .await
-            .get(name)
-            .ok_or(db_not_found(name))?
-            .size()
-            .await)
-    }
-
     pub(crate) async fn new(config: &Config, server_db: &ServerDb) -> ServerResult<Self> {
         std::fs::create_dir_all(&config.data_dir)?;
         let db_pool = Self(Arc::new(RwLock::new(HashMap::new())));
@@ -184,6 +173,17 @@ impl DbPool {
             size,
             backup: database.backup,
         })
+    }
+
+    pub(crate) async fn db_size(&self, name: &str) -> ServerResult<u64> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .get(name)
+            .ok_or(db_not_found(name))?
+            .size()
+            .await)
     }
 
     async fn do_clear_db_backup(
@@ -373,117 +373,10 @@ impl DbPool {
         Ok(r)
     }
 
-    pub(crate) async fn find_dbs(&self) -> ServerResult<Vec<ServerDatabase>> {
-        let pool = self.get_pool().await;
-        let dbs = self.0.server_db.dbs().await?;
-
-        let mut databases = Vec::with_capacity(dbs.len());
-
-        for db in dbs {
-            databases.push(ServerDatabase {
-                db_type: db.db_type,
-                role: DbUserRole::Admin,
-                size: pool
-                    .get(&db.name)
-                    .ok_or(db_not_found(&db.name))?
-                    .size()
-                    .await,
-                backup: db.backup,
-                name: db.name,
-            });
-        }
-
-        Ok(databases)
-    }
-
-    pub(crate) async fn find_user_dbs(&self, user: DbId) -> ServerResult<Vec<ServerDatabase>> {
-        let user_dbs = self.0.server_db.user_dbs(user).await?;
-        let mut dbs: Vec<ServerDatabase> = user_dbs
-            .into_iter()
-            .map(|(role, db)| ServerDatabase {
-                name: db.name,
-                db_type: db.db_type,
-                role,
-                size: 0,
-                backup: db.backup,
-            })
-            .collect();
-
-        for db in dbs.iter_mut() {
-            db.size = self
-                .get_pool()
-                .await
-                .get(&db.name)
-                .ok_or(db_not_found(&db.name))?
-                .size()
-                .await;
-        }
-
-        Ok(dbs)
-    }
-
-    pub(crate) async fn db_users(
-        &self,
-        owner: &str,
-        db: &str,
-        user: DbId,
-    ) -> ServerResult<Vec<DbUser>> {
-        let db = db_name(owner, db);
-        let db_id = self.0.server_db.user_db_id(user, &db).await?;
-        self.0.server_db.db_users(db_id).await
-    }
-
-    pub(crate) async fn optimize_db(
-        &self,
-        owner: &str,
-        db: &str,
-        user: DbId,
-    ) -> ServerResult<ServerDatabase> {
-        let db_name = db_name(owner, db);
-        let db = self.0.server_db.user_db(user, &db_name).await?;
-        let role = self.0.server_db.user_db_role(user, &db_name).await?;
-
-        if role == DbUserRole::Read {
-            return Err(permission_denied("write rights required"));
-        }
-
-        let pool = self.get_pool().await;
-        let server_db = pool.get(&db.name).ok_or(db_not_found(&db.name))?;
-        server_db.optimize_storage().await?;
-        let size = server_db.size().await;
-
-        Ok(ServerDatabase {
-            name: db.name,
-            db_type: db.db_type,
-            role,
-            size,
-            backup: db.backup,
-        })
-    }
-
-    pub(crate) async fn remove_db_user(
-        &self,
-        owner: &str,
-        db: &str,
-        username: &str,
-        user: DbId,
-    ) -> ServerResult {
-        if owner == username {
-            return Err(permission_denied("cannot remove owner"));
-        }
-
-        let db_id = self
-            .0
-            .server_db
-            .user_db_id(user, &db_name(owner, db))
-            .await?;
-        let user_id = self.0.server_db.user_id(username).await?;
-
-        if user != user_id && !self.0.server_db.is_db_admin(user, db_id).await? {
-            return Err(permission_denied("admin only"));
-        }
-
-        self.0.server_db.remove_db_user(db_id, user).await
+    pub(crate) async fn optimize_db(&self, db_name: &str) -> ServerResult<u64> {
+        let user_db = self.db(&db_name).await?;
+        user_db.optimize_storage().await?;
+        Ok(user_db.size().await)
     }
 
     pub(crate) async fn remove_db(&self, db_name: &str) -> ServerResult<UserDb> {

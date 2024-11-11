@@ -68,6 +68,10 @@ pub(crate) fn app(
             routing::post(routes::admin::db::backup),
         )
         .route(
+            "/admin/db/:user/:db/clear",
+            routing::post(routes::admin::db::clear),
+        )
+        .route(
             "/admin/db/:user/:db/convert",
             routing::post(routes::admin::db::convert),
         )

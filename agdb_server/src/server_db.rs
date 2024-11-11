@@ -372,8 +372,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn user(&self, username: &str) -> ServerResult<ServerUser> {
-        Ok(self
-            .0
+        self.0
             .read()
             .await
             .exec(
@@ -383,7 +382,7 @@ impl ServerDb {
                     .query(),
             )?
             .try_into()
-            .map_err(|_| user_not_found(username))?)
+            .map_err(|_| user_not_found(username))
     }
 
     pub(crate) async fn user_name(&self, id: DbId) -> ServerResult<String> {
@@ -413,8 +412,7 @@ impl ServerDb {
     }
 
     pub(crate) async fn user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
-        Ok(self
-            .0
+        self.0
             .read()
             .await
             .exec(
@@ -424,14 +422,13 @@ impl ServerDb {
                     .query(),
             )?
             .try_into()
-            .map_err(|_| db_not_found(db))?)
+            .map_err(|_| db_not_found(db))
     }
 
     pub(crate) async fn user_db_id(&self, user: DbId, db: &str) -> ServerResult<DbId> {
-        Ok(self
-            .find_user_db_id(user, db)
+        self.find_user_db_id(user, db)
             .await?
-            .ok_or(db_not_found(db))?)
+            .ok_or(db_not_found(db))
     }
 
     pub(crate) async fn user_db_role(&self, user: DbId, db: &str) -> ServerResult<DbUserRole> {

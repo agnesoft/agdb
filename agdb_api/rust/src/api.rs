@@ -79,6 +79,21 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
+    pub async fn admin_db_clear(
+        &self,
+        owner: &str,
+        db: &str,
+        resource: DbResource,
+    ) -> AgdbApiResult<(u16, ServerDatabase)> {
+        self.client
+            .post::<(), ServerDatabase>(
+                &self.url(&format!("/admin/db/{owner}/{db}/clear?resource={resource}")),
+                &None,
+                &self.token,
+            )
+            .await
+    }
+
     pub async fn admin_db_convert(
         &self,
         owner: &str,

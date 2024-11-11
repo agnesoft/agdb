@@ -5,12 +5,15 @@ use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::ServerDatabaseRename;
+use crate::routes::db::ServerDatabaseResource;
 use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use crate::utilities::db_name;
+use crate::utilities::required_role;
 use agdb_api::DbAudit;
+use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
 use agdb_api::ServerDatabase;
@@ -46,9 +49,9 @@ pub(crate) async fn add(
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
     let name = db_name(&owner, &db);
-    let user = server_db.user_id(&owner).await?;
+    let owner_id = server_db.user_id(&owner).await?;
 
-    if server_db.find_user_db_id(user, &name).await?.is_some() {
+    if server_db.find_user_db_id(owner_id, &name).await?.is_some() {
         return Err(ErrorCode::DbExists.into());
     }
 
@@ -58,7 +61,7 @@ pub(crate) async fn add(
 
     server_db
         .insert_db(
-            user,
+            owner_id,
             Database {
                 db_id: None,
                 name,
@@ -88,13 +91,18 @@ pub(crate) async fn add(
 pub(crate) async fn audit(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    let results = db_pool.audit(&owner, &db, owner_id, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    server_db.user_db_id(owner_id, &db_name).await?;
 
-    Ok((StatusCode::OK, Json(results)))
+    Ok((
+        StatusCode::OK,
+        Json(db_pool.audit(&owner, &db, &config).await?),
+    ))
 }
 
 #[utoipa::path(post,
@@ -116,13 +124,58 @@ pub(crate) async fn audit(
 pub(crate) async fn backup(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    db_pool.backup_db(&owner, &db, owner_id, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    let mut database = server_db.user_db(owner_id, &db_name).await?;
+
+    database.backup = db_pool
+        .backup_db(&owner, &db, &db_name, database.db_type, &config)
+        .await?;
+
+    server_db.save_db(&database).await?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/clear",
+    operation_id = "db_clear",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "user name"),
+        ("db" = String, Path, description = "db name"),
+        ServerDatabaseResource
+    ),
+    responses(
+         (status = 201, description = "db resource(s) cleared", body = ServerDatabase),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "server admin only"),
+         (status = 404, description = "user / db not found"),
+    )
+)]
+pub(crate) async fn clear(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
+    State(config): State<Config>,
+    Path((owner, db)): Path<(String, String)>,
+    request: Query<ServerDatabaseResource>,
+) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
+    let db_name = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    let mut database = server_db.user_db(owner_id, &db_name).await?;
+    let role = server_db.user_db_role(owner_id, &db_name).await?;
+    let db = db_pool
+        .clear_db(&owner, &db, &mut database, role, &config, request.resource)
+        .await?;
+    server_db.save_db(&database).await?;
+
+    Ok((StatusCode::OK, Json(db)))
 }
 
 #[utoipa::path(post,
@@ -138,21 +191,39 @@ pub(crate) async fn backup(
     responses(
          (status = 201, description = "db typ changes"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "admin only"),
+         (status = 403, description = "server admin only"),
          (status = 404, description = "user / db not found"),
     )
 )]
 pub(crate) async fn convert(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
+    let db_name = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    let mut database = server_db.user_db(owner_id, &db_name).await?;
+
+    if database.db_type == request.db_type {
+        return Ok(StatusCode::CREATED);
+    }
+
     db_pool
-        .convert_db(&owner, &db, owner_id, request.db_type, &config)
+        .convert_db(
+            &owner,
+            &db,
+            &db_name,
+            database.db_type,
+            request.db_type,
+            &config,
+        )
         .await?;
+
+    database.db_type = request.db_type;
+    server_db.save_db(&database).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -178,13 +249,40 @@ pub(crate) async fn convert(
 pub(crate) async fn copy(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
+    let (new_owner, new_db) = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
+    let source_db = db_name(&owner, &db);
+    let target_db = db_name(new_owner, new_db);
+    let owner_id = server_db.user_id(&owner).await?;
+    let db_type = server_db.user_db(owner_id, &source_db).await?.db_type;
+    let new_owner_id = server_db.user_id(new_owner).await?;
+
+    if server_db
+        .find_user_db_id(new_owner_id, &target_db)
+        .await?
+        .is_some()
+    {
+        return Err(ErrorCode::DbExists.into());
+    }
+
     db_pool
-        .copy_db(&owner, &db, &request.new_name, owner_id, &config, true)
+        .copy_db(&source_db, new_owner, new_db, &target_db, &config)
+        .await?;
+
+    server_db
+        .save_db(&Database {
+            db_id: None,
+            name: target_db,
+            db_type,
+            backup: 0,
+        })
         .await?;
 
     Ok(StatusCode::CREATED)
@@ -208,11 +306,14 @@ pub(crate) async fn copy(
 pub(crate) async fn delete(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    db_pool.delete_db(&owner, &db, owner_id, &config).await?;
+    let owner_id = server_db.user_id(&owner).await?;
+    let db = db_name(&owner, &db);
+    server_db.remove_db(owner_id, &db).await?;
+    db_pool.delete_db(&owner, &db, &db, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -241,10 +342,16 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    let results = db_pool
-        .exec(&owner, &db, owner_id, queries, &config)
-        .await?;
+    let db_name = db_name(&owner, &db);
+    let required_role = required_role(&queries);
+
+    let results = if required_role == DbUserRole::Read {
+        db_pool.exec(&db_name, queries).await?
+    } else {
+        db_pool
+            .exec_mut(&owner, &db, &db_name, &config.admin, queries, &config)
+            .await?
+    };
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
@@ -262,8 +369,20 @@ pub(crate) async fn exec(
 pub(crate) async fn list(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
-    let dbs = db_pool.find_dbs().await?;
+    let databases = server_db.dbs().await?;
+    let mut dbs = Vec::with_capacity(databases.len());
+
+    for db in databases {
+        dbs.push(ServerDatabase {
+            size: db_pool.db_size(&db.name).await?,
+            name: db.name,
+            db_type: db.db_type,
+            role: DbUserRole::Admin,
+            backup: db.backup,
+        });
+    }
 
     Ok((StatusCode::OK, Json(dbs)))
 }
@@ -285,12 +404,25 @@ pub(crate) async fn list(
 pub(crate) async fn optimize(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    let db = db_pool.optimize_db(&owner, &db, owner_id).await?;
+    let db_name = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    let database = server_db.user_db(owner_id, &db_name).await?;
+    let role = server_db.user_db_role(owner_id, &db_name).await?;
+    let size = db_pool.optimize_db(&db_name).await?;
 
-    Ok((StatusCode::OK, Json(db)))
+    Ok((
+        StatusCode::OK,
+        Json(ServerDatabase {
+            name: db_name,
+            db_type: database.db_type,
+            role,
+            backup: database.backup,
+            size,
+        }),
+    ))
 }
 
 #[utoipa::path(delete,
@@ -311,10 +443,13 @@ pub(crate) async fn optimize(
 pub(crate) async fn remove(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    db_pool.remove_db(&owner, &db, owner_id).await?;
+    let db = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    server_db.remove_db(owner_id, &db).await?;
+    db_pool.remove_db(&db).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -340,14 +475,45 @@ pub(crate) async fn remove(
 pub(crate) async fn rename(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
+    let db_name = db_name(&owner, &db);
+
+    if db_name == request.new_name {
+        return Ok(StatusCode::CREATED);
+    }
+
+    let (new_owner, new_db) = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
+    let new_owner_id = server_db.user_id(new_owner).await?;
+    let owner_id = server_db.user_id(&owner).await?;
+    let mut database = server_db.user_db(owner_id, &db_name).await?;
+
     db_pool
-        .rename_db(&owner, &db, &request.new_name, owner_id, &config)
+        .rename_db(
+            &owner,
+            &db,
+            &db_name,
+            new_owner,
+            new_db,
+            &request.new_name,
+            &config,
+        )
         .await?;
+
+    database.name = request.new_name.clone();
+    server_db.save_db(&database).await?;
+
+    if new_owner != owner {
+        server_db
+            .insert_db_user(database.db_id.unwrap(), new_owner_id, DbUserRole::Admin)
+            .await?;
+    }
 
     Ok(StatusCode::CREATED)
 }
@@ -370,11 +536,21 @@ pub(crate) async fn rename(
 pub(crate) async fn restore(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let owner_id = db_pool.find_user_id(&owner).await?;
-    db_pool.restore_db(&owner, &db, owner_id, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    let mut database = server_db.user_db(owner_id, &db_name).await?;
+
+    if let Some(backup) = db_pool
+        .restore_db(&owner, &db, &db_name, database.db_type, &config)
+        .await?
+    {
+        database.backup = backup;
+        server_db.save_db(&database).await?;
+    }
 
     Ok(StatusCode::CREATED)
 }

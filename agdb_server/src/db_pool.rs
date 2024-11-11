@@ -109,7 +109,7 @@ impl DbPool {
         db_type: DbType,
         config: &Config,
     ) -> ServerResult<u64> {
-        let user_db = self.db(&db_name).await?;
+        let user_db = self.db(db_name).await?;
 
         let backup_path = if db_type == DbType::Memory {
             db_file(owner, db, config)
@@ -276,7 +276,7 @@ impl DbPool {
         std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
 
         let server_db = self
-            .db(&source_db)
+            .db(source_db)
             .await?
             .copy(target_file.to_string_lossy().as_ref())
             .await
@@ -343,7 +343,7 @@ impl DbPool {
         queries: Queries,
         config: &Config,
     ) -> ServerResult<Vec<QueryResult>> {
-        let (r, audit) = self.db(db_name).await?.exec_mut(queries, &username).await?;
+        let (r, audit) = self.db(db_name).await?.exec_mut(queries, username).await?;
 
         if !audit.is_empty() {
             let mut log = std::fs::OpenOptions::new()
@@ -366,7 +366,7 @@ impl DbPool {
     }
 
     pub(crate) async fn optimize_db(&self, db_name: &str) -> ServerResult<u64> {
-        let user_db = self.db(&db_name).await?;
+        let user_db = self.db(db_name).await?;
         user_db.optimize_storage().await?;
         Ok(user_db.size().await)
     }
@@ -394,6 +394,7 @@ impl DbPool {
         Ok(())
     }
 
+    #[expect(clippy::too_many_arguments)]
     pub(crate) async fn rename_db(
         &self,
         owner: &str,

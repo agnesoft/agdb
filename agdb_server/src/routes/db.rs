@@ -2,6 +2,7 @@ pub(crate) mod user;
 
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
@@ -59,11 +60,12 @@ pub struct ServerDatabaseResource {
 pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let current_username = db_pool.user_name(user.0).await?;
+    let current_username = server_db.user_name(user.0).await?;
 
     if current_username != owner {
         return Err(ServerError::new(

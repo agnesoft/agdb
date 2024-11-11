@@ -561,6 +561,14 @@ impl ServerDb {
     }
 
     pub(crate) async fn user_statuses(&self) -> ServerResult<Vec<UserStatus>> {
+        let admin_id = self
+            .0
+            .read()
+            .await
+            .exec(QueryBuilder::select().aliases().ids(ADMIN).query())?
+            .elements[0]
+            .id;
+
         Ok(self
             .0
             .read()
@@ -579,7 +587,7 @@ impl ServerDb {
             .map(|e| UserStatus {
                 name: e.values[0].value.to_string(),
                 login: !e.values[1].value.to_string().is_empty(),
-                admin: false,
+                admin: e.id == admin_id,
             })
             .collect())
     }

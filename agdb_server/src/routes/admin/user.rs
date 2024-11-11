@@ -1,9 +1,10 @@
 use crate::config::Config;
 use crate::db_pool::DbPool;
-use crate::db_pool::ServerUser;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
+use crate::server_db::ServerDb;
+use crate::server_db::ServerUser;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use agdb_api::UserCredentials;
@@ -32,21 +33,21 @@ use axum::Json;
 )]
 pub(crate) async fn add(
     _admin_id: AdminId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
     password::validate_username(&username)?;
     password::validate_password(&request.password)?;
 
-    if db_pool.find_user_id(&username).await.is_ok() {
+    if server_db.find_user_id(&username).await?.is_some() {
         return Err(ErrorCode::UserExists.into());
     }
 
     let pswd = Password::create(&username, &request.password);
 
-    db_pool
-        .add_user(ServerUser {
+    server_db
+        .insert_user(ServerUser {
             db_id: None,
             username: username.clone(),
             password: pswd.password.to_vec(),
@@ -76,12 +77,17 @@ pub(crate) async fn add(
 )]
 pub(crate) async fn change_password(
     _admin_id: AdminId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
-    let user = db_pool.find_user(&username).await?;
-    db_pool.change_password(user, &request.password).await?;
+    let mut user = server_db.user(&username).await?;
+
+    password::validate_password(&request.password)?;
+    let pswd = Password::create(&user.username, &request.password);
+    user.password = pswd.password.to_vec();
+    user.salt = pswd.user_salt.to_vec();
+    server_db.save_user(user).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -98,16 +104,9 @@ pub(crate) async fn change_password(
 )]
 pub(crate) async fn list(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
-    State(config): State<Config>,
+    State(server_db): State<ServerDb>,
 ) -> ServerResponse<(StatusCode, Json<Vec<UserStatus>>)> {
-    let mut users = db_pool.find_users().await?;
-    users
-        .iter_mut()
-        .find(|u| u.name == config.admin)
-        .ok_or("admin user not found")?
-        .admin = true;
-    Ok((StatusCode::OK, Json(users)))
+    Ok((StatusCode::OK, Json(server_db.user_statuses().await?)))
 }
 
 #[utoipa::path(post,
@@ -126,12 +125,11 @@ pub(crate) async fn list(
 )]
 pub(crate) async fn logout(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path(username): Path<String>,
 ) -> ServerResponse {
-    let mut user = db_pool.find_user(&username).await?;
-    user.token = String::new();
-    db_pool.save_user(user).await?;
+    let user_id = server_db.user_id(&username).await?;
+    server_db.save_token(user_id, "").await?;
 
     Ok(StatusCode::CREATED)
 }

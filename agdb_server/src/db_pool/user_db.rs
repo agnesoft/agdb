@@ -19,6 +19,8 @@ use std::time::UNIX_EPOCH;
 use tokio::sync::RwLock;
 
 pub(crate) type UserDbImpl = DbImpl<UserDbStorage>;
+
+#[derive(Clone)]
 pub(crate) struct UserDb(pub(crate) Arc<RwLock<UserDbImpl>>);
 
 impl UserDb {

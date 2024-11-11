@@ -5,6 +5,7 @@ use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::server_db::Database;
 use crate::server_db::ServerDb;
+use crate::server_error::permission_denied;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
@@ -120,12 +121,17 @@ pub(crate) async fn add(
 pub(crate) async fn audit(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
-    let results = db_pool.audit(&owner, &db, user.0, &config).await?;
+    let db_name = db_name(&owner, &db);
+    server_db.user_db_id(user.0, &db_name).await?;
 
-    Ok((StatusCode::OK, Json(results)))
+    Ok((
+        StatusCode::OK,
+        Json(db_pool.audit(&owner, &db, &config).await?),
+    ))
 }
 
 #[utoipa::path(post,
@@ -147,10 +153,25 @@ pub(crate) async fn audit(
 pub(crate) async fn backup(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.backup_db(&owner, &db, user.0, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
+    database.backup = db_pool
+        .backup_db(&owner, &db, database.db_type, &config)
+        .await?;
+
+    server_db.save_db(&database).await?;
 
     Ok(StatusCode::CREATED)
 }

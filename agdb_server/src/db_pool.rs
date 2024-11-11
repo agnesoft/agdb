@@ -38,6 +38,15 @@ use user_db::UserDb;
 pub(crate) struct DbPool(pub(crate) Arc<RwLock<HashMap<String, UserDb>>>);
 
 impl DbPool {
+    pub(crate) async fn db(&self, name: &str) -> ServerResult<UserDb> {
+        self.0
+            .read()
+            .await
+            .get(name)
+            .cloned()
+            .ok_or_else(|| ServerError::new(StatusCode::NOT_FOUND, "db not found"))
+    }
+
     pub(crate) async fn new(config: &Config, server_db: &ServerDb) -> ServerResult<Self> {
         std::fs::create_dir_all(&config.data_dir)?;
         let db_pool = Self(Arc::new(RwLock::new(HashMap::new())));
@@ -86,16 +95,8 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        user: DbId,
         config: &Config,
     ) -> ServerResult<DbAudit> {
-        let db_name = db_name(owner, db);
-        self.0
-            .server_db
-            .find_user_db_id(user, &db_name)
-            .await?
-            .ok_or(db_not_found(&db_name))?;
-
         if let Ok(log) = std::fs::OpenOptions::new()
             .read(true)
             .open(db_audit_file(owner, db, config))
@@ -110,28 +111,29 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        user: DbId,
+        db_type: DbType,
         config: &Config,
-    ) -> ServerResult {
+    ) -> ServerResult<u64> {
         let db_name = db_name(owner, db);
-        let mut database = self.0.server_db.user_db(user, &db_name).await?;
+        let user_db = self.db(&db_name).await?;
 
-        if !self
-            .0
-            .server_db
-            .is_db_admin(user, database.db_id.unwrap())
-            .await?
-        {
-            return Err(permission_denied("admin only"));
+        let backup_path = if db_type == DbType::Memory {
+            db_file(owner, db, config)
+        } else {
+            db_backup_file(owner, db, config)
+        };
+
+        if backup_path.exists() {
+            std::fs::remove_file(&backup_path)?;
+        } else {
+            std::fs::create_dir_all(db_backup_dir(owner, config))?;
         }
 
-        let pool = self.get_pool().await;
-        let server_db = pool
-            .get(&database.name)
-            .ok_or(db_not_found(&database.name))?;
+        user_db
+            .backup(backup_path.to_string_lossy().as_ref())
+            .await?;
 
-        self.do_backup(owner, db, config, server_db, &mut database)
-            .await
+        Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
     }
 
     pub(crate) async fn clear_db(
@@ -237,33 +239,6 @@ impl DbPool {
             *server_db = UserDb::new(&format!("{}:{}", database.db_type, path))?;
         }
 
-        Ok(())
-    }
-
-    async fn do_backup(
-        &self,
-        owner: &str,
-        db: &str,
-        config: &Config,
-        server_db: &UserDb,
-        database: &mut Database,
-    ) -> Result<(), ServerError> {
-        let backup_path = if database.db_type == DbType::Memory {
-            db_file(owner, db, config)
-        } else {
-            db_backup_file(owner, db, config)
-        };
-        if backup_path.exists() {
-            std::fs::remove_file(&backup_path)?;
-        } else {
-            std::fs::create_dir_all(db_backup_dir(owner, config))?;
-        }
-        server_db
-            .backup(backup_path.to_string_lossy().as_ref())
-            .await?;
-
-        database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-        self.0.server_db.save_db(database).await?;
         Ok(())
     }
 

@@ -238,7 +238,7 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "admin only"
+            "description": "server admin only"
           },
           "404": {
             "description": "user / db not found"
@@ -1355,7 +1355,7 @@
         ],
         "responses": {
           "201": {
-            "description": "db typ changes"
+            "description": "db type changes"
           },
           "401": {
             "description": "unauthorized"

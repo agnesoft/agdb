@@ -51,7 +51,7 @@ const SERVER_DB_FILE: &str = "agdb_server.agdb";
 
 pub(crate) async fn new(config: &Config) -> ServerResult<ServerDb> {
     std::fs::create_dir_all(&config.data_dir)?;
-    let db_name = format!("mapped:{}/{}", config.data_dir, SERVER_DB_FILE);
+    let db_name = format!("{}/{}", config.data_dir, SERVER_DB_FILE);
     let db = ServerDb::new(&db_name)?;
 
     let admin = if let Some(admin_id) = db.find_user_id(&config.admin).await? {
@@ -87,11 +87,11 @@ impl ServerDb {
             .map(|kv| kv.key.to_string())
             .collect();
 
-            if indexes.iter().any(|i| i == USERNAME) {
+            if !indexes.iter().any(|i| i == USERNAME) {
                 t.exec_mut(QueryBuilder::insert().index(USERNAME).query())?;
             }
 
-            if indexes.iter().any(|i| i == TOKEN) {
+            if !indexes.iter().any(|i| i == TOKEN) {
                 t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
             }
 

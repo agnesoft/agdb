@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::utilities;
 use agdb::DbId;
@@ -26,15 +27,15 @@ pub(crate) struct UserName(pub(crate) String);
 impl<S: Sync + Send> FromRequestParts<S> for UserName
 where
     S: Send + Sync,
-    DbPool: FromRef<S>,
+    ServerDb: FromRef<S>,
 {
     type Rejection = ServerError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         if let Ok(bearer) = parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
-            let db_pool = DbPool::from_ref(state);
+            let db_pool = ServerDb::from_ref(state);
             let id = db_pool
-                .find_user_id_by_token(utilities::unquote(bearer.token()))
+                .user_token_id(utilities::unquote(bearer.token()))
                 .await?;
             return Ok(UserName(db_pool.user_name(id).await?));
         }
@@ -47,15 +48,15 @@ where
 impl<S: Sync + Send> FromRequestParts<S> for UserId
 where
     S: Send + Sync,
-    DbPool: FromRef<S>,
+    ServerDb: FromRef<S>,
 {
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let bearer: TypedHeader<Authorization<Bearer>> =
             parts.extract().await.map_err(unauthorized)?;
-        let id = DbPool::from_ref(state)
-            .find_user_id_by_token(utilities::unquote(bearer.token()))
+        let id = ServerDb::from_ref(state)
+            .user_token_id(utilities::unquote(bearer.token()))
             .await
             .map_err(unauthorized)?;
         Ok(Self(id))
@@ -66,15 +67,15 @@ where
 impl<S: Sync + Send> FromRequestParts<S> for AdminId
 where
     S: Send + Sync,
-    DbPool: FromRef<S>,
+    ServerDb: FromRef<S>,
     Config: FromRef<S>,
 {
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let admin_user = Config::from_ref(state).admin.clone();
-        let admin = DbPool::from_ref(state)
-            .find_user(&admin_user)
+        let admin_user = &Config::from_ref(state).admin;
+        let admin = ServerDb::from_ref(state)
+            .user_token(admin_user.as_str())
             .await
             .map_err(unauthorized)?;
         let bearer: TypedHeader<Authorization<Bearer>> =

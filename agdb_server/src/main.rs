@@ -7,6 +7,7 @@ mod error_code;
 mod logger;
 mod password;
 mod routes;
+mod server_db;
 mod server_error;
 mod server_state;
 mod user_id;

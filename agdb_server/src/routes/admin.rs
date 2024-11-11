@@ -2,13 +2,16 @@ pub(crate) mod db;
 pub(crate) mod user;
 
 use crate::config::Config;
-use crate::db_pool::DbPool;
+use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use crate::utilities::get_size;
 use agdb_api::AdminStatus;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use tokio::sync::broadcast::Sender;
 
 #[utoipa::path(post,
@@ -44,11 +47,19 @@ pub(crate) async fn shutdown(
 )]
 pub(crate) async fn status(
     _admin_id: AdminId,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
-    State(db_pool): State<DbPool>,
 ) -> ServerResponse<(StatusCode, Json<AdminStatus>)> {
-    let status = db_pool.status(&config).await?;
-    Ok((StatusCode::OK, Json(status)))
+    Ok((
+        StatusCode::OK,
+        Json(AdminStatus {
+            uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
+            dbs: server_db.db_count().await?,
+            users: server_db.user_count().await?,
+            logged_in_users: server_db.user_token_count().await?,
+            size: get_size(&config.data_dir).await?,
+        }),
+    ))
 }
 
 #[cfg(test)]

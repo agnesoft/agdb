@@ -11,6 +11,7 @@ use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use crate::utilities::db_name;
 use crate::utilities::required_role;
+use agdb::Db;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
@@ -555,13 +556,49 @@ pub(crate) async fn remove(
 pub(crate) async fn rename(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
+    let db_name = db_name(&owner, &db);
+
+    if db_name == request.new_name {
+        return Ok(StatusCode::CREATED);
+    }
+
+    let (new_owner, new_db) = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
+    let new_owner_id = server_db.user_id(new_owner).await?;
+
+    if owner != server_db.user_name(user.0).await? {
+        return Err(permission_denied("owner only"));
+    }
+
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
     db_pool
-        .rename_db(&owner, &db, &request.new_name, user.0, &config)
+        .rename_db(
+            &owner,
+            &db,
+            &db_name,
+            new_owner,
+            new_db,
+            &request.new_name,
+            &config,
+        )
         .await?;
+
+    database.name = request.new_name.clone();
+    server_db.save_db(&database).await?;
+
+    if new_owner != owner {
+        server_db
+            .insert_db_user(database.db_id.unwrap(), new_owner_id, DbUserRole::Admin)
+            .await?;
+    }
 
     Ok(StatusCode::CREATED)
 }
@@ -585,10 +622,27 @@ pub(crate) async fn rename(
 pub(crate) async fn restore(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.restore_db(&owner, &db, user.0, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
+    if let Some(backup) = db_pool
+        .restore_db(&owner, &db, &db_name, database.db_type, &config)
+        .await?
+    {
+        database.backup = backup;
+        server_db.save_db(&database).await?;
+    }
 
     Ok(StatusCode::CREATED)
 }

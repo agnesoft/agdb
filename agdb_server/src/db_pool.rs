@@ -3,21 +3,15 @@ mod user_db_storage;
 
 use crate::config::Config;
 use crate::error_code::ErrorCode;
-use crate::routes::db;
 use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use crate::utilities::db_name;
-use crate::utilities::get_size;
-use agdb::DbId;
 use agdb::QueryResult;
-use agdb::QueryType;
-use agdb_api::AdminStatus;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
-use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use agdb_api::ServerDatabase;
@@ -32,8 +26,6 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use tokio::sync::RwLock;
-use tokio::sync::RwLockReadGuard;
-use tokio::sync::RwLockWriteGuard;
 use user_db::UserDb;
 
 #[derive(Clone)]
@@ -212,7 +204,7 @@ impl DbPool {
         database: &Database,
         config: &Config,
     ) -> Result<(), ServerError> {
-        let mut pool = self.get_pool_mut().await;
+        let mut pool = self.0.write().await;
         let user_db = pool
             .get_mut(&database.name)
             .ok_or(db_not_found(&database.name))?;
@@ -390,7 +382,7 @@ impl DbPool {
         config: &Config,
     ) -> ServerResult {
         for db in dbs {
-            self.get_pool_mut().await.remove(db);
+            self.0.write().await.remove(db);
         }
 
         let user_dir = Path::new(&config.data_dir).join(username);
@@ -406,24 +398,12 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        new_name: &str,
-        user: DbId,
+        source_db: &str,
+        new_owner: &str,
+        new_db: &str,
+        target_db: &str,
         config: &Config,
     ) -> ServerResult {
-        let db_name = db_name(owner, db);
-
-        if db_name == new_name {
-            return Ok(());
-        }
-
-        let (new_owner, new_db) = new_name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-        let username = self.0.server_db.user_name(user).await?;
-
-        if owner != username {
-            return Err(permission_denied("owner only"));
-        }
-
-        let mut database = self.0.server_db.user_db(user, &db_name).await?;
         let target_name = db_file(new_owner, new_db, config);
 
         if target_name.exists() {
@@ -432,20 +412,11 @@ impl DbPool {
 
         if new_owner != owner {
             std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
-            self.add_db_user(owner, db, new_owner, DbUserRole::Admin, user)
-                .await?;
         }
 
-        let server_db = UserDb(
-            self.get_pool()
-                .await
-                .get(&db_name)
-                .ok_or(db_not_found(&db_name))?
-                .0
-                .clone(),
-        );
+        let user_db = self.db(source_db).await?;
 
-        server_db
+        user_db
             .rename(target_name.to_string_lossy().as_ref())
             .await
             .map_err(|mut e| {
@@ -454,6 +425,7 @@ impl DbPool {
             })?;
 
         let backup_path = db_backup_file(owner, db, config);
+
         if backup_path.exists() {
             let new_backup_path = db_backup_file(new_owner, new_db, config);
             let backups_dir = new_backup_path.parent().unwrap();
@@ -461,14 +433,8 @@ impl DbPool {
             std::fs::rename(backup_path, new_backup_path)?;
         }
 
-        self.get_pool_mut()
-            .await
-            .insert(new_name.to_string(), server_db);
-
-        database.name = new_name.to_string();
-        self.0.server_db.save_db(&database).await?;
-
-        self.get_pool_mut().await.remove(&db_name).unwrap();
+        self.0.write().await.insert(target_db.to_string(), user_db);
+        self.0.write().await.remove(source_db).unwrap();
 
         Ok(())
     }
@@ -477,22 +443,11 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        user: DbId,
+        db_name: &str,
+        db_type: DbType,
         config: &Config,
-    ) -> ServerResult {
-        let db_name = db_name(owner, db);
-        let mut database = self.0.server_db.user_db(user, &db_name).await?;
-
-        if !self
-            .0
-            .server_db
-            .is_db_admin(user, database.db_id.unwrap())
-            .await?
-        {
-            return Err(permission_denied("admin only"));
-        }
-
-        let backup_path = if database.db_type == DbType::Memory {
+    ) -> ServerResult<Option<u64>> {
+        let backup_path = if db_type == DbType::Memory {
             db_file(owner, db, config)
         } else {
             db_backup_file(owner, db, config)
@@ -505,45 +460,23 @@ impl DbPool {
             });
         }
 
-        let mut pool = self.get_pool_mut().await;
-        pool.remove(&db_name);
+        self.0.write().await.remove(db_name);
         let current_path = db_file(owner, db, config);
 
-        if database.db_type != DbType::Memory {
+        let backup = if db_type != DbType::Memory {
             let backup_temp = db_backup_dir(owner, config).join(db);
             std::fs::rename(&current_path, &backup_temp)?;
             std::fs::rename(&backup_path, &current_path)?;
             std::fs::rename(backup_temp, backup_path)?;
-            database.backup = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-        }
+            Some(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
+        } else {
+            None
+        };
 
-        let server_db = UserDb::new(&format!(
-            "{}:{}",
-            database.db_type,
-            current_path.to_string_lossy()
-        ))?;
-        pool.insert(db_name, server_db);
-        self.0.server_db.save_db(&database).await?;
+        let user_db = UserDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
+        self.0.write().await.insert(db_name.to_string(), user_db);
 
-        Ok(())
-    }
-
-    pub(crate) async fn status(&self, config: &Config) -> ServerResult<AdminStatus> {
-        Ok(AdminStatus {
-            uptime: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() - config.start_time,
-            dbs: self.0.server_db.db_count().await?,
-            users: self.0.server_db.user_count().await?,
-            logged_in_users: self.0.server_db.user_token_count().await?,
-            size: get_size(&config.data_dir).await?,
-        })
-    }
-
-    async fn get_pool(&self) -> RwLockReadGuard<HashMap<String, UserDb>> {
-        self.0.pool.read().await
-    }
-
-    async fn get_pool_mut(&self) -> RwLockWriteGuard<HashMap<String, UserDb>> {
-        self.0.pool.write().await
+        Ok(backup)
     }
 }
 

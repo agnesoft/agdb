@@ -3,6 +3,7 @@ mod user_db_storage;
 
 use crate::config::Config;
 use crate::error_code::ErrorCode;
+use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
@@ -38,13 +39,24 @@ use user_db::UserDb;
 pub(crate) struct DbPool(pub(crate) Arc<RwLock<HashMap<String, UserDb>>>);
 
 impl DbPool {
-    pub(crate) async fn db(&self, name: &str) -> ServerResult<UserDb> {
+    async fn db(&self, name: &str) -> ServerResult<UserDb> {
         self.0
             .read()
             .await
             .get(name)
             .cloned()
             .ok_or_else(|| ServerError::new(StatusCode::NOT_FOUND, "db not found"))
+    }
+
+    async fn db_size(&self, name: &str) -> ServerResult<u64> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .get(name)
+            .ok_or(db_not_found(name))?
+            .size()
+            .await)
     }
 
     pub(crate) async fn new(config: &Config, server_db: &ServerDb) -> ServerResult<Self> {
@@ -86,7 +98,7 @@ impl DbPool {
             0
         };
 
-        self.get_pool_mut().await.insert(db_name.clone(), server_db);
+        self.0.write().await.insert(db_name.clone(), server_db);
 
         Ok(backup)
     }
@@ -111,10 +123,10 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
+        db_name: &str,
         db_type: DbType,
         config: &Config,
     ) -> ServerResult<u64> {
-        let db_name = db_name(owner, db);
         let user_db = self.db(&db_name).await?;
 
         let backup_path = if db_type == DbType::Memory {
@@ -140,49 +152,32 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        user: DbId,
+        database: &mut Database,
+        role: DbUserRole,
         config: &Config,
         resource: DbResource,
     ) -> ServerResult<ServerDatabase> {
-        let db_name = db_name(owner, db);
-        let mut database = self.0.server_db.user_db(user, &db_name).await?;
-        let role = self.0.server_db.user_db_role(user, &db_name).await?;
-
-        if role != DbUserRole::Admin {
-            return Err(permission_denied("admin only"));
-        }
-
         match resource {
             DbResource::All => {
-                self.do_clear_db(&database, owner, db, config, db_name)
-                    .await?;
+                self.do_clear_db(owner, db, database, config).await?;
                 do_clear_db_audit(owner, db, config)?;
-                self.do_clear_db_backup(owner, db, config, &mut database)
-                    .await?;
+                self.do_clear_db_backup(owner, db, config, database).await?;
             }
             DbResource::Db => {
-                self.do_clear_db(&database, owner, db, config, db_name)
-                    .await?;
+                self.do_clear_db(owner, db, database, config).await?;
             }
             DbResource::Audit => {
                 do_clear_db_audit(owner, db, config)?;
             }
             DbResource::Backup => {
-                self.do_clear_db_backup(owner, db, config, &mut database)
-                    .await?;
+                self.do_clear_db_backup(owner, db, config, database).await?;
             }
         }
 
-        let size = self
-            .get_pool()
-            .await
-            .get(&database.name)
-            .ok_or(db_not_found(&database.name))?
-            .size()
-            .await;
+        let size = self.db_size(&database.name).await?;
 
         Ok(ServerDatabase {
-            name: database.name,
+            name: database.name.clone(),
             db_type: database.db_type,
             role,
             size,
@@ -206,23 +201,21 @@ impl DbPool {
             std::fs::remove_file(&backup_file)?;
         }
         database.backup = 0;
-        self.0.server_db.save_db(database).await?;
         Ok(())
     }
 
     async fn do_clear_db(
         &self,
-        database: &Database,
         owner: &str,
         db: &str,
+        database: &Database,
         config: &Config,
-        db_name: String,
     ) -> Result<(), ServerError> {
         let mut pool = self.get_pool_mut().await;
-        let server_db = pool
+        let user_db = pool
             .get_mut(&database.name)
             .ok_or(db_not_found(&database.name))?;
-        *server_db = UserDb::new(&format!("{}:{}", DbType::Memory, database.name))?;
+        *user_db = UserDb::new(&format!("{}:{}", DbType::Memory, &database.name))?;
         if database.db_type != DbType::Memory {
             let main_file = db_file(owner, db, config);
             if main_file.exists() {
@@ -234,9 +227,9 @@ impl DbPool {
                 std::fs::remove_file(wal_file)?;
             }
 
-            let db_path = Path::new(&config.data_dir).join(&db_name);
+            let db_path = Path::new(&config.data_dir).join(&database.name);
             let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
-            *server_db = UserDb::new(&format!("{}:{}", database.db_type, path))?;
+            *user_db = UserDb::new(&format!("{}:{path}", database.db_type))?;
         }
 
         Ok(())
@@ -246,35 +239,29 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        user: DbId,
+        db_name: &str,
         db_type: DbType,
+        target_type: DbType,
         config: &Config,
     ) -> ServerResult {
-        let db_name = db_name(owner, db);
-        let mut database = self.0.server_db.user_db(user, &db_name).await?;
-
-        if database.db_type == db_type {
-            return Ok(());
-        }
-
-        if !self
-            .0
-            .server_db
-            .is_db_admin(user, database.db_id.unwrap())
-            .await?
-        {
-            return Err(permission_denied("admin only"));
-        }
-
-        let mut pool = self.get_pool_mut().await;
-        pool.remove(&db_name);
-
+        let mut user_db = self.0.write().await.remove(db_name).unwrap();
         let current_path = db_file(owner, db, config);
-        let server_db = UserDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
-        pool.insert(db_name, server_db);
 
-        database.db_type = db_type;
-        self.0.server_db.save_db(&database).await?;
+        if db_type == DbType::Memory {
+            user_db
+                .0
+                .read()
+                .await
+                .backup(current_path.to_string_lossy().as_ref())?;
+        }
+
+        user_db = UserDb::new(&format!(
+            "{}:{}",
+            target_type,
+            current_path.to_string_lossy()
+        ))?;
+
+        self.0.write().await.insert(db_name.to_string(), user_db);
 
         Ok(())
     }

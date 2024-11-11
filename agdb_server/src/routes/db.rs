@@ -168,7 +168,7 @@ pub(crate) async fn backup(
     }
 
     database.backup = db_pool
-        .backup_db(&owner, &db, database.db_type, &config)
+        .backup_db(&owner, &db, &db_name, database.db_type, &config)
         .await?;
 
     server_db.save_db(&database).await?;
@@ -196,13 +196,27 @@ pub(crate) async fn backup(
 pub(crate) async fn clear(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseResource>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+    let role = server_db.user_db_role(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
     let db = db_pool
-        .clear_db(&owner, &db, user.0, &config, request.resource)
+        .clear_db(&owner, &db, &mut database, role, &config, request.resource)
         .await?;
+
+    server_db.save_db(&database).await?;
 
     Ok((StatusCode::OK, Json(db)))
 }
@@ -218,7 +232,7 @@ pub(crate) async fn clear(
         DbTypeParam,
     ),
     responses(
-         (status = 201, description = "db typ changes"),
+         (status = 201, description = "db type changes"),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "must be a db admin"),
          (status = 404, description = "user / db not found"),
@@ -227,13 +241,38 @@ pub(crate) async fn clear(
 pub(crate) async fn convert(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
+    if database.db_type == request.db_type {
+        return Ok(StatusCode::CREATED);
+    }
+
     db_pool
-        .convert_db(&owner, &db, user.0, request.db_type, &config)
+        .convert_db(
+            &owner,
+            &db,
+            &db_name,
+            database.db_type,
+            request.db_type,
+            &config,
+        )
         .await?;
+
+    database.db_type = request.db_type;
+    server_db.save_db(&database).await?;
 
     Ok(StatusCode::CREATED)
 }

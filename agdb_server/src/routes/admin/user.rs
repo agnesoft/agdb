@@ -151,10 +151,12 @@ pub(crate) async fn logout(
 pub(crate) async fn remove(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path(username): Path<String>,
 ) -> ServerResponse {
-    db_pool.remove_user(&username, &config).await?;
+    let dbs = server_db.remove_user(&username).await?;
+    db_pool.remove_user_dbs(&username, &dbs, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

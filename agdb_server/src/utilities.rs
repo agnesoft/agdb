@@ -1,9 +1,8 @@
+use crate::server_error::ServerResult;
 use std::path::Path;
 
-use crate::server_error::ServerResult;
-
-pub(crate) fn unquote(value: &str) -> &str {
-    value.trim_start_matches('"').trim_end_matches('"')
+pub(crate) fn db_name(owner: &str, db: &str) -> String {
+    format!("{owner}/{db}")
 }
 
 pub(crate) async fn get_size<P>(path: P) -> ServerResult<u64>
@@ -30,4 +29,8 @@ where
     }
 
     Ok(size_in_bytes)
+}
+
+pub(crate) fn unquote(value: &str) -> &str {
+    value.trim_start_matches('"').trim_end_matches('"')
 }

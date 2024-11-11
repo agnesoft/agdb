@@ -2,10 +2,13 @@ pub(crate) mod user;
 
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::error_code::ErrorCode;
+use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use crate::utilities::db_name;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
@@ -65,17 +68,35 @@ pub(crate) async fn add(
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let current_username = server_db.user_name(user.0).await?;
+    let username = server_db.user_name(user.0).await?;
 
-    if current_username != owner {
+    if username != owner {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
             "cannot add db to another user",
         ));
     }
 
-    db_pool
-        .add_db(&owner, &db, request.db_type, &config)
+    let name = db_name(&username, &db);
+
+    if server_db.find_user_db_id(user.0, &name).await?.is_some() {
+        return Err(ErrorCode::DbExists.into());
+    }
+
+    let backup = db_pool
+        .add_db(&owner, &name, request.db_type, &config)
+        .await?;
+
+    server_db
+        .insert_db(
+            user.0,
+            Database {
+                db_id: None,
+                name,
+                db_type: request.db_type,
+                backup,
+            },
+        )
         .await?;
 
     Ok(StatusCode::CREATED)

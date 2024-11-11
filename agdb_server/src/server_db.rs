@@ -30,7 +30,7 @@ pub(crate) struct ServerUser {
 }
 
 #[derive(Default, UserValue)]
-struct Database {
+pub(crate) struct Database {
     pub(crate) db_id: Option<DbId>,
     pub(crate) name: String,
     pub(crate) db_type: DbType,

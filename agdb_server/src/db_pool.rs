@@ -3,11 +3,10 @@ mod user_db_storage;
 
 use crate::config::Config;
 use crate::error_code::ErrorCode;
-use crate::password;
-use crate::password::Password;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
+use crate::utilities::db_name;
 use crate::utilities::get_size;
 use agdb::DbId;
 use agdb::QueryResult;
@@ -34,7 +33,6 @@ use tokio::sync::RwLock;
 use tokio::sync::RwLockReadGuard;
 use tokio::sync::RwLockWriteGuard;
 use user_db::UserDb;
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub(crate) struct DbPool(pub(crate) Arc<RwLock<HashMap<String, UserDb>>>);
@@ -52,7 +50,7 @@ impl DbPool {
             db_pool.0.write().await.insert(db.name, server_db);
         }
 
-        db_pool
+        Ok(db_pool)
     }
 
     pub(crate) async fn add_db(
@@ -61,20 +59,8 @@ impl DbPool {
         db: &str,
         db_type: DbType,
         config: &Config,
-    ) -> ServerResult {
-        let owner_id = self.0.server_db.user_id(owner).await?;
+    ) -> ServerResult<u64> {
         let db_name = db_name(owner, db);
-
-        if self
-            .0
-            .server_db
-            .find_user_db_id(owner_id, &db_name)
-            .await?
-            .is_some()
-        {
-            return Err(ErrorCode::DbExists.into());
-        }
-
         let db_path = Path::new(&config.data_dir).join(&db_name);
         std::fs::create_dir_all(db_audit_dir(owner, config))?;
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
@@ -92,48 +78,8 @@ impl DbPool {
         };
 
         self.get_pool_mut().await.insert(db_name.clone(), server_db);
-        self.0
-            .server_db
-            .insert_db(
-                owner_id,
-                Database {
-                    db_id: None,
-                    name: db_name.clone(),
-                    db_type,
-                    backup,
-                },
-            )
-            .await?;
 
-        Ok(())
-    }
-
-    pub(crate) async fn add_db_user(
-        &self,
-        owner: &str,
-        db: &str,
-        username: &str,
-        role: DbUserRole,
-        user: DbId,
-    ) -> ServerResult {
-        if owner == username {
-            return Err(permission_denied("cannot change role of db owner"));
-        }
-
-        let db_name = db_name(owner, db);
-        let db_id = self
-            .0
-            .server_db
-            .find_user_db_id(user, &db_name)
-            .await?
-            .ok_or(db_not_found(&db_name))?;
-
-        if !self.0.server_db.is_db_admin(user, db_id).await? {
-            return Err(permission_denied("admin only"));
-        }
-
-        let user_id = self.0.server_db.user_id(username).await?;
-        self.0.server_db.insert_db_user(db_id, user_id, role).await
+        Ok(backup)
     }
 
     pub(crate) async fn audit(
@@ -186,18 +132,6 @@ impl DbPool {
 
         self.do_backup(owner, db, config, server_db, &mut database)
             .await
-    }
-
-    pub(crate) async fn change_password(
-        &self,
-        mut user: ServerUser,
-        new_password: &str,
-    ) -> ServerResult {
-        password::validate_password(new_password)?;
-        let pswd = Password::create(&user.username, new_password);
-        user.password = pswd.password.to_vec();
-        user.salt = pswd.user_salt.to_vec();
-        self.0.server_db.save_user(user).await
     }
 
     pub(crate) async fn clear_db(
@@ -662,14 +596,18 @@ impl DbPool {
         Ok(self.get_pool_mut().await.remove(&db_name).unwrap())
     }
 
-    pub(crate) async fn remove_user(&self, username: &str, config: &Config) -> ServerResult {
-        let db_names = self.0.server_db.remove_user(username).await?;
-
-        for db in db_names.into_iter() {
-            self.get_pool_mut().await.remove(&db);
+    pub(crate) async fn remove_user_dbs(
+        &self,
+        username: &str,
+        dbs: &[String],
+        config: &Config,
+    ) -> ServerResult {
+        for db in dbs {
+            self.get_pool_mut().await.remove(db);
         }
 
         let user_dir = Path::new(&config.data_dir).join(username);
+
         if user_dir.exists() {
             std::fs::remove_dir_all(user_dir)?;
         }
@@ -854,17 +792,6 @@ fn db_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
 
 fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join(db)
-}
-
-fn db_name(owner: &str, db: &str) -> String {
-    format!("{owner}/{db}")
-}
-
-fn permission_denied(message: &str) -> ServerError {
-    ServerError::new(
-        StatusCode::FORBIDDEN,
-        &format!("permission denied: {}", message),
-    )
 }
 
 fn required_role(queries: &Queries) -> DbUserRole {

@@ -3,6 +3,7 @@ mod user_db_storage;
 
 use crate::config::Config;
 use crate::error_code::ErrorCode;
+use crate::routes::db;
 use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
@@ -335,59 +336,41 @@ impl DbPool {
 
     pub(crate) async fn exec(
         &self,
+        db_name: &str,
+        queries: Queries,
+    ) -> ServerResult<Vec<QueryResult>> {
+        self.db(db_name).await?.exec(queries).await
+    }
+
+    pub(crate) async fn exec_mut(
+        &self,
         owner: &str,
         db: &str,
-        user: DbId,
+        db_name: &str,
+        username: &str,
         queries: Queries,
         config: &Config,
     ) -> ServerResult<Vec<QueryResult>> {
-        let db_name = db_name(owner, db);
-        let role = self.0.server_db.user_db_role(user, &db_name).await?;
-        let required_role = required_role(&queries);
+        let (r, audit) = self.db(db_name).await?.exec_mut(queries, &username).await?;
 
-        if required_role == DbUserRole::Write && role == DbUserRole::Read {
-            return Err(permission_denied("write rights required"));
+        if !audit.is_empty() {
+            let mut log = std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .write(true)
+                .open(db_audit_file(owner, db, config))?;
+            let len = log.seek(SeekFrom::End(0))?;
+            if len == 0 {
+                serde_json::to_writer(&log, &audit)?;
+            } else {
+                let mut data = serde_json::to_vec(&audit)?;
+                data[0] = b',';
+                log.seek(SeekFrom::End(-1))?;
+                log.write_all(&data)?;
+            }
         }
 
-        let results = if required_role == DbUserRole::Read {
-            self.get_pool()
-                .await
-                .get(&db_name)
-                .ok_or(db_not_found(&db_name))?
-                .exec(queries)
-                .await
-        } else {
-            let username = self.0.server_db.user_name(user).await?;
-
-            let (r, audit) = self
-                .get_pool()
-                .await
-                .get(&db_name)
-                .ok_or(db_not_found(&db_name))?
-                .exec_mut(queries, &username)
-                .await?;
-
-            if !audit.is_empty() {
-                let mut log = std::fs::OpenOptions::new()
-                    .create(true)
-                    .truncate(false)
-                    .write(true)
-                    .open(db_audit_file(owner, db, config))?;
-                let len = log.seek(SeekFrom::End(0))?;
-                if len == 0 {
-                    serde_json::to_writer(&log, &audit)?;
-                } else {
-                    let mut data = serde_json::to_vec(&audit)?;
-                    data[0] = b',';
-                    log.seek(SeekFrom::End(-1))?;
-                    log.write_all(&data)?;
-                }
-            }
-
-            Ok(r)
-        }?;
-
-        Ok(results)
+        Ok(r)
     }
 
     pub(crate) async fn find_dbs(&self) -> ServerResult<Vec<ServerDatabase>> {
@@ -703,23 +686,4 @@ fn db_audit_file(owner: &str, db: &str, config: &Config) -> PathBuf {
 
 fn db_file(owner: &str, db: &str, config: &Config) -> PathBuf {
     Path::new(&config.data_dir).join(owner).join(db)
-}
-
-fn required_role(queries: &Queries) -> DbUserRole {
-    for q in &queries.0 {
-        match q {
-            QueryType::InsertAlias(_)
-            | QueryType::InsertEdges(_)
-            | QueryType::InsertNodes(_)
-            | QueryType::InsertValues(_)
-            | QueryType::Remove(_)
-            | QueryType::RemoveAliases(_)
-            | QueryType::RemoveValues(_) => {
-                return DbUserRole::Write;
-            }
-            _ => {}
-        }
-    }
-
-    DbUserRole::Read
 }

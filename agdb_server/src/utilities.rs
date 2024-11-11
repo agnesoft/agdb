@@ -1,3 +1,7 @@
+use agdb::QueryType;
+use agdb_api::DbUserRole;
+use agdb_api::Queries;
+
 use crate::server_error::ServerResult;
 use std::path::Path;
 
@@ -29,6 +33,25 @@ where
     }
 
     Ok(size_in_bytes)
+}
+
+pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
+    for q in &queries.0 {
+        match q {
+            QueryType::InsertAlias(_)
+            | QueryType::InsertEdges(_)
+            | QueryType::InsertNodes(_)
+            | QueryType::InsertValues(_)
+            | QueryType::Remove(_)
+            | QueryType::RemoveAliases(_)
+            | QueryType::RemoveValues(_) => {
+                return DbUserRole::Write;
+            }
+            _ => {}
+        }
+    }
+
+    DbUserRole::Read
 }
 
 pub(crate) fn unquote(value: &str) -> &str {

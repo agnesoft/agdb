@@ -10,9 +10,11 @@ use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use crate::utilities::db_name;
+use crate::utilities::required_role;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
+use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
 use agdb_api::ServerDatabase;
@@ -397,11 +399,27 @@ pub(crate) async fn delete(
 pub(crate) async fn exec(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let results = db_pool.exec(&owner, &db, user.0, queries, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let role = server_db.user_db_role(user.0, &db_name).await?;
+    let required_role = required_role(&queries);
+
+    if required_role == DbUserRole::Write && role == DbUserRole::Read {
+        return Err(permission_denied("write rights required"));
+    }
+
+    let results = if required_role == DbUserRole::Read {
+        db_pool.exec(&db_name, queries).await?
+    } else {
+        let username = server_db.user_name(user.0).await?;
+        db_pool
+            .exec_mut(&owner, &db, &db_name, &username, queries, &config)
+            .await?
+    };
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }

@@ -36,74 +36,23 @@ use tokio::sync::RwLockWriteGuard;
 use user_db::UserDb;
 use uuid::Uuid;
 
-pub(crate) struct DbPoolImpl {
-    server_db: ServerDb,
-    pool: RwLock<HashMap<String, UserDb>>,
-}
-
 #[derive(Clone)]
-pub(crate) struct DbPool(pub(crate) Arc<DbPoolImpl>);
+pub(crate) struct DbPool(pub(crate) Arc<RwLock<HashMap<String, UserDb>>>);
 
 impl DbPool {
-    pub(crate) async fn new(config: &Config) -> ServerResult<Self> {
+    pub(crate) async fn new(config: &Config, server_db: &ServerDb) -> ServerResult<Self> {
         std::fs::create_dir_all(&config.data_dir)?;
-        let db_exists = Path::new(&config.data_dir)
-            .join("agdb_server.agdb")
-            .exists();
+        let db_pool = Self(Arc::new(RwLock::new(HashMap::new())));
 
-        Ok(if db_exists {
-            let db_pool = Self(Arc::new(DbPoolImpl {
-                server_db: ServerDb::load(&format!("mapped:{}/agdb_server.agdb", config.data_dir))?,
-                pool: RwLock::new(HashMap::new()),
-            }));
+        for db in server_db.dbs().await? {
+            let (owner, db_name) = db.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
+            let db_path = db_file(owner, db_name, config);
+            std::fs::create_dir_all(db_audit_dir(owner, config))?;
+            let server_db = UserDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
+            db_pool.0.write().await.insert(db.name, server_db);
+        }
 
-            if db_pool
-                .0
-                .server_db
-                .find_user_id(&config.admin)
-                .await
-                .is_ok()
-            {
-                let admin_password = Password::create(&config.admin, &config.admin);
-                db_pool
-                    .0
-                    .server_db
-                    .insert_user(ServerUser {
-                        db_id: None,
-                        username: config.admin.clone(),
-                        password: admin_password.password.to_vec(),
-                        salt: admin_password.user_salt.to_vec(),
-                        token: String::new(),
-                    })
-                    .await?;
-            }
-
-            for db in db_pool.0.server_db.dbs().await? {
-                let (owner, db_name) = db.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-                let db_path = db_file(owner, db_name, config);
-                std::fs::create_dir_all(db_audit_dir(owner, config))?;
-                let server_db =
-                    UserDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
-                db_pool.0.pool.write().await.insert(db.name, server_db);
-            }
-
-            db_pool
-        } else {
-            let admin_password = Password::create(&config.admin, &config.admin);
-            Self(Arc::new(DbPoolImpl {
-                server_db: ServerDb::new(
-                    &format!("mapped:{}/agdb_server.agdb", config.data_dir),
-                    ServerUser {
-                        db_id: None,
-                        username: config.admin.clone(),
-                        password: admin_password.password.to_vec(),
-                        salt: admin_password.user_salt.to_vec(),
-                        token: String::new(),
-                    },
-                )?,
-                pool: RwLock::new(HashMap::new()),
-            }))
-        })
+        db_pool
     }
 
     pub(crate) async fn add_db(
@@ -852,18 +801,6 @@ impl DbPool {
         self.0.server_db.save_db(&database).await?;
 
         Ok(())
-    }
-
-    pub(crate) async fn user_token(&self, user: DbId) -> ServerResult<String> {
-        let mut user_token = self.0.server_db.user_token(user).await?;
-
-        if user_token.is_empty() {
-            let token_uuid = Uuid::new_v4();
-            user_token = token_uuid.to_string();
-            self.0.server_db.save_token(user, &user_token).await?;
-        }
-
-        Ok(user_token)
     }
 
     pub(crate) async fn status(&self, config: &Config) -> ServerResult<AdminStatus> {

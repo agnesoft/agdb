@@ -26,12 +26,15 @@ async fn main() -> ServerResult {
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let cluster = cluster::new(&config)?;
-    let db_pool = DbPool::new(&config).await?;
+    let server_db = server_db::new(&config).await?;
+    let db_pool = DbPool::new(&config, &server_db).await?;
+
     let app = app::app(
-        config.clone(),
-        shutdown_sender.clone(),
-        db_pool,
         cluster.clone(),
+        config.clone(),
+        db_pool,
+        server_db,
+        shutdown_sender.clone(),
     );
     tracing::info!("Listening at {}", config.bind);
     let listener = tokio::net::TcpListener::bind(&config.bind).await?;

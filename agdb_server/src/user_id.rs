@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::db_pool::DbPool;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::utilities;
@@ -15,8 +14,7 @@ use axum_extra::TypedHeader;
 
 pub(crate) struct UserId(pub(crate) DbId);
 
-#[expect(dead_code)]
-pub(crate) struct AdminId(pub(crate) DbId);
+pub(crate) struct AdminId();
 
 pub(crate) struct ClusterId();
 
@@ -73,19 +71,18 @@ where
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let admin_user = &Config::from_ref(state).admin;
-        let admin = ServerDb::from_ref(state)
-            .user_token(admin_user.as_str())
-            .await
-            .map_err(unauthorized)?;
         let bearer: TypedHeader<Authorization<Bearer>> =
             parts.extract().await.map_err(unauthorized)?;
 
-        if admin.token != utilities::unquote(bearer.token()) {
+        if !ServerDb::from_ref(state)
+            .is_admin(utilities::unquote(bearer.token()))
+            .await
+            .map_err(unauthorized)?
+        {
             return Err(unauthorized(()));
         }
 
-        Ok(Self(admin.db_id.unwrap()))
+        Ok(Self())
     }
 }
 

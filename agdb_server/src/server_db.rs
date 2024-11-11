@@ -1,3 +1,5 @@
+use crate::config::Config;
+use crate::password::Password;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::Comparison;
@@ -38,30 +40,70 @@ struct Database {
 #[derive(Clone)]
 pub(crate) struct ServerDb(pub(crate) Arc<RwLock<Db>>);
 
+const ADMIN: &str = "admin";
 const DBS: &str = "dbs";
 const NAME: &str = "name";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
 const USERS: &str = "users";
 const USERNAME: &str = "username";
+const SERVER_DB_FILE: &str = "agdb_server.agdb";
+
+pub(crate) async fn new(config: &Config) -> ServerResult<ServerDb> {
+    std::fs::create_dir_all(&config.data_dir)?;
+    let db_name = format!("mapped:{}/{}", config.data_dir, SERVER_DB_FILE);
+    let db = ServerDb::new(&db_name)?;
+
+    let admin = if let Some(admin_id) = db.find_user_id(&config.admin).await? {
+        admin_id
+    } else {
+        let admin_password = Password::create(&config.admin, &config.admin);
+        let admin = ServerUser {
+            db_id: None,
+            username: config.admin.clone(),
+            password: admin_password.password.to_vec(),
+            salt: admin_password.user_salt.to_vec(),
+            token: String::new(),
+        };
+        db.insert_user(admin).await?
+    };
+
+    db.0.write()
+        .await
+        .exec_mut(QueryBuilder::insert().aliases(ADMIN).ids(admin).query())?;
+
+    Ok(db)
+}
 
 impl ServerDb {
-    pub(crate) fn load(name: &str) -> ServerResult<Self> {
-        Ok(Self(Arc::new(RwLock::new(Db::new(name)?))))
-    }
-
-    pub(crate) fn new(name: &str, admin: ServerUser) -> ServerResult<Self> {
+    fn new(name: &str) -> ServerResult<Self> {
         let mut db = Db::new(name)?;
 
-        db.transaction_mut(|t| {
-            t.exec_mut(QueryBuilder::insert().index(USERNAME).query())?;
-            t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
-            t.exec_mut(QueryBuilder::insert().nodes().aliases([USERS, DBS]).query())?;
-            let id = t
-                .exec_mut(QueryBuilder::insert().element(&admin).query())?
-                .elements[0]
-                .id;
-            t.exec_mut(QueryBuilder::insert().edges().from(USERS).to(id).query())
+        db.transaction_mut(|t| -> ServerResult<()> {
+            let indexes: Vec<String> = t.exec(QueryBuilder::select().indexes().query())?.elements
+                [0]
+            .values
+            .iter()
+            .map(|kv| kv.key.to_string())
+            .collect();
+
+            if indexes.iter().any(|i| i == USERNAME) {
+                t.exec_mut(QueryBuilder::insert().index(USERNAME).query())?;
+            }
+
+            if indexes.iter().any(|i| i == TOKEN) {
+                t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
+            }
+
+            if t.exec(QueryBuilder::select().ids(USERS).query()).is_err() {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases(USERS).query())?;
+            }
+
+            if t.exec(QueryBuilder::select().ids(DBS).query()).is_err() {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
+            }
+
+            Ok(())
         })?;
 
         Ok(Self(Arc::new(RwLock::new(db))))
@@ -219,6 +261,19 @@ impl ServerDb {
             t.exec_mut(QueryBuilder::insert().edges().from(USERS).to(id).query())?;
             Ok(id)
         })
+    }
+
+    pub(crate) async fn is_admin(&self, token: &str) -> ServerResult<bool> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .exec(QueryBuilder::select().values(TOKEN).ids(ADMIN).query())?
+            .elements[0]
+            .values[0]
+            .value
+            .string()?
+            == token)
     }
 
     pub(crate) async fn is_db_admin(&self, user: DbId, db: DbId) -> ServerResult<bool> {

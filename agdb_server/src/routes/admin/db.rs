@@ -2,10 +2,14 @@ pub(crate) mod user;
 
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::error_code::ErrorCode;
 use crate::routes::db::DbTypeParam;
 use crate::routes::db::ServerDatabaseRename;
+use crate::server_db::Database;
+use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
+use crate::utilities::db_name;
 use agdb_api::DbAudit;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
@@ -36,12 +40,32 @@ use axum::Json;
 pub(crate) async fn add(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    db_pool
-        .add_db(&owner, &db, request.db_type, &config)
+    let name = db_name(&owner, &db);
+    let user = server_db.user_id(&owner).await?;
+
+    if server_db.find_user_db_id(user, &name).await?.is_some() {
+        return Err(ErrorCode::DbExists.into());
+    }
+
+    let backup = db_pool
+        .add_db(&owner, &name, request.db_type, &config)
+        .await?;
+
+    server_db
+        .insert_db(
+            user,
+            Database {
+                db_id: None,
+                name,
+                db_type: request.db_type,
+                backup,
+            },
+        )
         .await?;
 
     Ok(StatusCode::CREATED)

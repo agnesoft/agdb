@@ -287,7 +287,7 @@ impl ServerDb {
                     .to(db)
                     .limit(1)
                     .where_()
-                    .distance(CountComparison::Equal(2))
+                    .distance(CountComparison::LessThanOrEqual(2))
                     .and()
                     .key(ROLE)
                     .value(Comparison::Equal(DbUserRole::Admin.into()))

@@ -314,6 +314,11 @@ pub(crate) async fn copy(
     let target_db = db_name(new_owner, new_db);
     let db_type = server_db.user_db(user.0, &source_db).await?.db_type;
     let username = server_db.user_name(user.0).await?;
+    let new_owner_id = if username == new_owner {
+        user.0
+    } else {
+        server_db.user_id(new_owner).await?
+    };
 
     if new_owner != username {
         return Err(permission_denied("cannot copy db to another user"));
@@ -332,7 +337,7 @@ pub(crate) async fn copy(
         .await?;
 
     server_db
-        .save_db(&Database {
+        .insert_db(new_owner_id, Database {
             db_id: None,
             name: target_db,
             db_type,

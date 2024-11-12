@@ -372,9 +372,9 @@ pub(crate) async fn delete(
         return Err(permission_denied("owner only"));
     }
 
-    let db = db_name(&owner, &db);
-    server_db.remove_db(user.0, &db).await?;
-    db_pool.delete_db(&owner, &db, &db, &config).await?;
+    let db_name = db_name(&owner, &db);
+    server_db.remove_db(user.0, &db_name).await?;
+    db_pool.delete_db(&owner, &db, &db_name, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -526,9 +526,9 @@ pub(crate) async fn remove(
         return Err(permission_denied("owner only"));
     }
 
-    let db = db_name(&owner, &db);
-    server_db.remove_db(user.0, &db).await?;
-    db_pool.remove_db(&db).await?;
+    let db_name: String = db_name(&owner, &db);
+    server_db.remove_db(user.0, &db_name).await?;
+    db_pool.remove_db(&db_name).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

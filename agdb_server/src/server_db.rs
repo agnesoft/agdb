@@ -298,12 +298,18 @@ impl ServerDb {
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, db: &str) -> ServerResult<()> {
-        self.0.write().await.exec_mut(
-            QueryBuilder::remove()
-                .ids(find_user_db_query(user, db))
-                .query(),
-        )?;
-        Ok(())
+        self.0.write().await.transaction_mut(|t| {
+            let db_id = t
+                .exec(find_user_db_query(user, db))?
+                .elements
+                .first()
+                .ok_or(db_not_found(db))?
+                .id;
+
+            t.exec_mut(QueryBuilder::remove().ids(db_id).query())?;
+
+            Ok(())
+        })
     }
 
     pub(crate) async fn remove_db_user(&self, db: DbId, user: DbId) -> ServerResult<()> {

@@ -63,7 +63,7 @@ impl DbPool {
         db_type: DbType,
         config: &Config,
     ) -> ServerResult<u64> {
-        let db_path = Path::new(&config.data_dir).join(&db_name);
+        let db_path = Path::new(&config.data_dir).join(db_name);
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
         std::fs::create_dir_all(db_audit_dir(owner, config))?;

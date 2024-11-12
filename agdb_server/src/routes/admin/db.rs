@@ -311,9 +311,9 @@ pub(crate) async fn delete(
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
     let owner_id = server_db.user_id(&owner).await?;
-    let db = db_name(&owner, &db);
-    server_db.remove_db(owner_id, &db).await?;
-    db_pool.delete_db(&owner, &db, &db, &config).await?;
+    let db_name = db_name(&owner, &db);
+    server_db.remove_db(owner_id, &db_name).await?;
+    db_pool.delete_db(&owner, &db, &db_name, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -446,10 +446,10 @@ pub(crate) async fn remove(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    let db = db_name(&owner, &db);
+    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    server_db.remove_db(owner_id, &db).await?;
-    db_pool.remove_db(&db).await?;
+    server_db.remove_db(owner_id, &db_name).await?;
+    db_pool.remove_db(&db_name).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

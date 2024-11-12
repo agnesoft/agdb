@@ -376,7 +376,7 @@ pub(crate) async fn list(
 
     for db in databases {
         dbs.push(ServerDatabase {
-            size: db_pool.db_size(&db.name).await?,
+            size: db_pool.db_size(&db.name).await.unwrap_or(0),
             name: db.name,
             db_type: db.db_type,
             role: DbUserRole::Admin,

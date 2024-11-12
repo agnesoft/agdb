@@ -337,12 +337,15 @@ pub(crate) async fn copy(
         .await?;
 
     server_db
-        .insert_db(new_owner_id, Database {
-            db_id: None,
-            name: target_db,
-            db_type,
-            backup: 0,
-        })
+        .insert_db(
+            new_owner_id,
+            Database {
+                db_id: None,
+                name: target_db,
+                db_type,
+                backup: 0,
+            },
+        )
         .await?;
 
     Ok(StatusCode::CREATED)
@@ -449,7 +452,7 @@ pub(crate) async fn list(
 
     for db in databases {
         dbs.push(ServerDatabase {
-            size: db_pool.db_size(&db.1.name).await?,
+            size: db_pool.db_size(&db.1.name).await.unwrap_or(0),
             name: db.1.name,
             db_type: db.1.db_type,
             role: db.0,

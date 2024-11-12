@@ -194,9 +194,10 @@ mod tests {
 
     #[test]
     fn memory_storage() -> anyhow::Result<()> {
+        let test_file = TestFile::new("backup_test");
         let mut storage = UserDbStorage::new("memory:db_test.agdb")?;
         let _ = format!("{:?}", storage);
-        storage.backup("backup_test")?;
+        storage.backup(&test_file.0)?;
         let other = storage.copy("db_test_copy.agdb")?;
         assert_eq!(other.name(), "db_test_copy.agdb");
         storage.flush()?;

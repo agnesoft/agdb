@@ -39,8 +39,9 @@ pub(crate) async fn add(
         return Err(permission_denied("cannot change role of db owner"));
     }
 
+    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let db_id = server_db.user_db_id(owner_id, &db).await?;
+    let db_id = server_db.user_db_id(owner_id, &db_name).await?;
     let user_id = server_db.user_id(&username).await?;
     server_db
         .insert_db_user(db_id, user_id, request.db_role)

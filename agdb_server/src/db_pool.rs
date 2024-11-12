@@ -7,7 +7,6 @@ use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
-use crate::utilities::db_name;
 use agdb::QueryResult;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
@@ -60,15 +59,16 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
+        db_name: &str,
         db_type: DbType,
         config: &Config,
     ) -> ServerResult<u64> {
-        let db_name = db_name(owner, db);
         let db_path = Path::new(&config.data_dir).join(&db_name);
-        std::fs::create_dir_all(db_audit_dir(owner, config))?;
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
-        let server_db = UserDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
+        std::fs::create_dir_all(db_audit_dir(owner, config))?;
+
+        let user_db = UserDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
@@ -80,7 +80,7 @@ impl DbPool {
             0
         };
 
-        self.0.write().await.insert(db_name.clone(), server_db);
+        self.0.write().await.insert(db_name.to_string(), user_db);
 
         Ok(backup)
     }
@@ -275,7 +275,7 @@ impl DbPool {
 
         std::fs::create_dir_all(Path::new(&config.data_dir).join(new_owner))?;
 
-        let server_db = self
+        let user_db = self
             .db(source_db)
             .await?
             .copy(target_file.to_string_lossy().as_ref())
@@ -286,10 +286,7 @@ impl DbPool {
                     &format!("db copy error: {}", e.description),
                 )
             })?;
-        self.0
-            .write()
-            .await
-            .insert(target_db.to_string(), server_db);
+        self.0.write().await.insert(target_db.to_string(), user_db);
 
         Ok(())
     }

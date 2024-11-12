@@ -87,7 +87,7 @@ pub(crate) async fn add(
     }
 
     let backup = db_pool
-        .add_db(&owner, &name, request.db_type, &config)
+        .add_db(&owner, &db, &name, request.db_type, &config)
         .await?;
 
     server_db

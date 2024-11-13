@@ -179,7 +179,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_rename("owner", "db", "owner", "db2")
+        .db_rename("owner", "db", "owner", "dbx")
         .await
         .unwrap_err()
         .status;

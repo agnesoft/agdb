@@ -194,7 +194,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .admin_db_backup("user", "db")
+        .admin_db_backup("owner", "db")
         .await
         .unwrap_err()
         .status;

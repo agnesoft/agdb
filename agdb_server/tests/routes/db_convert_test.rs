@@ -126,7 +126,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_convert("user", "db", DbType::Memory)
+        .db_convert("owner", "db", DbType::Memory)
         .await
         .unwrap_err()
         .status;

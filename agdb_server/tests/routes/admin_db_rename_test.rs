@@ -106,7 +106,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
-        .admin_db_rename(owner, "db", owner, "not_found")
+        .admin_db_rename(owner, "db", owner, "dbx")
         .await
         .unwrap_err()
         .status;
@@ -156,7 +156,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .admin_db_rename(owner, "db", owner, "db2")
+        .admin_db_rename(owner, "db", owner, "dbx")
         .await
         .unwrap_err()
         .status;
@@ -169,7 +169,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .admin_db_rename("owner", "db", "owner", "db2")
+        .admin_db_rename("owner", "db", "owner", "dbx")
         .await
         .unwrap_err()
         .status;

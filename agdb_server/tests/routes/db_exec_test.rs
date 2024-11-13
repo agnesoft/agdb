@@ -727,7 +727,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_exec("user", "db", &[])
+        .db_exec("owner", "db", &[])
         .await
         .unwrap_err()
         .status;

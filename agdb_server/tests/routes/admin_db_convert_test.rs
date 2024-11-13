@@ -51,7 +51,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(user, user).await?;
     let status = server
         .api
-        .admin_db_convert(user, "db1", DbType::Mapped)
+        .admin_db_convert(user, "db", DbType::Mapped)
         .await
         .unwrap_err()
         .status;
@@ -64,7 +64,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .admin_db_convert("user", "db", DbType::Memory)
+        .admin_db_convert("owner", "db", DbType::Memory)
         .await
         .unwrap_err()
         .status;

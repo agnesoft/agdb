@@ -196,6 +196,68 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/clear": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_clear",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DbResource"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db resource(s) cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDatabase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "server admin only"
+          },
+          "404": {
+            "description": "user / db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/convert": {
       "post": {
         "tags": [

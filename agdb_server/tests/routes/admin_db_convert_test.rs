@@ -35,6 +35,7 @@ async fn same_type() -> anyhow::Result<()> {
         .admin_db_convert(owner, db, DbType::Memory)
         .await?;
     assert_eq!(status, 201);
+    server.api.user_login(owner, owner).await?;
     let list = server.api.db_list().await?.1;
     assert_eq!(list[0].db_type, DbType::Memory);
 

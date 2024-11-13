@@ -10,8 +10,6 @@ use url::Url;
 
 pub(crate) type Config = Arc<ConfigImpl>;
 
-const CONFIG_FILE: &str = "agdb_server.yaml";
-
 #[derive(Debug)]
 pub(crate) struct LogLevel(pub(crate) LevelFilter);
 
@@ -31,8 +29,8 @@ pub(crate) struct ConfigImpl {
     pub(crate) start_time: u64,
 }
 
-pub(crate) fn new() -> ServerResult<Config> {
-    if let Ok(content) = std::fs::read_to_string(CONFIG_FILE) {
+pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
+    if let Ok(content) = std::fs::read_to_string(config_file) {
         let mut config_impl: ConfigImpl = serde_yaml::from_str(&content)?;
         config_impl.cluster_node_id = config_impl
             .cluster
@@ -65,7 +63,7 @@ pub(crate) fn new() -> ServerResult<Config> {
         start_time: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
     };
 
-    std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config)?)?;
+    std::fs::write(config_file, serde_yaml::to_string(&config)?)?;
 
     Ok(Config::new(config))
 }
@@ -108,35 +106,36 @@ impl<'de> Deserialize<'de> for LogLevel {
 mod tests {
     use super::*;
     use crate::config;
-    use std::path::Path;
 
-    struct TestFile {}
+    struct TestFile {
+        filename: &'static str,
+    }
 
     impl TestFile {
-        fn new() -> Self {
-            let _ = std::fs::remove_file(CONFIG_FILE);
-            Self {}
+        fn new(filename: &'static str) -> Self {
+            let _ = std::fs::remove_file(filename);
+            Self { filename }
         }
     }
 
     impl Drop for TestFile {
         fn drop(&mut self) {
-            let _ = std::fs::remove_file(CONFIG_FILE);
+            let _ = std::fs::remove_file(self.filename);
         }
     }
 
     #[test]
     fn default_values() {
-        let _test_file = TestFile::new();
-        assert!(!Path::new(CONFIG_FILE).exists());
-        let _config = config::new().unwrap();
-        assert!(Path::new(CONFIG_FILE).exists());
-        let _config = config::new().unwrap();
+        let test_file = TestFile::new("test_config_default.yaml");
+        assert!(!std::fs::exists(test_file.filename).unwrap());
+        let _config = config::new(test_file.filename).unwrap();
+        assert!(std::fs::exists(test_file.filename).unwrap());
+        let _config = config::new(test_file.filename).unwrap();
     }
 
     #[test]
     fn invalid_cluster() {
-        let _test_file = TestFile::new();
+        let test_file = TestFile::new("test_config_invalid_cluster.yaml");
         let config = ConfigImpl {
             bind: ":::3000".to_string(),
             address: Url::parse("localhost:3000").unwrap(),
@@ -149,9 +148,9 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
         };
-        std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config).unwrap()).unwrap();
+        std::fs::write(test_file.filename, serde_yaml::to_string(&config).unwrap()).unwrap();
         assert_eq!(
-            config::new().unwrap_err().description,
+            config::new(test_file.filename).unwrap_err().description,
             "Cluster does not contain local node: localhost:3000"
         );
     }

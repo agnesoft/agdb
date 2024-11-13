@@ -17,9 +17,11 @@ use crate::db_pool::DbPool;
 use server_error::ServerResult;
 use tokio::sync::broadcast;
 
+const CONFIG_FILE: &str = "agdb_server.yaml";
+
 #[tokio::main]
 async fn main() -> ServerResult {
-    let config = config::new()?;
+    let config = config::new(CONFIG_FILE)?;
     tracing_subscriber::fmt()
         .with_max_level(config.log_level.0)
         .init();

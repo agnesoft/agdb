@@ -257,7 +257,9 @@ impl DbPool {
     ) -> ServerResult {
         let target_file = db_file(new_owner, new_db, config);
 
-        if std::fs::exists(&target_file)? {
+        if std::fs::exists(&target_file)
+            .map_err(|e| ServerError::new(ErrorCode::DbInvalid.into(), &e.to_string()))?
+        {
             return Err(ErrorCode::DbExists.into());
         }
 
@@ -267,13 +269,7 @@ impl DbPool {
             .db(source_db)
             .await?
             .copy(target_file.to_string_lossy().as_ref())
-            .await
-            .map_err(|e| {
-                ServerError::new(
-                    ErrorCode::DbInvalid.into(),
-                    &format!("db copy error: {}", e.description),
-                )
-            })?;
+            .await?;
         self.0.write().await.insert(target_db.to_string(), user_db);
 
         Ok(())
@@ -352,7 +348,10 @@ impl DbPool {
             self.0.write().await.remove(db);
         }
 
-        remove_file_if_exists(Path::new(&config.data_dir).join(username))?;
+        let user_dir = Path::new(&config.data_dir).join(username);
+        if std::fs::exists(&user_dir)? {
+            std::fs::remove_dir_all(&user_dir)?;
+        }
 
         Ok(())
     }

@@ -448,17 +448,29 @@ pub(crate) async fn list(
     State(server_db): State<ServerDb>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
     let databases = server_db.user_dbs(user.0).await?;
-    let mut dbs = Vec::with_capacity(databases.len());
+    let mut sizes = Vec::with_capacity(databases.len());
 
-    for db in databases {
-        dbs.push(ServerDatabase {
-            size: db_pool.db_size(&db.1.name).await.unwrap_or(0),
-            name: db.1.name,
-            db_type: db.1.db_type,
-            role: db.0,
-            backup: db.1.backup,
-        });
+    for (_, db) in &databases {
+        sizes.push(db_pool.db_size(&db.name).await.unwrap_or(0));
     }
+
+    let dbs = databases
+        .into_iter()
+        .zip(sizes)
+        .filter_map(|((role, db), size)| {
+            if size != 0 {
+                Some(ServerDatabase {
+                    name: db.name,
+                    db_type: db.db_type,
+                    role,
+                    backup: db.backup,
+                    size,
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
 
     Ok((StatusCode::OK, Json(dbs)))
 }

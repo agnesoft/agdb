@@ -143,7 +143,7 @@ pub(crate) async fn backup(
 
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/clear",
-    operation_id = "db_clear",
+    operation_id = "admin_db_clear",
     tag = "agdb",
     security(("Token" = [])),
     params(
@@ -154,7 +154,6 @@ pub(crate) async fn backup(
     responses(
          (status = 201, description = "db resource(s) cleared", body = ServerDatabase),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "server admin only"),
          (status = 404, description = "user / db not found"),
     )
 )]

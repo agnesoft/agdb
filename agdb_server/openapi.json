@@ -201,7 +201,7 @@
         "tags": [
           "agdb"
         ],
-        "operationId": "db_clear",
+        "operationId": "admin_db_clear",
         "parameters": [
           {
             "name": "owner",
@@ -243,9 +243,6 @@
           },
           "401": {
             "description": "unauthorized"
-          },
-          "403": {
-            "description": "server admin only"
           },
           "404": {
             "description": "user / db not found"

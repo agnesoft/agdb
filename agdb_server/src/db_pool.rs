@@ -7,6 +7,7 @@ use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
+use crate::utilities::remove_file_if_exists;
 use agdb::QueryResult;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
@@ -74,7 +75,7 @@ impl DbPool {
             e
         })?;
 
-        let backup = if db_backup_file(owner, db, config).exists() {
+        let backup = if std::fs::exists(db_backup_file(owner, db, config))? {
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs()
         } else {
             0
@@ -117,11 +118,8 @@ impl DbPool {
             db_backup_file(owner, db, config)
         };
 
-        if backup_path.exists() {
-            std::fs::remove_file(&backup_path)?;
-        } else {
-            std::fs::create_dir_all(db_backup_dir(owner, config))?;
-        }
+        remove_file_if_exists(&backup_path)?;
+        std::fs::create_dir_all(db_backup_dir(owner, config))?;
 
         user_db
             .backup(backup_path.to_string_lossy().as_ref())
@@ -142,14 +140,14 @@ impl DbPool {
         match resource {
             DbResource::All => {
                 self.do_clear_db(owner, db, database, config).await?;
-                do_clear_db_audit(owner, db, config)?;
+                remove_file_if_exists(db_audit_file(owner, db, config))?;
                 self.do_clear_db_backup(owner, db, config, database).await?;
             }
             DbResource::Db => {
                 self.do_clear_db(owner, db, database, config).await?;
             }
             DbResource::Audit => {
-                do_clear_db_audit(owner, db, config)?;
+                remove_file_if_exists(db_audit_file(owner, db, config))?;
             }
             DbResource::Backup => {
                 self.do_clear_db_backup(owner, db, config, database).await?;
@@ -190,9 +188,7 @@ impl DbPool {
         } else {
             db_backup_file(owner, db, config)
         };
-        if backup_file.exists() {
-            std::fs::remove_file(&backup_file)?;
-        }
+        remove_file_if_exists(&backup_file)?;
         database.backup = 0;
         Ok(())
     }
@@ -210,16 +206,8 @@ impl DbPool {
             .ok_or(db_not_found(&database.name))?;
         *user_db = UserDb::new(&format!("{}:{}", DbType::Memory, &database.name))?;
         if database.db_type != DbType::Memory {
-            let main_file = db_file(owner, db, config);
-            if main_file.exists() {
-                std::fs::remove_file(&main_file)?;
-            }
-
-            let wal_file = db_file(owner, &format!(".{db}"), config);
-            if wal_file.exists() {
-                std::fs::remove_file(wal_file)?;
-            }
-
+            remove_file_if_exists(db_file(owner, db, config))?;
+            remove_file_if_exists(db_file(owner, &format!(".{db}"), config))?;
             let db_path = Path::new(&config.data_dir).join(&database.name);
             let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
             *user_db = UserDb::new(&format!("{}:{path}", database.db_type))?;
@@ -269,7 +257,7 @@ impl DbPool {
     ) -> ServerResult {
         let target_file = db_file(new_owner, new_db, config);
 
-        if target_file.exists() {
+        if std::fs::exists(&target_file)? {
             return Err(ErrorCode::DbExists.into());
         }
 
@@ -299,28 +287,10 @@ impl DbPool {
         config: &Config,
     ) -> ServerResult {
         self.remove_db(db_name).await?;
-
-        let main_file = db_file(owner, db, config);
-        if main_file.exists() {
-            std::fs::remove_file(&main_file)?;
-        }
-
-        let wal_file = db_file(owner, &format!(".{db}"), config);
-        if wal_file.exists() {
-            std::fs::remove_file(wal_file)?;
-        }
-
-        let backup_file = db_backup_file(owner, db, config);
-        if backup_file.exists() {
-            std::fs::remove_file(backup_file)?;
-        }
-
-        let audit_file = db_audit_file(owner, db, config);
-        if audit_file.exists() {
-            std::fs::remove_file(audit_file)?;
-        }
-
-        Ok(())
+        remove_file_if_exists(db_file(owner, db, config))?;
+        remove_file_if_exists(db_file(owner, &format!(".{db}"), config))?;
+        remove_file_if_exists(db_backup_file(owner, db, config))?;
+        remove_file_if_exists(db_audit_file(owner, db, config))
     }
 
     pub(crate) async fn exec(
@@ -382,11 +352,7 @@ impl DbPool {
             self.0.write().await.remove(db);
         }
 
-        let user_dir = Path::new(&config.data_dir).join(username);
-
-        if user_dir.exists() {
-            std::fs::remove_dir_all(user_dir)?;
-        }
+        remove_file_if_exists(Path::new(&config.data_dir).join(username))?;
 
         Ok(())
     }
@@ -476,16 +442,6 @@ impl DbPool {
 
         Ok(backup)
     }
-}
-
-fn do_clear_db_audit(owner: &str, db: &str, config: &Config) -> Result<(), ServerError> {
-    let audit_file = db_audit_file(owner, db, config);
-
-    if audit_file.exists() {
-        std::fs::remove_file(&audit_file)?;
-    }
-
-    Ok(())
 }
 
 fn db_not_found(name: &str) -> ServerError {

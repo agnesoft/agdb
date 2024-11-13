@@ -2004,6 +2004,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbBackup.Responses.$201>
   /**
+   * db_clear
+   */
+  'db_clear'(
+    parameters?: Parameters<Paths.DbClear.QueryParameters & Paths.DbClear.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DbClear.Responses.$201>
+  /**
    * admin_db_convert
    */
   'admin_db_convert'(
@@ -2365,6 +2373,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbBackup.Responses.$201>
+  }
+  ['/api/v1/admin/db/{owner}/{db}/clear']: {
+    /**
+     * db_clear
+     */
+    'post'(
+      parameters?: Parameters<Paths.DbClear.QueryParameters & Paths.DbClear.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DbClear.Responses.$201>
   }
   ['/api/v1/admin/db/{owner}/{db}/convert']: {
     /**

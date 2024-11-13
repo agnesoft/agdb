@@ -35,6 +35,17 @@ where
     Ok(size_in_bytes)
 }
 
+pub(crate) fn remove_file_if_exists<P>(file: P) -> ServerResult
+where
+    P: AsRef<Path>,
+{
+    if std::fs::exists(&file)? {
+        std::fs::remove_file(file)?;
+    }
+
+    Ok(())
+}
+
 pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
     for q in &queries.0 {
         match q {
@@ -56,4 +67,16 @@ pub(crate) fn required_role(queries: &Queries) -> DbUserRole {
 
 pub(crate) fn unquote(value: &str) -> &str {
     value.trim_start_matches('"').trim_end_matches('"')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn get_size_on_file() -> anyhow::Result<()> {
+        let size = get_size("Cargo.toml").await.unwrap();
+        assert_ne!(size, 0);
+        Ok(())
+    }
 }

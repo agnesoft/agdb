@@ -12,9 +12,10 @@ pub(crate) type Config = Arc<ConfigImpl>;
 
 const CONFIG_FILE: &str = "agdb_server.yaml";
 
+#[derive(Debug)]
 pub(crate) struct LogLevel(pub(crate) LevelFilter);
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct ConfigImpl {
     pub(crate) bind: String,
     pub(crate) address: Url,
@@ -43,7 +44,7 @@ pub(crate) fn new() -> ServerResult<Config> {
 
         if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
             return Err(ServerError::from(format!(
-                "Cluster does not contain this node: {}",
+                "Cluster does not contain local node: {}",
                 config.address
             )));
         }
@@ -134,6 +135,28 @@ mod tests {
     }
 
     #[test]
+    fn invalid_cluster() {
+        let _test_file = TestFile::new();
+        let config = ConfigImpl {
+            bind: ":::3000".to_string(),
+            address: Url::parse("localhost:3000").unwrap(),
+            basepath: "".to_string(),
+            admin: "admin".to_string(),
+            log_level: LogLevel(LevelFilter::INFO),
+            data_dir: "agdb_server_data".to_string(),
+            cluster_token: "cluster".to_string(),
+            cluster: vec![Url::parse("localhost:3001").unwrap()],
+            cluster_node_id: 0,
+            start_time: 0,
+        };
+        std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config).unwrap()).unwrap();
+        assert_eq!(
+            config::new().unwrap_err().description,
+            "Cluster does not contain local node: localhost:3000"
+        );
+    }
+
+    #[test]
     fn log_level() {
         let level = LogLevel(LevelFilter::OFF);
         let serialized = serde_yaml::to_string(&level).unwrap();
@@ -164,5 +187,13 @@ mod tests {
         let serialized = serde_yaml::to_string(&level).unwrap();
         let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
+
+        let serialized = "INVALID".to_string();
+        assert_eq!(
+            serde_yaml::from_str::<LogLevel>(&serialized)
+                .unwrap_err()
+                .to_string(),
+            "Invalid log level"
+        );
     }
 }

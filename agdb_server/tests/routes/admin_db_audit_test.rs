@@ -55,7 +55,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .admin_db_audit("owner_x", "db_x")
+        .admin_db_audit("owner", "db")
         .await
         .unwrap_err()
         .status;
@@ -68,7 +68,7 @@ async fn audit_no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .admin_db_audit("owner_y", "db_y")
+        .admin_db_audit("owner", "db")
         .await
         .unwrap_err()
         .status;

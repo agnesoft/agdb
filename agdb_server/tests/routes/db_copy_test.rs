@@ -194,7 +194,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .db_copy(owner, "db", owner, "db2")
+        .db_copy(owner, "db", owner, "dbx")
         .await
         .unwrap_err()
         .status;
@@ -207,7 +207,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_copy("user", "db", "user", "db2")
+        .db_copy("owner", "db", "owner", "dbx")
         .await
         .unwrap_err()
         .status;

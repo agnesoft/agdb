@@ -1,6 +1,7 @@
 use crate::config::Config;
-use crate::db_pool::DbPool;
+use crate::password;
 use crate::password::Password;
+use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
@@ -11,6 +12,7 @@ use agdb_api::UserStatus;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+use uuid::Uuid;
 
 #[utoipa::path(post,
     path = "/api/v1/user/login",
@@ -23,11 +25,11 @@ use axum::Json;
     )
 )]
 pub(crate) async fn login(
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, Json<String>)> {
-    let user = db_pool
-        .find_user(&request.username)
+    let user = server_db
+        .user(&request.username)
         .await
         .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
     let pswd = Password::new(&user.username, &user.password, &user.salt)?;
@@ -36,7 +38,14 @@ pub(crate) async fn login(
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
-    let token = db_pool.user_token(user.db_id.unwrap()).await?;
+    let user_id = user.db_id.unwrap();
+    let mut token = server_db.user_token(user_id).await?;
+
+    if token.is_empty() {
+        let token_uuid = Uuid::new_v4();
+        token = token_uuid.to_string();
+        server_db.save_token(user_id, &token).await?;
+    }
 
     Ok((StatusCode::OK, Json(token)))
 }
@@ -51,10 +60,8 @@ pub(crate) async fn login(
          (status = 401, description = "invalid credentials")
     )
 )]
-pub(crate) async fn logout(user: UserId, State(db_pool): State<DbPool>) -> ServerResponse {
-    let mut user = db_pool.get_user(user.0).await?;
-    user.token = String::new();
-    db_pool.save_user(user).await?;
+pub(crate) async fn logout(user: UserId, State(server_db): State<ServerDb>) -> ServerResponse {
+    server_db.save_token(user.0, "").await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -73,17 +80,21 @@ pub(crate) async fn logout(user: UserId, State(db_pool): State<DbPool>) -> Serve
 )]
 pub(crate) async fn change_password(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Json(request): Json<ChangePassword>,
 ) -> ServerResponse {
-    let user = db_pool.get_user(user.0).await?;
+    let mut user = server_db.user_by_id(user.0).await?;
     let old_pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
-    db_pool.change_password(user, &request.new_password).await?;
+    password::validate_password(&request.new_password)?;
+    let pswd = Password::create(&user.username, &request.new_password);
+    user.password = pswd.password.to_vec();
+    user.salt = pswd.user_salt.to_vec();
+    server_db.save_user(user).await?;
 
     Ok(StatusCode::CREATED)
 }

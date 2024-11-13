@@ -7,6 +7,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminDbAdd()**](AgdbApi.md#adminDbAdd) | **POST** /api/v1/admin/db/{owner}/{db}/add |  |
 | [**adminDbAudit()**](AgdbApi.md#adminDbAudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit |  |
 | [**adminDbBackup()**](AgdbApi.md#adminDbBackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup |  |
+| [**adminDbClear()**](AgdbApi.md#adminDbClear) | **POST** /api/v1/admin/db/{owner}/{db}/clear |  |
 | [**adminDbConvert()**](AgdbApi.md#adminDbConvert) | **POST** /api/v1/admin/db/{owner}/{db}/convert |  |
 | [**adminDbCopy()**](AgdbApi.md#adminDbCopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy |  |
 | [**adminDbDelete()**](AgdbApi.md#adminDbDelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete |  |
@@ -225,6 +226,68 @@ void (empty response body)
 
 - **Content-Type**: Not defined
 - **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDbClear()`
+
+```php
+adminDbClear($owner, $db, $resource): \Agnesoft\AgdbApi\Model\ServerDatabase
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+$resource = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbResource(); // \Agnesoft\AgdbApi\Model\DbResource
+
+try {
+    $result = $apiInstance->adminDbClear($owner, $db, $resource);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDbClear: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| user name | |
+| **db** | **string**| db name | |
+| **resource** | [**\Agnesoft\AgdbApi\Model\DbResource**](../Model/.md)|  | |
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\ServerDatabase**](../Model/ServerDatabase.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

@@ -2,12 +2,19 @@ pub(crate) mod user;
 
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::error_code::ErrorCode;
+use crate::server_db::Database;
+use crate::server_db::ServerDb;
+use crate::server_error::permission_denied;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use crate::utilities::db_name;
+use crate::utilities::required_role;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
+use agdb_api::DbUserRole;
 use agdb_api::Queries;
 use agdb_api::QueriesResults;
 use agdb_api::ServerDatabase;
@@ -59,21 +66,40 @@ pub struct ServerDatabaseResource {
 pub(crate) async fn add(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
-    let current_username = db_pool.user_name(user.0).await?;
+    let username = server_db.user_name(user.0).await?;
 
-    if current_username != owner {
+    if username != owner {
         return Err(ServerError::new(
             StatusCode::FORBIDDEN,
             "cannot add db to another user",
         ));
     }
 
-    db_pool
-        .add_db(&owner, &db, request.db_type, &config)
+    let name = db_name(&username, &db);
+
+    if server_db.find_user_db_id(user.0, &name).await?.is_some() {
+        return Err(ErrorCode::DbExists.into());
+    }
+
+    let backup = db_pool
+        .add_db(&owner, &db, &name, request.db_type, &config)
+        .await?;
+
+    server_db
+        .insert_db(
+            user.0,
+            Database {
+                db_id: None,
+                name,
+                db_type: request.db_type,
+                backup,
+            },
+        )
         .await?;
 
     Ok(StatusCode::CREATED)
@@ -97,12 +123,17 @@ pub(crate) async fn add(
 pub(crate) async fn audit(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
-    let results = db_pool.audit(&owner, &db, user.0, &config).await?;
+    let db_name = db_name(&owner, &db);
+    server_db.user_db_id(user.0, &db_name).await?;
 
-    Ok((StatusCode::OK, Json(results)))
+    Ok((
+        StatusCode::OK,
+        Json(db_pool.audit(&owner, &db, &config).await?),
+    ))
 }
 
 #[utoipa::path(post,
@@ -124,10 +155,25 @@ pub(crate) async fn audit(
 pub(crate) async fn backup(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.backup_db(&owner, &db, user.0, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
+    database.backup = db_pool
+        .backup_db(&owner, &db, &db_name, database.db_type, &config)
+        .await?;
+
+    server_db.save_db(&database).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -152,13 +198,27 @@ pub(crate) async fn backup(
 pub(crate) async fn clear(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseResource>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+    let role = server_db.user_db_role(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
     let db = db_pool
-        .clear_db(&owner, &db, user.0, &config, request.resource)
+        .clear_db(&owner, &db, &mut database, role, &config, request.resource)
         .await?;
+
+    server_db.save_db(&database).await?;
 
     Ok((StatusCode::OK, Json(db)))
 }
@@ -174,7 +234,7 @@ pub(crate) async fn clear(
         DbTypeParam,
     ),
     responses(
-         (status = 201, description = "db typ changes"),
+         (status = 201, description = "db type changes"),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "must be a db admin"),
          (status = 404, description = "user / db not found"),
@@ -183,13 +243,38 @@ pub(crate) async fn clear(
 pub(crate) async fn convert(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse {
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
+    if database.db_type == request.db_type {
+        return Ok(StatusCode::CREATED);
+    }
+
     db_pool
-        .convert_db(&owner, &db, user.0, request.db_type, &config)
+        .convert_db(
+            &owner,
+            &db,
+            &db_name,
+            database.db_type,
+            request.db_type,
+            &config,
+        )
         .await?;
+
+    database.db_type = request.db_type;
+    server_db.save_db(&database).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -216,12 +301,51 @@ pub(crate) async fn convert(
 pub(crate) async fn copy(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
+    let (new_owner, new_db) = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
+    let source_db = db_name(&owner, &db);
+    let target_db = db_name(new_owner, new_db);
+    let db_type = server_db.user_db(user.0, &source_db).await?.db_type;
+    let username = server_db.user_name(user.0).await?;
+    let new_owner_id = if username == new_owner {
+        user.0
+    } else {
+        server_db.user_id(new_owner).await?
+    };
+
+    if new_owner != username {
+        return Err(permission_denied("cannot copy db to another user"));
+    }
+
+    if server_db
+        .find_user_db_id(user.0, &target_db)
+        .await?
+        .is_some()
+    {
+        return Err(ErrorCode::DbExists.into());
+    }
+
     db_pool
-        .copy_db(&owner, &db, &request.new_name, user.0, &config, false)
+        .copy_db(&source_db, new_owner, new_db, &target_db, &config)
+        .await?;
+
+    server_db
+        .insert_db(
+            new_owner_id,
+            Database {
+                db_id: None,
+                name: target_db,
+                db_type,
+                backup: 0,
+            },
+        )
         .await?;
 
     Ok(StatusCode::CREATED)
@@ -246,10 +370,19 @@ pub(crate) async fn copy(
 pub(crate) async fn delete(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.delete_db(&owner, &db, user.0, &config).await?;
+    let user_name = server_db.user_name(user.0).await?;
+
+    if owner != user_name {
+        return Err(permission_denied("owner only"));
+    }
+
+    let db_name = db_name(&owner, &db);
+    server_db.remove_db(user.0, &db_name).await?;
+    db_pool.delete_db(&owner, &db, &db_name, &config).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -274,11 +407,27 @@ pub(crate) async fn delete(
 pub(crate) async fn exec(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
-    let results = db_pool.exec(&owner, &db, user.0, queries, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let role = server_db.user_db_role(user.0, &db_name).await?;
+    let required_role = required_role(&queries);
+
+    if required_role == DbUserRole::Write && role == DbUserRole::Read {
+        return Err(permission_denied("write rights required"));
+    }
+
+    let results = if required_role == DbUserRole::Read {
+        db_pool.exec(&db_name, queries).await?
+    } else {
+        let username = server_db.user_name(user.0).await?;
+        db_pool
+            .exec_mut(&owner, &db, &db_name, &username, queries, &config)
+            .await?
+    };
 
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
@@ -296,8 +445,32 @@ pub(crate) async fn exec(
 pub(crate) async fn list(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
 ) -> ServerResponse<(StatusCode, Json<Vec<ServerDatabase>>)> {
-    let dbs = db_pool.find_user_dbs(user.0).await?;
+    let databases = server_db.user_dbs(user.0).await?;
+    let mut sizes = Vec::with_capacity(databases.len());
+
+    for (_, db) in &databases {
+        sizes.push(db_pool.db_size(&db.name).await.unwrap_or(0));
+    }
+
+    let dbs = databases
+        .into_iter()
+        .zip(sizes)
+        .filter_map(|((role, db), size)| {
+            if size != 0 {
+                Some(ServerDatabase {
+                    name: db.name,
+                    db_type: db.db_type,
+                    role,
+                    backup: db.backup,
+                    size,
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
 
     Ok((StatusCode::OK, Json(dbs)))
 }
@@ -320,11 +493,29 @@ pub(crate) async fn list(
 pub(crate) async fn optimize(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
-    let db = db_pool.optimize_db(&owner, &db, user.0).await?;
+    let db_name = db_name(&owner, &db);
+    let database = server_db.user_db(user.0, &db_name).await?;
+    let role = server_db.user_db_role(user.0, &db_name).await?;
 
-    Ok((StatusCode::OK, Json(db)))
+    if role == DbUserRole::Read {
+        return Err(permission_denied("write rights required"));
+    }
+
+    let size = db_pool.optimize_db(&db_name).await?;
+
+    Ok((
+        StatusCode::OK,
+        Json(ServerDatabase {
+            name: db_name,
+            db_type: database.db_type,
+            role,
+            backup: database.backup,
+            size,
+        }),
+    ))
 }
 
 #[utoipa::path(delete,
@@ -346,9 +537,18 @@ pub(crate) async fn optimize(
 pub(crate) async fn remove(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.remove_db(&owner, &db, user.0).await?;
+    let user_name = server_db.user_name(user.0).await?;
+
+    if owner != user_name {
+        return Err(permission_denied("owner only"));
+    }
+
+    let db_name: String = db_name(&owner, &db);
+    server_db.remove_db(user.0, &db_name).await?;
+    db_pool.remove_db(&db_name).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -375,13 +575,49 @@ pub(crate) async fn remove(
 pub(crate) async fn rename(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse {
+    let db_name = db_name(&owner, &db);
+
+    if db_name == request.new_name {
+        return Ok(StatusCode::CREATED);
+    }
+
+    let (new_owner, new_db) = request
+        .new_name
+        .split_once('/')
+        .ok_or(ErrorCode::DbInvalid)?;
+    let new_owner_id = server_db.user_id(new_owner).await?;
+
+    if owner != server_db.user_name(user.0).await? {
+        return Err(permission_denied("owner only"));
+    }
+
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
     db_pool
-        .rename_db(&owner, &db, &request.new_name, user.0, &config)
+        .rename_db(
+            &owner,
+            &db,
+            &db_name,
+            new_owner,
+            new_db,
+            &request.new_name,
+            &config,
+        )
         .await?;
+
+    database.name = request.new_name.clone();
+    server_db.save_db(&database).await?;
+
+    if new_owner != owner {
+        server_db
+            .insert_db_user(database.db_id.unwrap(), new_owner_id, DbUserRole::Admin)
+            .await?;
+    }
 
     Ok(StatusCode::CREATED)
 }
@@ -405,10 +641,27 @@ pub(crate) async fn rename(
 pub(crate) async fn restore(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse {
-    db_pool.restore_db(&owner, &db, user.0, &config).await?;
+    let db_name = db_name(&owner, &db);
+    let mut database = server_db.user_db(user.0, &db_name).await?;
+
+    if !server_db
+        .is_db_admin(user.0, database.db_id.unwrap())
+        .await?
+    {
+        return Err(permission_denied("admin only"));
+    }
+
+    if let Some(backup) = db_pool
+        .restore_db(&owner, &db, &db_name, database.db_type, &config)
+        .await?
+    {
+        database.backup = backup;
+        server_db.save_db(&database).await?;
+    }
 
     Ok(StatusCode::CREATED)
 }

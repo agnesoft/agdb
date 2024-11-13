@@ -4,6 +4,7 @@ use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::logger;
 use crate::routes;
+use crate::server_db::ServerDb;
 use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
@@ -15,17 +16,19 @@ use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
 pub(crate) fn app(
-    config: Config,
-    shutdown_sender: Sender<()>,
-    db_pool: DbPool,
     cluster: Cluster,
+    config: Config,
+    db_pool: DbPool,
+    server_db: ServerDb,
+    shutdown_sender: Sender<()>,
 ) -> Router {
     let basepath = config.basepath.clone();
 
     let state = ServerState {
-        db_pool,
-        config,
         cluster,
+        config,
+        db_pool,
+        server_db,
         shutdown_sender,
     };
 
@@ -63,6 +66,10 @@ pub(crate) fn app(
         .route(
             "/admin/db/:user/:db/backup",
             routing::post(routes::admin::db::backup),
+        )
+        .route(
+            "/admin/db/:user/:db/clear",
+            routing::post(routes::admin::db::clear),
         )
         .route(
             "/admin/db/:user/:db/convert",

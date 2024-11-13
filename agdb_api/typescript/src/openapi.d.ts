@@ -1256,6 +1256,27 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminDbClear {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+            export type Resource = Components.Schemas.DbResource;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export interface QueryParameters {
+            resource: Parameters.Resource;
+        }
+        namespace Responses {
+            export type $201 = Components.Schemas.ServerDatabase;
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbConvert {
         namespace Parameters {
             export type Db = string;
@@ -2004,6 +2025,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbBackup.Responses.$201>
   /**
+   * admin_db_clear
+   */
+  'admin_db_clear'(
+    parameters?: Parameters<Paths.AdminDbClear.QueryParameters & Paths.AdminDbClear.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbClear.Responses.$201>
+  /**
    * admin_db_convert
    */
   'admin_db_convert'(
@@ -2365,6 +2394,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbBackup.Responses.$201>
+  }
+  ['/api/v1/admin/db/{owner}/{db}/clear']: {
+    /**
+     * admin_db_clear
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbClear.QueryParameters & Paths.AdminDbClear.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbClear.Responses.$201>
   }
   ['/api/v1/admin/db/{owner}/{db}/convert']: {
     /**

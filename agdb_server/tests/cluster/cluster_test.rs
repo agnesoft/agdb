@@ -141,3 +141,20 @@ async fn vote_no_token() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn wrong_token() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+
+    let status = client
+        .get(server.full_url("/cluster/vote?cluster_hash=test&term=1&leader=0"))
+        .bearer_auth("WRONG")
+        .send()
+        .await?
+        .status();
+
+    assert_eq!(status, 401);
+
+    Ok(())
+}

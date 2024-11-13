@@ -35,6 +35,13 @@ impl ServerError {
     }
 }
 
+pub(crate) fn permission_denied(message: &str) -> ServerError {
+    ServerError::new(
+        StatusCode::FORBIDDEN,
+        &format!("permission denied: {}", message),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

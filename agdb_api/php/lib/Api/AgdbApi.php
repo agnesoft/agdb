@@ -80,6 +80,9 @@ class AgdbApi
         'adminDbBackup' => [
             'application/json',
         ],
+        'adminDbClear' => [
+            'application/json',
+        ],
         'adminDbConvert' => [
             'application/json',
         ],
@@ -1007,6 +1010,351 @@ class AgdbApi
 
         $headers = $this->headerSelector->selectHeaders(
             [],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDbClear
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbResource $resource resource (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbClear'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\ServerDatabase
+     */
+    public function adminDbClear($owner, $db, $resource, string $contentType = self::contentTypes['adminDbClear'][0])
+    {
+        list($response) = $this->adminDbClearWithHttpInfo($owner, $db, $resource, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation adminDbClearWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbResource $resource (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbClear'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\ServerDatabase, HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDbClearWithHttpInfo($owner, $db, $resource, string $contentType = self::contentTypes['adminDbClear'][0])
+    {
+        $request = $this->adminDbClearRequest($owner, $db, $resource, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 201:
+                    if ('\Agnesoft\AgdbApi\Model\ServerDatabase' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Agnesoft\AgdbApi\Model\ServerDatabase' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\ServerDatabase', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 201:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\ServerDatabase',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDbClearAsync
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbResource $resource (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbClear'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbClearAsync($owner, $db, $resource, string $contentType = self::contentTypes['adminDbClear'][0])
+    {
+        return $this->adminDbClearAsyncWithHttpInfo($owner, $db, $resource, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDbClearAsyncWithHttpInfo
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbResource $resource (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbClear'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbClearAsyncWithHttpInfo($owner, $db, $resource, string $contentType = self::contentTypes['adminDbClear'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\ServerDatabase';
+        $request = $this->adminDbClearRequest($owner, $db, $resource, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDbClear'
+     *
+     * @param  string $owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\DbResource $resource (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbClear'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDbClearRequest($owner, $db, $resource, string $contentType = self::contentTypes['adminDbClear'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDbClear'
+            );
+        }
+
+        // verify the required parameter 'db' is set
+        if ($db === null || (is_array($db) && count($db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db when calling adminDbClear'
+            );
+        }
+
+        // verify the required parameter 'resource' is set
+        if ($resource === null || (is_array($resource) && count($resource) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $resource when calling adminDbClear'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/db/{owner}/{db}/clear';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $resource,
+            'resource', // param base name
+            'DbResource', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{' . 'owner' . '}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($db !== null) {
+            $resourcePath = str_replace(
+                '{' . 'db' . '}',
+                ObjectSerializer::toPathValue($db),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
             $contentType,
             $multipart
         );

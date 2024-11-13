@@ -80,6 +80,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminDbAdd**](docs/Api/AgdbApi.md#admindbadd) | **POST** /api/v1/admin/db/{owner}/{db}/add | 
 *AgdbApi* | [**adminDbAudit**](docs/Api/AgdbApi.md#admindbaudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit | 
 *AgdbApi* | [**adminDbBackup**](docs/Api/AgdbApi.md#admindbbackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup | 
+*AgdbApi* | [**adminDbClear**](docs/Api/AgdbApi.md#admindbclear) | **POST** /api/v1/admin/db/{owner}/{db}/clear | 
 *AgdbApi* | [**adminDbConvert**](docs/Api/AgdbApi.md#admindbconvert) | **POST** /api/v1/admin/db/{owner}/{db}/convert | 
 *AgdbApi* | [**adminDbCopy**](docs/Api/AgdbApi.md#admindbcopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy | 
 *AgdbApi* | [**adminDbDelete**](docs/Api/AgdbApi.md#admindbdelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete | 

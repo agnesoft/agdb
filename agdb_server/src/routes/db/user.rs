@@ -1,6 +1,8 @@
-use crate::db_pool::DbPool;
+use crate::server_db::ServerDb;
+use crate::server_error::permission_denied;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
+use crate::utilities::db_name;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use axum::extract::Path;
@@ -38,12 +40,24 @@ pub(crate) struct DbUserRoleParam {
 )]
 pub(crate) async fn add(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
 ) -> ServerResponse {
-    db_pool
-        .add_db_user(&owner, &db, &username, request.0.db_role, user.0)
+    if owner == username {
+        return Err(permission_denied("cannot change role of db owner"));
+    }
+
+    let db_name = db_name(&owner, &db);
+    let db_id = server_db.user_db_id(user.0, &db_name).await?;
+
+    if !server_db.is_db_admin(user.0, db_id).await? {
+        return Err(permission_denied("admin only"));
+    }
+
+    let user_id = server_db.user_id(&username).await?;
+    server_db
+        .insert_db_user(db_id, user_id, request.db_role)
         .await?;
 
     Ok(StatusCode::CREATED)
@@ -66,12 +80,12 @@ pub(crate) async fn add(
 )]
 pub(crate) async fn list(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let users = db_pool.db_users(&owner, &db, user.0).await?;
+    let db_id = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
 
-    Ok((StatusCode::OK, Json(users)))
+    Ok((StatusCode::OK, Json(server_db.db_users(db_id).await?)))
 }
 
 #[utoipa::path(post,
@@ -93,12 +107,21 @@ pub(crate) async fn list(
 )]
 pub(crate) async fn remove(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(server_db): State<ServerDb>,
     Path((owner, db, username)): Path<(String, String, String)>,
 ) -> ServerResponse {
-    db_pool
-        .remove_db_user(&owner, &db, &username, user.0)
-        .await?;
+    if owner == username {
+        return Err(permission_denied("cannot remove owner"));
+    }
+
+    let db_id = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
+    let user_id = server_db.user_id(&username).await?;
+
+    if user.0 != user_id && !server_db.is_db_admin(user.0, db_id).await? {
+        return Err(permission_denied("admin only"));
+    }
+
+    server_db.remove_db_user(db_id, user_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

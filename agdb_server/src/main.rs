@@ -7,6 +7,7 @@ mod error_code;
 mod logger;
 mod password;
 mod routes;
+mod server_db;
 mod server_error;
 mod server_state;
 mod user_id;
@@ -16,21 +17,26 @@ use crate::db_pool::DbPool;
 use server_error::ServerResult;
 use tokio::sync::broadcast;
 
+const CONFIG_FILE: &str = "agdb_server.yaml";
+
 #[tokio::main]
 async fn main() -> ServerResult {
-    let config = config::new()?;
+    let config = config::new(CONFIG_FILE)?;
     tracing_subscriber::fmt()
         .with_max_level(config.log_level.0)
         .init();
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let cluster = cluster::new(&config)?;
-    let db_pool = DbPool::new(&config).await?;
+    let server_db = server_db::new(&config).await?;
+    let db_pool = DbPool::new(&config, &server_db).await?;
+
     let app = app::app(
-        config.clone(),
-        shutdown_sender.clone(),
-        db_pool,
         cluster.clone(),
+        config.clone(),
+        db_pool,
+        server_db,
+        shutdown_sender.clone(),
     );
     tracing::info!("Listening at {}", config.bind);
     let listener = tokio::net::TcpListener::bind(&config.bind).await?;

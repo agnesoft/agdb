@@ -10,11 +10,10 @@ use url::Url;
 
 pub(crate) type Config = Arc<ConfigImpl>;
 
-const CONFIG_FILE: &str = "agdb_server.yaml";
-
+#[derive(Debug)]
 pub(crate) struct LogLevel(pub(crate) LevelFilter);
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct ConfigImpl {
     pub(crate) bind: String,
     pub(crate) address: Url,
@@ -30,8 +29,8 @@ pub(crate) struct ConfigImpl {
     pub(crate) start_time: u64,
 }
 
-pub(crate) fn new() -> ServerResult<Config> {
-    if let Ok(content) = std::fs::read_to_string(CONFIG_FILE) {
+pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
+    if let Ok(content) = std::fs::read_to_string(config_file) {
         let mut config_impl: ConfigImpl = serde_yaml::from_str(&content)?;
         config_impl.cluster_node_id = config_impl
             .cluster
@@ -43,7 +42,7 @@ pub(crate) fn new() -> ServerResult<Config> {
 
         if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
             return Err(ServerError::from(format!(
-                "Cluster does not contain this node: {}",
+                "Cluster does not contain local node: {}",
                 config.address
             )));
         }
@@ -64,7 +63,7 @@ pub(crate) fn new() -> ServerResult<Config> {
         start_time: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
     };
 
-    std::fs::write(CONFIG_FILE, serde_yaml::to_string(&config)?)?;
+    std::fs::write(config_file, serde_yaml::to_string(&config)?)?;
 
     Ok(Config::new(config))
 }
@@ -107,30 +106,53 @@ impl<'de> Deserialize<'de> for LogLevel {
 mod tests {
     use super::*;
     use crate::config;
-    use std::path::Path;
 
-    struct TestFile {}
+    struct TestFile {
+        filename: &'static str,
+    }
 
     impl TestFile {
-        fn new() -> Self {
-            let _ = std::fs::remove_file(CONFIG_FILE);
-            Self {}
+        fn new(filename: &'static str) -> Self {
+            let _ = std::fs::remove_file(filename);
+            Self { filename }
         }
     }
 
     impl Drop for TestFile {
         fn drop(&mut self) {
-            let _ = std::fs::remove_file(CONFIG_FILE);
+            let _ = std::fs::remove_file(self.filename);
         }
     }
 
     #[test]
     fn default_values() {
-        let _test_file = TestFile::new();
-        assert!(!Path::new(CONFIG_FILE).exists());
-        let _config = config::new().unwrap();
-        assert!(Path::new(CONFIG_FILE).exists());
-        let _config = config::new().unwrap();
+        let test_file = TestFile::new("test_config_default.yaml");
+        assert!(!std::fs::exists(test_file.filename).unwrap());
+        let _config = config::new(test_file.filename).unwrap();
+        assert!(std::fs::exists(test_file.filename).unwrap());
+        let _config = config::new(test_file.filename).unwrap();
+    }
+
+    #[test]
+    fn invalid_cluster() {
+        let test_file = TestFile::new("test_config_invalid_cluster.yaml");
+        let config = ConfigImpl {
+            bind: ":::3000".to_string(),
+            address: Url::parse("localhost:3000").unwrap(),
+            basepath: "".to_string(),
+            admin: "admin".to_string(),
+            log_level: LogLevel(LevelFilter::INFO),
+            data_dir: "agdb_server_data".to_string(),
+            cluster_token: "cluster".to_string(),
+            cluster: vec![Url::parse("localhost:3001").unwrap()],
+            cluster_node_id: 0,
+            start_time: 0,
+        };
+        std::fs::write(test_file.filename, serde_yaml::to_string(&config).unwrap()).unwrap();
+        assert_eq!(
+            config::new(test_file.filename).unwrap_err().description,
+            "Cluster does not contain local node: localhost:3000"
+        );
     }
 
     #[test]
@@ -164,5 +186,13 @@ mod tests {
         let serialized = serde_yaml::to_string(&level).unwrap();
         let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
+
+        let serialized = "INVALID".to_string();
+        assert_eq!(
+            serde_yaml::from_str::<LogLevel>(&serialized)
+                .unwrap_err()
+                .to_string(),
+            "Invalid log level"
+        );
     }
 }

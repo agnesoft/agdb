@@ -127,7 +127,7 @@ where
         let index = DbIndex::new(key, storage)?;
         self.storage_indexes.push(storage, &index.storage_index())?;
         self.indexes.push(index);
-        return Ok(self.indexes.last_mut().unwrap());
+        Ok(self.indexes.last_mut().unwrap())
     }
 
     pub fn new(storage: &mut Storage<D>) -> Result<Self, DbError> {

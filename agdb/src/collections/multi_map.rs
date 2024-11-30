@@ -32,7 +32,7 @@ where
     pub phantom_data: PhantomData<(T, D)>,
 }
 
-impl<'a, K, T, D, Data> Iterator for MultiMapIterator<'a, K, T, D, Data>
+impl<K, T, D, Data> Iterator for MultiMapIterator<'_, K, T, D, Data>
 where
     K: Default + PartialEq,
     T: Default,
@@ -193,7 +193,7 @@ where
         self.len() == 0
     }
 
-    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<K, T, D, Data> {
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<'a, K, T, D, Data> {
         MapIterator {
             pos: 0,
             data: &self.data,
@@ -206,7 +206,7 @@ where
         &'a self,
         storage: &'a Storage<D>,
         key: &'a K,
-    ) -> MultiMapIterator<K, T, D, Data> {
+    ) -> MultiMapIterator<'a, K, T, D, Data> {
         let pos = if self.capacity() == 0 {
             0
         } else {

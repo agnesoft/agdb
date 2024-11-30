@@ -308,7 +308,7 @@ where
     pub phantom_data: PhantomData<(K, T, D)>,
 }
 
-impl<'a, K, T, D, Data> Iterator for MapIterator<'a, K, T, D, Data>
+impl<K, T, D, Data> Iterator for MapIterator<'_, K, T, D, Data>
 where
     K: Default,
     T: Default,
@@ -393,7 +393,7 @@ where
         self.multi_map.is_empty()
     }
 
-    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<K, T, D, Data> {
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<'a, K, T, D, Data> {
         self.multi_map.iter(storage)
     }
 

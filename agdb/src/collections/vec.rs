@@ -258,7 +258,7 @@ where
 
 pub type DbVec<T, D> = VecImpl<T, D, DbVecData<T, D, DbError>, DbError>;
 
-impl<'a, T, D, Data, E> Iterator for VecIterator<'a, T, D, Data, E>
+impl<T, D, Data, E> Iterator for VecIterator<'_, T, D, Data, E>
 where
     T: VecValue,
     D: StorageData,
@@ -295,7 +295,7 @@ where
         self.len() == 0
     }
 
-    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> VecIterator<T, D, Data, E> {
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> VecIterator<'a, T, D, Data, E> {
         VecIterator {
             index: 0,
             vec: self,

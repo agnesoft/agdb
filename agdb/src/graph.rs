@@ -308,7 +308,7 @@ where
         self.index
     }
 
-    pub fn edge_iter_from(&'a self) -> GraphEdgeIterator<D, Data> {
+    pub fn edge_iter_from(&'a self) -> GraphEdgeIterator<'a, D, Data> {
         GraphEdgeIterator {
             graph: self.graph,
             index: self
@@ -357,7 +357,7 @@ where
     storage: &'a Storage<D>,
 }
 
-impl<'a, D, Data> Iterator for GraphIterator<'a, D, Data>
+impl<D, Data> Iterator for GraphIterator<'_, D, Data>
 where
     Data: GraphData<D>,
     D: StorageData,
@@ -418,7 +418,7 @@ where
     storage: &'a Storage<D>,
 }
 
-impl<'a, D, Data> GraphEdge<'a, D, Data>
+impl<D, Data> GraphEdge<'_, D, Data>
 where
     Data: GraphData<D>,
     D: StorageData,
@@ -528,7 +528,7 @@ where
         &'a self,
         storage: &'a Storage<D>,
         index: GraphIndex,
-    ) -> Option<GraphEdge<D, Data>> {
+    ) -> Option<GraphEdge<'a, D, Data>> {
         if self.validate_edge(storage, index).is_err() {
             return None;
         }
@@ -572,7 +572,7 @@ where
         Ok(index)
     }
 
-    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> GraphIterator<D, Data> {
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> GraphIterator<'a, D, Data> {
         GraphIterator {
             graph: self,
             index: Some(GraphIndex::default()),
@@ -584,7 +584,7 @@ where
         &'a self,
         storage: &'a Storage<D>,
         index: GraphIndex,
-    ) -> Option<GraphNode<D, Data>> {
+    ) -> Option<GraphNode<'a, D, Data>> {
         if self.validate_node(storage, index).is_err() {
             return None;
         }
@@ -597,7 +597,7 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn node_iter<'a>(&'a self, storage: &'a Storage<D>) -> GraphNodeIterator<D, Data> {
+    pub fn node_iter<'a>(&'a self, storage: &'a Storage<D>) -> GraphNodeIterator<'a, D, Data> {
         GraphNodeIterator {
             graph: self,
             index: GraphIndex::default(),

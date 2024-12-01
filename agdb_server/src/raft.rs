@@ -695,6 +695,24 @@ mod test {
 
             panic!("Leader not found within {:?}", timeout);
         }
+
+        async fn expect_follower(&self, index: u64, timeout: Duration) {
+            let timer = Instant::now();
+            while timer.elapsed() < timeout {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+
+                if let ClusterState::Follower(_) = self.nodes.read().await[index as usize]
+                    .read()
+                    .await
+                    .cluster
+                    .state
+                {
+                    return;
+                }
+            }
+
+            panic!("{index} has not become a followerwithin {:?}", timeout);
+        }
     }
 
     impl Drop for TestCluster {
@@ -705,13 +723,14 @@ mod test {
 
     #[tokio::test]
     async fn rebalance() -> anyhow::Result<()> {
+        const TIMEOUT: Duration = Duration::from_secs(5);
         let mut cluster = TestCluster::new(3);
         cluster.start().await;
-        cluster.expect_leader(0, Duration::from_secs(5)).await;
+        cluster.expect_leader(0, TIMEOUT).await;
         cluster.block(0).await;
-        cluster.expect_leader(1, Duration::from_secs(5)).await;
+        cluster.expect_leader(1, TIMEOUT).await;
         cluster.block(99).await;
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+        cluster.expect_follower(0, TIMEOUT).await;
         Ok(())
     }
 }

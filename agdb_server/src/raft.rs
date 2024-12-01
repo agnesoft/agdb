@@ -79,14 +79,9 @@ pub trait Storage {
     fn logs(&self, index: u64, term: u64) -> Vec<Log>;
 }
 
-struct Node {
-    index: u64,
-    timer: Instant,
-}
-
 pub struct Cluster<S: Storage> {
     storage: S,
-    nodes: Vec<Node>,
+    nodes: Vec<u64>,
     state: ClusterState,
     hash: u64,
     size: u64,
@@ -113,16 +108,11 @@ pub struct ClusterSettings {
 
 impl<S: Storage> Cluster<S> {
     pub fn new(storage: S, settings: ClusterSettings) -> Self {
-        let nodes = (0..settings.size)
-            .map(|i| Node {
-                index: i,
-                timer: Instant::now(),
-            })
-            .collect();
-
         Self {
             state: ClusterState::Election,
-            nodes,
+            nodes: (0..settings.size)
+                .filter(|i| *i != settings.index)
+                .collect(),
             hash: settings.hash,
             size: settings.size,
             index: settings.index,
@@ -150,22 +140,16 @@ impl<S: Storage> Cluster<S> {
         let requests = self
             .nodes
             .iter()
-            .filter_map(|node| {
-                if node.index != self.index {
-                    Some(Request {
-                        version: VERSION,
-                        hash: self.hash,
-                        index: self.index,
-                        target: node.index,
-                        term: self.term,
-                        log_index: self.log_index,
-                        log_term: self.log_term,
-                        log_commit: self.log_commit,
-                        data: RequestType::Append(vec![log.clone()]),
-                    })
-                } else {
-                    None
-                }
+            .map(|node| Request {
+                version: VERSION,
+                hash: self.hash,
+                index: self.index,
+                target: *node,
+                term: self.term,
+                log_index: self.log_index,
+                log_term: self.log_term,
+                log_commit: self.log_commit,
+                data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
         self.storage.append(log);
@@ -174,19 +158,10 @@ impl<S: Storage> Cluster<S> {
 
     pub fn process(&mut self) -> Option<Vec<Request>> {
         if let ClusterState::Leader = self.state {
-            let requests = self.heartbeat(false);
-            self.timer = Instant::now();
-            if requests.is_empty() {
-                return None;
-            } else {
-                return Some(requests);
+            if self.timer.elapsed() >= self.heartbeat_timeout {
+                return Some(self.heartbeat());
             }
         } else {
-            if self.timer.elapsed() > self.term_timeout {
-                self.state = ClusterState::Election;
-                self.timer = Instant::now();
-            }
-
             if let ClusterState::Election = self.state {
                 if self.timer.elapsed() >= self.election_timeout {
                     let requests = self.election();
@@ -194,14 +169,17 @@ impl<S: Storage> Cluster<S> {
                     return Some(requests);
                 }
             }
+
+            if self.timer.elapsed() > self.term_timeout {
+                self.state = ClusterState::Election;
+                self.timer = Instant::now();
+            }
         }
 
         None
     }
 
     pub fn request(&mut self, request: &Request) -> Response {
-        println!("[{}] {:?} {:?}", self.index, self.state, request);
-
         let response = match request.data {
             RequestType::Append(ref logs) => self.append_request(request, logs),
             RequestType::Commit(index) => self.commit_request(request, index),
@@ -222,23 +200,13 @@ impl<S: Storage> Cluster<S> {
         use RequestType::*;
         use ResponseType::*;
 
-        println!(
-            "[{}] {:?} {:?} -> {:?}",
-            self.index, self.state, request, response
-        );
-
         match (&self.state, &request.data, &response.result) {
             (Candidate, Vote, Ok) => self.vote_ok(),
-            (Leader, Heartbeat, Ok) => {
-                self.nodes[request.target as usize].timer = Instant::now();
-                None
-            }
             (Leader, Heartbeat | Append(_) | Commit(_), LogMismatch(values)) => {
                 let logs = self.storage.logs(
                     values.index.actual.unwrap_or_default(),
                     values.term.actual.unwrap_or_default(),
                 );
-                self.nodes[request.target as usize].timer = Instant::now();
                 Some(vec![Request {
                     version: VERSION,
                     hash: self.hash,
@@ -256,27 +224,20 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn election(&mut self) -> Vec<Request> {
-        println!("[{}] Election", self.index);
         self.state = ClusterState::Candidate;
         self.votes = 1;
         self.nodes
             .iter()
-            .filter_map(|node| {
-                if node.index != self.index {
-                    Some(Request {
-                        version: VERSION,
-                        hash: self.hash,
-                        index: self.index,
-                        target: node.index,
-                        term: self.term + 1,
-                        log_index: self.log_index,
-                        log_term: self.log_term,
-                        log_commit: self.log_commit,
-                        data: RequestType::Vote,
-                    })
-                } else {
-                    None
-                }
+            .map(|node| Request {
+                version: VERSION,
+                hash: self.hash,
+                index: self.index,
+                target: *node,
+                term: self.term + 1,
+                log_index: self.log_index,
+                log_term: self.log_term,
+                log_commit: self.log_commit,
+                data: RequestType::Vote,
             })
             .collect()
     }
@@ -316,25 +277,19 @@ impl<S: Storage> Cluster<S> {
         Self::ok(request)
     }
 
-    fn heartbeat(&mut self, forced: bool) -> Vec<Request> {
+    fn heartbeat(&mut self) -> Vec<Request> {
         self.nodes
             .iter()
-            .filter_map(|node| {
-                if forced || node.timer.elapsed() > self.heartbeat_timeout {
-                    Some(Request {
-                        version: VERSION,
-                        hash: self.hash,
-                        index: self.index,
-                        target: node.index,
-                        term: self.term,
-                        log_index: self.log_index,
-                        log_term: self.log_term,
-                        log_commit: self.log_commit,
-                        data: RequestType::Heartbeat,
-                    })
-                } else {
-                    None
-                }
+            .map(|node| Request {
+                version: VERSION,
+                hash: self.hash,
+                index: self.index,
+                target: *node,
+                term: self.term,
+                log_index: self.log_index,
+                log_term: self.log_term,
+                log_commit: self.log_commit,
+                data: RequestType::Heartbeat,
             })
             .collect()
     }
@@ -361,12 +316,7 @@ impl<S: Storage> Cluster<S> {
 
         if self.votes > self.size / 2 {
             self.state = ClusterState::Leader;
-            let requests = self.heartbeat(true);
-            if requests.is_empty() {
-                return None;
-            } else {
-                return Some(requests);
-            }
+            return Some(self.heartbeat());
         }
 
         None
@@ -564,7 +514,6 @@ mod test {
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
     use tokio::sync::RwLock;
-    use tokio::task::JoinHandle;
 
     struct TestStorage {
         logs: Vec<Log>,
@@ -575,9 +524,7 @@ mod test {
 
     struct TestCluster {
         nodes: Arc<RwLock<Vec<TestNode>>>,
-        tasks: Vec<JoinHandle<Result<(), anyhow::Error>>>,
         shutdown: Arc<AtomicBool>,
-        messages: Arc<RwLock<Vec<String>>>,
     }
 
     impl Storage for TestStorage {
@@ -609,6 +556,8 @@ mod test {
 
     impl TestCluster {
         fn new(size: u64) -> Self {
+            tracing_subscriber::fmt().init();
+
             let nodes = (0..size)
                 .map(|index| {
                     let storage = TestStorage {
@@ -629,9 +578,7 @@ mod test {
 
             Self {
                 nodes: Arc::new(RwLock::new(nodes)),
-                tasks: Vec::new(),
                 shutdown: Arc::new(AtomicBool::new(false)),
-                messages: Arc::new(RwLock::new(Vec::new())),
             }
         }
 
@@ -641,7 +588,7 @@ mod test {
             let (responses_channel, mut responses_receiver) = tokio::sync::mpsc::channel(100);
             let shutdown = self.shutdown.clone();
             let nodes = self.nodes.clone();
-            self.tasks.push(tokio::spawn(async move {
+            tokio::spawn(async move {
                 while !shutdown.load(Ordering::Relaxed) {
                     if let Some(request) = requests_receiver.recv().await {
                         let target = nodes.read().await[request.target as usize].clone();
@@ -650,21 +597,17 @@ mod test {
                     }
                 }
 
-                Ok(())
-            }));
+                anyhow::Ok(())
+            });
 
             let shutdown = self.shutdown.clone();
             let nodes = self.nodes.clone();
             let req_channel = requests_channel.clone();
-            let messages = self.messages.clone();
-            self.tasks.push(tokio::spawn(async move {
+            tokio::spawn(async move {
                 while !shutdown.load(Ordering::Relaxed) {
                     if let Some((request, response)) = responses_receiver.recv().await {
+                        tracing::info!("{:?} -> {:?}", request, response);
                         let origin = nodes.read().await[response.target as usize].clone();
-                        messages
-                            .write()
-                            .await
-                            .push(format!("{:?} -> {:?}", request, response));
                         let new_requests = origin.write().await.response(&request, &response);
                         if let Some(new_requests) = new_requests {
                             for req in new_requests {
@@ -674,14 +617,14 @@ mod test {
                     }
                 }
 
-                Ok(())
-            }));
+                anyhow::Ok(())
+            });
 
             for node in self.nodes.read().await.iter() {
                 let node = node.clone();
                 let shutdown = self.shutdown.clone();
                 let req_channel = requests_channel.clone();
-                self.tasks.push(tokio::spawn(async move {
+                tokio::spawn(async move {
                     while !shutdown.load(Ordering::Relaxed) {
                         if let Some(requests) = node.write().await.process() {
                             for request in requests {
@@ -691,23 +634,16 @@ mod test {
                             tokio::time::sleep(Duration::from_millis(10)).await;
                         }
                     }
-                    Ok(())
-                }));
-            }
-        }
 
-        async fn stop(&mut self) -> anyhow::Result<()> {
-            self.shutdown.store(true, Ordering::Relaxed);
-            for task in self.tasks.drain(..) {
-                let _ = task.await?;
+                    anyhow::Ok(())
+                });
             }
-            Ok(())
         }
 
         async fn ensure_leader(&self, timeout: Duration) -> bool {
             let timer = Instant::now();
             while timer.elapsed() < timeout {
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                tokio::time::sleep(Duration::from_millis(10)).await;
 
                 for node in self.nodes.read().await.iter() {
                     if let ClusterState::Leader = node.read().await.state {
@@ -716,9 +652,6 @@ mod test {
                 }
             }
 
-            self.messages.read().await.iter().for_each(|message| {
-                println!("{}", message);
-            });
             false
         }
     }
@@ -733,13 +666,7 @@ mod test {
     async fn election() -> anyhow::Result<()> {
         let mut cluster = TestCluster::new(3);
         cluster.start().await;
-        let leader = cluster.ensure_leader(Duration::from_secs(5)).await;
-        cluster.stop().await?;
-        assert!(leader);
-
-        cluster.messages.read().await.iter().for_each(|message| {
-            println!("{}", message);
-        });
+        assert!(cluster.ensure_leader(Duration::from_secs(5)).await);
 
         Ok(())
     }

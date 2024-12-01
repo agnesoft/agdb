@@ -82,6 +82,7 @@ pub trait Storage {
 pub struct Cluster<S: Storage> {
     storage: S,
     nodes: Vec<u64>,
+    timers: Vec<Instant>,
     state: ClusterState,
     hash: u64,
     size: u64,
@@ -113,6 +114,7 @@ impl<S: Storage> Cluster<S> {
             nodes: (0..settings.size)
                 .filter(|i| *i != settings.index)
                 .collect(),
+            timers: vec![Instant::now(); settings.size as usize],
             hash: settings.hash,
             size: settings.size,
             index: settings.index,
@@ -158,10 +160,17 @@ impl<S: Storage> Cluster<S> {
 
     pub fn process(&mut self) -> Option<Vec<Request>> {
         if let ClusterState::Leader = self.state {
-            if self.timer.elapsed() >= self.heartbeat_timeout {
-                self.timer = Instant::now();
-                return Some(self.heartbeat());
+            let requests = self.heartbeat();
+
+            if requests.is_empty() {
+                return None;
             }
+
+            requests.iter().for_each(|request| {
+                self.timers[request.target as usize] = Instant::now();
+            });
+
+            return Some(requests);
         } else {
             if let ClusterState::Election = self.state {
                 if self.timer.elapsed() >= self.election_timeout {
@@ -188,6 +197,7 @@ impl<S: Storage> Cluster<S> {
             RequestType::Vote => self.vote_request(request),
         };
 
+        self.timers[request.index as usize] = Instant::now();
         self.timer = Instant::now();
 
         match response {
@@ -208,6 +218,7 @@ impl<S: Storage> Cluster<S> {
                     values.index.local.unwrap_or_default(),
                     values.term.local.unwrap_or_default(),
                 );
+                self.timers[request.target as usize] = Instant::now();
                 Some(vec![Request {
                     version: VERSION,
                     hash: self.hash,
@@ -245,8 +256,12 @@ impl<S: Storage> Cluster<S> {
 
     fn append_request(&mut self, request: &Request, logs: &[Log]) -> Result<Response, Response> {
         self.validate_hash(request)?;
-        self.validate_leader(request)?;
-        self.validate_current_term(request)?;
+        self.validate_term(request)?;
+
+        if request.term > self.term {
+            self.term = request.term;
+            self.state = ClusterState::Follower(request.index);
+        }
 
         for log in logs {
             self.validate_log_commit(request, log)?;
@@ -268,8 +283,12 @@ impl<S: Storage> Cluster<S> {
 
     fn commit_request(&mut self, request: &Request, index: u64) -> Result<Response, Response> {
         self.validate_hash(request)?;
-        self.validate_leader(request)?;
-        self.validate_current_term(request)?;
+        self.validate_term(request)?;
+
+        if request.term > self.term {
+            self.term = request.term;
+            self.state = ClusterState::Follower(request.index);
+        }
 
         if self.log_commit < index {
             self.commit(index);
@@ -279,6 +298,29 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn heartbeat(&mut self) -> Vec<Request> {
+        self.nodes
+            .iter()
+            .filter_map(|node| {
+                if self.timers[*node as usize].elapsed() > self.heartbeat_timeout {
+                    Some(Request {
+                        version: VERSION,
+                        hash: self.hash,
+                        index: self.index,
+                        target: *node,
+                        term: self.term,
+                        log_index: self.log_index,
+                        log_term: self.log_term,
+                        log_commit: self.log_commit,
+                        data: RequestType::Heartbeat,
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn heartbeat_no_timer(&mut self) -> Vec<Request> {
         self.nodes
             .iter()
             .map(|node| Request {
@@ -319,7 +361,7 @@ impl<S: Storage> Cluster<S> {
         if self.votes > self.size / 2 {
             self.state = ClusterState::Leader;
             self.term = term;
-            return Some(self.heartbeat());
+            return Some(self.heartbeat_no_timer());
         }
 
         None
@@ -787,6 +829,22 @@ mod test {
         cluster.expect_value(0, value.clone(), TIMEOUT).await;
         cluster.expect_value(1, value.clone(), TIMEOUT).await;
         cluster.expect_value(2, value.clone(), TIMEOUT).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reconciliation() -> anyhow::Result<()> {
+        const TIMEOUT: Duration = Duration::from_secs(5);
+        let mut cluster = TestCluster::new(3);
+        cluster.start().await;
+        cluster.expect_leader(0, TIMEOUT).await;
+        cluster.block(1).await;
+        let value = b"Hello, World!".to_vec();
+        cluster.append(0, value.clone()).await?;
+        cluster.expect_value(0, value.clone(), TIMEOUT).await;
+        cluster.expect_value(2, value.clone(), TIMEOUT).await;
+        cluster.block(99).await;
+        cluster.expect_value(1, value.clone(), TIMEOUT).await;
         Ok(())
     }
 }

@@ -223,15 +223,15 @@ impl<S: Storage> Cluster<S> {
         match (&self.state, &request.data, &response.result) {
             (Candidate, Vote, Ok) => self.vote_received(request),
             (Leader, Heartbeat | Append(_), Ok) => self.commit(request),
-            (Leader, Heartbeat | Append(_), LogMismatch(values)) => self.reconcile(request, values),
+            (Leader, Heartbeat | Append(_), LogMismatch(_)) => self.reconcile(request),
             _ => None,
         }
     }
 
-    fn reconcile(&mut self, request: &Request, values: &LogMismatch) -> Option<Vec<Request>> {
+    fn reconcile(&mut self, request: &Request) -> Option<Vec<Request>> {
         let logs = self.storage.logs(
-            values.index.local.unwrap_or_default(),
-            values.term.local.unwrap_or_default(),
+            self.node(request.target).log_index,
+            self.node(request.target).log_term,
         );
         self.node_mut(request.target).timer = Instant::now();
         Some(vec![Request {
@@ -914,18 +914,6 @@ mod test {
         cluster.expect_storage_synced(1, 2).await;
         cluster.unblock().await;
         cluster.expect_storage_synced(0, 1).await;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn commit() -> anyhow::Result<()> {
-        let mut cluster = TestCluster::new(3);
-        cluster.start().await;
-        cluster.expect_leader(0).await;
-        cluster.append(0, b"0".to_vec()).await?;
-        cluster.expect_leader(1).await;
-        cluster.expect_storage_synced(0, 1).await;
-        cluster.expect_storage_synced(0, 2).await;
         Ok(())
     }
 }

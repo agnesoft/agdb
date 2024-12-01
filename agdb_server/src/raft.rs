@@ -574,6 +574,7 @@ mod test {
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
+    use std::sync::OnceLock;
     use tokio::sync::mpsc::Sender;
     use tokio::sync::RwLock;
 
@@ -624,7 +625,8 @@ mod test {
 
     impl TestCluster {
         fn new(size: u64) -> Self {
-            tracing_subscriber::fmt().init();
+            static LOGGER_INIT: OnceLock<()> = OnceLock::new();
+            LOGGER_INIT.get_or_init(|| tracing_subscriber::fmt().init());
 
             let nodes = (0..size)
                 .map(|index| {
@@ -724,6 +726,10 @@ mod test {
             self.blocked.store(index, Ordering::Relaxed);
         }
 
+        async fn unblock(&self) {
+            self.blocked.store(u64::MAX, Ordering::Relaxed);
+        }
+
         async fn expect_leader(&self, index: u64, timeout: Duration) {
             let timer = Instant::now();
             while timer.elapsed() < timeout {
@@ -813,7 +819,7 @@ mod test {
         cluster.expect_leader(0, TIMEOUT).await;
         cluster.block(0).await;
         cluster.expect_leader(1, TIMEOUT).await;
-        cluster.block(99).await;
+        cluster.unblock().await;
         cluster.expect_follower(0, TIMEOUT).await;
         Ok(())
     }
@@ -824,7 +830,7 @@ mod test {
         let mut cluster = TestCluster::new(3);
         cluster.start().await;
         cluster.expect_leader(0, TIMEOUT).await;
-        let value = b"Hello, World!".to_vec();
+        let value = b"0".to_vec();
         cluster.append(0, value.clone()).await?;
         cluster.expect_value(0, value.clone(), TIMEOUT).await;
         cluster.expect_value(1, value.clone(), TIMEOUT).await;
@@ -839,12 +845,38 @@ mod test {
         cluster.start().await;
         cluster.expect_leader(0, TIMEOUT).await;
         cluster.block(1).await;
-        let value = b"Hello, World!".to_vec();
+        let value = b"0".to_vec();
         cluster.append(0, value.clone()).await?;
         cluster.expect_value(0, value.clone(), TIMEOUT).await;
         cluster.expect_value(2, value.clone(), TIMEOUT).await;
-        cluster.block(99).await;
+        cluster.unblock().await;
         cluster.expect_value(1, value.clone(), TIMEOUT).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reconciliation_multiple_values() -> anyhow::Result<()> {
+        const TIMEOUT: Duration = Duration::from_secs(5);
+        let mut cluster = TestCluster::new(3);
+        cluster.start().await;
+        cluster.expect_leader(0, TIMEOUT).await;
+        let value = b"0".to_vec();
+        cluster.append(0, value.clone()).await?;
+        cluster.expect_value(0, value.clone(), TIMEOUT).await;
+        cluster.expect_value(1, value.clone(), TIMEOUT).await;
+        cluster.expect_value(2, value.clone(), TIMEOUT).await;
+        let value2 = b"1".to_vec();
+        let value3 = b"2".to_vec();
+        cluster.block(2).await;
+        cluster.append(0, value2.clone()).await?;
+        cluster.append(0, value3.clone()).await?;
+        cluster.expect_value(0, value2.clone(), TIMEOUT).await;
+        cluster.expect_value(0, value3.clone(), TIMEOUT).await;
+        cluster.expect_value(1, value2.clone(), TIMEOUT).await;
+        cluster.expect_value(1, value3.clone(), TIMEOUT).await;
+        cluster.unblock().await;
+        cluster.expect_value(2, value2.clone(), TIMEOUT).await;
+        cluster.expect_value(2, value3.clone(), TIMEOUT).await;
         Ok(())
     }
 }

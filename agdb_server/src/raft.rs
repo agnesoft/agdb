@@ -274,6 +274,7 @@ impl<S: Storage> Cluster<S> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
         self.become_follower(request);
+        self.update_node(request.index, request);
 
         for log in logs {
             self.validate_log_commit(request, log)?;
@@ -369,6 +370,7 @@ impl<S: Storage> Cluster<S> {
         self.validate_term(request)?;
         self.become_follower(request);
         self.validate_log(request)?;
+        self.update_node(request.index, request);
 
         if self.local().log_commit < request.log_commit {
             let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
@@ -559,6 +561,12 @@ impl<S: Storage> Cluster<S> {
             target: request.index,
             result: ResponseType::Ok,
         })
+    }
+
+    fn update_node(&mut self, index: u64, request: &Request) {
+        self.node_mut(index).log_index = request.log_index;
+        self.node_mut(index).log_term = request.log_term;
+        self.node_mut(index).log_commit = request.log_commit;
     }
 
     fn node(&self, index: u64) -> &Node {
@@ -898,6 +906,27 @@ mod test {
         cluster.expect_leader(1).await;
         cluster.append(1, b"1".to_vec()).await?;
         cluster.expect_storage_synced(1, 2).await;
+        cluster.unblock().await;
+        cluster.expect_storage_synced(0, 1).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cluster_of_5() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::new(5);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+        cluster.append(0, b"0".to_vec()).await?;
+        cluster.expect_storage_synced(0, 1).await;
+        cluster.expect_storage_synced(0, 2).await;
+        cluster.expect_storage_synced(0, 3).await;
+        cluster.expect_storage_synced(0, 4).await;
+        cluster.block(0).await;
+        cluster.expect_leader(1).await;
+        cluster.append(1, b"1".to_vec()).await?;
+        cluster.expect_storage_synced(1, 2).await;
+        cluster.expect_storage_synced(1, 3).await;
+        cluster.expect_storage_synced(1, 4).await;
         cluster.unblock().await;
         cluster.expect_storage_synced(0, 1).await;
         Ok(())

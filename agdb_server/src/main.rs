@@ -6,6 +6,7 @@ mod db_pool;
 mod error_code;
 mod logger;
 mod password;
+mod raft;
 mod routes;
 mod server_db;
 mod server_error;

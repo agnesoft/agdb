@@ -1,115 +1,21 @@
-use crate::cluster;
 use crate::cluster::Cluster;
-use crate::cluster::ClusterState;
 use crate::config::Config;
-use crate::error_code::ErrorCode;
+use crate::raft::Request;
+use crate::raft::Response;
 use crate::server_error::ServerResult;
 use crate::user_id::ClusterId;
 use agdb_api::ClusterStatus;
-use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use serde::Deserialize;
 
-#[derive(Deserialize)]
-pub(crate) struct ClusterParams {
-    cluster_hash: u64,
-    term: u64,
-    leader: usize,
-}
-
-pub(crate) async fn heartbeat(
+pub(crate) async fn cluster(
     _cluster_id: ClusterId,
     State(cluster): State<Cluster>,
-    request: Query<ClusterParams>,
-) -> ServerResult<(StatusCode, Json<String>)> {
-    if cluster.cluster_hash != request.cluster_hash {
-        return Ok((
-            ErrorCode::ClusterHashMismatch.into(),
-            Json(format!(
-                "Cluster hash mismatch: expected {}, got {}",
-                cluster.cluster_hash, request.cluster_hash
-            )),
-        ));
-    }
-
-    let current_term = cluster.data.read().await.term;
-
-    if request.term < current_term {
-        return Ok((
-            ErrorCode::TermMismatch.into(),
-            Json(format!(
-                "Term mismatch: expected higher term than {}, got {}",
-                current_term, request.term
-            )),
-        ));
-    }
-
-    let state = cluster.data.read().await.state;
-
-    if let ClusterState::Follower(leader) = state {
-        if leader == request.leader && request.term == current_term {
-            return Ok((StatusCode::OK, Json(String::new())));
-        }
-    }
-
-    cluster::become_follower(&cluster, request.term, request.leader).await?;
-
-    Ok((StatusCode::OK, Json(String::new())))
-}
-
-pub(crate) async fn vote(
-    _cluster_id: ClusterId,
-    State(cluster): State<Cluster>,
-    request: Query<ClusterParams>,
-) -> ServerResult<(StatusCode, Json<String>)> {
-    if cluster.cluster_hash != request.cluster_hash {
-        return Ok((
-            ErrorCode::ClusterHashMismatch.into(),
-            Json(format!(
-                "Cluster hash mismatch: expected local ({}) == other ({})",
-                cluster.cluster_hash, request.cluster_hash
-            )),
-        ));
-    }
-
-    let current_leader = cluster.leader().await;
-
-    if let Some(leader) = current_leader {
-        return Ok((
-            ErrorCode::LeaderExists.into(),
-            Json(format!("Leader already exists: node {}", leader)),
-        ));
-    }
-
-    let current_term = cluster.data.read().await.term;
-
-    if request.term <= current_term {
-        return Ok((
-            ErrorCode::TermMismatch.into(),
-            Json(format!(
-                "Term mismatch: epxected current ({}) < requested ({})",
-                current_term, request.term
-            )),
-        ));
-    }
-
-    let voted = cluster.data.read().await.voted;
-
-    if request.term <= voted {
-        return Ok((
-            ErrorCode::AlreadyVoted.into(),
-            Json(format!(
-                "Already voted: expected last vote ({voted}) < {}",
-                request.term
-            )),
-        ));
-    }
-
-    cluster::vote(&cluster, request.term, request.leader).await?;
-
-    Ok((StatusCode::OK, Json(String::new())))
+    request: Json<Request>,
+) -> ServerResult<(StatusCode, Json<Response>)> {
+    let response = cluster.raft.write().await.request(&request).await;
+    Ok((StatusCode::OK, Json(response)))
 }
 
 #[utoipa::path(get,
@@ -126,15 +32,7 @@ pub(crate) async fn status(
 ) -> ServerResult<(StatusCode, Json<Vec<ClusterStatus>>)> {
     let mut statuses = vec![ClusterStatus::default(); config.cluster.len()];
     let mut tasks = Vec::new();
-
-    let leader;
-    let term;
-
-    {
-        let data = cluster.data.read().await;
-        leader = cluster.leader().await;
-        term = data.term;
-    }
+    let leader = cluster.raft.read().await.leader();
 
     for (index, node) in config.cluster.iter().enumerate() {
         if index != cluster.index {
@@ -161,9 +59,7 @@ pub(crate) async fn status(
                     ClusterStatus {
                         address,
                         status,
-                        leader: status && Some(index) == leader,
-                        term,
-                        commit: 0,
+                        leader: status && Some(index as u64) == leader,
                     },
                 )
             }));
@@ -171,9 +67,7 @@ pub(crate) async fn status(
             let status = &mut statuses[index];
             status.address = node.as_str().to_string();
             status.status = true;
-            status.leader = Some(index) == leader;
-            status.term = term;
-            status.commit = 0;
+            status.leader = Some(index as u64) == leader;
         };
     }
 

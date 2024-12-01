@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::password::Password;
+use crate::raft::Log;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use agdb::Comparison;
@@ -41,6 +42,7 @@ pub(crate) struct Database {
 pub(crate) struct ServerDb(pub(crate) Arc<RwLock<Db>>);
 
 const ADMIN: &str = "admin";
+const CLUSTER_LOG: &str = "cluster_log";
 const DBS: &str = "dbs";
 const NAME: &str = "name";
 const ROLE: &str = "role";
@@ -103,10 +105,66 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
             }
 
+            if t.exec(QueryBuilder::select().ids(CLUSTER_LOG).query())
+                .is_err()
+            {
+                t.exec_mut(QueryBuilder::insert().nodes().aliases(CLUSTER_LOG).query())?;
+            }
+
             Ok(())
         })?;
 
         Ok(Self(Arc::new(RwLock::new(db))))
+    }
+
+    pub(crate) async fn cluster_log(&self) -> ServerResult<(u64, u64, u64)> {
+        self.0
+            .write()
+            .await
+            .transaction_mut(|t| -> ServerResult<(u64, u64, u64)> {
+                let commit = t
+                    .exec(
+                        QueryBuilder::select()
+                            .edge_count_from()
+                            .ids(CLUSTER_LOG)
+                            .query(),
+                    )?
+                    .elements[0]
+                    .values[0]
+                    .value
+                    .to_u64()?;
+                let log: Log = t
+                    .exec(
+                        QueryBuilder::select()
+                            .elements::<Log>()
+                            .search()
+                            .depth_first()
+                            .from(CLUSTER_LOG)
+                            .limit(1)
+                            .where_()
+                            .distance(CountComparison::Equal(2))
+                            .query(),
+                    )?
+                    .try_into()?;
+                Ok((log.index, log.term, commit))
+            })
+    }
+
+    pub(crate) async fn commit_log(&self, log: &Log) -> ServerResult<()> {
+        self.0.write().await.transaction_mut(
+            |t: &mut agdb::TransactionMut<'_, agdb::FileStorageMemoryMapped>| -> ServerResult<()> {
+                let log_id = t.exec_mut(QueryBuilder::insert().element(log).query())?;
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .edges()
+                        .from(CLUSTER_LOG)
+                        .to(log_id)
+                        .query(),
+                )?;
+                Ok(())
+            },
+        )?;
+        Ok(())
     }
 
     pub(crate) async fn db_count(&self) -> ServerResult<u64> {
@@ -295,6 +353,38 @@ impl ServerDb {
             )?
             .result
             == 1)
+    }
+
+    pub(crate) async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log>> {
+        Ok(self
+            .0
+            .read()
+            .await
+            .transaction(|t| {
+                let log_count = t
+                    .exec(
+                        QueryBuilder::select()
+                            .edge_count_from()
+                            .ids(CLUSTER_LOG)
+                            .query(),
+                    )?
+                    .elements[0]
+                    .values[0]
+                    .value
+                    .to_u64()?;
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<Log>()
+                        .search()
+                        .depth_first()
+                        .from(CLUSTER_LOG)
+                        .limit(log_count - since_index)
+                        .where_()
+                        .distance(CountComparison::Equal(2))
+                        .query(),
+                )
+            })?
+            .try_into()?)
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, db: &str) -> ServerResult<()> {

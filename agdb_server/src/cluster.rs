@@ -1,25 +1,24 @@
 use crate::config::Config;
-use crate::server_error::ServerError;
+use crate::raft;
+use crate::raft::Log;
+use crate::raft::Request;
+use crate::raft::Response;
+use crate::raft::Storage;
+use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
 use agdb::StableHash;
 use agdb_api::HttpClient;
 use agdb_api::ReqwestClient;
-use axum::http::StatusCode;
-use serde::Serialize;
-use std::fmt::Display;
+use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
 use tokio::signal;
 use tokio::sync::broadcast;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::RwLock;
-
-const TERM_TIMEOUT: Duration = Duration::from_secs(3);
-const HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(1);
-const LOOP_TIMEOUT: Duration = Duration::from_millis(10);
 
 pub(crate) type Cluster = Arc<ClusterImpl>;
 
@@ -27,178 +26,85 @@ type ClusterNode = Arc<ClusterNodeImpl>;
 
 pub(crate) struct ClusterNodeImpl {
     client: ReqwestClient,
-    base_url: String,
+    url: String,
     token: Option<String>,
-    index: usize,
-}
-
-#[derive(Copy, Clone)]
-pub(crate) enum ClusterState {
-    Leader,
-    LeaderElect,
-    Follower(usize),
-    Candidate,
-    Election,
-    Voted,
-}
-
-pub(crate) struct ClusterData {
-    pub(crate) state: ClusterState,
-    pub(crate) timer: std::time::Instant,
-    pub(crate) term: u64,
-    pub(crate) voted: u64,
-    pub(crate) leader: Arc<AtomicBool>,
+    requests_sender: UnboundedSender<Request>,
+    requests_receiver: RwLock<UnboundedReceiver<Request>>,
+    responses: UnboundedSender<(Request, Response)>,
 }
 
 pub(crate) struct ClusterImpl {
-    pub(crate) nodes: Vec<ClusterNode>,
-    pub(crate) cluster_hash: u64,
     pub(crate) index: usize,
-    pub(crate) data: RwLock<ClusterData>,
-}
-
-#[derive(Serialize)]
-pub(crate) enum ClusterOperation {
-    Heartbeat,
-    Election,
-    Leader,
-    Follower,
-    Vote,
-}
-
-#[derive(Serialize)]
-pub(crate) enum ClusterResult {
-    Success,
-    Reject,
-    Failure,
-}
-
-#[derive(Serialize)]
-pub(crate) struct ClusterLog {
-    pub(crate) node: usize,
-    pub(crate) operation: ClusterOperation,
-    pub(crate) target_node: usize,
-    pub(crate) term: u64,
-    pub(crate) result: ClusterResult,
-    pub(crate) status: u16,
-    pub(crate) time: u128,
-    pub(crate) message: String,
-}
-
-impl Display for ClusterLog {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&serde_json::to_string(self).unwrap_or_default())
-    }
-}
-
-impl ClusterImpl {
-    pub(crate) async fn leader(&self) -> Option<usize> {
-        match self.data.read().await.state {
-            ClusterState::Leader | ClusterState::LeaderElect => Some(self.index),
-            ClusterState::Follower(leader) => Some(leader),
-            ClusterState::Candidate | ClusterState::Election | ClusterState::Voted => None,
-        }
-    }
+    pub(crate) nodes: Vec<ClusterNode>,
+    pub(crate) raft: Arc<RwLock<raft::Cluster<ClusterStorage>>>,
+    pub(crate) responses: RwLock<UnboundedReceiver<(Request, Response)>>,
 }
 
 impl ClusterNodeImpl {
-    fn new(address: &str, token: &str, index: usize) -> Self {
+    fn new(address: &str, token: &str, responses: UnboundedSender<(Request, Response)>) -> Self {
         let base = if address.starts_with("http") || address.starts_with("https") {
             address.to_string()
         } else {
             format!("http://{address}")
         };
 
+        let (requests_sender, requests_receiver) = tokio::sync::mpsc::unbounded_channel();
+
         Self {
             client: ReqwestClient::new(),
-            base_url: format!("{base}api/v1"),
+            url: format!("{base}api/v1/cluster"),
             token: Some(token.to_string()),
-            index,
+            requests_sender,
+            requests_receiver: RwLock::new(requests_receiver),
+            responses,
         }
     }
 
-    async fn heartbeat(
-        &self,
-        cluster_hash: u64,
-        term: u64,
-        leader: usize,
-    ) -> ServerResult<(u16, String)> {
-        self.client
-            .post::<(), String>(
-                &self.url(&format!(
-                    "/cluster/heartbeat?cluster_hash={cluster_hash}&term={term}&leader={leader}"
-                )),
-                &None,
-                &self.token,
-            )
-            .await
-            .map_err(|e| {
-                ServerError::new(
-                    StatusCode::from_u16(e.status).unwrap_or(StatusCode::NOT_IMPLEMENTED),
-                    &e.description,
-                )
-            })
-    }
-
-    async fn vote(
-        &self,
-        cluster_hash: u64,
-        term: u64,
-        leader: usize,
-    ) -> ServerResult<(u16, String)> {
-        self.client
-            .get::<String>(
-                &self.url(&format!(
-                    "/cluster/vote?cluster_hash={cluster_hash}&term={term}&leader={leader}"
-                )),
-                &self.token,
-            )
-            .await
-            .map_err(|e| {
-                ServerError::new(
-                    StatusCode::from_u16(e.status).unwrap_or(StatusCode::NOT_IMPLEMENTED),
-                    &e.description,
-                )
-            })
-    }
-
-    fn url(&self, uri: &str) -> String {
-        format!("{}{uri}", self.base_url)
+    async fn send(&self, request: &raft::Request) -> ServerResult<raft::Response> {
+        Ok(self
+            .client
+            .post(&self.url, &Some(request), &self.token)
+            .await?
+            .1)
     }
 }
 
-pub(crate) fn new(config: &Config) -> ServerResult<Cluster> {
+pub(crate) async fn new(config: &Config, db: &ServerDb) -> ServerResult<Cluster> {
     let mut nodes = vec![];
-    let mut index = 0;
-
-    for (i, node) in config.cluster.iter().enumerate() {
-        if node == &config.address {
-            index = i;
-        } else {
-            nodes.push(ClusterNode::new(ClusterNodeImpl::new(
-                node.as_str(),
-                &config.cluster_token,
-                i,
-            )));
-        }
-    }
-
     let mut sorted_cluster: Vec<String> =
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
-    let cluster_hash = sorted_cluster.stable_hash();
+    let index = config
+        .cluster
+        .iter()
+        .position(|url| url == &config.address)
+        .unwrap();
+    let hash = sorted_cluster.stable_hash();
+    let storage = ClusterStorage::new(db.clone()).await?;
+    let settings = raft::ClusterSettings {
+        index: index as u64,
+        hash,
+        size: config.cluster.len() as u64,
+        election_factor: 1,
+        heartbeat_timeout: Duration::from_secs(1),
+        term_timeout: Duration::from_secs(3),
+    };
+    let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
+    let (requests, responses) = tokio::sync::mpsc::unbounded_channel();
+
+    for node in config.cluster.iter() {
+        nodes.push(ClusterNode::new(ClusterNodeImpl::new(
+            node.as_str(),
+            &config.cluster_token,
+            requests.clone(),
+        )));
+    }
 
     Ok(Cluster::new(ClusterImpl {
-        nodes,
-        cluster_hash,
         index,
-        data: RwLock::new(ClusterData {
-            timer: Instant::now(),
-            state: ClusterState::Election,
-            term: 0,
-            voted: 0,
-            leader: Arc::new(AtomicBool::new(false)),
-        }),
+        nodes,
+        raft,
+        responses: RwLock::new(responses),
     }))
 }
 
@@ -207,278 +113,64 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
         return Ok(());
     }
 
-    cluster.data.write().await.timer = Instant::now();
+    for node in &cluster.nodes {
+        let node = node.clone();
+        let shutdown_signal = shutdown_signal.clone();
+        tokio::spawn(async move {
+            while !shutdown_signal.load(Ordering::Relaxed) {
+                if let Some(request) = node.requests_receiver.write().await.recv().await {
+                    let response = node.send(&request).await?;
+                    node.responses.send((request, response))?;
+                }
+            }
+
+            ServerResult::Ok(())
+        });
+    }
+
+    let responses_shutdown_signal = shutdown_signal.clone();
+    let response_cluster = cluster.clone();
+    tokio::spawn(async move {
+        while !responses_shutdown_signal.load(Ordering::Relaxed) {
+            if let Some((request, response)) = response_cluster.responses.write().await.recv().await
+            {
+                if let Some(requests) = response_cluster
+                    .raft
+                    .write()
+                    .await
+                    .response(&request, &response)
+                    .await?
+                {
+                    for request in requests {
+                        response_cluster.nodes[request.target as usize]
+                            .requests_sender
+                            .send(request)?;
+                    }
+                };
+            }
+        }
+        ServerResult::Ok(())
+    });
 
     while !shutdown_signal.load(Ordering::Relaxed) {
-        let state = cluster.data.read().await.state;
-
-        match state {
-            ClusterState::LeaderElect => heartbeat(&cluster, shutdown_signal.clone()).await?,
-            ClusterState::Voted | ClusterState::Follower(_) => {
-                if cluster.data.read().await.timer.elapsed() > TERM_TIMEOUT {
-                    let mut data = cluster.data.write().await;
-                    data.state = ClusterState::Election;
-                    data.timer = Instant::now();
-                }
+        if let Some(requests) = cluster.raft.write().await.process() {
+            for request in requests {
+                cluster.nodes[request.target as usize]
+                    .requests_sender
+                    .send(request)?;
             }
-            ClusterState::Election => {
-                if cluster.data.read().await.timer.elapsed()
-                    >= Duration::from_secs(cluster.index as u64)
-                {
-                    election(&cluster).await?;
-                }
-            }
-            ClusterState::Candidate | ClusterState::Leader => {}
         }
-
-        std::thread::sleep(LOOP_TIMEOUT);
     }
 
     Ok(())
 }
 
-async fn heartbeat(cluster: &Cluster, shutdown_signal: Arc<AtomicBool>) -> ServerResult<()> {
-    cluster.data.write().await.state = ClusterState::Leader;
-
-    let term = cluster.data.read().await.term;
-    let cluster_hash = cluster.cluster_hash;
-    let leader = cluster.index;
-    let is_leader = cluster.data.read().await.leader.clone();
-    let cluster_index = cluster.index;
-
-    for node in &cluster.nodes {
-        let node = node.clone();
-        let is_leader = is_leader.clone();
-        let shutdown_signal = shutdown_signal.clone();
-
-        tokio::spawn(async move {
-            while is_leader.load(Ordering::Relaxed) && !shutdown_signal.load(Ordering::Relaxed) {
-                let timer = Instant::now();
-
-                match node.heartbeat(cluster_hash, term, leader).await {
-                    Ok((status, message)) => {
-                        if status != 200 {
-                            let log = ClusterLog {
-                                node: cluster_index,
-                                operation: ClusterOperation::Heartbeat,
-                                target_node: node.index,
-                                term,
-                                result: ClusterResult::Reject,
-                                status,
-                                time: timer.elapsed().as_micros(),
-                                message,
-                            };
-                            tracing::warn!("{log}");
-                        }
-                    }
-                    Err(e) => {
-                        let log = ClusterLog {
-                            node: cluster_index,
-                            operation: ClusterOperation::Heartbeat,
-                            target_node: node.index,
-                            term,
-                            result: if e.status.is_client_error() {
-                                ClusterResult::Reject
-                            } else {
-                                ClusterResult::Failure
-                            },
-                            status: e.status.as_u16(),
-                            time: timer.elapsed().as_micros(),
-                            message: e.description,
-                        };
-
-                        if e.status.is_client_error() {
-                            tracing::warn!("{log}");
-                        } else {
-                            tracing::error!("{log}");
-                        }
-                    }
-                }
-
-                std::thread::sleep(HEARTBEAT_TIMEOUT);
-            }
-        });
+pub(crate) async fn append(cluster: Cluster, data: Vec<u8>) -> ServerResult<()> {
+    for request in cluster.raft.write().await.append(data).await {
+        cluster.nodes[request.target as usize]
+            .requests_sender
+            .send(request)?;
     }
-
-    Ok(())
-}
-
-async fn election(cluster: &Cluster) -> ServerResult<()> {
-    let timer = Instant::now();
-    let election_term;
-
-    {
-        let mut data = cluster.data.write().await;
-        election_term = data.term + 1;
-        data.state = ClusterState::Candidate;
-        data.voted = election_term;
-    }
-
-    let cluster_hash = cluster.cluster_hash;
-    let index = cluster.index;
-    let cluster_len = cluster.nodes.len() + 1;
-    let quorum = cluster_len / 2 + 1;
-
-    let log = ClusterLog {
-        node: index,
-        operation: ClusterOperation::Election,
-        target_node: index,
-        term: election_term,
-        result: ClusterResult::Success,
-        status: 0,
-        time: timer.elapsed().as_micros(),
-        message: format!(
-            "Starting election (cluster: {cluster_hash}, quorum: {quorum}/{cluster_len})"
-        ),
-    };
-    tracing::info!("{log}");
-
-    let votes = Arc::new(AtomicUsize::new(1));
-    let voted = Arc::new(AtomicUsize::new(1));
-
-    for node in &cluster.nodes {
-        let node = node.clone();
-        let votes = votes.clone();
-        let voted = voted.clone();
-        let cluster = cluster.clone();
-
-        tokio::spawn(async move {
-            match node.vote(cluster_hash, election_term, index).await {
-                Ok((status, message)) => {
-                    let log = ClusterLog {
-                        node: cluster.index,
-                        operation: ClusterOperation::Vote,
-                        target_node: node.index,
-                        term: election_term,
-                        result: ClusterResult::Success,
-                        time: timer.elapsed().as_micros(),
-                        status,
-                        message,
-                    };
-                    tracing::info!("{log}");
-
-                    if (votes.fetch_add(1, Ordering::Relaxed) + 1) == quorum {
-                        let log = ClusterLog {
-                            node: cluster.index,
-                            operation: ClusterOperation::Leader,
-                            target_node: cluster.index,
-                            term: election_term,
-                            result: ClusterResult::Success,
-                            status: 0,
-                            time: timer.elapsed().as_micros(),
-                            message: "Elected as leader".to_string(),
-                        };
-                        tracing::info!("{log}");
-
-                        let mut data = cluster.data.write().await;
-                        data.state = ClusterState::LeaderElect;
-                        data.leader.store(true, Ordering::Relaxed);
-                        data.term = election_term;
-                        data.timer = Instant::now();
-                    }
-                }
-                Err(e) => {
-                    let log = ClusterLog {
-                        node: cluster.index,
-                        operation: ClusterOperation::Vote,
-                        target_node: node.index,
-                        term: election_term,
-                        result: if e.status.is_client_error() {
-                            ClusterResult::Reject
-                        } else {
-                            ClusterResult::Failure
-                        },
-                        time: timer.elapsed().as_micros(),
-                        status: e.status.as_u16(),
-                        message: e.description,
-                    };
-
-                    if e.status.is_client_error() {
-                        tracing::warn!("{log}");
-                    } else {
-                        tracing::error!("{log}");
-                    }
-                }
-            }
-
-            if voted.fetch_add(1, Ordering::Relaxed) == cluster.nodes.len() {
-                let is_leader = cluster.data.read().await.leader.load(Ordering::Relaxed);
-
-                if !is_leader {
-                    let log = ClusterLog {
-                        node: cluster.index,
-                        operation: ClusterOperation::Election,
-                        target_node: cluster.index,
-                        term: election_term,
-                        result: ClusterResult::Reject,
-                        status: 0,
-                        time: timer.elapsed().as_micros(),
-                        message: format!(
-                            "Election for term {election_term} failed - {}/{cluster_len} (quorum: {quorum}/{cluster_len})",
-                            votes.load(Ordering::Relaxed)
-                        ),
-                    };
-                    tracing::warn!("{log}");
-
-                    let mut data = cluster.data.write().await;
-                    data.state = ClusterState::Election;
-                    data.timer = Instant::now();
-                }
-            };
-        });
-    }
-
-    Ok(())
-}
-
-pub(crate) async fn become_follower(
-    cluster: &Cluster,
-    term: u64,
-    leader: usize,
-) -> ServerResult<()> {
-    let mut data = cluster.data.write().await;
-    data.term = term;
-    data.state = ClusterState::Follower(leader);
-    data.leader.store(false, Ordering::Relaxed);
-
-    let time = data.timer;
-    data.timer = Instant::now();
-
-    let log = ClusterLog {
-        node: cluster.index,
-        operation: ClusterOperation::Follower,
-        target_node: leader,
-        term,
-        result: ClusterResult::Success,
-        status: StatusCode::OK.as_u16(),
-        time: time.elapsed().as_micros(),
-        message: "Becoming follower".to_string(),
-    };
-    tracing::info!("{}", log);
-
-    Ok(())
-}
-
-pub(crate) async fn vote(cluster: &Cluster, term: u64, leader: usize) -> ServerResult<()> {
-    let mut data = cluster.data.write().await;
-    data.state = ClusterState::Voted;
-    data.term = term;
-    data.voted = term;
-
-    let time = data.timer;
-    data.timer = Instant::now();
-
-    let log = ClusterLog {
-        node: cluster.index,
-        operation: ClusterOperation::Vote,
-        target_node: leader,
-        term,
-        result: ClusterResult::Success,
-        status: StatusCode::OK.as_u16(),
-        time: time.elapsed().as_micros(),
-        message: "Vote cast".to_string(),
-    };
-    tracing::info!("{}", log);
 
     Ok(())
 }
@@ -497,4 +189,74 @@ pub(crate) async fn start_with_shutdown(
 
     shutdown_signal.store(true, Ordering::Relaxed);
     let _ = cluster_handle.await;
+}
+
+pub(crate) struct ClusterStorage {
+    logs: VecDeque<Log>,
+    index: u64,
+    term: u64,
+    commit: u64,
+    db: ServerDb,
+}
+
+impl ClusterStorage {
+    async fn new(db: ServerDb) -> ServerResult<Self> {
+        let (index, term, commit) = db.cluster_log().await?;
+        Ok(Self {
+            logs: VecDeque::new(),
+            index,
+            term,
+            commit,
+            db,
+        })
+    }
+}
+
+impl Storage for ClusterStorage {
+    async fn append(&mut self, log: Log) {
+        if let Some(index) = self
+            .logs
+            .iter()
+            .rev()
+            .position(|l| l.index == log.index && l.term == log.term)
+        {
+            self.logs.truncate(index);
+        }
+
+        self.index = log.index;
+        self.term = log.term;
+        self.logs.push_back(log);
+    }
+
+    async fn commit(&mut self, index: u64) -> ServerResult<()> {
+        while let Some(log) = self.logs.pop_front() {
+            if log.index > index {
+                self.logs.push_front(log);
+                break;
+            } else {
+                self.commit = log.index;
+                self.db.commit_log(&log).await?;
+                //TODO: Execute action
+            }
+        }
+        Ok(())
+    }
+
+    fn current_index(&self) -> u64 {
+        self.index
+    }
+
+    fn current_term(&self) -> u64 {
+        self.term
+    }
+
+    fn current_commit(&self) -> u64 {
+        self.commit
+    }
+
+    async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log>> {
+        let mut logs = self.db.logs(since_index).await?;
+        logs.extend_from_slice(&self.logs.iter().cloned().collect::<Vec<Log>>());
+        Ok(logs)
+    }
 }

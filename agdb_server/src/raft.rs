@@ -12,8 +12,8 @@ pub struct Log {
 
 #[derive(Debug)]
 pub struct MismatchedValues {
-    actual: Option<u64>,
-    expected: Option<u64>,
+    local: Option<u64>,
+    requested: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -159,6 +159,7 @@ impl<S: Storage> Cluster<S> {
     pub fn process(&mut self) -> Option<Vec<Request>> {
         if let ClusterState::Leader = self.state {
             if self.timer.elapsed() >= self.heartbeat_timeout {
+                self.timer = Instant::now();
                 return Some(self.heartbeat());
             }
         } else {
@@ -201,11 +202,11 @@ impl<S: Storage> Cluster<S> {
         use ResponseType::*;
 
         match (&self.state, &request.data, &response.result) {
-            (Candidate, Vote, Ok) => self.vote_ok(),
+            (Candidate, Vote, Ok) => self.vote_ok(request.term),
             (Leader, Heartbeat | Append(_) | Commit(_), LogMismatch(values)) => {
                 let logs = self.storage.logs(
-                    values.index.actual.unwrap_or_default(),
-                    values.term.actual.unwrap_or_default(),
+                    values.index.local.unwrap_or_default(),
+                    values.term.local.unwrap_or_default(),
                 );
                 Some(vec![Request {
                     version: VERSION,
@@ -296,8 +297,9 @@ impl<S: Storage> Cluster<S> {
 
     fn heartbeat_request(&mut self, request: &Request) -> Result<Response, Response> {
         self.validate_hash(request)?;
+        self.validate_term(request)?;
 
-        if request.term < self.term {
+        if request.term > self.term {
             self.term = request.term;
             self.state = ClusterState::Follower(request.index);
         }
@@ -311,11 +313,12 @@ impl<S: Storage> Cluster<S> {
         Self::ok(request)
     }
 
-    fn vote_ok(&mut self) -> Option<Vec<Request>> {
+    fn vote_ok(&mut self, term: u64) -> Option<Vec<Request>> {
         self.votes += 1;
 
         if self.votes > self.size / 2 {
             self.state = ClusterState::Leader;
+            self.term = term;
             return Some(self.heartbeat());
         }
 
@@ -325,7 +328,7 @@ impl<S: Storage> Cluster<S> {
     fn vote_request(&mut self, request: &Request) -> Result<Response, Response> {
         self.validate_hash(request)?;
         self.validate_no_leader(request)?;
-        self.validate_term(request)?;
+        self.validate_term_for_vote(request)?;
         self.validate_log_for_vote(request)?;
         self.state = ClusterState::Voted(request.index);
         Self::ok(request)
@@ -337,8 +340,8 @@ impl<S: Storage> Cluster<S> {
                 version: VERSION,
                 target: request.index,
                 result: ResponseType::ClusterMismatch(MismatchedValues {
-                    actual: Some(self.hash),
-                    expected: Some(request.hash),
+                    local: Some(self.hash),
+                    requested: Some(request.hash),
                 }),
             });
         }
@@ -352,16 +355,16 @@ impl<S: Storage> Cluster<S> {
                 version: VERSION,
                 target: request.index,
                 result: ResponseType::LeaderMismatch(MismatchedValues {
-                    actual: Some(self.index),
-                    expected: None,
+                    local: Some(self.index),
+                    requested: None,
                 }),
             }),
             ClusterState::Follower(leader) => Err(Response {
                 version: VERSION,
                 target: request.index,
                 result: ResponseType::LeaderMismatch(MismatchedValues {
-                    actual: Some(leader),
-                    expected: None,
+                    local: Some(leader),
+                    requested: None,
                 }),
             }),
             _ => Ok(()),
@@ -375,16 +378,16 @@ impl<S: Storage> Cluster<S> {
                 version: VERSION,
                 target: request.index,
                 result: ResponseType::LeaderMismatch(MismatchedValues {
-                    actual: Some(leader),
-                    expected: Some(request.index),
+                    local: Some(leader),
+                    requested: Some(request.index),
                 }),
             }),
             _ => Err(Response {
                 version: VERSION,
                 target: request.index,
                 result: ResponseType::LeaderMismatch(MismatchedValues {
-                    actual: None,
-                    expected: Some(request.index),
+                    local: None,
+                    requested: Some(request.index),
                 }),
             }),
         }
@@ -397,16 +400,16 @@ impl<S: Storage> Cluster<S> {
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
-                        actual: Some(self.log_index),
-                        expected: Some(request.log_index),
+                        local: Some(self.log_index),
+                        requested: Some(request.log_index),
                     },
                     term: MismatchedValues {
-                        actual: Some(self.log_term),
-                        expected: Some(request.log_term),
+                        local: Some(self.log_term),
+                        requested: Some(request.log_term),
                     },
                     commit: MismatchedValues {
-                        actual: Some(self.log_commit),
-                        expected: Some(request.log_commit),
+                        local: Some(self.log_commit),
+                        requested: Some(request.log_commit),
                     },
                 }),
             });
@@ -422,16 +425,16 @@ impl<S: Storage> Cluster<S> {
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
-                        actual: Some(self.log_index),
-                        expected: Some(request.log_index),
+                        local: Some(self.log_index),
+                        requested: Some(request.log_index),
                     },
                     term: MismatchedValues {
-                        actual: Some(self.log_term),
-                        expected: Some(request.log_term),
+                        local: Some(self.log_term),
+                        requested: Some(request.log_term),
                     },
                     commit: MismatchedValues {
-                        actual: Some(self.log_commit),
-                        expected: Some(request.log_commit),
+                        local: Some(self.log_commit),
+                        requested: Some(request.log_commit),
                     },
                 }),
             });
@@ -450,16 +453,16 @@ impl<S: Storage> Cluster<S> {
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
-                        actual: Some(self.log_index),
-                        expected: Some(request.log_index),
+                        local: Some(self.log_index),
+                        requested: Some(request.log_index),
                     },
                     term: MismatchedValues {
-                        actual: Some(self.log_term),
-                        expected: Some(request.log_term),
+                        local: Some(self.log_term),
+                        requested: Some(request.log_term),
                     },
                     commit: MismatchedValues {
-                        actual: Some(self.log_commit),
-                        expected: Some(request.log_commit),
+                        local: Some(self.log_commit),
+                        requested: Some(request.log_commit),
                     },
                 }),
             });
@@ -474,8 +477,23 @@ impl<S: Storage> Cluster<S> {
                 version: VERSION,
                 target: request.index,
                 result: ResponseType::TermMismatch(MismatchedValues {
-                    actual: Some(self.term),
-                    expected: Some(request.term),
+                    local: Some(self.term),
+                    requested: Some(request.term),
+                }),
+            });
+        }
+
+        Ok(())
+    }
+
+    fn validate_term_for_vote(&self, request: &Request) -> Result<(), Response> {
+        if request.term <= self.term {
+            return Err(Response {
+                version: VERSION,
+                target: request.index,
+                result: ResponseType::TermMismatch(MismatchedValues {
+                    local: Some(self.term),
+                    requested: Some(request.term),
                 }),
             });
         }
@@ -484,13 +502,13 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn validate_term(&self, request: &Request) -> Result<(), Response> {
-        if request.term <= self.term {
+        if request.term < self.term {
             return Err(Response {
                 version: VERSION,
                 target: request.index,
                 result: ResponseType::TermMismatch(MismatchedValues {
-                    actual: Some(self.term),
-                    expected: Some(request.term),
+                    local: Some(self.term),
+                    requested: Some(request.term),
                 }),
             });
         }
@@ -511,6 +529,7 @@ impl<S: Storage> Cluster<S> {
 mod test {
     use super::*;
     use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -520,11 +539,16 @@ mod test {
         commit: u64,
     }
 
-    type TestNode = Arc<RwLock<Cluster<TestStorage>>>;
+    struct TestNodeImpl {
+        cluster: Cluster<TestStorage>,
+    }
+
+    type TestNode = Arc<RwLock<TestNodeImpl>>;
 
     struct TestCluster {
         nodes: Arc<RwLock<Vec<TestNode>>>,
         shutdown: Arc<AtomicBool>,
+        blocked: Arc<AtomicU64>,
     }
 
     impl Storage for TestStorage {
@@ -570,15 +594,18 @@ mod test {
                         hash: 123,
                         election_factor: 1,
                         heartbeat_timeout: Duration::from_secs(1),
-                        term_timeout: Duration::from_secs(3),
+                        term_timeout: Duration::from_secs(1),
                     };
-                    Arc::new(RwLock::new(Cluster::new(storage, settings)))
+                    Arc::new(RwLock::new(TestNodeImpl {
+                        cluster: Cluster::new(storage, settings),
+                    }))
                 })
                 .collect();
 
             Self {
                 nodes: Arc::new(RwLock::new(nodes)),
                 shutdown: Arc::new(AtomicBool::new(false)),
+                blocked: Arc::new(AtomicU64::new(99)),
             }
         }
 
@@ -588,12 +615,18 @@ mod test {
             let (responses_channel, mut responses_receiver) = tokio::sync::mpsc::channel(100);
             let shutdown = self.shutdown.clone();
             let nodes = self.nodes.clone();
+            let blocked = self.blocked.clone();
             tokio::spawn(async move {
                 while !shutdown.load(Ordering::Relaxed) {
                     if let Some(request) = requests_receiver.recv().await {
-                        let target = nodes.read().await[request.target as usize].clone();
-                        let response = target.write().await.request(&request);
-                        responses_channel.send((request, response)).await?;
+                        let blocked_node = blocked.load(Ordering::Relaxed);
+                        if request.target != blocked_node && request.index != blocked_node {
+                            let target = nodes.read().await[request.target as usize].clone();
+                            let response = target.write().await.cluster.request(&request);
+                            responses_channel.send((request, response)).await?;
+                        } else {
+                            tracing::info!("Blocked: {:?}", request);
+                        }
                     }
                 }
 
@@ -608,7 +641,8 @@ mod test {
                     if let Some((request, response)) = responses_receiver.recv().await {
                         tracing::info!("{:?} -> {:?}", request, response);
                         let origin = nodes.read().await[response.target as usize].clone();
-                        let new_requests = origin.write().await.response(&request, &response);
+                        let new_requests =
+                            origin.write().await.cluster.response(&request, &response);
                         if let Some(new_requests) = new_requests {
                             for req in new_requests {
                                 req_channel.send(req).await?;
@@ -626,13 +660,13 @@ mod test {
                 let req_channel = requests_channel.clone();
                 tokio::spawn(async move {
                     while !shutdown.load(Ordering::Relaxed) {
-                        if let Some(requests) = node.write().await.process() {
+                        if let Some(requests) = node.write().await.cluster.process() {
                             for request in requests {
                                 req_channel.send(request).await?;
                             }
-                        } else {
-                            tokio::time::sleep(Duration::from_millis(10)).await;
                         }
+
+                        tokio::time::sleep(Duration::from_millis(10)).await;
                     }
 
                     anyhow::Ok(())
@@ -640,19 +674,26 @@ mod test {
             }
         }
 
-        async fn ensure_leader(&self, timeout: Duration) -> bool {
+        async fn block(&self, index: u64) {
+            self.blocked.store(index, Ordering::Relaxed);
+        }
+
+        async fn expect_leader(&self, index: u64, timeout: Duration) {
             let timer = Instant::now();
             while timer.elapsed() < timeout {
                 tokio::time::sleep(Duration::from_millis(10)).await;
 
-                for node in self.nodes.read().await.iter() {
-                    if let ClusterState::Leader = node.read().await.state {
-                        return true;
-                    }
+                if let ClusterState::Leader = self.nodes.read().await[index as usize]
+                    .read()
+                    .await
+                    .cluster
+                    .state
+                {
+                    return;
                 }
             }
 
-            false
+            panic!("Leader not found within {:?}", timeout);
         }
     }
 
@@ -663,11 +704,14 @@ mod test {
     }
 
     #[tokio::test]
-    async fn election() -> anyhow::Result<()> {
+    async fn rebalance() -> anyhow::Result<()> {
         let mut cluster = TestCluster::new(3);
         cluster.start().await;
-        assert!(cluster.ensure_leader(Duration::from_secs(5)).await);
-
+        cluster.expect_leader(0, Duration::from_secs(5)).await;
+        cluster.block(0).await;
+        cluster.expect_leader(1, Duration::from_secs(5)).await;
+        cluster.block(99).await;
+        tokio::time::sleep(Duration::from_millis(1000)).await;
         Ok(())
     }
 }

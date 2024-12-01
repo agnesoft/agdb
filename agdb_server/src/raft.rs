@@ -532,6 +532,7 @@ mod test {
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
     use std::sync::Arc;
+    use tokio::sync::mpsc::Sender;
     use tokio::sync::RwLock;
 
     struct TestStorage {
@@ -549,6 +550,7 @@ mod test {
         nodes: Arc<RwLock<Vec<TestNode>>>,
         shutdown: Arc<AtomicBool>,
         blocked: Arc<AtomicU64>,
+        requests_channel: Option<Sender<Request>>,
     }
 
     impl Storage for TestStorage {
@@ -606,12 +608,14 @@ mod test {
                 nodes: Arc::new(RwLock::new(nodes)),
                 shutdown: Arc::new(AtomicBool::new(false)),
                 blocked: Arc::new(AtomicU64::new(99)),
+                requests_channel: None,
             }
         }
 
         async fn start(&mut self) {
             let (requests_channel, mut requests_receiver) =
                 tokio::sync::mpsc::channel::<Request>(100);
+            self.requests_channel = Some(requests_channel.clone());
             let (responses_channel, mut responses_receiver) = tokio::sync::mpsc::channel(100);
             let shutdown = self.shutdown.clone();
             let nodes = self.nodes.clone();
@@ -713,6 +717,43 @@ mod test {
 
             panic!("{index} has not become a followerwithin {:?}", timeout);
         }
+
+        async fn expect_value(&self, index: u64, value: Vec<u8>, timeout: Duration) {
+            let timer = Instant::now();
+            while timer.elapsed() < timeout {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+
+                if self.nodes.read().await[index as usize]
+                    .read()
+                    .await
+                    .cluster
+                    .storage
+                    .logs
+                    .iter()
+                    .any(|log| log.data == value)
+                {
+                    return;
+                }
+            }
+
+            panic!("{index} has not received the value within {:?}", timeout);
+        }
+
+        async fn append(&self, index: u64, log: Vec<u8>) -> anyhow::Result<()> {
+            let requests = self.nodes.read().await[index as usize]
+                .write()
+                .await
+                .cluster
+                .append(log);
+
+            for request in requests {
+                if let Some(channel) = &self.requests_channel {
+                    channel.send(request).await?;
+                }
+            }
+
+            Ok(())
+        }
     }
 
     impl Drop for TestCluster {
@@ -721,9 +762,10 @@ mod test {
         }
     }
 
+    const TIMEOUT: Duration = Duration::from_secs(5);
+
     #[tokio::test]
     async fn rebalance() -> anyhow::Result<()> {
-        const TIMEOUT: Duration = Duration::from_secs(5);
         let mut cluster = TestCluster::new(3);
         cluster.start().await;
         cluster.expect_leader(0, TIMEOUT).await;
@@ -731,6 +773,20 @@ mod test {
         cluster.expect_leader(1, TIMEOUT).await;
         cluster.block(99).await;
         cluster.expect_follower(0, TIMEOUT).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn replication() -> anyhow::Result<()> {
+        const TIMEOUT: Duration = Duration::from_secs(5);
+        let mut cluster = TestCluster::new(3);
+        cluster.start().await;
+        cluster.expect_leader(0, TIMEOUT).await;
+        let value = b"Hello, World!".to_vec();
+        cluster.append(0, value.clone()).await?;
+        cluster.expect_value(0, value.clone(), TIMEOUT).await;
+        cluster.expect_value(1, value.clone(), TIMEOUT).await;
+        cluster.expect_value(2, value.clone(), TIMEOUT).await;
         Ok(())
     }
 }

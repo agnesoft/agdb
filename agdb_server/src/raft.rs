@@ -526,20 +526,6 @@ impl<S: Storage> Cluster<S> {
         Ok(())
     }
 
-    fn validate_current_term(&self, request: &Request) -> Result<(), Response> {
-        if self.term != request.term {
-            return Err(Response {
-                target: request.index,
-                result: ResponseType::TermMismatch(MismatchedValues {
-                    local: Some(self.term),
-                    requested: Some(request.term),
-                }),
-            });
-        }
-
-        Ok(())
-    }
-
     fn validate_term_for_vote(&self, request: &Request) -> Result<(), Response> {
         if self.term >= request.term {
             return Err(Response {

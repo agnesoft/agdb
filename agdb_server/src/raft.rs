@@ -1,8 +1,6 @@
 use std::time::Duration;
 use std::time::Instant;
 
-const VERSION: u64 = 1;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Log {
     index: u64,
@@ -26,7 +24,6 @@ pub struct LogMismatch {
 #[derive(Debug)]
 pub enum RequestType {
     Append(Vec<Log>),
-    Commit(u64),
     Heartbeat,
     Vote,
 }
@@ -52,7 +49,6 @@ enum ClusterState {
 
 #[derive(Debug)]
 pub struct Request {
-    version: u64,
     hash: u64,
     index: u64,
     target: u64,
@@ -65,9 +61,17 @@ pub struct Request {
 
 #[derive(Debug)]
 pub struct Response {
-    version: u64,
     target: u64,
     result: ResponseType,
+}
+
+struct Node {
+    index: u64,
+    log_index: u64,
+    log_term: u64,
+    log_commit: u64,
+    timer: Instant,
+    voted: bool,
 }
 
 pub trait Storage {
@@ -76,23 +80,17 @@ pub trait Storage {
     fn current_index(&self) -> u64;
     fn current_term(&self) -> u64;
     fn current_commit(&self) -> u64;
-    fn logs(&self, index: u64, term: u64) -> Vec<Log>;
+    fn logs(&self, since_index: u64, since_term: u64) -> Vec<Log>;
 }
 
 pub struct Cluster<S: Storage> {
     storage: S,
-    nodes: Vec<u64>,
-    timers: Vec<Instant>,
+    nodes: Vec<Node>,
     state: ClusterState,
     hash: u64,
     size: u64,
     index: u64,
     term: u64,
-    votes: u64,
-    log_index: u64,
-    log_term: u64,
-    log_commit: u64,
-    timer: Instant,
     election_timeout: Duration,
     heartbeat_timeout: Duration,
     term_timeout: Duration,
@@ -112,18 +110,31 @@ impl<S: Storage> Cluster<S> {
         Self {
             state: ClusterState::Election,
             nodes: (0..settings.size)
-                .filter(|i| *i != settings.index)
+                .map(|i| Node {
+                    index: i,
+                    log_index: if i == settings.index {
+                        storage.current_index()
+                    } else {
+                        0
+                    },
+                    log_term: if i == settings.index {
+                        storage.current_term()
+                    } else {
+                        0
+                    },
+                    log_commit: if i == settings.index {
+                        storage.current_commit()
+                    } else {
+                        0
+                    },
+                    timer: Instant::now(),
+                    voted: i == settings.index,
+                })
                 .collect(),
-            timers: vec![Instant::now(); settings.size as usize],
             hash: settings.hash,
             size: settings.size,
             index: settings.index,
             term: 0,
-            votes: 0,
-            log_index: storage.current_index(),
-            log_term: storage.current_term(),
-            log_commit: storage.current_commit(),
-            timer: Instant::now(),
             election_timeout: Duration::from_secs(settings.election_factor * settings.index),
             heartbeat_timeout: settings.heartbeat_timeout,
             term_timeout: settings.term_timeout,
@@ -133,24 +144,24 @@ impl<S: Storage> Cluster<S> {
 
     pub fn append(&mut self, log: Vec<u8>) -> Vec<Request> {
         let log = Log {
-            index: self.log_index,
-            term: self.log_term,
+            index: self.local().log_index,
+            term: self.term,
             data: log,
         };
-        self.log_index += 1;
-        self.log_term = self.term;
+        self.local_mut().log_index += 1;
+        self.local_mut().log_term = self.term;
         let requests = self
             .nodes
             .iter()
+            .filter(|node| self.index != node.index)
             .map(|node| Request {
-                version: VERSION,
                 hash: self.hash,
                 index: self.index,
-                target: *node,
+                target: node.index,
                 term: self.term,
-                log_index: self.log_index,
-                log_term: self.log_term,
-                log_commit: self.log_commit,
+                log_index: self.local().log_index,
+                log_term: self.local().log_term,
+                log_commit: self.local().log_commit,
                 data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
@@ -167,22 +178,22 @@ impl<S: Storage> Cluster<S> {
             }
 
             requests.iter().for_each(|request| {
-                self.timers[request.target as usize] = Instant::now();
+                self.node_mut(request.target).timer = Instant::now();
             });
 
             return Some(requests);
         } else {
             if let ClusterState::Election = self.state {
-                if self.timer.elapsed() >= self.election_timeout {
+                if self.local().timer.elapsed() >= self.election_timeout {
                     let requests = self.election();
-                    self.timer = Instant::now();
+                    self.local_mut().timer = Instant::now();
                     return Some(requests);
                 }
             }
 
-            if self.timer.elapsed() > self.term_timeout {
+            if self.local().timer.elapsed() > self.term_timeout {
                 self.state = ClusterState::Election;
-                self.timer = Instant::now();
+                self.local_mut().timer = Instant::now();
             }
         }
 
@@ -192,13 +203,11 @@ impl<S: Storage> Cluster<S> {
     pub fn request(&mut self, request: &Request) -> Response {
         let response = match request.data {
             RequestType::Append(ref logs) => self.append_request(request, logs),
-            RequestType::Commit(index) => self.commit_request(request, index),
             RequestType::Heartbeat => self.heartbeat_request(request),
             RequestType::Vote => self.vote_request(request),
         };
 
-        self.timers[request.index as usize] = Instant::now();
-        self.timer = Instant::now();
+        self.node_mut(request.target).timer = Instant::now();
 
         match response {
             Ok(response) => response,
@@ -212,43 +221,50 @@ impl<S: Storage> Cluster<S> {
         use ResponseType::*;
 
         match (&self.state, &request.data, &response.result) {
-            (Candidate, Vote, Ok) => self.vote_ok(request.term),
-            (Leader, Heartbeat | Append(_) | Commit(_), LogMismatch(values)) => {
-                let logs = self.storage.logs(
-                    values.index.local.unwrap_or_default(),
-                    values.term.local.unwrap_or_default(),
-                );
-                self.timers[request.target as usize] = Instant::now();
-                Some(vec![Request {
-                    version: VERSION,
-                    hash: self.hash,
-                    index: self.index,
-                    target: request.target,
-                    term: self.term,
-                    log_index: self.index,
-                    log_term: self.term,
-                    log_commit: self.log_commit,
-                    data: Append(logs),
-                }])
-            }
+            (Candidate, Vote, Ok) => self.vote_received(request),
+            (Leader, Heartbeat | Append(_), Ok) => self.commit(request),
+            (Leader, Heartbeat | Append(_), LogMismatch(values)) => self.reconcile(request, values),
             _ => None,
         }
     }
 
+    fn reconcile(&mut self, request: &Request, values: &LogMismatch) -> Option<Vec<Request>> {
+        let logs = self.storage.logs(
+            values.index.local.unwrap_or_default(),
+            values.term.local.unwrap_or_default(),
+        );
+        self.node_mut(request.target).timer = Instant::now();
+        Some(vec![Request {
+            hash: self.hash,
+            index: self.index,
+            target: request.target,
+            term: self.term,
+            log_index: self.local().log_index,
+            log_term: self.local().log_term,
+            log_commit: self.local().log_commit,
+            data: RequestType::Append(logs),
+        }])
+    }
+
     fn election(&mut self) -> Vec<Request> {
         self.state = ClusterState::Candidate;
-        self.votes = 1;
+        self.nodes
+            .iter_mut()
+            .filter(|node| self.index != node.index)
+            .for_each(|node| {
+                node.voted = false;
+            });
         self.nodes
             .iter()
+            .filter(|node| self.index != node.index)
             .map(|node| Request {
-                version: VERSION,
                 hash: self.hash,
                 index: self.index,
-                target: *node,
+                target: node.index,
                 term: self.term + 1,
-                log_index: self.log_index,
-                log_term: self.log_term,
-                log_commit: self.log_commit,
+                log_index: self.local().log_index,
+                log_term: self.local().log_term,
+                log_commit: self.local().log_commit,
                 data: RequestType::Vote,
             })
             .collect()
@@ -257,110 +273,127 @@ impl<S: Storage> Cluster<S> {
     fn append_request(&mut self, request: &Request, logs: &[Log]) -> Result<Response, Response> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
-
-        if request.term > self.term {
-            self.term = request.term;
-            self.state = ClusterState::Follower(request.index);
-        }
+        self.become_follower(request);
 
         for log in logs {
             self.validate_log_commit(request, log)?;
             self.append_storage(log);
         }
 
+        if self.local().log_commit < request.log_commit {
+            let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
+            self.commit_storage(available_commit);
+        }
+
         Self::ok(request)
     }
     fn append_storage(&mut self, log: &Log) {
-        self.log_index = log.index;
-        self.log_term = log.term;
         self.storage.append(log.clone());
+        self.local_mut().log_index = log.index + 1;
+        self.local_mut().log_term = log.term;
     }
 
-    fn commit(&mut self, index: u64) {
-        self.log_commit = index;
+    fn commit_storage(&mut self, index: u64) {
         self.storage.commit(index);
+        self.local_mut().log_commit = index;
     }
 
-    fn commit_request(&mut self, request: &Request, index: u64) -> Result<Response, Response> {
-        self.validate_hash(request)?;
-        self.validate_term(request)?;
+    fn commit(&mut self, request: &Request) -> Option<Vec<Request>> {
+        self.node_mut(request.target).log_index = request.log_index;
+        self.node_mut(request.target).log_term = request.log_term;
+        self.node_mut(request.target).log_commit = request.log_commit;
 
-        if request.term > self.term {
-            self.term = request.term;
-            self.state = ClusterState::Follower(request.index);
+        let quorum = self.size / 2 + 1;
+
+        if self.local().log_commit < request.log_index
+            && self
+                .nodes
+                .iter()
+                .filter(|node| node.log_index >= request.log_index)
+                .count() as u64
+                >= quorum
+        {
+            self.commit_storage(request.log_index);
+            return Some(self.heartbeat_no_timer());
         }
 
-        if self.log_commit < index {
-            self.commit(index);
-        }
-
-        Self::ok(request)
+        None
     }
 
     fn heartbeat(&mut self) -> Vec<Request> {
         self.nodes
             .iter()
-            .filter_map(|node| {
-                if self.timers[*node as usize].elapsed() > self.heartbeat_timeout {
-                    Some(Request {
-                        version: VERSION,
-                        hash: self.hash,
-                        index: self.index,
-                        target: *node,
-                        term: self.term,
-                        log_index: self.log_index,
-                        log_term: self.log_term,
-                        log_commit: self.log_commit,
-                        data: RequestType::Heartbeat,
-                    })
-                } else {
-                    None
-                }
+            .filter(|node| {
+                self.index != node.index
+                    && self.node(node.index).timer.elapsed() > self.heartbeat_timeout
             })
-            .collect()
-    }
-
-    fn heartbeat_no_timer(&mut self) -> Vec<Request> {
-        self.nodes
-            .iter()
             .map(|node| Request {
-                version: VERSION,
                 hash: self.hash,
                 index: self.index,
-                target: *node,
+                target: node.index,
                 term: self.term,
-                log_index: self.log_index,
-                log_term: self.log_term,
-                log_commit: self.log_commit,
+                log_index: self.local().log_index,
+                log_term: self.local().log_term,
+                log_commit: self.local().log_commit,
                 data: RequestType::Heartbeat,
             })
             .collect()
     }
 
+    fn heartbeat_no_timer(&mut self) -> Vec<Request> {
+        let requests: Vec<Request> = self
+            .nodes
+            .iter()
+            .filter(|node| self.index != node.index)
+            .map(|node| Request {
+                hash: self.hash,
+                index: self.index,
+                target: node.index,
+                term: self.term,
+                log_index: self.local().log_index,
+                log_term: self.local().log_term,
+                log_commit: self.local().log_commit,
+                data: RequestType::Heartbeat,
+            })
+            .collect();
+
+        requests.iter().for_each(|request| {
+            self.node_mut(request.target).timer = Instant::now();
+        });
+
+        requests
+    }
+
     fn heartbeat_request(&mut self, request: &Request) -> Result<Response, Response> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
-
-        if request.term > self.term {
-            self.term = request.term;
-            self.state = ClusterState::Follower(request.index);
-        }
-
+        self.become_follower(request);
         self.validate_log(request)?;
 
-        if request.log_commit > self.log_commit {
-            self.commit(request.log_commit);
+        if self.local().log_commit < request.log_commit {
+            let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
+            self.commit_storage(available_commit);
         }
 
         Self::ok(request)
     }
 
-    fn vote_ok(&mut self, term: u64) -> Option<Vec<Request>> {
-        self.votes += 1;
+    fn become_follower(&mut self, request: &Request) {
+        if self.term < request.term {
+            self.term = request.term;
+            self.state = ClusterState::Follower(request.index);
+        }
+    }
 
-        if self.votes > self.size / 2 {
+    fn vote_received(&mut self, request: &Request) -> Option<Vec<Request>> {
+        self.node_mut(request.target).voted = true;
+
+        let votes = self.nodes.iter().filter(|node| node.voted).count() as u64;
+        let quorum = self.size / 2;
+
+        if votes > quorum {
             self.state = ClusterState::Leader;
-            self.term = term;
+            self.term = request.term;
             return Some(self.heartbeat_no_timer());
         }
 
@@ -369,17 +402,16 @@ impl<S: Storage> Cluster<S> {
 
     fn vote_request(&mut self, request: &Request) -> Result<Response, Response> {
         self.validate_hash(request)?;
-        self.validate_no_leader(request)?;
+        self.validate_vote_state(request)?;
         self.validate_term_for_vote(request)?;
         self.validate_log_for_vote(request)?;
-        self.state = ClusterState::Voted(request.index);
+        self.state = ClusterState::Voted(request.term);
         Self::ok(request)
     }
 
     fn validate_hash(&self, request: &Request) -> Result<(), Response> {
-        if request.hash != self.hash {
+        if self.hash != request.hash {
             return Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::ClusterMismatch(MismatchedValues {
                     local: Some(self.hash),
@@ -391,10 +423,9 @@ impl<S: Storage> Cluster<S> {
         Ok(())
     }
 
-    fn validate_no_leader(&self, request: &Request) -> Result<(), Response> {
+    fn validate_vote_state(&self, request: &Request) -> Result<(), Response> {
         match self.state {
             ClusterState::Leader | ClusterState::Candidate => Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::LeaderMismatch(MismatchedValues {
                     local: Some(self.index),
@@ -402,55 +433,39 @@ impl<S: Storage> Cluster<S> {
                 }),
             }),
             ClusterState::Follower(leader) => Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::LeaderMismatch(MismatchedValues {
                     local: Some(leader),
                     requested: None,
                 }),
             }),
+            ClusterState::Voted(term) if request.term <= term => Err(Response {
+                target: request.index,
+                result: ResponseType::AlreadyVoted(MismatchedValues {
+                    local: Some(term),
+                    requested: Some(request.term),
+                }),
+            }),
             _ => Ok(()),
         }
     }
 
-    fn validate_leader(&self, request: &Request) -> Result<(), Response> {
-        match self.state {
-            ClusterState::Follower(leader) if request.index == leader => Ok(()),
-            ClusterState::Follower(leader) => Err(Response {
-                version: VERSION,
-                target: request.index,
-                result: ResponseType::LeaderMismatch(MismatchedValues {
-                    local: Some(leader),
-                    requested: Some(request.index),
-                }),
-            }),
-            _ => Err(Response {
-                version: VERSION,
-                target: request.index,
-                result: ResponseType::LeaderMismatch(MismatchedValues {
-                    local: None,
-                    requested: Some(request.index),
-                }),
-            }),
-        }
-    }
-
     fn validate_log(&self, request: &Request) -> Result<(), Response> {
-        if request.log_index != self.log_index || request.log_term != self.log_term {
+        if self.local().log_index != request.log_index || self.local().log_term != request.log_term
+        {
             return Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
-                        local: Some(self.log_index),
+                        local: Some(self.local().log_index),
                         requested: Some(request.log_index),
                     },
                     term: MismatchedValues {
-                        local: Some(self.log_term),
+                        local: Some(self.local().log_term),
                         requested: Some(request.log_term),
                     },
                     commit: MismatchedValues {
-                        local: Some(self.log_commit),
+                        local: Some(self.local().log_commit),
                         requested: Some(request.log_commit),
                     },
                 }),
@@ -461,21 +476,20 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn validate_log_commit(&self, request: &Request, log: &Log) -> Result<(), Response> {
-        if log.index < self.log_commit {
+        if self.local().log_commit > log.index {
             return Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
-                        local: Some(self.log_index),
+                        local: Some(self.local().log_index),
                         requested: Some(request.log_index),
                     },
                     term: MismatchedValues {
-                        local: Some(self.log_term),
+                        local: Some(self.local().log_term),
                         requested: Some(request.log_term),
                     },
                     commit: MismatchedValues {
-                        local: Some(self.log_commit),
+                        local: Some(self.local().log_commit),
                         requested: Some(request.log_commit),
                     },
                 }),
@@ -486,24 +500,23 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn validate_log_for_vote(&self, request: &Request) -> Result<(), Response> {
-        if request.log_index < self.log_index
-            || request.log_term < self.log_term
-            || request.log_commit < self.log_commit
+        if self.local().log_index > request.log_index
+            || self.local().log_term > request.log_term
+            || self.local().log_commit > request.log_commit
         {
             return Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
-                        local: Some(self.log_index),
+                        local: Some(self.local().log_index),
                         requested: Some(request.log_index),
                     },
                     term: MismatchedValues {
-                        local: Some(self.log_term),
+                        local: Some(self.local().log_term),
                         requested: Some(request.log_term),
                     },
                     commit: MismatchedValues {
-                        local: Some(self.log_commit),
+                        local: Some(self.local().log_commit),
                         requested: Some(request.log_commit),
                     },
                 }),
@@ -514,9 +527,8 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn validate_current_term(&self, request: &Request) -> Result<(), Response> {
-        if request.term != self.term {
+        if self.term != request.term {
             return Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::TermMismatch(MismatchedValues {
                     local: Some(self.term),
@@ -529,9 +541,8 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn validate_term_for_vote(&self, request: &Request) -> Result<(), Response> {
-        if request.term <= self.term {
+        if self.term >= request.term {
             return Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::TermMismatch(MismatchedValues {
                     local: Some(self.term),
@@ -544,9 +555,8 @@ impl<S: Storage> Cluster<S> {
     }
 
     fn validate_term(&self, request: &Request) -> Result<(), Response> {
-        if request.term < self.term {
+        if self.term > request.term {
             return Err(Response {
-                version: VERSION,
                 target: request.index,
                 result: ResponseType::TermMismatch(MismatchedValues {
                     local: Some(self.term),
@@ -560,10 +570,25 @@ impl<S: Storage> Cluster<S> {
 
     fn ok(request: &Request) -> Result<Response, Response> {
         Ok(Response {
-            version: VERSION,
             target: request.index,
             result: ResponseType::Ok,
         })
+    }
+
+    fn node(&self, index: u64) -> &Node {
+        &self.nodes[index as usize]
+    }
+
+    fn node_mut(&mut self, index: u64) -> &mut Node {
+        &mut self.nodes[index as usize]
+    }
+
+    fn local(&self) -> &Node {
+        self.node(self.index)
+    }
+
+    fn local_mut(&mut self) -> &mut Node {
+        self.node_mut(self.index)
     }
 }
 
@@ -578,6 +603,7 @@ mod test {
     use tokio::sync::mpsc::Sender;
     use tokio::sync::RwLock;
 
+    #[derive(Debug, Default, Clone, PartialEq)]
     struct TestStorage {
         logs: Vec<Log>,
         commit: u64,
@@ -768,35 +794,33 @@ mod test {
 
         async fn expect_storage_synced(&self, left: u64, right: u64) {
             let timer = Instant::now();
-            let mut left_log = vec![];
-            let mut right_log = vec![];
+            let mut left_storage = TestStorage::default();
+            let mut right_storage = TestStorage::default();
 
             while timer.elapsed() < TIMEOUT {
                 tokio::time::sleep(Duration::from_millis(10)).await;
-                left_log = self.nodes.read().await[left as usize]
+                left_storage = self.nodes.read().await[left as usize]
                     .read()
                     .await
                     .cluster
                     .storage
-                    .logs
                     .clone();
 
-                right_log = self.nodes.read().await[right as usize]
+                right_storage = self.nodes.read().await[right as usize]
                     .read()
                     .await
                     .cluster
                     .storage
-                    .logs
                     .clone();
 
-                if left_log == right_log {
+                if left_storage == right_storage {
                     return;
                 }
             }
 
             panic!(
                 "{left} is not in sync with {right} in {:?}:\nLEFT\n{:?}\nRIGHT:\n{:?}",
-                TIMEOUT, left_log, right_log
+                TIMEOUT, left_storage, right_storage
             );
         }
 
@@ -855,9 +879,9 @@ mod test {
         cluster.expect_leader(0).await;
         cluster.block(1).await;
         cluster.append(0, b"0".to_vec()).await?;
+        cluster.expect_storage_synced(0, 2).await;
         cluster.unblock().await;
         cluster.expect_storage_synced(0, 1).await;
-        cluster.expect_storage_synced(0, 2).await;
         Ok(())
     }
 
@@ -872,8 +896,8 @@ mod test {
         cluster.block(2).await;
         cluster.append(0, b"1".to_vec()).await?;
         cluster.append(0, b"2".to_vec()).await?;
-        cluster.unblock().await;
         cluster.expect_storage_synced(0, 1).await;
+        cluster.unblock().await;
         cluster.expect_storage_synced(0, 2).await;
         Ok(())
     }
@@ -887,7 +911,19 @@ mod test {
         cluster.append(0, b"0".to_vec()).await?;
         cluster.expect_leader(1).await;
         cluster.append(1, b"1".to_vec()).await?;
+        cluster.expect_storage_synced(1, 2).await;
         cluster.unblock().await;
+        cluster.expect_storage_synced(0, 1).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn commit() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::new(3);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+        cluster.append(0, b"0".to_vec()).await?;
+        cluster.expect_leader(1).await;
         cluster.expect_storage_synced(0, 1).await;
         cluster.expect_storage_synced(0, 2).await;
         Ok(())

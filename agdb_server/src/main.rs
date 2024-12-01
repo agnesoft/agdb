@@ -6,6 +6,7 @@ mod db_pool;
 mod error_code;
 mod logger;
 mod password;
+#[allow(dead_code)]
 mod raft;
 mod routes;
 mod server_db;

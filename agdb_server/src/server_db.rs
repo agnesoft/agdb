@@ -132,7 +132,8 @@ impl ServerDb {
                     .elements[0]
                     .values[0]
                     .value
-                    .to_u64()?;
+                    .to_u64()
+                    .unwrap_or_default();
                 let log: Log = t
                     .exec(
                         QueryBuilder::select()
@@ -145,7 +146,12 @@ impl ServerDb {
                             .distance(CountComparison::Equal(2))
                             .query(),
                     )?
-                    .try_into()?;
+                    .try_into()
+                    .unwrap_or(Log {
+                        index: 0,
+                        term: 0,
+                        data: vec![],
+                    });
                 Ok((log.index, log.term, commit))
             })
     }

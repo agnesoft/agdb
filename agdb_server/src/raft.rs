@@ -67,7 +67,7 @@ pub(crate) struct Request {
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Response {
     pub(crate) target: u64,
-    result: ResponseType,
+    pub(crate) result: ResponseType,
 }
 
 struct Node {

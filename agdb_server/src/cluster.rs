@@ -36,8 +36,8 @@ pub(crate) struct ClusterNodeImpl {
 pub(crate) struct ClusterImpl {
     pub(crate) index: usize,
     pub(crate) nodes: Vec<ClusterNode>,
-    pub(crate) raft: Arc<RwLock<raft::Cluster<ClusterStorage>>>,
-    pub(crate) responses: RwLock<UnboundedReceiver<(Request, Response)>>,
+    pub(crate) raft: Option<Arc<RwLock<raft::Cluster<ClusterStorage>>>>,
+    pub(crate) responses: Option<RwLock<UnboundedReceiver<(Request, Response)>>>,
 }
 
 impl ClusterNodeImpl {
@@ -70,41 +70,45 @@ impl ClusterNodeImpl {
 }
 
 pub(crate) async fn new(config: &Config, db: &ServerDb) -> ServerResult<Cluster> {
-    let mut nodes = vec![];
-    let mut sorted_cluster: Vec<String> =
-        config.cluster.iter().map(|url| url.to_string()).collect();
-    sorted_cluster.sort();
-    let index = config
-        .cluster
-        .iter()
-        .position(|url| url == &config.address)
-        .unwrap();
-    let hash = sorted_cluster.stable_hash();
-    let storage = ClusterStorage::new(db.clone()).await?;
-    let settings = raft::ClusterSettings {
-        index: index as u64,
-        hash,
-        size: config.cluster.len() as u64,
-        election_factor: 1,
-        heartbeat_timeout: Duration::from_secs(1),
-        term_timeout: Duration::from_secs(3),
-    };
-    let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
-    let (requests, responses) = tokio::sync::mpsc::unbounded_channel();
+    if let Some(index) = config.cluster.iter().position(|url| url == &config.address) {
+        let mut nodes = vec![];
+        let mut sorted_cluster: Vec<String> =
+            config.cluster.iter().map(|url| url.to_string()).collect();
+        sorted_cluster.sort();
+        let hash = sorted_cluster.stable_hash();
+        let storage = ClusterStorage::new(db.clone()).await?;
+        let settings = raft::ClusterSettings {
+            index: index as u64,
+            hash,
+            size: config.cluster.len() as u64,
+            election_factor: 1,
+            heartbeat_timeout: Duration::from_secs(1),
+            term_timeout: Duration::from_secs(3),
+        };
+        let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
+        let (requests, responses) = tokio::sync::mpsc::unbounded_channel();
 
-    for node in config.cluster.iter() {
-        nodes.push(ClusterNode::new(ClusterNodeImpl::new(
-            node.as_str(),
-            &config.cluster_token,
-            requests.clone(),
-        )));
+        for node in config.cluster.iter() {
+            nodes.push(ClusterNode::new(ClusterNodeImpl::new(
+                node.as_str(),
+                &config.cluster_token,
+                requests.clone(),
+            )));
+        }
+
+        return Ok(Cluster::new(ClusterImpl {
+            index,
+            nodes,
+            raft: Some(raft),
+            responses: Some(RwLock::new(responses)),
+        }));
     }
 
     Ok(Cluster::new(ClusterImpl {
-        index,
-        nodes,
-        raft,
-        responses: RwLock::new(responses),
+        index: 0,
+        nodes: vec![],
+        raft: None,
+        responses: None,
     }))
 }
 
@@ -132,10 +136,19 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     let response_cluster = cluster.clone();
     tokio::spawn(async move {
         while !responses_shutdown_signal.load(Ordering::Relaxed) {
-            if let Some((request, response)) = response_cluster.responses.write().await.recv().await
+            if let Some((request, response)) = response_cluster
+                .responses
+                .as_ref()
+                .expect("responses is initialized")
+                .write()
+                .await
+                .recv()
+                .await
             {
                 if let Some(requests) = response_cluster
                     .raft
+                    .as_ref()
+                    .expect("raft is initialized")
                     .write()
                     .await
                     .response(&request, &response)
@@ -153,7 +166,14 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     });
 
     while !shutdown_signal.load(Ordering::Relaxed) {
-        if let Some(requests) = cluster.raft.write().await.process() {
+        if let Some(requests) = cluster
+            .raft
+            .as_ref()
+            .expect("raft is initialized")
+            .write()
+            .await
+            .process()
+        {
             for request in requests {
                 cluster.nodes[request.target as usize]
                     .requests_sender
@@ -166,10 +186,12 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
 }
 
 pub(crate) async fn append(cluster: Cluster, data: Vec<u8>) -> ServerResult<()> {
-    for request in cluster.raft.write().await.append(data).await {
-        cluster.nodes[request.target as usize]
-            .requests_sender
-            .send(request)?;
+    if let Some(raft) = &cluster.raft {
+        for request in raft.write().await.append(data).await {
+            cluster.nodes[request.target as usize]
+                .requests_sender
+                .send(request)?;
+        }
     }
 
     Ok(())

@@ -58,10 +58,8 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static $openAPITypes = [
         'address' => 'string',
-        'commit' => 'int',
         'leader' => 'bool',
-        'status' => 'bool',
-        'term' => 'int'
+        'status' => 'bool'
     ];
 
     /**
@@ -73,10 +71,8 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static $openAPIFormats = [
         'address' => null,
-        'commit' => 'int64',
         'leader' => null,
-        'status' => null,
-        'term' => 'int64'
+        'status' => null
     ];
 
     /**
@@ -86,10 +82,8 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static array $openAPINullables = [
         'address' => false,
-        'commit' => false,
         'leader' => false,
-        'status' => false,
-        'term' => false
+        'status' => false
     ];
 
     /**
@@ -179,10 +173,8 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $attributeMap = [
         'address' => 'address',
-        'commit' => 'commit',
         'leader' => 'leader',
-        'status' => 'status',
-        'term' => 'term'
+        'status' => 'status'
     ];
 
     /**
@@ -192,10 +184,8 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $setters = [
         'address' => 'setAddress',
-        'commit' => 'setCommit',
         'leader' => 'setLeader',
-        'status' => 'setStatus',
-        'term' => 'setTerm'
+        'status' => 'setStatus'
     ];
 
     /**
@@ -205,10 +195,8 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $getters = [
         'address' => 'getAddress',
-        'commit' => 'getCommit',
         'leader' => 'getLeader',
-        'status' => 'getStatus',
-        'term' => 'getTerm'
+        'status' => 'getStatus'
     ];
 
     /**
@@ -269,10 +257,8 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     public function __construct(array $data = null)
     {
         $this->setIfExists('address', $data ?? [], null);
-        $this->setIfExists('commit', $data ?? [], null);
         $this->setIfExists('leader', $data ?? [], null);
         $this->setIfExists('status', $data ?? [], null);
-        $this->setIfExists('term', $data ?? [], null);
     }
 
     /**
@@ -305,26 +291,12 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         if ($this->container['address'] === null) {
             $invalidProperties[] = "'address' can't be null";
         }
-        if ($this->container['commit'] === null) {
-            $invalidProperties[] = "'commit' can't be null";
-        }
-        if (($this->container['commit'] < 0)) {
-            $invalidProperties[] = "invalid value for 'commit', must be bigger than or equal to 0.";
-        }
-
         if ($this->container['leader'] === null) {
             $invalidProperties[] = "'leader' can't be null";
         }
         if ($this->container['status'] === null) {
             $invalidProperties[] = "'status' can't be null";
         }
-        if ($this->container['term'] === null) {
-            $invalidProperties[] = "'term' can't be null";
-        }
-        if (($this->container['term'] < 0)) {
-            $invalidProperties[] = "invalid value for 'term', must be bigger than or equal to 0.";
-        }
-
         return $invalidProperties;
     }
 
@@ -363,38 +335,6 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable address cannot be null');
         }
         $this->container['address'] = $address;
-
-        return $this;
-    }
-
-    /**
-     * Gets commit
-     *
-     * @return int
-     */
-    public function getCommit()
-    {
-        return $this->container['commit'];
-    }
-
-    /**
-     * Sets commit
-     *
-     * @param int $commit commit
-     *
-     * @return self
-     */
-    public function setCommit($commit)
-    {
-        if (is_null($commit)) {
-            throw new \InvalidArgumentException('non-nullable commit cannot be null');
-        }
-
-        if (($commit < 0)) {
-            throw new \InvalidArgumentException('invalid value for $commit when calling ClusterStatus., must be bigger than or equal to 0.');
-        }
-
-        $this->container['commit'] = $commit;
 
         return $this;
     }
@@ -449,38 +389,6 @@ class ClusterStatus implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable status cannot be null');
         }
         $this->container['status'] = $status;
-
-        return $this;
-    }
-
-    /**
-     * Gets term
-     *
-     * @return int
-     */
-    public function getTerm()
-    {
-        return $this->container['term'];
-    }
-
-    /**
-     * Sets term
-     *
-     * @param int $term term
-     *
-     * @return self
-     */
-    public function setTerm($term)
-    {
-        if (is_null($term)) {
-            throw new \InvalidArgumentException('non-nullable term cannot be null');
-        }
-
-        if (($term < 0)) {
-            throw new \InvalidArgumentException('invalid value for $term when calling ClusterStatus., must be bigger than or equal to 0.');
-        }
-
-        $this->container['term'] = $term;
 
         return $this;
     }

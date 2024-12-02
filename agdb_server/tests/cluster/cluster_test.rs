@@ -22,7 +22,7 @@ async fn wait_for_leader(
         if status.1.iter().any(|s| s.leader) {
             return Ok(status.1);
         }
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        std::thread::sleep(std::time::Duration::from_millis(1000));
     }
 
     Err(anyhow::anyhow!(

@@ -37,8 +37,8 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
       - run: cargo llvm-cov clean --workspace
-      - run: cargo llvm-cov --package agdb_server --all-features --no-report
       - run: cargo llvm-cov --package agdb_server --all-features --no-report -- --ignored
+      - run: cargo llvm-cov --package agdb_server --all-features --no-report
       - run: cargo llvm-cov report --ignore-filename-regex "agdb(.|..)src|agdb_derive|agdb_api|api.rs" --fail-uncovered-functions 23 --show-missing-lines
 
   agdb_server_test:

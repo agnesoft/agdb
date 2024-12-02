@@ -185,6 +185,7 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     Ok(())
 }
 
+#[allow(dead_code)]
 pub(crate) async fn append(cluster: Cluster, data: Vec<u8>) -> ServerResult<()> {
     if let Some(raft) = &cluster.raft {
         for request in raft.write().await.append(data).await {

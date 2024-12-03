@@ -61,14 +61,20 @@ impl ClusterNodeImpl {
     }
 
     async fn send(&self, request: &raft::Request) -> Option<raft::Response> {
-        if let Ok((_, response)) = self
+        match self
             .client
             .post(&self.url, &Some(request), &self.token)
             .await
         {
-            Some(response)
-        } else {
-            None
+            Ok((_, response)) => Some(response),
+            Err(e) => {
+                tracing::warn!(
+                    "Error sending request to cluster node {}: {:?}",
+                    request.target,
+                    e
+                );
+                None
+            }
         }
     }
 }

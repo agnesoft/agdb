@@ -59,8 +59,6 @@ pub struct ClusterStatus {
     pub address: String,
     pub status: bool,
     pub leader: bool,
-    pub term: u64,
-    pub commit: u64,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize, ToSchema, PartialEq)]
@@ -239,8 +237,6 @@ mod tests {
                 address: "localhost".to_string(),
                 status: true,
                 leader: false,
-                term: 0,
-                commit: 0,
             }
         );
     }
@@ -340,8 +336,6 @@ mod tests {
             address: "localhost".to_string(),
             status: true,
             leader: false,
-            term: 0,
-            commit: 0,
         };
         let data = serde_json::to_string(&cs1).unwrap();
         let cs2: ClusterStatus = serde_json::from_str(&data).unwrap();

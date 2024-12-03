@@ -6,7 +6,6 @@ mod db_pool;
 mod error_code;
 mod logger;
 mod password;
-#[allow(dead_code)]
 mod raft;
 mod routes;
 mod server_db;
@@ -29,8 +28,8 @@ async fn main() -> ServerResult {
         .init();
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
-    let cluster = cluster::new(&config)?;
     let server_db = server_db::new(&config).await?;
+    let cluster = cluster::new(&config, &server_db).await?;
     let db_pool = DbPool::new(&config, &server_db).await?;
 
     let app = app::app(

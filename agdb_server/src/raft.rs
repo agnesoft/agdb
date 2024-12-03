@@ -1,36 +1,41 @@
+use crate::server_error::ServerResult;
+use agdb::UserValue;
+use serde::Deserialize;
+use serde::Serialize;
 use std::time::Duration;
 use std::time::Instant;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Log {
-    index: u64,
-    term: u64,
-    data: Vec<u8>,
+#[derive(Debug, Clone, PartialEq, UserValue, Serialize, Deserialize)]
+pub(crate) struct Log {
+    pub(crate) index: u64,
+    pub(crate) term: u64,
+    pub(crate) data: Vec<u8>,
 }
 
-#[derive(Debug)]
-pub struct MismatchedValues {
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct MismatchedValues {
     local: Option<u64>,
     requested: Option<u64>,
 }
 
-#[derive(Debug)]
-pub struct LogMismatch {
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct LogMismatch {
     index: MismatchedValues,
     term: MismatchedValues,
     commit: MismatchedValues,
 }
 
-#[derive(Debug)]
-pub enum RequestType {
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) enum RequestType {
     Append(Vec<Log>),
     Heartbeat,
     Vote,
 }
 
-#[derive(Debug)]
-pub enum ResponseType {
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) enum ResponseType {
     Ok,
+    CommitError(String),
     ClusterMismatch(MismatchedValues),
     LeaderMismatch(MismatchedValues),
     TermMismatch(MismatchedValues),
@@ -47,11 +52,11 @@ enum ClusterState {
     Voted(u64),
 }
 
-#[derive(Debug)]
-pub struct Request {
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct Request {
     hash: u64,
-    index: u64,
-    target: u64,
+    pub(crate) index: u64,
+    pub(crate) target: u64,
     term: u64,
     log_index: u64,
     log_term: u64,
@@ -59,10 +64,10 @@ pub struct Request {
     data: RequestType,
 }
 
-#[derive(Debug)]
-pub struct Response {
-    target: u64,
-    result: ResponseType,
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct Response {
+    pub(crate) target: u64,
+    pub(crate) result: ResponseType,
 }
 
 struct Node {
@@ -74,16 +79,16 @@ struct Node {
     voted: bool,
 }
 
-pub trait Storage {
-    fn append(&mut self, log: Log);
-    fn commit(&mut self, index: u64);
+pub(crate) trait Storage {
+    async fn append(&mut self, log: Log);
+    async fn commit(&mut self, index: u64) -> ServerResult<()>;
     fn current_index(&self) -> u64;
     fn current_term(&self) -> u64;
     fn current_commit(&self) -> u64;
-    fn logs(&self, since_index: u64, since_term: u64) -> Vec<Log>;
+    async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log>>;
 }
 
-pub struct Cluster<S: Storage> {
+pub(crate) struct Cluster<S: Storage> {
     storage: S,
     nodes: Vec<Node>,
     state: ClusterState,
@@ -96,17 +101,17 @@ pub struct Cluster<S: Storage> {
     term_timeout: Duration,
 }
 
-pub struct ClusterSettings {
-    pub index: u64,
-    pub size: u64,
-    pub hash: u64,
-    pub election_factor: u64,
-    pub heartbeat_timeout: Duration,
-    pub term_timeout: Duration,
+pub(crate) struct ClusterSettings {
+    pub(crate) index: u64,
+    pub(crate) size: u64,
+    pub(crate) hash: u64,
+    pub(crate) election_factor: u64,
+    pub(crate) heartbeat_timeout: Duration,
+    pub(crate) term_timeout: Duration,
 }
 
 impl<S: Storage> Cluster<S> {
-    pub fn new(storage: S, settings: ClusterSettings) -> Self {
+    pub(crate) fn new(storage: S, settings: ClusterSettings) -> Self {
         Self {
             state: ClusterState::Election,
             nodes: (0..settings.size)
@@ -142,7 +147,7 @@ impl<S: Storage> Cluster<S> {
         }
     }
 
-    pub fn append(&mut self, log: Vec<u8>) -> Vec<Request> {
+    pub(crate) async fn append(&mut self, log: Vec<u8>) -> Vec<Request> {
         let log = Log {
             index: self.local().log_index,
             term: self.term,
@@ -165,11 +170,23 @@ impl<S: Storage> Cluster<S> {
                 data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
-        self.storage.append(log);
+        self.storage.append(log).await;
         requests
     }
 
-    pub fn process(&mut self) -> Option<Vec<Request>> {
+    pub(crate) fn leader(&self) -> Option<u64> {
+        if let ClusterState::Leader = self.state {
+            return Some(self.index);
+        }
+
+        if let ClusterState::Follower(leader) = self.state {
+            return Some(leader);
+        }
+
+        None
+    }
+
+    pub(crate) fn process(&mut self) -> Option<Vec<Request>> {
         if let ClusterState::Leader = self.state {
             let requests = self.heartbeat();
 
@@ -200,10 +217,10 @@ impl<S: Storage> Cluster<S> {
         None
     }
 
-    pub fn request(&mut self, request: &Request) -> Response {
+    pub(crate) async fn request(&mut self, request: &Request) -> Response {
         let response = match request.data {
-            RequestType::Append(ref logs) => self.append_request(request, logs),
-            RequestType::Heartbeat => self.heartbeat_request(request),
+            RequestType::Append(ref logs) => self.append_request(request, logs).await,
+            RequestType::Heartbeat => self.heartbeat_request(request).await,
             RequestType::Vote => self.vote_request(request),
         };
 
@@ -215,26 +232,31 @@ impl<S: Storage> Cluster<S> {
         }
     }
 
-    pub fn response(&mut self, request: &Request, response: &Response) -> Option<Vec<Request>> {
+    pub(crate) async fn response(
+        &mut self,
+        request: &Request,
+        response: &Response,
+    ) -> ServerResult<Option<Vec<Request>>> {
         use ClusterState::*;
         use RequestType::*;
-        use ResponseType::*;
+        use ResponseType::LogMismatch;
+        use ResponseType::Ok as OK;
 
         match (&self.state, &request.data, &response.result) {
-            (Candidate, Vote, Ok) => self.vote_received(request),
-            (Leader, Heartbeat | Append(_), Ok) => self.commit(request),
-            (Leader, Heartbeat | Append(_), LogMismatch(_)) => self.reconcile(request),
-            _ => None,
+            (Candidate, Vote, OK) => Ok(self.vote_received(request)),
+            (Leader, Heartbeat | Append(_), OK) => self.commit(request).await,
+            (Leader, Heartbeat | Append(_), LogMismatch(_)) => self.reconcile(request).await,
+            _ => Ok(None),
         }
     }
 
-    fn reconcile(&mut self, request: &Request) -> Option<Vec<Request>> {
-        let logs = self.storage.logs(
-            self.node(request.target).log_index,
-            self.node(request.target).log_term,
-        );
+    async fn reconcile(&mut self, request: &Request) -> ServerResult<Option<Vec<Request>>> {
+        let logs = self
+            .storage
+            .logs(self.node(request.target).log_index)
+            .await?;
         self.node_mut(request.target).timer = Instant::now();
-        Some(vec![Request {
+        Ok(Some(vec![Request {
             hash: self.hash,
             index: self.index,
             target: request.target,
@@ -243,7 +265,7 @@ impl<S: Storage> Cluster<S> {
             log_term: self.local().log_term,
             log_commit: self.local().log_commit,
             data: RequestType::Append(logs),
-        }])
+        }]))
     }
 
     fn election(&mut self) -> Vec<Request> {
@@ -270,7 +292,11 @@ impl<S: Storage> Cluster<S> {
             .collect()
     }
 
-    fn append_request(&mut self, request: &Request, logs: &[Log]) -> Result<Response, Response> {
+    async fn append_request(
+        &mut self,
+        request: &Request,
+        logs: &[Log],
+    ) -> Result<Response, Response> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
         self.become_follower(request);
@@ -278,28 +304,32 @@ impl<S: Storage> Cluster<S> {
 
         for log in logs {
             self.validate_log_commit(request, log)?;
-            self.append_storage(log);
+            self.append_storage(log).await;
         }
 
         if self.local().log_commit < request.log_commit {
             let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
-            self.commit_storage(available_commit);
+            self.commit_storage(available_commit)
+                .await
+                .map_err(|e| self.commit_error(request, e.description))?;
         }
 
         Self::ok(request)
     }
-    fn append_storage(&mut self, log: &Log) {
-        self.storage.append(log.clone());
+
+    async fn append_storage(&mut self, log: &Log) {
+        self.storage.append(log.clone()).await;
         self.local_mut().log_index = log.index + 1;
         self.local_mut().log_term = log.term;
     }
 
-    fn commit_storage(&mut self, index: u64) {
-        self.storage.commit(index);
+    async fn commit_storage(&mut self, index: u64) -> ServerResult<()> {
+        self.storage.commit(index).await?;
         self.local_mut().log_commit = index;
+        Ok(())
     }
 
-    fn commit(&mut self, request: &Request) -> Option<Vec<Request>> {
+    async fn commit(&mut self, request: &Request) -> ServerResult<Option<Vec<Request>>> {
         self.node_mut(request.target).log_index = request.log_index;
         self.node_mut(request.target).log_term = request.log_term;
         self.node_mut(request.target).log_commit = request.log_commit;
@@ -314,11 +344,11 @@ impl<S: Storage> Cluster<S> {
                 .count() as u64
                 >= quorum
         {
-            self.commit_storage(request.log_index);
-            return Some(self.heartbeat_no_timer());
+            self.commit_storage(request.log_index).await?;
+            return Ok(Some(self.heartbeat_no_timer()));
         }
 
-        None
+        Ok(None)
     }
 
     fn heartbeat(&mut self) -> Vec<Request> {
@@ -365,7 +395,7 @@ impl<S: Storage> Cluster<S> {
         requests
     }
 
-    fn heartbeat_request(&mut self, request: &Request) -> Result<Response, Response> {
+    async fn heartbeat_request(&mut self, request: &Request) -> Result<Response, Response> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
         self.become_follower(request);
@@ -374,10 +404,19 @@ impl<S: Storage> Cluster<S> {
 
         if self.local().log_commit < request.log_commit {
             let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
-            self.commit_storage(available_commit);
+            self.commit_storage(available_commit)
+                .await
+                .map_err(|e| self.commit_error(request, e.description))?;
         }
 
         Self::ok(request)
+    }
+
+    fn commit_error(&mut self, request: &Request, error: String) -> Response {
+        Response {
+            target: request.index,
+            result: ResponseType::CommitError(error),
+        }
     }
 
     fn become_follower(&mut self, request: &Request) {
@@ -589,6 +628,7 @@ impl<S: Storage> Cluster<S> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::anyhow;
     use std::sync::atomic::AtomicBool;
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
@@ -617,13 +657,14 @@ mod test {
     }
 
     impl Storage for TestStorage {
-        fn append(&mut self, log: Log) {
+        async fn append(&mut self, log: Log) {
             self.logs.truncate(log.index as usize);
             self.logs.push(log);
         }
 
-        fn commit(&mut self, index: u64) {
+        async fn commit(&mut self, index: u64) -> ServerResult<()> {
             self.commit = index;
+            Ok(())
         }
 
         fn current_index(&self) -> u64 {
@@ -638,8 +679,8 @@ mod test {
             self.commit
         }
 
-        fn logs(&self, index: u64, _term: u64) -> Vec<Log> {
-            self.logs[index as usize..].to_vec()
+        async fn logs(&self, index: u64) -> ServerResult<Vec<Log>> {
+            Ok(self.logs[index as usize..].to_vec())
         }
     }
 
@@ -690,7 +731,7 @@ mod test {
                         let blocked_node = blocked.load(Ordering::Relaxed);
                         if request.target != blocked_node && request.index != blocked_node {
                             let target = nodes.read().await[request.target as usize].clone();
-                            let response = target.write().await.cluster.request(&request);
+                            let response = target.write().await.cluster.request(&request).await;
                             responses_channel.send((request, response)).await?;
                         } else {
                             tracing::info!("Blocked: {:?}", request);
@@ -709,8 +750,13 @@ mod test {
                     if let Some((request, response)) = responses_receiver.recv().await {
                         tracing::info!("{:?} -> {:?}", request, response);
                         let origin = nodes.read().await[response.target as usize].clone();
-                        let new_requests =
-                            origin.write().await.cluster.response(&request, &response);
+                        let new_requests = origin
+                            .write()
+                            .await
+                            .cluster
+                            .response(&request, &response)
+                            .await
+                            .map_err(|e| anyhow!(e.description))?;
                         if let Some(new_requests) = new_requests {
                             for req in new_requests {
                                 req_channel.send(req).await?;
@@ -823,7 +869,8 @@ mod test {
                 .write()
                 .await
                 .cluster
-                .append(log);
+                .append(log)
+                .await;
 
             for request in requests {
                 if let Some(channel) = &self.requests_channel {

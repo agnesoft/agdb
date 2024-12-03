@@ -78,7 +78,6 @@ async fn create_cluster(
 }
 
 #[tokio::test]
-#[ignore = "Unstable on GitHub runners when run with coverage enabled"]
 async fn cluster_rebalance() -> anyhow::Result<()> {
     let mut servers = create_cluster(3).await?;
 
@@ -110,51 +109,4 @@ async fn cluster_status() {
 
     assert_eq!(code, 200);
     assert_eq!(status.len(), 0);
-}
-
-#[tokio::test]
-async fn heartbeat_no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
-    let status = client
-        .post(server.full_url("/cluster/heartbeat?cluster_hash=test&term=1&leader=0"))
-        .send()
-        .await?
-        .status();
-
-    assert_eq!(status, 401);
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn vote_no_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
-    let status = client
-        .get(server.full_url("/cluster/vote?cluster_hash=test&term=1&leader=0"))
-        .send()
-        .await?
-        .status();
-
-    assert_eq!(status, 401);
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn wrong_token() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
-
-    let status = client
-        .get(server.full_url("/cluster/vote?cluster_hash=test&term=1&leader=0"))
-        .bearer_auth("WRONG")
-        .send()
-        .await?
-        .status();
-
-    assert_eq!(status, 401);
-
-    Ok(())
 }

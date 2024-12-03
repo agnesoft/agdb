@@ -7,6 +7,8 @@ use crate::raft::Storage;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
 use agdb::StableHash;
+use agdb_api::HttpClient;
+use agdb_api::ReqwestClient;
 use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -23,7 +25,7 @@ pub(crate) type Cluster = Arc<ClusterImpl>;
 type ClusterNode = Arc<ClusterNodeImpl>;
 
 pub(crate) struct ClusterNodeImpl {
-    client: reqwest::Client,
+    client: ReqwestClient,
     url: String,
     token: Option<String>,
     requests_sender: UnboundedSender<Request>,
@@ -49,7 +51,7 @@ impl ClusterNodeImpl {
         let (requests_sender, requests_receiver) = tokio::sync::mpsc::unbounded_channel();
 
         Self {
-            client: reqwest::Client::new(),
+            client: ReqwestClient::new(),
             url: format!("{base}api/v1/cluster"),
             token: Some(token.to_string()),
             requests_sender,
@@ -58,18 +60,16 @@ impl ClusterNodeImpl {
         }
     }
 
-    async fn send(&self, request: &raft::Request) -> ServerResult<Option<raft::Response>> {
-        Ok(Some(
-            self.client
-                .post(&self.url)
-                .timeout(Duration::from_secs(3))
-                .bearer_auth(self.token.as_ref().expect("token is initialized"))
-                .json(request)
-                .send()
-                .await?
-                .json()
-                .await?,
-        ))
+    async fn send(&self, request: &raft::Request) -> Option<raft::Response> {
+        if let Ok((_, response)) = self
+            .client
+            .post(&self.url, &Some(request), &self.token)
+            .await
+        {
+            Some(response)
+        } else {
+            None
+        }
     }
 }
 
@@ -127,8 +127,7 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
         tokio::spawn(async move {
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {
-                    let response = node.send(&request).await?;
-                    if let Some(response) = response {
+                    if let Some(response) = node.send(&request).await {
                         node.responses.send((request, response))?;
                     }
                 }

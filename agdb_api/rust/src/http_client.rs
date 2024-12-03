@@ -46,7 +46,7 @@ impl HttpClient for ReqwestClient {
     async fn delete(&self, uri: &str, token: &Option<String>) -> AgdbApiResult<u16> {
         let mut request = self.client.delete(uri);
         if let Some(token) = token {
-            request = request.header("Authorization", format!("Bearer {}", token));
+            request = request.bearer_auth(token);
         }
         let response = request.send().await?;
         let status = response.status().as_u16();
@@ -67,7 +67,7 @@ impl HttpClient for ReqwestClient {
     ) -> AgdbApiResult<(u16, T)> {
         let mut request = self.client.get(uri);
         if let Some(token) = token {
-            request = request.header("Authorization", format!("Bearer {}", token));
+            request = request.bearer_auth(token);
         }
         let response = request.send().await?;
         let status = response.status().as_u16();
@@ -95,7 +95,7 @@ impl HttpClient for ReqwestClient {
         let client = reqwest::Client::new();
         let mut request = client.post(uri);
         if let Some(token) = token {
-            request = request.header("Authorization", format!("Bearer {}", token));
+            request = request.bearer_auth(token);
         }
         if let Some(json) = json {
             request = request.json(json);
@@ -128,7 +128,7 @@ impl HttpClient for ReqwestClient {
             request = request.json(json);
         }
         if let Some(token) = token {
-            request = request.header("Authorization", format!("Bearer {}", token));
+            request = request.bearer_auth(token);
         }
         let response = request.send().await?;
         let status = response.status().as_u16();

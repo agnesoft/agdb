@@ -8,7 +8,6 @@ pub(crate) enum ErrorCode {
     DbExists,
     DbInvalid,
     QueryError,
-    ClusterUninitialized,
 }
 
 impl From<ErrorCode> for StatusCode {
@@ -26,7 +25,6 @@ impl From<&ErrorCode> for StatusCode {
             ErrorCode::DbExists => 465,
             ErrorCode::DbInvalid => 467,
             ErrorCode::QueryError => 470,
-            ErrorCode::ClusterUninitialized => 471,
         })
         .unwrap()
     }
@@ -47,7 +45,6 @@ impl ErrorCode {
             ErrorCode::DbExists => "db already exists",
             ErrorCode::DbInvalid => "db invalid",
             ErrorCode::QueryError => "query error",
-            ErrorCode::ClusterUninitialized => "cluster uninitialized",
         }
     }
 }
@@ -67,9 +64,5 @@ mod tests {
         assert_eq!(ErrorCode::DbExists.as_str(), "db already exists");
         assert_eq!(ErrorCode::DbInvalid.as_str(), "db invalid");
         assert_eq!(ErrorCode::QueryError.as_str(), "query error");
-        assert_eq!(
-            ErrorCode::ClusterUninitialized.as_str(),
-            "cluster uninitialized"
-        );
     }
 }

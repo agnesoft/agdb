@@ -1,9 +1,7 @@
 use crate::cluster::Cluster;
 use crate::config::Config;
-use crate::error_code::ErrorCode;
 use crate::raft::Request;
 use crate::raft::Response;
-use crate::raft::ResponseType;
 use crate::server_error::ServerResult;
 use crate::user_id::ClusterId;
 use agdb_api::ClusterStatus;
@@ -16,18 +14,8 @@ pub(crate) async fn cluster(
     State(cluster): State<Cluster>,
     request: Json<Request>,
 ) -> ServerResult<(StatusCode, Json<Response>)> {
-    if let Some(raft) = &cluster.raft {
-        let response = raft.write().await.request(&request).await;
-        Ok((StatusCode::OK, Json(response)))
-    } else {
-        Ok((
-            ErrorCode::ClusterUninitialized.into(),
-            Json(Response {
-                target: request.index,
-                result: ResponseType::Ok,
-            }),
-        ))
-    }
+    let response = cluster.raft.write().await.request(&request).await;
+    Ok((StatusCode::OK, Json(response)))
 }
 
 #[utoipa::path(get,
@@ -44,11 +32,7 @@ pub(crate) async fn status(
 ) -> ServerResult<(StatusCode, Json<Vec<ClusterStatus>>)> {
     let mut statuses = vec![ClusterStatus::default(); config.cluster.len()];
     let mut tasks = Vec::new();
-    let leader = if let Some(raft) = cluster.raft.as_ref() {
-        raft.read().await.leader()
-    } else {
-        None
-    };
+    let leader = cluster.raft.read().await.leader();
 
     for (index, node) in config.cluster.iter().enumerate() {
         if index != cluster.index {

@@ -36,7 +36,7 @@ pub(crate) struct ClusterNodeImpl {
 pub(crate) struct ClusterImpl {
     pub(crate) index: usize,
     pub(crate) nodes: Vec<ClusterNode>,
-    pub(crate) raft: Option<Arc<RwLock<raft::Cluster<ClusterStorage>>>>,
+    pub(crate) raft: Arc<RwLock<raft::Cluster<ClusterStorage>>>,
     pub(crate) responses: Option<RwLock<UnboundedReceiver<(Request, Response)>>>,
 }
 
@@ -80,22 +80,28 @@ impl ClusterNodeImpl {
 }
 
 pub(crate) async fn new(config: &Config, db: &ServerDb) -> ServerResult<Cluster> {
-    if let Some(index) = config.cluster.iter().position(|url| url == &config.address) {
-        let mut nodes = vec![];
-        let mut sorted_cluster: Vec<String> =
-            config.cluster.iter().map(|url| url.to_string()).collect();
-        sorted_cluster.sort();
-        let hash = sorted_cluster.stable_hash();
-        let storage = ClusterStorage::new(db.clone()).await?;
-        let settings = raft::ClusterSettings {
-            index: index as u64,
-            hash,
-            size: config.cluster.len() as u64,
-            election_factor: 1,
-            heartbeat_timeout: Duration::from_secs(1),
-            term_timeout: Duration::from_secs(3),
-        };
-        let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
+    let index = config
+        .cluster
+        .iter()
+        .position(|url| url == &config.address)
+        .unwrap_or_default();
+    let mut sorted_cluster: Vec<String> =
+        config.cluster.iter().map(|url| url.to_string()).collect();
+    sorted_cluster.sort();
+    let hash = sorted_cluster.stable_hash();
+    let storage = ClusterStorage::new(db.clone()).await?;
+    let settings = raft::ClusterSettings {
+        index: index as u64,
+        hash,
+        size: std::cmp::max(config.cluster.len() as u64, 1),
+        election_factor: 1,
+        heartbeat_timeout: Duration::from_secs(1),
+        term_timeout: Duration::from_secs(3),
+    };
+    let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
+    let mut nodes = vec![];
+
+    let responses = if !sorted_cluster.is_empty() {
         let (requests, responses) = tokio::sync::mpsc::unbounded_channel();
 
         for node in config.cluster.iter() {
@@ -106,19 +112,16 @@ pub(crate) async fn new(config: &Config, db: &ServerDb) -> ServerResult<Cluster>
             )));
         }
 
-        return Ok(Cluster::new(ClusterImpl {
-            index,
-            nodes,
-            raft: Some(raft),
-            responses: Some(RwLock::new(responses)),
-        }));
-    }
+        Some(RwLock::new(responses))
+    } else {
+        None
+    };
 
     Ok(Cluster::new(ClusterImpl {
-        index: 0,
-        nodes: vec![],
-        raft: None,
-        responses: None,
+        index,
+        nodes,
+        raft,
+        responses,
     }))
 }
 
@@ -158,8 +161,6 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
             {
                 if let Some(requests) = response_cluster
                     .raft
-                    .as_ref()
-                    .expect("raft is initialized")
                     .write()
                     .await
                     .response(&request, &response)
@@ -177,14 +178,7 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     });
 
     while !shutdown_signal.load(Ordering::Relaxed) {
-        if let Some(requests) = cluster
-            .raft
-            .as_ref()
-            .expect("raft is initialized")
-            .write()
-            .await
-            .process()
-        {
+        if let Some(requests) = cluster.raft.write().await.process() {
             for request in requests {
                 cluster.nodes[request.target as usize]
                     .requests_sender
@@ -198,12 +192,10 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
 
 #[allow(dead_code)]
 pub(crate) async fn append(cluster: Cluster, data: Vec<u8>) -> ServerResult<()> {
-    if let Some(raft) = &cluster.raft {
-        for request in raft.write().await.append(data).await {
-            cluster.nodes[request.target as usize]
-                .requests_sender
-                .send(request)?;
-        }
+    for request in cluster.raft.write().await.append(data).await {
+        cluster.nodes[request.target as usize]
+            .requests_sender
+            .send(request)?;
     }
 
     Ok(())

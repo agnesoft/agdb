@@ -113,7 +113,11 @@ pub(crate) struct ClusterSettings {
 impl<S: Storage> Cluster<S> {
     pub(crate) fn new(storage: S, settings: ClusterSettings) -> Self {
         Self {
-            state: ClusterState::Election,
+            state: if settings.size == 1 {
+                ClusterState::Leader
+            } else {
+                ClusterState::Election
+            },
             nodes: (0..settings.size)
                 .map(|i| Node {
                     index: i,
@@ -139,7 +143,7 @@ impl<S: Storage> Cluster<S> {
             hash: settings.hash,
             size: settings.size,
             index: settings.index,
-            term: 0,
+            term: if settings.size == 1 { 1 } else { 0 },
             election_timeout: Duration::from_secs(settings.election_factor * settings.index),
             heartbeat_timeout: settings.heartbeat_timeout,
             term_timeout: settings.term_timeout,
@@ -889,6 +893,31 @@ mod test {
     }
 
     const TIMEOUT: Duration = Duration::from_secs(5);
+
+    #[tokio::test]
+    async fn cluster_of_one() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::new(1);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cluster_of_one_store_values() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::new(1);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+        cluster.append(0, b"0".to_vec()).await?;
+        let logs = cluster.nodes.read().await[0]
+            .read()
+            .await
+            .cluster
+            .storage
+            .logs
+            .clone();
+        assert_eq!(logs.len(), 1);
+        Ok(())
+    }
 
     #[tokio::test]
     async fn rebalance() -> anyhow::Result<()> {

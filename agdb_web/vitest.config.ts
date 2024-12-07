@@ -20,6 +20,8 @@ export default defineConfig({
                 "e2e/*",
                 "*.config.*",
                 "middleware.ts",
+                "*/_app.tsx",
+                "**/_meta.ts",
             ],
             thresholds: {
                 lines: 100,

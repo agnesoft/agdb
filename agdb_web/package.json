@@ -18,8 +18,8 @@
         "@vitest/coverage-istanbul": "^2",
         "highlight.js": "^11",
         "next": "14",
-        "nextra": "^2",
-        "nextra-theme-docs": "^2",
+        "nextra": "^3.2.4",
+        "nextra-theme-docs": "^3.2.4",
         "react": "^18",
         "react-dom": "^18",
         "sass": "^1"

@@ -13,10 +13,6 @@ vi.mock("nextra/hooks", () => ({
     useRouter: useRounterMock,
 }));
 
-vi.mock("nextra/constants", () => ({
-    DEFAULT_LOCALE: "en-US",
-}));
-
 vi.mock("@/messages/cs-CZ.json", () => ({
     test: "testCZ",
 }));
@@ -40,6 +36,7 @@ describe("i18n", () => {
         messagesEnMock.mockRejectedValue(new Error("error"));
         useRounterMock.mockReturnValue({
             locale: "",
+            defaultLocale: "en-US",
         });
         const { result } = renderHook(() => useI18n());
         await waitFor(() => {
@@ -51,6 +48,7 @@ describe("i18n", () => {
         messagesEnMock.mockResolvedValue(messagesEN);
         useRounterMock.mockReturnValue({
             locale: "",
+            defaultLocale: "en-US",
         });
         const { result } = renderHook(() => useI18n());
         await waitFor(() => {
@@ -61,6 +59,7 @@ describe("i18n", () => {
     it("should return the default locale", async () => {
         useRounterMock.mockReturnValue({
             locale: "cs-CZ",
+            defaultLocale: "en-US",
         });
 
         const { result } = renderHook(() => useI18n());
@@ -70,6 +69,7 @@ describe("i18n", () => {
     it("should return a translation", async () => {
         useRounterMock.mockReturnValue({
             locale: "cs-CZ",
+            defaultLocale: "en-US",
         });
         const { result } = renderHook(() => useI18n());
 

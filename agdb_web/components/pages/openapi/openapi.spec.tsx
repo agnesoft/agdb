@@ -13,7 +13,7 @@ const jsonMock = {
     paths: {},
 };
 
-vi.mock("next/router", () => ({
+vi.mock("nextra/hooks", () => ({
     useRouter: () => ({
         pathname: "/",
         locale: "en-US",

@@ -9,7 +9,7 @@ const { useRounterMock, messagesEnMock } = vi.hoisted(() => {
         messagesEnMock: vi.fn(),
     };
 });
-vi.mock("next/router", () => ({
+vi.mock("nextra/hooks", () => ({
     useRouter: useRounterMock,
 }));
 

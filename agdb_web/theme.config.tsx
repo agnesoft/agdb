@@ -37,8 +37,8 @@ const config: DocsThemeConfig = {
     docsRepositoryBase: "https://github.com/agnesoft/agdb/blob/main/agdb_web",
     footer: { content: Footer },
     i18n: [
-        { locale: "en", name: "English" },
-        { locale: "cs", name: "Čeština" },
+        { locale: "en-US", name: "English" },
+        { locale: "cs-CZ", name: "Čeština" },
     ],
     head: useHead,
     // banner: {

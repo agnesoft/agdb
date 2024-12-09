@@ -70,8 +70,6 @@ async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<Clus
 
     for _ in 0..nodes {
         let port = TestServerImpl::next_port();
-        tracing::info!("NEW_PORT: {port}");
-        println!("NEW_PORT: {port}");
         let mut config = HashMap::<&str, serde_yaml::Value>::new();
         config.insert("bind", format!("{HOST}:{port}").into());
         config.insert("address", format!("http://{HOST}:{port}").into());

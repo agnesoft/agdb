@@ -1,4 +1,3 @@
-mod cluster;
 mod routes;
 
 use agdb_api::AgdbApi;
@@ -111,10 +110,7 @@ impl TestServerImpl {
     }
 
     pub fn next_port() -> u16 {
-        let port = PORT.fetch_add(1, Ordering::Relaxed);
-        let process_id = std::process::id() as u16;
-        println!("NEXT_PORT: {port} + {process_id} = {}", port + process_id);
-        port + process_id
+        PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
     }
 
     fn shutdown_server(&mut self) -> anyhow::Result<()> {

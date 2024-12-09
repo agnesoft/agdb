@@ -116,7 +116,7 @@ async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<Clus
     Ok((servers.remove(leader), servers))
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn rebalance() -> anyhow::Result<()> {
     let (mut leader, servers) = create_cluster(3).await?;
     leader.client.write().await.user_login(ADMIN, ADMIN).await?;
@@ -139,7 +139,7 @@ async fn rebalance() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn user_add() -> anyhow::Result<()> {
     let (leader, servers) = create_cluster(3).await?;
     leader.client.write().await.user_login(ADMIN, ADMIN).await?;

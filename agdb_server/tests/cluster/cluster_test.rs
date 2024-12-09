@@ -10,14 +10,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-const LEADER_TIMOUT: u128 = 10000;
+const TEST_TIMEOUT: u128 = 10000;
 
 async fn wait_for_leader(
     client: Arc<AgdbApi<ReqwestClient>>,
 ) -> anyhow::Result<Vec<ClusterStatus>> {
     let now = Instant::now();
 
-    while now.elapsed().as_millis() < LEADER_TIMOUT {
+    while now.elapsed().as_millis() < TEST_TIMEOUT {
         let status = client.cluster_status().await?;
         if status.1.iter().any(|s| s.leader) {
             return Ok(status.1);
@@ -26,7 +26,28 @@ async fn wait_for_leader(
     }
 
     Err(anyhow::anyhow!(
-        "Leader not found within {LEADER_TIMOUT}seconds"
+        "Leader not found within {TEST_TIMEOUT}seconds"
+    ))
+}
+
+async fn wait_for_user(client: &AgdbApi<ReqwestClient>, username: &str) -> anyhow::Result<()> {
+    let now = Instant::now();
+
+    while now.elapsed().as_millis() < TEST_TIMEOUT {
+        if client
+            .admin_user_list()
+            .await?
+            .1
+            .iter()
+            .any(|u| u.name == username)
+        {
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+
+    Err(anyhow::anyhow!(
+        "User '{username}' not found within {TEST_TIMEOUT}seconds"
     ))
 }
 
@@ -108,26 +129,16 @@ async fn user_add() -> anyhow::Result<()> {
     let mut client1 = AgdbApi::new(ReqwestClient::new(), &servers[0].0.address);
     client1.user_login(ADMIN, ADMIN).await?;
     client1.admin_user_add("user1", "password123").await?;
-    let mut users = client1.admin_user_list().await?.1;
-    users.sort();
 
     let mut client2 = AgdbApi::new(ReqwestClient::new(), &servers[1].0.address);
     client2.user_login(ADMIN, ADMIN).await?;
-    let mut users2 = client2.admin_user_list().await?.1;
-    users2.sort();
+    wait_for_user(&client2, "user1").await?;
+    client2.user_login("user1", "password123").await?;
 
     let mut client3 = AgdbApi::new(ReqwestClient::new(), &servers[2].0.address);
     client3.user_login(ADMIN, ADMIN).await?;
-    let mut users3 = client3.admin_user_list().await?.1;
-    users3.sort();
-
-    if users == users2 {
-        client2.user_login("user1", "password123").await?;
-    } else if users == users3 {
-        client3.user_login("user1", "password123").await?;
-    } else {
-        panic!("User was not replicated to any server");
-    }
+    wait_for_user(&client3, "user1").await?;
+    client3.user_login("user1", "password123").await?;
 
     Ok(())
 }

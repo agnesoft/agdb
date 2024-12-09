@@ -52,7 +52,7 @@ pub(crate) async fn add(
     cluster::append(
         cluster,
         UserAdd {
-            username,
+            user: username,
             password: pswd.password.to_vec(),
             salt: pswd.user_salt.to_vec(),
         },

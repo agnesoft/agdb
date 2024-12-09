@@ -110,13 +110,7 @@ impl TestServerImpl {
     }
 
     pub fn next_port() -> u16 {
-        let port = PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16;
-        let address = std::net::SocketAddrV4::new(std::net::Ipv4Addr::LOCALHOST, port);
-        if std::net::TcpListener::bind(address).is_ok() {
-            port
-        } else {
-            Self::next_port()
-        }
+        PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
     }
 
     fn shutdown_server(&mut self) -> anyhow::Result<()> {

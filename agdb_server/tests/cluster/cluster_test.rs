@@ -9,20 +9,29 @@ use agdb_api::ReqwestClient;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
+use tokio::sync::RwLock;
 
 const TEST_TIMEOUT: u128 = 10000;
+const POLL_INTERVAL: u64 = 250;
 
-async fn wait_for_leader(
-    client: Arc<AgdbApi<ReqwestClient>>,
-) -> anyhow::Result<Vec<ClusterStatus>> {
+type ClusterClient = Arc<RwLock<AgdbApi<ReqwestClient>>>;
+
+struct ClusterServer {
+    server: TestServerImpl,
+    client: ClusterClient,
+}
+
+async fn wait_for_leader(client: ClusterClient) -> anyhow::Result<Vec<ClusterStatus>> {
     let now = Instant::now();
 
     while now.elapsed().as_millis() < TEST_TIMEOUT {
-        let status = client.cluster_status().await?;
+        let status = client.read().await.cluster_status().await?;
+
         if status.1.iter().any(|s| s.leader) {
             return Ok(status.1);
         }
-        std::thread::sleep(std::time::Duration::from_millis(250));
+
+        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
     }
 
     Err(anyhow::anyhow!(
@@ -30,11 +39,13 @@ async fn wait_for_leader(
     ))
 }
 
-async fn wait_for_user(client: &AgdbApi<ReqwestClient>, username: &str) -> anyhow::Result<()> {
+async fn wait_for_user(client: ClusterClient, username: &str) -> anyhow::Result<()> {
     let now = Instant::now();
 
     while now.elapsed().as_millis() < TEST_TIMEOUT {
         if client
+            .read()
+            .await
             .admin_user_list()
             .await?
             .1
@@ -43,7 +54,7 @@ async fn wait_for_user(client: &AgdbApi<ReqwestClient>, username: &str) -> anyho
         {
             return Ok(());
         }
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
     }
 
     Err(anyhow::anyhow!(
@@ -51,9 +62,7 @@ async fn wait_for_user(client: &AgdbApi<ReqwestClient>, username: &str) -> anyho
     ))
 }
 
-async fn create_cluster(
-    nodes: usize,
-) -> anyhow::Result<Vec<(TestServerImpl, Arc<AgdbApi<ReqwestClient>>)>> {
+async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<ClusterServer>)> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
     let mut servers = Vec::with_capacity(nodes);
@@ -80,13 +89,16 @@ async fn create_cluster(
 
     for config in configs {
         let server = TestServerImpl::with_config(config).await?;
-        let client = Arc::new(AgdbApi::new(ReqwestClient::new(), &server.address));
-        servers.push((server, client));
+        let client = Arc::new(RwLock::new(AgdbApi::new(
+            ReqwestClient::new(),
+            &server.address,
+        )));
+        servers.push(ClusterServer { server, client });
     }
 
     for has_leader in servers
         .iter()
-        .map(|(_, c)| tokio::spawn(wait_for_leader(c.clone())))
+        .map(|s| tokio::spawn(wait_for_leader(s.client.clone())))
     {
         statuses.push(has_leader.await??);
     }
@@ -95,23 +107,27 @@ async fn create_cluster(
         assert_eq!(statuses[0], *status);
     }
 
-    Ok(servers)
+    let leader = statuses[0]
+        .iter()
+        .enumerate()
+        .find_map(|(i, s)| if s.leader { Some(i) } else { None })
+        .unwrap();
+
+    Ok((servers.remove(leader), servers))
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn rebalance() -> anyhow::Result<()> {
-    let mut servers = create_cluster(3).await?;
+    let (mut leader, servers) = create_cluster(3).await?;
+    leader.client.write().await.user_login(ADMIN, ADMIN).await?;
+    leader.client.read().await.admin_shutdown().await?;
+    assert!(leader.server.process.wait()?.success());
 
-    let mut client = AgdbApi::new(ReqwestClient::new(), &servers[0].0.address);
-    client.user_login(ADMIN, ADMIN).await?;
-    client.admin_shutdown().await?;
-    assert!(servers[0].0.process.wait()?.success());
+    let mut statuses = Vec::with_capacity(2);
 
-    let mut statuses = Vec::with_capacity(3);
-
-    for has_leader in servers[1..]
+    for has_leader in servers
         .iter()
-        .map(|(_, c)| tokio::spawn(wait_for_leader(c.clone())))
+        .map(|s| tokio::spawn(wait_for_leader(s.client.clone())))
     {
         statuses.push(has_leader.await??);
     }
@@ -123,22 +139,26 @@ async fn rebalance() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn user_add() -> anyhow::Result<()> {
-    let servers = create_cluster(3).await?;
-    let mut client1 = AgdbApi::new(ReqwestClient::new(), &servers[0].0.address);
-    client1.user_login(ADMIN, ADMIN).await?;
-    client1.admin_user_add("user1", "password123").await?;
+    let (leader, servers) = create_cluster(3).await?;
+    leader.client.write().await.user_login(ADMIN, ADMIN).await?;
+    leader
+        .client
+        .write()
+        .await
+        .admin_user_add("user1", "password123")
+        .await?;
 
-    let mut client2 = AgdbApi::new(ReqwestClient::new(), &servers[1].0.address);
-    client2.user_login(ADMIN, ADMIN).await?;
-    wait_for_user(&client2, "user1").await?;
-    client2.user_login("user1", "password123").await?;
-
-    let mut client3 = AgdbApi::new(ReqwestClient::new(), &servers[2].0.address);
-    client3.user_login(ADMIN, ADMIN).await?;
-    wait_for_user(&client3, "user1").await?;
-    client3.user_login("user1", "password123").await?;
+    for has_user in servers.iter().map(|s| {
+        let client = s.client.clone();
+        tokio::spawn(async move {
+            client.write().await.user_login(ADMIN, ADMIN).await?;
+            wait_for_user(client.clone(), "user1").await
+        })
+    }) {
+        has_user.await??;
+    }
 
     Ok(())
 }

@@ -767,10 +767,6 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
             values.push(("action", "UserAdd").into());
             values.extend(action.to_db_values());
         }
-        ClusterAction::Login(action) => {
-            values.push(("action", "Login").into());
-            values.extend(action.to_db_values());
-        }
     }
 
     values

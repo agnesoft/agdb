@@ -1,4 +1,3 @@
-pub(crate) mod login;
 pub(crate) mod user_add;
 
 use crate::action::user_add::UserAdd;
@@ -11,7 +10,6 @@ use serde::Serialize;
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) enum ClusterAction {
     UserAdd(user_add::UserAdd),
-    Login(login::Login),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -27,7 +25,6 @@ impl Action for ClusterAction {
     async fn exec(self, db: &mut ServerDb, db_pool: &mut DbPool) -> ServerResult<ClusterResponse> {
         match self {
             ClusterAction::UserAdd(action) => action.exec(db, db_pool).await,
-            ClusterAction::Login(action) => action.exec(db, db_pool).await,
         }
     }
 }

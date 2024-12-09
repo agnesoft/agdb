@@ -78,7 +78,7 @@ async fn create_cluster(
 }
 
 #[tokio::test]
-async fn cluster_rebalance() -> anyhow::Result<()> {
+async fn rebalance() -> anyhow::Result<()> {
     let mut servers = create_cluster(3).await?;
 
     let mut client = AgdbApi::new(ReqwestClient::new(), &servers[0].0.address);
@@ -99,16 +99,41 @@ async fn cluster_rebalance() -> anyhow::Result<()> {
         assert_eq!(statuses[0], *status);
     }
 
-    let status = servers[1].1.user_status().await?.1;
-    assert_eq!(status.name, ADMIN);
-    assert!(status.admin);
-    assert!(status.login);
+    Ok(())
+}
+
+#[tokio::test]
+async fn user_add() -> anyhow::Result<()> {
+    let servers = create_cluster(3).await?;
+    let mut client1 = AgdbApi::new(ReqwestClient::new(), &servers[0].0.address);
+    client1.user_login(ADMIN, ADMIN).await?;
+    client1.admin_user_add("user1", "password123").await?;
+    let mut users = client1.admin_user_list().await?.1;
+    users.sort();
+
+    let mut client2 = AgdbApi::new(ReqwestClient::new(), &servers[1].0.address);
+    client2.user_login(ADMIN, ADMIN).await?;
+    let mut users2 = client2.admin_user_list().await?.1;
+    users2.sort();
+
+    let mut client3 = AgdbApi::new(ReqwestClient::new(), &servers[2].0.address);
+    client3.user_login(ADMIN, ADMIN).await?;
+    let mut users3 = client3.admin_user_list().await?.1;
+    users3.sort();
+
+    if users == users2 {
+        client2.user_login("user1", "password123").await?;
+    } else if users == users3 {
+        client3.user_login("user1", "password123").await?;
+    } else {
+        panic!("User was not replicated to any server");
+    }
 
     Ok(())
 }
 
 #[tokio::test]
-async fn cluster_status() {
+async fn status() {
     let server = TestServer::new().await.unwrap();
     let (code, status) = server.api.cluster_status().await.unwrap();
 

@@ -110,7 +110,8 @@ impl TestServerImpl {
     }
 
     pub fn next_port() -> u16 {
-        PORT.fetch_add(1, Ordering::SeqCst) + std::process::id() as u16
+        let offset: u32 = (std::process::id() % 10) * 100;
+        PORT.fetch_add(1, Ordering::Relaxed) + offset as u16
     }
 
     fn shutdown_server(&mut self) -> anyhow::Result<()> {

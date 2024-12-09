@@ -99,6 +99,11 @@ async fn cluster_rebalance() -> anyhow::Result<()> {
         assert_eq!(statuses[0], *status);
     }
 
+    let status = servers[1].1.user_status().await?.1;
+    assert_eq!(status.name, ADMIN);
+    assert!(status.admin);
+    assert!(status.login);
+
     Ok(())
 }
 

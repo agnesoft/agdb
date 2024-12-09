@@ -1,4 +1,8 @@
+use crate::action::Action;
+use crate::action::ClusterAction;
+use crate::action::ClusterResponse;
 use crate::config::Config;
+use crate::db_pool::DbPool;
 use crate::raft;
 use crate::raft::Log;
 use crate::raft::Request;
@@ -23,25 +27,31 @@ use tokio::sync::RwLock;
 pub(crate) type Cluster = Arc<ClusterImpl>;
 
 type ClusterNode = Arc<ClusterNodeImpl>;
+type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<ClusterResponse>>;
+type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Response)>;
 
 pub(crate) struct ClusterNodeImpl {
     client: ReqwestClient,
     url: String,
     token: Option<String>,
-    requests_sender: UnboundedSender<Request>,
-    requests_receiver: RwLock<UnboundedReceiver<Request>>,
-    responses: UnboundedSender<(Request, Response)>,
+    requests_sender: UnboundedSender<Request<ClusterAction>>,
+    requests_receiver: RwLock<UnboundedReceiver<Request<ClusterAction>>>,
+    responses: UnboundedSender<(Request<ClusterAction>, Response)>,
 }
 
 pub(crate) struct ClusterImpl {
     pub(crate) index: usize,
     pub(crate) nodes: Vec<ClusterNode>,
-    pub(crate) raft: Arc<RwLock<raft::Cluster<ClusterStorage>>>,
-    pub(crate) responses: Option<RwLock<UnboundedReceiver<(Request, Response)>>>,
+    pub(crate) raft: Arc<RwLock<raft::Cluster<ClusterAction, ResultNotifier, ClusterStorage>>>,
+    pub(crate) responses: Option<RwLock<ClusterResponseReceiver>>,
 }
 
 impl ClusterNodeImpl {
-    fn new(address: &str, token: &str, responses: UnboundedSender<(Request, Response)>) -> Self {
+    fn new(
+        address: &str,
+        token: &str,
+        responses: UnboundedSender<(Request<ClusterAction>, Response)>,
+    ) -> Self {
         let base = if address.starts_with("http") || address.starts_with("https") {
             address.to_string()
         } else {
@@ -60,7 +70,7 @@ impl ClusterNodeImpl {
         }
     }
 
-    async fn send(&self, request: &raft::Request) -> Option<raft::Response> {
+    async fn send(&self, request: &raft::Request<ClusterAction>) -> Option<raft::Response> {
         match self
             .client
             .post(&self.url, &Some(request), &self.token)
@@ -79,7 +89,7 @@ impl ClusterNodeImpl {
     }
 }
 
-pub(crate) async fn new(config: &Config, db: &ServerDb) -> ServerResult<Cluster> {
+pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> ServerResult<Cluster> {
     let index = config
         .cluster
         .iter()
@@ -89,7 +99,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb) -> ServerResult<Cluster>
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
     let hash = sorted_cluster.stable_hash();
-    let storage = ClusterStorage::new(db.clone()).await?;
+    let storage = ClusterStorage::new(db.clone(), db_pool.clone()).await?;
     let settings = raft::ClusterSettings {
         index: index as u64,
         hash,
@@ -190,15 +200,25 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     Ok(())
 }
 
-#[allow(dead_code)]
-pub(crate) async fn append(cluster: Cluster, data: Vec<u8>) -> ServerResult<()> {
-    for request in cluster.raft.write().await.append(data).await {
+pub(crate) async fn append<T: Action + Into<ClusterAction>>(
+    cluster: Cluster,
+    action: T,
+) -> ServerResult<ClusterResponse> {
+    let (sender, receiver) = tokio::sync::oneshot::channel::<ServerResult<ClusterResponse>>();
+    let requests = cluster
+        .raft
+        .write()
+        .await
+        .append(action.into(), Some(sender))
+        .await?;
+
+    for request in requests {
         cluster.nodes[request.target as usize]
             .requests_sender
             .send(request)?;
     }
 
-    Ok(())
+    receiver.await?
 }
 
 pub(crate) async fn start_with_shutdown(
@@ -218,15 +238,16 @@ pub(crate) async fn start_with_shutdown(
 }
 
 pub(crate) struct ClusterStorage {
-    logs: VecDeque<Log>,
+    logs: VecDeque<(Log<ClusterAction>, Option<ResultNotifier>)>,
     index: u64,
     term: u64,
     commit: u64,
     db: ServerDb,
+    db_pool: DbPool,
 }
 
 impl ClusterStorage {
-    async fn new(db: ServerDb) -> ServerResult<Self> {
+    async fn new(db: ServerDb, db_pool: DbPool) -> ServerResult<Self> {
         let (index, term, commit) = db.cluster_log().await?;
         Ok(Self {
             logs: VecDeque::new(),
@@ -234,55 +255,75 @@ impl ClusterStorage {
             term,
             commit,
             db,
+            db_pool,
         })
     }
 }
 
-impl Storage for ClusterStorage {
-    async fn append(&mut self, log: Log) {
+impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
+    async fn append(&mut self, log: Log<ClusterAction>, notifier: Option<ResultNotifier>) {
         if let Some(index) = self
             .logs
             .iter()
             .rev()
-            .position(|l| l.index == log.index && l.term == log.term)
+            .position(|(l, _)| l.index == log.index && l.term == log.term)
         {
             self.logs.truncate(index);
         }
 
         self.index = log.index;
         self.term = log.term;
-        self.logs.push_back(log);
+        self.logs.push_back((log, notifier));
     }
 
     async fn commit(&mut self, index: u64) -> ServerResult<()> {
-        while let Some(log) = self.logs.pop_front() {
-            if log.index > index {
-                self.logs.push_front(log);
-                break;
+        while let Some((log, _notifier)) = self.logs.front() {
+            if log.index <= index {
+                if let Some((log, notifier)) = self.logs.pop_front() {
+                    self.commit = log.index;
+                    self.db.commit_log(&log).await?;
+
+                    let mut db = self.db.clone();
+                    let mut db_pool = self.db_pool.clone();
+
+                    tokio::spawn(async move {
+                        let result = log.data.exec(&mut db, &mut db_pool).await;
+
+                        if let Some(notifier) = notifier {
+                            let _ = notifier.send(result);
+                        }
+                    });
+                }
             } else {
-                self.commit = log.index;
-                self.db.commit_log(&log).await?;
-                //TODO: Execute action
+                break;
             }
         }
+
         Ok(())
     }
 
-    fn current_index(&self) -> u64 {
+    fn log_index(&self) -> u64 {
         self.index
     }
 
-    fn current_term(&self) -> u64 {
+    fn log_term(&self) -> u64 {
         self.term
     }
 
-    fn current_commit(&self) -> u64 {
+    fn log_commit(&self) -> u64 {
         self.commit
     }
 
-    async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log>> {
+    async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
         let mut logs = self.db.logs(since_index).await?;
-        logs.extend_from_slice(&self.logs.iter().cloned().collect::<Vec<Log>>());
+        logs.extend_from_slice(
+            &self
+                .logs
+                .iter()
+                .map(|(log, _)| log)
+                .cloned()
+                .collect::<Vec<Log<ClusterAction>>>(),
+        );
         Ok(logs)
     }
 }

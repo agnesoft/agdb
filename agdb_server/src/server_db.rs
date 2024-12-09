@@ -1,3 +1,5 @@
+use crate::action::user_add::UserAdd;
+use crate::action::ClusterAction;
 use crate::config::Config;
 use crate::password::Password;
 use crate::raft::Log;
@@ -7,6 +9,7 @@ use agdb::Comparison;
 use agdb::CountComparison;
 use agdb::Db;
 use agdb::DbId;
+use agdb::DbKeyValue;
 use agdb::DbUserValue;
 use agdb::QueryBuilder;
 use agdb::QueryId;
@@ -118,48 +121,54 @@ impl ServerDb {
     }
 
     pub(crate) async fn cluster_log(&self) -> ServerResult<(u64, u64, u64)> {
-        self.0
-            .write()
-            .await
-            .transaction_mut(|t| -> ServerResult<(u64, u64, u64)> {
-                let commit = t
-                    .exec(
-                        QueryBuilder::select()
-                            .edge_count_from()
-                            .ids(CLUSTER_LOG)
-                            .query(),
-                    )?
-                    .elements[0]
-                    .values[0]
-                    .value
-                    .to_u64()
-                    .unwrap_or_default();
-                let log: Log = t
-                    .exec(
-                        QueryBuilder::select()
-                            .elements::<Log>()
-                            .search()
-                            .depth_first()
-                            .from(CLUSTER_LOG)
-                            .limit(1)
-                            .where_()
-                            .distance(CountComparison::Equal(2))
-                            .query(),
-                    )?
-                    .try_into()
-                    .unwrap_or(Log {
-                        index: 0,
-                        term: 0,
-                        data: vec![],
-                    });
-                Ok((log.index, log.term, commit))
-            })
+        self.0.write().await.transaction_mut(|t| {
+            let commit = t
+                .exec(
+                    QueryBuilder::select()
+                        .edge_count_from()
+                        .ids(CLUSTER_LOG)
+                        .query(),
+                )?
+                .elements[0]
+                .values[0]
+                .value
+                .to_u64()
+                .unwrap_or_default();
+            if let Some(e) = t
+                .exec(
+                    QueryBuilder::select()
+                        .values(["index", "term"])
+                        .search()
+                        .depth_first()
+                        .from(CLUSTER_LOG)
+                        .limit(1)
+                        .where_()
+                        .distance(CountComparison::Equal(2))
+                        .query(),
+                )?
+                .elements
+                .first()
+            {
+                Ok((
+                    e.values[0].value.to_u64()?,
+                    e.values[1].value.to_u64()?,
+                    commit,
+                ))
+            } else {
+                Ok((0, 0, 0))
+            }
+        })
     }
 
-    pub(crate) async fn commit_log(&self, log: &Log) -> ServerResult<()> {
+    pub(crate) async fn commit_log(&self, log: &Log<ClusterAction>) -> ServerResult<()> {
         self.0.write().await.transaction_mut(
             |t: &mut agdb::TransactionMut<'_, agdb::FileStorageMemoryMapped>| -> ServerResult<()> {
-                let log_id = t.exec_mut(QueryBuilder::insert().element(log).query())?;
+                let log_id = t.exec_mut(
+                    QueryBuilder::insert()
+                        .nodes()
+                        .values([log_db_values(log)])
+                        .query(),
+                )?;
                 t.exec_mut(
                     QueryBuilder::insert()
                         .edges()
@@ -169,8 +178,7 @@ impl ServerDb {
                 )?;
                 Ok(())
             },
-        )?;
-        Ok(())
+        )
     }
 
     pub(crate) async fn db_count(&self) -> ServerResult<u64> {
@@ -361,36 +369,63 @@ impl ServerDb {
             == 1)
     }
 
-    pub(crate) async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log>> {
-        Ok(self
-            .0
-            .read()
-            .await
-            .transaction(|t| {
-                let log_count = t
+    pub(crate) async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
+        self.0.read().await.transaction(|t| {
+            let log_count = t
+                .exec(
+                    QueryBuilder::select()
+                        .edge_count_from()
+                        .ids(CLUSTER_LOG)
+                        .query(),
+                )?
+                .elements[0]
+                .values[0]
+                .value
+                .to_u64()?;
+
+            let mut actions = Vec::new();
+
+            if log_count < since_index {
+                for element in t
                     .exec(
                         QueryBuilder::select()
-                            .edge_count_from()
-                            .ids(CLUSTER_LOG)
+                            .values(["index", "term", "action"])
+                            .search()
+                            .depth_first()
+                            .from(CLUSTER_LOG)
+                            .limit(log_count - since_index)
+                            .where_()
+                            .distance(CountComparison::Equal(2))
                             .query(),
                     )?
-                    .elements[0]
-                    .values[0]
-                    .value
-                    .to_u64()?;
-                t.exec(
-                    QueryBuilder::select()
-                        .elements::<Log>()
-                        .search()
-                        .depth_first()
-                        .from(CLUSTER_LOG)
-                        .limit(log_count - since_index)
-                        .where_()
-                        .distance(CountComparison::Equal(2))
-                        .query(),
-                )
-            })?
-            .try_into()?)
+                    .elements
+                {
+                    let index = element.values[0].value.to_u64()?;
+                    let term = element.values[1].value.to_u64()?;
+                    let action = element.values[2].value.string()?;
+
+                    let data = match action.as_str() {
+                        "UserAdd" => Ok(ClusterAction::UserAdd(
+                            t.exec(
+                                QueryBuilder::select()
+                                    .elements::<UserAdd>()
+                                    .ids(element.id)
+                                    .query(),
+                            )?
+                            .try_into()?,
+                        )),
+                        _ => Err(ServerError::new(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            &format!("unknown action: {action}"),
+                        )),
+                    }?;
+
+                    actions.push(Log { index, term, data });
+                }
+            }
+
+            Ok(actions)
+        })
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, db: &str) -> ServerResult<()> {
@@ -722,4 +757,17 @@ fn token_not_found(token: &str) -> ServerError {
 
 fn user_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("user not found: {name}"))
+}
+
+fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
+    let mut values = vec![("index", log.index).into(), ("term", log.term).into()];
+
+    match &log.data {
+        ClusterAction::UserAdd(action) => {
+            values.push(("action", "UserAdd").into());
+            values.extend(action.to_db_values());
+        }
+    }
+
+    values
 }

@@ -3,6 +3,7 @@ use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::logger;
+use crate::redirect;
 use crate::routes;
 use crate::server_db::ServerDb;
 use crate::server_state::ServerState;
@@ -33,7 +34,6 @@ pub(crate) fn app(
     };
 
     let api_v1 = Router::new()
-        .route("/test_error", routing::get(routes::test_error))
         .route("/status", routing::get(routes::status))
         .route("/admin/shutdown", routing::post(routes::admin::shutdown))
         .route("/admin/status", routing::get(routes::admin::status))
@@ -161,6 +161,10 @@ pub(crate) fn app(
     let router = Router::new()
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest("/api/v1", api_v1)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            redirect::cluster_redirect,
+        ))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             logger::logger,

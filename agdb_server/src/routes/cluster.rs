@@ -1,3 +1,4 @@
+use crate::action::ClusterAction;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::raft::Request;
@@ -12,7 +13,7 @@ use axum::Json;
 pub(crate) async fn cluster(
     _cluster_id: ClusterId,
     State(cluster): State<Cluster>,
-    request: Json<Request>,
+    request: Json<Request<ClusterAction>>,
 ) -> ServerResult<(StatusCode, Json<Response>)> {
     let response = cluster.raft.write().await.request(&request).await;
     Ok((StatusCode::OK, Json(response)))

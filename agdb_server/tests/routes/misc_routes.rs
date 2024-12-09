@@ -15,19 +15,6 @@ use std::path::Path;
 use std::process::Command;
 
 #[tokio::test]
-async fn error() -> anyhow::Result<()> {
-    let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
-    let status = client
-        .get(server.full_url("/test_error"))
-        .send()
-        .await?
-        .status();
-    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
-    Ok(())
-}
-
-#[tokio::test]
 async fn missing() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let client = reqwest::Client::new();

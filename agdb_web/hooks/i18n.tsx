@@ -1,6 +1,5 @@
-import { useRouter } from "next/router";
+import { useRouter } from "nextra/hooks";
 import { useEffect, useState } from "react";
-import { DEFAULT_LOCALE } from "nextra/constants";
 
 type MessagesStructure = { [key: string]: string | MessagesStructure };
 
@@ -19,18 +18,12 @@ const iterateMessages = (
     }
 };
 
-export const getDefaultLocale = (): string => {
-    return DEFAULT_LOCALE;
-};
-
 export const useI18n = () => {
-    const { locale } = useRouter();
+    const { locale, defaultLocale } = useRouter();
     const [fallbackMessages, setFallbackMessages] = useState(
         new Map<string, string>(),
     );
     const [messages, setMessages] = useState(new Map<string, string>());
-
-    const defaultLocale = getDefaultLocale();
 
     const processFallbackMessages = (data: MessagesStructure): void => {
         const messages = new Map<string, string>();

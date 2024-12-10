@@ -102,7 +102,7 @@ impl TestServerImpl {
         config.insert("admin", ADMIN.into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("basepath", "".into());
-        config.insert("log_level", "INFO".into());
+        config.insert("log_level", "TRACE".into());
         config.insert("cluster_token", "test".into());
         config.insert("cluster", Vec::<String>::new().into());
 

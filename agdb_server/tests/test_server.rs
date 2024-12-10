@@ -5,6 +5,7 @@ use agdb_api::ReqwestClient;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use std::collections::HashMap;
+use std::io::Read;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
@@ -75,7 +76,7 @@ impl TestServerImpl {
             address.clone()
         };
 
-        let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
+        let mut process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let api = AgdbApi::new(ReqwestClient::new(), &api_address);
 
         for _ in 0..RETRY_ATTEMPS {
@@ -94,7 +95,17 @@ impl TestServerImpl {
             std::thread::sleep(RETRY_TIMEOUT);
         }
 
-        anyhow::bail!("Failed to start server")
+        let mut status = 0;
+        if let Ok(Some(s)) = process.try_wait() {
+            status = s.code().unwrap_or(0);
+        }
+
+        let mut err = String::new();
+        if let Some(mut err_stream) = process.stderr {
+            let _ = err_stream.read_to_string(&mut err);
+        }
+
+        anyhow::bail!("Failed to start server '{api_address}' ({status}): {err}")
     }
 
     pub async fn new() -> anyhow::Result<Self> {

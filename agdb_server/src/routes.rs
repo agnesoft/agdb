@@ -17,7 +17,3 @@ use axum::http::StatusCode;
 pub(crate) async fn status() -> ServerResult<StatusCode> {
     Ok(StatusCode::OK)
 }
-
-pub(crate) async fn test_error() -> StatusCode {
-    StatusCode::INTERNAL_SERVER_ERROR
-}

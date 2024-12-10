@@ -1,10 +1,12 @@
+use crate::action::user_add::UserAdd;
+use crate::cluster;
+use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
 use crate::server_db::ServerDb;
-use crate::server_db::ServerUser;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use agdb_api::UserCredentials;
@@ -34,6 +36,7 @@ use axum::Json;
 pub(crate) async fn add(
     _admin_id: AdminId,
     State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
@@ -46,15 +49,15 @@ pub(crate) async fn add(
 
     let pswd = Password::create(&username, &request.password);
 
-    server_db
-        .insert_user(ServerUser {
-            db_id: None,
-            username: username.clone(),
+    cluster::append(
+        cluster,
+        UserAdd {
+            user: username,
             password: pswd.password.to_vec(),
             salt: pswd.user_salt.to_vec(),
-            token: String::new(),
-        })
-        .await?;
+        },
+    )
+    .await?;
 
     Ok(StatusCode::CREATED)
 }

@@ -1,4 +1,3 @@
-mod cluster;
 mod routes;
 
 use agdb_api::AgdbApi;
@@ -20,7 +19,7 @@ const HOST: &str = "localhost";
 const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
-const RETRY_ATTEMPS: u16 = 3;
+const RETRY_ATTEMPS: u16 = 10;
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 
@@ -76,26 +75,35 @@ impl TestServerImpl {
             address.clone()
         };
 
-        let process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
+        let mut process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let api = AgdbApi::new(ReqwestClient::new(), &api_address);
 
         for _ in 0..RETRY_ATTEMPS {
-            if let Ok(status) = api.status().await {
-                if status == 200 {
+            match api.status().await {
+                Ok(200) => {
                     return Ok(Self {
                         dir,
                         data_dir,
                         address: api_address,
                         process,
                         instances: 1,
-                    });
+                    })
                 }
+                Ok(status) => println!("Server at {api_address} is not ready: {status}"),
+                Err(e) => println!("Failed to contact server at {api_address}: {e:?}"),
             }
 
             std::thread::sleep(RETRY_TIMEOUT);
         }
 
-        anyhow::bail!("Failed to start server")
+        let mut status = "running".to_string();
+        if let Ok(Some(s)) = process.try_wait() {
+            if let Some(code) = s.code() {
+                status = code.to_string()
+            }
+        }
+
+        anyhow::bail!("Failed to start server '{api_address}' ({status})")
     }
 
     pub async fn new() -> anyhow::Result<Self> {

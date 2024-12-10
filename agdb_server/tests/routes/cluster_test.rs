@@ -123,7 +123,7 @@ async fn rebalance() -> anyhow::Result<()> {
     leader.client.read().await.admin_shutdown().await?;
     assert!(leader.server.process.wait()?.success());
 
-    let mut statuses = Vec::with_capacity(2);
+    let mut statuses = Vec::with_capacity(servers.len());
 
     for has_leader in servers
         .iter()

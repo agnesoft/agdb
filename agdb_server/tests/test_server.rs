@@ -75,21 +75,22 @@ impl TestServerImpl {
             address.clone()
         };
 
-        println!("Starting server at '{api_address}' in {dir}");
         let mut process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let api = AgdbApi::new(ReqwestClient::new(), &api_address);
 
         for _ in 0..RETRY_ATTEMPS {
-            if let Ok(status) = api.status().await {
-                if status == 200 {
+            match api.status().await {
+                Ok(200) => {
                     return Ok(Self {
                         dir,
                         data_dir,
                         address: api_address,
                         process,
                         instances: 1,
-                    });
+                    })
                 }
+                Ok(status) => println!("Server at {api_address} is not ready: {status}"),
+                Err(e) => println!("Failed to contact server at {api_address}: {e:?}"),
             }
 
             std::thread::sleep(RETRY_TIMEOUT);

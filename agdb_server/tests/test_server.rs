@@ -75,6 +75,7 @@ impl TestServerImpl {
             address.clone()
         };
 
+        println!("Starting server at '{api_address}' in {dir}");
         let mut process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
         let api = AgdbApi::new(ReqwestClient::new(), &api_address);
 
@@ -117,9 +118,7 @@ impl TestServerImpl {
     }
 
     pub fn next_port() -> u16 {
-        let port = PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16;
-        println!("PORT: {}", port);
-        port
+        PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
     }
 
     fn shutdown_server(&mut self) -> anyhow::Result<()> {

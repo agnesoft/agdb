@@ -79,7 +79,8 @@ impl ClusterNodeImpl {
             Ok((_, response)) => Some(response),
             Err(e) => {
                 tracing::warn!(
-                    "Error sending request to cluster node {}: {:?}",
+                    "[{}] Error sending request to cluster node {}: {:?}",
+                    request.index,
                     request.target,
                     e
                 );

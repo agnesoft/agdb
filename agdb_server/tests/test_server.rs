@@ -5,7 +5,6 @@ use agdb_api::ReqwestClient;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
 use std::collections::HashMap;
-use std::io::Read;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
@@ -95,17 +94,14 @@ impl TestServerImpl {
             std::thread::sleep(RETRY_TIMEOUT);
         }
 
-        let mut status = 0;
+        let mut status = "running".to_string();
         if let Ok(Some(s)) = process.try_wait() {
-            status = s.code().unwrap_or(0);
+            if let Some(code) = s.code() {
+                status = code.to_string()
+            }
         }
 
-        let mut err = String::new();
-        if let Some(mut err_stream) = process.stderr {
-            let _ = err_stream.read_to_string(&mut err);
-        }
-
-        anyhow::bail!("Failed to start server '{api_address}' ({status}): {err}")
+        anyhow::bail!("Failed to start server '{api_address}' ({status})")
     }
 
     pub async fn new() -> anyhow::Result<Self> {
@@ -121,7 +117,9 @@ impl TestServerImpl {
     }
 
     pub fn next_port() -> u16 {
-        PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
+        let port = PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16;
+        println!("PORT: {}", port);
+        port
     }
 
     fn shutdown_server(&mut self) -> anyhow::Result<()> {

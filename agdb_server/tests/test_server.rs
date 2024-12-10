@@ -19,7 +19,7 @@ const HOST: &str = "localhost";
 const DEFAULT_PORT: u16 = 3000;
 const ADMIN: &str = "admin";
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
-const RETRY_ATTEMPS: u16 = 3;
+const RETRY_ATTEMPS: u16 = 10;
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 

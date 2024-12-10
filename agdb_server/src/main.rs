@@ -41,6 +41,8 @@ async fn main() -> ServerResult {
         server_db,
         shutdown_sender.clone(),
     );
+    tracing::info!("Current directory: {}", std::env::current_dir()?.display());
+    tracing::info!("Data directory: {}", config.data_dir);
     tracing::info!("Listening at {}", config.bind);
     let listener = tokio::net::TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)

@@ -87,8 +87,11 @@ async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<Clus
         config.insert("cluster", cluster.clone().into());
     }
 
-    for config in configs {
-        let server = TestServerImpl::with_config(config).await?;
+    for server in configs
+        .into_iter()
+        .map(|c| tokio::spawn(async move { TestServerImpl::with_config(c).await }))
+    {
+        let server = server.await??;
         let client = Arc::new(RwLock::new(AgdbApi::new(
             ReqwestClient::new(),
             &server.address,

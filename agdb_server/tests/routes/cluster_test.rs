@@ -39,6 +39,29 @@ async fn wait_for_leader(client: ClusterClient) -> anyhow::Result<Vec<ClusterSta
     ))
 }
 
+async fn wait_for_user(client: ClusterClient, username: &str) -> anyhow::Result<()> {
+    let now = Instant::now();
+
+    while now.elapsed().as_millis() < TEST_TIMEOUT {
+        if client
+            .read()
+            .await
+            .admin_user_list()
+            .await?
+            .1
+            .iter()
+            .any(|u| u.name == username)
+        {
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
+    }
+
+    Err(anyhow::anyhow!(
+        "User '{username}' not found within {TEST_TIMEOUT}seconds"
+    ))
+}
+
 async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<ClusterServer>)> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
@@ -129,19 +152,8 @@ async fn user() -> anyhow::Result<()> {
         client.admin_user_add("user1", "password123").await?;
     }
 
-    {
-        let mut client = servers[0].client.write().await;
-        client.token = leader.client.read().await.token.clone();
-        let mut list = client
-            .admin_user_list()
-            .await?
-            .1
-            .into_iter()
-            .map(|u| u.name)
-            .collect::<Vec<_>>();
-        list.sort();
-        assert_eq!(list, vec!["admin", "user1"]);
-    }
+    servers[0].client.write().await.token = leader.client.read().await.token.clone();
+    wait_for_user(servers[0].client.clone(), "user1").await?;
 
     Ok(())
 }

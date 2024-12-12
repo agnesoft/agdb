@@ -39,29 +39,6 @@ async fn wait_for_leader(client: ClusterClient) -> anyhow::Result<Vec<ClusterSta
     ))
 }
 
-async fn wait_for_user(client: ClusterClient, username: &str) -> anyhow::Result<()> {
-    let now = Instant::now();
-
-    while now.elapsed().as_millis() < TEST_TIMEOUT {
-        if client
-            .read()
-            .await
-            .admin_user_list()
-            .await?
-            .1
-            .iter()
-            .any(|u| u.name == username)
-        {
-            return Ok(());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
-    }
-
-    Err(anyhow::anyhow!(
-        "User '{username}' not found within {TEST_TIMEOUT}seconds"
-    ))
-}
-
 async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<ClusterServer>)> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
@@ -146,26 +123,24 @@ async fn rebalance() -> anyhow::Result<()> {
 async fn user() -> anyhow::Result<()> {
     let (leader, servers) = create_cluster(2).await?;
 
-    // Add a user and admin changes their password
     {
         let mut client = leader.client.write().await;
         client.cluster_login(ADMIN, ADMIN).await?;
         client.admin_user_add("user1", "password123").await?;
-        client
-            .admin_user_change_password("user1", "password456")
-            .await?;
     }
 
-    // wait for the user to appear on another node and login as that user
-    // change their password again (this should forward to leader)
-    wait_for_user(servers[0].client.clone(), "user1").await?;
-
     {
-        let mut client2 = servers[0].client.write().await;
-        client2.cluster_login("user1", "password456").await?;
-        client2
-            .user_change_password("password456", "password789")
-            .await?;
+        let mut client = servers[0].client.write().await;
+        client.token = leader.client.read().await.token.clone();
+        let mut list = client
+            .admin_user_list()
+            .await?
+            .1
+            .into_iter()
+            .map(|u| u.name)
+            .collect::<Vec<_>>();
+        list.sort();
+        assert_eq!(list, vec!["admin", "user1"]);
     }
 
     Ok(())

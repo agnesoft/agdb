@@ -1,3 +1,4 @@
+use crate::action::cluster_login::ClusterLogin;
 use crate::action::user_add::UserAdd;
 use crate::action::ClusterAction;
 use crate::config::Config;
@@ -414,6 +415,15 @@ impl ServerDb {
                             )?
                             .try_into()?,
                         )),
+                        "ClusterLogin" => Ok(ClusterAction::ClusterLogin(
+                            t.exec(
+                                QueryBuilder::select()
+                                    .elements::<ClusterLogin>()
+                                    .ids(element.id)
+                                    .query(),
+                            )?
+                            .try_into()?,
+                        )),
                         _ => Err(ServerError::new(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             &format!("unknown action: {action}"),
@@ -765,6 +775,10 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
     match &log.data {
         ClusterAction::UserAdd(action) => {
             values.push(("action", "UserAdd").into());
+            values.extend(action.to_db_values());
+        }
+        ClusterAction::ClusterLogin(action) => {
+            values.push(("action", "ClusterLogin").into());
             values.extend(action.to_db_values());
         }
     }

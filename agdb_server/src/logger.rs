@@ -101,33 +101,36 @@ fn mask_password(log_record: &mut LogRecord) {
         || log_record.uri.contains("/change_password")
         || (log_record.uri.contains("/admin/user/") && log_record.uri.contains("/add"))
     {
-        const PASSWORD_PATTERN: &str = "\"password\"";
+        const PASSWORD_PATTERNS: [&str; 2] = ["\"password\"", "\"new_password\""];
         const QUOTE_PATTERN: &str = "\"";
-        if let Some(starting_index) = log_record.request_body.find(PASSWORD_PATTERN) {
-            if let Some(start) = log_record.request_body[starting_index + PASSWORD_PATTERN.len()..]
-                .find(QUOTE_PATTERN)
-            {
-                let mut skip = false;
-                let start = starting_index + PASSWORD_PATTERN.len() + start;
-                let mut end = start + 1;
 
-                for c in log_record.request_body[start + 1..].chars() {
-                    end += 1;
+        for pattern in PASSWORD_PATTERNS {
+            if let Some(starting_index) = log_record.request_body.find(pattern) {
+                if let Some(start) =
+                    log_record.request_body[starting_index + pattern.len()..].find(QUOTE_PATTERN)
+                {
+                    let mut skip = false;
+                    let start = starting_index + pattern.len() + start;
+                    let mut end = start + 1;
 
-                    if skip {
-                        skip = false;
-                    } else if c == '\\' {
-                        skip = true;
-                    } else if c == '"' {
-                        break;
+                    for c in log_record.request_body[start + 1..].chars() {
+                        end += 1;
+
+                        if skip {
+                            skip = false;
+                        } else if c == '\\' {
+                            skip = true;
+                        } else if c == '"' {
+                            break;
+                        }
                     }
-                }
 
-                log_record.request_body = format!(
-                    "{}\"***\"{}",
-                    &log_record.request_body[..start],
-                    &log_record.request_body[end..]
-                );
+                    log_record.request_body = format!(
+                        "{}\"***\"{}",
+                        &log_record.request_body[..start],
+                        &log_record.request_body[end..]
+                    );
+                }
             }
         }
     }

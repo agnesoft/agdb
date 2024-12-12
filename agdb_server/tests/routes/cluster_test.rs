@@ -143,25 +143,17 @@ async fn rebalance() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn user_add() -> anyhow::Result<()> {
-    let (leader, servers) = create_cluster(3).await?;
-    leader.client.write().await.user_login(ADMIN, ADMIN).await?;
-    leader
-        .client
-        .write()
-        .await
-        .admin_user_add("user1", "password123")
-        .await?;
+async fn user() -> anyhow::Result<()> {
+    let (leader, servers) = create_cluster(2).await?;
 
-    for has_user in servers.iter().map(|s| {
-        let client = s.client.clone();
-        tokio::spawn(async move {
-            client.write().await.user_login(ADMIN, ADMIN).await?;
-            wait_for_user(client.clone(), "user1").await
-        })
-    }) {
-        has_user.await??;
+    {
+        let mut client = leader.client.write().await;
+        client.cluster_login(ADMIN, ADMIN).await?;
+        client.admin_user_add("user1", "password123").await?;
     }
+
+    servers[0].client.write().await.token = leader.client.read().await.token.clone();
+    wait_for_user(servers[0].client.clone(), "user1").await?;
 
     Ok(())
 }

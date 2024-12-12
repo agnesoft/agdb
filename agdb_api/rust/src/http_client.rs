@@ -92,8 +92,7 @@ impl HttpClient for ReqwestClient {
         json: &Option<T>,
         token: &Option<String>,
     ) -> AgdbApiResult<(u16, R)> {
-        let client = reqwest::Client::new();
-        let mut request = client.post(uri);
+        let mut request = self.client.post(uri);
         if let Some(token) = token {
             request = request.bearer_auth(token);
         }

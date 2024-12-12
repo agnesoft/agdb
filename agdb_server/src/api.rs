@@ -55,6 +55,7 @@ use utoipa::OpenApi;
         routes::db::user::add,
         routes::db::user::list,
         routes::db::user::remove,
+        routes::cluster::login,
         routes::cluster::status,
     ),
     components(schemas(

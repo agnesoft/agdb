@@ -7,11 +7,12 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use reqwest::StatusCode;
 
-const REDIRECT_PATHS: [&str; 12] = [
+const REDIRECT_PATHS: [&str; 13] = [
     "/add",
     "/backup",
     "/change_password",
     "/clear",
+    "/cluster/login",
     "/convert",
     "/copy",
     "/delete",

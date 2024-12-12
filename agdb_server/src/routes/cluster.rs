@@ -1,11 +1,17 @@
+use crate::action::cluster_login::ClusterLogin;
 use crate::action::ClusterAction;
+use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::raft::Request;
 use crate::raft::Response;
+use crate::routes::user::do_login;
+use crate::server_db::ServerDb;
+use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::ClusterId;
 use agdb_api::ClusterStatus;
+use agdb_api::UserLogin;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -17,6 +23,37 @@ pub(crate) async fn cluster(
 ) -> ServerResult<(StatusCode, Json<Response>)> {
     let response = cluster.raft.write().await.request(&request).await;
     Ok((StatusCode::OK, Json(response)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/cluster/login",
+    operation_id = "cluster_login",
+    tag = "agdb",
+    request_body = UserLogin,
+    responses(
+         (status = 200, description = "login successful", body = String),
+         (status = 401, description = "invalid credentials"),
+    )
+)]
+pub(crate) async fn login(
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+    Json(request): Json<UserLogin>,
+) -> ServerResponse<(StatusCode, Json<String>)> {
+    let (token, user_id) = do_login(&server_db, &request.username, &request.password).await?;
+
+    if user_id.is_some() {
+        cluster::append(
+            cluster,
+            ClusterLogin {
+                user: request.username,
+                new_token: token.clone(),
+            },
+        )
+        .await?;
+    }
+
+    Ok((StatusCode::OK, Json(token)))
 }
 
 #[utoipa::path(get,

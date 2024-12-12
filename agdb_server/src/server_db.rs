@@ -1,3 +1,4 @@
+use crate::action::cluster_login::ClusterLogin;
 use crate::action::user_add::UserAdd;
 use crate::action::ClusterAction;
 use crate::config::Config;
@@ -409,6 +410,15 @@ impl ServerDb {
                             t.exec(
                                 QueryBuilder::select()
                                     .elements::<UserAdd>()
+                                    .ids(element.id)
+                                    .query(),
+                            )?
+                            .try_into()?,
+                        )),
+                        "ClusterLogin" => Ok(ClusterAction::ClusterLogin(
+                            t.exec(
+                                QueryBuilder::select()
+                                    .elements::<ClusterLogin>()
                                     .ids(element.id)
                                     .query(),
                             )?

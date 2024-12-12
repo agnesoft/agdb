@@ -1,11 +1,13 @@
 use crate::config::Config;
 use crate::password;
 use crate::password::Password;
+use crate::routes::ServerResult;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
 use crate::user_id::UserName;
+use agdb::DbId;
 use agdb_api::ChangePassword;
 use agdb_api::UserLogin;
 use agdb_api::UserStatus;
@@ -18,7 +20,7 @@ pub(crate) async fn do_login(
     server_db: &ServerDb,
     username: &str,
     password: &str,
-) -> ServerResult<(DbId, String, bool)> {
+) -> ServerResult<(String, Option<DbId>)> {
     let user = server_db
         .user(username)
         .await
@@ -31,14 +33,13 @@ pub(crate) async fn do_login(
 
     let user_id = user.db_id.unwrap();
     let mut token = server_db.user_token(user_id).await?;
-    let new_token = token.is_empty();
 
-    if new_token {
+    if token.is_empty() {
         let token_uuid = Uuid::new_v4();
         token = token_uuid.to_string();
     }
 
-    Ok((user_id, token, new_token))
+    Ok((token, Some(user_id)))
 }
 
 #[utoipa::path(post,
@@ -55,22 +56,9 @@ pub(crate) async fn login(
     State(server_db): State<ServerDb>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<(StatusCode, Json<String>)> {
-    let user = server_db
-        .user(&request.username)
-        .await
-        .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
-    let pswd = Password::new(&user.username, &user.password, &user.salt)?;
+    let (token, user_id) = do_login(&server_db, &request.username, &request.password).await?;
 
-    if !pswd.verify_password(&request.password) {
-        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
-    }
-
-    let user_id = user.db_id.unwrap();
-    let mut token = server_db.user_token(user_id).await?;
-
-    if token.is_empty() {
-        let token_uuid = Uuid::new_v4();
-        token = token_uuid.to_string();
+    if let Some(user_id) = user_id {
         server_db.save_token(user_id, &token).await?;
     }
 

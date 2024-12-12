@@ -142,29 +142,30 @@ async fn rebalance() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn user_add() -> anyhow::Result<()> {
-    let (leader, servers) = create_cluster(3).await?;
-    leader.client.write().await.user_login(ADMIN, ADMIN).await?;
-    leader
-        .client
-        .write()
-        .await
-        .admin_user_add("user1", "password123")
-        .await?;
+async fn user() -> anyhow::Result<()> {
+    let (leader, servers) = create_cluster(2).await?;
 
-    for has_user in servers.iter().map(|s| {
-        let client = s.client.clone();
-        tokio::spawn(async move {
-            client.write().await.user_login(ADMIN, ADMIN).await?;
-            wait_for_user(client.clone(), "user1").await
-        })
-    }) {
-        has_user.await??;
+    // Add a user and admin changes their password
+    {
+        let mut client = leader.client.write().await;
+        client.cluster_login(ADMIN, ADMIN).await?;
+        client.admin_user_add("user1", "password123").await?;
+        client
+            .admin_user_change_password("user1", "password456")
+            .await?;
     }
 
-    Ok(())
-}
+    // wait for the user to appear on another node and login as that user
+    // change their password again (this should redirect to leader)
+    wait_for_user(servers[0].client.clone(), "user1").await?;
+
+    {
+        let mut client2 = servers[0].client.write().await;
+        client2.cluster_login("user1", "password456").await?;
+        client2
+            .user_change_password("password456", "password789")
+            .await?;
+    }
 
 #[tokio::test]
 async fn status() {

@@ -526,6 +526,22 @@ impl<T: HttpClient> AgdbApi<T> {
         self.client.get(&self.url("/cluster/status"), &None).await
     }
 
+    pub async fn cluster_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {
+        let (status, token) = self
+            .client
+            .post::<UserLogin, String>(
+                &self.url("/cluster/login"),
+                &Some(UserLogin {
+                    username: user.to_string(),
+                    password: password.to_string(),
+                }),
+                &None,
+            )
+            .await?;
+        self.token = Some(token);
+        Ok(status)
+    }
+
     pub async fn user_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {
         let (status, token) = self
             .client

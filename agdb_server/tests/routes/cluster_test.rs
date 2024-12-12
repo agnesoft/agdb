@@ -142,6 +142,7 @@ async fn rebalance() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[tokio::test]
 async fn user() -> anyhow::Result<()> {
     let (leader, servers) = create_cluster(2).await?;
 
@@ -166,6 +167,9 @@ async fn user() -> anyhow::Result<()> {
             .user_change_password("password456", "password789")
             .await?;
     }
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn status() {

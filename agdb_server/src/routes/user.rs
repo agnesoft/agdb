@@ -14,6 +14,33 @@ use axum::http::StatusCode;
 use axum::Json;
 use uuid::Uuid;
 
+pub(crate) async fn do_login(
+    server_db: &ServerDb,
+    username: &str,
+    password: &str,
+) -> ServerResult<(DbId, String, bool)> {
+    let user = server_db
+        .user(username)
+        .await
+        .map_err(|_| ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"))?;
+    let pswd = Password::new(&user.username, &user.password, &user.salt)?;
+
+    if !pswd.verify_password(password) {
+        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
+    }
+
+    let user_id = user.db_id.unwrap();
+    let mut token = server_db.user_token(user_id).await?;
+    let new_token = token.is_empty();
+
+    if new_token {
+        let token_uuid = Uuid::new_v4();
+        token = token_uuid.to_string();
+    }
+
+    Ok((user_id, token, new_token))
+}
+
 #[utoipa::path(post,
     path = "/api/v1/user/login",
     operation_id = "user_login",

@@ -156,7 +156,7 @@ async fn user() -> anyhow::Result<()> {
     }
 
     // wait for the user to appear on another node and login as that user
-    // change their password again (this should redirect to leader)
+    // change their password again (this should forward to leader)
     wait_for_user(servers[0].client.clone(), "user1").await?;
 
     {

@@ -28,7 +28,7 @@ pub trait HttpClient {
 
 #[cfg(feature = "reqwest")]
 pub struct ReqwestClient {
-    client: reqwest::Client,
+    pub client: reqwest::Client,
 }
 
 #[cfg(feature = "reqwest")]

@@ -13,7 +13,12 @@ use crate::server_error::ServerResult;
 use agdb::StableHash;
 use agdb_api::HttpClient;
 use agdb_api::ReqwestClient;
+use axum::body::Body;
+use axum::extract::Request as AxumRequest;
+use axum::response::Response as AxumResponse;
+use reqwest::StatusCode;
 use std::collections::VecDeque;
+use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -33,6 +38,7 @@ type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Respon
 pub(crate) struct ClusterNodeImpl {
     client: ReqwestClient,
     url: String,
+    base_url: String,
     token: Option<String>,
     requests_sender: UnboundedSender<Request<ClusterAction>>,
     requests_receiver: RwLock<UnboundedReceiver<Request<ClusterAction>>>,
@@ -63,11 +69,55 @@ impl ClusterNodeImpl {
         Self {
             client: ReqwestClient::new(),
             url: format!("{base}api/v1/cluster"),
+            base_url: base.trim_end_matches("/").to_string(),
             token: Some(token.to_string()),
             requests_sender,
             requests_receiver: RwLock::new(requests_receiver),
             responses,
         }
+    }
+
+    fn bad_request(message: &str) -> AxumResponse {
+        AxumResponse::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(message.to_owned().into())
+            .expect("bad request")
+    }
+
+    pub(crate) async fn forward(
+        &self,
+        axum_request: AxumRequest,
+        local_index: usize,
+    ) -> Result<AxumResponse, AxumResponse> {
+        let (parts, body) = axum_request.into_parts();
+        let path_query = parts.uri.path_and_query().ok_or(Self::bad_request(""))?;
+        let url = format!("{}{path_query}", self.base_url);
+
+        let mut response = self
+            .client
+            .client
+            .request(
+                reqwest::Method::from_str(parts.method.as_str())
+                    .map_err(|e| Self::bad_request(&e.to_string()))?,
+                url,
+            )
+            .headers(parts.headers)
+            .header("Forwarded-By", local_index)
+            .body(reqwest::Body::wrap_stream(body.into_data_stream()))
+            .send()
+            .await
+            .map_err(|e| Self::bad_request(&e.to_string()))?;
+
+        let mut axum_response = AxumResponse::builder().status(response.status());
+        if let Some(headers) = axum_response.headers_mut() {
+            std::mem::swap(headers, response.headers_mut());
+        }
+
+        tracing::info!("Responding...");
+
+        axum_response
+            .body(Body::from_stream(response.bytes_stream()))
+            .map_err(|e| Self::bad_request(&e.to_string()))
     }
 
     async fn send(&self, request: &raft::Request<ClusterAction>) -> Option<raft::Response> {

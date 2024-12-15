@@ -1,9 +1,7 @@
 use crate::server_state::ServerState;
-use axum::body::Body;
 use axum::extract::Request;
 use axum::extract::State;
 use axum::middleware::Next;
-use axum::response::IntoResponse;
 use axum::response::Response;
 use reqwest::StatusCode;
 
@@ -23,30 +21,33 @@ const REDIRECT_PATHS: [&str; 13] = [
     "/restore",
 ];
 
-pub(crate) async fn cluster_redirect(
+pub(crate) async fn forward_to_leader(
     state: State<ServerState>,
     request: Request,
     next: Next,
-) -> Result<impl IntoResponse, Response> {
+) -> Response {
     if REDIRECT_PATHS
         .iter()
         .any(|pattern| request.uri().path().ends_with(pattern))
     {
-        if let Some(leader) = state.cluster.raft.read().await.leader() {
+        let leader = state.cluster.raft.read().await.leader();
+        if let Some(leader) = leader {
             if state.cluster.index != leader as usize {
-                return Ok(Response::builder()
-                    .status(StatusCode::PERMANENT_REDIRECT)
-                    .header("Location", state.config.cluster[leader as usize].as_str())
-                    .body(Body::empty())
-                    .expect("pemanent redirect response"));
+                return match state.cluster.nodes[leader as usize]
+                    .forward(request, state.cluster.index)
+                    .await
+                {
+                    Ok(r) => r,
+                    Err(r) => r,
+                };
             }
         } else {
-            return Ok(Response::builder()
+            return Response::builder()
                 .status(StatusCode::SERVICE_UNAVAILABLE)
                 .body("Cluster is not ready yet".into())
-                .expect("cluster not ready yet response"));
+                .expect("cluster not ready yet response");
         }
     }
 
-    Ok(next.run(request).await)
+    next.run(request).await
 }

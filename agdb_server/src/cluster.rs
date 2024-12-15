@@ -52,6 +52,29 @@ pub(crate) struct ClusterImpl {
     pub(crate) responses: Option<RwLock<ClusterResponseReceiver>>,
 }
 
+impl ClusterImpl {
+    pub(crate) async fn append<T: Action + Into<ClusterAction>>(
+        &self,
+        action: T,
+    ) -> ServerResult<ClusterResponse> {
+        let (sender, receiver) = tokio::sync::oneshot::channel::<ServerResult<ClusterResponse>>();
+        let requests = self
+            .raft
+            .write()
+            .await
+            .append(action.into(), Some(sender))
+            .await?;
+
+        for request in requests {
+            self.nodes[request.target as usize]
+                .requests_sender
+                .send(request)?;
+        }
+
+        receiver.await?
+    }
+}
+
 impl ClusterNodeImpl {
     fn new(
         address: &str,
@@ -150,7 +173,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
     let hash = sorted_cluster.stable_hash();
-    let storage = ClusterStorage::new(db.clone(), db_pool.clone()).await?;
+    let storage = ClusterStorage::new(db.clone(), db_pool.clone(), config.clone()).await?;
     let settings = raft::ClusterSettings {
         index: index as u64,
         hash,
@@ -251,27 +274,6 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     Ok(())
 }
 
-pub(crate) async fn append<T: Action + Into<ClusterAction>>(
-    cluster: Cluster,
-    action: T,
-) -> ServerResult<ClusterResponse> {
-    let (sender, receiver) = tokio::sync::oneshot::channel::<ServerResult<ClusterResponse>>();
-    let requests = cluster
-        .raft
-        .write()
-        .await
-        .append(action.into(), Some(sender))
-        .await?;
-
-    for request in requests {
-        cluster.nodes[request.target as usize]
-            .requests_sender
-            .send(request)?;
-    }
-
-    receiver.await?
-}
-
 pub(crate) async fn start_with_shutdown(
     cluster: Cluster,
     mut shutdown_receiver: broadcast::Receiver<()>,
@@ -295,10 +297,11 @@ pub(crate) struct ClusterStorage {
     commit: u64,
     db: ServerDb,
     db_pool: DbPool,
+    config: Config,
 }
 
 impl ClusterStorage {
-    async fn new(db: ServerDb, db_pool: DbPool) -> ServerResult<Self> {
+    async fn new(db: ServerDb, db_pool: DbPool, config: Config) -> ServerResult<Self> {
         let (index, term, commit) = db.cluster_log().await?;
         Ok(Self {
             logs: VecDeque::new(),
@@ -307,6 +310,7 @@ impl ClusterStorage {
             commit,
             db,
             db_pool,
+            config,
         })
     }
 }
@@ -336,9 +340,10 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
                     let mut db = self.db.clone();
                     let mut db_pool = self.db_pool.clone();
+                    let config = self.config.clone();
 
                     tokio::spawn(async move {
-                        let result = log.data.exec(&mut db, &mut db_pool).await;
+                        let result = log.data.exec(&mut db, &mut db_pool, &config).await;
 
                         if let Some(notifier) = notifier {
                             let _ = notifier.send(result);

@@ -12,7 +12,7 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 
 const TEST_TIMEOUT: u128 = 10000;
-const POLL_INTERVAL: u64 = 250;
+const POLL_INTERVAL: u64 = 100;
 
 type ClusterClient = Arc<RwLock<AgdbApi<ReqwestClient>>>;
 
@@ -58,7 +58,32 @@ async fn wait_for_user(client: ClusterClient, username: &str) -> anyhow::Result<
     }
 
     Err(anyhow::anyhow!(
-        "User '{username}' not found within {TEST_TIMEOUT}seconds"
+        "User '{username}' not found within {} seconds",
+        TEST_TIMEOUT / 1000
+    ))
+}
+
+async fn wait_for_user_gone(client: ClusterClient, username: &str) -> anyhow::Result<()> {
+    let now = Instant::now();
+
+    while now.elapsed().as_millis() < TEST_TIMEOUT {
+        if client
+            .read()
+            .await
+            .admin_user_list()
+            .await?
+            .1
+            .iter()
+            .all(|u| u.name != username)
+        {
+            return Ok(());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
+    }
+
+    Err(anyhow::anyhow!(
+        "User '{username}' still found after {} seconds",
+        TEST_TIMEOUT / 1000
     ))
 }
 
@@ -144,7 +169,7 @@ async fn rebalance() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user() -> anyhow::Result<()> {
-    let (_leader, servers) = create_cluster(2).await?;
+    let (leader, servers) = create_cluster(2).await?;
 
     {
         let mut client = servers[0].client.write().await;
@@ -153,6 +178,12 @@ async fn user() -> anyhow::Result<()> {
     }
 
     wait_for_user(servers[0].client.clone(), "user1").await?;
+
+    let mut leader = leader.client.write().await;
+    leader.user_login(ADMIN, ADMIN).await?;
+    leader.admin_user_remove("user1").await?;
+
+    wait_for_user_gone(servers[0].client.clone(), "user1").await?;
 
     Ok(())
 }

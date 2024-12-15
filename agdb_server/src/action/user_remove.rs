@@ -2,27 +2,26 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterResponse;
-use crate::action::Config;
+use crate::config::Config;
 use crate::server_error::ServerResult;
 use agdb::UserValue;
 use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Deserialize, UserValue)]
-pub(crate) struct ClusterLogin {
+pub(crate) struct UserRemove {
     pub(crate) user: String,
-    pub(crate) new_token: String,
 }
 
-impl Action for ClusterLogin {
+impl Action for UserRemove {
     async fn exec(
         self,
         db: &mut ServerDb,
-        _db_pool: &mut DbPool,
-        _config: &Config,
+        db_pool: &mut DbPool,
+        config: &Config,
     ) -> ServerResult<ClusterResponse> {
-        let user_id = db.user_id(&self.user).await?;
-        db.save_token(user_id, &self.new_token).await?;
+        let dbs = db.remove_user(&self.user).await?;
+        db_pool.remove_user_dbs(&self.user, &dbs, config).await?;
 
         Ok(ClusterResponse::None)
     }

@@ -14,7 +14,7 @@ const cellKeys = computed(() => {
 </script>
 
 <template>
-    <div class="agdb-table-row">
+    <div class="agdb-table-row columns">
         <div v-for="cellKey in cellKeys" :key="cellKey">
             <p>{{ row[cellKey] }}</p>
         </div>

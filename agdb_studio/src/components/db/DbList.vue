@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { useDbList } from "@/composables/stores/DbStore";
 import { onMounted } from "vue";
-import DbListRow from "./DbListRow.vue";
 import DbAddForm from "./DbAddForm.vue";
 import DbTable from "./DbTable.vue";
 

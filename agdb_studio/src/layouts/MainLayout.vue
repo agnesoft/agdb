@@ -55,6 +55,7 @@ main {
     grid-area: main;
     flex-grow: 1;
     padding: 1rem;
+    max-width: 100vw;
 }
 
 footer {

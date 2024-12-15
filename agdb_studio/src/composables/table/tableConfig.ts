@@ -1,27 +1,12 @@
 import { computed, ref } from "vue";
 
-// export type CellType = "text" | "number" | "date" | "boolean" | "custom";
-
-// export type Cell<TData> = {
-//     value: string | number | Date | boolean;
-//     row: TData;
-// };
-
-// export type TCell = {
-//     key: string;
-//     value: string | number | Date | boolean;
-// };
-
 export type TRow = {
     [key: string]: string | number | Date | boolean;
-    // key: string;
-    // cells: TCell[];
 };
 
 export type Column<T extends TRow> = {
     key: string;
     title: string;
-    // cellType: CellType | ((row: TData) => CellType);
     cellClass?: string | ((row: T) => string);
     sortable?: boolean;
     filterable?: boolean;
@@ -67,14 +52,12 @@ const clearTables = (): void => {
     tables.value.clear();
 };
 
-export const useTableConfig = () => {
-    return {
-        getTable,
-        addTable,
-        removeTable,
-        tableExists,
-        tableNames,
-        clearTables,
-        getTableColumns,
-    };
+export {
+    getTable,
+    addTable,
+    removeTable,
+    tableExists,
+    tableNames,
+    clearTables,
+    getTableColumns,
 };

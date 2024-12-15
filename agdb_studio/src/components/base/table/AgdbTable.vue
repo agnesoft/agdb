@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import { computed, defineProps } from "vue";
-import { useTableData } from "@/composables/table/tableData";
+import { getRows } from "@/composables/table/tableData";
 import TableRow from "@/components/base/table/TableRow.vue";
+import TableHeader from "./TableHeader.vue";
 
 const props = defineProps({
     name: {
@@ -10,7 +11,6 @@ const props = defineProps({
     },
 });
 
-const { getRows } = useTableData();
 const rows = computed(() => {
     return getRows(props.name);
 });
@@ -18,10 +18,28 @@ const rows = computed(() => {
 
 <template>
     <div class="agdb-table">
-        <div v-for="row in rows" :key="row[0]">
+        <TableHeader :tableKey="name" />
+        <template v-for="row in rows" :key="row[0]">
             <TableRow :row="row[1]" />
-        </div>
+        </template>
     </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.agdb-table {
+    display: grid;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    margin: 0 auto;
+    max-width: 100%;
+    overflow: auto;
+}
+.agdb-table ::v-deep(.columns) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+</style>

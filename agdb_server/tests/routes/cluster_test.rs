@@ -144,15 +144,14 @@ async fn rebalance() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn user() -> anyhow::Result<()> {
-    let (leader, servers) = create_cluster(2).await?;
+    let (_leader, servers) = create_cluster(2).await?;
 
     {
-        let mut client = leader.client.write().await;
+        let mut client = servers[0].client.write().await;
         client.cluster_login(ADMIN, ADMIN).await?;
         client.admin_user_add("user1", "password123").await?;
     }
 
-    servers[0].client.write().await.token = leader.client.read().await.token.clone();
     wait_for_user(servers[0].client.clone(), "user1").await?;
 
     Ok(())

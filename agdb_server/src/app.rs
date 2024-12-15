@@ -2,8 +2,8 @@ use crate::api::Api;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::forward;
 use crate::logger;
-use crate::redirect;
 use crate::routes;
 use crate::server_db::ServerDb;
 use crate::server_state::ServerState;
@@ -164,7 +164,7 @@ pub(crate) fn app(
         .nest("/api/v1", api_v1)
         .layer(middleware::from_fn_with_state(
             state.clone(),
-            redirect::cluster_redirect,
+            forward::forward_to_leader,
         ))
         .layer(middleware::from_fn_with_state(
             state.clone(),

@@ -58,6 +58,7 @@ use utoipa::OpenApi;
         routes::cluster::login,
         routes::cluster::logout,
         routes::cluster::status,
+        routes::cluster::admin_logout,
     ),
     components(schemas(
         routes::db::DbTypeParam,

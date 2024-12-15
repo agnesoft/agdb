@@ -46,6 +46,18 @@ impl<T: HttpClient> AgdbApi<T> {
         &self.base_url
     }
 
+    pub async fn admin_cluster_logout(&self, user: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/admin/cluster/{user}/logout")),
+                &None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
         Ok(self
             .client

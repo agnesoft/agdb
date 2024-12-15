@@ -188,26 +188,42 @@ async fn rebalance() -> anyhow::Result<()> {
 #[tokio::test]
 async fn user() -> anyhow::Result<()> {
     let (leader, servers) = create_cluster(2).await?;
+    let client = servers[0].client.clone();
 
-    {
-        let mut client = servers[0].client.write().await;
-        client.cluster_login(ADMIN, ADMIN).await?;
-        client.admin_user_add("user1", "password123").await?;
-    }
+    client.write().await.cluster_login(ADMIN, ADMIN).await?;
+    client
+        .read()
+        .await
+        .admin_user_add("user1", "password123")
+        .await?;
+    client
+        .read()
+        .await
+        .admin_user_change_password("user1", "password456")
+        .await?;
 
-    wait_for_user(servers[0].client.clone(), "user1").await?;
+    wait_for_user(client.clone(), "user1").await?;
+    client
+        .write()
+        .await
+        .user_login("user1", "password456")
+        .await?;
 
     let mut leader = leader.client.write().await;
-    leader.token = servers[0].client.read().await.token.clone();
+    leader.cluster_login(ADMIN, ADMIN).await?;
+    leader.admin_cluster_logout("user1").await?;
+
+    wait_for_logout(client.clone()).await?;
+
     leader.admin_user_remove("user1").await?;
 
-    wait_for_user_gone(servers[0].client.clone(), "user1").await?;
+    client.write().await.user_login(ADMIN, ADMIN).await?;
+    wait_for_user_gone(client.clone(), "user1").await?;
 
-    let client = servers[0].client.read().await;
-    client.user_status().await?;
+    client.read().await.user_status().await?;
     leader.cluster_logout().await?;
 
-    wait_for_logout(servers[0].client.clone()).await?;
+    wait_for_logout(client.clone()).await?;
 
     Ok(())
 }

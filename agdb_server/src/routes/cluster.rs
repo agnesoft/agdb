@@ -8,10 +8,12 @@ use crate::routes::user::do_login;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
+use crate::user_id::AdminId;
 use crate::user_id::ClusterId;
 use crate::user_id::UserId;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
+use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -23,6 +25,38 @@ pub(crate) async fn cluster(
 ) -> ServerResult<(StatusCode, Json<Response>)> {
     let response = cluster.raft.write().await.request(&request).await;
     Ok((StatusCode::OK, Json(response)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/cluster/{username}/logout",
+    operation_id = "admin_cluster_logout",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+    ),
+    responses(
+         (status = 201, description = "user logged out"),
+         (status = 401, description = "admin only"),
+         (status = 404, description = "user not found"),
+    )
+)]
+pub(crate) async fn admin_logout(
+    _admin: AdminId,
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+    Path(username): Path<String>,
+) -> ServerResponse {
+    let _user_id = server_db.user_id(&username).await?;
+
+    cluster
+        .append(ClusterLogin {
+            user: username,
+            new_token: String::new(),
+        })
+        .await?;
+
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(post,
@@ -69,12 +103,16 @@ pub(crate) async fn logout(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
 ) -> ServerResponse {
-    cluster
-        .append(ClusterLogin {
-            user: server_db.user_name(user.0).await?,
-            new_token: String::new(),
-        })
-        .await?;
+    let token = server_db.user_token(user.0).await?;
+
+    if !token.is_empty() {
+        cluster
+            .append(ClusterLogin {
+                user: server_db.user_name(user.0).await?,
+                new_token: String::new(),
+            })
+            .await?;
+    }
 
     Ok(StatusCode::CREATED)
 }

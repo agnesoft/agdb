@@ -33,15 +33,15 @@ pub(crate) async fn do_login(
         return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
     }
 
-    let user_id = user.db_id.unwrap();
-    let mut token = server_db.user_token(user_id).await?;
+    let user_id = user.db_id;
+    let mut token = server_db.user_token(user_id.unwrap_or_default()).await?;
 
     if token.is_empty() {
         let token_uuid = Uuid::new_v4();
         token = token_uuid.to_string();
     }
 
-    Ok((token, Some(user_id)))
+    Ok((token, user_id))
 }
 
 #[utoipa::path(post,

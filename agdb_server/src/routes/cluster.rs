@@ -9,6 +9,7 @@ use crate::server_db::ServerDb;
 use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
 use crate::user_id::ClusterId;
+use crate::user_id::UserId;
 use agdb_api::ClusterStatus;
 use agdb_api::UserLogin;
 use axum::extract::State;
@@ -51,6 +52,31 @@ pub(crate) async fn login(
     }
 
     Ok((StatusCode::OK, Json(token)))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/cluster/logout",
+    operation_id = "cluster_logout",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "user logged out"),
+         (status = 401, description = "invalid credentials")
+    )
+)]
+pub(crate) async fn logout(
+    user: UserId,
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+) -> ServerResponse {
+    cluster
+        .append(ClusterLogin {
+            user: server_db.user_name(user.0).await?,
+            new_token: String::new(),
+        })
+        .await?;
+
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(get,

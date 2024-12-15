@@ -542,6 +542,16 @@ impl<T: HttpClient> AgdbApi<T> {
         Ok(status)
     }
 
+    pub async fn cluster_logout(&mut self) -> AgdbApiResult<u16> {
+        let status = self
+            .client
+            .post::<(), ()>(&self.url("/cluster/logout"), &None, &self.token)
+            .await?
+            .0;
+        self.token = None;
+        Ok(status)
+    }
+
     pub async fn user_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {
         let (status, token) = self
             .client

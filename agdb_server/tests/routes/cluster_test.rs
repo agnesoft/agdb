@@ -87,6 +87,24 @@ async fn wait_for_user_gone(client: ClusterClient, username: &str) -> anyhow::Re
     ))
 }
 
+async fn wait_for_logout(client: ClusterClient) -> anyhow::Result<()> {
+    let now = Instant::now();
+
+    while now.elapsed().as_millis() < TEST_TIMEOUT {
+        if let Err(e) = client.read().await.user_status().await {
+            if e.status == 401 {
+                return Ok(());
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
+    }
+
+    Err(anyhow::anyhow!(
+        "User not logged out within {} seconds",
+        TEST_TIMEOUT / 1000
+    ))
+}
+
 async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<ClusterServer>)> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
@@ -170,20 +188,38 @@ async fn rebalance() -> anyhow::Result<()> {
 #[tokio::test]
 async fn user() -> anyhow::Result<()> {
     let (leader, servers) = create_cluster(2).await?;
+    let client = servers[0].client.clone();
 
-    {
-        let mut client = servers[0].client.write().await;
-        client.cluster_login(ADMIN, ADMIN).await?;
-        client.admin_user_add("user1", "password123").await?;
-    }
+    client.write().await.cluster_login(ADMIN, ADMIN).await?;
+    client
+        .read()
+        .await
+        .admin_user_add("user1", "password123")
+        .await?;
 
-    wait_for_user(servers[0].client.clone(), "user1").await?;
+    wait_for_user(client.clone(), "user1").await?;
+
+    client
+        .write()
+        .await
+        .user_login("user1", "password123")
+        .await?;
 
     let mut leader = leader.client.write().await;
-    leader.user_login(ADMIN, ADMIN).await?;
+    leader.cluster_login(ADMIN, ADMIN).await?;
+    leader.admin_cluster_logout("user1").await?;
+
+    wait_for_logout(client.clone()).await?;
+
     leader.admin_user_remove("user1").await?;
 
-    wait_for_user_gone(servers[0].client.clone(), "user1").await?;
+    client.write().await.user_login(ADMIN, ADMIN).await?;
+    wait_for_user_gone(client.clone(), "user1").await?;
+
+    client.read().await.user_status().await?;
+    leader.cluster_logout().await?;
+
+    wait_for_logout(client.clone()).await?;
 
     Ok(())
 }

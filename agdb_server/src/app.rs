@@ -145,6 +145,11 @@ pub(crate) fn app(
         )
         .route("/cluster", routing::post(routes::cluster::cluster))
         .route("/cluster/login", routing::post(routes::cluster::login))
+        .route("/cluster/logout", routing::post(routes::cluster::logout))
+        .route(
+            "/admin/cluster/:user/logout",
+            routing::post(routes::cluster::admin_logout),
+        )
         .route("/cluster/status", routing::get(routes::cluster::status))
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))

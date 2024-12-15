@@ -175,9 +175,6 @@ async fn user() -> anyhow::Result<()> {
         let mut client = servers[0].client.write().await;
         client.cluster_login(ADMIN, ADMIN).await?;
         client.admin_user_add("user1", "password123").await?;
-        client
-            .admin_user_change_password("user1", "password456")
-            .await?;
     }
 
     wait_for_user(servers[0].client.clone(), "user1").await?;

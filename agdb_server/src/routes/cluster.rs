@@ -1,6 +1,5 @@
 use crate::action::cluster_login::ClusterLogin;
 use crate::action::ClusterAction;
-use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::raft::Request;
@@ -43,14 +42,12 @@ pub(crate) async fn login(
     let (token, user_id) = do_login(&server_db, &request.username, &request.password).await?;
 
     if user_id.is_some() {
-        cluster::append(
-            cluster,
-            ClusterLogin {
+        cluster
+            .append(ClusterLogin {
                 user: request.username,
                 new_token: token.clone(),
-            },
-        )
-        .await?;
+            })
+            .await?;
     }
 
     Ok((StatusCode::OK, Json(token)))

@@ -1,5 +1,7 @@
+use crate::action::change_password::ChangePassword;
 use crate::action::cluster_login::ClusterLogin;
 use crate::action::user_add::UserAdd;
+use crate::action::user_remove::UserRemove;
 use crate::action::ClusterAction;
 use crate::config::Config;
 use crate::password::Password;
@@ -424,6 +426,24 @@ impl ServerDb {
                             )?
                             .try_into()?,
                         )),
+                        "ChangePassword" => Ok(ClusterAction::ChangePassword(
+                            t.exec(
+                                QueryBuilder::select()
+                                    .elements::<ChangePassword>()
+                                    .ids(element.id)
+                                    .query(),
+                            )?
+                            .try_into()?,
+                        )),
+                        "UserRemove" => Ok(ClusterAction::UserRemove(
+                            t.exec(
+                                QueryBuilder::select()
+                                    .elements::<UserRemove>()
+                                    .ids(element.id)
+                                    .query(),
+                            )?
+                            .try_into()?,
+                        )),
                         _ => Err(ServerError::new(
                             StatusCode::INTERNAL_SERVER_ERROR,
                             &format!("unknown action: {action}"),
@@ -779,6 +799,14 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
         }
         ClusterAction::ClusterLogin(action) => {
             values.push(("action", "ClusterLogin").into());
+            values.extend(action.to_db_values());
+        }
+        ClusterAction::ChangePassword(action) => {
+            values.push(("action", "ChangePassword").into());
+            values.extend(action.to_db_values());
+        }
+        ClusterAction::UserRemove(action) => {
+            values.push(("action", "UserRemove").into());
             values.extend(action.to_db_values());
         }
     }

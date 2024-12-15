@@ -1,3 +1,5 @@
+use crate::action::change_password::ChangePassword as ChangePasswordAction;
+use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::password;
 use crate::password::Password;
@@ -96,9 +98,10 @@ pub(crate) async fn logout(user: UserId, State(server_db): State<ServerDb>) -> S
 pub(crate) async fn change_password(
     user: UserId,
     State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
     Json(request): Json<ChangePassword>,
 ) -> ServerResponse {
-    let mut user = server_db.user_by_id(user.0).await?;
+    let user = server_db.user_by_id(user.0).await?;
     let old_pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {
@@ -107,9 +110,14 @@ pub(crate) async fn change_password(
 
     password::validate_password(&request.new_password)?;
     let pswd = Password::create(&user.username, &request.new_password);
-    user.password = pswd.password.to_vec();
-    user.salt = pswd.user_salt.to_vec();
-    server_db.save_user(user).await?;
+
+    cluster
+        .append(ChangePasswordAction {
+            user: user.username,
+            new_password: pswd.password.to_vec(),
+            new_salt: pswd.user_salt.to_vec(),
+        })
+        .await?;
 
     Ok(StatusCode::CREATED)
 }

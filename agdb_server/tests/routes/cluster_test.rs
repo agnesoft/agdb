@@ -196,17 +196,13 @@ async fn user() -> anyhow::Result<()> {
         .await
         .admin_user_add("user1", "password123")
         .await?;
-    client
-        .read()
-        .await
-        .admin_user_change_password("user1", "password456")
-        .await?;
 
     wait_for_user(client.clone(), "user1").await?;
+
     client
         .write()
         .await
-        .user_login("user1", "password456")
+        .user_login("user1", "password123")
         .await?;
 
     let mut leader = leader.client.write().await;

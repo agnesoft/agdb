@@ -44,6 +44,9 @@ const getRows = <T extends TRow>(name: string): [string, T][] => {
     }
     const filter = getTableFilter(name);
     const filteredRows = Array.from(table.data ?? []).filter(([, row]) => {
+        if (filter.filters.size === 0) {
+            return true;
+        }
         for (const [filterKey, filterValue] of filter.filters) {
             if (row[filterKey] !== filterValue) {
                 return false;

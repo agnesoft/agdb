@@ -20,6 +20,7 @@ use reqwest::StatusCode;
 use std::collections::VecDeque;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
@@ -125,18 +126,17 @@ impl ClusterNodeImpl {
                 url,
             )
             .headers(parts.headers)
-            .header("Forwarded-By", local_index)
+            .header("forwarded-by", local_index)
             .body(reqwest::Body::wrap_stream(body.into_data_stream()))
             .send()
             .await
             .map_err(|e| Self::bad_request(&e.to_string()))?;
 
         let mut axum_response = AxumResponse::builder().status(response.status());
-        if let Some(headers) = axum_response.headers_mut() {
-            std::mem::swap(headers, response.headers_mut());
-        }
 
-        tracing::info!("Responding...");
+        if let Some(headers) = axum_response.headers_mut() {
+            std::mem::swap(headers, response.headers_mut())
+        }
 
         axum_response
             .body(Body::from_stream(response.bytes_stream()))
@@ -294,7 +294,7 @@ pub(crate) struct ClusterStorage {
     logs: VecDeque<(Log<ClusterAction>, Option<ResultNotifier>)>,
     index: u64,
     term: u64,
-    commit: u64,
+    commit: Arc<AtomicU64>,
     db: ServerDb,
     db_pool: DbPool,
     config: Config,
@@ -302,16 +302,47 @@ pub(crate) struct ClusterStorage {
 
 impl ClusterStorage {
     async fn new(db: ServerDb, db_pool: DbPool, config: Config) -> ServerResult<Self> {
-        let (index, term, commit) = db.cluster_log().await?;
-        Ok(Self {
+        let (index, term) = db.cluster_log().await?;
+        let unexecuted_logs = db.logs_unexecuted().await?;
+
+        let storage = Self {
             logs: VecDeque::new(),
             index,
             term,
-            commit,
+            commit: Arc::new(AtomicU64::new(index)),
             db,
             db_pool,
             config,
-        })
+        };
+
+        for log in unexecuted_logs {
+            storage.execute_log(log, None).await?;
+        }
+
+        Ok(storage)
+    }
+
+    async fn execute_log(
+        &self,
+        log: Log<ClusterAction>,
+        notifier: Option<ResultNotifier>,
+    ) -> Result<(), crate::server_error::ServerError> {
+        let log_id = self.db.commit_log(&log).await?;
+        let commit = self.commit.clone();
+        let mut db = self.db.clone();
+        let mut db_pool = self.db_pool.clone();
+        let config = self.config.clone();
+
+        tokio::spawn(async move {
+            let result = log.data.exec(&mut db, &mut db_pool, &config).await;
+            commit.fetch_max(log.index, Ordering::Relaxed);
+            let _ = db.commit_log_executed(log_id).await;
+
+            if let Some(notifier) = notifier {
+                let _ = notifier.send(result);
+            }
+        });
+        Ok(())
     }
 }
 
@@ -335,20 +366,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         while let Some((log, _notifier)) = self.logs.front() {
             if log.index <= index {
                 if let Some((log, notifier)) = self.logs.pop_front() {
-                    self.commit = log.index;
-                    self.db.commit_log(&log).await?;
-
-                    let mut db = self.db.clone();
-                    let mut db_pool = self.db_pool.clone();
-                    let config = self.config.clone();
-
-                    tokio::spawn(async move {
-                        let result = log.data.exec(&mut db, &mut db_pool, &config).await;
-
-                        if let Some(notifier) = notifier {
-                            let _ = notifier.send(result);
-                        }
-                    });
+                    self.execute_log(log, notifier).await?;
                 }
             } else {
                 break;
@@ -367,7 +385,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     }
 
     fn log_commit(&self) -> u64 {
-        self.commit
+        self.commit.load(Ordering::Relaxed)
     }
 
     async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {

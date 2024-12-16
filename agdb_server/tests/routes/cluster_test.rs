@@ -39,72 +39,6 @@ async fn wait_for_leader(client: ClusterClient) -> anyhow::Result<Vec<ClusterSta
     ))
 }
 
-async fn wait_for_user(client: ClusterClient, username: &str) -> anyhow::Result<()> {
-    let now = Instant::now();
-
-    while now.elapsed().as_millis() < TEST_TIMEOUT {
-        if client
-            .read()
-            .await
-            .admin_user_list()
-            .await?
-            .1
-            .iter()
-            .any(|u| u.name == username)
-        {
-            return Ok(());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
-    }
-
-    Err(anyhow::anyhow!(
-        "User '{username}' not found within {} seconds",
-        TEST_TIMEOUT / 1000
-    ))
-}
-
-async fn wait_for_user_gone(client: ClusterClient, username: &str) -> anyhow::Result<()> {
-    let now = Instant::now();
-
-    while now.elapsed().as_millis() < TEST_TIMEOUT {
-        if client
-            .read()
-            .await
-            .admin_user_list()
-            .await?
-            .1
-            .iter()
-            .all(|u| u.name != username)
-        {
-            return Ok(());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
-    }
-
-    Err(anyhow::anyhow!(
-        "User '{username}' still found after {} seconds",
-        TEST_TIMEOUT / 1000
-    ))
-}
-
-async fn wait_for_logout(client: ClusterClient) -> anyhow::Result<()> {
-    let now = Instant::now();
-
-    while now.elapsed().as_millis() < TEST_TIMEOUT {
-        if let Err(e) = client.read().await.user_status().await {
-            if e.status == 401 {
-                return Ok(());
-            }
-        }
-        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
-    }
-
-    Err(anyhow::anyhow!(
-        "User not logged out within {} seconds",
-        TEST_TIMEOUT / 1000
-    ))
-}
-
 async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<ClusterServer>)> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
@@ -196,9 +130,6 @@ async fn user() -> anyhow::Result<()> {
         .await
         .admin_user_add("user1", "password123")
         .await?;
-
-    wait_for_user(client.clone(), "user1").await?;
-
     client
         .write()
         .await
@@ -208,18 +139,14 @@ async fn user() -> anyhow::Result<()> {
     let mut leader = leader.client.write().await;
     leader.cluster_login(ADMIN, ADMIN).await?;
     leader.admin_cluster_logout("user1").await?;
-
-    wait_for_logout(client.clone()).await?;
-
     leader.admin_user_remove("user1").await?;
-
     client.write().await.user_login(ADMIN, ADMIN).await?;
-    wait_for_user_gone(client.clone(), "user1").await?;
-
     client.read().await.user_status().await?;
     leader.cluster_logout().await?;
-
-    wait_for_logout(client.clone()).await?;
+    assert_eq!(
+        client.read().await.user_status().await.unwrap_err().status,
+        401
+    );
 
     Ok(())
 }

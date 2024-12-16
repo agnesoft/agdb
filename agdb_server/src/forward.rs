@@ -27,6 +27,8 @@ pub(crate) async fn forward_to_leader(
     request: Request,
     next: Next,
 ) -> Response {
+    let forwarded = request.headers().get("forwarded-by").is_some();
+
     if REDIRECT_PATHS
         .iter()
         .any(|pattern| request.uri().path().ends_with(pattern))
@@ -66,5 +68,14 @@ pub(crate) async fn forward_to_leader(
         }
     }
 
-    next.run(request).await
+    let mut resposne = next.run(request).await;
+
+    if forwarded && resposne.status().is_success() {
+        resposne.headers_mut().insert(
+            "commit-index",
+            state.cluster.raft.read().await.storage.log_commit().into(),
+        );
+    }
+
+    resposne
 }

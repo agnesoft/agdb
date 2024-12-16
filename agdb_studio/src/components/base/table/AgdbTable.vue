@@ -3,6 +3,7 @@ import { computed, defineProps } from "vue";
 import { getRows } from "@/composables/table/tableData";
 import TableRow from "@/components/base/table/TableRow.vue";
 import TableHeader from "./TableHeader.vue";
+import { getTableColumns, type TRow } from "@/composables/table/tableConfig";
 
 const props = defineProps({
     name: {
@@ -14,13 +15,16 @@ const props = defineProps({
 const rows = computed(() => {
     return getRows(props.name);
 });
+const columns = computed(() => {
+    return getTableColumns<TRow>(props.name);
+});
 </script>
 
 <template>
     <div class="agdb-table">
         <TableHeader :tableKey="name" />
         <template v-for="row in rows" :key="row[0]">
-            <TableRow :row="row[1]" />
+            <TableRow v-if="columns" :row="row[1]" :columns="columns" />
         </template>
     </div>
 </template>

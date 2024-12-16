@@ -7,7 +7,7 @@ const { addDatabase } = vi.hoisted(() => {
     };
 });
 
-vi.mock("@/composables/DbStore", () => {
+vi.mock("@/composables/stores/DbStore", () => {
     return {
         useDbList: () => {
             return {

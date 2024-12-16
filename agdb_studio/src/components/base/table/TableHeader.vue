@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { getTable } from "@/composables/table/tableConfig";
+import { getTableColumnsArray } from "@/composables/table/tableConfig";
 import { defineProps, computed } from "vue";
 const props = defineProps({
     tableKey: {
@@ -9,7 +9,7 @@ const props = defineProps({
 });
 
 const columns = computed(() => {
-    return getTable(props.tableKey)?.columns;
+    return getTableColumnsArray(props.tableKey);
 });
 </script>
 
@@ -29,6 +29,7 @@ const columns = computed(() => {
 
     div {
         font-weight: bold;
+        font-size: 1.05rem;
     }
 }
 </style>

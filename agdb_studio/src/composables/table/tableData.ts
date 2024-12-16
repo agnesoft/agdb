@@ -10,9 +10,9 @@ const setTableData = <T extends TRow>(tableName: string, data: T[]): void => {
     table.data = new Map<string, T>();
     for (const rowIndex in data) {
         const rowData: TRow = {};
-        for (const column of table.columns) {
+        table.columns.forEach((column) => {
             rowData[column.key] = data[rowIndex][column.key];
-        }
+        });
 
         table.data.set(rowIndex, rowData);
     }

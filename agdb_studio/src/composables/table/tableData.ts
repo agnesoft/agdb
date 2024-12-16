@@ -13,17 +13,23 @@ const setTableData = <T extends TRow>(tableName: string, data: T[]): void => {
         table.columns.forEach((column) => {
             rowData[column.key] = data[rowIndex][column.key];
         });
+        const rowKey = table.uniqueKey
+            ? rowData[table.uniqueKey].toString()
+            : rowIndex;
 
-        table.data.set(rowIndex, rowData);
+        table.data.set(rowKey, rowData);
     }
 };
 
-const addRow = <T extends TRow>(
-    tableName: string,
-    rowKey: string,
-    row: T,
-): void => {
+const addRow = <T extends TRow>(tableName: string, row: T): void => {
     const table = getTable<T>(tableName);
+    const rowKey =
+        (table?.uniqueKey && row[table.uniqueKey].toString()) ??
+        table?.data?.size.toString();
+    if (!rowKey) {
+        return;
+    }
+
     table?.data?.set(rowKey, row);
 };
 
@@ -39,11 +45,11 @@ const clearTableData = <T extends TRow>(tableName: string): void => {
 
 const getRows = <T extends TRow>(name: string): [string, T][] => {
     const table = getTable<T>(name);
-    if (!table) {
+    if (!table?.data) {
         return [];
     }
     const filter = getTableFilter(name);
-    const filteredRows = Array.from(table.data ?? []).filter(([, row]) => {
+    const filteredRows = Array.from(table.data).filter(([, row]) => {
         if (filter.filters.size === 0) {
             return true;
         }

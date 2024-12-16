@@ -20,16 +20,28 @@ export type Table<T extends TRow> = {
     name: string;
     columns: Map<string, Column<T>>;
     data?: Map<string, T>;
+    uniqueKey?: string;
 };
 
 const tables = ref<Map<string, Table<TRow>>>(new Map<string, Table<TRow>>());
 
-const addTable = (name: string, columns: Column<TRow>[]): void => {
+export type AddTableProps<T extends TRow> = {
+    name: string;
+    columns: Column<T>[];
+    uniqueKey?: string;
+};
+
+const addTable = ({ name, columns, uniqueKey }: AddTableProps<TRow>): void => {
     const columnMap = new Map<string, Column<TRow>>();
     columns.forEach((column) => {
         columnMap.set(column.key, column);
     });
-    tables.value.set(name, { name, columns: columnMap, data: new Map() });
+    tables.value.set(name, {
+        name,
+        columns: columnMap,
+        data: new Map(),
+        uniqueKey,
+    });
 };
 
 const removeTable = (name: string): void => {

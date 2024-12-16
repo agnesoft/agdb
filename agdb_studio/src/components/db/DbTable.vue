@@ -9,20 +9,24 @@ const { databases } = useDbList();
 
 const TABLE_KEY = "databases";
 
-addTable(TABLE_KEY, [
-    { key: "role", title: "Role" },
-    { key: "name", title: "Owner/Name" },
-    { key: "db_type", title: "Type" },
-    { key: "size", title: "Size" },
-    {
-        key: "backup",
-        title: "Backup",
-        valueFormatter: (value: TCellType) =>
-            value && typeof value === "number"
-                ? new Date(value).toLocaleString()
-                : "N/A",
-    },
-]);
+addTable({
+    name: TABLE_KEY,
+    columns: [
+        { key: "role", title: "Role" },
+        { key: "name", title: "Owner/Name" },
+        { key: "db_type", title: "Type" },
+        { key: "size", title: "Size" },
+        {
+            key: "backup",
+            title: "Backup",
+            valueFormatter: (value: TCellType) =>
+                value && typeof value === "number"
+                    ? new Date(value).toLocaleString()
+                    : "N/A",
+        },
+    ],
+    uniqueKey: "name",
+});
 
 watchEffect(() => {
     setTableData(TABLE_KEY, databases.value);

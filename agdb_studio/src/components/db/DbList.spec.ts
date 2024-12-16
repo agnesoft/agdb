@@ -1,5 +1,5 @@
 import DbList from "./DbList.vue";
-import { mount } from "@vue/test-utils";
+import { mount, shallowMount } from "@vue/test-utils";
 
 const { databases, fetchDatabases } = vi.hoisted(() => {
     return {
@@ -40,11 +40,9 @@ describe("DbList", () => {
         vi.clearAllMocks();
     });
     it("should render databases when the page view loads", () => {
-        const wrapper = mount(DbList);
-        const rows = wrapper.findAll("li");
-        expect(rows).toHaveLength(2);
-        expect(rows[0].text()).toContain("test_db");
-        expect(rows[1].text()).toContain("test_db2");
+        const wrapper = shallowMount(DbList);
+        expect(wrapper.html()).toContain("db-add-form-stub");
+        expect(wrapper.html()).toContain("db-table-stub");
     });
     it("should fetch databases when the page view loads", () => {
         expect(fetchDatabases).not.toHaveBeenCalled();

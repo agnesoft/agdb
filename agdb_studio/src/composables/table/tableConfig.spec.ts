@@ -1,15 +1,16 @@
-import { getTable } from "./tableConfig";
+import { addTable, getTable } from "./tableConfig";
+import { TABLE_NAME, tableConfig, columnsMap } from "@/tests/tableMocks";
 
-describe("tableConfig", () => {
+describe("tableData", () => {
+    addTable({ name: TABLE_NAME, columns: tableConfig, uniqueKey: "name" });
+
     it("should return table config", () => {
-        const table = getTable("table");
+        const table = getTable(TABLE_NAME);
         expect(table).toEqual({
-            columns: [
-                { key: "name", label: "Name" },
-                { key: "age", label: "Age" },
-                { key: "job", label: "Job" },
-            ],
+            name: TABLE_NAME,
+            columns: columnsMap,
             data: new Map(),
+            uniqueKey: "name",
         });
     });
 });

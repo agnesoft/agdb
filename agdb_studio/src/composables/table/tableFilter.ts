@@ -14,10 +14,6 @@ const getTableFilter = (tableName: string): TableFilter => {
     return tableFilter;
 };
 
-const setTableFilter = (tableName: string, tableFilter: TableFilter): void => {
-    tableFilters.set(tableName, tableFilter);
-};
-
 const addFilter = (
     tableName: string,
     columnKey: string,
@@ -32,14 +28,14 @@ const removeFilter = (tableName: string, filterKey: string): void => {
     tableFilter.filters.delete(filterKey);
 };
 
-const clearTableFilter = (tableName: string): void => {
-    tableFilters.delete(tableName);
+const setSort = (
+    tableName: string,
+    columnKey: string,
+    direction: "asc" | "desc",
+): void => {
+    const tableFilter = getTableFilter(tableName);
+    tableFilter.sort.clear();
+    tableFilter.sort.set(columnKey, direction);
 };
 
-export {
-    setTableFilter,
-    getTableFilter,
-    clearTableFilter,
-    addFilter,
-    removeFilter,
-};
+export { getTableFilter, addFilter, removeFilter, setSort };

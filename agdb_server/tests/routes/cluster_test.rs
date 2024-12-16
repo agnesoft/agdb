@@ -142,7 +142,7 @@ async fn user() -> anyhow::Result<()> {
     leader.admin_user_remove("user1").await?;
     client.write().await.user_login(ADMIN, ADMIN).await?;
     client.read().await.user_status().await?;
-    leader.cluster_logout().await?;
+    client.write().await.admin_cluster_logout(ADMIN).await?;
     assert_eq!(
         client.read().await.user_status().await.unwrap_err().status,
         401

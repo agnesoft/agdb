@@ -68,14 +68,14 @@ pub(crate) async fn forward_to_leader(
         }
     }
 
-    let mut resposne = next.run(request).await;
+    let mut response = next.run(request).await;
 
-    if forwarded && resposne.status().is_success() {
-        resposne.headers_mut().insert(
+    if forwarded && response.status().is_success() {
+        response.headers_mut().insert(
             "commit-index",
             state.cluster.raft.read().await.storage.log_commit().into(),
         );
     }
 
-    resposne
+    response
 }

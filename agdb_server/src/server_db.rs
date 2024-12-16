@@ -50,6 +50,7 @@ pub(crate) struct ServerDb(pub(crate) Arc<RwLock<Db>>);
 const ADMIN: &str = "admin";
 const CLUSTER_LOG: &str = "cluster_log";
 const DBS: &str = "dbs";
+const EXECUTED: &str = "executed";
 const NAME: &str = "name";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
@@ -103,6 +104,10 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().index(TOKEN).query())?;
             }
 
+            if !indexes.iter().any(|i| i == EXECUTED) {
+                t.exec_mut(QueryBuilder::insert().index(EXECUTED).query())?;
+            }
+
             if t.exec(QueryBuilder::select().ids(USERS).query()).is_err() {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(USERS).query())?;
             }
@@ -123,20 +128,8 @@ impl ServerDb {
         Ok(Self(Arc::new(RwLock::new(db))))
     }
 
-    pub(crate) async fn cluster_log(&self) -> ServerResult<(u64, u64, u64)> {
+    pub(crate) async fn cluster_log(&self) -> ServerResult<(u64, u64)> {
         self.0.write().await.transaction_mut(|t| {
-            let commit = t
-                .exec(
-                    QueryBuilder::select()
-                        .edge_count_from()
-                        .ids(CLUSTER_LOG)
-                        .query(),
-                )?
-                .elements[0]
-                .values[0]
-                .value
-                .to_u64()
-                .unwrap_or_default();
             if let Some(e) = t
                 .exec(
                     QueryBuilder::select()
@@ -152,26 +145,22 @@ impl ServerDb {
                 .elements
                 .first()
             {
-                Ok((
-                    e.values[0].value.to_u64()?,
-                    e.values[1].value.to_u64()?,
-                    commit,
-                ))
+                Ok((e.values[0].value.to_u64()?, e.values[1].value.to_u64()?))
             } else {
-                Ok((0, 0, 0))
+                Ok((0, 0))
             }
         })
     }
 
-    pub(crate) async fn commit_log(&self, log: &Log<ClusterAction>) -> ServerResult<()> {
+    pub(crate) async fn commit_log(&self, log: &Log<ClusterAction>) -> ServerResult<DbId> {
         self.0.write().await.transaction_mut(
-            |t: &mut agdb::TransactionMut<'_, agdb::FileStorageMemoryMapped>| -> ServerResult<()> {
-                let log_id = t.exec_mut(
-                    QueryBuilder::insert()
-                        .nodes()
-                        .values([log_db_values(log)])
-                        .query(),
-                )?;
+            |t: &mut agdb::TransactionMut<'_, agdb::FileStorageMemoryMapped>| {
+                let mut values = log_db_values(log);
+                values.push((EXECUTED, false).into());
+                let log_id = t
+                    .exec_mut(QueryBuilder::insert().nodes().values([values]).query())?
+                    .elements[0]
+                    .id;
                 t.exec_mut(
                     QueryBuilder::insert()
                         .edges()
@@ -179,9 +168,17 @@ impl ServerDb {
                         .to(log_id)
                         .query(),
                 )?;
-                Ok(())
+                Ok(log_id)
             },
         )
+    }
+
+    pub(crate) async fn commit_log_executed(&self, log_id: DbId) -> ServerResult<()> {
+        self.0
+            .write()
+            .await
+            .exec_mut(QueryBuilder::remove().values(EXECUTED).ids(log_id).query())?;
+        Ok(())
     }
 
     pub(crate) async fn db_count(&self) -> ServerResult<u64> {
@@ -370,6 +367,30 @@ impl ServerDb {
             )?
             .result
             == 1)
+    }
+
+    pub(crate) async fn logs_unexecuted(&self) -> ServerResult<Vec<Log<ClusterAction>>> {
+        if let Some(index) = self
+            .0
+            .read()
+            .await
+            .exec(
+                QueryBuilder::select()
+                    .values("index")
+                    .search()
+                    .index(EXECUTED)
+                    .value(false)
+                    .query(),
+            )?
+            .elements
+            .into_iter()
+            .map(|e| e.values[0].value.to_u64().unwrap_or_default())
+            .min()
+        {
+            self.logs(index).await
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     pub(crate) async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {

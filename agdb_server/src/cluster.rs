@@ -125,18 +125,17 @@ impl ClusterNodeImpl {
                 url,
             )
             .headers(parts.headers)
-            .header("Forwarded-By", local_index)
+            .header("forwarded-by", local_index)
             .body(reqwest::Body::wrap_stream(body.into_data_stream()))
             .send()
             .await
             .map_err(|e| Self::bad_request(&e.to_string()))?;
 
         let mut axum_response = AxumResponse::builder().status(response.status());
-        if let Some(headers) = axum_response.headers_mut() {
-            std::mem::swap(headers, response.headers_mut());
-        }
 
-        tracing::info!("Responding...");
+        if let Some(headers) = axum_response.headers_mut() {
+            std::mem::swap(headers, response.headers_mut())
+        }
 
         axum_response
             .body(Body::from_stream(response.bytes_stream()))

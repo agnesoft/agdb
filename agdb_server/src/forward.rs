@@ -1,3 +1,4 @@
+use crate::raft::Storage;
 use crate::server_state::ServerState;
 use axum::extract::Request;
 use axum::extract::State;
@@ -33,13 +34,29 @@ pub(crate) async fn forward_to_leader(
         let leader = state.cluster.raft.read().await.leader();
         if let Some(leader) = leader {
             if state.cluster.index != leader as usize {
-                return match state.cluster.nodes[leader as usize]
+                let mut response = match state.cluster.nodes[leader as usize]
                     .forward(request, state.cluster.index)
                     .await
                 {
                     Ok(r) => r,
                     Err(r) => r,
                 };
+
+                if response.status().is_success() {
+                    if let Some(commit_index) = response.headers_mut().remove("commit-index") {
+                        if let Ok(commit_index) = commit_index.to_str() {
+                            if let Ok(commit_index) = commit_index.parse::<u64>() {
+                                while state.cluster.raft.read().await.storage.log_commit()
+                                    < commit_index
+                                {
+                                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return response;
             }
         } else {
             return Response::builder()

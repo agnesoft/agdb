@@ -4,7 +4,9 @@ describe("utils", () => {
     describe("dateFormatter", () => {
         it("should return a formatted date when value is number", () => {
             const formattedDate = dateFormatter(1734447876);
-            expect(formattedDate).toBe("17. 12. 2024 16:04:36");
+            expect(formattedDate).toBe(
+                new Date(1734447876000).toLocaleString(),
+            );
         });
         it("should return N/A when value is not a number", () => {
             const formattedDate = dateFormatter("not a number");

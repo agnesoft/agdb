@@ -1,22 +1,21 @@
 import { shallowMount } from "@vue/test-utils";
 import TableRow from "./TableRow.vue";
+import { columnsMap } from "@/tests/tableMocks";
 
 describe("TableRow", () => {
     it("should render", () => {
         const wrapper = shallowMount(TableRow, {
             props: {
-                columns: new Map([
-                    ["name", { key: "name", title: "Name" }],
-                    ["age", { key: "age", title: "Age" }],
-                    ["job", { key: "job", title: "Job" }],
-                ]),
+                columns: columnsMap,
                 row: {
-                    name: "John Doe",
-                    age: 30,
-                    job: "Developer",
+                    role: "admin",
+                    name: "admin/app3",
+                    db_type: "file",
+                    size: 50,
+                    backup: 0,
                 },
             },
         });
-        expect(wrapper.exists()).toBe(true);
+        expect(wrapper.text()).toContain("admin");
     });
 });

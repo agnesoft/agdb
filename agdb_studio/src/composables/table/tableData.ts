@@ -1,4 +1,4 @@
-import type { TRow } from "./tableConfig";
+import type { TRow } from "./types";
 import { getTable } from "./tableConfig";
 import { getTableFilter } from "./tableFilter";
 

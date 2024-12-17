@@ -1,27 +1,5 @@
-import { computed, ref } from "vue";
-
-export type TCellType = string | number | Date | boolean;
-
-export type TRow = {
-    [key: string]: TCellType;
-};
-
-export type Column<T extends TRow> = {
-    key: string;
-    title: string;
-    cellClass?: string | ((row: T) => string);
-    sortable?: boolean;
-    filterable?: boolean;
-    cellComponent?: string | ((row: T) => string);
-    valueFormatter?: (value: TCellType) => TCellType;
-};
-
-export type Table<T extends TRow> = {
-    name: string;
-    columns: Map<string, Column<T>>;
-    data?: Map<string, T>;
-    uniqueKey?: string;
-};
+import { ref } from "vue";
+import type { Column, Table, TRow } from "./types";
 
 const tables = ref<Map<string, Table<TRow>>>(new Map<string, Table<TRow>>());
 
@@ -68,10 +46,6 @@ const tableExists = (name: string): boolean => {
     return tables.value.has(name);
 };
 
-const tableNames = computed(() => {
-    return Array.from(tables.value.keys());
-});
-
 const clearTables = (): void => {
     tables.value.clear();
 };
@@ -81,7 +55,6 @@ export {
     addTable,
     removeTable,
     tableExists,
-    tableNames,
     clearTables,
     getTableColumns,
     getTableColumnsArray,

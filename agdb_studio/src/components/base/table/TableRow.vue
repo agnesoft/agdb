@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { defineProps, computed, type PropType } from "vue";
-import { type Column, type TRow } from "@/composables/table/tableConfig";
+import { type Column, type TRow } from "@/composables/table/types";
 
 const props = defineProps({
     row: {

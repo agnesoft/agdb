@@ -3,7 +3,8 @@ import { computed, defineProps } from "vue";
 import { getRows } from "@/composables/table/tableData";
 import TableRow from "@/components/base/table/TableRow.vue";
 import TableHeader from "./TableHeader.vue";
-import { getTableColumns, type TRow } from "@/composables/table/tableConfig";
+import { getTableColumns } from "@/composables/table/tableConfig";
+import { type TRow } from "@/composables/table/types";
 
 const props = defineProps({
     name: {
@@ -24,7 +25,7 @@ const columns = computed(() => {
     <div class="agdb-table">
         <TableHeader :tableKey="name" />
         <template v-for="row in rows" :key="row[0]">
-            <TableRow v-if="columns" :row="row[1]" :columns="columns" />
+            <TableRow :row="row[1]" :columns="columns" />
         </template>
     </div>
 </template>

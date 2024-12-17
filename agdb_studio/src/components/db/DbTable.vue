@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import AgdbTable from "../base/table/AgdbTable.vue";
 import { useDbList } from "@/composables/stores/DbStore";
-import { addTable, type TCellType } from "@/composables/table/tableConfig";
+import { addTable } from "@/composables/table/tableConfig";
 import { setTableData } from "@/composables/table/tableData";
 import { watchEffect } from "vue";
+import { dateFormatter } from "@/composables/table/utils";
 
 const { databases } = useDbList();
 
@@ -19,10 +20,7 @@ addTable({
         {
             key: "backup",
             title: "Backup",
-            valueFormatter: (value: TCellType) =>
-                value && typeof value === "number"
-                    ? new Date(value).toLocaleString()
-                    : "N/A",
+            valueFormatter: dateFormatter,
         },
     ],
     uniqueKey: "name",

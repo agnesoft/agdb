@@ -25,6 +25,7 @@ export default mergeConfig(
                     "*.config.*",
                     "./src/main.ts",
                     "./src/App.vue",
+                    "src/tests/*",
                 ],
                 thresholds: {
                     lines: 100,

@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { useDbList } from "@/composables/DbStore";
+import { useDbList } from "@/composables/stores/DbStore";
 import { onMounted } from "vue";
-import DbListRow from "./DbListRow.vue";
 import DbAddForm from "./DbAddForm.vue";
+import DbTable from "./DbTable.vue";
 
-const { fetchDatabases, databases } = useDbList();
+const { fetchDatabases } = useDbList();
 onMounted(async () => {
     await fetchDatabases();
 });
@@ -14,12 +14,7 @@ onMounted(async () => {
     <div class="db-list">
         <button class="button" @click="fetchDatabases">Refresh</button>
         <DbAddForm />
-        <ul v-if="databases.length">
-            <li v-for="db in databases" :key="db.name">
-                <DbListRow :db="db" />
-            </li>
-        </ul>
-        <p v-else>No databases found</p>
+        <DbTable />
     </div>
 </template>
 

@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import { client } from "@/services/api.service";
 import type { DbType, ServerDatabase } from "agdb_api/dist/openapi";
-import { useAccount } from "./user/account";
+import { useAccount } from "../user/account";
 
 const databases = ref<ServerDatabase[]>([]);
 

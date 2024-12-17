@@ -21,10 +21,8 @@ declare namespace Components {
         }
         export interface ClusterStatus {
             address: string;
-            commit: number; // int64
             leader: boolean;
             status: boolean;
-            term: number; // int64
         }
         /**
          * Comparison of database values ([`DbValue`]) used

@@ -46,6 +46,18 @@ impl<T: HttpClient> AgdbApi<T> {
         &self.base_url
     }
 
+    pub async fn admin_cluster_logout(&self, user: &str) -> AgdbApiResult<u16> {
+        Ok(self
+            .client
+            .post::<(), ()>(
+                &self.url(&format!("/admin/cluster/{user}/logout")),
+                &None,
+                &self.token,
+            )
+            .await?
+            .0)
+    }
+
     pub async fn admin_db_add(&self, owner: &str, db: &str, db_type: DbType) -> AgdbApiResult<u16> {
         Ok(self
             .client
@@ -524,6 +536,32 @@ impl<T: HttpClient> AgdbApi<T> {
 
     pub async fn cluster_status(&self) -> AgdbApiResult<(u16, Vec<ClusterStatus>)> {
         self.client.get(&self.url("/cluster/status"), &None).await
+    }
+
+    pub async fn cluster_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {
+        let (status, token) = self
+            .client
+            .post::<UserLogin, String>(
+                &self.url("/cluster/login"),
+                &Some(UserLogin {
+                    username: user.to_string(),
+                    password: password.to_string(),
+                }),
+                &None,
+            )
+            .await?;
+        self.token = Some(token);
+        Ok(status)
+    }
+
+    pub async fn cluster_logout(&mut self) -> AgdbApiResult<u16> {
+        let status = self
+            .client
+            .post::<(), ()>(&self.url("/cluster/logout"), &None, &self.token)
+            .await?
+            .0;
+        self.token = None;
+        Ok(status)
     }
 
     pub async fn user_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {

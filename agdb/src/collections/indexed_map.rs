@@ -42,7 +42,7 @@ where
         Ok(())
     }
 
-    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<K, T, D, DataKT> {
+    pub fn iter<'a>(&'a self, storage: &'a Storage<D>) -> MapIterator<'a, K, T, D, DataKT> {
         self.keys_to_values.iter(storage)
     }
 

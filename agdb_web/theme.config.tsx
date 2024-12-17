@@ -1,7 +1,7 @@
 import { DocsThemeConfig, useConfig } from "nextra-theme-docs";
 import Logo from "@/components/layout/logo";
 import Footer from "@/components/layout/footer";
-import { useRouter } from "next/router";
+import { useRouter } from "nextra/hooks";
 
 const useHead = () => {
     const { asPath, defaultLocale, locale } = useRouter();
@@ -35,10 +35,10 @@ const config: DocsThemeConfig = {
     //     link: "https://discord.com",
     // },
     docsRepositoryBase: "https://github.com/agnesoft/agdb/blob/main/agdb_web",
-    footer: { text: Footer },
+    footer: { content: Footer },
     i18n: [
-        { locale: "en-US", text: "English" },
-        { locale: "cs-CZ", text: "Čeština" },
+        { locale: "en-US", name: "English" },
+        { locale: "cs-CZ", name: "Čeština" },
     ],
     head: useHead,
     // banner: {

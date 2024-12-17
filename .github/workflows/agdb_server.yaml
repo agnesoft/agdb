@@ -36,10 +36,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov clean --workspace
-      - run: cargo llvm-cov --package agdb_server --all-features --no-report
-      - run: cargo llvm-cov --package agdb_server --all-features --no-report -- --ignored
-      - run: cargo llvm-cov report --ignore-filename-regex "agdb(.|..)src|agdb_derive|agdb_api|api.rs" --fail-uncovered-functions 0 --show-missing-lines
+      - run: cargo llvm-cov --package agdb_server --all-features --no-report --ignore-filename-regex "agdb(.|..)src|agdb_derive|agdb_api|api.rs" --fail-uncovered-functions 18 --show-missing-lines
 
   agdb_server_test:
     runs-on: ubuntu-latest
@@ -48,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: threshold=2; count=0; while cargo test --release --package agdb_server -- --include-ignored &> test.log && [[ "$count" != "$threshold" ]]; do count=$((count+1)); echo -n "."; done; cat test.log; echo "$count of $threshold tests run"
+      - run: threshold=2; count=0; while cargo test --release --package agdb_server &> test.log && [[ "$count" != "$threshold" ]]; do count=$((count+1)); echo -n "."; done; cat test.log; echo "$count of $threshold tests run"
 
   agdb_server_format:
     runs-on: ubuntu-latest

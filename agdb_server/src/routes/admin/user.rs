@@ -1,10 +1,11 @@
-use crate::config::Config;
-use crate::db_pool::DbPool;
+use crate::action::change_password::ChangePassword as ChangePasswordAction;
+use crate::action::user_add::UserAdd;
+use crate::action::user_remove::UserRemove;
+use crate::cluster::Cluster;
 use crate::error_code::ErrorCode;
 use crate::password;
 use crate::password::Password;
 use crate::server_db::ServerDb;
-use crate::server_db::ServerUser;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use agdb_api::UserCredentials;
@@ -34,6 +35,7 @@ use axum::Json;
 pub(crate) async fn add(
     _admin_id: AdminId,
     State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
@@ -46,13 +48,11 @@ pub(crate) async fn add(
 
     let pswd = Password::create(&username, &request.password);
 
-    server_db
-        .insert_user(ServerUser {
-            db_id: None,
-            username: username.clone(),
+    cluster
+        .append(UserAdd {
+            user: username,
             password: pswd.password.to_vec(),
             salt: pswd.user_salt.to_vec(),
-            token: String::new(),
         })
         .await?;
 
@@ -78,16 +78,21 @@ pub(crate) async fn add(
 pub(crate) async fn change_password(
     _admin_id: AdminId,
     State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse {
-    let mut user = server_db.user(&username).await?;
-
+    let _user = server_db.user_id(&username).await?;
     password::validate_password(&request.password)?;
-    let pswd = Password::create(&user.username, &request.password);
-    user.password = pswd.password.to_vec();
-    user.salt = pswd.user_salt.to_vec();
-    server_db.save_user(user).await?;
+    let pswd = Password::create(&username, &request.password);
+
+    cluster
+        .append(ChangePasswordAction {
+            user: username.to_string(),
+            new_password: pswd.password.to_vec(),
+            new_salt: pswd.user_salt.to_vec(),
+        })
+        .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -150,13 +155,17 @@ pub(crate) async fn logout(
 )]
 pub(crate) async fn remove(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
+    State(cluster): State<Cluster>,
     Path(username): Path<String>,
 ) -> ServerResponse {
-    let dbs = server_db.remove_user(&username).await?;
-    db_pool.remove_user_dbs(&username, &dbs, &config).await?;
+    server_db.user_id(&username).await?;
+
+    cluster
+        .append(UserRemove {
+            user: username.to_string(),
+        })
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

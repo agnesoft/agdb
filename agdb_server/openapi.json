@@ -2174,29 +2174,17 @@
         "required": [
           "address",
           "status",
-          "leader",
-          "term",
-          "commit"
+          "leader"
         ],
         "properties": {
           "address": {
             "type": "string"
-          },
-          "commit": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
           },
           "leader": {
             "type": "boolean"
           },
           "status": {
             "type": "boolean"
-          },
-          "term": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
           }
         }
       },

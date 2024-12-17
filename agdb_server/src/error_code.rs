@@ -8,10 +8,6 @@ pub(crate) enum ErrorCode {
     DbExists,
     DbInvalid,
     QueryError,
-    ClusterHashMismatch,
-    TermMismatch,
-    LeaderExists,
-    AlreadyVoted,
 }
 
 impl From<ErrorCode> for StatusCode {
@@ -29,10 +25,6 @@ impl From<&ErrorCode> for StatusCode {
             ErrorCode::DbExists => 465,
             ErrorCode::DbInvalid => 467,
             ErrorCode::QueryError => 470,
-            ErrorCode::ClusterHashMismatch => 480,
-            ErrorCode::TermMismatch => 481,
-            ErrorCode::LeaderExists => 482,
-            ErrorCode::AlreadyVoted => 483,
         })
         .unwrap()
     }
@@ -53,10 +45,6 @@ impl ErrorCode {
             ErrorCode::DbExists => "db already exists",
             ErrorCode::DbInvalid => "db invalid",
             ErrorCode::QueryError => "query error",
-            ErrorCode::ClusterHashMismatch => "cluster hash mismatch",
-            ErrorCode::TermMismatch => "term mismatch",
-            ErrorCode::LeaderExists => "leader exists",
-            ErrorCode::AlreadyVoted => "already voted",
         }
     }
 }
@@ -76,11 +64,5 @@ mod tests {
         assert_eq!(ErrorCode::DbExists.as_str(), "db already exists");
         assert_eq!(ErrorCode::DbInvalid.as_str(), "db invalid");
         assert_eq!(ErrorCode::QueryError.as_str(), "query error");
-        assert_eq!(
-            ErrorCode::ClusterHashMismatch.as_str(),
-            "cluster hash mismatch"
-        );
-        assert_eq!(ErrorCode::TermMismatch.as_str(), "term mismatch");
-        assert_eq!(ErrorCode::LeaderExists.as_str(), "leader exists");
     }
 }

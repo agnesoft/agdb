@@ -2,6 +2,7 @@ use crate::api::Api;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
+use crate::forward;
 use crate::logger;
 use crate::routes;
 use crate::server_db::ServerDb;
@@ -33,7 +34,6 @@ pub(crate) fn app(
     };
 
     let api_v1 = Router::new()
-        .route("/test_error", routing::get(routes::test_error))
         .route("/status", routing::get(routes::status))
         .route("/admin/shutdown", routing::post(routes::admin::shutdown))
         .route("/admin/status", routing::get(routes::admin::status))
@@ -143,12 +143,14 @@ pub(crate) fn app(
             "/db/:user/:db/user/:other/remove",
             routing::delete(routes::db::user::remove),
         )
-        .route("/cluster/status", routing::get(routes::cluster::status))
+        .route("/cluster", routing::post(routes::cluster::cluster))
+        .route("/cluster/login", routing::post(routes::cluster::login))
+        .route("/cluster/logout", routing::post(routes::cluster::logout))
         .route(
-            "/cluster/heartbeat",
-            routing::post(routes::cluster::heartbeat),
+            "/admin/cluster/:user/logout",
+            routing::post(routes::cluster::admin_logout),
         )
-        .route("/cluster/vote", routing::get(routes::cluster::vote))
+        .route("/cluster/status", routing::get(routes::cluster::status))
         .route("/user/login", routing::post(routes::user::login))
         .route("/user/logout", routing::post(routes::user::logout))
         .route(
@@ -165,6 +167,10 @@ pub(crate) fn app(
     let router = Router::new()
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest("/api/v1", api_v1)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            forward::forward_to_leader,
+        ))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             logger::logger,

@@ -1,115 +1,120 @@
-use crate::cluster;
+use crate::action::cluster_login::ClusterLogin;
+use crate::action::ClusterAction;
 use crate::cluster::Cluster;
-use crate::cluster::ClusterState;
 use crate::config::Config;
-use crate::error_code::ErrorCode;
+use crate::raft::Request;
+use crate::raft::Response;
+use crate::routes::user::do_login;
+use crate::server_db::ServerDb;
+use crate::server_error::ServerResponse;
 use crate::server_error::ServerResult;
+use crate::user_id::AdminId;
 use crate::user_id::ClusterId;
+use crate::user_id::UserId;
 use agdb_api::ClusterStatus;
-use axum::extract::Query;
+use agdb_api::UserLogin;
+use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use serde::Deserialize;
 
-#[derive(Deserialize)]
-pub(crate) struct ClusterParams {
-    cluster_hash: u64,
-    term: u64,
-    leader: usize,
-}
-
-pub(crate) async fn heartbeat(
+pub(crate) async fn cluster(
     _cluster_id: ClusterId,
     State(cluster): State<Cluster>,
-    request: Query<ClusterParams>,
-) -> ServerResult<(StatusCode, Json<String>)> {
-    if cluster.cluster_hash != request.cluster_hash {
-        return Ok((
-            ErrorCode::ClusterHashMismatch.into(),
-            Json(format!(
-                "Cluster hash mismatch: expected {}, got {}",
-                cluster.cluster_hash, request.cluster_hash
-            )),
-        ));
-    }
-
-    let current_term = cluster.data.read().await.term;
-
-    if request.term < current_term {
-        return Ok((
-            ErrorCode::TermMismatch.into(),
-            Json(format!(
-                "Term mismatch: expected higher term than {}, got {}",
-                current_term, request.term
-            )),
-        ));
-    }
-
-    let state = cluster.data.read().await.state;
-
-    if let ClusterState::Follower(leader) = state {
-        if leader == request.leader && request.term == current_term {
-            return Ok((StatusCode::OK, Json(String::new())));
-        }
-    }
-
-    cluster::become_follower(&cluster, request.term, request.leader).await?;
-
-    Ok((StatusCode::OK, Json(String::new())))
+    request: Json<Request<ClusterAction>>,
+) -> ServerResult<(StatusCode, Json<Response>)> {
+    let response = cluster.raft.write().await.request(&request).await;
+    Ok((StatusCode::OK, Json(response)))
 }
 
-pub(crate) async fn vote(
-    _cluster_id: ClusterId,
+#[utoipa::path(post,
+    path = "/api/v1/admin/cluster/{username}/logout",
+    operation_id = "admin_cluster_logout",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("username" = String, Path, description = "user name"),
+    ),
+    responses(
+         (status = 201, description = "user logged out"),
+         (status = 401, description = "admin only"),
+         (status = 404, description = "user not found"),
+    )
+)]
+pub(crate) async fn admin_logout(
+    _admin: AdminId,
+    State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
-    request: Query<ClusterParams>,
-) -> ServerResult<(StatusCode, Json<String>)> {
-    if cluster.cluster_hash != request.cluster_hash {
-        return Ok((
-            ErrorCode::ClusterHashMismatch.into(),
-            Json(format!(
-                "Cluster hash mismatch: expected local ({}) == other ({})",
-                cluster.cluster_hash, request.cluster_hash
-            )),
-        ));
+    Path(username): Path<String>,
+) -> ServerResponse {
+    let _user_id = server_db.user_id(&username).await?;
+
+    cluster
+        .append(ClusterLogin {
+            user: username,
+            new_token: String::new(),
+        })
+        .await?;
+
+    Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/cluster/login",
+    operation_id = "cluster_login",
+    tag = "agdb",
+    request_body = UserLogin,
+    responses(
+         (status = 200, description = "login successful", body = String),
+         (status = 401, description = "invalid credentials"),
+    )
+)]
+pub(crate) async fn login(
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+    Json(request): Json<UserLogin>,
+) -> ServerResponse<(StatusCode, Json<String>)> {
+    let (token, user_id) = do_login(&server_db, &request.username, &request.password).await?;
+
+    if user_id.is_some() {
+        cluster
+            .append(ClusterLogin {
+                user: request.username,
+                new_token: token.clone(),
+            })
+            .await?;
     }
 
-    let current_leader = cluster.leader().await;
+    Ok((StatusCode::OK, Json(token)))
+}
 
-    if let Some(leader) = current_leader {
-        return Ok((
-            ErrorCode::LeaderExists.into(),
-            Json(format!("Leader already exists: node {}", leader)),
-        ));
+#[utoipa::path(post,
+    path = "/api/v1/cluster/logout",
+    operation_id = "cluster_logout",
+    tag = "agdb",
+    security(("Token" = [])),
+    responses(
+         (status = 201, description = "user logged out"),
+         (status = 401, description = "invalid credentials")
+    )
+)]
+pub(crate) async fn logout(
+    user: UserId,
+    State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
+) -> ServerResponse {
+    let token = server_db.user_token(user.0).await?;
+
+    if !token.is_empty() {
+        cluster
+            .append(ClusterLogin {
+                user: server_db.user_name(user.0).await?,
+                new_token: String::new(),
+            })
+            .await?;
     }
 
-    let current_term = cluster.data.read().await.term;
-
-    if request.term <= current_term {
-        return Ok((
-            ErrorCode::TermMismatch.into(),
-            Json(format!(
-                "Term mismatch: epxected current ({}) < requested ({})",
-                current_term, request.term
-            )),
-        ));
-    }
-
-    let voted = cluster.data.read().await.voted;
-
-    if request.term <= voted {
-        return Ok((
-            ErrorCode::AlreadyVoted.into(),
-            Json(format!(
-                "Already voted: expected last vote ({voted}) < {}",
-                request.term
-            )),
-        ));
-    }
-
-    cluster::vote(&cluster, request.term, request.leader).await?;
-
-    Ok((StatusCode::OK, Json(String::new())))
+    Ok(StatusCode::CREATED)
 }
 
 #[utoipa::path(get,
@@ -126,15 +131,7 @@ pub(crate) async fn status(
 ) -> ServerResult<(StatusCode, Json<Vec<ClusterStatus>>)> {
     let mut statuses = vec![ClusterStatus::default(); config.cluster.len()];
     let mut tasks = Vec::new();
-
-    let leader;
-    let term;
-
-    {
-        let data = cluster.data.read().await;
-        leader = cluster.leader().await;
-        term = data.term;
-    }
+    let leader = cluster.raft.read().await.leader();
 
     for (index, node) in config.cluster.iter().enumerate() {
         if index != cluster.index {
@@ -161,9 +158,7 @@ pub(crate) async fn status(
                     ClusterStatus {
                         address,
                         status,
-                        leader: status && Some(index) == leader,
-                        term,
-                        commit: 0,
+                        leader: status && Some(index as u64) == leader,
                     },
                 )
             }));
@@ -171,9 +166,7 @@ pub(crate) async fn status(
             let status = &mut statuses[index];
             status.address = node.as_str().to_string();
             status.status = true;
-            status.leader = Some(index) == leader;
-            status.term = term;
-            status.commit = 0;
+            status.leader = Some(index as u64) == leader;
         };
     }
 

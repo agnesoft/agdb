@@ -5,6 +5,7 @@ use crate::HOST;
 use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
+use agdb_api::DbResource;
 use agdb_api::DbType;
 use agdb_api::ReqwestClient;
 use std::collections::HashMap;
@@ -171,6 +172,10 @@ async fn db() -> anyhow::Result<()> {
     client.db_backup(ADMIN, "db1").await?;
     let db = &client.db_list().await?.1[0];
     assert_ne!(db.backup, 0);
+    client.db_restore(ADMIN, "db1").await?;
+
+    let db = client.db_clear(ADMIN, "db1", DbResource::Backup).await?.1;
+    assert_eq!(db.backup, 0);
 
     Ok(())
 }

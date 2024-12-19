@@ -116,9 +116,20 @@ pub struct UserStatus {
 impl From<&str> for DbType {
     fn from(value: &str) -> Self {
         match value {
-            "mapped" => DbType::Mapped,
-            "file" => DbType::File,
-            _ => DbType::Memory,
+            "mapped" => Self::Mapped,
+            "file" => Self::File,
+            _ => Self::Memory,
+        }
+    }
+}
+
+impl From<&str> for DbResource {
+    fn from(value: &str) -> Self {
+        match value {
+            "db" => Self::Db,
+            "audit" => Self::Audit,
+            "backup" => Self::Backup,
+            _ => Self::All,
         }
     }
 }
@@ -131,8 +142,22 @@ impl TryFrom<DbValue> for DbType {
     }
 }
 
+impl TryFrom<DbValue> for DbResource {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(Self::from(value.to_string().as_str()))
+    }
+}
+
 impl From<DbType> for DbValue {
     fn from(value: DbType) -> Self {
+        value.to_string().into()
+    }
+}
+
+impl From<DbResource> for DbValue {
+    fn from(value: DbResource) -> Self {
         value.to_string().into()
     }
 }

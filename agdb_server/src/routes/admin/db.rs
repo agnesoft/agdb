@@ -1,5 +1,8 @@
 pub(crate) mod user;
 
+use crate::action::db_backup::DbBackup;
+use crate::action::db_clear::DbClear;
+use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
@@ -21,6 +24,7 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::Json;
 
 #[utoipa::path(post,
@@ -123,22 +127,20 @@ pub(crate) async fn audit(
 )]
 pub(crate) async fn backup(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let mut database = server_db.user_db(owner_id, &db_name).await?;
+    server_db.user_db_id(owner_id, &db_name).await?;
 
-    database.backup = db_pool
-        .backup_db(&owner, &db, &db_name, database.db_type, &config)
-        .await?;
+    let commit_index = cluster.append(DbBackup { owner, db }).await?;
 
-    server_db.save_db(&database).await?;
-
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,
@@ -160,21 +162,38 @@ pub(crate) async fn backup(
 pub(crate) async fn clear(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseResource>,
-) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let mut database = server_db.user_db(owner_id, &db_name).await?;
     let role = server_db.user_db_role(owner_id, &db_name).await?;
-    let db = db_pool
-        .clear_db(&owner, &db, &mut database, role, &config, request.resource)
-        .await?;
-    server_db.save_db(&database).await?;
 
-    Ok((StatusCode::OK, Json(db)))
+    let commit_index = cluster
+        .append(DbClear {
+            owner,
+            db,
+            resource: request.resource,
+        })
+        .await?;
+
+    let size = db_pool.db_size(&db_name).await.unwrap_or(0);
+    let database = server_db.user_db(owner_id, &db_name).await?;
+    let db = ServerDatabase {
+        name: db_name,
+        db_type: database.db_type,
+        role,
+        backup: database.backup,
+        size,
+    };
+
+    Ok((
+        StatusCode::OK,
+        [("commit-index", commit_index.to_string())],
+        Json(db),
+    ))
 }
 
 #[utoipa::path(post,

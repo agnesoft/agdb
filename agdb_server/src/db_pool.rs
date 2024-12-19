@@ -12,9 +12,7 @@ use agdb::QueryResult;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
 use agdb_api::DbType;
-use agdb_api::DbUserRole;
 use agdb_api::Queries;
-use agdb_api::ServerDatabase;
 use axum::http::StatusCode;
 use std::collections::HashMap;
 use std::io::Seek;
@@ -133,10 +131,9 @@ impl DbPool {
         owner: &str,
         db: &str,
         database: &mut Database,
-        role: DbUserRole,
         config: &Config,
         resource: DbResource,
-    ) -> ServerResult<ServerDatabase> {
+    ) -> ServerResult {
         match resource {
             DbResource::All => {
                 self.do_clear_db(owner, db, database, config).await?;
@@ -154,15 +151,7 @@ impl DbPool {
             }
         }
 
-        let size = self.db_size(&database.name).await?;
-
-        Ok(ServerDatabase {
-            name: database.name.clone(),
-            db_type: database.db_type,
-            role,
-            size,
-            backup: database.backup,
-        })
+        Ok(())
     }
 
     pub(crate) async fn db_size(&self, name: &str) -> ServerResult<u64> {

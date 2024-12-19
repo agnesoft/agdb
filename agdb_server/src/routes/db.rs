@@ -1,5 +1,7 @@
 pub(crate) mod user;
 
+use crate::action::db_add::DbAdd;
+use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
@@ -22,6 +24,7 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::Json;
 use serde::Deserialize;
 use utoipa::IntoParams;
@@ -65,12 +68,11 @@ pub struct ServerDatabaseResource {
 )]
 pub(crate) async fn add(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let username = server_db.user_name(user.0).await?;
 
     if username != owner {
@@ -86,23 +88,18 @@ pub(crate) async fn add(
         return Err(ErrorCode::DbExists.into());
     }
 
-    let backup = db_pool
-        .add_db(&owner, &db, &name, request.db_type, &config)
+    let commit_index = cluster
+        .append(DbAdd {
+            owner: username,
+            db,
+            db_type: request.db_type,
+        })
         .await?;
 
-    server_db
-        .insert_db(
-            user.0,
-            Database {
-                db_id: None,
-                name,
-                db_type: request.db_type,
-                backup,
-            },
-        )
-        .await?;
-
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(get,

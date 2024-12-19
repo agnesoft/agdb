@@ -13,7 +13,7 @@ pub(crate) struct UserRemove {
 }
 
 impl Action for UserRemove {
-    async fn exec(self, db: &mut ServerDb, db_pool: &mut DbPool, config: &Config) -> ServerResult {
+    async fn exec(self, db: ServerDb, db_pool: DbPool, config: &Config) -> ServerResult {
         let dbs = db.remove_user(&self.user).await?;
         db_pool.remove_user_dbs(&self.user, &dbs, config).await?;
 

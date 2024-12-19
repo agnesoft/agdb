@@ -5,6 +5,7 @@ use crate::HOST;
 use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
+use agdb_api::DbType;
 use agdb_api::ReqwestClient;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -147,6 +148,25 @@ async fn user() -> anyhow::Result<()> {
         client.read().await.user_status().await.unwrap_err().status,
         401
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn db() -> anyhow::Result<()> {
+    let (_leader, servers) = create_cluster(2).await?;
+    let client = servers[0].client.clone();
+
+    client.write().await.cluster_login(ADMIN, ADMIN).await?;
+    client
+        .read()
+        .await
+        .db_add(ADMIN, "db1", DbType::Memory)
+        .await?;
+    let db = &client.read().await.db_list().await?.1[0];
+
+    assert_eq!(db.name, "admin/db1");
+    assert_eq!(db.db_type, DbType::Memory);
 
     Ok(())
 }

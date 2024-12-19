@@ -1,10 +1,12 @@
 pub(crate) mod change_password;
 pub(crate) mod cluster_login;
+pub(crate) mod db_add;
 pub(crate) mod user_add;
 pub(crate) mod user_remove;
 
 use crate::action::change_password::ChangePassword;
 use crate::action::cluster_login::ClusterLogin;
+use crate::action::db_add::DbAdd;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::config::Config;
@@ -20,17 +22,18 @@ pub(crate) enum ClusterAction {
     ClusterLogin(ClusterLogin),
     ChangePassword(ChangePassword),
     UserRemove(UserRemove),
+    DbAdd(DbAdd),
 }
 
 pub(crate) trait Action: Sized {
-    async fn exec(self, db: &mut ServerDb, db_pool: &mut DbPool, config: &Config) -> ServerResult;
+    async fn exec(self, db: ServerDb, db_pool: DbPool, config: &Config) -> ServerResult;
 }
 
 impl ClusterAction {
     pub(crate) async fn exec(
         self,
-        db: &mut ServerDb,
-        db_pool: &mut DbPool,
+        db: ServerDb,
+        db_pool: DbPool,
         config: &Config,
     ) -> ServerResult<()> {
         match self {
@@ -38,6 +41,7 @@ impl ClusterAction {
             ClusterAction::ClusterLogin(action) => action.exec(db, db_pool, config).await,
             ClusterAction::ChangePassword(action) => action.exec(db, db_pool, config).await,
             ClusterAction::UserRemove(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbAdd(action) => action.exec(db, db_pool, config).await,
         }
     }
 }
@@ -63,5 +67,11 @@ impl From<ChangePassword> for ClusterAction {
 impl From<UserRemove> for ClusterAction {
     fn from(value: UserRemove) -> Self {
         ClusterAction::UserRemove(value)
+    }
+}
+
+impl From<DbAdd> for ClusterAction {
+    fn from(value: DbAdd) -> Self {
+        ClusterAction::DbAdd(value)
     }
 }

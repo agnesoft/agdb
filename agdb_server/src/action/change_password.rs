@@ -15,12 +15,7 @@ pub(crate) struct ChangePassword {
 }
 
 impl Action for ChangePassword {
-    async fn exec(
-        self,
-        db: &mut ServerDb,
-        _db_pool: &mut DbPool,
-        _config: &Config,
-    ) -> ServerResult {
+    async fn exec(self, db: ServerDb, _db_pool: DbPool, _config: &Config) -> ServerResult {
         let mut user = db.user(&self.user).await?;
         user.password = self.new_password;
         user.salt = self.new_salt;

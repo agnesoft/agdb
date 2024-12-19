@@ -327,13 +327,13 @@ impl ClusterStorage {
     async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
         let log_id = log.db_id.unwrap_or_default();
         let executed = self.executed.clone();
-        let mut db = self.db.clone();
-        let mut db_pool = self.db_pool.clone();
+        let db = self.db.clone();
+        let db_pool = self.db_pool.clone();
         let config = self.config.clone();
         let notifier = self.result_notifiers.remove(&log_id);
 
         tokio::spawn(async move {
-            let result = log.data.exec(&mut db, &mut db_pool, &config).await;
+            let result = log.data.exec(db.clone(), db_pool, &config).await;
             executed.fetch_max(log.index, Ordering::Relaxed);
             let _ = db.log_executed(log_id).await;
 

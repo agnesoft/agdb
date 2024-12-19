@@ -1,5 +1,6 @@
 use crate::action::change_password::ChangePassword;
 use crate::action::cluster_login::ClusterLogin;
+use crate::action::db_add::DbAdd;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::action::ClusterAction;
@@ -436,7 +437,7 @@ impl ServerDb {
                 })
                 .collect();
             log_ids.sort_by_key(|l| l.0);
-            Self::logs(t, log_ids.into_iter().map(|l| l.1).collect())
+            logs(t, log_ids.into_iter().map(|l| l.1).collect())
         })
     }
 
@@ -499,81 +500,8 @@ impl ServerDb {
                 .ids();
 
             log_ids.reverse();
-            Self::logs(t, log_ids)
+            logs(t, log_ids)
         })
-    }
-
-    fn logs<T: StorageData>(
-        t: &Transaction<T>,
-        log_ids: Vec<DbId>,
-    ) -> ServerResult<Vec<Log<ClusterAction>>> {
-        let mut actions = Vec::new();
-
-        for element in t
-            .exec(
-                QueryBuilder::select()
-                    .values(["index", "term", "action"])
-                    .ids(log_ids)
-                    .query(),
-            )?
-            .elements
-        {
-            let index = element.values[0].value.to_u64()?;
-            let term = element.values[1].value.to_u64()?;
-            let action = element.values[2].value.string()?;
-
-            let data = match action.as_str() {
-                "UserAdd" => Ok(ClusterAction::UserAdd(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<UserAdd>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                "ClusterLogin" => Ok(ClusterAction::ClusterLogin(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<ClusterLogin>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                "ChangePassword" => Ok(ClusterAction::ChangePassword(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<ChangePassword>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                "UserRemove" => Ok(ClusterAction::UserRemove(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<UserRemove>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                _ => Err(ServerError::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("unknown action: {action}"),
-                )),
-            }?;
-
-            actions.push(Log {
-                db_id: Some(element.id),
-                index,
-                term,
-                data,
-            });
-        }
-
-        Ok(actions)
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, db: &str) -> ServerResult<()> {
@@ -927,7 +855,93 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
             values.push(("action", "UserRemove").into());
             values.extend(action.to_db_values());
         }
+        ClusterAction::DbAdd(action) => {
+            values.push(("action", "DbAdd").into());
+            values.extend(action.to_db_values());
+        }
     }
 
     values
+}
+
+fn logs<T: StorageData>(
+    t: &Transaction<T>,
+    log_ids: Vec<DbId>,
+) -> ServerResult<Vec<Log<ClusterAction>>> {
+    let mut actions = Vec::new();
+
+    for element in t
+        .exec(
+            QueryBuilder::select()
+                .values(["index", "term", "action"])
+                .ids(log_ids)
+                .query(),
+        )?
+        .elements
+    {
+        let index = element.values[0].value.to_u64()?;
+        let term = element.values[1].value.to_u64()?;
+        let action = element.values[2].value.string()?;
+
+        let data = match action.as_str() {
+            "UserAdd" => Ok(ClusterAction::UserAdd(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<UserAdd>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "ClusterLogin" => Ok(ClusterAction::ClusterLogin(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<ClusterLogin>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "ChangePassword" => Ok(ClusterAction::ChangePassword(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<ChangePassword>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "UserRemove" => Ok(ClusterAction::UserRemove(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<UserRemove>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbAdd" => Ok(ClusterAction::DbAdd(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbAdd>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            _ => Err(ServerError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("unknown action: {action}"),
+            )),
+        }?;
+
+        actions.push(Log {
+            db_id: Some(element.id),
+            index,
+            term,
+            data,
+        });
+    }
+
+    Ok(actions)
 }

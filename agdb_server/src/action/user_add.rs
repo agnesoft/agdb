@@ -16,12 +16,7 @@ pub(crate) struct UserAdd {
 }
 
 impl Action for UserAdd {
-    async fn exec(
-        self,
-        db: &mut ServerDb,
-        _db_pool: &mut DbPool,
-        _config: &Config,
-    ) -> ServerResult {
+    async fn exec(self, db: ServerDb, _db_pool: DbPool, _config: &Config) -> ServerResult {
         db.insert_user(ServerUser {
             db_id: None,
             username: self.user,

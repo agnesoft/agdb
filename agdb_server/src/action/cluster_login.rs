@@ -14,12 +14,7 @@ pub(crate) struct ClusterLogin {
 }
 
 impl Action for ClusterLogin {
-    async fn exec(
-        self,
-        db: &mut ServerDb,
-        _db_pool: &mut DbPool,
-        _config: &Config,
-    ) -> ServerResult {
+    async fn exec(self, db: ServerDb, _db_pool: DbPool, _config: &Config) -> ServerResult {
         let user_id = db.user_id(&self.user).await?;
         db.save_token(user_id, &self.new_token).await?;
 

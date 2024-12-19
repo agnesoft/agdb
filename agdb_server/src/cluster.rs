@@ -368,7 +368,9 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     async fn commit(&mut self, index: u64) -> ServerResult<()> {
         for log in self.db.logs_unexecuted_until(index).await? {
             self.commit = index;
-            self.db.log_committed(log.db_id.unwrap_or_default()).await?;
+            self.db
+                .log_committed(log.db_id.expect("log should have db_id"))
+                .await?;
             self.execute_log(log).await?;
         }
 

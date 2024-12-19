@@ -6,12 +6,14 @@ use axum::middleware::Next;
 use axum::response::Response;
 use reqwest::StatusCode;
 
-const REDIRECT_PATHS: [&str; 13] = [
+const REDIRECT_PATHS: [&str; 15] = [
     "/add",
     "/backup",
     "/change_password",
     "/clear",
     "/cluster/login",
+    "/cluster/logout",
+    "/cluster/admin/logout",
     "/convert",
     "/copy",
     "/delete",
@@ -27,8 +29,6 @@ pub(crate) async fn forward_to_leader(
     request: Request,
     next: Next,
 ) -> Response {
-    let forwarded = request.headers().get("forwarded-by").is_some();
-
     if REDIRECT_PATHS
         .iter()
         .any(|pattern| request.uri().path().ends_with(pattern))
@@ -48,7 +48,7 @@ pub(crate) async fn forward_to_leader(
                     if let Some(commit_index) = response.headers_mut().remove("commit-index") {
                         if let Ok(commit_index) = commit_index.to_str() {
                             if let Ok(commit_index) = commit_index.parse::<u64>() {
-                                while state.cluster.raft.read().await.storage.log_commit()
+                                while state.cluster.raft.read().await.storage.log_executed()
                                     < commit_index
                                 {
                                     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
@@ -68,14 +68,5 @@ pub(crate) async fn forward_to_leader(
         }
     }
 
-    let mut response = next.run(request).await;
-
-    if forwarded && response.status().is_success() {
-        response.headers_mut().insert(
-            "commit-index",
-            state.cluster.raft.read().await.storage.log_commit().into(),
-        );
-    }
-
-    response
+    next.run(request).await
 }

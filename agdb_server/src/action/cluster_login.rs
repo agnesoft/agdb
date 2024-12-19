@@ -1,7 +1,6 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
-use crate::action::ClusterResponse;
 use crate::action::Config;
 use crate::server_error::ServerResult;
 use agdb::UserValue;
@@ -20,10 +19,10 @@ impl Action for ClusterLogin {
         db: &mut ServerDb,
         _db_pool: &mut DbPool,
         _config: &Config,
-    ) -> ServerResult<ClusterResponse> {
+    ) -> ServerResult {
         let user_id = db.user_id(&self.user).await?;
         db.save_token(user_id, &self.new_token).await?;
 
-        Ok(ClusterResponse::None)
+        Ok(())
     }
 }

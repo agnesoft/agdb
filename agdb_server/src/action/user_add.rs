@@ -1,7 +1,6 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
-use crate::action::ClusterResponse;
 use crate::action::Config;
 use crate::server_db::ServerUser;
 use crate::server_error::ServerResult;
@@ -22,7 +21,7 @@ impl Action for UserAdd {
         db: &mut ServerDb,
         _db_pool: &mut DbPool,
         _config: &Config,
-    ) -> ServerResult<ClusterResponse> {
+    ) -> ServerResult {
         db.insert_user(ServerUser {
             db_id: None,
             username: self.user,
@@ -32,6 +31,6 @@ impl Action for UserAdd {
         })
         .await?;
 
-        Ok(ClusterResponse::None)
+        Ok(())
     }
 }

@@ -181,6 +181,10 @@ async fn db() -> anyhow::Result<()> {
     let db = &client.db_list().await?.1[0];
     assert_eq!(db.db_type, DbType::Mapped);
 
+    client.db_copy(ADMIN, "db1", ADMIN, "db2").await?;
+    let db = &client.db_list().await?.1[1];
+    assert_eq!(db.name, "admin/db2");
+
     Ok(())
 }
 

@@ -3,6 +3,7 @@ pub(crate) mod user;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
+use crate::action::db_copy::DbCopy;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -263,12 +264,11 @@ pub(crate) async fn convert(
 )]
 pub(crate) async fn copy(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let (new_owner, new_db) = request
         .new_name
         .split_once('/')
@@ -287,20 +287,20 @@ pub(crate) async fn copy(
         return Err(ErrorCode::DbExists.into());
     }
 
-    db_pool
-        .copy_db(&source_db, new_owner, new_db, &target_db, &config)
-        .await?;
-
-    server_db
-        .save_db(&Database {
-            db_id: None,
-            name: target_db,
+    let commit_index = cluster
+        .append(DbCopy {
+            owner,
+            db,
+            new_owner: new_owner.to_string(),
+            new_db: new_db.to_string(),
             db_type,
-            backup: 0,
         })
         .await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(delete,

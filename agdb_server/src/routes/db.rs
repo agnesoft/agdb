@@ -4,11 +4,11 @@ use crate::action::db_add::DbAdd;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
+use crate::action::db_copy::DbCopy;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
-use crate::server_db::Database;
 use crate::server_db::ServerDb;
 use crate::server_error::permission_denied;
 use crate::server_error::ServerError;
@@ -304,12 +304,11 @@ pub(crate) async fn convert(
 )]
 pub(crate) async fn copy(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let (new_owner, new_db) = request
         .new_name
         .split_once('/')
@@ -318,11 +317,6 @@ pub(crate) async fn copy(
     let target_db = db_name(new_owner, new_db);
     let db_type = server_db.user_db(user.0, &source_db).await?.db_type;
     let username = server_db.user_name(user.0).await?;
-    let new_owner_id = if username == new_owner {
-        user.0
-    } else {
-        server_db.user_id(new_owner).await?
-    };
 
     if new_owner != username {
         return Err(permission_denied("cannot copy db to another user"));
@@ -336,23 +330,20 @@ pub(crate) async fn copy(
         return Err(ErrorCode::DbExists.into());
     }
 
-    db_pool
-        .copy_db(&source_db, new_owner, new_db, &target_db, &config)
+    let commit_index = cluster
+        .append(DbCopy {
+            owner,
+            db,
+            new_owner: new_owner.to_string(),
+            new_db: new_db.to_string(),
+            db_type,
+        })
         .await?;
 
-    server_db
-        .insert_db(
-            new_owner_id,
-            Database {
-                db_id: None,
-                name: target_db,
-                db_type,
-                backup: 0,
-            },
-        )
-        .await?;
-
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(delete,

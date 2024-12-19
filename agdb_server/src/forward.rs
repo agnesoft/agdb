@@ -48,7 +48,7 @@ pub(crate) async fn forward_to_leader(
                     if let Some(commit_index) = response.headers_mut().remove("commit-index") {
                         if let Ok(commit_index) = commit_index.to_str() {
                             if let Ok(commit_index) = commit_index.parse::<u64>() {
-                                while state.cluster.raft.read().await.storage.log_commit()
+                                while state.cluster.raft.read().await.storage.log_executed()
                                     < commit_index
                                 {
                                     tokio::time::sleep(std::time::Duration::from_millis(10)).await;

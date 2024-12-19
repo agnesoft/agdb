@@ -177,6 +177,10 @@ async fn db() -> anyhow::Result<()> {
     let db = client.db_clear(ADMIN, "db1", DbResource::Backup).await?.1;
     assert_eq!(db.backup, 0);
 
+    client.db_convert(ADMIN, "db1", DbType::Mapped).await?;
+    let db = &client.db_list().await?.1[0];
+    assert_eq!(db.db_type, DbType::Mapped);
+
     Ok(())
 }
 

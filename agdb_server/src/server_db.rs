@@ -3,6 +3,7 @@ use crate::action::cluster_login::ClusterLogin;
 use crate::action::db_add::DbAdd;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
+use crate::action::db_convert::DbConvert;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::action::ClusterAction;
@@ -869,6 +870,10 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
             values.push(("action", "DbClear").into());
             values.extend(db_clear.to_db_values());
         }
+        ClusterAction::DbConvert(db_convert) => {
+            values.push(("action", "DbConvert").into());
+            values.extend(db_convert.to_db_values());
+        }
     }
 
     values
@@ -952,6 +957,15 @@ fn logs<T: StorageData>(
                 t.exec(
                     QueryBuilder::select()
                         .elements::<DbClear>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbConvert" => Ok(ClusterAction::DbConvert(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbConvert>()
                         .ids(element.id)
                         .query(),
                 )?

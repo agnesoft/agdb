@@ -2,6 +2,7 @@ pub(crate) mod user;
 
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
+use crate::action::db_convert::DbConvert;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -215,35 +216,31 @@ pub(crate) async fn clear(
 )]
 pub(crate) async fn convert(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let mut database = server_db.user_db(owner_id, &db_name).await?;
+    let db_type = server_db.user_db(owner_id, &db_name).await?.db_type;
 
-    if database.db_type == request.db_type {
-        return Ok(StatusCode::CREATED);
+    if db_type == request.db_type {
+        return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
     }
 
-    db_pool
-        .convert_db(
-            &owner,
-            &db,
-            &db_name,
-            database.db_type,
-            request.db_type,
-            &config,
-        )
+    let commit_index = cluster
+        .append(DbConvert {
+            owner,
+            db,
+            db_type: request.db_type,
+        })
         .await?;
 
-    database.db_type = request.db_type;
-    server_db.save_db(&database).await?;
-
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,

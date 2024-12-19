@@ -3,6 +3,7 @@ pub(crate) mod cluster_login;
 pub(crate) mod db_add;
 pub(crate) mod db_backup;
 pub(crate) mod db_clear;
+pub(crate) mod db_convert;
 pub(crate) mod user_add;
 pub(crate) mod user_remove;
 
@@ -11,6 +12,7 @@ use crate::action::cluster_login::ClusterLogin;
 use crate::action::db_add::DbAdd;
 use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
+use crate::action::db_convert::DbConvert;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::config::Config;
@@ -29,6 +31,7 @@ pub(crate) enum ClusterAction {
     DbAdd(DbAdd),
     DbBackup(DbBackup),
     DbClear(DbClear),
+    DbConvert(DbConvert),
 }
 
 pub(crate) trait Action: Sized {
@@ -50,6 +53,7 @@ impl ClusterAction {
             ClusterAction::DbAdd(action) => action.exec(db, db_pool, config).await,
             ClusterAction::DbBackup(db_backup) => db_backup.exec(db, db_pool, config).await,
             ClusterAction::DbClear(db_clear) => db_clear.exec(db, db_pool, config).await,
+            ClusterAction::DbConvert(db_convert) => db_convert.exec(db, db_pool, config).await,
         }
     }
 }
@@ -93,5 +97,11 @@ impl From<DbBackup> for ClusterAction {
 impl From<DbClear> for ClusterAction {
     fn from(value: DbClear) -> Self {
         ClusterAction::DbClear(value)
+    }
+}
+
+impl From<DbConvert> for ClusterAction {
+    fn from(value: DbConvert) -> Self {
+        ClusterAction::DbConvert(value)
     }
 }

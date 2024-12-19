@@ -16,6 +16,7 @@ use agdb_api::UserLogin;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::Json;
 
 pub(crate) async fn cluster(
@@ -46,17 +47,20 @@ pub(crate) async fn admin_logout(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let _user_id = server_db.user_id(&username).await?;
 
-    cluster
+    let commit_index = cluster
         .append(ClusterLogin {
             user: username,
             new_token: String::new(),
         })
         .await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,
@@ -73,11 +77,12 @@ pub(crate) async fn login(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Json(request): Json<UserLogin>,
-) -> ServerResponse<(StatusCode, Json<String>)> {
+) -> ServerResponse<impl IntoResponse> {
     let (token, user_id) = do_login(&server_db, &request.username, &request.password).await?;
+    let mut commit_index = 0;
 
     if user_id.is_some() {
-        cluster
+        commit_index = cluster
             .append(ClusterLogin {
                 user: request.username,
                 new_token: token.clone(),
@@ -85,7 +90,11 @@ pub(crate) async fn login(
             .await?;
     }
 
-    Ok((StatusCode::OK, Json(token)))
+    Ok((
+        StatusCode::OK,
+        [("commit-index", commit_index.to_string())],
+        Json(token),
+    ))
 }
 
 #[utoipa::path(post,
@@ -102,11 +111,12 @@ pub(crate) async fn logout(
     user: UserId,
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let token = server_db.user_token(user.0).await?;
+    let mut commit_index = 0;
 
     if !token.is_empty() {
-        cluster
+        commit_index = cluster
             .append(ClusterLogin {
                 user: server_db.user_name(user.0).await?,
                 new_token: String::new(),
@@ -114,7 +124,10 @@ pub(crate) async fn logout(
             .await?;
     }
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(get,

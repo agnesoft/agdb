@@ -137,7 +137,7 @@ async fn user() -> anyhow::Result<()> {
         .await?;
 
     let mut leader = leader.client.write().await;
-    leader.cluster_login(ADMIN, ADMIN).await?;
+    leader.user_login(ADMIN, ADMIN).await?;
     leader.admin_cluster_logout("user1").await?;
     leader.admin_user_remove("user1").await?;
     client.write().await.user_login(ADMIN, ADMIN).await?;

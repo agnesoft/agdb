@@ -1,6 +1,5 @@
 use crate::action::Action;
 use crate::action::ClusterAction;
-use crate::action::ClusterResponse;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::raft;
@@ -34,7 +33,7 @@ use tokio::sync::RwLock;
 pub(crate) type Cluster = Arc<ClusterImpl>;
 
 type ClusterNode = Arc<ClusterNodeImpl>;
-type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<ClusterResponse>>;
+type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<u64>>;
 type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Response)>;
 
 pub(crate) struct ClusterNodeImpl {
@@ -58,8 +57,8 @@ impl ClusterImpl {
     pub(crate) async fn append<T: Action + Into<ClusterAction>>(
         &self,
         action: T,
-    ) -> ServerResult<ClusterResponse> {
-        let (sender, receiver) = tokio::sync::oneshot::channel::<ServerResult<ClusterResponse>>();
+    ) -> ServerResult<u64> {
+        let (sender, receiver) = tokio::sync::oneshot::channel::<ServerResult<u64>>();
         let requests = self
             .raft
             .write()
@@ -292,7 +291,7 @@ pub(crate) async fn start_with_shutdown(
 }
 
 pub(crate) struct ClusterStorage {
-    notifiers: HashMap<DbId, ResultNotifier>,
+    result_notifiers: HashMap<DbId, ResultNotifier>,
     index: u64,
     term: u64,
     commit: u64,
@@ -308,7 +307,7 @@ impl ClusterStorage {
         let logs = db.logs_unexecuted_until(commit).await?;
 
         let mut storage = Self {
-            notifiers: HashMap::new(),
+            result_notifiers: HashMap::new(),
             index,
             term,
             commit,
@@ -331,7 +330,7 @@ impl ClusterStorage {
         let mut db = self.db.clone();
         let mut db_pool = self.db_pool.clone();
         let config = self.config.clone();
-        let notifier = self.notifiers.remove(&log_id);
+        let notifier = self.result_notifiers.remove(&log_id);
 
         tokio::spawn(async move {
             let result = log.data.exec(&mut db, &mut db_pool, &config).await;
@@ -339,7 +338,7 @@ impl ClusterStorage {
             let _ = db.log_executed(log_id).await;
 
             if let Some(notifier) = notifier {
-                let _ = notifier.send(result);
+                let _ = notifier.send(result.map(|_| log.index));
             }
         });
 
@@ -359,7 +358,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         self.term = log.term;
 
         if let Some(notifier) = notifier {
-            self.notifiers.insert(log_id, notifier);
+            self.result_notifiers.insert(log_id, notifier);
         }
 
         Ok(())

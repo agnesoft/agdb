@@ -1,7 +1,6 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
-use crate::action::ClusterResponse;
 use crate::action::Config;
 use crate::server_error::ServerResult;
 use agdb::UserValue;
@@ -21,12 +20,12 @@ impl Action for ChangePassword {
         db: &mut ServerDb,
         _db_pool: &mut DbPool,
         _config: &Config,
-    ) -> ServerResult<ClusterResponse> {
+    ) -> ServerResult {
         let mut user = db.user(&self.user).await?;
         user.password = self.new_password;
         user.salt = self.new_salt;
         db.save_user(user).await?;
 
-        Ok(ClusterResponse::None)
+        Ok(())
     }
 }

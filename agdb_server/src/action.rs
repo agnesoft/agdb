@@ -22,27 +22,17 @@ pub(crate) enum ClusterAction {
     UserRemove(UserRemove),
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub(crate) enum ClusterResponse {
-    None,
-}
-
 pub(crate) trait Action: Sized {
-    async fn exec(
-        self,
-        db: &mut ServerDb,
-        db_pool: &mut DbPool,
-        config: &Config,
-    ) -> ServerResult<ClusterResponse>;
+    async fn exec(self, db: &mut ServerDb, db_pool: &mut DbPool, config: &Config) -> ServerResult;
 }
 
-impl Action for ClusterAction {
-    async fn exec(
+impl ClusterAction {
+    pub(crate) async fn exec(
         self,
         db: &mut ServerDb,
         db_pool: &mut DbPool,
         config: &Config,
-    ) -> ServerResult<ClusterResponse> {
+    ) -> ServerResult<()> {
         match self {
             ClusterAction::UserAdd(action) => action.exec(db, db_pool, config).await,
             ClusterAction::ClusterLogin(action) => action.exec(db, db_pool, config).await,

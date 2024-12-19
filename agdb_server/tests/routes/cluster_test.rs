@@ -155,18 +155,22 @@ async fn user() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db() -> anyhow::Result<()> {
     let (_leader, servers) = create_cluster(2).await?;
-    let client = servers[0].client.clone();
-
-    client.write().await.cluster_login(ADMIN, ADMIN).await?;
-    client
-        .read()
+    servers[0]
+        .client
+        .write()
         .await
-        .db_add(ADMIN, "db1", DbType::Memory)
+        .cluster_login(ADMIN, ADMIN)
         .await?;
-    let db = &client.read().await.db_list().await?.1[0];
 
+    let client = servers[0].client.read().await;
+    client.db_add(ADMIN, "db1", DbType::Memory).await?;
+    let db = &client.db_list().await?.1[0];
     assert_eq!(db.name, "admin/db1");
     assert_eq!(db.db_type, DbType::Memory);
+
+    client.db_backup(ADMIN, "db1").await?;
+    let db = &client.db_list().await?.1[0];
+    assert_ne!(db.backup, 0);
 
     Ok(())
 }

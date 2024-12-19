@@ -1,6 +1,7 @@
 pub(crate) mod user;
 
 use crate::action::db_add::DbAdd;
+use crate::action::db_backup::DbBackup;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -151,28 +152,23 @@ pub(crate) async fn audit(
 )]
 pub(crate) async fn backup(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
-    let mut database = server_db.user_db(user.0, &db_name).await?;
+    let db_id = server_db.user_db_id(user.0, &db_name).await?;
 
-    if !server_db
-        .is_db_admin(user.0, database.db_id.unwrap())
-        .await?
-    {
+    if !server_db.is_db_admin(user.0, db_id).await? {
         return Err(permission_denied("admin only"));
     }
 
-    database.backup = db_pool
-        .backup_db(&owner, &db, &db_name, database.db_type, &config)
-        .await?;
+    let commit_index = cluster.append(DbBackup { owner, db }).await?;
 
-    server_db.save_db(&database).await?;
-
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,

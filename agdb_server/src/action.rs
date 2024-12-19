@@ -1,12 +1,14 @@
 pub(crate) mod change_password;
 pub(crate) mod cluster_login;
 pub(crate) mod db_add;
+pub(crate) mod db_backup;
 pub(crate) mod user_add;
 pub(crate) mod user_remove;
 
 use crate::action::change_password::ChangePassword;
 use crate::action::cluster_login::ClusterLogin;
 use crate::action::db_add::DbAdd;
+use crate::action::db_backup::DbBackup;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::config::Config;
@@ -23,6 +25,7 @@ pub(crate) enum ClusterAction {
     ChangePassword(ChangePassword),
     UserRemove(UserRemove),
     DbAdd(DbAdd),
+    DbBackup(DbBackup),
 }
 
 pub(crate) trait Action: Sized {
@@ -42,6 +45,7 @@ impl ClusterAction {
             ClusterAction::ChangePassword(action) => action.exec(db, db_pool, config).await,
             ClusterAction::UserRemove(action) => action.exec(db, db_pool, config).await,
             ClusterAction::DbAdd(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbBackup(db_backup) => db_backup.exec(db, db_pool, config).await,
         }
     }
 }
@@ -73,5 +77,11 @@ impl From<UserRemove> for ClusterAction {
 impl From<DbAdd> for ClusterAction {
     fn from(value: DbAdd) -> Self {
         ClusterAction::DbAdd(value)
+    }
+}
+
+impl From<DbBackup> for ClusterAction {
+    fn from(value: DbBackup) -> Self {
+        ClusterAction::DbBackup(value)
     }
 }

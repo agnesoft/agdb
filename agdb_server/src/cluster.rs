@@ -304,7 +304,7 @@ pub(crate) struct ClusterStorage {
 impl ClusterStorage {
     async fn new(db: ServerDb, db_pool: DbPool, config: Config) -> ServerResult<Self> {
         let (index, term, commit) = db.cluster_log().await?;
-        let logs = db.logs_unexecuted_until(commit).await?;
+        let logs = db.logs_unexecuted(commit).await?;
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
@@ -352,7 +352,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         log: Log<ClusterAction>,
         notifier: Option<ResultNotifier>,
     ) -> ServerResult<()> {
-        self.db.remove_unexecuted_logs_since(log.index).await?;
+        self.db.remove_uncommitted_logs_since(log.index).await?;
         let log_id = self.db.append_log(&log).await?;
         self.index = log.index;
         self.term = log.term;
@@ -365,7 +365,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     }
 
     async fn commit(&mut self, index: u64) -> ServerResult<()> {
-        for log in self.db.logs_unexecuted_until(index).await? {
+        for log in self.db.logs_uncommitted(index).await? {
             self.commit = index;
             self.db
                 .log_committed(log.db_id.expect("log should have db_id"))

@@ -116,6 +116,10 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().index(EXECUTED).query())?;
             }
 
+            if !indexes.iter().any(|i| i == COMMITTED) {
+                t.exec_mut(QueryBuilder::insert().index(COMMITTED).query())?;
+            }
+
             if t.exec(QueryBuilder::select().ids(USERS).query()).is_err() {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(USERS).query())?;
             }
@@ -414,17 +418,28 @@ impl ServerDb {
         )
     }
 
-    pub(crate) async fn logs_unexecuted_until(
+    pub(crate) async fn logs_unexecuted(
         &self,
         index: u64,
     ) -> ServerResult<Vec<Log<ClusterAction>>> {
+        self.logs_until(index, EXECUTED).await
+    }
+
+    pub(crate) async fn logs_uncommitted(
+        &self,
+        index: u64,
+    ) -> ServerResult<Vec<Log<ClusterAction>>> {
+        self.logs_until(index, COMMITTED).await
+    }
+
+    async fn logs_until(&self, index: u64, label: &str) -> ServerResult<Vec<Log<ClusterAction>>> {
         self.0.read().await.transaction(|t| {
             let mut log_ids: Vec<(u64, DbId)> = t
                 .exec(
                     QueryBuilder::select()
                         .values("index")
                         .search()
-                        .index(EXECUTED)
+                        .index(label)
                         .value(false)
                         .query(),
                 )?
@@ -445,14 +460,14 @@ impl ServerDb {
         })
     }
 
-    pub(crate) async fn remove_unexecuted_logs_since(&self, since_index: u64) -> ServerResult<()> {
+    pub(crate) async fn remove_uncommitted_logs_since(&self, since_index: u64) -> ServerResult<()> {
         self.0.write().await.transaction_mut(|t| {
             let logs: Vec<DbId> = t
                 .exec(
                     QueryBuilder::select()
                         .values(["index", "term"])
                         .search()
-                        .index(EXECUTED)
+                        .index(COMMITTED)
                         .value(false)
                         .query(),
                 )?

@@ -54,10 +54,10 @@ impl ClusterAction {
             ClusterAction::ChangePassword(action) => action.exec(db, db_pool, config).await,
             ClusterAction::UserRemove(action) => action.exec(db, db_pool, config).await,
             ClusterAction::DbAdd(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbBackup(db_backup) => db_backup.exec(db, db_pool, config).await,
-            ClusterAction::DbClear(db_clear) => db_clear.exec(db, db_pool, config).await,
-            ClusterAction::DbConvert(db_convert) => db_convert.exec(db, db_pool, config).await,
-            ClusterAction::DbCopy(db_copy) => db_copy.exec(db, db_pool, config).await,
+            ClusterAction::DbBackup(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbClear(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbConvert(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbCopy(action) => action.exec(db, db_pool, config).await,
         }
     }
 }

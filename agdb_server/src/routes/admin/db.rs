@@ -6,6 +6,7 @@ use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
 use crate::action::db_copy::DbCopy;
 use crate::action::db_delete::DbDelete;
+use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -62,8 +63,8 @@ pub(crate) async fn add(
         return Err(ErrorCode::DbExists.into());
     }
 
-    let commit_index = cluster
-        .append(DbAdd {
+    let (commit_index, _result) = cluster
+        .exec(DbAdd {
             owner: owner.to_string(),
             db,
             db_type: request.db_type,
@@ -133,7 +134,7 @@ pub(crate) async fn backup(
     let owner_id = server_db.user_id(&owner).await?;
     server_db.user_db_id(owner_id, &db_name).await?;
 
-    let commit_index = cluster.append(DbBackup { owner, db }).await?;
+    let (commit_index, _result) = cluster.exec(DbBackup { owner, db }).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -169,8 +170,8 @@ pub(crate) async fn clear(
     let owner_id = server_db.user_id(&owner).await?;
     let role = server_db.user_db_role(owner_id, &db_name).await?;
 
-    let commit_index = cluster
-        .append(DbClear {
+    let (commit_index, _result) = cluster
+        .exec(DbClear {
             owner,
             db,
             resource: request.resource,
@@ -226,8 +227,8 @@ pub(crate) async fn convert(
         return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
     }
 
-    let commit_index = cluster
-        .append(DbConvert {
+    let (commit_index, _result) = cluster
+        .exec(DbConvert {
             owner,
             db,
             db_type: request.db_type,
@@ -283,8 +284,8 @@ pub(crate) async fn copy(
         return Err(ErrorCode::DbExists.into());
     }
 
-    let commit_index = cluster
-        .append(DbCopy {
+    let (commit_index, _result) = cluster
+        .exec(DbCopy {
             owner,
             db,
             new_owner: new_owner.to_string(),
@@ -323,7 +324,7 @@ pub(crate) async fn delete(
     let user_id = server_db.user_id(&owner).await?;
     let _ = server_db.user_db_id(user_id, &db_name(&owner, &db)).await?;
 
-    let commit_index = cluster.append(DbDelete { owner, db }).await?;
+    let (commit_index, _result) = cluster.exec(DbDelete { owner, db }).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -417,17 +418,21 @@ pub(crate) async fn list(
 pub(crate) async fn optimize(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
     let database = server_db.user_db(owner_id, &db_name).await?;
     let role = server_db.user_db_role(owner_id, &db_name).await?;
-    let size = db_pool.optimize_db(&db_name).await?;
+
+    let (commit_index, _result) = cluster.exec(DbOptimize { owner, db }).await?;
+    let size = db_pool.db_size(&db_name).await?;
 
     Ok((
         StatusCode::OK,
+        [("commit-index", commit_index.to_string())],
         Json(ServerDatabase {
             name: db_name,
             db_type: database.db_type,
@@ -462,7 +467,7 @@ pub(crate) async fn remove(
     let user_id = server_db.user_id(&owner).await?;
     let _ = server_db.user_db_id(user_id, &db_name(&owner, &db)).await?;
 
-    let commit_index = cluster.append(DbRemove { owner, db }).await?;
+    let (commit_index, _result) = cluster.exec(DbRemove { owner, db }).await?;
 
     Ok((
         StatusCode::CREATED,

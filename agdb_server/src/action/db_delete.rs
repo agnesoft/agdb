@@ -1,6 +1,7 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
+use crate::action::ClusterActionResult;
 use crate::action::Config;
 use crate::server_error::ServerResult;
 use crate::utilities::db_name;
@@ -15,15 +16,18 @@ pub(crate) struct DbDelete {
 }
 
 impl Action for DbDelete {
-    async fn exec(self, db: ServerDb, db_pool: DbPool, config: &Config) -> ServerResult {
+    async fn exec(
+        self,
+        db: ServerDb,
+        db_pool: DbPool,
+        config: &Config,
+    ) -> ServerResult<ClusterActionResult> {
         let name = db_name(&self.owner, &self.db);
         let user_id = db.user_id(&self.owner).await?;
-
         db.remove_db(user_id, &name).await?;
         db_pool
             .delete_db(&self.owner, &self.db, &name, config)
             .await?;
-
-        Ok(())
+        Ok(ClusterActionResult::None)
     }
 }

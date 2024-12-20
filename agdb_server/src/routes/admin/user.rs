@@ -49,8 +49,8 @@ pub(crate) async fn add(
 
     let pswd = Password::create(&username, &request.password);
 
-    let commit_index = cluster
-        .append(UserAdd {
+    let (commit_index, _result) = cluster
+        .exec(UserAdd {
             user: username,
             password: pswd.password.to_vec(),
             salt: pswd.user_salt.to_vec(),
@@ -90,8 +90,8 @@ pub(crate) async fn change_password(
     password::validate_password(&request.password)?;
     let pswd = Password::create(&username, &request.password);
 
-    let commit_index = cluster
-        .append(ChangePasswordAction {
+    let (commit_index, _result) = cluster
+        .exec(ChangePasswordAction {
             user: username.to_string(),
             new_password: pswd.password.to_vec(),
             new_salt: pswd.user_salt.to_vec(),
@@ -168,8 +168,8 @@ pub(crate) async fn remove(
 ) -> ServerResponse<impl IntoResponse> {
     server_db.user_id(&username).await?;
 
-    let commit_index = cluster
-        .append(UserRemove {
+    let (commit_index, _result) = cluster
+        .exec(UserRemove {
             user: username.to_string(),
         })
         .await?;

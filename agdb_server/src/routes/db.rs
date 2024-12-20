@@ -6,7 +6,10 @@ use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
 use crate::action::db_copy::DbCopy;
 use crate::action::db_delete::DbDelete;
+use crate::action::db_exec::DbExec;
+use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
+use crate::action::ClusterActionResult;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -93,8 +96,8 @@ pub(crate) async fn add(
         return Err(ErrorCode::DbExists.into());
     }
 
-    let commit_index = cluster
-        .append(DbAdd {
+    let (commit_index, _result) = cluster
+        .exec(DbAdd {
             owner: username,
             db,
             db_type: request.db_type,
@@ -167,7 +170,7 @@ pub(crate) async fn backup(
         return Err(permission_denied("admin only"));
     }
 
-    let commit_index = cluster.append(DbBackup { owner, db }).await?;
+    let (commit_index, _result) = cluster.exec(DbBackup { owner, db }).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -208,8 +211,8 @@ pub(crate) async fn clear(
         return Err(permission_denied("admin only"));
     }
 
-    let commit_index = cluster
-        .append(DbClear {
+    let (commit_index, _result) = cluster
+        .exec(DbClear {
             owner,
             db,
             resource: request.resource,
@@ -271,8 +274,8 @@ pub(crate) async fn convert(
         return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
     }
 
-    let commit_index = cluster
-        .append(DbConvert {
+    let (commit_index, _result) = cluster
+        .exec(DbConvert {
             owner,
             db,
             db_type: request.db_type,
@@ -332,8 +335,8 @@ pub(crate) async fn copy(
         return Err(ErrorCode::DbExists.into());
     }
 
-    let commit_index = cluster
-        .append(DbCopy {
+    let (commit_index, _result) = cluster
+        .exec(DbCopy {
             owner,
             db,
             new_owner: new_owner.to_string(),
@@ -378,7 +381,7 @@ pub(crate) async fn delete(
 
     let _ = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
 
-    let commit_index = cluster.append(DbDelete { owner, db }).await?;
+    let (commit_index, _result) = cluster.exec(DbDelete { owner, db }).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -406,11 +409,11 @@ pub(crate) async fn delete(
 pub(crate) async fn exec(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
-) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let role = server_db.user_db_role(user.0, &db_name).await?;
     let required_role = required_role(&queries);
@@ -419,16 +422,34 @@ pub(crate) async fn exec(
         return Err(permission_denied("write rights required"));
     }
 
-    let results = if required_role == DbUserRole::Read {
-        db_pool.exec(&db_name, queries).await?
+    let (commit_index, results) = if required_role == DbUserRole::Read {
+        (0, db_pool.exec(&db_name, queries).await?)
     } else {
         let username = server_db.user_name(user.0).await?;
-        db_pool
-            .exec_mut(&owner, &db, &db_name, &username, queries, &config)
+        let mut index = 0;
+        let mut results = Vec::new();
+
+        if let (i, ClusterActionResult::QueryResults(r)) = cluster
+            .exec(DbExec {
+                user: username,
+                owner,
+                db,
+                queries,
+            })
             .await?
+        {
+            index = i;
+            results = r;
+        }
+
+        (index, results)
     };
 
-    Ok((StatusCode::OK, Json(QueriesResults(results))))
+    Ok((
+        StatusCode::OK,
+        [("commit-index", commit_index.to_string())],
+        Json(QueriesResults(results)),
+    ))
 }
 
 #[utoipa::path(get,
@@ -487,14 +508,16 @@ pub(crate) async fn list(
          (status = 200, description = "ok", body = ServerDatabase),
          (status = 401, description = "unauthorized"),
          (status = 403, description = "must have write permissions"),
+         (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn optimize(
     user: UserId,
     State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse<(StatusCode, Json<ServerDatabase>)> {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let database = server_db.user_db(user.0, &db_name).await?;
     let role = server_db.user_db_role(user.0, &db_name).await?;
@@ -503,10 +526,12 @@ pub(crate) async fn optimize(
         return Err(permission_denied("write rights required"));
     }
 
-    let size = db_pool.optimize_db(&db_name).await?;
+    let (commit_index, _result) = cluster.exec(DbOptimize { owner, db }).await?;
+    let size = db_pool.db_size(&db_name).await?;
 
     Ok((
         StatusCode::OK,
+        [("commit-index", commit_index.to_string())],
         Json(ServerDatabase {
             name: db_name,
             db_type: database.db_type,
@@ -547,7 +572,7 @@ pub(crate) async fn remove(
 
     let _ = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
 
-    let commit_index = cluster.append(DbRemove { owner, db }).await?;
+    let (commit_index, _result) = cluster.exec(DbRemove { owner, db }).await?;
 
     Ok((
         StatusCode::CREATED,

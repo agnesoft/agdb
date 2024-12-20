@@ -112,8 +112,8 @@ pub(crate) async fn change_password(
     password::validate_password(&request.new_password)?;
     let pswd = Password::create(&user.username, &request.new_password);
 
-    let commit_index = cluster
-        .append(ChangePasswordAction {
+    let (commit_index, _result) = cluster
+        .exec(ChangePasswordAction {
             user: user.username,
             new_password: pswd.password.to_vec(),
             new_salt: pswd.user_salt.to_vec(),

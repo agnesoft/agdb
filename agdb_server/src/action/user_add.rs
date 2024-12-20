@@ -1,6 +1,7 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
+use crate::action::ClusterActionResult;
 use crate::action::Config;
 use crate::server_db::ServerUser;
 use crate::server_error::ServerResult;
@@ -16,7 +17,12 @@ pub(crate) struct UserAdd {
 }
 
 impl Action for UserAdd {
-    async fn exec(self, db: ServerDb, _db_pool: DbPool, _config: &Config) -> ServerResult {
+    async fn exec(
+        self,
+        db: ServerDb,
+        _db_pool: DbPool,
+        _config: &Config,
+    ) -> ServerResult<ClusterActionResult> {
         db.insert_user(ServerUser {
             db_id: None,
             username: self.user,
@@ -25,7 +31,6 @@ impl Action for UserAdd {
             token: String::new(),
         })
         .await?;
-
-        Ok(())
+        Ok(ClusterActionResult::None)
     }
 }

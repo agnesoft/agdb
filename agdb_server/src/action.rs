@@ -6,6 +6,8 @@ pub(crate) mod db_clear;
 pub(crate) mod db_convert;
 pub(crate) mod db_copy;
 pub(crate) mod db_delete;
+pub(crate) mod db_exec;
+pub(crate) mod db_optimize;
 pub(crate) mod db_remove;
 pub(crate) mod user_add;
 pub(crate) mod user_remove;
@@ -18,6 +20,8 @@ use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
 use crate::action::db_copy::DbCopy;
 use crate::action::db_delete::DbDelete;
+use crate::action::db_exec::DbExec;
+use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
@@ -25,6 +29,7 @@ use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
+use agdb::QueryResult;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -41,10 +46,22 @@ pub(crate) enum ClusterAction {
     DbCopy(DbCopy),
     DbDelete(DbDelete),
     DbRemove(DbRemove),
+    DbExec(DbExec),
+    DbOptimize(DbOptimize),
+}
+
+pub(crate) enum ClusterActionResult {
+    None,
+    QueryResults(Vec<QueryResult>),
 }
 
 pub(crate) trait Action: Sized {
-    async fn exec(self, db: ServerDb, db_pool: DbPool, config: &Config) -> ServerResult;
+    async fn exec(
+        self,
+        db: ServerDb,
+        db_pool: DbPool,
+        config: &Config,
+    ) -> ServerResult<ClusterActionResult>;
 }
 
 impl ClusterAction {
@@ -53,7 +70,7 @@ impl ClusterAction {
         db: ServerDb,
         db_pool: DbPool,
         config: &Config,
-    ) -> ServerResult<()> {
+    ) -> ServerResult<ClusterActionResult> {
         match self {
             ClusterAction::UserAdd(action) => action.exec(db, db_pool, config).await,
             ClusterAction::ClusterLogin(action) => action.exec(db, db_pool, config).await,
@@ -66,6 +83,8 @@ impl ClusterAction {
             ClusterAction::DbCopy(action) => action.exec(db, db_pool, config).await,
             ClusterAction::DbDelete(action) => action.exec(db, db_pool, config).await,
             ClusterAction::DbRemove(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbExec(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbOptimize(action) => action.exec(db, db_pool, config).await,
         }
     }
 }
@@ -133,5 +152,17 @@ impl From<DbDelete> for ClusterAction {
 impl From<DbRemove> for ClusterAction {
     fn from(value: DbRemove) -> Self {
         ClusterAction::DbRemove(value)
+    }
+}
+
+impl From<DbExec> for ClusterAction {
+    fn from(value: DbExec) -> Self {
+        ClusterAction::DbExec(value)
+    }
+}
+
+impl From<DbOptimize> for ClusterAction {
+    fn from(value: DbOptimize) -> Self {
+        ClusterAction::DbOptimize(value)
     }
 }

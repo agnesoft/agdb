@@ -3,6 +3,7 @@ use crate::TestServerImpl;
 use crate::ADMIN;
 use crate::HOST;
 use crate::SERVER_DATA_DIR;
+use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::DbResource;
@@ -196,6 +197,32 @@ async fn db() -> anyhow::Result<()> {
 
     client.db_delete(ADMIN, "db2").await?;
     assert_eq!(client.db_list().await?.1.len(), 1);
+
+    client
+        .db_exec(
+            ADMIN,
+            "db1",
+            &[QueryBuilder::insert().nodes().count(100).query().into()],
+        )
+        .await?;
+    let node_count = client
+        .db_exec(
+            ADMIN,
+            "db1",
+            &[QueryBuilder::select().node_count().query().into()],
+        )
+        .await?
+        .1[0]
+        .elements[0]
+        .values[0]
+        .value
+        .to_u64()
+        .unwrap();
+    assert_eq!(node_count, 100);
+
+    let orig_size = client.db_list().await?.1[0].size;
+    let db_size = client.db_optimize(ADMIN, "db1").await?.1.size;
+    assert!(db_size < orig_size);
 
     Ok(())
 }

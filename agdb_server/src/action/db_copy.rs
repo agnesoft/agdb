@@ -1,6 +1,7 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
+use crate::action::ClusterActionResult;
 use crate::action::Config;
 use crate::server_db::Database;
 use crate::server_error::ServerResult;
@@ -20,15 +21,18 @@ pub(crate) struct DbCopy {
 }
 
 impl Action for DbCopy {
-    async fn exec(self, db: ServerDb, db_pool: DbPool, config: &Config) -> ServerResult {
+    async fn exec(
+        self,
+        db: ServerDb,
+        db_pool: DbPool,
+        config: &Config,
+    ) -> ServerResult<ClusterActionResult> {
         let name = db_name(&self.owner, &self.db);
         let target_name = db_name(&self.new_owner, &self.new_db);
         let new_owner_id = db.user_id(&self.new_owner).await?;
-
         db_pool
             .copy_db(&name, &self.new_owner, &self.new_db, &target_name, config)
             .await?;
-
         db.insert_db(
             new_owner_id,
             Database {
@@ -39,7 +43,6 @@ impl Action for DbCopy {
             },
         )
         .await?;
-
-        Ok(())
+        Ok(ClusterActionResult::None)
     }
 }

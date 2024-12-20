@@ -1,11 +1,10 @@
-use std::fmt::Display;
-
 use agdb::DbError;
 use agdb::DbValue;
 use agdb::QueryResult;
 use agdb::QueryType;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt::Display;
 use utoipa::ToSchema;
 
 #[derive(
@@ -70,7 +69,7 @@ pub struct AdminStatus {
     pub size: u64,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
 pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]

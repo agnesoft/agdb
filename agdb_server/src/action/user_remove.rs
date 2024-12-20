@@ -1,6 +1,7 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
+use crate::action::ClusterActionResult;
 use crate::config::Config;
 use crate::server_error::ServerResult;
 use agdb::UserValue;
@@ -13,10 +14,14 @@ pub(crate) struct UserRemove {
 }
 
 impl Action for UserRemove {
-    async fn exec(self, db: ServerDb, db_pool: DbPool, config: &Config) -> ServerResult {
+    async fn exec(
+        self,
+        db: ServerDb,
+        db_pool: DbPool,
+        config: &Config,
+    ) -> ServerResult<ClusterActionResult> {
         let dbs = db.remove_user(&self.user).await?;
         db_pool.remove_user_dbs(&self.user, &dbs, config).await?;
-
-        Ok(())
+        Ok(ClusterActionResult::None)
     }
 }

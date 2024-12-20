@@ -317,10 +317,10 @@ impl DbPool {
         Ok(r)
     }
 
-    pub(crate) async fn optimize_db(&self, db_name: &str) -> ServerResult<u64> {
+    pub(crate) async fn optimize_db(&self, db_name: &str) -> ServerResult {
         let user_db = self.db(db_name).await?;
         user_db.optimize_storage().await?;
-        Ok(user_db.size().await)
+        Ok(())
     }
 
     pub(crate) async fn remove_db(&self, db_name: &str) -> ServerResult<UserDb> {

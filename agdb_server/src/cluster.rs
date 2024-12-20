@@ -1,5 +1,6 @@
 use crate::action::Action;
 use crate::action::ClusterAction;
+use crate::action::ClusterActionResult;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::raft;
@@ -33,7 +34,7 @@ use tokio::sync::RwLock;
 pub(crate) type Cluster = Arc<ClusterImpl>;
 
 type ClusterNode = Arc<ClusterNodeImpl>;
-type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<u64>>;
+type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<(u64, ClusterActionResult)>>;
 type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Response)>;
 
 pub(crate) struct ClusterNodeImpl {
@@ -54,11 +55,12 @@ pub(crate) struct ClusterImpl {
 }
 
 impl ClusterImpl {
-    pub(crate) async fn append<T: Action + Into<ClusterAction>>(
+    pub(crate) async fn exec<T: Action + Into<ClusterAction>>(
         &self,
         action: T,
-    ) -> ServerResult<u64> {
-        let (sender, receiver) = tokio::sync::oneshot::channel::<ServerResult<u64>>();
+    ) -> ServerResult<(u64, ClusterActionResult)> {
+        let (sender, receiver) =
+            tokio::sync::oneshot::channel::<ServerResult<(u64, ClusterActionResult)>>();
         let requests = self
             .raft
             .write()
@@ -338,7 +340,7 @@ impl ClusterStorage {
             let _ = db.log_executed(log_id).await;
 
             if let Some(notifier) = notifier {
-                let _ = notifier.send(result.map(|_| log.index));
+                let _ = notifier.send(result.map(|r| (log.index, r)));
             }
         });
 

@@ -1,6 +1,7 @@
 use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
+use crate::action::ClusterActionResult;
 use crate::action::Config;
 use crate::server_error::ServerResult;
 use agdb::UserValue;
@@ -15,12 +16,17 @@ pub(crate) struct ChangePassword {
 }
 
 impl Action for ChangePassword {
-    async fn exec(self, db: ServerDb, _db_pool: DbPool, _config: &Config) -> ServerResult {
+    async fn exec(
+        self,
+        db: ServerDb,
+        _db_pool: DbPool,
+        _config: &Config,
+    ) -> ServerResult<ClusterActionResult> {
         let mut user = db.user(&self.user).await?;
         user.password = self.new_password;
         user.salt = self.new_salt;
         db.save_user(user).await?;
 
-        Ok(())
+        Ok(ClusterActionResult::None)
     }
 }

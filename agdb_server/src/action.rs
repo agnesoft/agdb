@@ -9,6 +9,7 @@ pub(crate) mod db_delete;
 pub(crate) mod db_exec;
 pub(crate) mod db_optimize;
 pub(crate) mod db_remove;
+pub(crate) mod db_rename;
 pub(crate) mod db_restore;
 pub(crate) mod user_add;
 pub(crate) mod user_remove;
@@ -24,6 +25,7 @@ use crate::action::db_delete::DbDelete;
 use crate::action::db_exec::DbExec;
 use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
+use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
@@ -51,6 +53,7 @@ pub(crate) enum ClusterAction {
     DbExec(DbExec),
     DbOptimize(DbOptimize),
     DbRestore(DbRestore),
+    DbRename(DbRename),
 }
 
 pub(crate) enum ClusterActionResult {
@@ -89,6 +92,7 @@ impl ClusterAction {
             ClusterAction::DbExec(action) => action.exec(db, db_pool, config).await,
             ClusterAction::DbOptimize(action) => action.exec(db, db_pool, config).await,
             ClusterAction::DbRestore(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::DbRename(action) => action.exec(db, db_pool, config).await,
         }
     }
 }
@@ -174,5 +178,11 @@ impl From<DbOptimize> for ClusterAction {
 impl From<DbRestore> for ClusterAction {
     fn from(value: DbRestore) -> Self {
         ClusterAction::DbRestore(value)
+    }
+}
+
+impl From<DbRename> for ClusterAction {
+    fn from(value: DbRename) -> Self {
+        ClusterAction::DbRename(value)
     }
 }

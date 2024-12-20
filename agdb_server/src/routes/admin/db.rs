@@ -8,6 +8,7 @@ use crate::action::db_copy::DbCopy;
 use crate::action::db_delete::DbDelete;
 use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
+use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -496,48 +497,46 @@ pub(crate) async fn remove(
 )]
 pub(crate) async fn rename(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
+    let owner_id = server_db.user_id(&owner).await?;
+    let _ = server_db.user_db_id(owner_id, &db_name).await?;
 
     if db_name == request.new_name {
-        return Ok(StatusCode::CREATED);
+        return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
     }
 
     let (new_owner, new_db) = request
         .new_name
         .split_once('/')
         .ok_or(ErrorCode::DbInvalid)?;
+
     let new_owner_id = server_db.user_id(new_owner).await?;
-    let owner_id = server_db.user_id(&owner).await?;
-    let mut database = server_db.user_db(owner_id, &db_name).await?;
-
-    db_pool
-        .rename_db(
-            &owner,
-            &db,
-            &db_name,
-            new_owner,
-            new_db,
-            &request.new_name,
-            &config,
-        )
-        .await?;
-
-    database.name = request.new_name.clone();
-    server_db.save_db(&database).await?;
-
-    if new_owner != owner {
-        server_db
-            .insert_db_user(database.db_id.unwrap(), new_owner_id, DbUserRole::Admin)
-            .await?;
+    if server_db
+        .find_user_db_id(new_owner_id, &request.new_name)
+        .await?
+        .is_some()
+    {
+        return Err(ErrorCode::DbExists.into());
     }
 
-    Ok(StatusCode::CREATED)
+    let (commit_index, _result) = cluster
+        .exec(DbRename {
+            owner,
+            db,
+            new_owner: new_owner.to_string(),
+            new_db: new_db.to_string(),
+        })
+        .await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,

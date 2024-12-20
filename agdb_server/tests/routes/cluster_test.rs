@@ -224,6 +224,10 @@ async fn db() -> anyhow::Result<()> {
     let db_size = client.db_optimize(ADMIN, "db1").await?.1.size;
     assert!(db_size < orig_size);
 
+    client.db_rename(ADMIN, "db1", ADMIN, "db2").await?;
+    let db = &client.db_list().await?.1[0];
+    assert_eq!(db.name, "admin/db2");
+
     Ok(())
 }
 

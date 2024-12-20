@@ -1,5 +1,16 @@
 use crate::action::change_password::ChangePassword;
 use crate::action::cluster_login::ClusterLogin;
+use crate::action::db_add::DbAdd;
+use crate::action::db_backup::DbBackup;
+use crate::action::db_clear::DbClear;
+use crate::action::db_convert::DbConvert;
+use crate::action::db_copy::DbCopy;
+use crate::action::db_delete::DbDelete;
+use crate::action::db_exec::DbExec;
+use crate::action::db_optimize::DbOptimize;
+use crate::action::db_remove::DbRemove;
+use crate::action::db_rename::DbRename;
+use crate::action::db_restore::DbRestore;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::action::ClusterAction;
@@ -109,6 +120,10 @@ impl ServerDb {
 
             if !indexes.iter().any(|i| i == EXECUTED) {
                 t.exec_mut(QueryBuilder::insert().index(EXECUTED).query())?;
+            }
+
+            if !indexes.iter().any(|i| i == COMMITTED) {
+                t.exec_mut(QueryBuilder::insert().index(COMMITTED).query())?;
             }
 
             if t.exec(QueryBuilder::select().ids(USERS).query()).is_err() {
@@ -409,17 +424,28 @@ impl ServerDb {
         )
     }
 
-    pub(crate) async fn logs_unexecuted_until(
+    pub(crate) async fn logs_unexecuted(
         &self,
         index: u64,
     ) -> ServerResult<Vec<Log<ClusterAction>>> {
+        self.logs_until(index, EXECUTED).await
+    }
+
+    pub(crate) async fn logs_uncommitted(
+        &self,
+        index: u64,
+    ) -> ServerResult<Vec<Log<ClusterAction>>> {
+        self.logs_until(index, COMMITTED).await
+    }
+
+    async fn logs_until(&self, index: u64, label: &str) -> ServerResult<Vec<Log<ClusterAction>>> {
         self.0.read().await.transaction(|t| {
             let mut log_ids: Vec<(u64, DbId)> = t
                 .exec(
                     QueryBuilder::select()
                         .values("index")
                         .search()
-                        .index(EXECUTED)
+                        .index(label)
                         .value(false)
                         .query(),
                 )?
@@ -436,18 +462,18 @@ impl ServerDb {
                 })
                 .collect();
             log_ids.sort_by_key(|l| l.0);
-            Self::logs(t, log_ids.into_iter().map(|l| l.1).collect())
+            logs(t, log_ids.into_iter().map(|l| l.1).collect())
         })
     }
 
-    pub(crate) async fn remove_unexecuted_logs_since(&self, since_index: u64) -> ServerResult<()> {
+    pub(crate) async fn remove_uncommitted_logs_since(&self, since_index: u64) -> ServerResult<()> {
         self.0.write().await.transaction_mut(|t| {
             let logs: Vec<DbId> = t
                 .exec(
                     QueryBuilder::select()
                         .values(["index", "term"])
                         .search()
-                        .index(EXECUTED)
+                        .index(COMMITTED)
                         .value(false)
                         .query(),
                 )?
@@ -499,81 +525,8 @@ impl ServerDb {
                 .ids();
 
             log_ids.reverse();
-            Self::logs(t, log_ids)
+            logs(t, log_ids)
         })
-    }
-
-    fn logs<T: StorageData>(
-        t: &Transaction<T>,
-        log_ids: Vec<DbId>,
-    ) -> ServerResult<Vec<Log<ClusterAction>>> {
-        let mut actions = Vec::new();
-
-        for element in t
-            .exec(
-                QueryBuilder::select()
-                    .values(["index", "term", "action"])
-                    .ids(log_ids)
-                    .query(),
-            )?
-            .elements
-        {
-            let index = element.values[0].value.to_u64()?;
-            let term = element.values[1].value.to_u64()?;
-            let action = element.values[2].value.string()?;
-
-            let data = match action.as_str() {
-                "UserAdd" => Ok(ClusterAction::UserAdd(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<UserAdd>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                "ClusterLogin" => Ok(ClusterAction::ClusterLogin(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<ClusterLogin>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                "ChangePassword" => Ok(ClusterAction::ChangePassword(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<ChangePassword>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                "UserRemove" => Ok(ClusterAction::UserRemove(
-                    t.exec(
-                        QueryBuilder::select()
-                            .elements::<UserRemove>()
-                            .ids(element.id)
-                            .query(),
-                    )?
-                    .try_into()?,
-                )),
-                _ => Err(ServerError::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("unknown action: {action}"),
-                )),
-            }?;
-
-            actions.push(Log {
-                db_id: Some(element.id),
-                index,
-                term,
-                data,
-            });
-        }
-
-        Ok(actions)
     }
 
     pub(crate) async fn remove_db(&self, user: DbId, db: &str) -> ServerResult<()> {
@@ -927,7 +880,223 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
             values.push(("action", "UserRemove").into());
             values.extend(action.to_db_values());
         }
+        ClusterAction::DbAdd(action) => {
+            values.push(("action", "DbAdd").into());
+            values.extend(action.to_db_values());
+        }
+        ClusterAction::DbBackup(db_backup) => {
+            values.push(("action", "DbBackup").into());
+            values.extend(db_backup.to_db_values());
+        }
+        ClusterAction::DbClear(db_clear) => {
+            values.push(("action", "DbClear").into());
+            values.extend(db_clear.to_db_values());
+        }
+        ClusterAction::DbConvert(db_convert) => {
+            values.push(("action", "DbConvert").into());
+            values.extend(db_convert.to_db_values());
+        }
+        ClusterAction::DbCopy(db_copy) => {
+            values.push(("action", "DbCopy").into());
+            values.extend(db_copy.to_db_values());
+        }
+        ClusterAction::DbDelete(db_delete) => {
+            values.push(("action", "DbDelete").into());
+            values.extend(db_delete.to_db_values());
+        }
+        ClusterAction::DbRemove(db_remove) => {
+            values.push(("action", "DbRemove").into());
+            values.extend(db_remove.to_db_values());
+        }
+        ClusterAction::DbExec(db_exec) => {
+            values.push(("action", "DbExec").into());
+            values.extend(db_exec.to_db_values());
+        }
+        ClusterAction::DbOptimize(db_optimize) => {
+            values.push(("action", "DbOptimize").into());
+            values.extend(db_optimize.to_db_values());
+        }
+        ClusterAction::DbRestore(db_restore) => {
+            values.push(("action", "DbRestore").into());
+            values.extend(db_restore.to_db_values());
+        }
+        ClusterAction::DbRename(db_rename) => {
+            values.push(("action", "DbRename").into());
+            values.extend(db_rename.to_db_values());
+        }
     }
 
     values
+}
+
+fn logs<T: StorageData>(
+    t: &Transaction<T>,
+    log_ids: Vec<DbId>,
+) -> ServerResult<Vec<Log<ClusterAction>>> {
+    let mut actions = Vec::new();
+
+    for element in t
+        .exec(
+            QueryBuilder::select()
+                .values(["index", "term", "action"])
+                .ids(log_ids)
+                .query(),
+        )?
+        .elements
+    {
+        let index = element.values[0].value.to_u64()?;
+        let term = element.values[1].value.to_u64()?;
+        let action = element.values[2].value.string()?;
+
+        let data = match action.as_str() {
+            "UserAdd" => Ok(ClusterAction::UserAdd(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<UserAdd>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "ClusterLogin" => Ok(ClusterAction::ClusterLogin(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<ClusterLogin>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "ChangePassword" => Ok(ClusterAction::ChangePassword(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<ChangePassword>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "UserRemove" => Ok(ClusterAction::UserRemove(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<UserRemove>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbAdd" => Ok(ClusterAction::DbAdd(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbAdd>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbBackup" => Ok(ClusterAction::DbBackup(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbBackup>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbClear" => Ok(ClusterAction::DbClear(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbClear>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbConvert" => Ok(ClusterAction::DbConvert(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbConvert>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbCopy" => Ok(ClusterAction::DbCopy(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbCopy>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbDelete" => Ok(ClusterAction::DbDelete(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbDelete>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbRemove" => Ok(ClusterAction::DbRemove(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbRemove>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbExec" => Ok(ClusterAction::DbExec(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbExec>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbOptimize" => Ok(ClusterAction::DbOptimize(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbOptimize>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbRestore" => Ok(ClusterAction::DbRestore(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbRestore>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbRename" => Ok(ClusterAction::DbRename(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbRename>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            _ => Err(ServerError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("unknown action: {action}"),
+            )),
+        }?;
+
+        actions.push(Log {
+            db_id: Some(element.id),
+            index,
+            term,
+            data,
+        });
+    }
+
+    Ok(actions)
 }

@@ -17,7 +17,7 @@ use crate::StorageData;
 /// list of elements with the requested properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SelectValuesQuery {
     pub keys: Vec<DbValue>,
     pub ids: QueryIds,

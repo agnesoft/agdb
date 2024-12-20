@@ -9,7 +9,7 @@ use crate::StorageData;
 /// a given key.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct InsertIndexQuery(pub DbValue);
 
 impl QueryMut for InsertIndexQuery {

@@ -13,7 +13,7 @@ use crate::StorageData;
 /// a value `u64` represneting number of nodes in teh database.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SelectNodeCountQuery {}
 
 impl Query for SelectNodeCountQuery {

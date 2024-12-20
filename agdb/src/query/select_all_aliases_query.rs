@@ -12,7 +12,7 @@ use crate::StorageData;
 /// the value `String`.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SelectAllAliasesQuery {}
 
 impl Query for SelectAllAliasesQuery {

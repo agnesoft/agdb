@@ -50,8 +50,8 @@ pub(crate) async fn admin_logout(
 ) -> ServerResponse<impl IntoResponse> {
     let _user_id = server_db.user_id(&username).await?;
 
-    let commit_index = cluster
-        .append(ClusterLogin {
+    let (commit_index, _result) = cluster
+        .exec(ClusterLogin {
             user: username,
             new_token: String::new(),
         })
@@ -82,12 +82,13 @@ pub(crate) async fn login(
     let mut commit_index = 0;
 
     if user_id.is_some() {
-        commit_index = cluster
-            .append(ClusterLogin {
+        let (index, _result) = cluster
+            .exec(ClusterLogin {
                 user: request.username,
                 new_token: token.clone(),
             })
             .await?;
+        commit_index = index;
     }
 
     Ok((
@@ -116,12 +117,13 @@ pub(crate) async fn logout(
     let mut commit_index = 0;
 
     if !token.is_empty() {
-        commit_index = cluster
-            .append(ClusterLogin {
+        let (index, _result) = cluster
+            .exec(ClusterLogin {
                 user: server_db.user_name(user.0).await?,
                 new_token: String::new(),
             })
             .await?;
+        commit_index = index;
     }
 
     Ok((

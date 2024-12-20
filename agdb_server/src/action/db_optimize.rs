@@ -2,26 +2,29 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::config::Config;
+use crate::action::Config;
 use crate::server_error::ServerResult;
+use crate::utilities::db_name;
 use agdb::UserValue;
 use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Clone, Serialize, Deserialize, UserValue)]
-pub(crate) struct UserRemove {
-    pub(crate) user: String,
+pub(crate) struct DbOptimize {
+    pub(crate) owner: String,
+    pub(crate) db: String,
 }
 
-impl Action for UserRemove {
+impl Action for DbOptimize {
     async fn exec(
         self,
-        db: ServerDb,
+        _db: ServerDb,
         db_pool: DbPool,
-        config: &Config,
+        _config: &Config,
     ) -> ServerResult<ClusterActionResult> {
-        let dbs = db.remove_user(&self.user).await?;
-        db_pool.remove_user_dbs(&self.user, &dbs, config).await?;
+        let name = db_name(&self.owner, &self.db);
+        db_pool.optimize_db(&name).await?;
+
         Ok(ClusterActionResult::None)
     }
 }

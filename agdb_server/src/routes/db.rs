@@ -5,6 +5,8 @@ use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
 use crate::action::db_copy::DbCopy;
+use crate::action::db_delete::DbDelete;
+use crate::action::db_remove::DbRemove;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -364,22 +366,24 @@ pub(crate) async fn copy(
 )]
 pub(crate) async fn delete(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
-    let user_name = server_db.user_name(user.0).await?;
+) -> ServerResponse<impl IntoResponse> {
+    let username = server_db.user_name(user.0).await?;
 
-    if owner != user_name {
+    if owner != username {
         return Err(permission_denied("owner only"));
     }
 
-    let db_name = db_name(&owner, &db);
-    server_db.remove_db(user.0, &db_name).await?;
-    db_pool.delete_db(&owner, &db, &db_name, &config).await?;
+    let _ = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
 
-    Ok(StatusCode::NO_CONTENT)
+    let commit_index = cluster.append(DbDelete { owner, db }).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,
@@ -531,21 +535,24 @@ pub(crate) async fn optimize(
 )]
 pub(crate) async fn remove(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let user_name = server_db.user_name(user.0).await?;
 
     if owner != user_name {
         return Err(permission_denied("owner only"));
     }
 
-    let db_name: String = db_name(&owner, &db);
-    server_db.remove_db(user.0, &db_name).await?;
-    db_pool.remove_db(&db_name).await?;
+    let _ = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
 
-    Ok(StatusCode::NO_CONTENT)
+    let commit_index = cluster.append(DbRemove { owner, db }).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,

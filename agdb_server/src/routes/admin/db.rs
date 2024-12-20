@@ -5,6 +5,8 @@ use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
 use crate::action::db_copy::DbCopy;
+use crate::action::db_delete::DbDelete;
+use crate::action::db_remove::DbRemove;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -314,17 +316,19 @@ pub(crate) async fn copy(
 )]
 pub(crate) async fn delete(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
-    let owner_id = server_db.user_id(&owner).await?;
-    let db_name = db_name(&owner, &db);
-    server_db.remove_db(owner_id, &db_name).await?;
-    db_pool.delete_db(&owner, &db, &db_name, &config).await?;
+) -> ServerResponse<impl IntoResponse> {
+    let user_id = server_db.user_id(&owner).await?;
+    let _ = server_db.user_db_id(user_id, &db_name(&owner, &db)).await?;
 
-    Ok(StatusCode::NO_CONTENT)
+    let commit_index = cluster.append(DbDelete { owner, db }).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,
@@ -451,16 +455,19 @@ pub(crate) async fn optimize(
 )]
 pub(crate) async fn remove(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
-    let db_name = db_name(&owner, &db);
-    let owner_id = server_db.user_id(&owner).await?;
-    server_db.remove_db(owner_id, &db_name).await?;
-    db_pool.remove_db(&db_name).await?;
+) -> ServerResponse<impl IntoResponse> {
+    let user_id = server_db.user_id(&owner).await?;
+    let _ = server_db.user_db_id(user_id, &db_name(&owner, &db)).await?;
 
-    Ok(StatusCode::NO_CONTENT)
+    let commit_index = cluster.append(DbRemove { owner, db }).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(post,

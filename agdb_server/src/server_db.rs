@@ -5,6 +5,7 @@ use crate::action::db_backup::DbBackup;
 use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
 use crate::action::db_copy::DbCopy;
+use crate::action::db_delete::DbDelete;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::action::ClusterAction;
@@ -894,6 +895,14 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
             values.push(("action", "DbCopy").into());
             values.extend(db_copy.to_db_values());
         }
+        ClusterAction::DbDelete(db_delete) => {
+            values.push(("action", "DbDelete").into());
+            values.extend(db_delete.to_db_values());
+        }
+        ClusterAction::DbRemove(db_remove) => {
+            values.push(("action", "DbRemove").into());
+            values.extend(db_remove.to_db_values());
+        }
     }
 
     values
@@ -995,6 +1004,24 @@ fn logs<T: StorageData>(
                 t.exec(
                     QueryBuilder::select()
                         .elements::<DbCopy>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbDelete" => Ok(ClusterAction::DbDelete(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbDelete>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbRemove" => Ok(ClusterAction::DbRemove(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbDelete>()
                         .ids(element.id)
                         .query(),
                 )?

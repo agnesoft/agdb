@@ -8,6 +8,7 @@ use crate::action::db_copy::DbCopy;
 use crate::action::db_delete::DbDelete;
 use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
+use crate::action::db_restore::DbRestore;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -551,27 +552,23 @@ pub(crate) async fn rename(
     responses(
          (status = 201, description = "db restored"),
          (status = 401, description = "unauthorized"),
-         (status = 404, description = "backup not found"),
+         (status = 404, description = "db or backup not found"),
     )
 )]
 pub(crate) async fn restore(
     _admin: AdminId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let mut database = server_db.user_db(owner_id, &db_name).await?;
+    let _ = server_db.user_db_id(owner_id, &db_name).await?;
 
-    if let Some(backup) = db_pool
-        .restore_db(&owner, &db, &db_name, database.db_type, &config)
-        .await?
-    {
-        database.backup = backup;
-        server_db.save_db(&database).await?;
-    }
+    let (commit_index, _result) = cluster.exec(DbRestore { owner, db }).await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }

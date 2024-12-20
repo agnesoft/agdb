@@ -9,6 +9,7 @@ use crate::action::db_delete::DbDelete;
 use crate::action::db_exec::DbExec;
 use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
+use crate::action::db_restore::DbRestore;
 use crate::action::ClusterActionResult;
 use crate::cluster::Cluster;
 use crate::config::Config;
@@ -667,28 +668,21 @@ pub(crate) async fn rename(
 )]
 pub(crate) async fn restore(
     user: UserId,
-    State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
-    let mut database = server_db.user_db(user.0, &db_name).await?;
+    let db_id = server_db.user_db_id(user.0, &db_name).await?;
 
-    if !server_db
-        .is_db_admin(user.0, database.db_id.unwrap())
-        .await?
-    {
+    if !server_db.is_db_admin(user.0, db_id).await? {
         return Err(permission_denied("admin only"));
     }
 
-    if let Some(backup) = db_pool
-        .restore_db(&owner, &db, &db_name, database.db_type, &config)
-        .await?
-    {
-        database.backup = backup;
-        server_db.save_db(&database).await?;
-    }
+    let (commit_index, _result) = cluster.exec(DbRestore { owner, db }).await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }

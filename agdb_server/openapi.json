@@ -1208,7 +1208,7 @@
             "description": "unauthorized"
           },
           "404": {
-            "description": "backup not found"
+            "description": "db or backup not found"
           }
         },
         "security": [
@@ -1736,6 +1736,9 @@
           },
           "403": {
             "description": "must have write permissions"
+          },
+          "404": {
+            "description": "db not found"
           }
         },
         "security": [

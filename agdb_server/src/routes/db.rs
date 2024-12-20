@@ -386,7 +386,7 @@ pub(crate) async fn delete(
     let (commit_index, _result) = cluster.exec(DbDelete { owner, db }).await?;
 
     Ok((
-        StatusCode::CREATED,
+        StatusCode::NO_CONTENT,
         [("commit-index", commit_index.to_string())],
     ))
 }
@@ -577,7 +577,7 @@ pub(crate) async fn remove(
     let (commit_index, _result) = cluster.exec(DbRemove { owner, db }).await?;
 
     Ok((
-        StatusCode::CREATED,
+        StatusCode::NO_CONTENT,
         [("commit-index", commit_index.to_string())],
     ))
 }

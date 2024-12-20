@@ -6,10 +6,12 @@ use crate::action::db_clear::DbClear;
 use crate::action::db_convert::DbConvert;
 use crate::action::db_copy::DbCopy;
 use crate::action::db_delete::DbDelete;
+use crate::action::db_exec::DbExec;
 use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
 use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
+use crate::action::ClusterActionResult;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -329,7 +331,7 @@ pub(crate) async fn delete(
     let (commit_index, _result) = cluster.exec(DbDelete { owner, db }).await?;
 
     Ok((
-        StatusCode::CREATED,
+        StatusCode::NO_CONTENT,
         [("commit-index", commit_index.to_string())],
     ))
 }
@@ -354,22 +356,41 @@ pub(crate) async fn delete(
 pub(crate) async fn exec(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
+    State(cluster): State<Cluster>,
     State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
-) -> ServerResponse<(StatusCode, Json<QueriesResults>)> {
+) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
     let required_role = required_role(&queries);
 
-    let results = if required_role == DbUserRole::Read {
-        db_pool.exec(&db_name, queries).await?
+    let (commit_index, results) = if required_role == DbUserRole::Read {
+        (0, db_pool.exec(&db_name, queries).await?)
     } else {
-        db_pool
-            .exec_mut(&owner, &db, &db_name, &config.admin, queries, &config)
+        let mut index = 0;
+        let mut results = Vec::new();
+
+        if let (i, ClusterActionResult::QueryResults(r)) = cluster
+            .exec(DbExec {
+                user: config.admin.clone(),
+                owner,
+                db,
+                queries,
+            })
             .await?
+        {
+            index = i;
+            results = r;
+        }
+
+        (index, results)
     };
 
-    Ok((StatusCode::OK, Json(QueriesResults(results))))
+    Ok((
+        StatusCode::OK,
+        [("commit-index", commit_index.to_string())],
+        Json(QueriesResults(results)),
+    ))
 }
 
 #[utoipa::path(get,
@@ -472,7 +493,7 @@ pub(crate) async fn remove(
     let (commit_index, _result) = cluster.exec(DbRemove { owner, db }).await?;
 
     Ok((
-        StatusCode::CREATED,
+        StatusCode::NO_CONTENT,
         [("commit-index", commit_index.to_string())],
     ))
 }

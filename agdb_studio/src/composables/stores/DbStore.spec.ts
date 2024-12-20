@@ -60,11 +60,6 @@ describe("DbStore", () => {
         const { addDatabase } = useDbList();
         await addDatabase({ name: "test_db", db_type: "memory" });
         expect(db_add).toHaveBeenCalledOnce();
-        // expect(db_add).toHaveBeenCalledWith({
-        //     owner: "test_user",
-        //     db: "test_db",
-        //     db_type: "memory",
-        // });
     });
 
     it("does nothing if not logged in", async () => {

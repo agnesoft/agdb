@@ -17,6 +17,8 @@
     },
     "dependencies": {
         "@kalimahapps/vue-icons": "^1.7.1",
+        "@vueuse/components": "^12.0.0",
+        "@vueuse/core": "^12.0.0",
         "agdb_api": "file:../agdb_api/typescript",
         "openapi-client-axios": "^7.5.1",
         "vue": "^3.3.4",

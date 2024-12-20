@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { defineProps, computed, type PropType } from "vue";
+import { defineProps, computed, type PropType, provide } from "vue";
 import { type Column, type TRow } from "@/composables/table/types";
 
 const props = defineProps({
@@ -23,6 +23,7 @@ const getFromattedValue = (key: string) => {
     }
     return value;
 };
+provide("row", props.row);
 </script>
 
 <template>

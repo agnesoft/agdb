@@ -13,7 +13,6 @@ use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
 use crate::action::ClusterActionResult;
 use crate::cluster::Cluster;
-use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::server_db::ServerDb;
@@ -131,16 +130,12 @@ pub(crate) async fn audit(
     user: UserId,
     State(db_pool): State<DbPool>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
     let db_name = db_name(&owner, &db);
     server_db.user_db_id(user.0, &db_name).await?;
 
-    Ok((
-        StatusCode::OK,
-        Json(db_pool.audit(&owner, &db, &config).await?),
-    ))
+    Ok((StatusCode::OK, Json(db_pool.audit(&owner, &db).await?)))
 }
 
 #[utoipa::path(post,

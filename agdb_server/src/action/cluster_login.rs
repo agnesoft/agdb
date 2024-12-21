@@ -2,7 +2,6 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::action::Config;
 use crate::server_error::ServerResult;
 use agdb::UserValue;
 use serde::Deserialize;
@@ -15,12 +14,7 @@ pub(crate) struct ClusterLogin {
 }
 
 impl Action for ClusterLogin {
-    async fn exec(
-        self,
-        db: ServerDb,
-        _db_pool: DbPool,
-        _config: &Config,
-    ) -> ServerResult<ClusterActionResult> {
+    async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let user_id = db.user_id(&self.user).await?;
         db.save_token(user_id, &self.new_token).await?;
 

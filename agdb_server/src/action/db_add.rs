@@ -2,7 +2,6 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::action::Config;
 use crate::server_db::Database;
 use crate::server_error::ServerResult;
 use crate::utilities::db_name;
@@ -19,16 +18,11 @@ pub(crate) struct DbAdd {
 }
 
 impl Action for DbAdd {
-    async fn exec(
-        self,
-        db: ServerDb,
-        db_pool: DbPool,
-        config: &Config,
-    ) -> ServerResult<ClusterActionResult> {
+    async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let name = db_name(&self.owner, &self.db);
 
         let backup = db_pool
-            .add_db(&self.owner, &self.db, &name, self.db_type, config)
+            .add_db(&self.owner, &self.db, &name, self.db_type)
             .await?;
 
         let owner = db.user_id(&self.owner).await?;

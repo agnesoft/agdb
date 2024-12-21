@@ -2,7 +2,6 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::action::Config;
 use crate::server_error::ServerResult;
 use crate::utilities::db_name;
 use agdb::UserValue;
@@ -19,12 +18,7 @@ pub(crate) struct DbUserAdd {
 }
 
 impl Action for DbUserAdd {
-    async fn exec(
-        self,
-        db: ServerDb,
-        _db_pool: DbPool,
-        _config: &Config,
-    ) -> ServerResult<ClusterActionResult> {
+    async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let name = db_name(&self.owner, &self.db);
         let owner_id = db.user_id(&self.owner).await?;
         let db_id = db.user_db_id(owner_id, &name).await?;

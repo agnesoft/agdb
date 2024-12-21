@@ -99,17 +99,13 @@ pub(crate) async fn audit(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     State(server_db): State<ServerDb>,
-    State(config): State<Config>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
     let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
     server_db.user_db_id(owner_id, &db_name).await?;
 
-    Ok((
-        StatusCode::OK,
-        Json(db_pool.audit(&owner, &db, &config).await?),
-    ))
+    Ok((StatusCode::OK, Json(db_pool.audit(&owner, &db).await?)))
 }
 
 #[utoipa::path(post,

@@ -11,6 +11,8 @@ use crate::action::db_optimize::DbOptimize;
 use crate::action::db_remove::DbRemove;
 use crate::action::db_rename::DbRename;
 use crate::action::db_restore::DbRestore;
+use crate::action::db_user_add::DbUserAdd;
+use crate::action::db_user_remove::DbUserRemove;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::action::ClusterAction;
@@ -924,6 +926,14 @@ fn log_db_values(log: &Log<ClusterAction>) -> Vec<DbKeyValue> {
             values.push(("action", "DbRename").into());
             values.extend(db_rename.to_db_values());
         }
+        ClusterAction::DbUserAdd(db_user_add) => {
+            values.push(("action", "DbUserAdd").into());
+            values.extend(db_user_add.to_db_values());
+        }
+        ClusterAction::DbUserRemove(db_user_remove) => {
+            values.push(("action", "DbUserRemove").into());
+            values.extend(db_user_remove.to_db_values());
+        }
     }
 
     values
@@ -1079,6 +1089,24 @@ fn logs<T: StorageData>(
                 t.exec(
                     QueryBuilder::select()
                         .elements::<DbRename>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbUserAdd" => Ok(ClusterAction::DbUserAdd(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbUserAdd>()
+                        .ids(element.id)
+                        .query(),
+                )?
+                .try_into()?,
+            )),
+            "DbUserRemove" => Ok(ClusterAction::DbUserRemove(
+                t.exec(
+                    QueryBuilder::select()
+                        .elements::<DbUserRemove>()
                         .ids(element.id)
                         .query(),
                 )?

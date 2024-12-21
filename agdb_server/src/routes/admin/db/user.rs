@@ -1,3 +1,6 @@
+use crate::action::db_user_add::DbUserAdd;
+use crate::action::db_user_remove::DbUserRemove;
+use crate::cluster::Cluster;
 use crate::routes::db::user::DbUserRoleParam;
 use crate::server_db::ServerDb;
 use crate::server_error::permission_denied;
@@ -9,6 +12,7 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::Json;
 
 #[utoipa::path(put,
@@ -32,22 +36,32 @@ use axum::Json;
 pub(crate) async fn add(
     _admin: AdminId,
     State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
     Path((owner, db, username)): Path<(String, String, String)>,
     request: Query<DbUserRoleParam>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     if owner == username {
         return Err(permission_denied("cannot change role of db owner"));
     }
 
-    let db_name = db_name(&owner, &db);
+    let name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let db_id = server_db.user_db_id(owner_id, &db_name).await?;
-    let user_id = server_db.user_id(&username).await?;
-    server_db
-        .insert_db_user(db_id, user_id, request.db_role)
+    let _ = server_db.user_db_id(owner_id, &name).await?;
+    let _ = server_db.user_id(&username).await?;
+
+    let (commit_index, _result) = cluster
+        .exec(DbUserAdd {
+            owner,
+            db,
+            user: username,
+            db_role: request.db_role,
+        })
         .await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(get,
@@ -98,19 +112,28 @@ pub(crate) async fn list(
 pub(crate) async fn remove(
     _admin: AdminId,
     State(server_db): State<ServerDb>,
+    State(cluster): State<Cluster>,
     Path((owner, db, username)): Path<(String, String, String)>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     if owner == username {
         return Err(permission_denied("cannot remove owner"));
     }
 
+    let name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let db_id = server_db
-        .user_db_id(owner_id, &db_name(&owner, &db))
+    let _ = server_db.user_db_id(owner_id, &name).await?;
+    let _ = server_db.user_id(&username).await?;
+
+    let (commit_index, _result) = cluster
+        .exec(DbUserRemove {
+            owner,
+            db,
+            user: username,
+        })
         .await?;
-    let user_id = server_db.user_id(&username).await?;
 
-    server_db.remove_db_user(db_id, user_id).await?;
-
-    Ok(StatusCode::NO_CONTENT)
+    Ok((
+        StatusCode::NO_CONTENT,
+        [("commit-index", commit_index.to_string())],
+    ))
 }

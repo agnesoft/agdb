@@ -8,6 +8,8 @@ use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::DbResource;
 use agdb_api::DbType;
+use agdb_api::DbUser;
+use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -228,6 +230,30 @@ async fn db() -> anyhow::Result<()> {
     let db = &client.db_list().await?.1[0];
     assert_eq!(db.name, "admin/db2");
 
+    client.admin_user_add("user2", "password123").await?;
+    client
+        .db_user_add(ADMIN, "db2", "user2", DbUserRole::Write)
+        .await?;
+    let users = client.db_user_list(ADMIN, "db2").await?.1;
+    let expected = vec![
+        DbUser {
+            user: ADMIN.to_string(),
+            role: DbUserRole::Admin,
+        },
+        DbUser {
+            user: "user2".to_string(),
+            role: DbUserRole::Write,
+        },
+    ];
+    assert_eq!(users, expected);
+    client.db_user_remove(ADMIN, "db2", "user2").await?;
+    let users = client.db_user_list(ADMIN, "db2").await?.1;
+    let expected = vec![DbUser {
+        user: ADMIN.to_string(),
+        role: DbUserRole::Admin,
+    }];
+    assert_eq!(users, expected);
+
     Ok(())
 }
 
@@ -306,6 +332,30 @@ async fn db_admin() -> anyhow::Result<()> {
     client.admin_db_rename(ADMIN, "db1", ADMIN, "db2").await?;
     let db = &client.db_list().await?.1[0];
     assert_eq!(db.name, "admin/db2");
+
+    client.admin_user_add("user2", "password123").await?;
+    client
+        .admin_db_user_add(ADMIN, "db2", "user2", DbUserRole::Write)
+        .await?;
+    let users = client.admin_db_user_list(ADMIN, "db2").await?.1;
+    let expected = vec![
+        DbUser {
+            user: ADMIN.to_string(),
+            role: DbUserRole::Admin,
+        },
+        DbUser {
+            user: "user2".to_string(),
+            role: DbUserRole::Write,
+        },
+    ];
+    assert_eq!(users, expected);
+    client.admin_db_user_remove(ADMIN, "db2", "user2").await?;
+    let users = client.admin_db_user_list(ADMIN, "db2").await?.1;
+    let expected = vec![DbUser {
+        user: ADMIN.to_string(),
+        role: DbUserRole::Admin,
+    }];
+    assert_eq!(users, expected);
 
     Ok(())
 }

@@ -133,6 +133,16 @@ impl From<&str> for DbResource {
     }
 }
 
+impl From<&str> for DbUserRole {
+    fn from(value: &str) -> Self {
+        match value {
+            "admin" => Self::Admin,
+            "write" => Self::Write,
+            _ => Self::Read,
+        }
+    }
+}
+
 impl TryFrom<DbValue> for DbType {
     type Error = DbError;
 
@@ -142,6 +152,14 @@ impl TryFrom<DbValue> for DbType {
 }
 
 impl TryFrom<DbValue> for DbResource {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(Self::from(value.to_string().as_str()))
+    }
+}
+
+impl TryFrom<DbValue> for DbUserRole {
     type Error = DbError;
 
     fn try_from(value: DbValue) -> Result<Self, Self::Error> {
@@ -184,21 +202,13 @@ impl Display for DbResource {
 
 impl From<&DbValue> for DbUserRole {
     fn from(value: &DbValue) -> Self {
-        match value.to_u64().unwrap_or_default() {
-            1 => Self::Admin,
-            2 => Self::Write,
-            _ => Self::Read,
-        }
+        Self::from(value.to_string().as_str())
     }
 }
 
 impl From<DbUserRole> for DbValue {
     fn from(value: DbUserRole) -> Self {
-        match value {
-            DbUserRole::Admin => 1_u64.into(),
-            DbUserRole::Write => 2_u64.into(),
-            DbUserRole::Read => 3_u64.into(),
-        }
+        value.to_string().into()
     }
 }
 

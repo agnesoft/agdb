@@ -16,7 +16,6 @@ mod server_state;
 mod user_id;
 mod utilities;
 
-use crate::db_pool::DbPool;
 use server_error::ServerResult;
 use tokio::sync::broadcast;
 
@@ -31,7 +30,7 @@ async fn main() -> ServerResult {
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let server_db = server_db::new(&config).await?;
-    let db_pool = DbPool::new(&config, &server_db).await?;
+    let db_pool = db_pool::new(config.clone(), &server_db).await?;
     let cluster = cluster::new(&config, &server_db, &db_pool).await?;
 
     let app = app::app(

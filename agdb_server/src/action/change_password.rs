@@ -2,7 +2,6 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::action::Config;
 use crate::server_error::ServerResult;
 use agdb::UserValue;
 use serde::Deserialize;
@@ -16,12 +15,7 @@ pub(crate) struct ChangePassword {
 }
 
 impl Action for ChangePassword {
-    async fn exec(
-        self,
-        db: ServerDb,
-        _db_pool: DbPool,
-        _config: &Config,
-    ) -> ServerResult<ClusterActionResult> {
+    async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let mut user = db.user(&self.user).await?;
         user.password = self.new_password;
         user.salt = self.new_salt;

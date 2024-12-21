@@ -175,7 +175,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
     let hash = sorted_cluster.stable_hash();
-    let storage = ClusterStorage::new(db.clone(), db_pool.clone(), config.clone()).await?;
+    let storage = ClusterStorage::new(db.clone(), db_pool.clone()).await?;
     let settings = raft::ClusterSettings {
         index: index as u64,
         hash,
@@ -300,11 +300,10 @@ pub(crate) struct ClusterStorage {
     executed: Arc<AtomicU64>,
     db: ServerDb,
     db_pool: DbPool,
-    config: Config,
 }
 
 impl ClusterStorage {
-    async fn new(db: ServerDb, db_pool: DbPool, config: Config) -> ServerResult<Self> {
+    async fn new(db: ServerDb, db_pool: DbPool) -> ServerResult<Self> {
         let (index, term, commit) = db.cluster_log().await?;
         let logs = db.logs_unexecuted(commit).await?;
 
@@ -316,7 +315,6 @@ impl ClusterStorage {
             executed: Arc::new(AtomicU64::new(index)),
             db,
             db_pool,
-            config,
         };
 
         for log in logs {
@@ -331,11 +329,10 @@ impl ClusterStorage {
         let executed = self.executed.clone();
         let db = self.db.clone();
         let db_pool = self.db_pool.clone();
-        let config = self.config.clone();
         let notifier = self.result_notifiers.remove(&log_id);
 
         tokio::spawn(async move {
-            let result = log.data.exec(db.clone(), db_pool, &config).await;
+            let result = log.data.exec(db.clone(), db_pool).await;
             executed.fetch_max(log.index, Ordering::Relaxed);
             let _ = db.log_executed(log_id).await;
 

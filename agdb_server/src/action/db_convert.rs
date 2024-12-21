@@ -2,7 +2,6 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::action::Config;
 use crate::server_error::ServerResult;
 use crate::utilities::db_name;
 use agdb::UserValue;
@@ -18,24 +17,12 @@ pub(crate) struct DbConvert {
 }
 
 impl Action for DbConvert {
-    async fn exec(
-        self,
-        db: ServerDb,
-        db_pool: DbPool,
-        config: &Config,
-    ) -> ServerResult<ClusterActionResult> {
+    async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let owner = db.user_id(&self.owner).await?;
         let name = db_name(&self.owner, &self.db);
         let mut database = db.user_db(owner, &name).await?;
         db_pool
-            .convert_db(
-                &self.owner,
-                &self.db,
-                &name,
-                database.db_type,
-                self.db_type,
-                config,
-            )
+            .convert_db(&self.owner, &self.db, &name, database.db_type, self.db_type)
             .await?;
         database.db_type = self.db_type;
         db.save_db(&database).await?;

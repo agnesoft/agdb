@@ -2,7 +2,6 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::action::Config;
 use crate::server_error::ServerResult;
 use crate::utilities::db_name;
 use agdb::UserValue;
@@ -19,12 +18,7 @@ pub(crate) struct DbRename {
 }
 
 impl Action for DbRename {
-    async fn exec(
-        self,
-        db: ServerDb,
-        db_pool: DbPool,
-        config: &Config,
-    ) -> ServerResult<ClusterActionResult> {
+    async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let owner_id = db.user_id(&self.owner).await?;
         let name = db_name(&self.owner, &self.db);
         let new_name = db_name(&self.new_owner, &self.new_db);
@@ -37,7 +31,6 @@ impl Action for DbRename {
                 &self.new_owner,
                 &self.new_db,
                 &new_name,
-                config,
             )
             .await?;
         database.name = new_name;

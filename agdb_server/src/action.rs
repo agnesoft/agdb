@@ -33,7 +33,6 @@ use crate::action::db_user_add::DbUserAdd;
 use crate::action::db_user_remove::DbUserRemove;
 use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
-use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
@@ -68,12 +67,7 @@ pub(crate) enum ClusterActionResult {
 }
 
 pub(crate) trait Action: Sized {
-    async fn exec(
-        self,
-        db: ServerDb,
-        db_pool: DbPool,
-        config: &Config,
-    ) -> ServerResult<ClusterActionResult>;
+    async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult>;
 }
 
 impl ClusterAction {
@@ -81,26 +75,25 @@ impl ClusterAction {
         self,
         db: ServerDb,
         db_pool: DbPool,
-        config: &Config,
     ) -> ServerResult<ClusterActionResult> {
         match self {
-            ClusterAction::UserAdd(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::ClusterLogin(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::ChangePassword(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::UserRemove(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbAdd(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbBackup(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbClear(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbConvert(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbCopy(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbDelete(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbRemove(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbExec(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbOptimize(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbRestore(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbRename(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbUserAdd(action) => action.exec(db, db_pool, config).await,
-            ClusterAction::DbUserRemove(action) => action.exec(db, db_pool, config).await,
+            ClusterAction::UserAdd(action) => action.exec(db, db_pool).await,
+            ClusterAction::ClusterLogin(action) => action.exec(db, db_pool).await,
+            ClusterAction::ChangePassword(action) => action.exec(db, db_pool).await,
+            ClusterAction::UserRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbAdd(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbBackup(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbClear(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbConvert(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbCopy(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbDelete(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbExec(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbOptimize(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbRestore(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbRename(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbUserAdd(action) => action.exec(db, db_pool).await,
+            ClusterAction::DbUserRemove(action) => action.exec(db, db_pool).await,
         }
     }
 }

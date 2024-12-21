@@ -2,7 +2,6 @@ use super::DbPool;
 use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
-use crate::action::Config;
 use crate::server_error::ServerResult;
 use crate::utilities::db_name;
 use agdb::UserValue;
@@ -16,12 +15,7 @@ pub(crate) struct DbOptimize {
 }
 
 impl Action for DbOptimize {
-    async fn exec(
-        self,
-        _db: ServerDb,
-        db_pool: DbPool,
-        _config: &Config,
-    ) -> ServerResult<ClusterActionResult> {
+    async fn exec(self, _db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let name = db_name(&self.owner, &self.db);
         db_pool.optimize_db(&name).await?;
 

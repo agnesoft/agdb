@@ -1,6 +1,7 @@
 mod routes;
 
 use agdb_api::AgdbApi;
+use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
@@ -11,21 +12,28 @@ use std::process::Command;
 use std::sync::atomic::AtomicU16;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use std::time::Instant;
 
+const ADMIN: &str = "admin";
 const BINARY: &str = "agdb_server";
 const CONFIG_FILE: &str = "agdb_server.yaml";
-const SERVER_DATA_DIR: &str = "agdb_server_data";
-const HOST: &str = "localhost";
 const DEFAULT_PORT: u16 = 3000;
-const ADMIN: &str = "admin";
+const HOST: &str = "localhost";
+const POLL_INTERVAL: u64 = 100;
 const RETRY_TIMEOUT: Duration = Duration::from_secs(1);
 const RETRY_ATTEMPS: u16 = 10;
+const SERVER_DATA_DIR: &str = "agdb_server_data";
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
+const TEST_TIMEOUT: u128 = 10000;
+
+type ClusterImpl = (Vec<TestServerImpl>, u64);
 
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 static SERVER: std::sync::OnceLock<tokio::sync::RwLock<Option<TestServerImpl>>> =
+    std::sync::OnceLock::new();
+static CLUSTER: std::sync::OnceLock<tokio::sync::RwLock<Option<ClusterImpl>>> =
     std::sync::OnceLock::new();
 
 pub struct TestServer {
@@ -34,12 +42,16 @@ pub struct TestServer {
     pub api: AgdbApi<ReqwestClient>,
 }
 
-struct TestServerImpl {
+pub struct TestServerImpl {
     pub dir: String,
     pub data_dir: String,
     pub address: String,
     pub process: Child,
     pub instances: u16,
+}
+
+pub struct TestCluster {
+    apis: Vec<AgdbApi<ReqwestClient>>,
 }
 
 impl TestServerImpl {
@@ -241,6 +253,50 @@ impl Drop for TestServer {
     }
 }
 
+impl TestCluster {
+    async fn new() -> anyhow::Result<Self> {
+        let global_cluster = CLUSTER.get_or_init(|| tokio::sync::RwLock::new(None));
+        let mut cluster_guard = global_cluster.write().await;
+
+        if cluster_guard.is_none() {
+            *cluster_guard = Some((create_cluster(3).await?, 1));
+        } else {
+            cluster_guard.as_mut().unwrap().1 += 1;
+        }
+
+        Ok(Self {
+            apis: cluster_guard
+                .as_ref()
+                .unwrap()
+                .0
+                .iter()
+                .map(|s| AgdbApi::new(ReqwestClient::new(), &s.address))
+                .collect(),
+        })
+    }
+}
+
+impl Drop for TestCluster {
+    fn drop(&mut self) {
+        let global_cluster = CLUSTER.get().unwrap();
+        let mut cluster_guard = loop {
+            if let Ok(c) = global_cluster.try_write() {
+                break c;
+            } else {
+                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+            }
+        };
+
+        if let Some(c) = cluster_guard.as_mut() {
+            if c.1 == 1 {
+                *cluster_guard = None;
+            } else {
+                c.1 -= 1;
+            }
+        }
+    }
+}
+
 pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<()> {
     for _ in 0..RETRY_ATTEMPS {
         if api.status().await.is_ok() {
@@ -251,4 +307,75 @@ pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<()> 
     }
 
     anyhow::bail!("Server not ready")
+}
+
+pub async fn wait_for_leader(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<Vec<ClusterStatus>> {
+    let now = Instant::now();
+
+    while now.elapsed().as_millis() < TEST_TIMEOUT {
+        let status = api.cluster_status().await?;
+
+        if status.1.iter().any(|s| s.leader) {
+            return Ok(status.1);
+        }
+
+        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
+    }
+
+    Err(anyhow::anyhow!(
+        "Leader not found within {TEST_TIMEOUT}seconds"
+    ))
+}
+
+pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>> {
+    let mut configs = Vec::with_capacity(nodes);
+    let mut cluster = Vec::with_capacity(nodes);
+    let mut servers = Vec::with_capacity(nodes);
+
+    for _ in 0..nodes {
+        let port = TestServerImpl::next_port();
+        let mut config = HashMap::<&str, serde_yaml::Value>::new();
+        config.insert("bind", format!("{HOST}:{port}").into());
+        config.insert("address", format!("http://{HOST}:{port}").into());
+        config.insert("admin", ADMIN.into());
+        config.insert("basepath", "".into());
+        config.insert("log_level", "INFO".into());
+        config.insert("data_dir", SERVER_DATA_DIR.into());
+        config.insert("cluster_token", "test".into());
+
+        configs.push(config);
+        cluster.push(format!("http://{HOST}:{port}"));
+    }
+
+    for config in &mut configs {
+        config.insert("cluster", cluster.clone().into());
+    }
+
+    for server in configs
+        .into_iter()
+        .map(|c| tokio::spawn(async move { TestServerImpl::with_config(c).await }))
+    {
+        let server = server.await??;
+        let api = AgdbApi::new(ReqwestClient::new(), &server.address);
+        servers.push((server, api));
+    }
+
+    let mut statuses = Vec::with_capacity(nodes);
+
+    for server in &servers {
+        statuses.push(wait_for_leader(&server.1).await?);
+    }
+
+    for status in &statuses[1..] {
+        assert_eq!(statuses[0], *status);
+    }
+
+    let leader = statuses[0]
+        .iter()
+        .enumerate()
+        .find_map(|(i, s)| if s.leader { Some(i) } else { None })
+        .unwrap();
+    servers.swap(0, leader);
+
+    Ok(servers.into_iter().map(|(s, _)| s).collect())
 }

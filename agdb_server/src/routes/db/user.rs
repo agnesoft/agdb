@@ -145,7 +145,7 @@ pub(crate) async fn remove(
         .await?;
 
     Ok((
-        StatusCode::CREATED,
+        StatusCode::NO_CONTENT,
         [("commit-index", commit_index.to_string())],
     ))
 }

@@ -19,7 +19,7 @@ async fn clear_backup() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(1).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     server.api.db_backup(owner, db).await?;
     let (status, db) = server.api.db_clear(owner, db, DbResource::Backup).await?;
     assert_eq!(status, 200);
@@ -37,7 +37,7 @@ async fn clear_audit() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(1).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let (status, _) = server.api.db_clear(owner, db, DbResource::Audit).await?;
     assert_eq!(status, 200);
     let db_audit_file = Path::new(&server.data_dir)
@@ -58,7 +58,7 @@ async fn clear_db() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let (_, list) = server.api.db_list().await?;
     let original_size = list[0].size;
     let (status, db) = server.api.db_clear(owner, db, DbResource::Db).await?;
@@ -77,7 +77,7 @@ async fn clear_db_memory() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Memory).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let (_, list) = server.api.db_list().await?;
     let original_size = list[0].size;
     let (status, db) = server.api.db_clear(owner, db, DbResource::Db).await?;
@@ -116,7 +116,7 @@ async fn clear_all() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let (_, list) = server.api.db_list().await?;
     let original_size = list[0].size;
     server.api.db_backup(owner, db).await?;

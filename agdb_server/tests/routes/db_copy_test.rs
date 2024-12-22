@@ -25,7 +25,7 @@ async fn copy() -> anyhow::Result<()> {
         .aliases(["root"])
         .query()
         .into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let status = server.api.db_copy(owner, db, owner, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());

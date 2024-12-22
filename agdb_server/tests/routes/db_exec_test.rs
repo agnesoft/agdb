@@ -29,7 +29,7 @@ async fn read_write() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids("root").query().into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     let expected = vec![
         QueryResult {
@@ -70,7 +70,7 @@ async fn read_only() -> anyhow::Result<()> {
         .values([[("key", 1.1).into()]])
         .query()
         .into()];
-    let (status, _) = server.api.db_exec(owner, db, queries).await?;
+    let (status, _) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
     let (status, results) = server.api.db_exec(owner, db, queries).await?;
@@ -103,7 +103,7 @@ async fn read_queries() -> anyhow::Result<()> {
         .values([[("key", "value").into()]])
         .query()
         .into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let queries = &vec![
         QueryBuilder::search().from(1).query().into(),
         QueryBuilder::select().ids(1).query().into(),
@@ -177,7 +177,7 @@ async fn write_queries() -> anyhow::Result<()> {
         QueryBuilder::remove().values("key").ids(1).query().into(),
         QueryBuilder::remove().ids("node1").query().into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(results.len(), 21);
     Ok(())
@@ -220,7 +220,7 @@ async fn use_result_of_previous_query() -> anyhow::Result<()> {
             .query()
             .into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(
         results[3],
@@ -283,7 +283,7 @@ async fn use_result_in_subquery() -> anyhow::Result<()> {
             .query()
             .into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(
         results[3],
@@ -331,7 +331,7 @@ async fn use_result_in_condition() -> anyhow::Result<()> {
             .query()
             .into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(
         results[1],
@@ -369,7 +369,7 @@ async fn use_result_in_search() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::search().from(":0").to(":1").query().into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(
         results[3],
@@ -445,7 +445,7 @@ async fn use_result_in_insert_ids() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::search().from(":0").to(":1").query().into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(
         results[3],
@@ -522,7 +522,7 @@ async fn reentrant_queries() -> anyhow::Result<()> {
         QueryBuilder::search().from(":0").to(":1").query().into(),
         QueryBuilder::search().from(":0").to(":1").query().into(),
     ];
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(
         results[4],
@@ -550,7 +550,7 @@ async fn reentrant_queries() -> anyhow::Result<()> {
             ]
         }
     );
-    let (status, results) = server.api.db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     assert_eq!(
         results[4],
@@ -610,7 +610,11 @@ async fn use_result_in_search_empty_result() -> anyhow::Result<()> {
         QueryBuilder::remove().ids(0).query().into(),
         QueryBuilder::search().from(":0").query().into(),
     ];
-    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
     assert_eq!(error.status, 470);
     assert_eq!(error.description, "No element found in the result");
     Ok(())
@@ -630,7 +634,11 @@ async fn use_result_bad_query() -> anyhow::Result<()> {
         .ids(":bad")
         .query()
         .into()];
-    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
     assert_eq!(error.status, 470);
     assert_eq!(error.description, "Alias ':bad' not found");
     Ok(())
@@ -650,7 +658,11 @@ async fn use_result_out_of_bounds() -> anyhow::Result<()> {
         .ids(":1")
         .query()
         .into()];
-    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
     assert_eq!(error.status, 470);
     assert_eq!(error.description, "Results index out of bounds '1' (> 0)");
     Ok(())
@@ -673,7 +685,11 @@ async fn query_error() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids("root").query().into(),
     ];
-    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
     assert_eq!(error.status, 470);
     assert_eq!(error.description, "Alias 'root' not found");
     Ok(())
@@ -703,7 +719,11 @@ async fn permission_denied() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids("root").query().into(),
     ];
-    let error = server.api.db_exec(owner, db, queries).await.unwrap_err();
+    let error = server
+        .api
+        .db_exec_mut(owner, db, queries)
+        .await
+        .unwrap_err();
     assert_eq!(error.status, 403);
     Ok(())
 }

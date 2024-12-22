@@ -52,7 +52,7 @@ async fn file_to_memory() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::File).await?;
     server
         .api
-        .db_exec(
+        .db_exec_mut(
             owner,
             db,
             &[QueryBuilder::insert().nodes().count(1).query().into()],

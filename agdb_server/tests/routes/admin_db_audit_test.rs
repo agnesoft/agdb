@@ -23,7 +23,7 @@ async fn admin_audit() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids(":0").query().into(),
     ];
-    server.api.db_exec(owner, db, &queries).await?;
+    server.api.db_exec_mut(owner, db, &queries).await?;
     server.api.user_login(ADMIN, ADMIN).await?;
     let (status, results) = server.api.admin_db_audit(owner, db).await?;
     assert_eq!(status, 200);

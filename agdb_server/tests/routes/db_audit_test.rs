@@ -24,7 +24,7 @@ async fn audit() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids(":0").query().into(),
     ];
-    server.api.db_exec(owner, db, &queries).await?;
+    server.api.db_exec_mut(owner, db, &queries).await?;
     let (status, results) = server.api.db_audit(owner, db).await?;
     assert_eq!(status, 200);
     assert_eq!(results.0[0].user, owner.to_string());
@@ -47,7 +47,7 @@ async fn audit_delete_db() -> anyhow::Result<()> {
         .values([[("key", 1.1).into()]])
         .query()
         .into()];
-    server.api.db_exec(owner, db, &queries).await?;
+    server.api.db_exec_mut(owner, db, &queries).await?;
     let db_audit_file = Path::new(&server.data_dir)
         .join(owner)
         .join("audit")
@@ -93,7 +93,7 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::Mapped).await?;
     server
         .api
-        .db_exec(
+        .db_exec_mut(
             owner,
             db,
             &vec![QueryBuilder::insert()
@@ -108,7 +108,7 @@ async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
     assert_eq!(audit.0.len(), 1);
     server
         .api
-        .db_exec(
+        .db_exec_mut(
             owner,
             db,
             &vec![QueryBuilder::insert()

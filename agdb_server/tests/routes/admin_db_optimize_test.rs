@@ -99,7 +99,7 @@ async fn cluster_exec() -> anyhow::Result<()> {
         .find(|d| d.name == format!("{owner}/{db}"))
         .unwrap()
         .size;
-    client.admin_db_optimize(owner, owner).await?;
+    client.admin_db_optimize(owner, db).await?;
     let server_db = client.admin_db_optimize(owner, db).await?.1;
     assert!(server_db.size < original_size);
     Ok(())

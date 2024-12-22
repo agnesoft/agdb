@@ -84,6 +84,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminDbCopy**](docs/Api/AgdbApi.md#admindbcopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy | 
 *AgdbApi* | [**adminDbDelete**](docs/Api/AgdbApi.md#admindbdelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete | 
 *AgdbApi* | [**adminDbExec**](docs/Api/AgdbApi.md#admindbexec) | **POST** /api/v1/admin/db/{owner}/{db}/exec | 
+*AgdbApi* | [**adminDbExecMut**](docs/Api/AgdbApi.md#admindbexecmut) | **POST** /api/v1/admin/db/{owner}/{db}/exec_mut | 
 *AgdbApi* | [**adminDbList**](docs/Api/AgdbApi.md#admindblist) | **GET** /api/v1/admin/db/list | 
 *AgdbApi* | [**adminDbOptimize**](docs/Api/AgdbApi.md#admindboptimize) | **POST** /api/v1/admin/db/{owner}/{db}/optimize | 
 *AgdbApi* | [**adminDbRemove**](docs/Api/AgdbApi.md#admindbremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove | 
@@ -110,6 +111,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**dbCopy**](docs/Api/AgdbApi.md#dbcopy) | **POST** /api/v1/db/{owner}/{db}/copy | 
 *AgdbApi* | [**dbDelete**](docs/Api/AgdbApi.md#dbdelete) | **DELETE** /api/v1/db/{owner}/{db}/delete | 
 *AgdbApi* | [**dbExec**](docs/Api/AgdbApi.md#dbexec) | **POST** /api/v1/db/{owner}/{db}/exec | 
+*AgdbApi* | [**dbExecMut**](docs/Api/AgdbApi.md#dbexecmut) | **POST** /api/v1/db/{owner}/{db}/exec_mut | 
 *AgdbApi* | [**dbList**](docs/Api/AgdbApi.md#dblist) | **GET** /api/v1/db/list | 
 *AgdbApi* | [**dbOptimize**](docs/Api/AgdbApi.md#dboptimize) | **POST** /api/v1/db/{owner}/{db}/optimize | 
 *AgdbApi* | [**dbRemove**](docs/Api/AgdbApi.md#dbremove) | **DELETE** /api/v1/db/{owner}/{db}/remove | 

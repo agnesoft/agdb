@@ -511,6 +511,67 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/exec_mut": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_exec_mut",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/optimize": {
       "post": {
         "tags": [
@@ -1682,6 +1743,70 @@
           },
           "403": {
             "description": "mutable queries not allowed"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/exec_mut": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_exec_mut",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "must have at least write role"
           },
           "404": {
             "description": "db not found"

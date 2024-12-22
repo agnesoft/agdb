@@ -98,6 +98,9 @@ class AgdbApi
         'adminDbExec' => [
             'application/json',
         ],
+        'adminDbExecMut' => [
+            'application/json',
+        ],
         'adminDbList' => [
             'application/json',
         ],
@@ -174,6 +177,9 @@ class AgdbApi
             'application/json',
         ],
         'dbExec' => [
+            'application/json',
+        ],
+        'dbExecMut' => [
             'application/json',
         ],
         'dbList' => [
@@ -2626,6 +2632,349 @@ class AgdbApi
 
 
         $resourcePath = '/api/v1/admin/db/{owner}/{db}/exec';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{' . 'owner' . '}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($db !== null) {
+            $resourcePath = str_replace(
+                '{' . 'db' . '}',
+                ObjectSerializer::toPathValue($db),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($query_type)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($query_type));
+            } else {
+                $httpBody = $query_type;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation adminDbExecMut
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExecMut'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\QueryResult[]
+     */
+    public function adminDbExecMut($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExecMut'][0])
+    {
+        list($response) = $this->adminDbExecMutWithHttpInfo($owner, $db, $query_type, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation adminDbExecMutWithHttpInfo
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExecMut'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\QueryResult[], HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminDbExecMutWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExecMut'][0])
+    {
+        $request = $this->adminDbExecMutRequest($owner, $db, $query_type, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Agnesoft\AgdbApi\Model\QueryResult[]' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Agnesoft\AgdbApi\Model\QueryResult[]' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\QueryResult[]', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\QueryResult[]',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminDbExecMutAsync
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExecMut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbExecMutAsync($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExecMut'][0])
+    {
+        return $this->adminDbExecMutAsyncWithHttpInfo($owner, $db, $query_type, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminDbExecMutAsyncWithHttpInfo
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExecMut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminDbExecMutAsyncWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExecMut'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
+        $request = $this->adminDbExecMutRequest($owner, $db, $query_type, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminDbExecMut'
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbExecMut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminDbExecMutRequest($owner, $db, $query_type, string $contentType = self::contentTypes['adminDbExecMut'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling adminDbExecMut'
+            );
+        }
+
+        // verify the required parameter 'db' is set
+        if ($db === null || (is_array($db) && count($db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db when calling adminDbExecMut'
+            );
+        }
+
+        // verify the required parameter 'query_type' is set
+        if ($query_type === null || (is_array($query_type) && count($query_type) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $query_type when calling adminDbExecMut'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/db/{owner}/{db}/exec_mut';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];
@@ -9559,6 +9908,349 @@ class AgdbApi
 
 
         $resourcePath = '/api/v1/db/{owner}/{db}/exec';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($owner !== null) {
+            $resourcePath = str_replace(
+                '{' . 'owner' . '}',
+                ObjectSerializer::toPathValue($owner),
+                $resourcePath
+            );
+        }
+        // path params
+        if ($db !== null) {
+            $resourcePath = str_replace(
+                '{' . 'db' . '}',
+                ObjectSerializer::toPathValue($db),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (isset($query_type)) {
+            if (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the body
+                $httpBody = \GuzzleHttp\Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($query_type));
+            } else {
+                $httpBody = $query_type;
+            }
+        } elseif (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'POST',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
+     * Operation dbExecMut
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExecMut'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\QueryResult[]
+     */
+    public function dbExecMut($owner, $db, $query_type, string $contentType = self::contentTypes['dbExecMut'][0])
+    {
+        list($response) = $this->dbExecMutWithHttpInfo($owner, $db, $query_type, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation dbExecMutWithHttpInfo
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExecMut'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\QueryResult[], HTTP status code, HTTP response headers (array of strings)
+     */
+    public function dbExecMutWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['dbExecMut'][0])
+    {
+        $request = $this->dbExecMutRequest($owner, $db, $query_type, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 200:
+                    if ('\Agnesoft\AgdbApi\Model\QueryResult[]' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Agnesoft\AgdbApi\Model\QueryResult[]' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\QueryResult[]', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 200:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\QueryResult[]',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation dbExecMutAsync
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExecMut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dbExecMutAsync($owner, $db, $query_type, string $contentType = self::contentTypes['dbExecMut'][0])
+    {
+        return $this->dbExecMutAsyncWithHttpInfo($owner, $db, $query_type, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation dbExecMutAsyncWithHttpInfo
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExecMut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function dbExecMutAsyncWithHttpInfo($owner, $db, $query_type, string $contentType = self::contentTypes['dbExecMut'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\QueryResult[]';
+        $request = $this->dbExecMutRequest($owner, $db, $query_type, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'dbExecMut'
+     *
+     * @param  string $owner db owner user name (required)
+     * @param  string $db db name (required)
+     * @param  \Agnesoft\AgdbApi\Model\QueryType[] $query_type (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbExecMut'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function dbExecMutRequest($owner, $db, $query_type, string $contentType = self::contentTypes['dbExecMut'][0])
+    {
+
+        // verify the required parameter 'owner' is set
+        if ($owner === null || (is_array($owner) && count($owner) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $owner when calling dbExecMut'
+            );
+        }
+
+        // verify the required parameter 'db' is set
+        if ($db === null || (is_array($db) && count($db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $db when calling dbExecMut'
+            );
+        }
+
+        // verify the required parameter 'query_type' is set
+        if ($query_type === null || (is_array($query_type) && count($query_type) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $query_type when calling dbExecMut'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/db/{owner}/{db}/exec_mut';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];

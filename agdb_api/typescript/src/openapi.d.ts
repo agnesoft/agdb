@@ -1379,6 +1379,24 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminDbExecMut {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export type RequestBody = Components.Schemas.Queries;
+        namespace Responses {
+            export type $200 = Components.Schemas.QueriesResults;
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbList {
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase[];
@@ -1822,6 +1840,26 @@ declare namespace Paths {
             }
         }
     }
+    namespace DbExecMut {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export type RequestBody = Components.Schemas.Queries;
+        namespace Responses {
+            export type $200 = Components.Schemas.QueriesResults;
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace DbList {
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase[];
@@ -2105,6 +2143,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbExec.Responses.$200>
   /**
+   * admin_db_exec_mut
+   */
+  'admin_db_exec_mut'(
+    parameters?: Parameters<Paths.AdminDbExecMut.PathParameters> | null,
+    data?: Paths.AdminDbExecMut.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbExecMut.Responses.$200>
+  /**
    * admin_db_optimize
    */
   'admin_db_optimize'(
@@ -2313,6 +2359,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbExec.Responses.$200>
   /**
+   * db_exec_mut
+   */
+  'db_exec_mut'(
+    parameters?: Parameters<Paths.DbExecMut.PathParameters> | null,
+    data?: Paths.DbExecMut.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DbExecMut.Responses.$200>
+  /**
    * db_optimize
    */
   'db_optimize'(
@@ -2510,6 +2564,16 @@ export interface PathsDictionary {
       data?: Paths.AdminDbExec.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbExec.Responses.$200>
+  }
+  ['/api/v1/admin/db/{owner}/{db}/exec_mut']: {
+    /**
+     * admin_db_exec_mut
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbExecMut.PathParameters> | null,
+      data?: Paths.AdminDbExecMut.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbExecMut.Responses.$200>
   }
   ['/api/v1/admin/db/{owner}/{db}/optimize']: {
     /**
@@ -2770,6 +2834,16 @@ export interface PathsDictionary {
       data?: Paths.DbExec.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbExec.Responses.$200>
+  }
+  ['/api/v1/db/{owner}/{db}/exec_mut']: {
+    /**
+     * db_exec_mut
+     */
+    'post'(
+      parameters?: Parameters<Paths.DbExecMut.PathParameters> | null,
+      data?: Paths.DbExecMut.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DbExecMut.Responses.$200>
   }
   ['/api/v1/db/{owner}/{db}/optimize']: {
     /**

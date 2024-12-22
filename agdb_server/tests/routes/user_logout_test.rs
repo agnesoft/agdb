@@ -28,10 +28,12 @@ async fn no_token() -> anyhow::Result<()> {
 #[tokio::test]
 async fn cluster_logout() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
+    let user = &next_user_name();
 
     let token = {
         let leader = cluster.apis.get_mut(0).unwrap();
         leader.cluster_login(ADMIN, ADMIN).await?;
+        leader.cluster_login(user, user).await?;
         leader.token.clone()
     };
 

@@ -1,6 +1,5 @@
 use crate::create_cluster;
 use crate::wait_for_leader;
-use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb_api::AgdbApi;
@@ -41,35 +40,6 @@ async fn rebalance() -> anyhow::Result<()> {
 
     for status in &statuses {
         assert_eq!(statuses[0], *status);
-    }
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn user() -> anyhow::Result<()> {
-    let mut cluster = TestCluster::new().await?;
-
-    {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.cluster_login(ADMIN, ADMIN).await?;
-        client.admin_user_add("user1", "password123").await?;
-        client.user_login("user1", "password123").await?;
-    }
-
-    {
-        let leader = cluster.apis.get_mut(0).unwrap();
-        leader.user_login(ADMIN, ADMIN).await?;
-        leader.admin_cluster_logout("user1").await?;
-        leader.admin_user_remove("user1").await?;
-    }
-
-    {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.user_login(ADMIN, ADMIN).await?;
-        client.user_status().await?;
-        client.cluster_logout().await?;
-        assert_eq!(client.user_status().await.unwrap_err().status, 401);
     }
 
     Ok(())

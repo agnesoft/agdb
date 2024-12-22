@@ -497,9 +497,6 @@
           "401": {
             "description": "unauthorized"
           },
-          "403": {
-            "description": "permission denied"
-          },
           "404": {
             "description": "db not found"
           }
@@ -1679,9 +1676,6 @@
           },
           "401": {
             "description": "unauthorized"
-          },
-          "403": {
-            "description": "must have at least write role"
           },
           "404": {
             "description": "db not found"

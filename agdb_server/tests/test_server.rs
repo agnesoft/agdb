@@ -226,6 +226,7 @@ impl Drop for TestServerImpl {
 
 impl Drop for TestServer {
     fn drop(&mut self) {
+        std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT * 5);
         let global_server = SERVER.get().unwrap();
         let mut server_guard = loop {
             if let Ok(s) = global_server.try_write() {
@@ -274,6 +275,7 @@ impl TestCluster {
 
 impl Drop for TestCluster {
     fn drop(&mut self) {
+        std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT * 5);
         let global_cluster = CLUSTER.get().unwrap();
         let mut cluster_guard = loop {
             if let Ok(c) = global_cluster.try_write() {

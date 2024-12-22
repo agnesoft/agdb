@@ -67,19 +67,27 @@ async fn cluster_user_logout() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let user = &next_user_name();
 
-    {
+    let token = {
         let client = cluster.apis.get_mut(1).unwrap();
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_user_add(user, user).await?;
         client.cluster_login(user, user).await?;
+        client.token.clone()
+    };
+
+    {
+        let leader = cluster.apis.get_mut(0).unwrap();
+        leader.token = token;
+        leader.user_status().await?;
     }
 
-    cluster.apis[1].user_status().await?;
-    let leader = cluster.apis.get_mut(0).unwrap();
-    leader.user_login(ADMIN, ADMIN).await?;
-    leader.admin_cluster_logout(user).await?;
+    {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_cluster_logout(user).await?;
+    }
 
-    assert_eq!(cluster.apis[1].user_status().await.unwrap_err().status, 401);
+    assert_eq!(cluster.apis[0].user_status().await.unwrap_err().status, 401);
 
     Ok(())
 }

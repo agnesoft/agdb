@@ -86,8 +86,11 @@ async fn cluster_clear() -> anyhow::Result<()> {
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbType::Memory).await?;
     client.admin_db_convert(owner, db, DbType::Mapped).await?;
-    client.user_login(owner, owner).await?;
-    let db_type = client.db_list().await?.1[0].db_type;
-    assert_eq!(db_type, DbType::Mapped);
+    let db_list = client.admin_db_list().await?.1;
+    let server_db = db_list
+        .iter()
+        .find(|d| d.name == format!("{owner}/{db}"))
+        .unwrap();
+    assert_eq!(server_db.db_type, DbType::Mapped);
     Ok(())
 }

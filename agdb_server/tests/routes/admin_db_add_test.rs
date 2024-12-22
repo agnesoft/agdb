@@ -111,8 +111,11 @@ async fn cluster_add() -> anyhow::Result<()> {
     client.cluster_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbType::Memory).await?;
-    client.user_login(owner, owner).await?;
-    let server_db = &client.db_list().await?.1[0];
+    let db_list = client.admin_db_list().await?.1;
+    let server_db = db_list
+        .iter()
+        .find(|d| d.name == format!("{owner}/{db}"))
+        .unwrap();
     assert_eq!(server_db.name, format!("{owner}/{db}"));
     assert_eq!(server_db.db_type, DbType::Memory);
     Ok(())

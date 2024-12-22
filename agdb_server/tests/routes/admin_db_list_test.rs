@@ -21,7 +21,7 @@ async fn db_list() -> anyhow::Result<()> {
     let (status, list) = server.api.admin_db_list().await?;
     assert_eq!(status, 200);
     assert!(list.contains(&ServerDatabase {
-        name: format!("{}/{}", owner1, db1),
+        name: format!("{owner1}/{db1}"),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
         size: 2656,

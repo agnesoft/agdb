@@ -224,28 +224,6 @@ impl Drop for TestServerImpl {
     }
 }
 
-impl Drop for TestServer {
-    fn drop(&mut self) {
-        std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT * 5);
-        let global_server = SERVER.get().unwrap();
-        let mut server_guard = loop {
-            if let Ok(s) = global_server.try_write() {
-                break s;
-            } else {
-                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
-            }
-        };
-
-        if let Some(s) = server_guard.as_mut() {
-            if s.instances == 1 {
-                *server_guard = None;
-            } else {
-                s.instances -= 1;
-            }
-        }
-    }
-}
-
 impl TestCluster {
     async fn new() -> anyhow::Result<Self> {
         let global_cluster = CLUSTER.get_or_init(|| tokio::sync::RwLock::new(None));
@@ -270,28 +248,6 @@ impl TestCluster {
         cluster.apis[1].cluster_login(ADMIN, ADMIN).await?;
 
         Ok(cluster)
-    }
-}
-
-impl Drop for TestCluster {
-    fn drop(&mut self) {
-        std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT * 5);
-        let global_cluster = CLUSTER.get().unwrap();
-        let mut cluster_guard = loop {
-            if let Ok(c) = global_cluster.try_write() {
-                break c;
-            } else {
-                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
-            }
-        };
-
-        if let Some(c) = cluster_guard.as_mut() {
-            if c.1 == 1 {
-                *cluster_guard = None;
-            } else {
-                c.1 -= 1;
-            }
-        }
     }
 }
 
@@ -384,4 +340,48 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
     servers.swap(0, leader);
 
     Ok(servers.into_iter().map(|(s, _)| s).collect())
+}
+
+impl Drop for TestServer {
+    fn drop(&mut self) {
+        let global_server = SERVER.get().unwrap();
+        let mut server_guard = loop {
+            if let Ok(s) = global_server.try_write() {
+                break s;
+            } else {
+                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+            }
+        };
+
+        if let Some(s) = server_guard.as_mut() {
+            if s.instances == 1 {
+                println!("SERVER SHUTDOWN");
+                *server_guard = None;
+            } else {
+                s.instances -= 1;
+            }
+        }
+    }
+}
+
+impl Drop for TestCluster {
+    fn drop(&mut self) {
+        let global_cluster = CLUSTER.get().unwrap();
+        let mut cluster_guard = loop {
+            if let Ok(c) = global_cluster.try_write() {
+                break c;
+            } else {
+                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+            }
+        };
+
+        if let Some(c) = cluster_guard.as_mut() {
+            if c.1 == 1 {
+                println!("CLUSTER SHUTDOWN");
+                *cluster_guard = None;
+            } else {
+                c.1 -= 1;
+            }
+        }
+    }
 }

@@ -1,3 +1,5 @@
+use crate::next_db_name;
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb::QueryBuilder;
@@ -7,8 +9,8 @@ use std::path::Path;
 #[tokio::test]
 async fn audit() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -33,8 +35,8 @@ async fn audit() -> anyhow::Result<()> {
 #[tokio::test]
 async fn audit_delete_db() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -60,8 +62,8 @@ async fn audit_delete_db() -> anyhow::Result<()> {
 #[tokio::test]
 async fn audit_db_empty() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -83,8 +85,8 @@ async fn audit_no_token() -> anyhow::Result<()> {
 #[tokio::test]
 async fn repeated_query_with_db_audit() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;

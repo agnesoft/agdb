@@ -1,3 +1,5 @@
+use crate::next_db_name;
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb::DbElement;
@@ -11,8 +13,8 @@ use std::path::Path;
 #[tokio::test]
 async fn backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -54,8 +56,8 @@ async fn backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn backup_overwrite() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -98,8 +100,8 @@ async fn backup_overwrite() -> anyhow::Result<()> {
 #[tokio::test]
 async fn backup_of_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -138,8 +140,8 @@ async fn backup_of_backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn restore_no_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -152,8 +154,8 @@ async fn restore_no_backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn in_memory() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -195,9 +197,9 @@ async fn in_memory() -> anyhow::Result<()> {
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let user = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let user = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;

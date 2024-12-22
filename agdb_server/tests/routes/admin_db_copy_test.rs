@@ -1,3 +1,5 @@
+use crate::next_db_name;
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb::DbElement;
@@ -9,9 +11,9 @@ use std::path::Path;
 #[tokio::test]
 async fn copy() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
-    let db2 = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
@@ -43,10 +45,10 @@ async fn copy() -> anyhow::Result<()> {
 #[tokio::test]
 async fn copy_to_different_user() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let owner2 = &server.next_user_name();
-    let db = &server.next_db_name();
-    let db2 = &server.next_db_name();
+    let owner = &next_user_name();
+    let owner2 = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(owner2, owner2).await?;
@@ -79,9 +81,9 @@ async fn copy_to_different_user() -> anyhow::Result<()> {
 #[tokio::test]
 async fn copy_target_exists() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
-    let db2 = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Memory).await?;
@@ -99,8 +101,8 @@ async fn copy_target_exists() -> anyhow::Result<()> {
 #[tokio::test]
 async fn target_self() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Memory).await?;
@@ -117,8 +119,8 @@ async fn target_self() -> anyhow::Result<()> {
 #[tokio::test]
 async fn invalid() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::File).await?;
@@ -135,7 +137,7 @@ async fn invalid() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_not_found() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     let status = server
@@ -151,9 +153,9 @@ async fn db_not_found() -> anyhow::Result<()> {
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
-    let db2 = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;

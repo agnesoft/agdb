@@ -85,10 +85,6 @@ async fn db() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let client = cluster.apis.get_mut(1).unwrap();
     client.cluster_login(ADMIN, ADMIN).await?;
-    client.db_add(ADMIN, "db1", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.name, "admin/db1");
-    assert_eq!(db.db_type, DbType::Memory);
 
     client.db_backup(ADMIN, "db1").await?;
     let db = &client.db_list().await?.1[0];

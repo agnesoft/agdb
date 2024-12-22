@@ -208,14 +208,6 @@ impl TestServer {
         })
     }
 
-    pub fn next_user_name(&mut self) -> String {
-        format!("db_user{}", COUNTER.fetch_add(1, Ordering::SeqCst))
-    }
-
-    pub fn next_db_name(&mut self) -> String {
-        format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
-    }
-
     pub fn url(&self, uri: &str) -> String {
         format!("{}{uri}", self.api.address())
     }
@@ -295,6 +287,14 @@ impl Drop for TestCluster {
             }
         }
     }
+}
+
+pub fn next_user_name() -> String {
+    format!("db_user{}", COUNTER.fetch_add(1, Ordering::SeqCst))
+}
+
+pub fn next_db_name() -> String {
+    format!("db{}", COUNTER.fetch_add(1, Ordering::SeqCst))
 }
 
 pub async fn wait_for_ready(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<()> {

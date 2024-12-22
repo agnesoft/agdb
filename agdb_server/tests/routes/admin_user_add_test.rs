@@ -1,4 +1,5 @@
 use crate::next_user_name;
+use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
 
@@ -83,5 +84,18 @@ async fn no_token() -> anyhow::Result<()> {
         .unwrap_err()
         .status;
     assert_eq!(status, 401);
+    Ok(())
+}
+
+#[tokio::test]
+async fn cluster_user_add() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let client = cluster.apis.get_mut(1).unwrap();
+    let user = &next_user_name();
+    client.cluster_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(user, user).await?;
+    let users = client.admin_user_list().await?.1;
+    let added_user = users.iter().find(|u| u.name.as_str() == user);
+    assert!(added_user.is_some());
     Ok(())
 }

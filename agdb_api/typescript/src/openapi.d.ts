@@ -1195,6 +1195,22 @@ declare namespace Components {
     }
 }
 declare namespace Paths {
+    namespace AdminClusterLogout {
+        namespace Parameters {
+            export type Username = string;
+        }
+        export interface PathParameters {
+            username: Parameters.Username;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbAdd {
         namespace Parameters {
             export type Db = string;
@@ -1607,6 +1623,22 @@ declare namespace Paths {
             }
         }
     }
+    namespace ClusterLogin {
+        export type RequestBody = Components.Schemas.UserLogin;
+        namespace Responses {
+            export type $200 = string;
+            export interface $401 {
+            }
+        }
+    }
+    namespace ClusterLogout {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+        }
+    }
     namespace ClusterStatus {
         namespace Responses {
             export type $200 = Components.Schemas.ClusterStatus[];
@@ -1812,6 +1844,8 @@ declare namespace Paths {
             }
             export interface $403 {
             }
+            export interface $404 {
+            }
         }
     }
     namespace DbRemove {
@@ -1991,6 +2025,14 @@ declare namespace Paths {
 
 export interface OperationMethods {
   /**
+   * admin_cluster_logout
+   */
+  'admin_cluster_logout'(
+    parameters?: Parameters<Paths.AdminClusterLogout.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminClusterLogout.Responses.$201>
+  /**
    * admin_db_list
    */
   'admin_db_list'(
@@ -2166,6 +2208,22 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
+  /**
+   * cluster_login
+   */
+  'cluster_login'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.ClusterLogin.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterLogin.Responses.$200>
+  /**
+   * cluster_logout
+   */
+  'cluster_logout'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterLogout.Responses.$201>
   /**
    * cluster_status
    */
@@ -2353,6 +2411,16 @@ export interface OperationMethods {
 }
 
 export interface PathsDictionary {
+  ['/api/v1/admin/cluster/{username}/logout']: {
+    /**
+     * admin_cluster_logout
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminClusterLogout.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminClusterLogout.Responses.$201>
+  }
   ['/api/v1/admin/db/list']: {
     /**
      * admin_db_list
@@ -2572,6 +2640,26 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
+  }
+  ['/api/v1/cluster/login']: {
+    /**
+     * cluster_login
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.ClusterLogin.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterLogin.Responses.$200>
+  }
+  ['/api/v1/cluster/logout']: {
+    /**
+     * cluster_logout
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterLogout.Responses.$201>
   }
   ['/api/v1/cluster/status']: {
     /**

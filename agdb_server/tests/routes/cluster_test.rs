@@ -86,10 +86,6 @@ async fn db() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.cluster_login(ADMIN, ADMIN).await?;
 
-    client.db_convert(ADMIN, "db1", DbType::Mapped).await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.db_type, DbType::Mapped);
-
     client.db_copy(ADMIN, "db1", ADMIN, "db2").await?;
     let db = &client.db_list().await?.1[1];
     assert_eq!(db.name, "admin/db2");

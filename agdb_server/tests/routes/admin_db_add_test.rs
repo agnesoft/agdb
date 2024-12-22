@@ -103,7 +103,7 @@ async fn no_token() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn cluster_add() -> anyhow::Result<()> {
+async fn cluster_db_add() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let owner = &next_user_name();
     let db = &next_db_name();

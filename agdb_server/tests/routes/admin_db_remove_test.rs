@@ -101,7 +101,14 @@ async fn cluster_remove() -> anyhow::Result<()> {
     client.cluster_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbType::Memory).await?;
+    let admin_token = client.token.clone();
+    client.user_login(owner, owner).await?;
+    let user_token = client.token.clone();
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 1);
+    client.token = admin_token;
     client.admin_db_remove(owner, db).await?;
+    client.token = user_token;
     let dbs = client.db_list().await?.1.len();
     assert_eq!(dbs, 0);
     Ok(())

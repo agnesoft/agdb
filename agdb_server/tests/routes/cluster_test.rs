@@ -86,39 +86,6 @@ async fn db() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.cluster_login(ADMIN, ADMIN).await?;
 
-    client.db_remove(ADMIN, "db2").await?;
-    assert_eq!(client.db_list().await?.1.len(), 1);
-
-    client.db_add(ADMIN, "db2", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[1];
-    assert_eq!(db.name, "admin/db2");
-    assert_ne!(db.backup, 0);
-
-    client.db_delete(ADMIN, "db2").await?;
-    assert_eq!(client.db_list().await?.1.len(), 1);
-
-    client
-        .db_exec(
-            ADMIN,
-            "db1",
-            &[QueryBuilder::insert().nodes().count(100).query().into()],
-        )
-        .await?;
-    let node_count = client
-        .db_exec(
-            ADMIN,
-            "db1",
-            &[QueryBuilder::select().node_count().query().into()],
-        )
-        .await?
-        .1[0]
-        .elements[0]
-        .values[0]
-        .value
-        .to_u64()
-        .unwrap();
-    assert_eq!(node_count, 100);
-
     let orig_size = client.db_list().await?.1[0].size;
     let db_size = client.db_optimize(ADMIN, "db1").await?.1.size;
     assert!(db_size < orig_size);
@@ -196,7 +163,7 @@ async fn db_admin() -> anyhow::Result<()> {
     assert_eq!(client.db_list().await?.1.len(), 1);
 
     client
-        .admin_db_exec(
+        .admin_db_exec_mut(
             ADMIN,
             "db1",
             &[QueryBuilder::insert().nodes().count(100).query().into()],

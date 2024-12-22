@@ -198,7 +198,7 @@ async fn cluster_clear() -> anyhow::Result<()> {
     client.admin_user_add(owner, owner).await?;
     client.admin_db_add(owner, db, DbType::Memory).await?;
     client
-        .admin_db_exec(
+        .admin_db_exec_mut(
             owner,
             db,
             &[QueryBuilder::insert().nodes().count(1).query().into()],

@@ -64,7 +64,7 @@ async fn copy_from_different_user() -> anyhow::Result<()> {
         .aliases(["root"])
         .query()
         .into()];
-    server.api.admin_db_exec(owner, db, queries).await?;
+    server.api.admin_db_exec_mut(owner, db, queries).await?;
     server.api.user_login(owner2, owner2).await?;
     let status = server.api.db_copy(owner, db, owner2, db2).await?;
     assert_eq!(status, 201);

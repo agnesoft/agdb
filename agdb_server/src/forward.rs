@@ -17,7 +17,7 @@ const REDIRECT_PATHS: [&str; 15] = [
     "/convert",
     "/copy",
     "/delete",
-    "/exec",
+    "/exec_mut",
     "/optimize",
     "/remove",
     "/rename",

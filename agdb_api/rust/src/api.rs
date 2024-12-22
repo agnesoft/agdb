@@ -167,6 +167,21 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
+    pub async fn admin_db_exec_mut(
+        &self,
+        owner: &str,
+        db: &str,
+        queries: &[QueryType],
+    ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
+        self.client
+            .post(
+                &self.url(&format!("/admin/db/{owner}/{db}/exec_mut")),
+                &Some(queries),
+                &self.token,
+            )
+            .await
+    }
+
     pub async fn admin_db_list(&self) -> AgdbApiResult<(u16, Vec<ServerDatabase>)> {
         self.client
             .get(&self.url("/admin/db/list"), &self.token)
@@ -436,6 +451,21 @@ impl<T: HttpClient> AgdbApi<T> {
         self.client
             .post(
                 &self.url(&format!("/db/{owner}/{db}/exec")),
+                &Some(queries),
+                &self.token,
+            )
+            .await
+    }
+
+    pub async fn db_exec_mut(
+        &self,
+        owner: &str,
+        db: &str,
+        queries: &[QueryType],
+    ) -> AgdbApiResult<(u16, Vec<QueryResult>)> {
+        self.client
+            .post(
+                &self.url(&format!("/db/{owner}/{db}/exec_mut")),
                 &Some(queries),
                 &self.token,
             )

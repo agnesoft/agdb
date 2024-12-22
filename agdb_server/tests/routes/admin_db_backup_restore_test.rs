@@ -23,7 +23,7 @@ async fn backup() -> anyhow::Result<()> {
         .aliases(["root"])
         .query()
         .into()];
-    server.api.admin_db_exec(owner, db, queries).await?;
+    server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
@@ -32,7 +32,7 @@ async fn backup() -> anyhow::Result<()> {
         .join(format!("{}.bak", db))
         .exists());
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
-    server.api.admin_db_exec(owner, db, queries).await?;
+    server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_restore(owner, db).await?;
     assert_eq!(status, 201);
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
@@ -65,7 +65,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
         .aliases(["root"])
         .query()
         .into()];
-    server.api.admin_db_exec(owner, db, queries).await?;
+    server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
@@ -74,7 +74,7 @@ async fn backup_overwrite() -> anyhow::Result<()> {
         .join(format!("{}.bak", db))
         .exists());
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
-    server.api.admin_db_exec(owner, db, queries).await?;
+    server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
@@ -108,7 +108,7 @@ async fn backup_of_backup() -> anyhow::Result<()> {
         .aliases(["root"])
         .query()
         .into()];
-    server.api.admin_db_exec(owner, db, queries).await?;
+    server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_backup(owner, db).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir)
@@ -117,7 +117,7 @@ async fn backup_of_backup() -> anyhow::Result<()> {
         .join(format!("{}.bak", db))
         .exists());
     let queries = &vec![QueryBuilder::remove().ids("root").query().into()];
-    server.api.admin_db_exec(owner, db, queries).await?;
+    server.api.admin_db_exec_mut(owner, db, queries).await?;
     let status = server.api.admin_db_restore(owner, db).await?;
     assert_eq!(status, 201);
     let status = server.api.admin_db_restore(owner, db).await?;
@@ -223,7 +223,7 @@ async fn cluster_backup() -> anyhow::Result<()> {
     client.admin_db_add(owner, db, DbType::Memory).await?;
     client.admin_db_backup(owner, db).await?;
     client
-        .admin_db_exec(
+        .admin_db_exec_mut(
             owner,
             db,
             &[QueryBuilder::insert().nodes().count(1).query().into()],

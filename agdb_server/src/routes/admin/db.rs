@@ -345,11 +345,37 @@ pub(crate) async fn delete(
     responses(
          (status = 200, description = "ok", body = QueriesResults),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "permission denied"),
          (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn exec(
+    _admin: AdminId,
+    State(db_pool): State<DbPool>,
+    Path((owner, db)): Path<(String, String)>,
+    Json(queries): Json<Queries>,
+) -> ServerResponse<impl IntoResponse> {
+    let db_name = db_name(&owner, &db);
+    let results = db_pool.exec(&db_name, queries).await?;
+    Ok((StatusCode::OK, Json(QueriesResults(results))))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/admin/db/{owner}/{db}/exec_mut",
+    operation_id = "admin_db_exec_mut",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    request_body = Queries,
+    responses(
+         (status = 200, description = "ok", body = QueriesResults),
+         (status = 401, description = "unauthorized"),
+         (status = 404, description = "db not found"),
+    )
+)]
+pub(crate) async fn exec_mut(
     _admin: AdminId,
     State(db_pool): State<DbPool>,
     State(cluster): State<Cluster>,

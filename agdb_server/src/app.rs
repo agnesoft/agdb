@@ -88,6 +88,10 @@ pub(crate) fn app(
             routing::post(routes::admin::db::exec),
         )
         .route(
+            "/admin/db/:user/:db/exec_mut",
+            routing::post(routes::admin::db::exec_mut),
+        )
+        .route(
             "/admin/db/:user/:db/optimize",
             routing::post(routes::admin::db::optimize),
         )
@@ -124,6 +128,10 @@ pub(crate) fn app(
         .route("/db/:user/:db/copy", routing::post(routes::db::copy))
         .route("/db/:user/:db/delete", routing::delete(routes::db::delete))
         .route("/db/:user/:db/exec", routing::post(routes::db::exec))
+        .route(
+            "/db/:user/:db/exec_mut",
+            routing::post(routes::db::exec_mut),
+        )
         .route(
             "/db/:user/:db/optimize",
             routing::post(routes::db::optimize),

@@ -4,6 +4,7 @@ use crate::db_pool::ServerError;
 use crate::server_error::ServerResult;
 use agdb::DbImpl;
 use agdb::QueryConditionData;
+use agdb::QueryError;
 use agdb::QueryId;
 use agdb::QueryIds;
 use agdb::QueryResult;
@@ -115,7 +116,7 @@ fn t_exec(
             inject_results(&mut q.ids, results)?;
             t.exec(&*q)
         }
-        _ => unreachable!(),
+        _ => Err(QueryError::from("mutable query not allowed")),
     }
     .map_err(|e| ServerError::new(ErrorCode::QueryError.into(), &e.description))
 }
@@ -297,22 +298,4 @@ fn inject_results_ids(ids: &mut Vec<QueryId>, results: &[QueryResult]) -> Server
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::db_pool::user_db::UserDb;
-    use agdb::QueryBuilder;
-
-    #[tokio::test]
-    #[should_panic]
-    async fn unreachable() {
-        let db = UserDb::new("memory:test").unwrap();
-        db.exec(Queries(vec![QueryType::Remove(
-            QueryBuilder::remove().ids(1).query(),
-        )]))
-        .await
-        .unwrap();
-    }
 }

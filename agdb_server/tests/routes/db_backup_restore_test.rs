@@ -163,7 +163,7 @@ async fn in_memory() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::Memory).await?;
     server
         .api
-        .db_exec(
+        .db_exec_mut(
             owner,
             db,
             &[QueryBuilder::insert().nodes().count(1).query().into()],
@@ -173,7 +173,7 @@ async fn in_memory() -> anyhow::Result<()> {
     assert_eq!(status, 201);
     server
         .api
-        .db_exec(
+        .db_exec_mut(
             owner,
             db,
             &[QueryBuilder::insert().nodes().count(1).query().into()],
@@ -238,7 +238,7 @@ async fn cluster_backup() -> anyhow::Result<()> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let client = cluster.apis.get_mut(1).unwrap();
-    client.cluster_login(ADMIN, ADMIN).await?;
+    client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_login(owner, owner).await?;
     client.db_add(owner, db, DbType::Memory).await?;

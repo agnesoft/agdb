@@ -256,7 +256,7 @@ impl TestCluster {
             cluster_guard.as_mut().unwrap().1 += 1;
         }
 
-        Ok(Self {
+        let mut cluster = Self {
             apis: cluster_guard
                 .as_ref()
                 .unwrap()
@@ -264,7 +264,11 @@ impl TestCluster {
                 .iter()
                 .map(|s| AgdbApi::new(ReqwestClient::new(), &s.address))
                 .collect(),
-        })
+        };
+
+        cluster.apis[1].cluster_login(ADMIN, ADMIN).await?;
+
+        Ok(cluster)
     }
 }
 

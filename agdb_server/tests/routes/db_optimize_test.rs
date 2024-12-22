@@ -89,7 +89,7 @@ async fn cluster_optimize() -> anyhow::Result<()> {
     let owner = &next_user_name();
     let db = &next_db_name();
     let client = cluster.apis.get_mut(1).unwrap();
-    client.cluster_login(ADMIN, ADMIN).await?;
+    client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(owner, owner).await?;
     client.cluster_login(owner, owner).await?;
     client.db_add(owner, db, DbType::Memory).await?;

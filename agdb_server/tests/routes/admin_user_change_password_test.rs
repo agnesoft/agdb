@@ -84,7 +84,7 @@ async fn cluster_change_password() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let client = cluster.apis.get_mut(1).unwrap();
     let user = &next_user_name();
-    client.cluster_login(ADMIN, ADMIN).await?;
+    client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
     client
         .admin_user_change_password(user, "password123")

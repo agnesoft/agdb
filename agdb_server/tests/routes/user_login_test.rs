@@ -68,7 +68,7 @@ async fn cluster_login() -> anyhow::Result<()> {
 
     let token = {
         let client = cluster.apis.get_mut(1).unwrap();
-        client.cluster_login(ADMIN, ADMIN).await?;
+        client.user_login(ADMIN, ADMIN).await?;
         client.token.clone()
     };
 

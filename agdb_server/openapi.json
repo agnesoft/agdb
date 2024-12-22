@@ -497,6 +497,9 @@
           "401": {
             "description": "unauthorized"
           },
+          "403": {
+            "description": "mutable queries not allowed"
+          },
           "404": {
             "description": "db not found"
           }
@@ -1676,6 +1679,9 @@
           },
           "401": {
             "description": "unauthorized"
+          },
+          "403": {
+            "description": "mutable queries not allowed"
           },
           "404": {
             "description": "db not found"

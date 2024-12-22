@@ -26,35 +26,31 @@ async fn no_token() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn cluster_logout() -> anyhow::Result<()> {
+async fn cluster_user_logout() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let user = &next_user_name();
 
     let token = {
-        let leader = cluster.apis.get_mut(0).unwrap();
-        leader.cluster_login(ADMIN, ADMIN).await?;
-        leader.cluster_login(user, user).await?;
-        leader.token.clone()
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add(user, user).await?;
+        client.cluster_login(user, user).await?;
+        client.token.clone()
     };
 
     {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.token = token.clone();
-        client.user_status().await?;
+        let leader = cluster.apis.get_mut(0).unwrap();
+        leader.token = token;
+        leader.user_status().await?;
     }
 
-    cluster.apis.get_mut(0).unwrap().cluster_logout().await?;
-    assert_eq!(
-        cluster
-            .apis
-            .get(1)
-            .unwrap()
-            .user_status()
-            .await
-            .unwrap_err()
-            .status,
-        401
-    );
+    {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.cluster_logout().await?;
+    }
+
+    assert_eq!(cluster.apis[0].user_status().await.unwrap_err().status, 401);
+    assert_eq!(cluster.apis[1].user_status().await.unwrap_err().status, 401);
 
     Ok(())
 }

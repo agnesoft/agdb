@@ -78,18 +78,13 @@ pub(crate) async fn login(
     State(cluster): State<Cluster>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (token, user_id) = do_login(&server_db, &request.username, &request.password).await?;
-    let mut commit_index = 0;
-
-    if user_id.is_some() {
-        let (index, _result) = cluster
-            .exec(ClusterLogin {
-                user: request.username,
-                new_token: token.clone(),
-            })
-            .await?;
-        commit_index = index;
-    }
+    let (_user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
+    let (commit_index, _result) = cluster
+        .exec(ClusterLogin {
+            user: request.username,
+            new_token: token.clone(),
+        })
+        .await?;
 
     Ok((
         StatusCode::OK,

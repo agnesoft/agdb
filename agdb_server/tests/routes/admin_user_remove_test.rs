@@ -97,7 +97,7 @@ async fn cluster_user_remove() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let client = cluster.apis.get_mut(1).unwrap();
     let user = &next_user_name();
-    client.cluster_login(ADMIN, ADMIN).await?;
+    client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
     let users = client.admin_user_list().await?.1;
     let added_user = users.iter().find(|u| u.name.as_str() == user);

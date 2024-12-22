@@ -69,7 +69,7 @@ async fn cluster_user_logout() -> anyhow::Result<()> {
 
     {
         let client = cluster.apis.get_mut(1).unwrap();
-        client.cluster_login(ADMIN, ADMIN).await?;
+        client.user_login(ADMIN, ADMIN).await?;
         client.admin_user_add(user, user).await?;
         client.cluster_login(user, user).await?;
     }

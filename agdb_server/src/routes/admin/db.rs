@@ -20,6 +20,7 @@ use crate::routes::db::DbTypeParam;
 use crate::routes::db::ServerDatabaseRename;
 use crate::routes::db::ServerDatabaseResource;
 use crate::server_db::ServerDb;
+use crate::server_error::permission_denied;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
 use crate::utilities::db_name;
@@ -345,6 +346,7 @@ pub(crate) async fn delete(
     responses(
          (status = 200, description = "ok", body = QueriesResults),
          (status = 401, description = "unauthorized"),
+         (status = 403, description = "mutable queries not allowed"),
          (status = 404, description = "db not found"),
     )
 )]
@@ -355,6 +357,12 @@ pub(crate) async fn exec(
     Json(queries): Json<Queries>,
 ) -> ServerResponse<impl IntoResponse> {
     let db_name = db_name(&owner, &db);
+    let required_role = required_role(&queries);
+    if required_role != DbUserRole::Read {
+        return Err(permission_denied(
+            "mutable queries not allowed, use exec_mut endpoint",
+        ));
+    }
     let results = db_pool.exec(&db_name, queries).await?;
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }

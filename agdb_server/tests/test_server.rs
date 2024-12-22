@@ -355,7 +355,6 @@ impl Drop for TestServer {
 
         if let Some(s) = server_guard.as_mut() {
             if s.instances == 1 {
-                println!("SERVER SHUTDOWN");
                 *server_guard = None;
             } else {
                 s.instances -= 1;
@@ -377,7 +376,6 @@ impl Drop for TestCluster {
 
         if let Some(c) = cluster_guard.as_mut() {
             if c.1 == 1 {
-                println!("CLUSTER SHUTDOWN");
                 *cluster_guard = None;
             } else {
                 c.1 -= 1;

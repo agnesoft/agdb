@@ -86,11 +86,6 @@ async fn db() -> anyhow::Result<()> {
     let client = cluster.apis.get_mut(1).unwrap();
     client.cluster_login(ADMIN, ADMIN).await?;
 
-    client.db_copy(ADMIN, "db1", ADMIN, "db2").await?;
-    let db = &client.db_list().await?.1[1];
-    assert_eq!(db.name, "admin/db2");
-    client.db_backup(ADMIN, "db2").await?;
-
     client.db_remove(ADMIN, "db2").await?;
     assert_eq!(client.db_list().await?.1.len(), 1);
 

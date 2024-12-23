@@ -22,6 +22,14 @@ addTable({
             title: "Backup",
             valueFormatter: dateFormatter,
         },
+        {
+            key: "actions",
+            title: "Actions",
+            actions: [
+                { label: "Edit", action: () => console.log("Edit") },
+                { label: "Delete", action: () => console.log("Delete") },
+            ],
+        },
     ],
     uniqueKey: "name",
 });
@@ -46,7 +54,7 @@ watchEffect(() => {
     overflow: auto;
 }
 .db-table {
-    width: 1000px;
+    width: 1100px;
     margin: 0 auto;
 }
 </style>

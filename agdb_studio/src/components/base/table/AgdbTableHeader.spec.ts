@@ -1,5 +1,5 @@
 import { shallowMount } from "@vue/test-utils";
-import TableHeader from "./TableHeader.vue";
+import TableHeader from "./AgdbTableHeader.vue";
 
 describe("TableHeader", () => {
     it("should render", () => {

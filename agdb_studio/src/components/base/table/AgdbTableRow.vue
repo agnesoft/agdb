@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { defineProps, computed, type PropType, provide } from "vue";
 import { type Column, type TRow } from "@/composables/table/types";
+import { INJECT_KEY_ROW } from "@/composables/table/constants";
 
 const props = defineProps({
     row: {
@@ -23,7 +24,7 @@ const getFromattedValue = (key: string) => {
     }
     return value;
 };
-provide("row", props.row);
+provide(INJECT_KEY_ROW, props.row);
 </script>
 
 <template>

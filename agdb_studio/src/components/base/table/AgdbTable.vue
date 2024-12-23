@@ -1,10 +1,14 @@
 <script lang="ts" setup>
-import { computed, defineProps } from "vue";
+import { computed, defineProps, provide } from "vue";
 import { getRows } from "@/composables/table/tableData";
-import TableRow from "@/components/base/table/TableRow.vue";
-import TableHeader from "./TableHeader.vue";
+import TableRow from "@/components/base/table/AgdbTableRow.vue";
+import TableHeader from "./AgdbTableHeader.vue";
 import { getTableColumns } from "@/composables/table/tableConfig";
 import { type TRow } from "@/composables/table/types";
+import {
+    INJECT_KEY_COLUMNS,
+    INJECT_KEY_TABLE_NAME,
+} from "@/composables/table/constants";
 
 const props = defineProps({
     name: {
@@ -19,6 +23,9 @@ const rows = computed(() => {
 const columns = computed(() => {
     return getTableColumns<TRow>(props.name);
 });
+
+provide(INJECT_KEY_TABLE_NAME, props.name);
+provide(INJECT_KEY_COLUMNS, columns);
 </script>
 
 <template>

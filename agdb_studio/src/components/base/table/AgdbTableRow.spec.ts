@@ -1,5 +1,5 @@
 import { shallowMount } from "@vue/test-utils";
-import TableRow from "./TableRow.vue";
+import TableRow from "./AgdbTableRow.vue";
 import { columnsMap } from "@/tests/tableMocks";
 
 describe("TableRow", () => {

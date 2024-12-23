@@ -1,10 +1,11 @@
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 
 #[tokio::test]
 async fn change_password() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -21,7 +22,7 @@ async fn change_password() -> anyhow::Result<()> {
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -38,7 +39,7 @@ async fn invalid_credentials() -> anyhow::Result<()> {
 #[tokio::test]
 async fn password_too_short() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;

@@ -50,14 +50,14 @@ describe("openapi test", () => {
             db_type: "memory",
         });
 
-        const res = await client.db_exec({ owner: "user1", db: "db1" }, [
+        const res = await client.db_exec_mut({ owner: "user1", db: "db1" }, [
             QueryBuilder.insert().nodes().aliases("alias").query(),
             QueryBuilder.insert().nodes().count(2).query(),
         ]);
 
         expect(res.status).toEqual(200);
 
-        const res2 = await client.db_exec({ owner: "user1", db: "db1" }, [
+        const res2 = await client.db_exec_mut({ owner: "user1", db: "db1" }, [
             QueryBuilder.insert().edges().from("alias").to(res.data[1]).query(),
         ]);
 
@@ -95,7 +95,7 @@ describe("openapi test", () => {
             age: 31,
         };
 
-        const res = await client.db_exec({ owner: "user2", db: "db1" }, [
+        const res = await client.db_exec_mut({ owner: "user2", db: "db1" }, [
             QueryBuilder.insert().elements([e1, e2]).query(),
             QueryBuilder.insert().element(e3).query(),
         ]);
@@ -166,7 +166,7 @@ describe("openapi test", () => {
             db_type: "memory",
         });
 
-        const res = await client.db_exec({ owner: "user3", db: "db1" }, [
+        const res = await client.db_exec_mut({ owner: "user3", db: "db1" }, [
             QueryBuilder.insert().nodes().count(1).query(),
             QueryBuilder.insert().nodes().count(1).query(),
             QueryBuilder.insert().edges().from(":0").to(":1").query(),

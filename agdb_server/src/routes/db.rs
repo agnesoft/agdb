@@ -399,11 +399,45 @@ pub(crate) async fn delete(
     responses(
          (status = 200, description = "ok", body = QueriesResults),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "must have at least write role"),
+         (status = 403, description = "mutable queries not allowed"),
          (status = 404, description = "db not found"),
     )
 )]
 pub(crate) async fn exec(
+    _user: UserId,
+    State(db_pool): State<DbPool>,
+    Path((owner, db)): Path<(String, String)>,
+    Json(queries): Json<Queries>,
+) -> ServerResponse<impl IntoResponse> {
+    let db_name = db_name(&owner, &db);
+    let required_role = required_role(&queries);
+    if required_role != DbUserRole::Read {
+        return Err(permission_denied(
+            "mutable queries not allowed, use exec_mut endpoint",
+        ));
+    }
+    let results = db_pool.exec(&db_name, queries).await?;
+    Ok((StatusCode::OK, Json(QueriesResults(results))))
+}
+
+#[utoipa::path(post,
+    path = "/api/v1/db/{owner}/{db}/exec_mut",
+    operation_id = "db_exec_mut",
+    tag = "agdb",
+    security(("Token" = [])),
+    params(
+        ("owner" = String, Path, description = "db owner user name"),
+        ("db" = String, Path, description = "db name"),
+    ),
+    request_body = Queries,
+    responses(
+         (status = 200, description = "ok", body = QueriesResults),
+         (status = 401, description = "unauthorized"),
+         (status = 403, description = "must have at least write role"),
+         (status = 404, description = "db not found"),
+    )
+)]
+pub(crate) async fn exec_mut(
     user: UserId,
     State(db_pool): State<DbPool>,
     State(cluster): State<Cluster>,
@@ -415,7 +449,7 @@ pub(crate) async fn exec(
     let role = server_db.user_db_role(user.0, &db_name).await?;
     let required_role = required_role(&queries);
 
-    if required_role == DbUserRole::Write && role == DbUserRole::Read {
+    if role == DbUserRole::Read {
         return Err(permission_denied("write rights required"));
     }
 

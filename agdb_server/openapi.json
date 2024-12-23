@@ -15,41 +15,6 @@
     }
   ],
   "paths": {
-    "/api/v1/admin/cluster/{username}/logout": {
-      "post": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "admin_cluster_logout",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "user logged out"
-          },
-          "401": {
-            "description": "admin only"
-          },
-          "404": {
-            "description": "user not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
     "/api/v1/admin/db/list": {
       "get": {
         "tags": [
@@ -498,7 +463,68 @@
             "description": "unauthorized"
           },
           "403": {
-            "description": "permission denied"
+            "description": "mutable queries not allowed"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/db/{owner}/{db}/exec_mut": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_exec_mut",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
           },
           "404": {
             "description": "db not found"
@@ -1097,37 +1123,39 @@
         ]
       }
     },
-    "/api/v1/cluster/login": {
+    "/api/v1/cluster/admin/user/{username}/logout": {
       "post": {
         "tags": [
           "agdb"
         ],
-        "operationId": "cluster_login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserLogin"
-              }
+        "operationId": "cluster_admin_user_logout",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
-          "200": {
-            "description": "login successful",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
+          "201": {
+            "description": "user logged out"
           },
           "401": {
-            "description": "invalid credentials"
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user not found"
           }
-        }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
       }
     },
     "/api/v1/cluster/logout": {
@@ -1135,7 +1163,7 @@
         "tags": [
           "agdb"
         ],
-        "operationId": "cluster_logout",
+        "operationId": "cluster_user_logout",
         "responses": {
           "201": {
             "description": "user logged out"
@@ -1170,6 +1198,39 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/cluster/user/login": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_user_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "login successful",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials"
           }
         }
       }
@@ -1636,6 +1697,70 @@
           "agdb"
         ],
         "operationId": "db_exec",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "db owner user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Queries"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueriesResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "mutable queries not allowed"
+          },
+          "404": {
+            "description": "db not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/db/{owner}/{db}/exec_mut": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "db_exec_mut",
         "parameters": [
           {
             "name": "owner",

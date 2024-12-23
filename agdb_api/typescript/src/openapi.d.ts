@@ -1363,6 +1363,24 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminDbExecMut {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export type RequestBody = Components.Schemas.Queries;
+        namespace Responses {
+            export type $200 = Components.Schemas.QueriesResults;
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminDbList {
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase[];
@@ -1607,9 +1625,41 @@ declare namespace Paths {
             }
         }
     }
+    namespace ClusterAdminUserLogout {
+        namespace Parameters {
+            export type Username = string;
+        }
+        export interface PathParameters {
+            username: Parameters.Username;
+        }
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace ClusterStatus {
         namespace Responses {
             export type $200 = Components.Schemas.ClusterStatus[];
+        }
+    }
+    namespace ClusterUserLogin {
+        export type RequestBody = Components.Schemas.UserLogin;
+        namespace Responses {
+            export type $200 = string;
+            export interface $401 {
+            }
+        }
+    }
+    namespace ClusterUserLogout {
+        namespace Responses {
+            export interface $201 {
+            }
+            export interface $401 {
+            }
         }
     }
     namespace DbAdd {
@@ -1790,6 +1840,26 @@ declare namespace Paths {
             }
         }
     }
+    namespace DbExecMut {
+        namespace Parameters {
+            export type Db = string;
+            export type Owner = string;
+        }
+        export interface PathParameters {
+            owner: Parameters.Owner;
+            db: Parameters.Db;
+        }
+        export type RequestBody = Components.Schemas.Queries;
+        namespace Responses {
+            export type $200 = Components.Schemas.QueriesResults;
+            export interface $401 {
+            }
+            export interface $403 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace DbList {
         namespace Responses {
             export type $200 = Components.Schemas.ServerDatabase[];
@@ -1811,6 +1881,8 @@ declare namespace Paths {
             export interface $401 {
             }
             export interface $403 {
+            }
+            export interface $404 {
             }
         }
     }
@@ -2063,6 +2135,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbExec.Responses.$200>
   /**
+   * admin_db_exec_mut
+   */
+  'admin_db_exec_mut'(
+    parameters?: Parameters<Paths.AdminDbExecMut.PathParameters> | null,
+    data?: Paths.AdminDbExecMut.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbExecMut.Responses.$200>
+  /**
    * admin_db_optimize
    */
   'admin_db_optimize'(
@@ -2167,6 +2247,22 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
   /**
+   * cluster_admin_user_logout
+   */
+  'cluster_admin_user_logout'(
+    parameters?: Parameters<Paths.ClusterAdminUserLogout.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
+  /**
+   * cluster_user_logout
+   */
+  'cluster_user_logout'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
+  /**
    * cluster_status
    */
   'cluster_status'(
@@ -2174,6 +2270,14 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterStatus.Responses.$200>
+  /**
+   * cluster_user_login
+   */
+  'cluster_user_login'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: Paths.ClusterUserLogin.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
   /**
    * admin_db_restore
    */
@@ -2254,6 +2358,14 @@ export interface OperationMethods {
     data?: Paths.DbExec.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.DbExec.Responses.$200>
+  /**
+   * db_exec_mut
+   */
+  'db_exec_mut'(
+    parameters?: Parameters<Paths.DbExecMut.PathParameters> | null,
+    data?: Paths.DbExecMut.RequestBody,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.DbExecMut.Responses.$200>
   /**
    * db_optimize
    */
@@ -2443,6 +2555,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbExec.Responses.$200>
   }
+  ['/api/v1/admin/db/{owner}/{db}/exec_mut']: {
+    /**
+     * admin_db_exec_mut
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbExecMut.PathParameters> | null,
+      data?: Paths.AdminDbExecMut.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbExecMut.Responses.$200>
+  }
   ['/api/v1/admin/db/{owner}/{db}/optimize']: {
     /**
      * admin_db_optimize
@@ -2573,6 +2695,26 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
   }
+  ['/api/v1/cluster/admin/user/{username}/logout']: {
+    /**
+     * cluster_admin_user_logout
+     */
+    'post'(
+      parameters?: Parameters<Paths.ClusterAdminUserLogout.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
+  }
+  ['/api/v1/cluster/logout']: {
+    /**
+     * cluster_user_logout
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
+  }
   ['/api/v1/cluster/status']: {
     /**
      * cluster_status
@@ -2582,6 +2724,16 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterStatus.Responses.$200>
+  }
+  ['/api/v1/cluster/user/login']: {
+    /**
+     * cluster_user_login
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: Paths.ClusterUserLogin.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
   }
   ['/api/v1/db/admin/{owner}/{db}/restore']: {
     /**
@@ -2682,6 +2834,16 @@ export interface PathsDictionary {
       data?: Paths.DbExec.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.DbExec.Responses.$200>
+  }
+  ['/api/v1/db/{owner}/{db}/exec_mut']: {
+    /**
+     * db_exec_mut
+     */
+    'post'(
+      parameters?: Parameters<Paths.DbExecMut.PathParameters> | null,
+      data?: Paths.DbExecMut.RequestBody,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.DbExecMut.Responses.$200>
   }
   ['/api/v1/db/{owner}/{db}/optimize']: {
     /**

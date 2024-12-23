@@ -1,3 +1,5 @@
+use crate::next_db_name;
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb::QueryBuilder;
@@ -9,14 +11,14 @@ use std::path::Path;
 #[tokio::test]
 async fn clear_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(1).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     server.api.db_backup(owner, db).await?;
     server.api.user_login(ADMIN, ADMIN).await?;
     let (status, db) = server
@@ -31,14 +33,14 @@ async fn clear_backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn clear_audit() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(1).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     server.api.user_login(ADMIN, ADMIN).await?;
     let (status, _) = server
         .api
@@ -56,14 +58,14 @@ async fn clear_audit() -> anyhow::Result<()> {
 #[tokio::test]
 async fn clear_db() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let (_, list) = server.api.db_list().await?;
     let original_size = list[0].size;
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -76,14 +78,14 @@ async fn clear_db() -> anyhow::Result<()> {
 #[tokio::test]
 async fn clear_db_memory() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Memory).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let (_, list) = server.api.db_list().await?;
     let original_size = list[0].size;
     server.api.user_login(ADMIN, ADMIN).await?;
@@ -96,8 +98,8 @@ async fn clear_db_memory() -> anyhow::Result<()> {
 #[tokio::test]
 async fn clear_db_memory_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
@@ -120,14 +122,14 @@ async fn clear_db_memory_backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn clear_all() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Mapped).await?;
     let queries = &vec![QueryBuilder::insert().nodes().count(100).query().into()];
-    server.api.db_exec(owner, db, queries).await?;
+    server.api.db_exec_mut(owner, db, queries).await?;
     let (_, list) = server.api.db_list().await?;
     let original_size = list[0].size;
     server.api.db_backup(owner, db).await?;
@@ -150,9 +152,9 @@ async fn clear_all() -> anyhow::Result<()> {
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let user = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let user = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_user_add(user, user).await?;

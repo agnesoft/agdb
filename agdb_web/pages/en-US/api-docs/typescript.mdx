@@ -98,7 +98,7 @@ await client.db_add({
 
 ### Execute queries
 
-To execute queries against the database we call `db_exec` with the user and their database.
+To execute queries against the database we call `db_exec` (read only queries) and `db_exec_mut` (for queries that also write to the database) with the user and their database.
 
 <Callout type="info">
     Notice we are feeding results of the previous query to the next one with
@@ -141,7 +141,7 @@ let queries = [
 ];
 
 // Execute queries.
-let results = (await client.db_exec({ owner: "user1", db: "db1" }, queries))
+let results = (await client.db_exec_mut({ owner: "user1", db: "db1" }, queries))
     .data;
 ```
 

@@ -29,8 +29,8 @@ pub(crate) async fn cluster(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/cluster/{username}/logout",
-    operation_id = "admin_cluster_logout",
+    path = "/api/v1/cluster/admin/user/{username}/logout",
+    operation_id = "cluster_admin_user_logout",
     tag = "agdb",
     security(("Token" = [])),
     params(
@@ -64,8 +64,8 @@ pub(crate) async fn admin_logout(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/cluster/login",
-    operation_id = "cluster_login",
+    path = "/api/v1/cluster/user/login",
+    operation_id = "cluster_user_login",
     tag = "agdb",
     request_body = UserLogin,
     responses(
@@ -78,18 +78,13 @@ pub(crate) async fn login(
     State(cluster): State<Cluster>,
     Json(request): Json<UserLogin>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (token, user_id) = do_login(&server_db, &request.username, &request.password).await?;
-    let mut commit_index = 0;
-
-    if user_id.is_some() {
-        let (index, _result) = cluster
-            .exec(ClusterLogin {
-                user: request.username,
-                new_token: token.clone(),
-            })
-            .await?;
-        commit_index = index;
-    }
+    let (_user_id, token) = do_login(&server_db, &request.username, &request.password).await?;
+    let (commit_index, _result) = cluster
+        .exec(ClusterLogin {
+            user: request.username,
+            new_token: token.clone(),
+        })
+        .await?;
 
     Ok((
         StatusCode::OK,
@@ -100,7 +95,7 @@ pub(crate) async fn login(
 
 #[utoipa::path(post,
     path = "/api/v1/cluster/logout",
-    operation_id = "cluster_logout",
+    operation_id = "cluster_user_logout",
     tag = "agdb",
     security(("Token" = [])),
     responses(

@@ -12,6 +12,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminDbCopy()**](AgdbApi.md#adminDbCopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy |  |
 | [**adminDbDelete()**](AgdbApi.md#adminDbDelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete |  |
 | [**adminDbExec()**](AgdbApi.md#adminDbExec) | **POST** /api/v1/admin/db/{owner}/{db}/exec |  |
+| [**adminDbExecMut()**](AgdbApi.md#adminDbExecMut) | **POST** /api/v1/admin/db/{owner}/{db}/exec_mut |  |
 | [**adminDbList()**](AgdbApi.md#adminDbList) | **GET** /api/v1/admin/db/list |  |
 | [**adminDbOptimize()**](AgdbApi.md#adminDbOptimize) | **POST** /api/v1/admin/db/{owner}/{db}/optimize |  |
 | [**adminDbRemove()**](AgdbApi.md#adminDbRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove |  |
@@ -27,7 +28,10 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
 | [**adminUserLogout()**](AgdbApi.md#adminUserLogout) | **POST** /api/v1/admin/user/{username}/logout |  |
 | [**adminUserRemove()**](AgdbApi.md#adminUserRemove) | **DELETE** /api/v1/admin/user/{username}/remove |  |
+| [**clusterAdminUserLogout()**](AgdbApi.md#clusterAdminUserLogout) | **POST** /api/v1/cluster/admin/user/{username}/logout |  |
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
+| [**clusterUserLogin()**](AgdbApi.md#clusterUserLogin) | **POST** /api/v1/cluster/user/login |  |
+| [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/logout |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
@@ -36,6 +40,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**dbCopy()**](AgdbApi.md#dbCopy) | **POST** /api/v1/db/{owner}/{db}/copy |  |
 | [**dbDelete()**](AgdbApi.md#dbDelete) | **DELETE** /api/v1/db/{owner}/{db}/delete |  |
 | [**dbExec()**](AgdbApi.md#dbExec) | **POST** /api/v1/db/{owner}/{db}/exec |  |
+| [**dbExecMut()**](AgdbApi.md#dbExecMut) | **POST** /api/v1/db/{owner}/{db}/exec_mut |  |
 | [**dbList()**](AgdbApi.md#dbList) | **GET** /api/v1/db/list |  |
 | [**dbOptimize()**](AgdbApi.md#dbOptimize) | **POST** /api/v1/db/{owner}/{db}/optimize |  |
 | [**dbRemove()**](AgdbApi.md#dbRemove) | **DELETE** /api/v1/db/{owner}/{db}/remove |  |
@@ -508,6 +513,68 @@ try {
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->adminDbExec: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| db owner user name | |
+| **db** | **string**| db name | |
+| **query_type** | [**\Agnesoft\AgdbApi\Model\QueryType[]**](../Model/QueryType.md)|  | |
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\QueryResult[]**](../Model/QueryResult.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `adminDbExecMut()`
+
+```php
+adminDbExecMut($owner, $db, $query_type): \Agnesoft\AgdbApi\Model\QueryResult[]
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | db owner user name
+$db = 'db_example'; // string | db name
+$query_type = array(new \Agnesoft\AgdbApi\Model\QueryType()); // \Agnesoft\AgdbApi\Model\QueryType[]
+
+try {
+    $result = $apiInstance->adminDbExecMut($owner, $db, $query_type);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminDbExecMut: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
@@ -1411,6 +1478,63 @@ try {
 [[Back to Model list]](../../README.md#models)
 [[Back to README]](../../README.md)
 
+## `clusterAdminUserLogout()`
+
+```php
+clusterAdminUserLogout($username)
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$username = 'username_example'; // string | user name
+
+try {
+    $apiInstance->clusterAdminUserLogout($username);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterAdminUserLogout: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **username** | **string**| user name | |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
 ## `clusterStatus()`
 
 ```php
@@ -1457,6 +1581,114 @@ No authorization required
 
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterUserLogin()`
+
+```php
+clusterUserLogin($user_login): string
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client()
+);
+$user_login = new \Agnesoft\AgdbApi\Model\UserLogin(); // \Agnesoft\AgdbApi\Model\UserLogin
+
+try {
+    $result = $apiInstance->clusterUserLogin($user_login);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterUserLogin: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **user_login** | [**\Agnesoft\AgdbApi\Model\UserLogin**](../Model/UserLogin.md)|  | |
+
+### Return type
+
+**string**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `text/plain`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterUserLogout()`
+
+```php
+clusterUserLogout()
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $apiInstance->clusterUserLogout();
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterUserLogout: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)
@@ -1919,6 +2151,68 @@ try {
     print_r($result);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dbExec: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **owner** | **string**| db owner user name | |
+| **db** | **string**| db name | |
+| **query_type** | [**\Agnesoft\AgdbApi\Model\QueryType[]**](../Model/QueryType.md)|  | |
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\QueryResult[]**](../Model/QueryResult.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `dbExecMut()`
+
+```php
+dbExecMut($owner, $db, $query_type): \Agnesoft\AgdbApi\Model\QueryResult[]
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$owner = 'owner_example'; // string | db owner user name
+$db = 'db_example'; // string | db name
+$query_type = array(new \Agnesoft\AgdbApi\Model\QueryType()); // \Agnesoft\AgdbApi\Model\QueryType[]
+
+try {
+    $result = $apiInstance->dbExecMut($owner, $db, $query_type);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->dbExecMut: ', $e->getMessage(), PHP_EOL;
 }
 ```
 

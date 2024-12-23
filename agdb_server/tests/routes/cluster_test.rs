@@ -33,6 +33,13 @@ async fn rebalance() -> anyhow::Result<()> {
         assert_eq!(statuses[0], *status);
     }
 
+    let mut new_leader = AgdbApi::new(ReqwestClient::new(), &servers[1].address);
+    new_leader.user_login(ADMIN, ADMIN).await?;
+    new_leader.admin_user_add("test", "password123").await?;
+    new_leader
+        .admin_db_add("test", "test", DbType::Memory)
+        .await?;
+
     let dir = &servers[0].dir;
     servers[0].process = Command::cargo_bin("agdb_server")?
         .current_dir(dir)

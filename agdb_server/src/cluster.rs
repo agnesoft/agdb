@@ -215,6 +215,8 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
         return Ok(());
     }
 
+    let index = cluster.index;
+
     for node in &cluster.nodes {
         let node = node.clone();
         let shutdown_signal = shutdown_signal.clone();
@@ -222,8 +224,15 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {
                     if let Some(response) = node.send(&request).await {
-                        node.responses.send((request, response))?;
+                        match node.responses.send((request, response)) {
+                            Ok(_) => {}
+                            Err(e) => tracing::warn!(
+                                "[{index}] Error sending response to cluster node: {e:?}"
+                            ),
+                        };
                     }
+                } else {
+                    break;
                 }
             }
 
@@ -252,11 +261,20 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                     .await?
                 {
                     for request in requests {
-                        response_cluster.nodes[request.target as usize]
+                        let target = request.target;
+                        match response_cluster.nodes[request.target as usize]
                             .requests_sender
-                            .send(request)?;
+                            .send(request)
+                        {
+                            Ok(_) => {}
+                            Err(e) => tracing::warn!(
+                                "[{index}] Error sending request to node '{target}': {e:?}"
+                            ),
+                        }
                     }
-                };
+                }
+            } else {
+                break;
             }
         }
         ServerResult::Ok(())
@@ -265,9 +283,16 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     while !shutdown_signal.load(Ordering::Relaxed) {
         if let Some(requests) = cluster.raft.write().await.process() {
             for request in requests {
-                cluster.nodes[request.target as usize]
+                let target = request.target;
+                match cluster.nodes[request.target as usize]
                     .requests_sender
-                    .send(request)?;
+                    .send(request)
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::warn!("[{index}] Error sending request to node '{target}': {e:?}")
+                    }
+                }
             }
         }
     }

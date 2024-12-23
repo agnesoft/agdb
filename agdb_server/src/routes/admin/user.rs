@@ -13,6 +13,7 @@ use agdb_api::UserStatus;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::Json;
 
 #[utoipa::path(post,
@@ -38,7 +39,7 @@ pub(crate) async fn add(
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     password::validate_username(&username)?;
     password::validate_password(&request.password)?;
 
@@ -48,15 +49,18 @@ pub(crate) async fn add(
 
     let pswd = Password::create(&username, &request.password);
 
-    cluster
-        .append(UserAdd {
+    let (commit_index, _result) = cluster
+        .exec(UserAdd {
             user: username,
             password: pswd.password.to_vec(),
             salt: pswd.user_salt.to_vec(),
         })
         .await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(put,
@@ -81,20 +85,23 @@ pub(crate) async fn change_password(
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
     Json(request): Json<UserCredentials>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let _user = server_db.user_id(&username).await?;
     password::validate_password(&request.password)?;
     let pswd = Password::create(&username, &request.password);
 
-    cluster
-        .append(ChangePasswordAction {
+    let (commit_index, _result) = cluster
+        .exec(ChangePasswordAction {
             user: username.to_string(),
             new_password: pswd.password.to_vec(),
             new_salt: pswd.user_salt.to_vec(),
         })
         .await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(get,
@@ -158,14 +165,17 @@ pub(crate) async fn remove(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Path(username): Path<String>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     server_db.user_id(&username).await?;
 
-    cluster
-        .append(UserRemove {
+    let (commit_index, _result) = cluster
+        .exec(UserRemove {
             user: username.to_string(),
         })
         .await?;
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok((
+        StatusCode::NO_CONTENT,
+        [("commit-index", commit_index.to_string())],
+    ))
 }

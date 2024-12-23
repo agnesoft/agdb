@@ -1,11 +1,10 @@
-use std::fmt::Display;
-
 use agdb::DbError;
 use agdb::DbValue;
 use agdb::QueryResult;
 use agdb::QueryType;
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt::Display;
 use utoipa::ToSchema;
 
 #[derive(
@@ -70,7 +69,7 @@ pub struct AdminStatus {
     pub size: u64,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
 pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]
@@ -116,9 +115,30 @@ pub struct UserStatus {
 impl From<&str> for DbType {
     fn from(value: &str) -> Self {
         match value {
-            "mapped" => DbType::Mapped,
-            "file" => DbType::File,
-            _ => DbType::Memory,
+            "mapped" => Self::Mapped,
+            "file" => Self::File,
+            _ => Self::Memory,
+        }
+    }
+}
+
+impl From<&str> for DbResource {
+    fn from(value: &str) -> Self {
+        match value {
+            "db" => Self::Db,
+            "audit" => Self::Audit,
+            "backup" => Self::Backup,
+            _ => Self::All,
+        }
+    }
+}
+
+impl From<&str> for DbUserRole {
+    fn from(value: &str) -> Self {
+        match value {
+            "admin" => Self::Admin,
+            "write" => Self::Write,
+            _ => Self::Read,
         }
     }
 }
@@ -131,8 +151,30 @@ impl TryFrom<DbValue> for DbType {
     }
 }
 
+impl TryFrom<DbValue> for DbResource {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(Self::from(value.to_string().as_str()))
+    }
+}
+
+impl TryFrom<DbValue> for DbUserRole {
+    type Error = DbError;
+
+    fn try_from(value: DbValue) -> Result<Self, Self::Error> {
+        Ok(Self::from(value.to_string().as_str()))
+    }
+}
+
 impl From<DbType> for DbValue {
     fn from(value: DbType) -> Self {
+        value.to_string().into()
+    }
+}
+
+impl From<DbResource> for DbValue {
+    fn from(value: DbResource) -> Self {
         value.to_string().into()
     }
 }
@@ -160,21 +202,13 @@ impl Display for DbResource {
 
 impl From<&DbValue> for DbUserRole {
     fn from(value: &DbValue) -> Self {
-        match value.to_u64().unwrap_or_default() {
-            1 => Self::Admin,
-            2 => Self::Write,
-            _ => Self::Read,
-        }
+        Self::from(value.to_string().as_str())
     }
 }
 
 impl From<DbUserRole> for DbValue {
     fn from(value: DbUserRole) -> Self {
-        match value {
-            DbUserRole::Admin => 1_u64.into(),
-            DbUserRole::Write => 2_u64.into(),
-            DbUserRole::Read => 3_u64.into(),
-        }
+        value.to_string().into()
     }
 }
 

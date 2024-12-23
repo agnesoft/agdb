@@ -15,6 +15,7 @@ use agdb_api::UserLogin;
 use agdb_api::UserStatus;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::Json;
 use uuid::Uuid;
 
@@ -100,7 +101,7 @@ pub(crate) async fn change_password(
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
     Json(request): Json<ChangePassword>,
-) -> ServerResponse {
+) -> ServerResponse<impl IntoResponse> {
     let user = server_db.user_by_id(user.0).await?;
     let old_pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
@@ -111,15 +112,18 @@ pub(crate) async fn change_password(
     password::validate_password(&request.new_password)?;
     let pswd = Password::create(&user.username, &request.new_password);
 
-    cluster
-        .append(ChangePasswordAction {
+    let (commit_index, _result) = cluster
+        .exec(ChangePasswordAction {
             user: user.username,
             new_password: pswd.password.to_vec(),
             new_salt: pswd.user_salt.to_vec(),
         })
         .await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        [("commit-index", commit_index.to_string())],
+    ))
 }
 
 #[utoipa::path(get,

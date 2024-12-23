@@ -1,4 +1,5 @@
 use crate::server_error::ServerResult;
+use agdb::DbId;
 use serde::Deserialize;
 use serde::Serialize;
 use std::marker::PhantomData;
@@ -7,6 +8,7 @@ use std::time::Instant;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Log<T> {
+    pub(crate) db_id: Option<DbId>,
     pub(crate) index: u64,
     pub(crate) term: u64,
     pub(crate) data: T,
@@ -80,11 +82,12 @@ struct Node {
 }
 
 pub(crate) trait Storage<T, N> {
-    async fn append(&mut self, log: Log<T>, notifier: Option<N>);
+    async fn append(&mut self, log: Log<T>, notifier: Option<N>) -> ServerResult<()>;
     async fn commit(&mut self, index: u64) -> ServerResult<()>;
     fn log_index(&self) -> u64;
     fn log_term(&self) -> u64;
     fn log_commit(&self) -> u64;
+    fn log_executed(&self) -> u64;
     async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<T>>>;
 }
 
@@ -159,6 +162,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         notifier: Option<N>,
     ) -> ServerResult<Vec<Request<T>>> {
         let log = Log {
+            db_id: None,
             index: self.local().log_index,
             term: self.term,
             data,
@@ -180,7 +184,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
                 data: RequestType::Append(vec![log.clone()]),
             })
             .collect();
-        self.storage.append(log, notifier).await;
+        self.storage.append(log, notifier).await?;
 
         if self.size == 1 {
             self.commit_storage(self.local().log_index).await?;
@@ -319,7 +323,9 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
         for log in logs {
             self.validate_log_commit(request, log)?;
-            self.append_storage(log).await;
+            self.append_storage(log)
+                .await
+                .map_err(|e| self.commit_error(request, e.description))?;
         }
 
         if self.local().log_commit < request.log_commit {
@@ -332,10 +338,11 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         Self::ok(request)
     }
 
-    async fn append_storage(&mut self, log: &Log<T>) {
-        self.storage.append(log.clone(), None).await;
+    async fn append_storage(&mut self, log: &Log<T>) -> ServerResult<()> {
+        self.storage.append(log.clone(), None).await?;
         self.local_mut().log_index = log.index + 1;
         self.local_mut().log_term = log.term;
+        Ok(())
     }
 
     async fn commit_storage(&mut self, index: u64) -> ServerResult<()> {
@@ -672,9 +679,10 @@ mod test {
     }
 
     impl Storage<u8, ()> for TestStorage {
-        async fn append(&mut self, log: Log<u8>, _notifier: Option<()>) {
+        async fn append(&mut self, log: Log<u8>, _notifier: Option<()>) -> ServerResult<()> {
             self.logs.truncate(log.index as usize);
             self.logs.push(log);
+            Ok(())
         }
 
         async fn commit(&mut self, index: u64) -> ServerResult<()> {
@@ -691,6 +699,10 @@ mod test {
         }
 
         fn log_commit(&self) -> u64 {
+            self.commit
+        }
+
+        fn log_executed(&self) -> u64 {
             self.commit
         }
 

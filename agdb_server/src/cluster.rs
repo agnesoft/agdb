@@ -1,6 +1,6 @@
 use crate::action::Action;
 use crate::action::ClusterAction;
-use crate::action::ClusterResponse;
+use crate::action::ClusterActionResult;
 use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::raft;
@@ -10,6 +10,7 @@ use crate::raft::Response;
 use crate::raft::Storage;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
+use agdb::DbId;
 use agdb::StableHash;
 use agdb_api::HttpClient;
 use agdb_api::ReqwestClient;
@@ -17,7 +18,7 @@ use axum::body::Body;
 use axum::extract::Request as AxumRequest;
 use axum::response::Response as AxumResponse;
 use reqwest::StatusCode;
-use std::collections::VecDeque;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicU64;
@@ -33,7 +34,7 @@ use tokio::sync::RwLock;
 pub(crate) type Cluster = Arc<ClusterImpl>;
 
 type ClusterNode = Arc<ClusterNodeImpl>;
-type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<ClusterResponse>>;
+type ResultNotifier = tokio::sync::oneshot::Sender<ServerResult<(u64, ClusterActionResult)>>;
 type ClusterResponseReceiver = UnboundedReceiver<(Request<ClusterAction>, Response)>;
 
 pub(crate) struct ClusterNodeImpl {
@@ -54,11 +55,12 @@ pub(crate) struct ClusterImpl {
 }
 
 impl ClusterImpl {
-    pub(crate) async fn append<T: Action + Into<ClusterAction>>(
+    pub(crate) async fn exec<T: Action + Into<ClusterAction>>(
         &self,
         action: T,
-    ) -> ServerResult<ClusterResponse> {
-        let (sender, receiver) = tokio::sync::oneshot::channel::<ServerResult<ClusterResponse>>();
+    ) -> ServerResult<(u64, ClusterActionResult)> {
+        let (sender, receiver) =
+            tokio::sync::oneshot::channel::<ServerResult<(u64, ClusterActionResult)>>();
         let requests = self
             .raft
             .write()
@@ -173,7 +175,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
         config.cluster.iter().map(|url| url.to_string()).collect();
     sorted_cluster.sort();
     let hash = sorted_cluster.stable_hash();
-    let storage = ClusterStorage::new(db.clone(), db_pool.clone(), config.clone()).await?;
+    let storage = ClusterStorage::new(db.clone(), db_pool.clone()).await?;
     let settings = raft::ClusterSettings {
         index: index as u64,
         hash,
@@ -291,89 +293,94 @@ pub(crate) async fn start_with_shutdown(
 }
 
 pub(crate) struct ClusterStorage {
-    logs: VecDeque<(Log<ClusterAction>, Option<ResultNotifier>)>,
+    result_notifiers: HashMap<DbId, ResultNotifier>,
     index: u64,
     term: u64,
-    commit: Arc<AtomicU64>,
+    commit: u64,
+    executed: Arc<AtomicU64>,
     db: ServerDb,
     db_pool: DbPool,
-    config: Config,
 }
 
 impl ClusterStorage {
-    async fn new(db: ServerDb, db_pool: DbPool, config: Config) -> ServerResult<Self> {
-        let (index, term) = db.cluster_log().await?;
-        let unexecuted_logs = db.logs_unexecuted().await?;
+    async fn new(db: ServerDb, db_pool: DbPool) -> ServerResult<Self> {
+        let (index, term, commit) = db.cluster_log().await?;
+        let logs = db.logs_unexecuted(commit).await?;
 
-        let storage = Self {
-            logs: VecDeque::new(),
+        let mut storage = Self {
+            result_notifiers: HashMap::new(),
             index,
             term,
-            commit: Arc::new(AtomicU64::new(index)),
+            commit,
+            executed: Arc::new(AtomicU64::new(index)),
             db,
             db_pool,
-            config,
         };
 
-        for log in unexecuted_logs {
-            storage.execute_log(log, None).await?;
+        for log in logs {
+            storage.execute_log(log).await?;
         }
 
         Ok(storage)
     }
 
-    async fn execute_log(
-        &self,
-        log: Log<ClusterAction>,
-        notifier: Option<ResultNotifier>,
-    ) -> Result<(), crate::server_error::ServerError> {
-        let log_id = self.db.commit_log(&log).await?;
-        let commit = self.commit.clone();
-        let mut db = self.db.clone();
-        let mut db_pool = self.db_pool.clone();
-        let config = self.config.clone();
+    async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
+        let log_id = log.db_id.unwrap_or_default();
+        let executed = self.executed.clone();
+        let db = self.db.clone();
+        let db_pool = self.db_pool.clone();
+        let notifier = self.result_notifiers.remove(&log_id);
 
         tokio::spawn(async move {
-            let result = log.data.exec(&mut db, &mut db_pool, &config).await;
-            commit.fetch_max(log.index, Ordering::Relaxed);
-            let _ = db.commit_log_executed(log_id).await;
+            let result = log.data.exec(db.clone(), db_pool).await;
+            executed.fetch_max(log.index, Ordering::Relaxed);
+            let _ = db.log_executed(log_id).await;
 
             if let Some(notifier) = notifier {
-                let _ = notifier.send(result);
+                let _ = notifier.send(result.map(|r| (log.index, r)));
             }
         });
+
         Ok(())
     }
 }
 
 impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
-    async fn append(&mut self, log: Log<ClusterAction>, notifier: Option<ResultNotifier>) {
-        if let Some(index) = self
-            .logs
-            .iter()
-            .rev()
-            .position(|(l, _)| l.index == log.index && l.term == log.term)
-        {
-            self.logs.truncate(index);
-        }
-
+    async fn append(
+        &mut self,
+        log: Log<ClusterAction>,
+        notifier: Option<ResultNotifier>,
+    ) -> ServerResult<()> {
+        self.db.remove_uncommitted_logs_since(log.index).await?;
+        let log_id = self.db.append_log(&log).await?;
         self.index = log.index;
         self.term = log.term;
-        self.logs.push_back((log, notifier));
-    }
 
-    async fn commit(&mut self, index: u64) -> ServerResult<()> {
-        while let Some((log, _notifier)) = self.logs.front() {
-            if log.index <= index {
-                if let Some((log, notifier)) = self.logs.pop_front() {
-                    self.execute_log(log, notifier).await?;
-                }
-            } else {
-                break;
-            }
+        if let Some(notifier) = notifier {
+            self.result_notifiers.insert(log_id, notifier);
         }
 
         Ok(())
+    }
+
+    async fn commit(&mut self, index: u64) -> ServerResult<()> {
+        for log in self.db.logs_uncommitted(index).await? {
+            self.commit = index;
+            self.db
+                .log_committed(log.db_id.expect("log should have db_id"))
+                .await?;
+            self.execute_log(log).await?;
+        }
+
+        Ok(())
+    }
+
+    fn log_commit(&self) -> u64 {
+        self.commit
+    }
+
+    fn log_executed(&self) -> u64 {
+        self.executed.load(Ordering::Relaxed)
     }
 
     fn log_index(&self) -> u64 {
@@ -384,20 +391,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         self.term
     }
 
-    fn log_commit(&self) -> u64 {
-        self.commit.load(Ordering::Relaxed)
-    }
-
     async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
-        let mut logs = self.db.logs(since_index).await?;
-        logs.extend_from_slice(
-            &self
-                .logs
-                .iter()
-                .map(|(log, _)| log)
-                .cloned()
-                .collect::<Vec<Log<ClusterAction>>>(),
-        );
-        Ok(logs)
+        self.db.logs_since(since_index).await
     }
 }

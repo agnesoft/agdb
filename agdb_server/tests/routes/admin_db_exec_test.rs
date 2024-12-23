@@ -113,7 +113,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
-        .admin_db_exec("owner", "db", &vec![])
+        .admin_db_exec("owner", "db", &[])
         .await
         .unwrap_err()
         .status;
@@ -130,7 +130,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .admin_db_exec(owner, "db", &vec![])
+        .admin_db_exec(owner, "db", &[])
         .await
         .unwrap_err()
         .status;
@@ -143,7 +143,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .admin_db_exec("owner", "db", &vec![])
+        .admin_db_exec("owner", "db", &[])
         .await
         .unwrap_err()
         .status;

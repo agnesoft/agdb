@@ -53,8 +53,8 @@ impl<T: SearchQueryBuilder> Search<T> {
     /// Use breadth-first (BFS) search algorithm. This option is redundant as
     /// BFS is the default. BFS means each level of the graph is examined in full
     /// before advancing to the next level. E.g. all edges coming from a node,
-    /// then all the nodes connected to them, then all edges coming from each of the
-    /// nodes etc.
+    /// then all the nodes connected to them in the same order. Then all edges
+    /// coming from each of those nodes etc.
     ///
     /// Options:
     ///
@@ -71,7 +71,8 @@ impl<T: SearchQueryBuilder> Search<T> {
 
     /// Use depth-first (DFS) search algorithm. DFS means each element is followed
     /// up to its dead end (or already visited element) before examining a next element.
-    /// E.g. first edge, its connected node, its first outgoing edge etc.
+    /// The algorithm is exhausting each path before backtracking one step at a time to
+    /// try another when it reaches the end in any direction.
     ///
     /// Options:
     ///

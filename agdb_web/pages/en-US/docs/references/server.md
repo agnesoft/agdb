@@ -100,7 +100,8 @@ The admin users can do some (but not all) actions that the owner can:
 | /api/v1/db/{owner}/{db}/convert     | admin      | converts db between memory/mapped/file                                                           |
 | /api/v1/db/{owner}/{db}/copy        | read       | creates a copy of the database under the current user                                            |
 | /api/v1/db/{owner}/{db}/delete      | owner      | deletes the database including files on disk                                                     |
-| /api/v1/db/{owner}/{db}/exec        | read\*     | executes queries against the database (\*read permissions only allow immutable queries)          |
+| /api/v1/db/{owner}/{db}/exec        | read       | executes queries against the database (does not allow mutable queries)                           |
+| /api/v1/db/{owner}/{db}/exec_mut    | write      | executes queries against the database (allows both mutable and immutable queries)                |
 | /api/v1/db/{owner}/{db}/optimize    | write      | optimizes the underlying file storage packing the data reclaiming unused regions (defragmenting) |
 | /api/v1/db/{owner}/{db}/remove      | owner      | removes the database from the server but keeps the files on disk (main, WAL, backup, audit)      |
 | /api/v1/db/{owner}/{db}/rename      | owner      | changes the name of the database (this API can be used to transfer db ownership!)                |
@@ -116,7 +117,7 @@ Each database can be backed up. The backup API `/api/v1/db/{owner}/{db}/backup` 
 
 ### Queries
 
-All queries are executed using the single `/api/v1/db/{owner}/{db}/exec` endpoint and are exactly the same as in the embedded/application database (see [Queries documentation](/docs/references/queries)). However, depending on the user's role the server may reject executing the queries (i.e. mutable queries executed by the user with `read` role in the database). The endpoint accepts a list of queries and the entire list is run as a transaction meaning either all queries succeed or none of them do. The endpoint will return list of results, one per executed query.
+All queries are executed using the single `/api/v1/db/{owner}/{db}/exec` (read only queries) and `/api/v1/db/{owner}/{db}/exec_mut` (for queries that also write to the database) endpoint and are exactly the same as in the embedded/application database (see [Queries documentation](/docs/references/queries)). However, depending on the user's role the server may reject executing the queries (i.e. mutable queries executed by the user with `read` role in the database). The endpoints accept a list of queries and the entire list is run as a transaction meaning either all queries succeed or none of them do. The endpoint will return list of results, one per executed query.
 
 It is possible to reference queries from each other in the list and the server will inject results of the referenced queries to the next one. This is slight extension to the vanilla `agdb` queries. It is best illustrated by an example:
 
@@ -140,7 +141,7 @@ There can be either:
 -   unlimited amount of immutable transactions
 -   exactly one mutable transaction
 
-However the `agdb` is written in such a way that it performs excellently even under heavily contested read/write load. See `agdb_benchmarks` and [performance documentation](/docs/references/performance).
+However, the `agdb` is written in such a way that it performs excellently even under heavily contested read/write load. See `agdb_benchmarks` and [performance documentation](/docs/references/performance).
 
 ## Admin
 

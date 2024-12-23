@@ -75,7 +75,7 @@ client.db_add("my_user", "my_db", DbType::Mapped).await?; // Memory mapped datab
 
 ### Run our first queries
 
-To run queries against the database we call `exec`. In this case we will insert node "users" and 3 user nodes and connect them together.
+To run queries against the database we call `db_exec` (for read only queries) and `db_exec_mut` (for queries that also write to the database). In this case we will insert node "users" and 3 user nodes and connect them together.
 
 <Callout>
     Note that we can feed the result of a previous query directly to the next
@@ -108,7 +108,7 @@ let queries: Vec<QueryType> = vec![QueryBuilder::insert().nodes().aliases("users
                                    QueryBuilder::insert().edges().from("users").to(":1").query().into(),
                             ];
 
-client.exec("my_user", "my_db", &queries).await?;
+client.db_exec_mut("my_user", "my_db", &queries).await?;
 ```
 
 ## Run more queries
@@ -130,7 +130,7 @@ let queries = vec![QueryBuilder::select()
                     .query()];
 
 // Runs the query against the db, grabs the first result and converts it to the collection of users.
-let users: Vec<User> = client.exec("my_user", "my_db", &queries).await?[0].try_into()?;
+let users: Vec<User> = client.db_exec("my_user", "my_db", &queries).await?[0].try_into()?;
 
 println!("{:?}", users);
 ```

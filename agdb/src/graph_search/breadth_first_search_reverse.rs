@@ -5,54 +5,60 @@ use crate::graph_search::search_impl::SearchIndex;
 use crate::graph_search::search_impl::SearchIterator;
 use crate::storage::Storage;
 use crate::StorageData;
-use std::vec::IntoIter;
+use std::collections::VecDeque;
 
 pub struct BreadthFirstSearchReverse {
-    stack_iterator: IntoIter<SearchIndex>,
-}
-
-impl BreadthFirstSearchReverse {
-    fn take_stack(stack: &mut Vec<SearchIndex>) -> Vec<SearchIndex> {
-        let mut res = Vec::<SearchIndex>::new();
-        std::mem::swap(&mut res, stack);
-
-        res
-    }
+    stack: VecDeque<SearchIndex>,
 }
 
 impl<D> SearchIterator<D> for BreadthFirstSearchReverse
 where
     D: StorageData,
 {
-    fn expand_edge<Data: GraphData<D>>(
-        index: GraphIndex,
-        graph: &GraphImpl<D, Data>,
-        storage: &Storage<D>,
-    ) -> GraphIndex {
-        graph.edge(storage, index).unwrap().index_from()
-    }
-
-    fn expand_node<Data: GraphData<D>>(
-        index: GraphIndex,
-        graph: &GraphImpl<D, Data>,
-        storage: &Storage<D>,
-    ) -> Vec<GraphIndex> {
-        graph
-            .node(storage, index)
-            .expect("invalid index, expected a valid node index")
-            .edge_iter_to()
-            .map(|edge| edge.index())
-            .collect()
-    }
-
-    fn new(stack: &mut Vec<SearchIndex>) -> Self {
+    fn new(index: GraphIndex) -> Self {
         Self {
-            stack_iterator: Self::take_stack(stack).into_iter(),
+            stack: VecDeque::from(vec![SearchIndex { index, distance: 0 }]),
+        }
+    }
+
+    fn expand<Data: GraphData<D>>(
+        &mut self,
+        current_index: SearchIndex,
+        graph: &GraphImpl<D, Data>,
+        storage: &Storage<D>,
+    ) {
+        if current_index.index.is_node() {
+            if let Some(i) = graph
+                .first_edge_to(storage, current_index.index)
+                .ok()
+                .filter(|i| i.is_valid())
+            {
+                self.stack.push_back(SearchIndex {
+                    index: i,
+                    distance: current_index.distance + 1,
+                });
+            }
+        } else {
+            self.stack.push_back(SearchIndex {
+                index: graph.edge_from(storage, current_index.index),
+                distance: current_index.distance + 1,
+            });
+
+            if let Some(i) = graph
+                .next_edge_to(storage, current_index.index)
+                .ok()
+                .filter(|i| i.is_valid())
+            {
+                self.stack.push_front(SearchIndex {
+                    index: i,
+                    distance: current_index.distance,
+                })
+            }
         }
     }
 
     fn next(&mut self) -> Option<SearchIndex> {
-        self.stack_iterator.next()
+        self.stack.pop_front()
     }
 }
 
@@ -62,6 +68,7 @@ mod tests {
     use super::super::SearchHandler;
     use super::*;
     use crate::graph::DbGraph;
+    use crate::graph::GraphIndex;
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;

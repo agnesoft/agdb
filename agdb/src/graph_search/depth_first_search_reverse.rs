@@ -7,43 +7,57 @@ use crate::storage::Storage;
 use crate::StorageData;
 
 pub struct DepthFirstSearchReverse {
-    index: Option<SearchIndex>,
+    stack: Vec<SearchIndex>,
 }
 
 impl<D> SearchIterator<D> for DepthFirstSearchReverse
 where
     D: StorageData,
 {
-    fn expand_edge<Data: GraphData<D>>(
-        index: GraphIndex,
-        graph: &GraphImpl<D, Data>,
-        storage: &Storage<D>,
-    ) -> GraphIndex {
-        graph
-            .edge(storage, index)
-            .expect("invalid index, expected a valid edge index")
-            .index_from()
+    fn new(index: GraphIndex) -> Self {
+        Self {
+            stack: vec![SearchIndex { index, distance: 0 }],
+        }
     }
 
-    fn expand_node<Data: GraphData<D>>(
-        index: GraphIndex,
+    fn expand<Data: GraphData<D>>(
+        &mut self,
+        current_index: SearchIndex,
         graph: &GraphImpl<D, Data>,
         storage: &Storage<D>,
-    ) -> Vec<GraphIndex> {
-        graph
-            .node(storage, index)
-            .expect("invalid index, expected a valid node index")
-            .edge_iter_to()
-            .map(|edge| edge.index())
-            .collect()
-    }
+    ) {
+        if current_index.index.is_node() {
+            if let Some(i) = graph
+                .first_edge_to(storage, current_index.index)
+                .ok()
+                .filter(|i| i.is_valid())
+            {
+                self.stack.push(SearchIndex {
+                    index: i,
+                    distance: current_index.distance + 1,
+                });
+            }
+        } else {
+            if let Some(i) = graph
+                .next_edge_to(storage, current_index.index)
+                .ok()
+                .filter(|i| i.is_valid())
+            {
+                self.stack.push(SearchIndex {
+                    index: i,
+                    distance: current_index.distance,
+                })
+            }
 
-    fn new(stack: &mut Vec<SearchIndex>) -> Self {
-        Self { index: stack.pop() }
+            self.stack.push(SearchIndex {
+                index: graph.edge_from(storage, current_index.index),
+                distance: current_index.distance + 1,
+            });
+        }
     }
 
     fn next(&mut self) -> Option<SearchIndex> {
-        self.index.take()
+        self.stack.pop()
     }
 }
 
@@ -53,6 +67,7 @@ mod tests {
     use super::super::SearchHandler;
     use super::*;
     use crate::graph::DbGraph;
+    use crate::graph::GraphIndex;
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;

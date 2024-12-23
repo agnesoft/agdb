@@ -153,7 +153,7 @@ impl ClusterNodeImpl {
             Ok((_, response)) => Some(response),
             Err(e) => {
                 tracing::warn!(
-                    "[{}] Error sending request to cluster node {}: {:?}",
+                    "[{}] Error sending request to cluster node '{}': {:?}",
                     request.index,
                     request.target,
                     e
@@ -217,7 +217,7 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
 
     let index = cluster.index;
 
-    for node in &cluster.nodes {
+    for (node_index, node) in cluster.nodes.iter().enumerate() {
         let node = node.clone();
         let shutdown_signal = shutdown_signal.clone();
         tokio::spawn(async move {
@@ -227,7 +227,7 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                         match node.responses.send((request, response)) {
                             Ok(_) => {}
                             Err(e) => tracing::warn!(
-                                "[{index}] Error sending response to cluster node: {e:?}"
+                                "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
                             ),
                         };
                     }
@@ -262,15 +262,14 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                 {
                     for request in requests {
                         let target = request.target;
-                        match response_cluster.nodes[request.target as usize]
+                        let _ = response_cluster.nodes[request.target as usize]
                             .requests_sender
                             .send(request)
-                        {
-                            Ok(_) => {}
-                            Err(e) => tracing::warn!(
-                                "[{index}] Error sending request to node '{target}': {e:?}"
-                            ),
-                        }
+                            .inspect_err(|e| {
+                                tracing::warn!(
+                                    "[{index}] Error sending follow up request to node '{target}': {e:?}"
+                                )
+                            });
                     }
                 }
             } else {
@@ -284,15 +283,14 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
         if let Some(requests) = cluster.raft.write().await.process() {
             for request in requests {
                 let target = request.target;
-                match cluster.nodes[request.target as usize]
+                let _ = cluster.nodes[request.target as usize]
                     .requests_sender
                     .send(request)
-                {
-                    Ok(_) => {}
-                    Err(e) => {
-                        tracing::warn!("[{index}] Error sending request to node '{target}': {e:?}")
-                    }
-                }
+                    .inspect_err(|e| {
+                        tracing::warn!(
+                            "[{index}] Error sending new request to node '{target}': {e:?}"
+                        )
+                    });
             }
         }
     }

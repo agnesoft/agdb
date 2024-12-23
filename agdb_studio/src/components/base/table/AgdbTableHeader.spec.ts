@@ -1,9 +1,9 @@
 import { shallowMount } from "@vue/test-utils";
-import TableHeader from "./AgdbTableHeader.vue";
+import AgdbTableHeader from "./AgdbTableHeader.vue";
 
 describe("TableHeader", () => {
     it("should render", () => {
-        const wrapper = shallowMount(TableHeader, {
+        const wrapper = shallowMount(AgdbTableHeader, {
             props: {
                 tableKey: "table",
             },

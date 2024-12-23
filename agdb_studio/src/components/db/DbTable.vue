@@ -5,6 +5,7 @@ import { addTable } from "@/composables/table/tableConfig";
 import { setTableData } from "@/composables/table/tableData";
 import { watchEffect } from "vue";
 import { dateFormatter } from "@/composables/table/utils";
+import type { TRow } from "@/composables/table/types";
 
 const { databases } = useDbList();
 
@@ -26,7 +27,10 @@ addTable({
             key: "actions",
             title: "Actions",
             actions: [
-                { label: "Edit", action: () => console.log("Edit") },
+                {
+                    label: "Edit",
+                    action: (row: TRow) => console.log("Edit", row.name),
+                },
                 { label: "Delete", action: () => console.log("Delete") },
             ],
         },

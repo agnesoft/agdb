@@ -15,15 +15,15 @@ const row = inject<TRow>(INJECT_KEY_ROW)!;
 <template>
     <AgdbDropdown>
         <template #trigger>
-            <button class="button"><MdRoundMenu /></button>
+            <MdRoundMenu />
         </template>
         <template #content>
-            <div class="agdb-cell-actions-dropdown">
+            <div>
                 <div
                     v-for="action in props.actions"
                     :key="action.label"
                     @click="() => action.action(row)"
-                    class="button"
+                    class="dropdown-item"
                 >
                     {{ action.label }}
                 </div>
@@ -32,4 +32,16 @@ const row = inject<TRow>(INJECT_KEY_ROW)!;
     </AgdbDropdown>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.dropdown-item {
+    padding: 0.5rem;
+    cursor: pointer;
+    transition:
+        background-color 0.2s,
+        color 0.2s;
+    &:hover {
+        background-color: var(--color-background-active);
+        color: var(--black);
+    }
+}
+</style>

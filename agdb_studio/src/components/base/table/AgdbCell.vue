@@ -5,6 +5,7 @@ import {
 } from "@/composables/table/constants";
 import type { Column, TRow } from "@/composables/table/types";
 import { computed, inject } from "vue";
+import AgdbCellMenu from "./AgdbCellMenu.vue";
 
 const props = defineProps({
     cellKey: {
@@ -12,16 +13,19 @@ const props = defineProps({
         required: true,
     },
 });
-const columns = inject<Map<string, Column<TRow>>>(INJECT_KEY_COLUMNS);
-const row = inject<TRow>(INJECT_KEY_ROW);
+const columns = inject<Map<string, Column<TRow>>>(
+    INJECT_KEY_COLUMNS,
+    new Map(),
+);
+const row = inject<TRow>(INJECT_KEY_ROW, {} as TRow);
 
-const column = computed(() => columns?.get(props.cellKey));
-const value = computed(() => row?.[props.cellKey]);
+const column = computed(() => columns.get(props.cellKey));
+const value = computed(() => row[props.cellKey]);
 
 const formattedValue = computed(() => {
-    if (!column.value || !value.value) {
-        return "";
-    }
+    // if (!column.value || !value.value) {
+    //     return "";
+    // }
     if (column.value?.valueFormatter) {
         return column.value.valueFormatter(value.value);
     }

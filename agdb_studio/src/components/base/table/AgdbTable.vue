@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { computed, defineProps, provide } from "vue";
 import { getRows } from "@/composables/table/tableData";
-import TableRow from "@/components/base/table/AgdbTableRow.vue";
-import TableHeader from "./AgdbTableHeader.vue";
+import AgdbTableRow from "@/components/base/table/AgdbTableRow.vue";
+import AgdbTableHeader from "./AgdbTableHeader.vue";
 import { getTableColumns } from "@/composables/table/tableConfig";
 import { type TRow } from "@/composables/table/types";
 import {
@@ -25,14 +25,14 @@ const columns = computed(() => {
 });
 
 provide(INJECT_KEY_TABLE_NAME, props.name);
-provide(INJECT_KEY_COLUMNS, columns);
+provide(INJECT_KEY_COLUMNS, columns.value);
 </script>
 
 <template>
     <div class="agdb-table">
-        <TableHeader :tableKey="name" />
+        <AgdbTableHeader :tableKey="name" />
         <template v-for="row in rows" :key="row[0]">
-            <TableRow :row="row[1]" :columns="columns" />
+            <AgdbTableRow :row="row[1]" :columns="columns" />
         </template>
     </div>
 </template>

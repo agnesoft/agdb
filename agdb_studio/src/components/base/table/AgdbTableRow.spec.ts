@@ -1,10 +1,10 @@
 import { shallowMount } from "@vue/test-utils";
-import TableRow from "./AgdbTableRow.vue";
+import AgdbTableRow from "./AgdbTableRow.vue";
 import { columnsMap } from "@/tests/tableMocks";
 
 describe("TableRow", () => {
     it("should render", () => {
-        const wrapper = shallowMount(TableRow, {
+        const wrapper = shallowMount(AgdbTableRow, {
             props: {
                 columns: columnsMap,
                 row: {

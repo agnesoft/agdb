@@ -4,7 +4,6 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 
 | Method | HTTP request | Description |
 | ------------- | ------------- | ------------- |
-| [**adminClusterLogout()**](AgdbApi.md#adminClusterLogout) | **POST** /api/v1/admin/cluster/{username}/logout |  |
 | [**adminDbAdd()**](AgdbApi.md#adminDbAdd) | **POST** /api/v1/admin/db/{owner}/{db}/add |  |
 | [**adminDbAudit()**](AgdbApi.md#adminDbAudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit |  |
 | [**adminDbBackup()**](AgdbApi.md#adminDbBackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup |  |
@@ -29,9 +28,10 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
 | [**adminUserLogout()**](AgdbApi.md#adminUserLogout) | **POST** /api/v1/admin/user/{username}/logout |  |
 | [**adminUserRemove()**](AgdbApi.md#adminUserRemove) | **DELETE** /api/v1/admin/user/{username}/remove |  |
-| [**clusterLogin()**](AgdbApi.md#clusterLogin) | **POST** /api/v1/cluster/login |  |
-| [**clusterLogout()**](AgdbApi.md#clusterLogout) | **POST** /api/v1/cluster/logout |  |
+| [**clusterAdminUserLogout()**](AgdbApi.md#clusterAdminUserLogout) | **POST** /api/v1/cluster/admin/user/{username}/logout |  |
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
+| [**clusterUserLogin()**](AgdbApi.md#clusterUserLogin) | **POST** /api/v1/cluster/user/login |  |
+| [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/logout |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
@@ -55,63 +55,6 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**userLogout()**](AgdbApi.md#userLogout) | **POST** /api/v1/user/logout |  |
 | [**userStatus()**](AgdbApi.md#userStatus) | **GET** /api/v1/user/status |  |
 
-
-## `adminClusterLogout()`
-
-```php
-adminClusterLogout($username)
-```
-
-
-
-### Example
-
-```php
-<?php
-require_once(__DIR__ . '/vendor/autoload.php');
-
-
-// Configure Bearer authorization: Token
-$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
-
-
-$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
-    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
-    // This is optional, `GuzzleHttp\Client` will be used as default.
-    new GuzzleHttp\Client(),
-    $config
-);
-$username = 'username_example'; // string | user name
-
-try {
-    $apiInstance->adminClusterLogout($username);
-} catch (Exception $e) {
-    echo 'Exception when calling AgdbApi->adminClusterLogout: ', $e->getMessage(), PHP_EOL;
-}
-```
-
-### Parameters
-
-| Name | Type | Description  | Notes |
-| ------------- | ------------- | ------------- | ------------- |
-| **username** | **string**| user name | |
-
-### Return type
-
-void (empty response body)
-
-### Authorization
-
-[Token](../../README.md#Token)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: Not defined
-
-[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
-[[Back to Model list]](../../README.md#models)
-[[Back to README]](../../README.md)
 
 ## `adminDbAdd()`
 
@@ -1535,64 +1478,10 @@ try {
 [[Back to Model list]](../../README.md#models)
 [[Back to README]](../../README.md)
 
-## `clusterLogin()`
+## `clusterAdminUserLogout()`
 
 ```php
-clusterLogin($user_login): string
-```
-
-
-
-### Example
-
-```php
-<?php
-require_once(__DIR__ . '/vendor/autoload.php');
-
-
-
-$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
-    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
-    // This is optional, `GuzzleHttp\Client` will be used as default.
-    new GuzzleHttp\Client()
-);
-$user_login = new \Agnesoft\AgdbApi\Model\UserLogin(); // \Agnesoft\AgdbApi\Model\UserLogin
-
-try {
-    $result = $apiInstance->clusterLogin($user_login);
-    print_r($result);
-} catch (Exception $e) {
-    echo 'Exception when calling AgdbApi->clusterLogin: ', $e->getMessage(), PHP_EOL;
-}
-```
-
-### Parameters
-
-| Name | Type | Description  | Notes |
-| ------------- | ------------- | ------------- | ------------- |
-| **user_login** | [**\Agnesoft\AgdbApi\Model\UserLogin**](../Model/UserLogin.md)|  | |
-
-### Return type
-
-**string**
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `text/plain`
-
-[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
-[[Back to Model list]](../../README.md#models)
-[[Back to README]](../../README.md)
-
-## `clusterLogout()`
-
-```php
-clusterLogout()
+clusterAdminUserLogout($username)
 ```
 
 
@@ -1614,17 +1503,20 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
+$username = 'username_example'; // string | user name
 
 try {
-    $apiInstance->clusterLogout();
+    $apiInstance->clusterAdminUserLogout($username);
 } catch (Exception $e) {
-    echo 'Exception when calling AgdbApi->clusterLogout: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling AgdbApi->clusterAdminUserLogout: ', $e->getMessage(), PHP_EOL;
 }
 ```
 
 ### Parameters
 
-This endpoint does not need any parameter.
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **username** | **string**| user name | |
 
 ### Return type
 
@@ -1689,6 +1581,114 @@ No authorization required
 
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterUserLogin()`
+
+```php
+clusterUserLogin($user_login): string
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client()
+);
+$user_login = new \Agnesoft\AgdbApi\Model\UserLogin(); // \Agnesoft\AgdbApi\Model\UserLogin
+
+try {
+    $result = $apiInstance->clusterUserLogin($user_login);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterUserLogin: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **user_login** | [**\Agnesoft\AgdbApi\Model\UserLogin**](../Model/UserLogin.md)|  | |
+
+### Return type
+
+**string**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `text/plain`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
+## `clusterUserLogout()`
+
+```php
+clusterUserLogout()
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+
+try {
+    $apiInstance->clusterUserLogout();
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->clusterUserLogout: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

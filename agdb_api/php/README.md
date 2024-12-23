@@ -59,12 +59,14 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
     new GuzzleHttp\Client(),
     $config
 );
-$username = 'username_example'; // string | user name
+$owner = 'owner_example'; // string | user name
+$db = 'db_example'; // string | db name
+$db_type = new \Agnesoft\AgdbApi\Model\\Agnesoft\AgdbApi\Model\DbType(); // \Agnesoft\AgdbApi\Model\DbType
 
 try {
-    $apiInstance->adminClusterLogout($username);
+    $apiInstance->adminDbAdd($owner, $db, $db_type);
 } catch (Exception $e) {
-    echo 'Exception when calling AgdbApi->adminClusterLogout: ', $e->getMessage(), PHP_EOL;
+    echo 'Exception when calling AgdbApi->adminDbAdd: ', $e->getMessage(), PHP_EOL;
 }
 
 ```
@@ -75,7 +77,6 @@ All URIs are relative to *http://localhost:3000*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*AgdbApi* | [**adminClusterLogout**](docs/Api/AgdbApi.md#adminclusterlogout) | **POST** /api/v1/admin/cluster/{username}/logout | 
 *AgdbApi* | [**adminDbAdd**](docs/Api/AgdbApi.md#admindbadd) | **POST** /api/v1/admin/db/{owner}/{db}/add | 
 *AgdbApi* | [**adminDbAudit**](docs/Api/AgdbApi.md#admindbaudit) | **GET** /api/v1/admin/db/{owner}/{db}/audit | 
 *AgdbApi* | [**adminDbBackup**](docs/Api/AgdbApi.md#admindbbackup) | **POST** /api/v1/admin/db/{owner}/{db}/backup | 
@@ -100,9 +101,10 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminUserList**](docs/Api/AgdbApi.md#adminuserlist) | **GET** /api/v1/admin/user/list | 
 *AgdbApi* | [**adminUserLogout**](docs/Api/AgdbApi.md#adminuserlogout) | **POST** /api/v1/admin/user/{username}/logout | 
 *AgdbApi* | [**adminUserRemove**](docs/Api/AgdbApi.md#adminuserremove) | **DELETE** /api/v1/admin/user/{username}/remove | 
-*AgdbApi* | [**clusterLogin**](docs/Api/AgdbApi.md#clusterlogin) | **POST** /api/v1/cluster/login | 
-*AgdbApi* | [**clusterLogout**](docs/Api/AgdbApi.md#clusterlogout) | **POST** /api/v1/cluster/logout | 
+*AgdbApi* | [**clusterAdminUserLogout**](docs/Api/AgdbApi.md#clusteradminuserlogout) | **POST** /api/v1/cluster/admin/user/{username}/logout | 
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
+*AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 
+*AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/logout | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
 *AgdbApi* | [**dbBackup**](docs/Api/AgdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 

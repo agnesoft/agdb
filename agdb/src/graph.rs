@@ -717,7 +717,7 @@ where
         Ok(0 <= self.data.from(storage, index)?)
     }
 
-    fn next_edge_from(
+    pub(crate) fn next_edge_from(
         &self,
         storage: &Storage<D>,
         index: GraphIndex,
@@ -725,7 +725,11 @@ where
         Ok(GraphIndex::from(-self.data.from_meta(storage, index)?))
     }
 
-    fn next_edge_to(&self, storage: &Storage<D>, index: GraphIndex) -> Result<GraphIndex, DbError> {
+    pub(crate) fn next_edge_to(
+        &self,
+        storage: &Storage<D>,
+        index: GraphIndex,
+    ) -> Result<GraphIndex, DbError> {
         Ok(GraphIndex::from(-self.data.to_meta(storage, index)?))
     }
 

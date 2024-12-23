@@ -7,43 +7,62 @@ use crate::storage::Storage;
 use crate::StorageData;
 
 pub struct DepthFirstSearch {
-    index: Option<SearchIndex>,
+    stack: Vec<SearchIndex>,
 }
 
 impl<D> SearchIterator<D> for DepthFirstSearch
 where
     D: StorageData,
 {
-    fn expand_edge<Data: GraphData<D>>(
-        index: GraphIndex,
-        graph: &GraphImpl<D, Data>,
-        storage: &Storage<D>,
-    ) -> GraphIndex {
-        graph
-            .edge(storage, index)
-            .expect("invalid index, expected a valid edge index")
-            .index_to()
+    fn new(index: GraphIndex) -> Self {
+        Self {
+            stack: vec![SearchIndex { index, distance: 0 }],
+        }
     }
 
-    fn expand_node<Data: GraphData<D>>(
-        index: GraphIndex,
+    fn expand<Data: GraphData<D>>(
+        &mut self,
+        current_index: SearchIndex,
         graph: &GraphImpl<D, Data>,
         storage: &Storage<D>,
-    ) -> Vec<GraphIndex> {
-        graph
-            .node(storage, index)
-            .expect("invalid index, expected a valid node index")
-            .edge_iter_from()
-            .map(|edge| edge.index())
-            .collect()
-    }
+        follow: bool,
+    ) {
+        if current_index.index.is_node() {
+            if follow {
+                if let Some(i) = graph
+                    .first_edge_from(storage, current_index.index)
+                    .ok()
+                    .filter(|i| i.is_valid())
+                {
+                    self.stack.push(SearchIndex {
+                        index: i,
+                        distance: current_index.distance + 1,
+                    });
+                }
+            }
+        } else {
+            if let Some(i) = graph
+                .next_edge_from(storage, current_index.index)
+                .ok()
+                .filter(|i| i.is_valid())
+            {
+                self.stack.push(SearchIndex {
+                    index: i,
+                    distance: current_index.distance,
+                })
+            }
 
-    fn new(stack: &mut Vec<SearchIndex>) -> Self {
-        Self { index: stack.pop() }
+            if follow {
+                self.stack.push(SearchIndex {
+                    index: graph.edge_to(storage, current_index.index),
+                    distance: current_index.distance + 1,
+                });
+            }
+        }
     }
 
     fn next(&mut self) -> Option<SearchIndex> {
-        self.index.take()
+        self.stack.pop()
     }
 }
 
@@ -53,6 +72,7 @@ mod tests {
     use super::super::SearchHandler;
     use super::*;
     use crate::graph::DbGraph;
+    use crate::graph::GraphIndex;
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
@@ -111,7 +131,7 @@ mod tests {
         assert_eq!(
             result,
             Ok(vec![
-                node1, edge1, node2, edge3, node3, edge5, edge6, edge4, edge2
+                node1, edge2, node2, edge4, node3, edge6, edge5, edge3, edge1
             ])
         );
     }
@@ -136,7 +156,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Ok(vec![node1, edge1, node2, edge2, node3, edge3, node4])
+            Ok(vec![node1, edge3, node4, edge2, node3, edge1, node2])
         );
     }
 
@@ -164,7 +184,7 @@ mod tests {
             },
         );
 
-        assert_eq!(result, Ok(vec![node1, node2, node3, node4]));
+        assert_eq!(result, Ok(vec![node1, node4, node3, node2]));
     }
 
     #[test]
@@ -217,7 +237,7 @@ mod tests {
 
         let mut result =
             GraphSearch::from((&graph, &storage)).depth_first_search(node1, Handler::default());
-        let expected = Ok(vec![node1, edge1, node2, edge2, node3, edge3, node4]);
+        let expected = Ok(vec![node1, edge3, node4, edge2, node3, edge1, node2]);
 
         assert_eq!(result, expected);
 
@@ -255,6 +275,6 @@ mod tests {
             },
         );
 
-        assert_eq!(result, Ok(vec![node1, edge1, node2, edge2]));
+        assert_eq!(result, Ok(vec![node1, edge2, node2, edge1]));
     }
 }

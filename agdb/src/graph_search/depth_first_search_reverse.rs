@@ -7,43 +7,62 @@ use crate::storage::Storage;
 use crate::StorageData;
 
 pub struct DepthFirstSearchReverse {
-    index: Option<SearchIndex>,
+    stack: Vec<SearchIndex>,
 }
 
 impl<D> SearchIterator<D> for DepthFirstSearchReverse
 where
     D: StorageData,
 {
-    fn expand_edge<Data: GraphData<D>>(
-        index: GraphIndex,
-        graph: &GraphImpl<D, Data>,
-        storage: &Storage<D>,
-    ) -> GraphIndex {
-        graph
-            .edge(storage, index)
-            .expect("invalid index, expected a valid edge index")
-            .index_from()
+    fn new(index: GraphIndex) -> Self {
+        Self {
+            stack: vec![SearchIndex { index, distance: 0 }],
+        }
     }
 
-    fn expand_node<Data: GraphData<D>>(
-        index: GraphIndex,
+    fn expand<Data: GraphData<D>>(
+        &mut self,
+        current_index: SearchIndex,
         graph: &GraphImpl<D, Data>,
         storage: &Storage<D>,
-    ) -> Vec<GraphIndex> {
-        graph
-            .node(storage, index)
-            .expect("invalid index, expected a valid node index")
-            .edge_iter_to()
-            .map(|edge| edge.index())
-            .collect()
-    }
+        follow: bool,
+    ) {
+        if current_index.index.is_node() {
+            if follow {
+                if let Some(i) = graph
+                    .first_edge_to(storage, current_index.index)
+                    .ok()
+                    .filter(|i| i.is_valid())
+                {
+                    self.stack.push(SearchIndex {
+                        index: i,
+                        distance: current_index.distance + 1,
+                    });
+                }
+            }
+        } else {
+            if let Some(i) = graph
+                .next_edge_to(storage, current_index.index)
+                .ok()
+                .filter(|i| i.is_valid())
+            {
+                self.stack.push(SearchIndex {
+                    index: i,
+                    distance: current_index.distance,
+                })
+            }
 
-    fn new(stack: &mut Vec<SearchIndex>) -> Self {
-        Self { index: stack.pop() }
+            if follow {
+                self.stack.push(SearchIndex {
+                    index: graph.edge_from(storage, current_index.index),
+                    distance: current_index.distance + 1,
+                });
+            }
+        }
     }
 
     fn next(&mut self) -> Option<SearchIndex> {
-        self.index.take()
+        self.stack.pop()
     }
 }
 
@@ -53,6 +72,7 @@ mod tests {
     use super::super::SearchHandler;
     use super::*;
     use crate::graph::DbGraph;
+    use crate::graph::GraphIndex;
     use crate::graph_search::GraphSearch;
     use crate::storage::file_storage::FileStorage;
     use crate::test_utilities::test_file::TestFile;
@@ -108,5 +128,36 @@ mod tests {
         let expected = Ok(vec![node4, edge3, node3, edge2, node2, edge1, node1]);
 
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn stop_at_distance() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
+
+        let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
+        let _edge4 = graph.insert_edge(&mut storage, node3, node1).unwrap();
+
+        let result = GraphSearch::from((&graph, &storage)).depth_first_search_reverse(
+            node3,
+            Handler {
+                processor: |_index: GraphIndex, distance: u64| {
+                    if distance == 2 {
+                        SearchControl::Stop(true)
+                    } else {
+                        SearchControl::Continue(true)
+                    }
+                },
+            },
+        );
+
+        assert_eq!(result, Ok(vec![node3, edge3, node2]));
     }
 }

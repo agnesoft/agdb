@@ -185,7 +185,7 @@ async fn db() -> anyhow::Result<()> {
     assert_eq!(db.db_type, DbType::Mapped);
 
     client.db_copy(ADMIN, "db1", ADMIN, "db2").await?;
-    let db = &client.db_list().await?.1[1];
+    let db = &client.db_list().await?.1[0];
     assert_eq!(db.name, "admin/db2");
     client.db_backup(ADMIN, "db2").await?;
 
@@ -193,7 +193,7 @@ async fn db() -> anyhow::Result<()> {
     assert_eq!(client.db_list().await?.1.len(), 1);
 
     client.db_add(ADMIN, "db2", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[1];
+    let db = &client.db_list().await?.1[0];
     assert_eq!(db.name, "admin/db2");
     assert_ne!(db.backup, 0);
 
@@ -234,8 +234,9 @@ async fn db() -> anyhow::Result<()> {
     client
         .db_user_add(ADMIN, "db2", "user2", DbUserRole::Write)
         .await?;
-    let users = client.db_user_list(ADMIN, "db2").await?.1;
-    let expected = vec![
+    let mut users = client.db_user_list(ADMIN, "db2").await?.1;
+    users.sort();
+    let mut expected = vec![
         DbUser {
             user: ADMIN.to_string(),
             role: DbUserRole::Admin,
@@ -245,6 +246,7 @@ async fn db() -> anyhow::Result<()> {
             role: DbUserRole::Write,
         },
     ];
+    expected.sort();
     assert_eq!(users, expected);
     client.db_user_remove(ADMIN, "db2", "user2").await?;
     let users = client.db_user_list(ADMIN, "db2").await?.1;
@@ -288,7 +290,7 @@ async fn db_admin() -> anyhow::Result<()> {
     assert_eq!(db.db_type, DbType::Mapped);
 
     client.admin_db_copy(ADMIN, "db1", ADMIN, "db2").await?;
-    let db = &client.db_list().await?.1[1];
+    let db = &client.db_list().await?.1[0];
     assert_eq!(db.name, "admin/db2");
     client.admin_db_backup(ADMIN, "db2").await?;
 
@@ -296,7 +298,7 @@ async fn db_admin() -> anyhow::Result<()> {
     assert_eq!(client.db_list().await?.1.len(), 1);
 
     client.admin_db_add(ADMIN, "db2", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[1];
+    let db = &client.db_list().await?.1[0];
     assert_eq!(db.name, "admin/db2");
     assert_ne!(db.backup, 0);
 
@@ -337,8 +339,9 @@ async fn db_admin() -> anyhow::Result<()> {
     client
         .admin_db_user_add(ADMIN, "db2", "user2", DbUserRole::Write)
         .await?;
-    let users = client.admin_db_user_list(ADMIN, "db2").await?.1;
-    let expected = vec![
+    let mut users = client.admin_db_user_list(ADMIN, "db2").await?.1;
+    users.sort();
+    let mut expected = vec![
         DbUser {
             user: ADMIN.to_string(),
             role: DbUserRole::Admin,
@@ -348,6 +351,7 @@ async fn db_admin() -> anyhow::Result<()> {
             role: DbUserRole::Write,
         },
     ];
+    expected.sort();
     assert_eq!(users, expected);
     client.admin_db_user_remove(ADMIN, "db2", "user2").await?;
     let users = client.admin_db_user_list(ADMIN, "db2").await?.1;

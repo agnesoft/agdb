@@ -19,21 +19,22 @@ async fn list() -> anyhow::Result<()> {
         .api
         .db_user_add(owner, db, user, DbUserRole::Write)
         .await?;
-    let (status, list) = server.api.db_user_list(owner, db).await?;
+    let (status, mut list) = server.api.db_user_list(owner, db).await?;
+    list.sort();
+    let mut expected = vec![
+        DbUser {
+            user: owner.to_string(),
+            role: DbUserRole::Admin,
+        },
+        DbUser {
+            user: user.to_string(),
+            role: DbUserRole::Write,
+        },
+    ];
+    expected.sort();
+
     assert_eq!(status, 200);
-    assert_eq!(
-        list,
-        vec![
-            DbUser {
-                user: owner.to_string(),
-                role: DbUserRole::Admin,
-            },
-            DbUser {
-                user: user.to_string(),
-                role: DbUserRole::Write,
-            }
-        ]
-    );
+    assert_eq!(list, expected);
     Ok(())
 }
 

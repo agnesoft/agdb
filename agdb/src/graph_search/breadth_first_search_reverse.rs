@@ -26,23 +26,28 @@ where
         current_index: SearchIndex,
         graph: &GraphImpl<D, Data>,
         storage: &Storage<D>,
+        follow: bool,
     ) {
         if current_index.index.is_node() {
-            if let Some(i) = graph
-                .first_edge_to(storage, current_index.index)
-                .ok()
-                .filter(|i| i.is_valid())
-            {
+            if follow {
+                if let Some(i) = graph
+                    .first_edge_to(storage, current_index.index)
+                    .ok()
+                    .filter(|i| i.is_valid())
+                {
+                    self.stack.push_back(SearchIndex {
+                        index: i,
+                        distance: current_index.distance + 1,
+                    });
+                }
+            }
+        } else {
+            if follow {
                 self.stack.push_back(SearchIndex {
-                    index: i,
+                    index: graph.edge_from(storage, current_index.index),
                     distance: current_index.distance + 1,
                 });
             }
-        } else {
-            self.stack.push_back(SearchIndex {
-                index: graph.edge_from(storage, current_index.index),
-                distance: current_index.distance + 1,
-            });
 
             if let Some(i) = graph
                 .next_edge_to(storage, current_index.index)

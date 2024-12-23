@@ -25,17 +25,20 @@ where
         current_index: SearchIndex,
         graph: &GraphImpl<D, Data>,
         storage: &Storage<D>,
+        follow: bool,
     ) {
         if current_index.index.is_node() {
-            if let Some(i) = graph
-                .first_edge_to(storage, current_index.index)
-                .ok()
-                .filter(|i| i.is_valid())
-            {
-                self.stack.push(SearchIndex {
-                    index: i,
-                    distance: current_index.distance + 1,
-                });
+            if follow {
+                if let Some(i) = graph
+                    .first_edge_to(storage, current_index.index)
+                    .ok()
+                    .filter(|i| i.is_valid())
+                {
+                    self.stack.push(SearchIndex {
+                        index: i,
+                        distance: current_index.distance + 1,
+                    });
+                }
             }
         } else {
             if let Some(i) = graph
@@ -49,10 +52,12 @@ where
                 })
             }
 
-            self.stack.push(SearchIndex {
-                index: graph.edge_from(storage, current_index.index),
-                distance: current_index.distance + 1,
-            });
+            if follow {
+                self.stack.push(SearchIndex {
+                    index: graph.edge_from(storage, current_index.index),
+                    distance: current_index.distance + 1,
+                });
+            }
         }
     }
 

@@ -22,6 +22,7 @@ pub trait SearchIterator<D: StorageData> {
         current_index: SearchIndex,
         graph: &GraphImpl<D, Data>,
         storage: &Storage<D>,
+        follow: bool,
     );
     fn next(&mut self) -> Option<SearchIndex>;
 }
@@ -90,7 +91,7 @@ where
 
         match handler.process(index.index, index.distance)? {
             SearchControl::Continue(add) => {
-                self.algorithm.expand(index, self.graph, self.storage);
+                self.algorithm.expand(index, self.graph, self.storage, true);
                 add_index = add;
                 result = true;
             }
@@ -99,6 +100,8 @@ where
                 result = false;
             }
             SearchControl::Stop(add) => {
+                self.algorithm
+                    .expand(index, self.graph, self.storage, false);
                 add_index = add;
                 result = true;
             }

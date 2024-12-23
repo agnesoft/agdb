@@ -377,7 +377,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         log: Log<ClusterAction>,
         notifier: Option<ResultNotifier>,
     ) -> ServerResult<()> {
-        self.db.remove_uncommitted_logs_since(log.index).await?;
+        self.db.remove_uncommitted_logs(log.index).await?;
         let log_id = self.db.append_log(&log).await?;
         self.index = log.index;
         self.term = log.term;
@@ -413,7 +413,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         self.term
     }
 
-    async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.db.logs_since(since_index).await
+    async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
+        self.db.logs_since(from_index).await
     }
 }

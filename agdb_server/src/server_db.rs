@@ -468,7 +468,7 @@ impl ServerDb {
         })
     }
 
-    pub(crate) async fn remove_uncommitted_logs_since(&self, since_index: u64) -> ServerResult<()> {
+    pub(crate) async fn remove_uncommitted_logs(&self, from_index: u64) -> ServerResult<()> {
         self.0.write().await.transaction_mut(|t| {
             let logs: Vec<DbId> = t
                 .exec(
@@ -484,7 +484,7 @@ impl ServerDb {
                 .filter_map(|e| {
                     let index = e.values[0].value.to_u64().unwrap_or_default();
 
-                    if index >= since_index {
+                    if index >= from_index {
                         Some(e.id)
                     } else {
                         None
@@ -500,7 +500,7 @@ impl ServerDb {
 
     pub(crate) async fn logs_since(
         &self,
-        since_index: u64,
+        from_index: u64,
     ) -> ServerResult<Vec<Log<ClusterAction>>> {
         self.0.read().await.transaction(|t| {
             let log_count = t
@@ -519,7 +519,7 @@ impl ServerDb {
                     QueryBuilder::search()
                         .depth_first()
                         .from(CLUSTER_LOG)
-                        .limit(log_count - since_index)
+                        .limit(log_count - from_index)
                         .where_()
                         .distance(CountComparison::Equal(2))
                         .query(),

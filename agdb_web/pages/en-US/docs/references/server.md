@@ -7,7 +7,7 @@ description: "Server, Agnesoft Graph Database"
 
 The `agdb_server` is the OpenAPI REST server that provides remote `agdb` database management. Running the server is trivial as there are no dependencies, no complicated configuration etc. It can be run on any platform supported by Rust. Please follow the guide:
 
-[How to run he server?](/docs/guides/how-to-run-server)
+[How to run the server?](/docs/guides/how-to-run-server)
 
 The server is based on [`axum`](https://github.com/tokio-rs/axum) and uses OpenAPI to specify its API (via [`utoipa`](https://github.com/juhaku/utoipa)) and [`rapidoc`](https://rapidocweb.com/) for the OpenAPI GUI. To interact with the server you can use the rapidoc GUI, `curl` or any of the [available API clients](/api-docs/openapi). Internally it uses the `agdb` database:
 
@@ -31,11 +31,11 @@ data_dir: agdb_server_data # directory to store user data
 log_level: INFO # Options are: OFF, ERROR, WARN, INFO, DEBUG, TRACE
 ```
 
-You can prepare it in advance in a file `agdb_server.yaml`. After the server database is created changes to the `admin` field will have no effect but the other settings can be changed later. All config changes require server restart to take effect.
+You can prepare it in advance in a file `agdb_server.yaml`. After the server database is created changes to the `admin` field will have no effect, but the other settings can be changed later. All config changes require server restart to take effect.
 
 ## Users
 
-The server has a single admin account (`admin` by default, configurable with password being the name) that can perform any regular user action + all admin actions such as creating users. You can use this account for using the database locally but it would be advisable to use it only for maintaining the server and to create a regular user for use with the databases:
+The server has a single admin account (`admin` by default, configurable with password being the name) that can perform any regular user action + all admin actions such as creating users. You can use this account for using the database locally, but it would be advisable to use it only for maintaining the server and to create a regular user for use with the databases:
 
 ```bash
  # produce an admin API token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
@@ -57,7 +57,7 @@ Available user APIs:
 | /api/v1/user/logout          | logs out the user and invalidating the API token \*                 |
 | /api/v1/user/status          | returns current user's username and whether it is a server admin \* |
 
-The login is shared meaning if you login twice even from different devices you will get the same shared API token of that user. Similarly when the `logout` endpoint is used this token is invalidated across all sessions.
+The login is shared meaning if you log in twice even from different devices you will get the same shared API token of that user. Similarly, when the `logout` endpoint is used this token is invalidated across all sessions.
 
 ## Databases
 
@@ -75,11 +75,11 @@ mapped # memory mapped database, using memory for reading but persisting changes
 file # file based database only, no memory caching, reading/writing from/to disk
 ```
 
-It is possible to add an existing database to the server. Move the db file to the server data folder and run `/api/v1/db/{owner}/{db}/add` API as if you were creating a new database with the db's name. If the file exists it will be added rather than created. Similarly you can remove database (instead of deleting it) from the server with `/api/v1/db/{owner}/{db}/remove` API that will disassociate the db from the server which you can then move and use elsehwere.
+It is possible to add an existing database to the server. Move the db file to the server data folder and run `/api/v1/db/{owner}/{db}/add` API as if you were creating a new database with the db's name. If the file exists it will be added rather than created. Similarly, you can remove database (instead of deleting it) from the server with `/api/v1/db/{owner}/{db}/remove` API that will disassociate the db from the server which you can then move and use elsewhere.
 
 ### Database Users
 
-Each database is scoped to one user (owner) who can excercise full control over it. The owner can add more users (they must exist on the server) to the database including admin level users with one of three roles:
+Each database is scoped to one user (owner) who can exercise full control over it. The owner can add more users (they must exist on the server) to the database including admin level users with one of three roles:
 
 ```yaml
 read # can only run immutable exec queries
@@ -112,11 +112,11 @@ The admin users can do some (but not all) actions that the owner can:
 
 ### Backups
 
-Each database can be backed up. The backup API `/api/v1/db/{owner}/{db}/backup` has no parameters and will always backup the database under the same name to the "backups" subfolder in the owner's data. The database can be restored with `/api/v1/db/{owner}/{db}/restore` at which point the existing backup will become the main database and the current database will become the backup so it is not possible to "lose" the current state even if accidentally "restoring". You can revert to the state before backup by running another `/api/v1/db/{owner}/{db}/restore`. If you need more granular backup or multiple backups you can devise your own scheme using the `/api/v1/db/{owner}/{db}/copy`, `/api/v1/db/{owner}/{db}/rename` and possibly `/api/v1/db/{owner}/{db}/remove` or `/api/v1/db/{owner}/{db}/delete` APIs.
+Each database can be backed up. The backup API `/api/v1/db/{owner}/{db}/backup` has no parameters and will always back up the database under the same name to the "backups" subfolder in the owner's data. The database can be restored with `/api/v1/db/{owner}/{db}/restore` at which point the existing backup will become the main database and the current database will become the backup so it is not possible to "lose" the current state even if accidentally "restoring". You can revert to the state before backup by running another `/api/v1/db/{owner}/{db}/restore`. If you need more granular backup or multiple backups you can devise your own scheme using the `/api/v1/db/{owner}/{db}/copy`, `/api/v1/db/{owner}/{db}/rename` and possibly `/api/v1/db/{owner}/{db}/remove` or `/api/v1/db/{owner}/{db}/delete` APIs.
 
 ### Queries
 
-All queries are executed using the single `/api/v1/db/{owner}/{db}/exec` endpoint and are exactly the same as in the embedded/application database (see [Queries documentation](/docs/references/queries)). However depending on the user's role the server may reject executing the queries (i.e. mutable queries executed by the user with `read` role in the database). The endpoint accepts a list of queries and the entire list is run as a transaction meaning either all queries succeed or none of them do. The endpoint will return list of results, one per executed query.
+All queries are executed using the single `/api/v1/db/{owner}/{db}/exec` endpoint and are exactly the same as in the embedded/application database (see [Queries documentation](/docs/references/queries)). However, depending on the user's role the server may reject executing the queries (i.e. mutable queries executed by the user with `read` role in the database). The endpoint accepts a list of queries and the entire list is run as a transaction meaning either all queries succeed or none of them do. The endpoint will return list of results, one per executed query.
 
 It is possible to reference queries from each other in the list and the server will inject results of the referenced queries to the next one. This is slight extension to the vanilla `agdb` queries. It is best illustrated by an example:
 
@@ -144,18 +144,18 @@ However the `agdb` is written in such a way that it performs excellently even un
 
 ## Admin
 
-Each `agdb_server` has exactly one admin account (`admin` by default) that acts as a regular user but additonally is allowed to execute APIs under `/admin/`. These mostly copies the APIs for regular users but some of the restrictions are not enforced (i.e. ownership or db role). Additionally the admin has access to the following exclusive APIs:
+Each `agdb_server` has exactly one admin account (`admin` by default) that acts as a regular user but additionally is allowed to execute APIs under `/admin/`. These mostly copies the APIs for regular users but some of the restrictions are not enforced (i.e. ownership or db role). Furthermore, the admin has access to the following exclusive APIs:
 
-| Action                                        | Description                                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| /api/v1/admin/shutdown                        | gracefully shuts down the server                                                                 |
-| /api/v1/admin/status                          | lists extended statiscs on the server - uptime, # dbs, # users, # logged users, server data size |
-| /api/v1/admin/user/list                       | lists the all users on the server                                                                |
-| /api/v1/admin/user/{username}/logout          | force logout of any user                                                                         |
-| /api/v1/admin/user/{username}/add             | adds new user to the server                                                                      |
-| /api/v1/admin/user/{username}/change_password | changes password of a user                                                                       |
-| /api/v1/admin/user/{username}/remove          | deletes user and all their data (databases) from the server                                      |
-| /api/v1/admin/db/\*                           | provides same endpoints as for regular users but without owner/role restrictions                 |
+| Action                                        | Description                                                                                        |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| /api/v1/admin/shutdown                        | gracefully shuts down the server                                                                   |
+| /api/v1/admin/status                          | lists extended statistics of the server - uptime, # dbs, # users, # logged users, server data size |
+| /api/v1/admin/user/list                       | lists the all users on the server                                                                  |
+| /api/v1/admin/user/{username}/logout          | force logout of any user                                                                           |
+| /api/v1/admin/user/{username}/add             | adds new user to the server                                                                        |
+| /api/v1/admin/user/{username}/change_password | changes password of a user                                                                         |
+| /api/v1/admin/user/{username}/remove          | deletes user and all their data (databases) from the server                                        |
+| /api/v1/admin/db/\*                           | provides same endpoints as for regular users but without owner/role restrictions                   |
 
 ## Shutdown
 
@@ -168,7 +168,7 @@ curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/shu
 
 ## Misc
 
-Following are the special or miscellanerous endpoints:
+Following are the special or miscellaneous endpoints:
 
 | Endpoint             | Description                                          |
 | -------------------- | ---------------------------------------------------- |

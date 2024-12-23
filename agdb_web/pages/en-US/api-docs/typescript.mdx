@@ -23,7 +23,7 @@ https://nodejs.org/en
 
 ### Create your project
 
-Let's create a directory (e.g. `my_agdb`) and nitialize the package:
+Let's create a directory (e.g. `my_agdb`) and initialize the package:
 
 ```bash
 mkdir my_agdb
@@ -76,7 +76,7 @@ async function main() {
 }
 ```
 
-### Create a databasse user
+### Create a database user
 
 To create a database user we use the default admin user:
 
@@ -145,7 +145,7 @@ let results = (await client.db_exec({ owner: "user1", db: "db1" }, queries))
     .data;
 ```
 
-### Print the the result of the final query to the console:
+### Print the result of the final query to the console:
 
 ```ts
 console.log(`User (id: ${results[3].elements[0].id})`);

@@ -120,7 +120,7 @@ impl Db {
 
 Alternatively you can run a series of queries as a [transaction](#transactions).
 
-All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#queryresult) is the universal data structure holding results of all queries in an uniform structure. The [`QueryError`](#queryerror) is the singular error type holding information of any failure or problem encountered when running the query.
+All queries return `Result<QueryResult, QueryError>`. The [`QueryResult`](#queryresult) is the universal data structure holding results of all queries in a uniform structure. The [`QueryError`](#queryerror) is the singular error type holding information of any failure or problem encountered when running the query.
 
 ## Types
 
@@ -137,9 +137,9 @@ pub trait DbUserValue: Sized {
 }
 ```
 
-Typically you would derive this trait with `agdb::UserValue` procedural macro that uses the field names as keys (of type `String`) and loss-lessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
+Typically, you would derive this trait with `agdb::UserValue` procedural macro that uses the field names as keys (of type `String`) and losslessly converts the values when reading/writing from/to the database from supported types (e.g. field type `i32` will become `i64` in the database).
 
-It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with a query shorthands. However it is optional and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders.
+It is recommended but optional to have `db_id` field of type `Option<T: Into<DbId>>` (e.g. `Option<QueryId>` or `Option<DbId>`) in your user defined types which will further allow you to directly update your values with query shorthands. However, it is optional, and all other features will still work including conversion from `QueryResult` or passing your types to `values()` in the builders.
 
 The `agdb::UserValue` macro also supports `Option`al types. When a value is `None` it will be omitted when saving the object to the database.
 
@@ -155,7 +155,7 @@ user.name = "Alice".to_string();
 db.exec_mut(QueryBuilder::insert().element(&user).query())?; //updates the user element with new name
 ```
 
-In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field enitrely or construct it based on other values.
+In some cases you may want to implement the `DbUserValue` trait yourself. For example when you want to omit a field entirely or construct it based on other values.
 
 Types not directly used in the database but for which the conversions are supported:
 
@@ -169,7 +169,7 @@ Types not directly used in the database but for which the conversions are suppor
 -   Vec<&str> => Vec<String> (only one way conversion to `Vec<String>`)
 -   bool (\*)
 
-\* The boolean type is not a native type in the `agdb` but you can still use it in your types in any language. The `bool` type will be converted to `u64` (0 == false, 1 == true). The `Vec<bool>` type will be converted to `Vec<u8>` (bytes, 0 == false, 1 == true). The conversion back to `bool` is possible from wider range of values - the same rules apply for vectorized version which however cannot be converted to from single values:
+\* The boolean type is not a native type in the `agdb`, but you can still use it in your types in any language. The `bool` type will be converted to `u64` (0 == false, 1 == true). The `Vec<bool>` type will be converted to `Vec<u8>` (bytes, 0 == false, 1 == true). The conversion back to `bool` is possible from wider range of values - the same rules apply for vectorized version which however cannot be converted to from single values:
 
 -   u64 / i64: any non-zero value will be `true`
 -   f64: any value except `0.0` will be `true`
@@ -186,7 +186,7 @@ pub struct QueryResult {
 }
 ```
 
-The `result` field holds numerical result of the query. It typically returns the number of database items affected. For example when selecting from the database it will hold a positive number of elements returned. When removing from the database it will hold a negative number of elements deleted from the database. The optional `from` and `to` fields will hold origin/destination id of an edge and will be `None` for nodes.
+The `result` field holds numerical result of the query. It typically returns the number of database items affected. For example when selecting from the database it will hold a positive number of elements returned. When removing from the database it will hold a negative number of elements deleted from the database. The optional `from` and `to` fields will hold origin/destination `id` of an edge and will be `None` for nodes.
 
 The `elements` field hold the [database elements](/docs/guides/concepts#graph) returned. Each element looks like:
 
@@ -245,7 +245,7 @@ fn vec_string(&self) -> Result<&Vec<String>, DbError>;
 fn vec_bool(&self) -> Result<Vec<bool>, DbError>;
 ```
 
-The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For bool conversion details refer to [DbUserValue](#dbuservalue) section.
+The numerical variants (`I64`, `U64`, `DbF64`) will attempt loss-less conversions where possible. To avoid copies all other variants return `&` where conversions are not possible even if they could be done in theory. The special case is `to_string()` provided by the `Display` trait. It converts any values into string (it also copies the `String` variant) and performs possibly lossy conversion from `Bytes` to UTF-8 string. For `bool` conversion details refer to [DbUserValue](#dbuservalue) section.
 
 ### QueryError, DbError
 
@@ -253,7 +253,7 @@ Failure when running a query is reported through a single `QueryError` object wh
 
 ### QueryId, QueryIds
 
-Most queries operate over a set of database ids. The `QueryIds` type is actually an enum:
+Most queries operate over a set of database `ids`. The `QueryIds` type is actually an enum:
 
 ```rs
 pub enum QueryIds {
@@ -262,7 +262,7 @@ pub enum QueryIds {
 }
 ```
 
-It represents either a set of actual `ids` or a `search` query that will be executed as the larger query and its results fed as ids to the larger query. The `QueryId` is defined as another enum:
+It represents either a set of actual `ids` or a `search` query that will be executed as the larger query and its results fed as `ids` to the larger query. The `QueryId` is defined as another enum:
 
 ```rs
 pub enum QueryId {
@@ -275,7 +275,7 @@ This is because you can refer to the database elements via their numerical ident
 
 ### QueryValues
 
-The `QueryValues` is a an enum type that makes a distinction between singular and multiple values like so:
+The `QueryValues` is an enum type that makes a distinction between singular and multiple values like so:
 
 ```rs
 pub enum QueryValues {
@@ -284,7 +284,7 @@ pub enum QueryValues {
 }
 ```
 
-This is especially important because it can change the meaning of a query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely `QueryValues::Multi` will initialize each element with a different provided set of properties but the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
+This is especially important because it can change the meaning of a query making use of this type. For example when inserting elements into the database and supplying `QueryValues::Single` all the elements will have the copy of the single set of properties associated with them. Conversely, `QueryValues::Multi` will initialize each element with a different provided set of properties but the number of inserted elements and the number of property sets must then match (it would be a query logic error if they did not match and the query would fail with such an error).
 
 ## Mutable queries
 
@@ -297,7 +297,7 @@ The `insert` queries are used for both insert and updating data while `remove` q
 
 ## Immutable queries
 
-Immutable queries read the data from the database and there can be unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
+Immutable queries read the data from the database and there can be an unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
 
 -   select
 -   search
@@ -318,7 +318,7 @@ impl Db {
 }
 ```
 
-The transaction methods take a closure that itself takes a transaction object as an argument. This is to prevent long lived transactions and force them to be as concise as possible. The transaction objects implement the same execution methods as the `Db` itself (`exec` / `exec_mut`). It is not possible to nest transactions but you can run immutable queries within a mutable transaction `TransactionMut`.
+The transaction methods take a closure that itself takes a transaction object as an argument. This is to prevent long-lived transactions and force them to be as concise as possible. The transaction objects implement the same execution methods as the `Db` itself (`exec` / `exec_mut`). It is not possible to nest transactions, but you can run immutable queries within a mutable transaction `TransactionMut`.
 
 Note that you cannot manually abort, rollback or commit the transaction. These are handled by the database itself based on the result of the closure. If it's `Ok` the transaction will be committed (in case of the `mutable` queries as there is nothing to commit for `immutable` queries). If the result is `Err` the transaction will be rolled back.
 
@@ -369,7 +369,7 @@ QueryBuilder::insert().aliases(["a", "b"]).ids([1, 2]).query();
 
 Inserts or updates aliases of existing nodes (and only nodes, edges cannot have aliases) through this query. It takes `ids` [`QueryIds`](#queryids--queryid) and list of `aliases` as arguments. The number of aliases must match the `ids` (even if they are a search query). Empty alias (`""`) are not allowed.
 
-Note that this query is also used for updating existing aliases. By inserting a different alias of an id that already has one that alias will be overwritten with the new one.
+Note that this query is also used for updating existing aliases. By inserting a different alias of an `id` that already has one that alias will be overwritten with the new one.
 
 ### Insert edges
 
@@ -415,7 +415,7 @@ QueryBuilder::insert().edges().ids(QueryBuilder::search().from(1).where_().edge(
 
 </td></tr></table>
 
-The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All ids must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert edges as normal. If the list is not empty all ids must exist and refer to existing edges and the query will perform update of values instead. Note: the specified from/to (origin/destination) for the updated edges is not checked against those supplied via `ids`.
+The `from` and `to` represents list of origins and destinations of the edges to be inserted. As per [`QueryIds`](#queryids--queryid) it can be a list, single value, search query or even a result of another query (e.g. [insert nodes](#insert-nodes)) through the call of convenient `QueryResult::ids()` method. All `ids` must be `node`s and all must exist in the database otherwise data error will occur. If the `values` is [`QueryValues::Single`](#queryvalues) all edges will be associated with the copy of the same properties. If `values` is [`QueryValues::Multi`](#queryvalues) then the number of edges being inserted must match the provided values otherwise a logic error will occur. By default, the `from` and `to` are expected to be of equal length specifying at each index the pair of nodes to connect with an edge. If all-to-all is desired set the `each` flag to `true`. The rule about the `values` [`QueryValues::Multi`](#queryvalues) still applies though so there must be enough values for all nodes resulting from the combination. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular and vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert edges as normal. If the list is not empty all `ids` must exist and refer to existing edges and the query will perform update of values instead. Note: the specified from/to (origin/destination) for the updated edges is not checked against those supplied via `ids`.
 
 ### Insert index
 
@@ -489,7 +489,11 @@ QueryBuilder::insert().nodes().ids(QueryBuilder::search().from(1).query()).count
 
 </td></tr></table>
 
-The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0` but the query will be a no-op and return empty result. If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must be compatible (aliases <= values), otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal. If the list is not empty all ids must exist and must refer to nodes and the query will perform update instead - both aliases (replacing existing ones if applicable) and values.
+The `count` is the number of nodes to be inserted into the database. It can be omitted (left `0`) if either `values` or `aliases` (or both) are provided. If the `values` is [`QueryValues::Single`](#queryvalues) you must provide either `count` or `aliases`. It is not an error if the count is set to `0`, but the query will be a no-op and return empty result.
+
+If both `values` [`QueryValues::Multi`](#queryvalues) and `aliases` are provided their lengths must be compatible (aliases <= values), otherwise it will result in a logic error. Empty aliases (`""`) are not allowed. The values can be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular and vectorized versions are supported. Optionally one can specify `ids` that facilitates insert-or-update semantics. The field can be a search sub-query. If the resulting list in `ids` is empty the query will insert nodes as normal.
+
+If the list is not empty all `ids` must exist and must refer to nodes and the query will perform update instead - both aliases (replacing existing ones if applicable) and values.
 
 If an alias already exists in the database its values will be amended (inserted or replaced) with the provided values.
 
@@ -529,10 +533,10 @@ QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).searc
 
 </td></tr></table>
 
-Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and ids from your types. The `values()` will be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular nad vectorized versions are supported.
+Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties, but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and `ids` from your types. The `values()` will be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular and vectorized versions are supported.
 
--   If an id is non-0 or an existing alias that element will be updated in the database with provided values.
--   If an id is `0` or an non-existent alias new element (node) will be inserted into the database with that alias.
+-   If an `id` is non-0 or an existing alias that element will be updated in the database with provided values.
+-   If an `id` is `0` or a non-existent alias new element (node) will be inserted into the database with that alias.
 
 Note: that this query is insert-or-update for both nodes and existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
@@ -669,7 +673,7 @@ QueryBuilder::remove().values(["k1".into(), "k2".into()]).search().from("a").que
 
 NOTE: See [`SelectValuesQuery`](#select-values) for more details.
 
-The properties (key-value pairs) identified by `keys` and associated with `ids` [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is an error if any of the `ids` do not exist in the database but it is NOT an error if any of the keys does not exist or is not associated as property to any of the `ids`.
+The properties (key-value pairs) identified by `keys` and associated with `ids` [`QueryIds`](#queryids--queryid) will be removed from the database if they exist. It is an error if any of the `ids` do not exist in the database, but it is NOT an error if any of the keys does not exist or is not associated as property to any of the `ids`.
 
 ## Select
 
@@ -714,7 +718,7 @@ QueryBuilder::select().aliases().search().from(1).query(); //Equivalent to the p
 
 </td></tr></table>
 
-Selects aliases of the `ids` [`QueryIds`](#queryids--queryid) or a search. If any of the ids does not have an alias running the query will return an error.
+Selects aliases of the `ids` [`QueryIds`](#queryids--queryid) or a search. If any of the `ids` does not have an alias running the query will return an error.
 
 ### Select all aliases
 
@@ -782,9 +786,9 @@ QueryBuilder::select().edge_count().search().from("a").query(); // Equivalent to
 
 </td></tr></table>
 
-Selects count of edges of nodes (ids). The `edge_count` variant counts all edges (outgoing & incoming). The `edge_count_from` counts only outgoing edges. The `edge_count_to` counts only incoming edges.
+Selects count of edges of nodes (`ids`). The `edge_count` variant counts all edges (outgoing & incoming). The `edge_count_from` counts only outgoing edges. The `edge_count_to` counts only incoming edges.
 
-NOTE: Self-referential edges (going from the same node to the same node) will be counted twice in the first variant (`edge_count`) as the query counts ountgoing/incoming edges rather than unique database elements. As a result the `edge_count` result may be higher than the actual number of physical edges in such a case.
+NOTE: Self-referential edges (going from the same node to the same node) will be counted twice in the first variant (`edge_count`) as the query counts outgoing/incoming edges rather than unique database elements. As a result the `edge_count` result may be higher than the actual number of physical edges in such a case.
 
 ### Select indexes
 
@@ -848,7 +852,7 @@ QueryBuilder::select().keys().search().from(1).query(); // Equivalent to the pre
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only keys returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing what data is available in on the graph elements (e.g. when transforming the data into a table this query could be used to populate the column names).
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only keys returned. If any of the `ids` does not exist in the database running the query will return an error. This query is most commonly used for establishing what data is available in on the graph elements (e.g. when transforming the data into a table this query could be used to populate the column names).
 
 ### Select key count
 
@@ -881,7 +885,7 @@ QueryBuilder::select().key_count().search().from(1).query(); // Equivalent to th
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only key count returned. If any of the ids does not exist in the database running the query will return an error. This query is most commonly used for establishing how many properties there are associated with the graph elements.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only key count returned. If any of the `ids` does not exist in the database running the query will return an error. This query is most commonly used for establishing how many properties there are associated with the graph elements.
 
 ### Select node count
 
@@ -952,7 +956,7 @@ QueryBuilder::select().elements::<T>().search().from("a").query(); // Equivalent
 
 </td></tr></table>
 
-Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the ids does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()` otherwise the keys may not be in an expected order even if they are otherwise present.
+Selects elements identified by `ids` [`QueryIds`](#queryids--queryid) or search query with only selected properties (identified by the list of keys). If any of the `ids` does not exist in the database or does not have all the keys associated with it then running the query will return an error. The search query is most commonly used to find, filter or otherwise limit what elements to select. You can limit what properties will be returned. If the list of properties to select is empty all properties will be returned. If you plan to convert the result into your user defined type(s) you should use either `elements::<T>()` variant or supply the list of keys to `values()` with `T::db_keys()` provided through the `DbUserValue` trait (`#derive(UserValue)`) as argument to `values()` otherwise the keys may not be in an expected order even if they are otherwise present.
 
 ## Search
 
@@ -1018,19 +1022,48 @@ QueryBuilder::search().from(1).offset(10).limit(5).query();
 
 </td></tr></table>
 
-There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`. For searching disregarding the graph structure and indexes (full search) the algorithm is `elements`.
+There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying them that way can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`. For searching disregarding the graph structure and indexes (full search) the algorithm is `elements`. Elements will never be examined twice during any search regardless of any cycles in the graph.
 
-Very often you would want the values / elements to be returned from the search query. To accomplish it you need to nest the search query in the select query's `ids()` step. That fetches the data as the search query only traverses the graph. E.g. `QueryBuilder::select().ids(QueryBuilder::search().from("alias").query()).query()`. Refer to the [Select Values](#select-values) query for details.
+Very often you would want the values / elements to be returned from the search query. To accomplish it you need to nest the search query in the select query with either `.search()` builder element or `ids()` step that takes a `SearchQuery` as argument. That fetches the data as the search query only traverses the graph. E.g. `QueryBuilder::select().search().from("alias").query()`. Refer to the [Select Values](#select-values) query for details.
 
 If the index search is done the graph traversal is skipped entirely as are most of the parameters including like limit, offset, ordering and conditions.
 
-The graph search query is made up of the `origin` and `destination` of the search and the algorithm. Specifying only `origin` (from) will result in a search along `from->to` edges. Specifying only `destination` (to) will result in the reverse search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm used will be `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element ids. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
+The graph search query is made up of the `origin` and `destination` of the search and the algorithm. Specifying only `origin` (from) will result in a search along `from->to` edges. Specifying only `destination` (to) will result in the reverse search along the `to<-from` edges. When both `origin` and `destination` are specified the search algorithm becomes a path search and the algorithm used will be `A*`. Optionally you can specify a `limit` (0 = unlimited) and `offset` (0 = no offset) to the returned list of graph element `ids`. If specified (!= 0) the `origin` and the `destination` must exist in the database, otherwise an error will be returned. The elements can be optionally ordered with `order_by` list of keys allowing ascending/descending ordering based on multiple properties.
 
-When searching `elements` the database is being scanned in linerly one element (node & edge) at a time which can be very slow. Consider using `limit` in this case. However this search can be useful in exploration, when thethe database structure is not known, when searching for abandoned/lost elements and other edge cases not covered by regular search algorithms. The default order of returned elements is from lowest internal db id to the highest which does not necessarily indicate age of the elements as the ids can be reused when elements are deleted.
+When searching `elements` the database is being scanned in linearly one element (node & edge) at a time which can be very slow. Consider using `limit` in this case. However, this search can be useful in exploration, when the database structure is not known, when searching for abandoned/lost elements and other edge cases not covered by regular search algorithms. The default order of returned elements is from the lowest internal db `id` to the highest which does not necessarily indicate age of the elements as the `ids` can be reused when elements are deleted.
 
-Finally the list of `conditions` that each examined graph element must satisfy to be included in the result (and subjected to the `limit` and `offset`).
+Finally, the list of `conditions` that each examined graph element must satisfy to be included in the result (and subjected to the `limit` and `offset`).
 
-**NOTE:** When both `origin` and `destination` are specified and the algorithm is switched to the `A*` the `limit` and `offset` are applied differently. In regular (open-ended) search the search will end when the `limit` is reached but with the path search (A\*) the `destination` must be reached first before they are applied.
+**NOTE:** When both `origin` and `destination` are specified, and the algorithm is switched to the `A*` the `limit` and `offset` are applied differently. In regular (open-ended) search the search will end when the `limit` is reached but with the path search (A\*) the `destination` must be reached first before they are applied.
+
+### Breadth First
+
+The `breadt first` algorithm (the default one) examines every element on each level before moving to the next level. For instance starting at a node this algorithm will first examine all the edges in the selected direction (from/to) before examining the adjacent nodes reachable through those edges. The order of the elements is **from newest to oldest** where newest means most recently connected. Similarly, the next level is also examined in the same order. Example:
+
+Given a graph of 6 nodes connected together with 4 edges like so (NOTE: `ids` are for illustration only and does NOT indicate newer/older element):
+
+| Level 0  | Level 1  | Level 2  | Level 3  | Level 4  |
+| -------- | -------- | -------- | -------- | -------- |
+| Node (a) | Edge (b) | Node (d) | Edge (f) | Node (h) |
+|          | Edge (c) | Node (e) | Edge (g) | Node (j) |
+
+The `breadth first` algorithm will first visit node (a) at level 0. Then it will visit all edges at level 1 starting with the newest edge (c) followed by the older edge (b). Then it will move on to the level 2 once more examining the newest node first (g) followed by (f). Lastly it will move on to level 4 examining nodes (j) and (h). The "newest" means most recently connected and does not necessarily mean it will have higher `id` because `ids` can be reused from deleted elements.
+
+### Depth First
+
+The `depth first` algorithm follows every element to the next level first. When it cannot continue on to a next level it will step back to the previous level trying another direction if possible. When exhausted or not available it will backtrack again to the previous level and continue from there. The order of the elements is **from newest to oldest** where newest means most recently connected. Example:
+
+Given a graph of 6 nodes connected together with 4 edges like so (NOTE: `ids` are for illustration only and does NOT indicate newer/older element):
+
+| Level 0  | Level 1  | Level 2  | Level 3  | Level 4  |
+| -------- | -------- | -------- | -------- | -------- |
+| Node (a) | Edge (b) | Node (d) |          |          |
+|          | Edge (c) | Node (e) | Edge (f) | Node (h) |
+|          |          |          | Edge (g) | Node (j) |
+
+The `depth first` algorithm will first visit node (a) at level 0. Then it will visit the most recent edge (c) on level 1. Then it will follow it to its connected node (e) at level 2, then edge (g) at level 3 and finally node (j) at level 4. Since it cannot continue it will step back to level 3 and examine the edge (f) and follow it to node (h) at level 4. After that it will step back to level 3 and see nothing available so it will backtrack further to level 1 to examine edge (b) and follow it to node (d). That will conclude the search.
+
+NOTE: when a graph contains multiple edges leading to the same elements the extra edges will appear seemingly "out of order" in the search result (i.e. at the end). This is because no element can be visited twice yet the DFS algorithm will eventually backtrack and attempt to go in their direction possibly including them in the result. Typically, you might want to filter out all edges with `.where_().node()` condition.
 
 ### Paths
 
@@ -1129,7 +1162,7 @@ The currently supported conditions are:
 -   EdgeCount (if the element is a node and total number of edges (in and out) satisfies the numerical comparison - self-referential edges are counted twice)
 -   EdgeCountFrom (if the element is a node and total number of outgoing edges satisfies the numerical comparison)
 -   EdgeCountTo (if the element is a node and total number of incoming edges satisfies the numerical comparison)
--   Ids (if the element id is in the list)
+-   Ids (if the element `id` is in the list)
 -   KeyValue (if the element's property has the `key` and its value satisfies `value` comparison)
 -   Keys (if the element has all the `keys` regardless of their values)
 -   EndWhere (closes nested list of conditions)
@@ -1149,11 +1182,11 @@ NOTE: The use of `where_` with an underscore as the method name is necessary to 
 
 The conditions are applied one at a time to each visited element and chained using logic operators `AND` and `OR`. They can be nested using `where_` and `end_where` (in place of brackets). The condition evaluator supports short-circuiting not evaluating conditions further if the logical outcome cannot change. The condition comparators are type strict meaning that they do not perform type conversions nor coercion (e.g. `Comparison::Equal(1_i64).compare(1_u64)` will evaluate to `false`). Slight exception to this rule is the `Comparison::Contains` as it allows vectorized version of the base type (e.g. `Comparison::Contains(vec!["bc", "ef"]).compare("abcdefg")` will evaluate to `true`).
 
-The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`Beyond` and `NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements or continue only beyond certain elements.
+The condition `Distance` and the condition modifiers `Beyond` and `NotBeyond` are particularly important because they can directly influence the search. The former (`Distance`) can limit the depth of the search and can help with constructing more elaborate queries (or sequence thereof) extracting only fine-grained elements (e.g. nodes whose edges have particular properties or are connected to other nodes with some properties). The latter (`Beyond` and `NotBeyond`) can limit search to only certain areas of an otherwise larger graph. Its most basic usage would be with condition `ids` to flat out stop the search at certain elements or continue only beyond certain elements.
 
 ### Truth tables
 
-The following information should help with reasoning about the query conditions. Most of it should be intuitive but there are some aspects that might not be obvious especially when combining logic operators and condition modifiers. The search is using the following `enum` when evaluating conditions:
+The following information should help with reasoning about the query conditions. Most of it should be intuitive, but there are some aspects that might not be obvious especially when combining logic operators and condition modifiers. The search is using the following `enum` when evaluating conditions:
 
 ```rs
 pub enum SearchControl {
@@ -1163,7 +1196,7 @@ pub enum SearchControl {
 }
 ```
 
-The type controls the search and the boolean value controls if the given element should be included in a search result. The `Stop` will prevent the search expanding beyond current element (stopping the search in that direction). `Finish` will immediately exit the search returning accumulated elements (ids) and is only used internally with `offset` and `limit` (NOTE: path search and `order_by` still require complete search regardless of `limit`).
+The type controls the search and the boolean value controls if the given element should be included in a search result. The `Stop` will prevent the search expanding beyond current element (stopping the search in that direction). `Finish` will immediately exit the search returning accumulated elements (`ids`) and is only used internally with `offset` and `limit` (NOTE: path search and `order_by` still require complete search regardless of `limit`).
 
 Each condition contributes to the final control result as follows with the starting/default value being always `Continue(true)`:
 

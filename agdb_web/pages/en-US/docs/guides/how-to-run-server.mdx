@@ -13,11 +13,11 @@ The following is a guide how to run a local instance of the `agdb_server` on any
 
 ### Install git
 
-From the [officail source](https://git-scm.com/) (skip if you already have it).
+From the [official source](https://git-scm.com/) (skip if you already have it).
 
 ### Install Rust toolchain
 
-From the [official source](https://www.rust-lang.org/tools/install) (mininum required version is `1.75.0`).
+From the [official source](https://www.rust-lang.org/tools/install) (minimum required version is `1.75.0`).
 
 ### Install `agdb_server`
 
@@ -60,8 +60,8 @@ agdb_server
 The server upon starting will create few things in its working directory:
 
 -   `agdb_server.yaml`: Configuration file. You can alter it as you wish. You would need to restart the server for the changes to take effect.
--   `agdb_server.agdb` (`.agdb_server.agdb`): Internal databse of the server (uses `agdb` itself) + its write ahead file (the dotfile).
--   `agdb_data_dir/`: Folder for stroing the user data. It can be changed in the configuration file (requires restart of the server).
+-   `agdb_server.agdb` (`.agdb_server.agdb`): Internal database of the server (uses `agdb` itself) + its write ahead file (the dotfile).
+-   `agdb_data_dir/`: Folder for storing the user data. It can be changed in the configuration file (requires restart of the server).
 
 and report where it listens at:
 
@@ -80,7 +80,7 @@ The config supports following values:
 bind: :::3000 # host address to listen on
 address: localhost:3000 # address of incoming connections
 basepath: "" # optional prefix to allow running behind a reverse proxy
-admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
+admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, it is recommended to change it after startup)
 data_dir: agdb_server_data # directory to store user data
 ```
 

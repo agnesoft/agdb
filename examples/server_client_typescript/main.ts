@@ -38,8 +38,9 @@ async function main() {
   ];
 
   // Execute the first batch of queries.
-  let results = (await client.db_exec({ owner: "user1", db: "db1" }, queries))
-    .data;
+  let results = (
+    await client.db_exec_mut({ owner: "user1", db: "db1" }, queries)
+  ).data;
 
   // Prepare the second batch using the result of the previous batch.
   queries = [
@@ -54,7 +55,8 @@ async function main() {
   ];
 
   // Execute the second batch of queries.
-  results = (await client.db_exec({ owner: "user1", db: "db1" }, queries)).data;
+  results = (await client.db_exec_mut({ owner: "user1", db: "db1" }, queries))
+    .data;
 
   // Print the result of the second query.
   console.log(`User (id: ${results[1].elements[0].id})`);

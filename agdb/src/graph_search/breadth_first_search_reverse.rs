@@ -130,4 +130,35 @@ mod tests {
 
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn stop_at_distance() {
+        let test_file = TestFile::new();
+        let mut storage = Storage::<FileStorage>::new(test_file.file_name()).unwrap();
+        let mut graph = DbGraph::new(&mut storage).unwrap();
+
+        let node1 = graph.insert_node(&mut storage).unwrap();
+        let node2 = graph.insert_node(&mut storage).unwrap();
+        let node3 = graph.insert_node(&mut storage).unwrap();
+
+        let _edge1 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let _edge2 = graph.insert_edge(&mut storage, node1, node2).unwrap();
+        let edge3 = graph.insert_edge(&mut storage, node2, node3).unwrap();
+        let _edge4 = graph.insert_edge(&mut storage, node3, node1).unwrap();
+
+        let result = GraphSearch::from((&graph, &storage)).breadth_first_search_reverse(
+            node3,
+            Handler {
+                processor: |_index: GraphIndex, distance: u64| {
+                    if distance == 2 {
+                        SearchControl::Stop(true)
+                    } else {
+                        SearchControl::Continue(true)
+                    }
+                },
+            },
+        );
+
+        assert_eq!(result, Ok(vec![node3, edge3, node2]));
+    }
 }

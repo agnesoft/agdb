@@ -19,7 +19,7 @@ Looking for... [how to run a server?](/docs/guides/how-to-run-server) | [another
 
 Please install the Rust toolchain from the [official source](https://www.rust-lang.org/tools/install).
 
-### Create an applicaiton
+### Create an application
 
 First we initialize an application called `agdb_client` with cargo:
 
@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
 
 ### Create a database user
 
-First we need to login as default admin user and create our database user and then login as them:
+First we need to log in as default admin user and create our database user and then login as them:
 
 ```rs
 client.user_login("admin", "admin").await?; // The authentication login is stored in

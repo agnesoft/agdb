@@ -83,7 +83,7 @@ let users = vec![User { db_id: None, username: "Alice".to_string(), age: 40 },
 let db_users = db.exec_mut(QueryBuilder::insert()
                                 .nodes()
                                 .values(&users) // We can pass users directly as
-                                                // query paramter thanks to the
+                                                // query parameter thanks to the
                                                 // implementation of the agdb::DbUserValue
                                                 // trait via #[derive(UserValue)].
                                 .query())?;

@@ -219,8 +219,8 @@ impl TestServer {
 
 impl Drop for TestServerImpl {
     fn drop(&mut self) {
-        Self::shutdown_server(self).unwrap();
-        Self::remove_dir_if_exists(&self.dir).unwrap();
+        let _ = Self::shutdown_server(self);
+        let _ = Self::remove_dir_if_exists(&self.dir);
     }
 }
 

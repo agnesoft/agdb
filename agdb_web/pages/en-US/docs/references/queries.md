@@ -1018,9 +1018,9 @@ QueryBuilder::search().from(1).offset(10).limit(5).query();
 
 </td></tr></table>
 
-There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying conditions manually in particular can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`. For searching disregarding the graph structure and indexes (full search) the algorithm is `elements`.
+There is only a single search query that provides the ability to search the graph or indexes. When searching the graph it examines connected elements and their properties. While it is possible to construct the search queries manually, specifying them that way can be excessively difficult and therefore **using the builder pattern is recommended**. The default search algorithm is `breadth first` however you can choose to use `depth first`. For path search the `A*` algorithm is used. For searching an index the algorithm is `index`. For searching disregarding the graph structure and indexes (full search) the algorithm is `elements`. Elements will never be examined twice during any search regardless of any cycles in the graph.
 
-Very often you would want the values / elements to be returned from the search query. To accomplish it you need to nest the search query in the select query's `ids()` step. That fetches the data as the search query only traverses the graph. E.g. `QueryBuilder::select().ids(QueryBuilder::search().from("alias").query()).query()`. Refer to the [Select Values](#select-values) query for details.
+Very often you would want the values / elements to be returned from the search query. To accomplish it you need to nest the search query in the select query with either `.search()` builder element or `ids()` step that takes a `SearchQuery` as argument. That fetches the data as the search query only traverses the graph. E.g. `QueryBuilder::select().search().from("alias").query()`. Refer to the [Select Values](#select-values) query for details.
 
 If the index search is done the graph traversal is skipped entirely as are most of the parameters including like limit, offset, ordering and conditions.
 
@@ -1031,6 +1031,35 @@ When searching `elements` the database is being scanned in linerly one element (
 Finally the list of `conditions` that each examined graph element must satisfy to be included in the result (and subjected to the `limit` and `offset`).
 
 **NOTE:** When both `origin` and `destination` are specified and the algorithm is switched to the `A*` the `limit` and `offset` are applied differently. In regular (open-ended) search the search will end when the `limit` is reached but with the path search (A\*) the `destination` must be reached first before they are applied.
+
+### Breadth First
+
+The `breadt first` algorithm (the default one) examines every element on each level before moving to the next level. For instance starting at a node this algorithm will first examine all the edges in the selected direction (from/to) before examining the adjacent nodes reachable through those edges. The order of the elements is **from newest to oldest** where newest means most recently connected. Similarly the next level is also examined in the same order. Example:
+
+Given a graph of 6 nodes connected together with 4 edges like so (NOTE: ids are for illustration only and does NOT indicate newer/older element):
+
+| Level 0  | Level 1  | Level 2  | Level 3  | Level 4  |
+| -------- | -------- | -------- | -------- | -------- |
+| Node (a) | Edge (b) | Node (d) | Edge (f) | Node (h) |
+|          | Edge (c) | Node (e) | Edge (g) | Node (j) |
+
+The `breadth first` algorithm will first visit node (a) at level 0. Then it will visit all edges at level 1 starting with the newest edge (c) followed by the older edge (b). Then it will move on to the level 2 once more examining newest node firt (g) followed by (f). Lastly it will move on to level 4 examining nodes (j) and (h). The "newest" means most recently connected and does not necessarily mean it will have higher id because ids can be reused from deleted elements.
+
+### Depth First
+
+The `depth first` algorithm follows every element to the next level first. When it cannot continue on to a next level it will step back to the previous level trying another direction if possible. When exhausted or not available it will backtrack again to the previous level and continue from there. The order of the elements is **from newest to oldest** where newest means most recently connected. Example:
+
+Given a graph of 6 nodes connected together with 4 edges like so (NOTE: ids are for illustration only and does NOT indicate newer/older element):
+
+| Level 0  | Level 1  | Level 2  | Level 3  | Level 4  |
+| -------- | -------- | -------- | -------- | -------- |
+| Node (a) | Edge (b) | Node (d) |          |          |
+|          | Edge (c) | Node (e) | Edge (f) | Node (h) |
+|          |          |          | Edge (g) | Node (j) |
+
+The `depth first` algorithm will first visit node (a) at level 0. Then it will visit the most recent edge (c) on level 1. Then it will follow it to its connected node (e) at level 2, then edge (g) at level 3 and finally node (j) at level 4. Since it cannot continue anymore it will step back to level 3 and examine the edge (f) and follow it to node (h) at level 4. After that it will step back to level 3 and see nothing available so it will backtrack further to level 1 to examine edge (b) and follow it to node (d). That will conclude the search.
+
+NOTE: when a graph contains multiple edges leading to the same elements the extra edges will appear seemingly "out of order" in the search result (i.e. at the end). This is because no element can be visited twice yet the DFS algorithm will eventually backtrack and attempt to go in their direction possibly including them in the result. Typically you might want to filter out all edges with `.where_().node()` condition.
 
 ### Paths
 

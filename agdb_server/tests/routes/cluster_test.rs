@@ -2,6 +2,7 @@ use crate::create_cluster;
 use crate::next_db_name;
 use crate::next_user_name;
 use crate::wait_for_leader;
+use crate::wait_for_ready;
 use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
@@ -33,17 +34,11 @@ async fn rebalance() -> anyhow::Result<()> {
         assert_eq!(statuses[0], *status);
     }
 
-    let mut new_leader = AgdbApi::new(ReqwestClient::new(), &servers[1].address);
-    new_leader.user_login(ADMIN, ADMIN).await?;
-    new_leader.admin_user_add("test", "password123").await?;
-    new_leader
-        .admin_db_add("test", "test", DbType::Memory)
-        .await?;
-
     let dir = &servers[0].dir;
     servers[0].process = Command::cargo_bin("agdb_server")?
         .current_dir(dir)
         .spawn()?;
+    wait_for_ready(&leader).await?;
 
     statuses.clear();
 

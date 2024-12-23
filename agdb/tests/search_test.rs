@@ -510,7 +510,7 @@ fn search_depth_first_from_limit() {
             .from(1)
             .limit(3)
             .query(),
-        &[1, -11, 3],
+        &[1, -15, 3],
     );
 }
 
@@ -532,7 +532,7 @@ fn search_depth_first_from_offset() {
             .from(1)
             .offset(3)
             .query(),
-        &[-12, 5, -13, 7, -14, 9, -18, -17, -16, -15],
+        &[-16, 5, -17, 7, -18, 9, -14, -13, -12, -11],
     );
 }
 
@@ -555,7 +555,7 @@ fn search_depth_first_from_offset_limit() {
             .offset(3)
             .limit(3)
             .query(),
-        &[-12, 5, -13],
+        &[-16, 5, -17],
     );
 }
 
@@ -573,7 +573,7 @@ fn search_depth_first_from() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().from(1).query(),
-        &[1, -11, 3, -12, 5, -13, 7, -14, 9, -18, -17, -16, -15],
+        &[1, -15, 3, -16, 5, -17, 7, -18, 9, -14, -13, -12, -11],
     );
 }
 
@@ -591,7 +591,7 @@ fn search_depth_first_to() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().to(9).query(),
-        &[9, -14, 7, -13, 5, -12, 3, -11, 1, -15, -16, -17, -18],
+        &[9, -18, 7, -17, 5, -16, 3, -15, 1, -11, -12, -13, -14],
     );
 }
 
@@ -609,7 +609,7 @@ fn search_depth_first_to_limit() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().to(9).limit(3).query(),
-        &[9, -14, 7],
+        &[9, -18, 7],
     );
 }
 
@@ -627,7 +627,7 @@ fn search_depth_first_to_offset() {
     );
     db.exec_ids(
         QueryBuilder::search().depth_first().to(9).offset(3).query(),
-        &[-13, 5, -12, 3, -11, 1, -15, -16, -17, -18],
+        &[-17, 5, -16, 3, -15, 1, -11, -12, -13, -14],
     );
 }
 
@@ -650,6 +650,6 @@ fn search_depth_first_to_offset_limit() {
             .offset(3)
             .limit(3)
             .query(),
-        &[-13, 5, -12],
+        &[-17, 5, -16],
     );
 }

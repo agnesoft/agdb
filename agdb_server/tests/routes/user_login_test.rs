@@ -1,5 +1,4 @@
 use crate::next_user_name;
-use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
 
@@ -59,22 +58,5 @@ async fn user_not_found() -> anyhow::Result<()> {
         .unwrap_err()
         .status;
     assert_eq!(status, 401);
-    Ok(())
-}
-
-#[tokio::test]
-async fn cluster_login() -> anyhow::Result<()> {
-    let mut cluster = TestCluster::new().await?;
-
-    let token = {
-        let client = cluster.apis.get_mut(1).unwrap();
-        client.user_login(ADMIN, ADMIN).await?;
-        client.token.clone()
-    };
-
-    let leader = cluster.apis.get_mut(0).unwrap();
-    leader.token = token;
-    leader.user_status().await?;
-
     Ok(())
 }

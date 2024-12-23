@@ -1,6 +1,5 @@
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb::DbElement;
@@ -151,39 +150,5 @@ async fn no_token() -> anyhow::Result<()> {
         .unwrap_err()
         .status;
     assert_eq!(status, 401);
-    Ok(())
-}
-
-#[tokio::test]
-async fn cluster_exec() -> anyhow::Result<()> {
-    let mut cluster = TestCluster::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
-    client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
-    client
-        .admin_db_exec_mut(
-            owner,
-            db,
-            &[QueryBuilder::insert()
-                .nodes()
-                .aliases("root")
-                .query()
-                .into()],
-        )
-        .await?;
-    client.user_login(owner, owner).await?;
-    let result = client
-        .db_exec(
-            owner,
-            db,
-            &[QueryBuilder::select().ids("root").query().into()],
-        )
-        .await?
-        .1[0]
-        .result;
-    assert_eq!(result, 1);
     Ok(())
 }

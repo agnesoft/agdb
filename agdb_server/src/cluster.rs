@@ -21,7 +21,6 @@ use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
@@ -294,10 +293,10 @@ pub(crate) async fn start_with_shutdown(
 
 pub(crate) struct ClusterStorage {
     result_notifiers: HashMap<DbId, ResultNotifier>,
+    notifier: tokio::sync::broadcast::Sender<u64>,
     index: u64,
     term: u64,
     commit: u64,
-    executed: Arc<AtomicU64>,
     db: ServerDb,
     db_pool: DbPool,
 }
@@ -309,10 +308,10 @@ impl ClusterStorage {
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
+            notifier: tokio::sync::broadcast::channel(100).0,
             index,
             term,
             commit,
-            executed: Arc::new(AtomicU64::new(index)),
             db,
             db_pool,
         };
@@ -326,22 +325,26 @@ impl ClusterStorage {
 
     async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
         let log_id = log.db_id.unwrap_or_default();
-        let executed = self.executed.clone();
         let db = self.db.clone();
         let db_pool = self.db_pool.clone();
-        let notifier = self.result_notifiers.remove(&log_id);
+        let notifier = self.notifier.clone();
+        let result_notifier = self.result_notifiers.remove(&log_id);
 
         tokio::spawn(async move {
             let result = log.data.exec(db.clone(), db_pool).await;
-            executed.fetch_max(log.index, Ordering::Relaxed);
+            let _ = notifier.send(log.index);
             let _ = db.log_executed(log_id).await;
 
-            if let Some(notifier) = notifier {
-                let _ = notifier.send(result.map(|r| (log.index, r)));
+            if let Some(rs) = result_notifier {
+                let _ = rs.send(result.map(|r| (log.index, r)));
             }
         });
 
         Ok(())
+    }
+
+    pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
+        self.notifier.subscribe()
     }
 }
 
@@ -377,10 +380,6 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
 
     fn log_commit(&self) -> u64 {
         self.commit
-    }
-
-    fn log_executed(&self) -> u64 {
-        self.executed.load(Ordering::Relaxed)
     }
 
     fn log_index(&self) -> u64 {

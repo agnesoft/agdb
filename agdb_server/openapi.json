@@ -15,41 +15,6 @@
     }
   ],
   "paths": {
-    "/api/v1/admin/cluster/{username}/logout": {
-      "post": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "admin_cluster_logout",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "user logged out"
-          },
-          "401": {
-            "description": "admin only"
-          },
-          "404": {
-            "description": "user not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
     "/api/v1/admin/db/list": {
       "get": {
         "tags": [
@@ -1158,37 +1123,39 @@
         ]
       }
     },
-    "/api/v1/cluster/login": {
+    "/api/v1/cluster/admin/user/{username}/logout": {
       "post": {
         "tags": [
           "agdb"
         ],
-        "operationId": "cluster_login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserLogin"
-              }
+        "operationId": "cluster_admin_user_logout",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
-          "200": {
-            "description": "login successful",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
+          "201": {
+            "description": "user logged out"
           },
           "401": {
-            "description": "invalid credentials"
+            "description": "admin only"
+          },
+          "404": {
+            "description": "user not found"
           }
-        }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
       }
     },
     "/api/v1/cluster/logout": {
@@ -1196,7 +1163,7 @@
         "tags": [
           "agdb"
         ],
-        "operationId": "cluster_logout",
+        "operationId": "cluster_user_logout",
         "responses": {
           "201": {
             "description": "user logged out"
@@ -1231,6 +1198,39 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/cluster/user/login": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "cluster_user_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "login successful",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials"
           }
         }
       }

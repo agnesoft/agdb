@@ -29,8 +29,8 @@ pub(crate) async fn cluster(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/admin/cluster/{username}/logout",
-    operation_id = "admin_cluster_logout",
+    path = "/api/v1/cluster/admin/user/{username}/logout",
+    operation_id = "cluster_admin_user_logout",
     tag = "agdb",
     security(("Token" = [])),
     params(
@@ -64,8 +64,8 @@ pub(crate) async fn admin_logout(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/cluster/login",
-    operation_id = "cluster_login",
+    path = "/api/v1/cluster/user/login",
+    operation_id = "cluster_user_login",
     tag = "agdb",
     request_body = UserLogin,
     responses(
@@ -95,7 +95,7 @@ pub(crate) async fn login(
 
 #[utoipa::path(post,
     path = "/api/v1/cluster/logout",
-    operation_id = "cluster_logout",
+    operation_id = "cluster_user_logout",
     tag = "agdb",
     security(("Token" = [])),
     responses(

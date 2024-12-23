@@ -87,7 +87,6 @@ pub(crate) trait Storage<T, N> {
     fn log_index(&self) -> u64;
     fn log_term(&self) -> u64;
     fn log_commit(&self) -> u64;
-    fn log_executed(&self) -> u64;
     async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<T>>>;
 }
 
@@ -699,10 +698,6 @@ mod test {
         }
 
         fn log_commit(&self) -> u64 {
-            self.commit
-        }
-
-        fn log_executed(&self) -> u64 {
             self.commit
         }
 

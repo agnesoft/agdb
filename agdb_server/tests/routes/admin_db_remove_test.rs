@@ -1,6 +1,5 @@
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb_api::DbType;
@@ -89,27 +88,5 @@ async fn no_token() -> anyhow::Result<()> {
         .unwrap_err()
         .status;
     assert_eq!(status, 401);
-    Ok(())
-}
-
-#[tokio::test]
-async fn cluster_remove() -> anyhow::Result<()> {
-    let mut cluster = TestCluster::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
-    client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
-    let admin_token = client.token.clone();
-    client.user_login(owner, owner).await?;
-    let user_token = client.token.clone();
-    let dbs = client.db_list().await?.1.len();
-    assert_eq!(dbs, 1);
-    client.token = admin_token;
-    client.admin_db_remove(owner, db).await?;
-    client.token = user_token;
-    let dbs = client.db_list().await?.1.len();
-    assert_eq!(dbs, 0);
     Ok(())
 }

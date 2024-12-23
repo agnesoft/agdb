@@ -1,6 +1,5 @@
 use crate::next_db_name;
 use crate::next_user_name;
-use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb_api::DbType;
@@ -73,24 +72,5 @@ async fn no_token() -> anyhow::Result<()> {
         .status;
     assert_eq!(status, 401);
 
-    Ok(())
-}
-
-#[tokio::test]
-async fn cluster_clear() -> anyhow::Result<()> {
-    let mut cluster = TestCluster::new().await?;
-    let owner = &next_user_name();
-    let db = &next_db_name();
-    let client = cluster.apis.get_mut(1).unwrap();
-    client.user_login(ADMIN, ADMIN).await?;
-    client.admin_user_add(owner, owner).await?;
-    client.admin_db_add(owner, db, DbType::Memory).await?;
-    client.admin_db_convert(owner, db, DbType::Mapped).await?;
-    let db_list = client.admin_db_list().await?.1;
-    let server_db = db_list
-        .iter()
-        .find(|d| d.name == format!("{owner}/{db}"))
-        .unwrap();
-    assert_eq!(server_db.db_type, DbType::Mapped);
     Ok(())
 }

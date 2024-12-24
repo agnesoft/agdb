@@ -3629,7 +3629,7 @@
       "ServerDatabase": {
         "type": "object",
         "required": [
-          "name",
+          "db",
           "owner",
           "db_type",
           "role",
@@ -3642,11 +3642,11 @@
             "format": "int64",
             "minimum": 0
           },
+          "db": {
+            "type": "string"
+          },
           "db_type": {
             "$ref": "#/components/schemas/DbType"
-          },
-          "name": {
-            "type": "string"
           },
           "owner": {
             "type": "string"

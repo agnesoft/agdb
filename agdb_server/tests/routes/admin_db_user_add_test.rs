@@ -26,7 +26,7 @@ async fn db_user_add() -> anyhow::Result<()> {
     assert_eq!(
         list,
         vec![ServerDatabase {
-            name: db.to_string(),
+            db: db.to_string(),
             owner: owner.to_string(),
             db_type: DbType::Mapped,
             role: DbUserRole::Write,
@@ -62,7 +62,7 @@ async fn change_user_role() -> anyhow::Result<()> {
     assert_eq!(
         list,
         vec![ServerDatabase {
-            name: db.to_string(),
+            db: db.to_string(),
             owner: owner.to_string(),
             db_type: DbType::Mapped,
             role: DbUserRole::Read,

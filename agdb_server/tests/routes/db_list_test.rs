@@ -27,7 +27,7 @@ async fn list() -> anyhow::Result<()> {
     assert_eq!(status, 200);
     let mut expected = vec![
         ServerDatabase {
-            name: db1.to_string(),
+            db: db1.to_string(),
             owner: owner.to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Read,
@@ -35,7 +35,7 @@ async fn list() -> anyhow::Result<()> {
             backup: 0,
         },
         ServerDatabase {
-            name: db2.to_string(),
+            db: db2.to_string(),
             owner: user.to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,
@@ -63,7 +63,7 @@ async fn with_backup() -> anyhow::Result<()> {
     assert_eq!(status, 200);
     let db = list
         .iter()
-        .find(|d| d.name == *db && d.owner == *owner)
+        .find(|d| d.db == *db && d.owner == *owner)
         .unwrap();
     assert_ne!(db.backup, 0);
     Ok(())

@@ -68,7 +68,7 @@ async fn transfer() -> anyhow::Result<()> {
     server.api.user_login(owner2, owner2).await?;
     let list = server.api.db_list().await?.1;
     let expected = vec![ServerDatabase {
-        name: db.to_string(),
+        db: db.to_string(),
         owner: owner2.to_string(),
         db_type: DbType::Mapped,
         role: DbUserRole::Admin,

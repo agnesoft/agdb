@@ -21,7 +21,7 @@ async fn db_list() -> anyhow::Result<()> {
     let (status, list) = server.api.admin_db_list().await?;
     assert_eq!(status, 200);
     assert!(list.contains(&ServerDatabase {
-        name: db1.to_string(),
+        db: db1.to_string(),
         owner: owner1.to_string(),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
@@ -29,7 +29,7 @@ async fn db_list() -> anyhow::Result<()> {
         backup: 0,
     }));
     assert!(list.contains(&ServerDatabase {
-        name: db2.to_string(),
+        db: db2.to_string(),
         owner: owner2.to_string(),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
@@ -52,7 +52,7 @@ async fn with_backup() -> anyhow::Result<()> {
     assert_eq!(status, 200);
     let db = list
         .iter()
-        .find(|d| d.name == *db && d.owner == *owner)
+        .find(|d| d.db == *db && d.owner == *owner)
         .unwrap();
     assert_ne!(db.backup, 0);
     Ok(())

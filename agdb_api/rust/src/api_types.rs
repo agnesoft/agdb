@@ -87,7 +87,7 @@ pub struct DbAudit(pub Vec<QueryAudit>);
 
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ServerDatabase {
-    pub name: String,
+    pub db: String,
     pub owner: String,
     pub db_type: DbType,
     pub role: DbUserRole,
@@ -242,7 +242,7 @@ mod tests {
         let _ = format!(
             "{:?}",
             ServerDatabase {
-                name: "db".to_string(),
+                db: "db".to_string(),
                 owner: "owner".to_string(),
                 db_type: DbType::Memory,
                 role: DbUserRole::Admin,
@@ -302,7 +302,7 @@ mod tests {
         };
         assert!(user < other);
         let db = ServerDatabase {
-            name: "db".to_string(),
+            db: "db".to_string(),
             owner: "owner".to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,
@@ -310,7 +310,7 @@ mod tests {
             backup: 0,
         };
         let other = ServerDatabase {
-            name: "db2".to_string(),
+            db: "db2".to_string(),
             owner: "owner".to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,
@@ -350,7 +350,7 @@ mod tests {
         assert_eq!(user.cmp(&user), std::cmp::Ordering::Equal);
 
         let db = ServerDatabase {
-            name: "db".to_string(),
+            db: "db".to_string(),
             owner: "owner".to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,

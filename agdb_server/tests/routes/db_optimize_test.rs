@@ -23,7 +23,7 @@ async fn optimize() -> anyhow::Result<()> {
         .await?
         .1
         .iter()
-        .find(|d| d.name == *db && d.owner == *owner)
+        .find(|d| d.db == *db && d.owner == *owner)
         .unwrap()
         .size;
     let (status, db) = server.api.db_optimize(owner, db).await?;

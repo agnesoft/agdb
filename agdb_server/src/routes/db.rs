@@ -219,7 +219,7 @@ pub(crate) async fn clear(
     let size = db_pool.db_size(&db_name).await.unwrap_or(0);
     let database = server_db.user_db(user.0, &db_name).await?;
     let db = ServerDatabase {
-        name: db,
+        db: db,
         owner,
         db_type: database.db_type,
         role,
@@ -513,7 +513,7 @@ pub(crate) async fn list(
             if size != 0 {
                 if let Some((owner, name)) = db.name.split_once('/') {
                     return Some(ServerDatabase {
-                        name: name.to_string(),
+                        db: name.to_string(),
                         owner: owner.to_string(),
                         db_type: db.db_type,
                         role,
@@ -572,7 +572,7 @@ pub(crate) async fn optimize(
         StatusCode::OK,
         [("commit-index", commit_index.to_string())],
         Json(ServerDatabase {
-            name: db.to_string(),
+            db: db.to_string(),
             owner,
             db_type: database.db_type,
             role,

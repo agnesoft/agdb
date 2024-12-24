@@ -3630,6 +3630,7 @@
         "type": "object",
         "required": [
           "name",
+          "owner",
           "db_type",
           "role",
           "size",
@@ -3645,6 +3646,9 @@
             "$ref": "#/components/schemas/DbType"
           },
           "name": {
+            "type": "string"
+          },
+          "owner": {
             "type": "string"
           },
           "role": {

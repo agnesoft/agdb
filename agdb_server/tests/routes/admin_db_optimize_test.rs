@@ -21,7 +21,7 @@ async fn optimize() -> anyhow::Result<()> {
         .await?
         .1
         .iter()
-        .find(|d| d.name == format!("{owner}/{db}"))
+        .find(|d| d.name == *db && d.owner == *owner)
         .unwrap()
         .size;
     let (status, db) = server.api.admin_db_optimize(owner, db).await?;

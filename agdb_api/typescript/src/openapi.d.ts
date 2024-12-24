@@ -1171,6 +1171,7 @@ declare namespace Components {
             backup: number; // int64
             db_type: DbType;
             name: string;
+            owner: string;
             role: DbUserRole;
             size: number; // int64
         }

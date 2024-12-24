@@ -60,6 +60,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         'backup' => 'int',
         'db_type' => '\Agnesoft\AgdbApi\Model\DbType',
         'name' => 'string',
+        'owner' => 'string',
         'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
         'size' => 'int'
     ];
@@ -75,6 +76,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         'backup' => 'int64',
         'db_type' => null,
         'name' => null,
+        'owner' => null,
         'role' => null,
         'size' => 'int64'
     ];
@@ -88,6 +90,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         'backup' => false,
         'db_type' => false,
         'name' => false,
+        'owner' => false,
         'role' => false,
         'size' => false
     ];
@@ -181,6 +184,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         'backup' => 'backup',
         'db_type' => 'db_type',
         'name' => 'name',
+        'owner' => 'owner',
         'role' => 'role',
         'size' => 'size'
     ];
@@ -194,6 +198,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         'backup' => 'setBackup',
         'db_type' => 'setDbType',
         'name' => 'setName',
+        'owner' => 'setOwner',
         'role' => 'setRole',
         'size' => 'setSize'
     ];
@@ -207,6 +212,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         'backup' => 'getBackup',
         'db_type' => 'getDbType',
         'name' => 'getName',
+        'owner' => 'getOwner',
         'role' => 'getRole',
         'size' => 'getSize'
     ];
@@ -271,6 +277,7 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         $this->setIfExists('backup', $data ?? [], null);
         $this->setIfExists('db_type', $data ?? [], null);
         $this->setIfExists('name', $data ?? [], null);
+        $this->setIfExists('owner', $data ?? [], null);
         $this->setIfExists('role', $data ?? [], null);
         $this->setIfExists('size', $data ?? [], null);
     }
@@ -314,6 +321,9 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
         }
         if ($this->container['name'] === null) {
             $invalidProperties[] = "'name' can't be null";
+        }
+        if ($this->container['owner'] === null) {
+            $invalidProperties[] = "'owner' can't be null";
         }
         if ($this->container['role'] === null) {
             $invalidProperties[] = "'role' can't be null";
@@ -422,6 +432,33 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable name cannot be null');
         }
         $this->container['name'] = $name;
+
+        return $this;
+    }
+
+    /**
+     * Gets owner
+     *
+     * @return string
+     */
+    public function getOwner()
+    {
+        return $this->container['owner'];
+    }
+
+    /**
+     * Sets owner
+     *
+     * @param string $owner owner
+     *
+     * @return self
+     */
+    public function setOwner($owner)
+    {
+        if (is_null($owner)) {
+            throw new \InvalidArgumentException('non-nullable owner cannot be null');
+        }
+        $this->container['owner'] = $owner;
 
         return $this;
     }

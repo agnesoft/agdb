@@ -173,8 +173,8 @@ pub(crate) async fn clear(
 
     let (commit_index, _result) = cluster
         .exec(DbClear {
-            owner,
-            db,
+            owner: owner.clone(),
+            db: db.clone(),
             resource: request.resource,
         })
         .await?;
@@ -182,7 +182,8 @@ pub(crate) async fn clear(
     let size = db_pool.db_size(&db_name).await.unwrap_or(0);
     let database = server_db.user_db(owner_id, &db_name).await?;
     let db = ServerDatabase {
-        name: db_name,
+        name: db,
+        owner,
         db_type: database.db_type,
         role,
         backup: database.backup,
@@ -442,13 +443,16 @@ pub(crate) async fn list(
     let mut dbs = Vec::with_capacity(databases.len());
 
     for db in databases {
-        dbs.push(ServerDatabase {
-            size: db_pool.db_size(&db.name).await.unwrap_or(0),
-            name: db.name,
-            db_type: db.db_type,
-            role: DbUserRole::Admin,
-            backup: db.backup,
-        });
+        if let Some((owner, name)) = db.name.split_once('/') {
+            dbs.push(ServerDatabase {
+                size: db_pool.db_size(&db.name).await.unwrap_or(0),
+                name: name.to_string(),
+                owner: owner.to_string(),
+                db_type: db.db_type,
+                role: DbUserRole::Admin,
+                backup: db.backup,
+            });
+        }
     }
 
     Ok((StatusCode::OK, Json(dbs)))
@@ -480,14 +484,20 @@ pub(crate) async fn optimize(
     let database = server_db.user_db(owner_id, &db_name).await?;
     let role = server_db.user_db_role(owner_id, &db_name).await?;
 
-    let (commit_index, _result) = cluster.exec(DbOptimize { owner, db }).await?;
+    let (commit_index, _result) = cluster
+        .exec(DbOptimize {
+            owner: owner.clone(),
+            db: db.clone(),
+        })
+        .await?;
     let size = db_pool.db_size(&db_name).await?;
 
     Ok((
         StatusCode::OK,
         [("commit-index", commit_index.to_string())],
         Json(ServerDatabase {
-            name: db_name,
+            name: db,
+            owner,
             db_type: database.db_type,
             role,
             backup: database.backup,

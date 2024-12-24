@@ -88,6 +88,7 @@ pub struct DbAudit(pub Vec<QueryAudit>);
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ServerDatabase {
     pub name: String,
+    pub owner: String,
     pub db_type: DbType,
     pub role: DbUserRole,
     pub size: u64,
@@ -242,6 +243,7 @@ mod tests {
             "{:?}",
             ServerDatabase {
                 name: "db".to_string(),
+                owner: "owner".to_string(),
                 db_type: DbType::Memory,
                 role: DbUserRole::Admin,
                 size: 0,
@@ -301,6 +303,7 @@ mod tests {
         assert!(user < other);
         let db = ServerDatabase {
             name: "db".to_string(),
+            owner: "owner".to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,
             size: 0,
@@ -308,6 +311,7 @@ mod tests {
         };
         let other = ServerDatabase {
             name: "db2".to_string(),
+            owner: "owner".to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,
             size: 0,
@@ -347,6 +351,7 @@ mod tests {
 
         let db = ServerDatabase {
             name: "db".to_string(),
+            owner: "owner".to_string(),
             db_type: DbType::Memory,
             role: DbUserRole::Admin,
             size: 0,

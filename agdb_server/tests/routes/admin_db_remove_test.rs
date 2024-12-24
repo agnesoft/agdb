@@ -21,7 +21,7 @@ async fn remove() -> anyhow::Result<()> {
         .await?
         .1
         .iter()
-        .any(|d| d.name == format!("{}/{}", owner, db)));
+        .any(|d| d.db == *db && d.owner == *owner));
     assert_eq!(status, 204);
     assert!(Path::new(&server.data_dir).join(owner).join(db).exists());
     Ok(())

@@ -210,8 +210,8 @@ pub(crate) async fn clear(
 
     let (commit_index, _result) = cluster
         .exec(DbClear {
-            owner,
-            db,
+            owner: owner.clone(),
+            db: db.clone(),
             resource: request.resource,
         })
         .await?;
@@ -219,7 +219,8 @@ pub(crate) async fn clear(
     let size = db_pool.db_size(&db_name).await.unwrap_or(0);
     let database = server_db.user_db(user.0, &db_name).await?;
     let db = ServerDatabase {
-        name: db_name,
+        db,
+        owner,
         db_type: database.db_type,
         role,
         backup: database.backup,
@@ -510,16 +511,18 @@ pub(crate) async fn list(
         .zip(sizes)
         .filter_map(|((role, db), size)| {
             if size != 0 {
-                Some(ServerDatabase {
-                    name: db.name,
-                    db_type: db.db_type,
-                    role,
-                    backup: db.backup,
-                    size,
-                })
-            } else {
-                None
+                if let Some((owner, name)) = db.name.split_once('/') {
+                    return Some(ServerDatabase {
+                        db: name.to_string(),
+                        owner: owner.to_string(),
+                        db_type: db.db_type,
+                        role,
+                        backup: db.backup,
+                        size,
+                    });
+                }
             }
+            None
         })
         .collect();
 
@@ -557,14 +560,20 @@ pub(crate) async fn optimize(
         return Err(permission_denied("write rights required"));
     }
 
-    let (commit_index, _result) = cluster.exec(DbOptimize { owner, db }).await?;
+    let (commit_index, _result) = cluster
+        .exec(DbOptimize {
+            owner: owner.clone(),
+            db: db.clone(),
+        })
+        .await?;
     let size = db_pool.db_size(&db_name).await?;
 
     Ok((
         StatusCode::OK,
         [("commit-index", commit_index.to_string())],
         Json(ServerDatabase {
-            name: db_name,
+            db: db.to_string(),
+            owner,
             db_type: database.db_type,
             role,
             backup: database.backup,

@@ -1,3 +1,4 @@
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb_api::UserStatus;
@@ -5,8 +6,8 @@ use agdb_api::UserStatus;
 #[tokio::test]
 async fn user_list() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user1 = &server.next_user_name();
-    let user2 = &server.next_user_name();
+    let user1 = &next_user_name();
+    let user2 = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user1, user1).await?;
     server.api.admin_user_add(user2, user2).await?;
@@ -33,7 +34,7 @@ async fn user_list() -> anyhow::Result<()> {
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let user = &server.next_user_name();
+    let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.user_login(user, user).await?;

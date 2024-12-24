@@ -88,6 +88,10 @@ pub(crate) fn app(
             routing::post(routes::admin::db::exec),
         )
         .route(
+            "/admin/db/:user/:db/exec_mut",
+            routing::post(routes::admin::db::exec_mut),
+        )
+        .route(
             "/admin/db/:user/:db/optimize",
             routing::post(routes::admin::db::optimize),
         )
@@ -125,6 +129,10 @@ pub(crate) fn app(
         .route("/db/:user/:db/delete", routing::delete(routes::db::delete))
         .route("/db/:user/:db/exec", routing::post(routes::db::exec))
         .route(
+            "/db/:user/:db/exec_mut",
+            routing::post(routes::db::exec_mut),
+        )
+        .route(
             "/db/:user/:db/optimize",
             routing::post(routes::db::optimize),
         )
@@ -144,10 +152,13 @@ pub(crate) fn app(
             routing::delete(routes::db::user::remove),
         )
         .route("/cluster", routing::post(routes::cluster::cluster))
-        .route("/cluster/login", routing::post(routes::cluster::login))
-        .route("/cluster/logout", routing::post(routes::cluster::logout))
+        .route("/cluster/user/login", routing::post(routes::cluster::login))
         .route(
-            "/admin/cluster/:user/logout",
+            "/cluster/user/logout",
+            routing::post(routes::cluster::logout),
+        )
+        .route(
+            "/cluster/admin/user/:user/logout",
             routing::post(routes::cluster::admin_logout),
         )
         .route("/cluster/status", routing::get(routes::cluster::status))

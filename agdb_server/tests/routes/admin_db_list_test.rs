@@ -1,3 +1,5 @@
+use crate::next_db_name;
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb_api::DbType;
@@ -7,10 +9,10 @@ use agdb_api::ServerDatabase;
 #[tokio::test]
 async fn db_list() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner1 = &server.next_user_name();
-    let owner2 = &server.next_user_name();
-    let db1 = &server.next_db_name();
-    let db2 = &server.next_db_name();
+    let owner1 = &next_user_name();
+    let owner2 = &next_user_name();
+    let db1 = &next_db_name();
+    let db2 = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner1, owner1).await?;
     server.api.admin_user_add(owner2, owner2).await?;
@@ -19,7 +21,7 @@ async fn db_list() -> anyhow::Result<()> {
     let (status, list) = server.api.admin_db_list().await?;
     assert_eq!(status, 200);
     assert!(list.contains(&ServerDatabase {
-        name: format!("{}/{}", owner1, db1),
+        name: format!("{owner1}/{db1}"),
         db_type: DbType::Memory,
         role: DbUserRole::Admin,
         size: 2656,
@@ -38,8 +40,8 @@ async fn db_list() -> anyhow::Result<()> {
 #[tokio::test]
 async fn with_backup() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
@@ -57,7 +59,7 @@ async fn with_backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;

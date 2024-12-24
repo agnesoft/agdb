@@ -179,7 +179,7 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
             .db_add("user1", "mydb", agdb_api::DbType::Mapped)
             .await?;
         client
-            .db_exec(
+            .db_exec_mut(
                 "user1",
                 "mydb",
                 &vec![QueryBuilder::insert().nodes().count(1).query().into()],
@@ -255,7 +255,7 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
         client.user_login(owner, "password123").await?;
         client.db_add(owner, db, DbType::Memory).await?;
         client
-            .db_exec(
+            .db_exec_mut(
                 owner,
                 db,
                 &[QueryBuilder::insert().nodes().count(1).query().into()],

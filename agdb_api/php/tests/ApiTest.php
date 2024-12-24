@@ -49,7 +49,7 @@ final class ApiTest extends TestCase
         );
         self::$client->getConfig()->setAccessToken($token);
         self::$client->dbAdd("php_user1", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
-        $res = self::$client->dbExec("php_user1", "db1", [
+        $res = self::$client->dbExecMut("php_user1", "db1", [
             QueryBuilder::insert()->nodes()->aliases("root")->query(),
             QueryBuilder::insert()->nodes()->count(2)->query(),
             QueryBuilder::insert()->edges()->from("root")->to(":1")->query(),
@@ -95,7 +95,7 @@ final class ApiTest extends TestCase
         $person2->listFloat = [3.0, 2.2, 1.785];
         $person2->listString = ["a", "b", "c"];
 
-        $res = self::$client->dbExec("php_user2", "db1", [
+        $res = self::$client->dbExecMut("php_user2", "db1", [
             QueryBuilder::insert()
                 ->elements([$person1, $person2])
                 ->query(),
@@ -128,7 +128,7 @@ final class ApiTest extends TestCase
         );
         self::$client->getConfig()->setAccessToken($token);
         self::$client->dbAdd("php_user3", "db1", DbType::MAPPED); // @phpstan-ignore argument.type
-        $res = self::$client->dbExec("php_user3", "db1", [
+        $res = self::$client->dbExecMut("php_user3", "db1", [
             QueryBuilder::insert()->nodes()->count(1)->query(),
             QueryBuilder::insert()->nodes()->count(1)->query(),
             QueryBuilder::insert()->edges()->from(":0")->to(":1")->query(),

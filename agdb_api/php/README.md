@@ -85,6 +85,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminDbCopy**](docs/Api/AgdbApi.md#admindbcopy) | **POST** /api/v1/admin/db/{owner}/{db}/copy | 
 *AgdbApi* | [**adminDbDelete**](docs/Api/AgdbApi.md#admindbdelete) | **DELETE** /api/v1/admin/db/{owner}/{db}/delete | 
 *AgdbApi* | [**adminDbExec**](docs/Api/AgdbApi.md#admindbexec) | **POST** /api/v1/admin/db/{owner}/{db}/exec | 
+*AgdbApi* | [**adminDbExecMut**](docs/Api/AgdbApi.md#admindbexecmut) | **POST** /api/v1/admin/db/{owner}/{db}/exec_mut | 
 *AgdbApi* | [**adminDbList**](docs/Api/AgdbApi.md#admindblist) | **GET** /api/v1/admin/db/list | 
 *AgdbApi* | [**adminDbOptimize**](docs/Api/AgdbApi.md#admindboptimize) | **POST** /api/v1/admin/db/{owner}/{db}/optimize | 
 *AgdbApi* | [**adminDbRemove**](docs/Api/AgdbApi.md#admindbremove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove | 
@@ -100,7 +101,10 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminUserList**](docs/Api/AgdbApi.md#adminuserlist) | **GET** /api/v1/admin/user/list | 
 *AgdbApi* | [**adminUserLogout**](docs/Api/AgdbApi.md#adminuserlogout) | **POST** /api/v1/admin/user/{username}/logout | 
 *AgdbApi* | [**adminUserRemove**](docs/Api/AgdbApi.md#adminuserremove) | **DELETE** /api/v1/admin/user/{username}/remove | 
+*AgdbApi* | [**clusterAdminUserLogout**](docs/Api/AgdbApi.md#clusteradminuserlogout) | **POST** /api/v1/cluster/admin/user/{username}/logout | 
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
+*AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 
+*AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/logout | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
 *AgdbApi* | [**dbBackup**](docs/Api/AgdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 
@@ -109,6 +113,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**dbCopy**](docs/Api/AgdbApi.md#dbcopy) | **POST** /api/v1/db/{owner}/{db}/copy | 
 *AgdbApi* | [**dbDelete**](docs/Api/AgdbApi.md#dbdelete) | **DELETE** /api/v1/db/{owner}/{db}/delete | 
 *AgdbApi* | [**dbExec**](docs/Api/AgdbApi.md#dbexec) | **POST** /api/v1/db/{owner}/{db}/exec | 
+*AgdbApi* | [**dbExecMut**](docs/Api/AgdbApi.md#dbexecmut) | **POST** /api/v1/db/{owner}/{db}/exec_mut | 
 *AgdbApi* | [**dbList**](docs/Api/AgdbApi.md#dblist) | **GET** /api/v1/db/list | 
 *AgdbApi* | [**dbOptimize**](docs/Api/AgdbApi.md#dboptimize) | **POST** /api/v1/db/{owner}/{db}/optimize | 
 *AgdbApi* | [**dbRemove**](docs/Api/AgdbApi.md#dbremove) | **DELETE** /api/v1/db/{owner}/{db}/remove | 

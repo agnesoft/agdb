@@ -49,7 +49,7 @@ async fn main() -> Result<(), anyhow::Error> {
     ];
 
     // Execute the first batch of queries.
-    let results = client.db_exec("client", "db", &queries).await?.1;
+    let results = client.db_exec_mut("client", "db", &queries).await?.1;
 
     // Prepare the second batch using the result of the previous batch.
     let queries = vec![
@@ -71,7 +71,7 @@ async fn main() -> Result<(), anyhow::Error> {
     ];
 
     // Execute the second batch of queries.
-    let results = client.db_exec("client", "db", &queries).await?.1;
+    let results = client.db_exec_mut("client", "db", &queries).await?.1;
 
     // Print the result of the second query.
     println!("User: {:?}", results[1].elements[0].id);

@@ -87,8 +87,7 @@ pub(crate) trait Storage<T, N> {
     fn log_index(&self) -> u64;
     fn log_term(&self) -> u64;
     fn log_commit(&self) -> u64;
-    fn log_executed(&self) -> u64;
-    async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<T>>>;
+    async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<T>>>;
 }
 
 pub(crate) struct Cluster<T, N, S: Storage<T, N>> {
@@ -161,14 +160,16 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         data: T,
         notifier: Option<N>,
     ) -> ServerResult<Vec<Request<T>>> {
+        self.local_mut().log_index += 1;
+        self.local_mut().log_term = self.term;
+
         let log = Log {
             db_id: None,
             index: self.local().log_index,
             term: self.term,
             data,
         };
-        self.local_mut().log_index += 1;
-        self.local_mut().log_term = self.term;
+
         let requests = self
             .nodes
             .iter()
@@ -264,15 +265,26 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         match (&self.state, &request.data, &response.result) {
             (Candidate, Vote, OK) => Ok(self.vote_received(request)),
             (Leader, Heartbeat | Append(_), OK) => self.commit(request).await,
-            (Leader, Heartbeat | Append(_), LogMismatch(_)) => self.reconcile(request).await,
+            (Leader, Heartbeat | Append(_), LogMismatch(mismatch)) => {
+                self.reconcile(request, mismatch).await
+            }
             _ => Ok(None),
         }
     }
 
-    async fn reconcile(&mut self, request: &Request<T>) -> ServerResult<Option<Vec<Request<T>>>> {
+    async fn reconcile(
+        &mut self,
+        request: &Request<T>,
+        mismatch: &LogMismatch,
+    ) -> ServerResult<Option<Vec<Request<T>>>> {
         let logs = self
             .storage
-            .logs(self.node(request.target).log_index)
+            .logs(
+                mismatch
+                    .commit
+                    .local
+                    .unwrap_or(self.node(request.target).log_commit),
+            )
             .await?;
         self.node_mut(request.target).timer = Instant::now();
         Ok(Some(vec![Request {
@@ -319,10 +331,15 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.validate_hash(request)?;
         self.validate_term(request)?;
         self.become_follower(request);
-        self.update_node(request.index, request);
+        self.update_node(
+            request.index,
+            request.log_index,
+            request.log_term,
+            request.log_commit,
+        );
 
         for log in logs {
-            self.validate_log_commit(request, log)?;
+            self.validate_log_append(request, log)?;
             self.append_storage(log)
                 .await
                 .map_err(|e| self.commit_error(request, e.description))?;
@@ -340,7 +357,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
 
     async fn append_storage(&mut self, log: &Log<T>) -> ServerResult<()> {
         self.storage.append(log.clone(), None).await?;
-        self.local_mut().log_index = log.index + 1;
+        self.local_mut().log_index = log.index;
         self.local_mut().log_term = log.term;
         Ok(())
     }
@@ -422,7 +439,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         self.validate_term(request)?;
         self.become_follower(request);
         self.validate_log(request)?;
-        self.update_node(request.index, request);
+        self.update_node(
+            request.index,
+            request.log_index,
+            request.log_term,
+            request.log_commit,
+        );
 
         if self.local().log_commit < request.log_commit {
             let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
@@ -538,8 +560,8 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         Ok(())
     }
 
-    fn validate_log_commit(&self, request: &Request<T>, log: &Log<T>) -> Result<(), Response> {
-        if self.local().log_commit > log.index {
+    fn validate_log_append(&self, request: &Request<T>, log: &Log<T>) -> Result<(), Response> {
+        if self.local().log_commit >= log.index {
             return Err(Response {
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
@@ -624,10 +646,10 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         })
     }
 
-    fn update_node(&mut self, index: u64, request: &Request<T>) {
-        self.node_mut(index).log_index = request.log_index;
-        self.node_mut(index).log_term = request.log_term;
-        self.node_mut(index).log_commit = request.log_commit;
+    fn update_node(&mut self, index: u64, log_index: u64, log_term: u64, log_commit: u64) {
+        self.node_mut(index).log_index = log_index;
+        self.node_mut(index).log_term = log_term;
+        self.node_mut(index).log_commit = log_commit;
     }
 
     fn node(&self, index: u64) -> &Node {
@@ -680,7 +702,7 @@ mod test {
 
     impl Storage<u8, ()> for TestStorage {
         async fn append(&mut self, log: Log<u8>, _notifier: Option<()>) -> ServerResult<()> {
-            self.logs.truncate(log.index as usize);
+            self.logs.truncate((log.index - 1) as usize);
             self.logs.push(log);
             Ok(())
         }
@@ -691,7 +713,7 @@ mod test {
         }
 
         fn log_index(&self) -> u64 {
-            self.logs.len() as u64
+            self.logs.last().map(|log| log.index).unwrap_or(0)
         }
 
         fn log_term(&self) -> u64 {
@@ -699,10 +721,6 @@ mod test {
         }
 
         fn log_commit(&self) -> u64 {
-            self.commit
-        }
-
-        fn log_executed(&self) -> u64 {
             self.commit
         }
 
@@ -728,7 +746,7 @@ mod test {
                         hash: 123,
                         election_factor: 1,
                         heartbeat_timeout: Duration::from_secs(1),
-                        term_timeout: Duration::from_secs(1),
+                        term_timeout: Duration::from_secs(3),
                     };
                     Arc::new(RwLock::new(TestNodeImpl {
                         cluster: Cluster::new(storage, settings),
@@ -823,12 +841,12 @@ mod test {
             self.blocked.store(u64::MAX, Ordering::Relaxed);
         }
 
-        async fn expect_leader(&self, index: u64) {
+        async fn expect_leader(&self, node: u64) {
             let timer = Instant::now();
             while timer.elapsed() < TIMEOUT {
                 tokio::time::sleep(Duration::from_millis(10)).await;
 
-                if let ClusterState::Leader = self.nodes.read().await[index as usize]
+                if let ClusterState::Leader = self.nodes.read().await[node as usize]
                     .read()
                     .await
                     .cluster
@@ -841,12 +859,12 @@ mod test {
             panic!("Leader not found within {:?}", TIMEOUT);
         }
 
-        async fn expect_follower(&self, index: u64) {
+        async fn expect_follower(&self, node: u64) {
             let timer = Instant::now();
             while timer.elapsed() < TIMEOUT {
                 tokio::time::sleep(Duration::from_millis(10)).await;
 
-                if let ClusterState::Follower(_) = self.nodes.read().await[index as usize]
+                if let ClusterState::Follower(_) = self.nodes.read().await[node as usize]
                     .read()
                     .await
                     .cluster
@@ -856,24 +874,24 @@ mod test {
                 }
             }
 
-            panic!("{index} has not become a followerwithin {:?}", TIMEOUT);
+            panic!("{node} has not become a followerwithin {:?}", TIMEOUT);
         }
 
-        async fn expect_storage_synced(&self, left: u64, right: u64) {
+        async fn expect_storage_synced(&self, left_node: u64, right_node: u64) {
             let timer = Instant::now();
             let mut left_storage = TestStorage::default();
             let mut right_storage = TestStorage::default();
 
             while timer.elapsed() < TIMEOUT {
                 tokio::time::sleep(Duration::from_millis(10)).await;
-                left_storage = self.nodes.read().await[left as usize]
+                left_storage = self.nodes.read().await[left_node as usize]
                     .read()
                     .await
                     .cluster
                     .storage
                     .clone();
 
-                right_storage = self.nodes.read().await[right as usize]
+                right_storage = self.nodes.read().await[right_node as usize]
                     .read()
                     .await
                     .cluster
@@ -886,13 +904,13 @@ mod test {
             }
 
             panic!(
-                "{left} is not in sync with {right} in {:?}:\nLEFT\n{:?}\nRIGHT:\n{:?}",
+                "{left_node} is not in sync with {right_node} in {:?}:\nLEFT\n{:?}\nRIGHT:\n{:?}",
                 TIMEOUT, left_storage, right_storage
             );
         }
 
-        async fn append(&self, index: u64, log: u8) -> anyhow::Result<()> {
-            let requests = self.nodes.read().await[index as usize]
+        async fn append(&self, node: u64, log: u8) -> anyhow::Result<()> {
+            let requests = self.nodes.read().await[node as usize]
                 .write()
                 .await
                 .cluster

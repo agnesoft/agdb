@@ -1,361 +1,55 @@
+use crate::create_cluster;
+use crate::next_db_name;
+use crate::next_user_name;
+use crate::wait_for_leader;
+use crate::wait_for_ready;
+use crate::TestCluster;
 use crate::TestServer;
-use crate::TestServerImpl;
 use crate::ADMIN;
-use crate::HOST;
-use crate::SERVER_DATA_DIR;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
-use agdb_api::ClusterStatus;
 use agdb_api::DbResource;
 use agdb_api::DbType;
-use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Instant;
-use tokio::sync::RwLock;
-
-const TEST_TIMEOUT: u128 = 10000;
-const POLL_INTERVAL: u64 = 100;
-
-type ClusterClient = Arc<RwLock<AgdbApi<ReqwestClient>>>;
-
-struct ClusterServer {
-    server: TestServerImpl,
-    client: ClusterClient,
-}
-
-async fn wait_for_leader(client: ClusterClient) -> anyhow::Result<Vec<ClusterStatus>> {
-    let now = Instant::now();
-
-    while now.elapsed().as_millis() < TEST_TIMEOUT {
-        let status = client.read().await.cluster_status().await?;
-
-        if status.1.iter().any(|s| s.leader) {
-            return Ok(status.1);
-        }
-
-        std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL));
-    }
-
-    Err(anyhow::anyhow!(
-        "Leader not found within {TEST_TIMEOUT}seconds"
-    ))
-}
-
-async fn create_cluster(nodes: usize) -> anyhow::Result<(ClusterServer, Vec<ClusterServer>)> {
-    let mut configs = Vec::with_capacity(nodes);
-    let mut cluster = Vec::with_capacity(nodes);
-    let mut servers = Vec::with_capacity(nodes);
-    let mut statuses = Vec::with_capacity(nodes);
-
-    for _ in 0..nodes {
-        let port = TestServerImpl::next_port();
-        let mut config = HashMap::<&str, serde_yaml::Value>::new();
-        config.insert("bind", format!("{HOST}:{port}").into());
-        config.insert("address", format!("http://{HOST}:{port}").into());
-        config.insert("admin", ADMIN.into());
-        config.insert("basepath", "".into());
-        config.insert("log_level", "INFO".into());
-        config.insert("data_dir", SERVER_DATA_DIR.into());
-        config.insert("cluster_token", "test".into());
-
-        configs.push(config);
-        cluster.push(format!("http://{HOST}:{port}"));
-    }
-
-    for config in &mut configs {
-        config.insert("cluster", cluster.clone().into());
-    }
-
-    for server in configs
-        .into_iter()
-        .map(|c| tokio::spawn(async move { TestServerImpl::with_config(c).await }))
-    {
-        let server = server.await??;
-        let client = Arc::new(RwLock::new(AgdbApi::new(
-            ReqwestClient::new(),
-            &server.address,
-        )));
-        servers.push(ClusterServer { server, client });
-    }
-
-    for has_leader in servers
-        .iter()
-        .map(|s| tokio::spawn(wait_for_leader(s.client.clone())))
-    {
-        statuses.push(has_leader.await??);
-    }
-
-    for status in &statuses[1..] {
-        assert_eq!(statuses[0], *status);
-    }
-
-    let leader = statuses[0]
-        .iter()
-        .enumerate()
-        .find_map(|(i, s)| if s.leader { Some(i) } else { None })
-        .unwrap();
-
-    Ok((servers.remove(leader), servers))
-}
+use assert_cmd::cargo::CommandCargoExt;
+use std::process::Command;
 
 #[tokio::test]
 async fn rebalance() -> anyhow::Result<()> {
-    let (mut leader, servers) = create_cluster(3).await?;
-    leader.client.write().await.user_login(ADMIN, ADMIN).await?;
-    leader.client.read().await.admin_shutdown().await?;
-    assert!(leader.server.process.wait()?.success());
+    let mut servers = create_cluster(3).await?;
+    let mut leader = AgdbApi::new(ReqwestClient::new(), &servers[0].address);
+    leader.user_login(ADMIN, ADMIN).await?;
+    leader.admin_shutdown().await?;
+    assert!(servers[0].process.wait()?.success());
 
     let mut statuses = Vec::with_capacity(servers.len());
 
-    for has_leader in servers
-        .iter()
-        .map(|s| tokio::spawn(wait_for_leader(s.client.clone())))
-    {
-        statuses.push(has_leader.await??);
+    for server in &servers[1..] {
+        let status = wait_for_leader(&AgdbApi::new(ReqwestClient::new(), &server.address)).await?;
+        statuses.push(status);
     }
 
-    for status in &statuses[1..] {
+    for status in &statuses {
         assert_eq!(statuses[0], *status);
     }
 
-    Ok(())
-}
+    let dir = &servers[0].dir;
+    servers[0].process = Command::cargo_bin("agdb_server")?
+        .current_dir(dir)
+        .spawn()?;
+    wait_for_ready(&leader).await?;
 
-#[tokio::test]
-async fn user() -> anyhow::Result<()> {
-    let (leader, servers) = create_cluster(2).await?;
-    let client = servers[0].client.clone();
+    statuses.clear();
 
-    client.write().await.cluster_login(ADMIN, ADMIN).await?;
-    client
-        .read()
-        .await
-        .admin_user_add("user1", "password123")
-        .await?;
-    client
-        .write()
-        .await
-        .user_login("user1", "password123")
-        .await?;
+    for server in &servers {
+        let status = wait_for_leader(&AgdbApi::new(ReqwestClient::new(), &server.address)).await?;
+        statuses.push(status);
+    }
 
-    let mut leader = leader.client.write().await;
-    leader.user_login(ADMIN, ADMIN).await?;
-    leader.admin_cluster_logout("user1").await?;
-    leader.admin_user_remove("user1").await?;
-    client.write().await.user_login(ADMIN, ADMIN).await?;
-    client.read().await.user_status().await?;
-    client.write().await.cluster_logout().await?;
-    assert_eq!(
-        client.read().await.user_status().await.unwrap_err().status,
-        401
-    );
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn db() -> anyhow::Result<()> {
-    let (_leader, servers) = create_cluster(2).await?;
-    servers[0]
-        .client
-        .write()
-        .await
-        .cluster_login(ADMIN, ADMIN)
-        .await?;
-
-    let client = servers[0].client.read().await;
-    client.db_add(ADMIN, "db1", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.name, "admin/db1");
-    assert_eq!(db.db_type, DbType::Memory);
-
-    client.db_backup(ADMIN, "db1").await?;
-    let db = &client.db_list().await?.1[0];
-    assert_ne!(db.backup, 0);
-    client.db_restore(ADMIN, "db1").await?;
-
-    let db = client.db_clear(ADMIN, "db1", DbResource::Backup).await?.1;
-    assert_eq!(db.backup, 0);
-
-    client.db_convert(ADMIN, "db1", DbType::Mapped).await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.db_type, DbType::Mapped);
-
-    client.db_copy(ADMIN, "db1", ADMIN, "db2").await?;
-    let db = &client.db_list().await?.1[1];
-    assert_eq!(db.name, "admin/db2");
-    client.db_backup(ADMIN, "db2").await?;
-
-    client.db_remove(ADMIN, "db2").await?;
-    assert_eq!(client.db_list().await?.1.len(), 1);
-
-    client.db_add(ADMIN, "db2", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[1];
-    assert_eq!(db.name, "admin/db2");
-    assert_ne!(db.backup, 0);
-
-    client.db_delete(ADMIN, "db2").await?;
-    assert_eq!(client.db_list().await?.1.len(), 1);
-
-    client
-        .db_exec(
-            ADMIN,
-            "db1",
-            &[QueryBuilder::insert().nodes().count(100).query().into()],
-        )
-        .await?;
-    let node_count = client
-        .db_exec(
-            ADMIN,
-            "db1",
-            &[QueryBuilder::select().node_count().query().into()],
-        )
-        .await?
-        .1[0]
-        .elements[0]
-        .values[0]
-        .value
-        .to_u64()
-        .unwrap();
-    assert_eq!(node_count, 100);
-
-    let orig_size = client.db_list().await?.1[0].size;
-    let db_size = client.db_optimize(ADMIN, "db1").await?.1.size;
-    assert!(db_size < orig_size);
-
-    client.db_rename(ADMIN, "db1", ADMIN, "db2").await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.name, "admin/db2");
-
-    client.admin_user_add("user2", "password123").await?;
-    client
-        .db_user_add(ADMIN, "db2", "user2", DbUserRole::Write)
-        .await?;
-    let users = client.db_user_list(ADMIN, "db2").await?.1;
-    let expected = vec![
-        DbUser {
-            user: ADMIN.to_string(),
-            role: DbUserRole::Admin,
-        },
-        DbUser {
-            user: "user2".to_string(),
-            role: DbUserRole::Write,
-        },
-    ];
-    assert_eq!(users, expected);
-    client.db_user_remove(ADMIN, "db2", "user2").await?;
-    let users = client.db_user_list(ADMIN, "db2").await?.1;
-    let expected = vec![DbUser {
-        user: ADMIN.to_string(),
-        role: DbUserRole::Admin,
-    }];
-    assert_eq!(users, expected);
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn db_admin() -> anyhow::Result<()> {
-    let (_leader, servers) = create_cluster(2).await?;
-    servers[0]
-        .client
-        .write()
-        .await
-        .cluster_login(ADMIN, ADMIN)
-        .await?;
-
-    let client = servers[0].client.read().await;
-    client.admin_db_add(ADMIN, "db1", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.name, "admin/db1");
-    assert_eq!(db.db_type, DbType::Memory);
-
-    client.admin_db_backup(ADMIN, "db1").await?;
-    let db = &client.db_list().await?.1[0];
-    assert_ne!(db.backup, 0);
-    client.admin_db_restore(ADMIN, "db1").await?;
-
-    let db = client.db_clear(ADMIN, "db1", DbResource::Backup).await?.1;
-    assert_eq!(db.backup, 0);
-
-    client
-        .admin_db_convert(ADMIN, "db1", DbType::Mapped)
-        .await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.db_type, DbType::Mapped);
-
-    client.admin_db_copy(ADMIN, "db1", ADMIN, "db2").await?;
-    let db = &client.db_list().await?.1[1];
-    assert_eq!(db.name, "admin/db2");
-    client.admin_db_backup(ADMIN, "db2").await?;
-
-    client.admin_db_remove(ADMIN, "db2").await?;
-    assert_eq!(client.db_list().await?.1.len(), 1);
-
-    client.admin_db_add(ADMIN, "db2", DbType::Memory).await?;
-    let db = &client.db_list().await?.1[1];
-    assert_eq!(db.name, "admin/db2");
-    assert_ne!(db.backup, 0);
-
-    client.admin_db_delete(ADMIN, "db2").await?;
-    assert_eq!(client.db_list().await?.1.len(), 1);
-
-    client
-        .admin_db_exec(
-            ADMIN,
-            "db1",
-            &[QueryBuilder::insert().nodes().count(100).query().into()],
-        )
-        .await?;
-    let node_count = client
-        .admin_db_exec(
-            ADMIN,
-            "db1",
-            &[QueryBuilder::select().node_count().query().into()],
-        )
-        .await?
-        .1[0]
-        .elements[0]
-        .values[0]
-        .value
-        .to_u64()
-        .unwrap();
-    assert_eq!(node_count, 100);
-
-    let orig_size = client.admin_db_list().await?.1[0].size;
-    let db_size = client.admin_db_optimize(ADMIN, "db1").await?.1.size;
-    assert!(db_size < orig_size);
-
-    client.admin_db_rename(ADMIN, "db1", ADMIN, "db2").await?;
-    let db = &client.db_list().await?.1[0];
-    assert_eq!(db.name, "admin/db2");
-
-    client.admin_user_add("user2", "password123").await?;
-    client
-        .admin_db_user_add(ADMIN, "db2", "user2", DbUserRole::Write)
-        .await?;
-    let users = client.admin_db_user_list(ADMIN, "db2").await?.1;
-    let expected = vec![
-        DbUser {
-            user: ADMIN.to_string(),
-            role: DbUserRole::Admin,
-        },
-        DbUser {
-            user: "user2".to_string(),
-            role: DbUserRole::Write,
-        },
-    ];
-    assert_eq!(users, expected);
-    client.admin_db_user_remove(ADMIN, "db2", "user2").await?;
-    let users = client.admin_db_user_list(ADMIN, "db2").await?.1;
-    let expected = vec![DbUser {
-        user: ADMIN.to_string(),
-        role: DbUserRole::Admin,
-    }];
-    assert_eq!(users, expected);
+    for status in &statuses {
+        assert_eq!(statuses[0], *status);
+    }
 
     Ok(())
 }
@@ -367,4 +61,653 @@ async fn status() {
 
     assert_eq!(code, 200);
     assert_eq!(status.len(), 0);
+}
+
+#[tokio::test]
+async fn admin_db_add() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    let db_list = client.admin_db_list().await?.1;
+    let server_db = db_list
+        .iter()
+        .find(|d| d.name == format!("{owner}/{db}"))
+        .unwrap();
+    assert_eq!(server_db.name, format!("{owner}/{db}"));
+    assert_eq!(server_db.db_type, DbType::Memory);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_backup_restore() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_backup(owner, db).await?;
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
+        .values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 1);
+    client.admin_db_restore(owner, db).await?;
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
+        .values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_clear() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
+        .values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 1);
+    client.admin_db_clear(owner, db, DbResource::All).await?;
+    let node_count = client.admin_db_exec(owner, db, node_count_query).await?.1[0].elements[0]
+        .values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_convert() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_convert(owner, db, DbType::Mapped).await?;
+    let db_list = client.admin_db_list().await?.1;
+    let server_db = db_list
+        .iter()
+        .find(|d| d.name == format!("{owner}/{db}"))
+        .unwrap();
+    assert_eq!(server_db.db_type, DbType::Mapped);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_copy() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_copy(owner, db, owner, db2).await?;
+    client.user_login(owner, owner).await?;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 2);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_delete() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    let admin_token = client.token.clone();
+    client.user_login(owner, owner).await?;
+    let user_token = client.token.clone();
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 1);
+    client.token = admin_token;
+    client.admin_db_delete(owner, db).await?;
+    client.token = user_token;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_exec() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
+        )
+        .await?;
+    client.user_login(owner, owner).await?;
+    let result = client
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
+        .await?
+        .1[0]
+        .result;
+    assert_eq!(result, 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_optimize() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client
+        .admin_db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(100).query().into()],
+        )
+        .await?;
+    let original_size = client
+        .admin_db_list()
+        .await?
+        .1
+        .iter()
+        .find(|d| d.name == format!("{owner}/{db}"))
+        .unwrap()
+        .size;
+    client.admin_db_optimize(owner, db).await?;
+    let server_db = client.admin_db_optimize(owner, db).await?.1;
+    assert!(server_db.size < original_size);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_remove() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    let admin_token = client.token.clone();
+    client.user_login(owner, owner).await?;
+    let user_token = client.token.clone();
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 1);
+    client.token = admin_token;
+    client.admin_db_remove(owner, db).await?;
+    client.token = user_token;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_rename() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client.admin_db_rename(owner, db, owner, db2).await?;
+    client.user_login(owner, owner).await?;
+    let dbs = client.db_list().await?.1;
+    assert_eq!(dbs.len(), 1);
+    assert_eq!(dbs[0].name, format!("{owner}/{db2}"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_db_user_add_remove() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let user = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_user_add(user, user).await?;
+    client.admin_db_add(owner, db, DbType::Memory).await?;
+    client
+        .admin_db_user_add(owner, db, user, DbUserRole::Read)
+        .await?;
+    let users = client.admin_db_user_list(owner, db).await?.1;
+    assert_eq!(users.len(), 2);
+    client.admin_db_user_remove(owner, db, user).await?;
+    let users = client.admin_db_user_list(owner, db).await?.1;
+    assert_eq!(users.len(), 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_user_add() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let client = cluster.apis.get_mut(1).unwrap();
+    let user = &next_user_name();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(user, user).await?;
+    let users = client.admin_user_list().await?.1;
+    let added_user = users.iter().find(|u| u.name.as_str() == user);
+    assert!(added_user.is_some());
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_user_change_password() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let client = cluster.apis.get_mut(1).unwrap();
+    let user = &next_user_name();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(user, user).await?;
+    client
+        .admin_user_change_password(user, "password123")
+        .await?;
+    client.user_login(user, "password123").await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_cluster_logout() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+
+    let token = {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add(user, user).await?;
+        client.cluster_user_login(user, user).await?;
+        client.token.clone()
+    };
+
+    {
+        let leader = cluster.apis.get_mut(0).unwrap();
+        leader.token = token;
+        leader.user_status().await?;
+    }
+
+    {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.user_login(ADMIN, ADMIN).await?;
+        client.cluster_admin_user_logout(user).await?;
+    }
+
+    assert_eq!(cluster.apis[0].user_status().await.unwrap_err().status, 401);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn admin_user_remove() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let client = cluster.apis.get_mut(1).unwrap();
+    let user = &next_user_name();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(user, user).await?;
+    let users = client.admin_user_list().await?.1;
+    let added_user = users.iter().find(|u| u.name.as_str() == user);
+    assert!(added_user.is_some());
+    client.admin_user_remove(user).await?;
+    let users = client.admin_user_list().await?.1;
+    let added_user = users.iter().find(|u| u.name.as_str() == user);
+    assert!(added_user.is_none());
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_add() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    let db_list = client.db_list().await?.1;
+    assert_eq!(db_list[0].name, format!("{owner}/{db}"));
+    assert_eq!(db_list[0].db_type, DbType::Memory);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_backup() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_backup(owner, db).await?;
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 1);
+    client.db_restore(owner, db).await?;
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_clear() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(1).query().into()],
+        )
+        .await?;
+    let node_count_query = &[QueryBuilder::select().node_count().query().into()];
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 1);
+    client.db_clear(owner, db, DbResource::All).await?;
+    let node_count = client.db_exec(owner, db, node_count_query).await?.1[0].elements[0].values[0]
+        .value
+        .to_u64()?;
+    assert_eq!(node_count, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_convert() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_convert(owner, db, DbType::Mapped).await?;
+    let db_list = client.db_list().await?.1;
+    assert_eq!(db_list[0].db_type, DbType::Mapped);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_copy() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_copy(owner, db, owner, db2).await?;
+    client.user_login(owner, owner).await?;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 2);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_delete() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 1);
+    client.db_delete(owner, db).await?;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_exec() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert()
+                .nodes()
+                .aliases("root")
+                .query()
+                .into()],
+        )
+        .await?;
+    client.user_login(owner, owner).await?;
+    let result = client
+        .db_exec(
+            owner,
+            db,
+            &[QueryBuilder::select().ids("root").query().into()],
+        )
+        .await?
+        .1[0]
+        .result;
+    assert_eq!(result, 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_optimize() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client
+        .db_exec_mut(
+            owner,
+            db,
+            &[QueryBuilder::insert().nodes().count(100).query().into()],
+        )
+        .await?;
+    let original_size = client.db_list().await?.1[0].size;
+    client.db_optimize(owner, db).await?;
+    let server_db = client.db_optimize(owner, db).await?.1;
+    assert!(server_db.size < original_size);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_remove() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 1);
+    client.db_remove(owner, db).await?;
+    let dbs = client.db_list().await?.1.len();
+    assert_eq!(dbs, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_rename() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let db2 = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client.db_rename(owner, db, owner, db2).await?;
+    let dbs = client.db_list().await?.1;
+    assert_eq!(dbs.len(), 1);
+    assert_eq!(dbs[0].name, format!("{owner}/{db2}"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn db_user_add_remove() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let owner = &next_user_name();
+    let user = &next_user_name();
+    let db = &next_db_name();
+    let client = cluster.apis.get_mut(1).unwrap();
+    client.user_login(ADMIN, ADMIN).await?;
+    client.admin_user_add(owner, owner).await?;
+    client.admin_user_add(user, user).await?;
+    client.cluster_user_login(owner, owner).await?;
+    client.db_add(owner, db, DbType::Memory).await?;
+    client
+        .db_user_add(owner, db, user, DbUserRole::Read)
+        .await?;
+    let users = client.db_user_list(owner, db).await?.1;
+    assert_eq!(users.len(), 2);
+    client.db_user_remove(owner, db, user).await?;
+    let users = client.db_user_list(owner, db).await?.1;
+    assert_eq!(users.len(), 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn user_change_password() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+    {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add(user, user).await?;
+        client.cluster_user_login(user, user).await?;
+        client.user_change_password(user, "password123").await?;
+    }
+    cluster.apis[0].user_login(user, "password123").await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn user_login() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+
+    let token = {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.user_login(ADMIN, ADMIN).await?;
+        client.token.clone()
+    };
+
+    let leader = cluster.apis.get_mut(0).unwrap();
+    leader.token = token;
+    leader.user_status().await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn cluster_logout() -> anyhow::Result<()> {
+    let mut cluster = TestCluster::new().await?;
+    let user = &next_user_name();
+
+    let token = {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.user_login(ADMIN, ADMIN).await?;
+        client.admin_user_add(user, user).await?;
+        client.cluster_user_login(user, user).await?;
+        client.token.clone()
+    };
+
+    {
+        let leader = cluster.apis.get_mut(0).unwrap();
+        leader.token = token;
+        leader.user_status().await?;
+    }
+
+    {
+        let client = cluster.apis.get_mut(1).unwrap();
+        client.cluster_user_logout().await?;
+    }
+
+    assert_eq!(cluster.apis[0].user_status().await.unwrap_err().status, 401);
+    assert_eq!(cluster.apis[1].user_status().await.unwrap_err().status, 401);
+
+    Ok(())
 }

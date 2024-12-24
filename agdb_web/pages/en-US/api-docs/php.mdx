@@ -7,13 +7,13 @@ import { Callout, Steps } from "nextra/components";
 
 # PHP
 
-The php agdb API client is generated with [openapi-generator](https://github.com/OpenAPITools/openapi-generator/blob/master/docs/generators/php.md). The following is the quickstart guide for the agdb client in PHP (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how-to-run-server) to learn how to run the server.
+The PHP agdb API client is generated with [openapi-generator](https://github.com/OpenAPITools/openapi-generator/blob/master/docs/generators/php.md). The following is the quickstart guide for the agdb client in PHP (connecting to the server). It assumes an `agdb_server` is running locally. Please refer to the [server guide](/docs/guides/how-to-run-server) to learn how to run the server.
 
 Looking for... [how to run a server?](/docs/guides/how-to-run-server) | [another language?](/api-docs/openapi) | [embedded db guide?](/docs/guides/quickstart)
 
 ## Usage
 
-The following is the from-scratch guide to use `agdb-api` php package.
+The following is the from-scratch guide to use `agdb-api` PHP package.
 
 <Steps>
 ### Install PHP
@@ -110,7 +110,7 @@ $client->dbAdd("php_user1", "db1", DbType::MAPPED);
 
 ### Execute queries
 
-To execute queries against the database we call `dbExec` with the user and their database.
+To execute queries against the database we call `dbExec` (read only queries) and `dbExecMut` (for queries that also write to teh datbaase) with the user and their database.
 
 <Callout type="info">
     Notice we are feeding results of the previous query to the next one with
@@ -155,8 +155,9 @@ $queries = [
         ->query()
 ];
 
-// Execute queries.
-$result = $client->dbExec("php_user1", "db1", $queries);
+// Execute queries. Since it includes mutable queries (inserts)
+// we need to call dbExecMut() rather than read-only dbExec()
+$result = $client->dbExecMut("php_user1", "db1", $queries);
 ```
 
 ### Print the the result

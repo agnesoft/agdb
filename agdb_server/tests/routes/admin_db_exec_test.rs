@@ -1,3 +1,5 @@
+use crate::next_db_name;
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 use agdb::DbElement;
@@ -9,8 +11,8 @@ use agdb_api::DbType;
 #[tokio::test]
 async fn read_write() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
@@ -23,7 +25,7 @@ async fn read_write() -> anyhow::Result<()> {
             .into(),
         QueryBuilder::select().ids("root").query().into(),
     ];
-    let (status, results) = server.api.admin_db_exec(owner, db, queries).await?;
+    let (status, results) = server.api.admin_db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     let expected = vec![
         QueryResult {
@@ -52,8 +54,8 @@ async fn read_write() -> anyhow::Result<()> {
 #[tokio::test]
 async fn read_only() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
@@ -63,7 +65,7 @@ async fn read_only() -> anyhow::Result<()> {
         .values([[("key", 1.1).into()]])
         .query()
         .into()];
-    let (status, _) = server.api.admin_db_exec(owner, db, queries).await?;
+    let (status, _) = server.api.admin_db_exec_mut(owner, db, queries).await?;
     assert_eq!(status, 200);
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
     let (status, results) = server.api.admin_db_exec(owner, db, queries).await?;
@@ -84,8 +86,8 @@ async fn read_only() -> anyhow::Result<()> {
 #[tokio::test]
 async fn query_error() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
-    let db = &server.next_db_name();
+    let owner = &next_user_name();
+    let db = &next_db_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.admin_db_add(owner, db, DbType::Mapped).await?;
@@ -99,7 +101,7 @@ async fn query_error() -> anyhow::Result<()> {
     ];
     let error = server
         .api
-        .admin_db_exec(owner, db, queries)
+        .admin_db_exec_mut(owner, db, queries)
         .await
         .unwrap_err();
     assert_eq!(error.status, 470);
@@ -124,7 +126,7 @@ async fn db_not_found() -> anyhow::Result<()> {
 #[tokio::test]
 async fn non_admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;

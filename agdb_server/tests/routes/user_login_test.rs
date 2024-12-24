@@ -1,10 +1,11 @@
+use crate::next_user_name;
 use crate::TestServer;
 use crate::ADMIN;
 
 #[tokio::test]
 async fn login() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     let status = server.api.user_login(ADMIN, ADMIN).await?;
     assert_eq!(status, 200);
     server.api.admin_user_add(owner, owner).await?;
@@ -17,7 +18,7 @@ async fn login() -> anyhow::Result<()> {
 #[tokio::test]
 async fn repeated_login() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     let status = server.api.user_login(ADMIN, ADMIN).await?;
     assert_eq!(status, 200);
     server.api.admin_user_add(owner, owner).await?;
@@ -33,7 +34,7 @@ async fn repeated_login() -> anyhow::Result<()> {
 #[tokio::test]
 async fn invalid_credentials() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
-    let owner = &server.next_user_name();
+    let owner = &next_user_name();
     let status = server.api.user_login(ADMIN, ADMIN).await?;
     assert_eq!(status, 200);
     server.api.admin_user_add(owner, owner).await?;

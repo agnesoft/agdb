@@ -21,7 +21,6 @@ use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
@@ -154,7 +153,7 @@ impl ClusterNodeImpl {
             Ok((_, response)) => Some(response),
             Err(e) => {
                 tracing::warn!(
-                    "[{}] Error sending request to cluster node {}: {:?}",
+                    "[{}] Error sending request to cluster node '{}': {:?}",
                     request.index,
                     request.target,
                     e
@@ -216,15 +215,24 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
         return Ok(());
     }
 
-    for node in &cluster.nodes {
+    let index = cluster.index;
+
+    for (node_index, node) in cluster.nodes.iter().enumerate() {
         let node = node.clone();
         let shutdown_signal = shutdown_signal.clone();
         tokio::spawn(async move {
             while !shutdown_signal.load(Ordering::Relaxed) {
                 if let Some(request) = node.requests_receiver.write().await.recv().await {
                     if let Some(response) = node.send(&request).await {
-                        node.responses.send((request, response))?;
+                        match node.responses.send((request, response)) {
+                            Ok(_) => {}
+                            Err(e) => tracing::warn!(
+                                "[{index}] Error sending response to cluster node '{node_index}': {e:?}"
+                            ),
+                        };
                     }
+                } else {
+                    break;
                 }
             }
 
@@ -253,11 +261,19 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
                     .await?
                 {
                     for request in requests {
-                        response_cluster.nodes[request.target as usize]
+                        let target = request.target;
+                        let _ = response_cluster.nodes[request.target as usize]
                             .requests_sender
-                            .send(request)?;
+                            .send(request)
+                            .inspect_err(|e| {
+                                tracing::warn!(
+                                    "[{index}] Error sending follow up request to node '{target}': {e:?}"
+                                )
+                            });
                     }
-                };
+                }
+            } else {
+                break;
             }
         }
         ServerResult::Ok(())
@@ -266,9 +282,15 @@ async fn start_cluster(cluster: Cluster, shutdown_signal: Arc<AtomicBool>) -> Se
     while !shutdown_signal.load(Ordering::Relaxed) {
         if let Some(requests) = cluster.raft.write().await.process() {
             for request in requests {
-                cluster.nodes[request.target as usize]
+                let target = request.target;
+                let _ = cluster.nodes[request.target as usize]
                     .requests_sender
-                    .send(request)?;
+                    .send(request)
+                    .inspect_err(|e| {
+                        tracing::warn!(
+                            "[{index}] Error sending new request to node '{target}': {e:?}"
+                        )
+                    });
             }
         }
     }
@@ -294,10 +316,10 @@ pub(crate) async fn start_with_shutdown(
 
 pub(crate) struct ClusterStorage {
     result_notifiers: HashMap<DbId, ResultNotifier>,
+    notifier: tokio::sync::broadcast::Sender<u64>,
     index: u64,
     term: u64,
     commit: u64,
-    executed: Arc<AtomicU64>,
     db: ServerDb,
     db_pool: DbPool,
 }
@@ -309,10 +331,10 @@ impl ClusterStorage {
 
         let mut storage = Self {
             result_notifiers: HashMap::new(),
+            notifier: tokio::sync::broadcast::channel(100).0,
             index,
             term,
             commit,
-            executed: Arc::new(AtomicU64::new(index)),
             db,
             db_pool,
         };
@@ -326,22 +348,26 @@ impl ClusterStorage {
 
     async fn execute_log(&mut self, log: Log<ClusterAction>) -> ServerResult<()> {
         let log_id = log.db_id.unwrap_or_default();
-        let executed = self.executed.clone();
         let db = self.db.clone();
         let db_pool = self.db_pool.clone();
-        let notifier = self.result_notifiers.remove(&log_id);
+        let notifier = self.notifier.clone();
+        let result_notifier = self.result_notifiers.remove(&log_id);
 
         tokio::spawn(async move {
             let result = log.data.exec(db.clone(), db_pool).await;
-            executed.fetch_max(log.index, Ordering::Relaxed);
+            let _ = notifier.send(log.index);
             let _ = db.log_executed(log_id).await;
 
-            if let Some(notifier) = notifier {
-                let _ = notifier.send(result.map(|r| (log.index, r)));
+            if let Some(rs) = result_notifier {
+                let _ = rs.send(result.map(|r| (log.index, r)));
             }
         });
 
         Ok(())
+    }
+
+    pub(crate) async fn subscribe(&self) -> tokio::sync::broadcast::Receiver<u64> {
+        self.notifier.subscribe()
     }
 }
 
@@ -351,7 +377,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         log: Log<ClusterAction>,
         notifier: Option<ResultNotifier>,
     ) -> ServerResult<()> {
-        self.db.remove_uncommitted_logs_since(log.index).await?;
+        self.db.remove_uncommitted_logs(log.index).await?;
         let log_id = self.db.append_log(&log).await?;
         self.index = log.index;
         self.term = log.term;
@@ -379,10 +405,6 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         self.commit
     }
 
-    fn log_executed(&self) -> u64 {
-        self.executed.load(Ordering::Relaxed)
-    }
-
     fn log_index(&self) -> u64 {
         self.index
     }
@@ -391,7 +413,7 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
         self.term
     }
 
-    async fn logs(&self, since_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
-        self.db.logs_since(since_index).await
+    async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
+        self.db.logs_since(from_index).await
     }
 }

@@ -58,8 +58,8 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static $openAPITypes = [
         'backup' => 'int',
+        'db' => 'string',
         'db_type' => '\Agnesoft\AgdbApi\Model\DbType',
-        'name' => 'string',
         'owner' => 'string',
         'role' => '\Agnesoft\AgdbApi\Model\DbUserRole',
         'size' => 'int'
@@ -74,8 +74,8 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static $openAPIFormats = [
         'backup' => 'int64',
+        'db' => null,
         'db_type' => null,
-        'name' => null,
         'owner' => null,
         'role' => null,
         'size' => 'int64'
@@ -88,8 +88,8 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
       */
     protected static array $openAPINullables = [
         'backup' => false,
+        'db' => false,
         'db_type' => false,
-        'name' => false,
         'owner' => false,
         'role' => false,
         'size' => false
@@ -182,8 +182,8 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $attributeMap = [
         'backup' => 'backup',
+        'db' => 'db',
         'db_type' => 'db_type',
-        'name' => 'name',
         'owner' => 'owner',
         'role' => 'role',
         'size' => 'size'
@@ -196,8 +196,8 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $setters = [
         'backup' => 'setBackup',
+        'db' => 'setDb',
         'db_type' => 'setDbType',
-        'name' => 'setName',
         'owner' => 'setOwner',
         'role' => 'setRole',
         'size' => 'setSize'
@@ -210,8 +210,8 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     protected static $getters = [
         'backup' => 'getBackup',
+        'db' => 'getDb',
         'db_type' => 'getDbType',
-        'name' => 'getName',
         'owner' => 'getOwner',
         'role' => 'getRole',
         'size' => 'getSize'
@@ -275,8 +275,8 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     public function __construct(array $data = null)
     {
         $this->setIfExists('backup', $data ?? [], null);
+        $this->setIfExists('db', $data ?? [], null);
         $this->setIfExists('db_type', $data ?? [], null);
-        $this->setIfExists('name', $data ?? [], null);
         $this->setIfExists('owner', $data ?? [], null);
         $this->setIfExists('role', $data ?? [], null);
         $this->setIfExists('size', $data ?? [], null);
@@ -316,11 +316,11 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
             $invalidProperties[] = "invalid value for 'backup', must be bigger than or equal to 0.";
         }
 
+        if ($this->container['db'] === null) {
+            $invalidProperties[] = "'db' can't be null";
+        }
         if ($this->container['db_type'] === null) {
             $invalidProperties[] = "'db_type' can't be null";
-        }
-        if ($this->container['name'] === null) {
-            $invalidProperties[] = "'name' can't be null";
         }
         if ($this->container['owner'] === null) {
             $invalidProperties[] = "'owner' can't be null";
@@ -383,6 +383,33 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
     }
 
     /**
+     * Gets db
+     *
+     * @return string
+     */
+    public function getDb()
+    {
+        return $this->container['db'];
+    }
+
+    /**
+     * Sets db
+     *
+     * @param string $db db
+     *
+     * @return self
+     */
+    public function setDb($db)
+    {
+        if (is_null($db)) {
+            throw new \InvalidArgumentException('non-nullable db cannot be null');
+        }
+        $this->container['db'] = $db;
+
+        return $this;
+    }
+
+    /**
      * Gets db_type
      *
      * @return \Agnesoft\AgdbApi\Model\DbType
@@ -405,33 +432,6 @@ class ServerDatabase implements ModelInterface, ArrayAccess, \JsonSerializable
             throw new \InvalidArgumentException('non-nullable db_type cannot be null');
         }
         $this->container['db_type'] = $db_type;
-
-        return $this;
-    }
-
-    /**
-     * Gets name
-     *
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->container['name'];
-    }
-
-    /**
-     * Sets name
-     *
-     * @param string $name name
-     *
-     * @return self
-     */
-    public function setName($name)
-    {
-        if (is_null($name)) {
-            throw new \InvalidArgumentException('non-nullable name cannot be null');
-        }
-        $this->container['name'] = $name;
 
         return $this;
     }

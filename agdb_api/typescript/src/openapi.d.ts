@@ -1169,8 +1169,8 @@ declare namespace Components {
         }
         export interface ServerDatabase {
             backup: number; // int64
+            db: string;
             db_type: DbType;
-            name: string;
             owner: string;
             role: DbUserRole;
             size: number; // int64

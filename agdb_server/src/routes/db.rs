@@ -219,7 +219,7 @@ pub(crate) async fn clear(
     let size = db_pool.db_size(&db_name).await.unwrap_or(0);
     let database = server_db.user_db(user.0, &db_name).await?;
     let db = ServerDatabase {
-        db: db,
+        db,
         owner,
         db_type: database.db_type,
         role,

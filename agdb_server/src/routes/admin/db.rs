@@ -182,7 +182,7 @@ pub(crate) async fn clear(
     let size = db_pool.db_size(&db_name).await.unwrap_or(0);
     let database = server_db.user_db(owner_id, &db_name).await?;
     let db = ServerDatabase {
-        db: db,
+        db,
         owner,
         db_type: database.db_type,
         role,
@@ -496,7 +496,7 @@ pub(crate) async fn optimize(
         StatusCode::OK,
         [("commit-index", commit_index.to_string())],
         Json(ServerDatabase {
-            db: db,
+            db,
             owner,
             db_type: database.db_type,
             role,

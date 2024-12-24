@@ -1,11 +1,25 @@
 <script lang="ts" setup>
-import DbList from "@/components/db/DbList.vue";
+import { useDbStore } from "@/composables/stores/DbStore";
+import { onMounted } from "vue";
+import DbAddForm from "@/components/db/DbAddForm.vue";
+import DbTable from "@/components/db/DbTable.vue";
+
+const { fetchDatabases } = useDbStore();
+onMounted(async () => {
+    await fetchDatabases();
+});
 </script>
 
 <template>
     <div class="db-view">
-        <DbList />
+        <button class="button" @click="fetchDatabases">Refresh</button>
+        <DbAddForm />
+        <DbTable />
     </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.db-view {
+    text-align: center;
+}
+</style>

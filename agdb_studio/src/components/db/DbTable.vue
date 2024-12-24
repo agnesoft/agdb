@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import AgdbTable from "../base/table/AgdbTable.vue";
-import { useDbList } from "@/composables/stores/DbStore";
+import { useDbStore } from "@/composables/stores/DbStore";
 import { addTable } from "@/composables/table/tableConfig";
 import { setTableData } from "@/composables/table/tableData";
 import { watchEffect } from "vue";
 import { dateFormatter } from "@/composables/table/utils";
 import type { TRow } from "@/composables/table/types";
 
-const { databases } = useDbList();
+const { databases } = useDbStore();
 
 const TABLE_KEY = "databases";
 

@@ -1217,6 +1217,7 @@ mod tests {
     #[tokio::test]
     async fn db_upgrade() -> ServerResult {
         let file = TestFile::new("test_db.db");
+        let _dot_file = TestFile::new(".test_db.db");
         let mut db = Db::new(file.filename)?;
         db.transaction_mut(|t| -> ServerResult {
             t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;

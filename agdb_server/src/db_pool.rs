@@ -26,9 +26,24 @@ use std::time::UNIX_EPOCH;
 use tokio::sync::RwLock;
 use user_db::UserDb;
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) struct DbName {
+    pub(crate) owner: String,
+    pub(crate) db: String,
+}
+
+impl DbName {
+    fn new(owner: &str, db: &str) -> Self {
+        Self {
+            owner: owner.to_string(),
+            db: db.to_string(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct DbPool {
-    pool: Arc<RwLock<HashMap<String, UserDb>>>,
+    pool: Arc<RwLock<HashMap<DbName, UserDb>>>,
     config: Config,
 }
 
@@ -37,39 +52,32 @@ pub(crate) async fn new(config: Config, server_db: &ServerDb) -> ServerResult<Db
     let pool = Arc::new(RwLock::new(HashMap::new()));
 
     for db in server_db.dbs().await? {
-        let (owner, db_name) = db.name.split_once('/').ok_or(ErrorCode::DbInvalid)?;
-        let db_path = db_file(owner, db_name, &config);
-        std::fs::create_dir_all(db_audit_dir(owner, &config))?;
+        let db_path = db_file(&db.owner, &db.db, &config);
+        std::fs::create_dir_all(db_audit_dir(&db.owner, &config))?;
         let server_db = UserDb::new(&format!("{}:{}", db.db_type, db_path.to_string_lossy()))?;
-        pool.write().await.insert(db.name, server_db);
+        pool.write().await.insert(db.name(), server_db);
     }
 
     Ok(DbPool { pool, config })
 }
 
 impl DbPool {
-    async fn db(&self, name: &str) -> ServerResult<UserDb> {
+    async fn db(&self, owner: &str, db: &str) -> ServerResult<UserDb> {
         self.pool
             .read()
             .await
-            .get(name)
+            .get(&DbName::new(owner, db))
             .cloned()
             .ok_or_else(|| ServerError::new(StatusCode::NOT_FOUND, "db not found"))
     }
 
-    pub(crate) async fn add_db(
-        &self,
-        owner: &str,
-        db: &str,
-        db_name: &str,
-        db_type: DbType,
-    ) -> ServerResult<u64> {
-        let db_path = Path::new(&self.config.data_dir).join(db_name);
+    pub(crate) async fn add_db(&self, owner: &str, db: &str, db_type: DbType) -> ServerResult<u64> {
+        let db_path = Path::new(&self.config.data_dir).join(owner).join(db);
         let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
 
         std::fs::create_dir_all(db_audit_dir(owner, &self.config))?;
 
-        let user_db = UserDb::new(&format!("{}:{}", db_type, path)).map_err(|mut e| {
+        let user_db = UserDb::new(&format!("{db_type}:{path}")).map_err(|mut e| {
             e.status = ErrorCode::DbInvalid.into();
             e.description = format!("{}: {}", ErrorCode::DbInvalid.as_str(), e.description);
             e
@@ -81,7 +89,10 @@ impl DbPool {
             0
         };
 
-        self.pool.write().await.insert(db_name.to_string(), user_db);
+        self.pool
+            .write()
+            .await
+            .insert(DbName::new(owner, db), user_db);
 
         Ok(backup)
     }
@@ -102,10 +113,9 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        db_name: &str,
         db_type: DbType,
     ) -> ServerResult<u64> {
-        let user_db = self.db(db_name).await?;
+        let user_db = self.db(owner, db).await?;
 
         let backup_path = if db_type == DbType::Memory {
             db_file(owner, db, &self.config)
@@ -150,15 +160,8 @@ impl DbPool {
         Ok(())
     }
 
-    pub(crate) async fn db_size(&self, name: &str) -> ServerResult<u64> {
-        Ok(self
-            .pool
-            .read()
-            .await
-            .get(name)
-            .ok_or(db_not_found(name))?
-            .size()
-            .await)
+    pub(crate) async fn db_size(&self, owner: &str, db: &str) -> ServerResult<u64> {
+        Ok(self.db(owner, db).await?.size().await)
     }
 
     async fn do_clear_db_backup(
@@ -184,16 +187,19 @@ impl DbPool {
         database: &Database,
     ) -> Result<(), ServerError> {
         let mut pool = self.pool.write().await;
-        let user_db = pool
-            .get_mut(&database.name)
-            .ok_or(db_not_found(&database.name))?;
-        *user_db = UserDb::new(&format!("{}:{}", DbType::Memory, &database.name))?;
+        let name = database.name();
+        let db_path = Path::new(&self.config.data_dir)
+            .join(owner)
+            .join(db)
+            .to_str()
+            .ok_or(ErrorCode::DbInvalid)?
+            .to_string();
+        let user_db = pool.get_mut(&name).ok_or(db_not_found(owner, db))?;
+        *user_db = UserDb::new(&format!("{}:{db_path}", DbType::Memory))?;
         if database.db_type != DbType::Memory {
             remove_file_if_exists(db_file(owner, db, &self.config))?;
             remove_file_if_exists(db_file(owner, &format!(".{db}"), &self.config))?;
-            let db_path = Path::new(&self.config.data_dir).join(&database.name);
-            let path = db_path.to_str().ok_or(ErrorCode::DbInvalid)?.to_string();
-            *user_db = UserDb::new(&format!("{}:{path}", database.db_type))?;
+            *user_db = UserDb::new(&format!("{}:{db_path}", database.db_type))?;
         }
 
         Ok(())
@@ -203,11 +209,11 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        db_name: &str,
         db_type: DbType,
         target_type: DbType,
     ) -> ServerResult {
-        let mut user_db = self.pool.write().await.remove(db_name).unwrap();
+        let db_name = DbName::new(owner, db);
+        let mut user_db = self.pool.write().await.remove(&db_name).unwrap();
         let current_path = db_file(owner, db, &self.config);
 
         if db_type == DbType::Memory {
@@ -224,17 +230,17 @@ impl DbPool {
             current_path.to_string_lossy()
         ))?;
 
-        self.pool.write().await.insert(db_name.to_string(), user_db);
+        self.pool.write().await.insert(db_name, user_db);
 
         Ok(())
     }
 
     pub(crate) async fn copy_db(
         &self,
-        source_db: &str,
+        owner: &str,
+        db: &str,
         new_owner: &str,
         new_db: &str,
-        target_db: &str,
     ) -> ServerResult {
         let target_file = db_file(new_owner, new_db, &self.config);
 
@@ -247,20 +253,18 @@ impl DbPool {
         std::fs::create_dir_all(Path::new(&self.config.data_dir).join(new_owner))?;
 
         let user_db = self
-            .db(source_db)
+            .db(owner, db)
             .await?
             .copy(target_file.to_string_lossy().as_ref())
             .await?;
-        self.pool
-            .write()
-            .await
-            .insert(target_db.to_string(), user_db);
+        let target_db = DbName::new(new_owner, new_db);
+        self.pool.write().await.insert(target_db, user_db);
 
         Ok(())
     }
 
-    pub(crate) async fn delete_db(&self, owner: &str, db: &str, db_name: &str) -> ServerResult {
-        self.remove_db(db_name).await?;
+    pub(crate) async fn delete_db(&self, owner: &str, db: &str) -> ServerResult {
+        self.remove_db(owner, db).await?;
         remove_file_if_exists(db_file(owner, db, &self.config))?;
         remove_file_if_exists(db_file(owner, &format!(".{db}"), &self.config))?;
         remove_file_if_exists(db_backup_file(owner, db, &self.config))?;
@@ -269,21 +273,25 @@ impl DbPool {
 
     pub(crate) async fn exec(
         &self,
-        db_name: &str,
+        owner: &str,
+        db: &str,
         queries: Queries,
     ) -> ServerResult<Vec<QueryResult>> {
-        self.db(db_name).await?.exec(queries).await
+        self.db(owner, db).await?.exec(queries).await
     }
 
     pub(crate) async fn exec_mut(
         &self,
         owner: &str,
         db: &str,
-        db_name: &str,
         username: &str,
         queries: Queries,
     ) -> ServerResult<Vec<QueryResult>> {
-        let (r, audit) = self.db(db_name).await?.exec_mut(queries, username).await?;
+        let (r, audit) = self
+            .db(owner, db)
+            .await?
+            .exec_mut(queries, username)
+            .await?;
 
         if !audit.is_empty() {
             let mut log = std::fs::OpenOptions::new()
@@ -305,17 +313,22 @@ impl DbPool {
         Ok(r)
     }
 
-    pub(crate) async fn optimize_db(&self, db_name: &str) -> ServerResult {
-        let user_db = self.db(db_name).await?;
+    pub(crate) async fn optimize_db(&self, owner: &str, db: &str) -> ServerResult {
+        let user_db = self.db(owner, db).await?;
         user_db.optimize_storage().await?;
         Ok(())
     }
 
-    pub(crate) async fn remove_db(&self, db_name: &str) -> ServerResult<UserDb> {
-        Ok(self.pool.write().await.remove(db_name).unwrap())
+    pub(crate) async fn remove_db(&self, owner: &str, db: &str) -> ServerResult<UserDb> {
+        Ok(self
+            .pool
+            .write()
+            .await
+            .remove(&DbName::new(owner, db))
+            .unwrap())
     }
 
-    pub(crate) async fn remove_user_dbs(&self, username: &str, dbs: &[String]) -> ServerResult {
+    pub(crate) async fn remove_user_dbs(&self, username: &str, dbs: &[DbName]) -> ServerResult {
         for db in dbs {
             self.pool.write().await.remove(db);
         }
@@ -332,10 +345,8 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        source_db: &str,
         new_owner: &str,
         new_db: &str,
-        target_db: &str,
     ) -> ServerResult {
         let target_name = db_file(new_owner, new_db, &self.config);
 
@@ -347,7 +358,7 @@ impl DbPool {
             std::fs::create_dir_all(Path::new(&self.config.data_dir).join(new_owner))?;
         }
 
-        let user_db = self.db(source_db).await?;
+        let user_db = self.db(owner, db).await?;
 
         user_db
             .rename(target_name.to_string_lossy().as_ref())
@@ -366,11 +377,10 @@ impl DbPool {
             std::fs::rename(backup_path, new_backup_path)?;
         }
 
-        self.pool
-            .write()
-            .await
-            .insert(target_db.to_string(), user_db);
-        self.pool.write().await.remove(source_db).unwrap();
+        let source_db = DbName::new(owner, db);
+        let target_db = DbName::new(new_owner, new_db);
+        self.pool.write().await.insert(target_db, user_db);
+        self.pool.write().await.remove(&source_db).unwrap();
 
         Ok(())
     }
@@ -379,7 +389,6 @@ impl DbPool {
         &self,
         owner: &str,
         db: &str,
-        db_name: &str,
         db_type: DbType,
     ) -> ServerResult<Option<u64>> {
         let backup_path = if db_type == DbType::Memory {
@@ -395,7 +404,8 @@ impl DbPool {
             });
         }
 
-        self.pool.write().await.remove(db_name);
+        let db_name = DbName::new(owner, db);
+        self.pool.write().await.remove(&db_name);
         let current_path = db_file(owner, db, &self.config);
 
         let backup = if db_type != DbType::Memory {
@@ -409,14 +419,17 @@ impl DbPool {
         };
 
         let user_db = UserDb::new(&format!("{}:{}", db_type, current_path.to_string_lossy()))?;
-        self.pool.write().await.insert(db_name.to_string(), user_db);
+        self.pool.write().await.insert(db_name, user_db);
 
         Ok(backup)
     }
 }
 
-fn db_not_found(name: &str) -> ServerError {
-    ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
+fn db_not_found(owner: &str, db: &str) -> ServerError {
+    ServerError::new(
+        StatusCode::NOT_FOUND,
+        &format!("db not found: {owner}/{db}"),
+    )
 }
 
 fn db_backup_file(owner: &str, db: &str, config: &Config) -> PathBuf {

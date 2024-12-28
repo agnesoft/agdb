@@ -3,7 +3,6 @@ use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
-use crate::utilities::db_name;
 use agdb::UserValue;
 use serde::Deserialize;
 use serde::Serialize;
@@ -17,9 +16,8 @@ pub(crate) struct DbUserRemove {
 
 impl Action for DbUserRemove {
     async fn exec(self, db: ServerDb, _db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        let name = db_name(&self.owner, &self.db);
         let owner_id = db.user_id(&self.owner).await?;
-        let db_id = db.user_db_id(owner_id, &name).await?;
+        let db_id = db.user_db_id(owner_id, &self.owner, &self.db).await?;
         let user_id = db.user_id(&self.user).await?;
         db.remove_db_user(db_id, user_id).await?;
 

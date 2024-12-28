@@ -3,7 +3,6 @@ use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
-use crate::utilities::db_name;
 use agdb::DbUserValue;
 use agdb::QueryResult;
 use agdb_api::Queries;
@@ -20,10 +19,9 @@ pub(crate) struct DbExec {
 
 impl Action for DbExec {
     async fn exec(self, _db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        let name = db_name(&self.owner, &self.db);
         Ok(ClusterActionResult::QueryResults(
             db_pool
-                .exec_mut(&self.owner, &self.db, &name, &self.user, self.queries)
+                .exec_mut(&self.owner, &self.db, &self.user, self.queries)
                 .await?,
         ))
     }

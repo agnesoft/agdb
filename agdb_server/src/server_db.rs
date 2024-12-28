@@ -17,6 +17,7 @@ use crate::action::user_add::UserAdd;
 use crate::action::user_remove::UserRemove;
 use crate::action::ClusterAction;
 use crate::config::Config;
+use crate::db_pool::DbName;
 use crate::password::Password;
 use crate::raft::Log;
 use crate::server_error::ServerError;
@@ -54,9 +55,19 @@ pub(crate) struct ServerUser {
 #[derive(Default, UserValue)]
 pub(crate) struct Database {
     pub(crate) db_id: Option<DbId>,
-    pub(crate) name: String,
+    pub(crate) db: String,
+    pub(crate) owner: String,
     pub(crate) db_type: DbType,
     pub(crate) backup: u64,
+}
+
+impl Database {
+    pub(crate) fn name(&self) -> DbName {
+        DbName {
+            owner: self.owner.clone(),
+            db: self.db.clone(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -65,9 +76,10 @@ pub(crate) struct ServerDb(pub(crate) Arc<RwLock<Db>>);
 const ADMIN: &str = "admin";
 const CLUSTER_LOG: &str = "cluster_log";
 const COMMITTED: &str = "committed";
+const DB: &str = "db";
 const DBS: &str = "dbs";
 const EXECUTED: &str = "executed";
-const NAME: &str = "name";
+const OWNER: &str = "owner";
 const ROLE: &str = "role";
 const TOKEN: &str = "token";
 const USERS: &str = "users";
@@ -140,6 +152,39 @@ impl ServerDb {
                 .is_err()
             {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(CLUSTER_LOG).query())?;
+            }
+
+            let dbs: Vec<(DbId, String, String)> = t
+                .exec(
+                    QueryBuilder::select()
+                        .values("name")
+                        .search()
+                        .from(DBS)
+                        .where_()
+                        .distance(CountComparison::Equal(2))
+                        .and()
+                        .keys("name")
+                        .query(),
+                )?
+                .elements
+                .iter()
+                .filter_map(|e| {
+                    e.values[0]
+                        .value
+                        .to_string()
+                        .split_once('/')
+                        .map(|(owner, db)| (e.id, owner.to_string(), db.to_string()))
+                })
+                .collect::<Vec<(DbId, String, String)>>();
+
+            for (db_id, owner, db) in dbs {
+                t.exec_mut(
+                    QueryBuilder::insert()
+                        .values([[(OWNER, owner).into(), (DB, db).into()]])
+                        .ids(db_id)
+                        .query(),
+                )?;
+                t.exec_mut(QueryBuilder::remove().values("name").ids(db_id).query())?;
             }
 
             Ok(())
@@ -280,12 +325,17 @@ impl ServerDb {
             .try_into()?)
     }
 
-    pub(crate) async fn find_user_db_id(&self, user: DbId, db: &str) -> ServerResult<Option<DbId>> {
+    pub(crate) async fn find_user_db_id(
+        &self,
+        user: DbId,
+        owner: &str,
+        db: &str,
+    ) -> ServerResult<Option<DbId>> {
         Ok(self
             .0
             .read()
             .await
-            .exec(find_user_db_query(user, db))?
+            .exec(find_user_db_query(user, owner, db))?
             .elements
             .first()
             .map(|e| e.id))
@@ -531,10 +581,10 @@ impl ServerDb {
         })
     }
 
-    pub(crate) async fn remove_db(&self, user: DbId, db: &str) -> ServerResult<()> {
+    pub(crate) async fn remove_db(&self, user: DbId, owner: &str, db: &str) -> ServerResult<()> {
         self.0.write().await.transaction_mut(|t| {
             let db_id = t
-                .exec(find_user_db_query(user, db))?
+                .exec(find_user_db_query(user, owner, db))?
                 .elements
                 .first()
                 .ok_or(db_not_found(db))?
@@ -560,7 +610,7 @@ impl ServerDb {
         Ok(())
     }
 
-    pub(crate) async fn remove_user(&self, username: &str) -> ServerResult<Vec<String>> {
+    pub(crate) async fn remove_user(&self, username: &str) -> ServerResult<Vec<DbName>> {
         let user = self.user_id(username).await?;
         let mut ids = vec![user];
         let mut dbs = vec![];
@@ -569,11 +619,12 @@ impl ServerDb {
             .await?
             .into_iter()
             .for_each(|(_role, db)| {
-                if let Some((owner, _)) = db.name.split_once('/') {
-                    if owner == username {
-                        ids.push(db.db_id.unwrap());
-                        dbs.push(db.name);
-                    }
+                if db.owner == username {
+                    ids.push(db.db_id.unwrap());
+                    dbs.push(DbName {
+                        owner: db.owner,
+                        db: db.db,
+                    });
                 }
             });
 
@@ -651,34 +702,44 @@ impl ServerDb {
             .try_into()?)
     }
 
-    pub(crate) async fn user_db(&self, user: DbId, db: &str) -> ServerResult<Database> {
+    pub(crate) async fn user_db(
+        &self,
+        user: DbId,
+        owner: &str,
+        db: &str,
+    ) -> ServerResult<Database> {
         self.0
             .read()
             .await
             .exec(
                 QueryBuilder::select()
                     .elements::<Database>()
-                    .ids(find_user_db_query(user, db))
+                    .ids(find_user_db_query(user, owner, db))
                     .query(),
             )?
             .try_into()
             .map_err(|_| db_not_found(db))
     }
 
-    pub(crate) async fn user_db_id(&self, user: DbId, db: &str) -> ServerResult<DbId> {
-        self.find_user_db_id(user, db)
+    pub(crate) async fn user_db_id(&self, user: DbId, owner: &str, db: &str) -> ServerResult<DbId> {
+        self.find_user_db_id(user, owner, db)
             .await?
             .ok_or(db_not_found(db))
     }
 
-    pub(crate) async fn user_db_role(&self, user: DbId, db: &str) -> ServerResult<DbUserRole> {
+    pub(crate) async fn user_db_role(
+        &self,
+        user: DbId,
+        owner: &str,
+        db: &str,
+    ) -> ServerResult<DbUserRole> {
         Ok((&self
             .0
             .read()
             .await
             .transaction(|t| -> Result<QueryResult, ServerError> {
                 let db_id = t
-                    .exec(find_user_db_query(user, db))?
+                    .exec(find_user_db_query(user, owner, db))?
                     .elements
                     .first()
                     .ok_or(db_not_found(db))?
@@ -834,7 +895,7 @@ fn db_not_found(name: &str) -> ServerError {
     ServerError::new(StatusCode::NOT_FOUND, &format!("db not found: {name}"))
 }
 
-fn find_user_db_query(user: DbId, db: &str) -> SearchQuery {
+fn find_user_db_query(user: DbId, owner: &str, db: &str) -> SearchQuery {
     QueryBuilder::search()
         .depth_first()
         .from(user)
@@ -842,7 +903,10 @@ fn find_user_db_query(user: DbId, db: &str) -> SearchQuery {
         .where_()
         .distance(CountComparison::Equal(2))
         .and()
-        .key(NAME)
+        .key(OWNER)
+        .value(Comparison::Equal(owner.into()))
+        .and()
+        .key(DB)
         .value(Comparison::Equal(db.into()))
         .query()
 }
@@ -1127,4 +1191,69 @@ fn logs<T: StorageData>(
     }
 
     Ok(actions)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct TestFile {
+        filename: &'static str,
+    }
+
+    impl TestFile {
+        fn new(filename: &'static str) -> Self {
+            let _ = std::fs::remove_file(filename);
+            Self { filename }
+        }
+    }
+
+    impl Drop for TestFile {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(self.filename);
+        }
+    }
+
+    #[tokio::test]
+    async fn db_upgrade() -> ServerResult {
+        let file = TestFile::new("test_db.db");
+        let mut db = Db::new(file.filename)?;
+        db.transaction_mut(|t| -> ServerResult {
+            t.exec_mut(QueryBuilder::insert().nodes().aliases(DBS).query())?;
+            let user_db = t.exec_mut(
+                QueryBuilder::insert()
+                    .nodes()
+                    .values([
+                        vec![
+                            ("name", "user/db1").into(),
+                            ("db_type", DbType::Memory).into(),
+                            ("backup", 0).into(),
+                        ],
+                        vec![
+                            ("owner", "user").into(),
+                            ("db", "db2").into(),
+                            ("db_type", DbType::Memory).into(),
+                            ("backup", 0).into(),
+                        ],
+                    ])
+                    .query(),
+            )?;
+            t.exec_mut(QueryBuilder::insert().edges().from(DBS).to(user_db).query())?;
+            Ok(())
+        })?;
+
+        let db = ServerDb::new("test_db.db")?;
+        let dbs = db.dbs().await?;
+        assert_eq!(dbs.len(), 2);
+        assert_eq!(dbs[0].db, "db2");
+        assert_eq!(dbs[0].owner, "user");
+        assert_eq!(dbs[0].db_type, DbType::Memory);
+        assert_eq!(dbs[0].backup, 0);
+        assert_eq!(dbs[1].db, "db1");
+        assert_eq!(dbs[1].owner, "user");
+        assert_eq!(dbs[1].db_type, DbType::Memory);
+        assert_eq!(dbs[1].backup, 0);
+
+        Ok(())
+    }
 }

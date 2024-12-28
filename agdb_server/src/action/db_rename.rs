@@ -3,7 +3,6 @@ use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
-use crate::utilities::db_name;
 use agdb::UserValue;
 use agdb_api::DbUserRole;
 use serde::Deserialize;
@@ -20,20 +19,12 @@ pub(crate) struct DbRename {
 impl Action for DbRename {
     async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
         let owner_id = db.user_id(&self.owner).await?;
-        let name = db_name(&self.owner, &self.db);
-        let new_name = db_name(&self.new_owner, &self.new_db);
-        let mut database = db.user_db(owner_id, &name).await?;
+        let mut database = db.user_db(owner_id, &self.owner, &self.db).await?;
         db_pool
-            .rename_db(
-                &self.owner,
-                &self.db,
-                &name,
-                &self.new_owner,
-                &self.new_db,
-                &new_name,
-            )
+            .rename_db(&self.owner, &self.db, &self.new_owner, &self.new_db)
             .await?;
-        database.name = new_name;
+        database.owner = self.new_owner.clone();
+        database.db = self.new_db.to_string();
         db.save_db(&database).await?;
 
         if self.owner != self.new_owner {

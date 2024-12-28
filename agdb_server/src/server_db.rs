@@ -154,6 +154,7 @@ impl ServerDb {
                 t.exec_mut(QueryBuilder::insert().nodes().aliases(CLUSTER_LOG).query())?;
             }
 
+            // Migration to new Database struct introduced in 0.10.0. Remove in 0.12.0.
             let dbs: Vec<(DbId, String, String)> = t
                 .exec(
                     QueryBuilder::select()

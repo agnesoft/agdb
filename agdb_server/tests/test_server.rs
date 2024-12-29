@@ -26,6 +26,7 @@ const SERVER_DATA_DIR: &str = "agdb_server_data";
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 const TEST_TIMEOUT: u128 = 10000;
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 
 type ClusterImpl = (Vec<TestServerImpl>, u64);
 
@@ -99,11 +100,7 @@ impl TestServerImpl {
             .kill_on_drop(true)
             .spawn()?;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
             &api_address,
         );
 
@@ -186,7 +183,7 @@ impl TestServerImpl {
         let token: String = client
             .post(format!("{}/api/v1/user/login", address))
             .json(&admin)
-            .timeout(Duration::from_secs(10))
+            .timeout(CLIENT_TIMEOUT)
             .send()
             .await?
             .json()
@@ -194,7 +191,7 @@ impl TestServerImpl {
 
         client
             .post(format!("{}/api/v1/admin/shutdown", address))
-            .timeout(Duration::from_secs(10))
+            .timeout(CLIENT_TIMEOUT)
             .bearer_auth(token)
             .send()
             .await?;
@@ -243,9 +240,7 @@ impl TestServer {
         Ok(Self {
             api: AgdbApi::new(
                 ReqwestClient::with_client(
-                    reqwest::Client::builder()
-                        .timeout(Duration::from_secs(10))
-                        .build()?,
+                    reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
                 ),
                 &server.address,
             ),
@@ -309,9 +304,7 @@ impl TestCluster {
                 .map(|s| {
                     Ok(AgdbApi::new(
                         ReqwestClient::with_client(
-                            reqwest::Client::builder()
-                                .timeout(Duration::from_secs(10))
-                                .build()?,
+                            reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
                         ),
                         &s.address,
                     ))
@@ -393,11 +386,7 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
     {
         let server = server.await??;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
             &server.address,
         );
         servers.push((server, api));

@@ -13,6 +13,7 @@ use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
+use std::time::Duration;
 
 #[tokio::test]
 async fn missing() -> anyhow::Result<()> {
@@ -73,7 +74,14 @@ async fn openapi() -> anyhow::Result<()> {
 #[tokio::test]
 async fn config_reuse() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
-    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?,
+        ),
+        &server.address,
+    );
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_shutdown().await?;
     assert!(server.process.wait()?.success());
@@ -87,7 +95,14 @@ async fn config_reuse() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_list_after_shutdown() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
-    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?,
+        ),
+        &server.address,
+    );
 
     {
         client.user_login(ADMIN, ADMIN).await?;
@@ -117,7 +132,14 @@ async fn db_list_after_shutdown() -> anyhow::Result<()> {
 #[tokio::test]
 async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
-    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?,
+        ),
+        &server.address,
+    );
 
     {
         client.user_login(ADMIN, ADMIN).await?;
@@ -168,7 +190,14 @@ async fn basepath_test() -> anyhow::Result<()> {
 #[tokio::test]
 async fn location_change_after_restart() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
-    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?,
+        ),
+        &server.address,
+    );
 
     {
         client.user_login(ADMIN, ADMIN).await?;
@@ -213,7 +242,14 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
 #[tokio::test]
 async fn reset_admin_password() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
-    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?,
+        ),
+        &server.address,
+    );
 
     {
         client.user_login(ADMIN, ADMIN).await?;
@@ -245,7 +281,14 @@ async fn reset_admin_password() -> anyhow::Result<()> {
 #[tokio::test]
 async fn memory_db_from_backup() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
-    let mut client = AgdbApi::new(ReqwestClient::new(), &server.address);
+    let mut client = AgdbApi::new(
+        ReqwestClient::with_client(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?,
+        ),
+        &server.address,
+    );
     let owner = "user1";
     let db = "db1";
 

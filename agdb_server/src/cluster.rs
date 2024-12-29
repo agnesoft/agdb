@@ -82,7 +82,7 @@ impl ClusterNodeImpl {
         address: &str,
         token: &str,
         responses: UnboundedSender<(Request<ClusterAction>, Response)>,
-    ) -> Self {
+    ) -> ServerResult<Self> {
         let base = if address.starts_with("http") || address.starts_with("https") {
             address.to_string()
         } else {
@@ -91,15 +91,19 @@ impl ClusterNodeImpl {
 
         let (requests_sender, requests_receiver) = tokio::sync::mpsc::unbounded_channel();
 
-        Self {
-            client: ReqwestClient::new(),
+        Ok(Self {
+            client: ReqwestClient::with_client(
+                reqwest::Client::builder()
+                    .connect_timeout(Duration::from_secs(60))
+                    .build()?,
+            ),
             url: format!("{base}api/v1/cluster"),
             base_url: base.trim_end_matches("/").to_string(),
             token: Some(token.to_string()),
             requests_sender,
             requests_receiver: RwLock::new(requests_receiver),
             responses,
-        }
+        })
     }
 
     fn bad_request(message: &str) -> AxumResponse {
@@ -194,7 +198,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
                 node.as_str(),
                 &config.cluster_token,
                 requests.clone(),
-            )));
+            )?));
         }
 
         Some(RwLock::new(responses))

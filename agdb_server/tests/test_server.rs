@@ -275,7 +275,11 @@ impl Drop for TestServerImpl {
                         .inspect_err(|e| println!("{e:?}"));
                 });
 
-            while !f.is_finished() {
+            for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
+                if f.is_finished() {
+                    break;
+                }
+
                 std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
             }
 

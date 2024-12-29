@@ -92,11 +92,7 @@ impl ClusterNodeImpl {
         let (requests_sender, requests_receiver) = tokio::sync::mpsc::unbounded_channel();
 
         Ok(Self {
-            client: ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .connect_timeout(Duration::from_secs(60))
-                    .build()?,
-            ),
+            client: ReqwestClient::new(),
             url: format!("{base}api/v1/cluster"),
             base_url: base.trim_end_matches("/").to_string(),
             token: Some(token.to_string()),

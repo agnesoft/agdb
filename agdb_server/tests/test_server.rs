@@ -9,10 +9,13 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU16;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Weak;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::process::Child;
 use tokio::process::Command;
+use tokio::sync::RwLock;
 
 const ADMIN: &str = "admin";
 const BINARY: &str = "agdb_server";
@@ -28,14 +31,12 @@ const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
 const TEST_TIMEOUT: u128 = 30000;
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 
-type ClusterImpl = (Vec<TestServerImpl>, u64);
+type ClusterImpl = Vec<TestServerImpl>;
 
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
-static SERVER: std::sync::OnceLock<tokio::sync::RwLock<Option<TestServerImpl>>> =
-    std::sync::OnceLock::new();
-static CLUSTER: std::sync::OnceLock<tokio::sync::RwLock<Option<ClusterImpl>>> =
-    std::sync::OnceLock::new();
+static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
+static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
 
 fn server_bin() -> anyhow::Result<PathBuf> {
     let mut path = std::env::current_exe()?;
@@ -48,6 +49,7 @@ pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
     pub api: AgdbApi<ReqwestClient>,
+    pub server: Arc<TestServerImpl>,
 }
 
 pub struct TestServerImpl {
@@ -55,11 +57,11 @@ pub struct TestServerImpl {
     pub data_dir: String,
     pub address: String,
     pub process: Option<Child>,
-    pub instances: u16,
 }
 
 pub struct TestCluster {
     apis: Vec<AgdbApi<ReqwestClient>>,
+    _cluster: Arc<ClusterImpl>,
 }
 
 impl TestServerImpl {
@@ -112,7 +114,6 @@ impl TestServerImpl {
                         data_dir,
                         address: api_address,
                         process: Some(process),
-                        instances: 1,
                     })
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),
@@ -226,16 +227,16 @@ impl TestServerImpl {
 
 impl TestServer {
     pub async fn new() -> anyhow::Result<Self> {
-        let global_server = SERVER.get_or_init(|| tokio::sync::RwLock::new(None));
+        let global_server = SERVER.get_or_init(|| RwLock::new(Weak::new()));
         let mut server_guard = global_server.write().await;
 
-        if server_guard.is_none() {
-            *server_guard = Some(TestServerImpl::new().await?);
+        let server = if let Some(server) = server_guard.upgrade() {
+            server
         } else {
-            server_guard.as_mut().unwrap().instances += 1;
-        }
-
-        let server = server_guard.as_ref().unwrap();
+            let server = Arc::new(TestServerImpl::new().await?);
+            *server_guard = Arc::downgrade(&server);
+            server
+        };
 
         Ok(Self {
             api: AgdbApi::new(
@@ -246,6 +247,7 @@ impl TestServer {
             ),
             dir: server.dir.clone(),
             data_dir: server.data_dir.clone(),
+            server,
         })
     }
 
@@ -290,20 +292,19 @@ impl Drop for TestServerImpl {
 
 impl TestCluster {
     async fn new() -> anyhow::Result<Self> {
-        let global_cluster = CLUSTER.get_or_init(|| tokio::sync::RwLock::new(None));
+        let global_cluster = CLUSTER.get_or_init(|| RwLock::new(Weak::new()));
         let mut cluster_guard = global_cluster.write().await;
 
-        if cluster_guard.is_none() {
-            *cluster_guard = Some((create_cluster(3).await?, 1));
+        let nodes = if let Some(nodes) = cluster_guard.upgrade() {
+            nodes
         } else {
-            cluster_guard.as_mut().unwrap().1 += 1;
-        }
+            let nodes = Arc::new(create_cluster(3).await?);
+            *cluster_guard = Arc::downgrade(&nodes);
+            nodes
+        };
 
         let mut cluster = Self {
-            apis: cluster_guard
-                .as_ref()
-                .unwrap()
-                .0
+            apis: nodes
                 .iter()
                 .map(|s| {
                     Ok(AgdbApi::new(
@@ -314,6 +315,7 @@ impl TestCluster {
                     ))
                 })
                 .collect::<anyhow::Result<Vec<AgdbApi<ReqwestClient>>>>()?,
+            _cluster: nodes,
         };
 
         cluster.apis[1].cluster_user_login(ADMIN, ADMIN).await?;
@@ -414,48 +416,4 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
     servers.swap(0, leader);
 
     Ok(servers.into_iter().map(|(s, _)| s).collect())
-}
-
-impl Drop for TestServer {
-    fn drop(&mut self) {
-        let global_server = SERVER.get().unwrap();
-
-        for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if let Ok(mut guard) = global_server.try_write() {
-                if let Some(server) = guard.as_mut() {
-                    if server.instances == 1 {
-                        *guard = None;
-                    } else {
-                        server.instances -= 1;
-                    }
-                }
-
-                break;
-            }
-
-            std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
-        }
-    }
-}
-
-impl Drop for TestCluster {
-    fn drop(&mut self) {
-        let global_cluster = CLUSTER.get().unwrap();
-
-        for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if let Ok(mut guard) = global_cluster.try_write() {
-                if let Some(cluster) = guard.as_mut() {
-                    if cluster.1 == 1 {
-                        *guard = None;
-                    } else {
-                        cluster.1 -= 1;
-                    }
-                }
-
-                break;
-            }
-
-            std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
-        }
-    }
 }

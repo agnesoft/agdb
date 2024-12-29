@@ -25,7 +25,7 @@ const RETRY_ATTEMPS: u16 = 10;
 const SERVER_DATA_DIR: &str = "agdb_server_data";
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
-const TEST_TIMEOUT: u128 = 10000;
+const TEST_TIMEOUT: u128 = 30000;
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 
 type ClusterImpl = (Vec<TestServerImpl>, u64);

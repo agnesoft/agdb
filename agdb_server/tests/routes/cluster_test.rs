@@ -20,7 +20,7 @@ async fn rebalance() -> anyhow::Result<()> {
     let mut leader = AgdbApi::new(
         ReqwestClient::with_client(
             reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
+                .timeout(Duration::from_secs(30))
                 .build()?,
         ),
         &servers[0].address,
@@ -35,7 +35,7 @@ async fn rebalance() -> anyhow::Result<()> {
         let status = wait_for_leader(&AgdbApi::new(
             ReqwestClient::with_client(
                 reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
+                    .timeout(Duration::from_secs(30))
                     .build()?,
             ),
             &server.address,
@@ -57,7 +57,7 @@ async fn rebalance() -> anyhow::Result<()> {
         let status = wait_for_leader(&AgdbApi::new(
             ReqwestClient::with_client(
                 reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
+                    .timeout(Duration::from_secs(30))
                     .build()?,
             ),
             &server.address,

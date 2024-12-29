@@ -294,7 +294,7 @@ impl TestCluster {
         let mut cluster_guard = global_cluster.write().await;
 
         if cluster_guard.is_none() {
-            *cluster_guard = Some((create_cluster(2).await?, 1));
+            *cluster_guard = Some((create_cluster(3).await?, 1));
         } else {
             cluster_guard.as_mut().unwrap().1 += 1;
         }

@@ -39,6 +39,10 @@ impl ReqwestClient {
             client: reqwest::Client::new(),
         }
     }
+
+    pub fn with_client(client: reqwest::Client) -> Self {
+        Self { client }
+    }
 }
 
 #[cfg(feature = "reqwest")]

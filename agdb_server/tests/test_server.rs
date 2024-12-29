@@ -281,7 +281,7 @@ impl Drop for TestServerImpl {
                 });
 
             while !f.is_finished() {
-                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT * 10);
+                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
             }
 
             let _ = Self::remove_dir_if_exists(&dir).inspect_err(|e| println!("{e:?}"));

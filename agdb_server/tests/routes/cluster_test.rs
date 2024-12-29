@@ -31,7 +31,7 @@ async fn rebalance() -> anyhow::Result<()> {
     leader.admin_shutdown().await?;
     assert!(servers[0].process.wait()?.success());
 
-    let mut statuses = Vec::with_capacity(servers.len());
+    let mut statuses = Vec::with_capacity(servers.len() - 1);
 
     for server in &servers[1..] {
         let status = wait_for_leader(&AgdbApi::new(

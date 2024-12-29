@@ -99,7 +99,11 @@ impl TestServerImpl {
             .kill_on_drop(true)
             .spawn()?;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(reqwest::Client::new()),
+            ReqwestClient::with_client(
+                reqwest::Client::builder()
+                    .timeout(Duration::from_secs(10))
+                    .build()?,
+            ),
             &api_address,
         );
 
@@ -182,6 +186,7 @@ impl TestServerImpl {
         let token: String = client
             .post(format!("{}/api/v1/user/login", address))
             .json(&admin)
+            .timeout(Duration::from_secs(10))
             .send()
             .await?
             .json()
@@ -189,6 +194,7 @@ impl TestServerImpl {
 
         client
             .post(format!("{}/api/v1/admin/shutdown", address))
+            .timeout(Duration::from_secs(10))
             .bearer_auth(token)
             .send()
             .await?;
@@ -235,7 +241,14 @@ impl TestServer {
         let server = server_guard.as_ref().unwrap();
 
         Ok(Self {
-            api: AgdbApi::new(ReqwestClient::new(), &server.address),
+            api: AgdbApi::new(
+                ReqwestClient::with_client(
+                    reqwest::Client::builder()
+                        .timeout(Duration::from_secs(10))
+                        .build()?,
+                ),
+                &server.address,
+            ),
             dir: server.dir.clone(),
             data_dir: server.data_dir.clone(),
         })
@@ -293,7 +306,16 @@ impl TestCluster {
                 .unwrap()
                 .0
                 .iter()
-                .map(|s| Ok(AgdbApi::new(ReqwestClient::new(), &s.address)))
+                .map(|s| {
+                    Ok(AgdbApi::new(
+                        ReqwestClient::with_client(
+                            reqwest::Client::builder()
+                                .timeout(Duration::from_secs(10))
+                                .build()?,
+                        ),
+                        &s.address,
+                    ))
+                })
                 .collect::<anyhow::Result<Vec<AgdbApi<ReqwestClient>>>>()?,
         };
 
@@ -370,7 +392,14 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
         .map(|c| tokio::spawn(async move { TestServerImpl::with_config(c).await }))
     {
         let server = server.await??;
-        let api = AgdbApi::new(ReqwestClient::new(), &server.address);
+        let api = AgdbApi::new(
+            ReqwestClient::with_client(
+                reqwest::Client::builder()
+                    .timeout(Duration::from_secs(10))
+                    .build()?,
+            ),
+            &server.address,
+        );
         servers.push((server, api));
     }
 

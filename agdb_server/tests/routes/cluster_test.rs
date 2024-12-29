@@ -12,8 +12,6 @@ use agdb_api::DbResource;
 use agdb_api::DbType;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
-use assert_cmd::cargo::CommandCargoExt;
-use std::process::Command;
 use std::time::Duration;
 
 #[tokio::test]
@@ -29,7 +27,7 @@ async fn rebalance() -> anyhow::Result<()> {
     );
     leader.user_login(ADMIN, ADMIN).await?;
     leader.admin_shutdown().await?;
-    assert!(servers[0].process.wait()?.success());
+    servers[0].wait().await?;
 
     let mut statuses = Vec::with_capacity(servers.len() - 1);
 
@@ -50,10 +48,7 @@ async fn rebalance() -> anyhow::Result<()> {
         assert_eq!(statuses[0], *status);
     }
 
-    let dir = &servers[0].dir;
-    servers[0].process = Command::cargo_bin("agdb_server")?
-        .current_dir(dir)
-        .spawn()?;
+    servers[0].restart()?;
     wait_for_ready(&leader).await?;
 
     statuses.clear();

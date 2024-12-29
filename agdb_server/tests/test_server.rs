@@ -4,15 +4,15 @@ use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
 use anyhow::anyhow;
-use assert_cmd::prelude::*;
 use std::collections::HashMap;
 use std::path::Path;
-use std::process::Child;
-use std::process::Command;
+use std::path::PathBuf;
 use std::sync::atomic::AtomicU16;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
+use tokio::process::Child;
+use tokio::process::Command;
 
 const ADMIN: &str = "admin";
 const BINARY: &str = "agdb_server";
@@ -36,6 +36,13 @@ static SERVER: std::sync::OnceLock<tokio::sync::RwLock<Option<TestServerImpl>>> 
 static CLUSTER: std::sync::OnceLock<tokio::sync::RwLock<Option<ClusterImpl>>> =
     std::sync::OnceLock::new();
 
+fn server_bin() -> anyhow::Result<PathBuf> {
+    let mut path = std::env::current_exe()?;
+    path.pop();
+    path.pop();
+    Ok(path.join(format!("{BINARY}{}", std::env::consts::EXE_SUFFIX)))
+}
+
 pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
@@ -46,7 +53,7 @@ pub struct TestServerImpl {
     pub dir: String,
     pub data_dir: String,
     pub address: String,
-    pub process: Child,
+    pub process: Option<Child>,
     pub instances: u16,
 }
 
@@ -87,7 +94,10 @@ impl TestServerImpl {
             address.clone()
         };
 
-        let mut process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
+        let mut process = Command::new(server_bin()?)
+            .current_dir(&dir)
+            .kill_on_drop(true)
+            .spawn()?;
         let api = AgdbApi::new(
             ReqwestClient::with_client(
                 reqwest::Client::builder()
@@ -104,7 +114,7 @@ impl TestServerImpl {
                         dir,
                         data_dir,
                         address: api_address,
-                        process,
+                        process: Some(process),
                         instances: 1,
                     })
                 }
@@ -141,12 +151,28 @@ impl TestServerImpl {
         PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
     }
 
-    fn shutdown_server(&mut self) -> anyhow::Result<()> {
-        if self.process.try_wait()?.is_some() {
-            return Ok(());
+    pub fn restart(&mut self) -> anyhow::Result<()> {
+        self.process = Some(
+            Command::new(server_bin()?)
+                .current_dir(&self.dir)
+                .kill_on_drop(true)
+                .spawn()?,
+        );
+        Ok(())
+    }
+
+    pub async fn wait(&mut self) -> anyhow::Result<()> {
+        if let Some(p) = self.process.as_mut() {
+            p.wait().await?;
         }
 
-        let mut address = self.address.clone();
+        Ok(())
+    }
+
+    async fn shutdown_server(mut process: Child, mut address: String) -> anyhow::Result<()> {
+        if process.try_wait()?.is_some() {
+            return Ok(());
+        }
 
         if !address.starts_with("http") {
             address = format!("http://{}", address);
@@ -156,36 +182,34 @@ impl TestServerImpl {
         admin.insert("username", ADMIN.to_string());
         admin.insert("password", ADMIN.to_string());
 
-        std::thread::spawn(move || -> anyhow::Result<()> {
-            let client = reqwest::blocking::Client::new();
-            let token: String = client
-                .post(format!("{}/api/v1/user/login", address))
-                .json(&admin)
-                .timeout(Duration::from_secs(10))
-                .send()?
-                .json()?;
+        let client = reqwest::Client::new();
+        let token: String = client
+            .post(format!("{}/api/v1/user/login", address))
+            .json(&admin)
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await?
+            .json()
+            .await?;
 
-            client
-                .post(format!("{}/api/v1/admin/shutdown", address))
-                .timeout(Duration::from_secs(10))
-                .bearer_auth(token)
-                .send()?;
-            Ok(())
-        })
-        .join()
-        .map_err(|e| anyhow!("{:?}", e))??;
+        client
+            .post(format!("{}/api/v1/admin/shutdown", address))
+            .timeout(Duration::from_secs(10))
+            .bearer_auth(token)
+            .send()
+            .await?;
 
         for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if self.process.try_wait()?.is_some() {
+            if process.try_wait()?.is_some() {
                 return Ok(());
             }
             std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
         }
 
-        self.process.kill()?;
+        process.kill().await?;
 
         for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if self.process.try_wait()?.is_some() {
+            if process.try_wait()?.is_some() {
                 return Ok(());
             }
             std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
@@ -241,8 +265,27 @@ impl TestServer {
 
 impl Drop for TestServerImpl {
     fn drop(&mut self) {
-        let _ = Self::shutdown_server(self);
-        let _ = Self::remove_dir_if_exists(&self.dir);
+        static DROP_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> =
+            std::sync::OnceLock::new();
+
+        if let Some(p) = self.process.take() {
+            let address = self.address.clone();
+            let dir = self.dir.clone();
+
+            let f = DROP_RUNTIME
+                .get_or_init(|| tokio::runtime::Runtime::new().unwrap())
+                .spawn(async move {
+                    let _ = Self::shutdown_server(p, address)
+                        .await
+                        .inspect_err(|e| println!("{e:?}"));
+                });
+
+            while !f.is_finished() {
+                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT * 10);
+            }
+
+            let _ = Self::remove_dir_if_exists(&dir).inspect_err(|e| println!("{e:?}"));
+        }
     }
 }
 

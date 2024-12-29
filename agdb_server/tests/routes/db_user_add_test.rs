@@ -27,7 +27,8 @@ async fn add_db_user() -> anyhow::Result<()> {
     assert_eq!(
         list,
         vec![ServerDatabase {
-            name: format!("{}/{}", owner, db),
+            db: db.to_string(),
+            owner: owner.to_string(),
             db_type: DbType::Mapped,
             role: DbUserRole::Write,
             size: 2656,
@@ -64,7 +65,8 @@ async fn add_db_user_as_non_owner_admin() -> anyhow::Result<()> {
     assert_eq!(
         list,
         vec![ServerDatabase {
-            name: format!("{}/{}", owner, db),
+            db: db.to_string(),
+            owner: owner.to_string(),
             db_type: DbType::Mapped,
             role: DbUserRole::Write,
             size: 2656,
@@ -100,7 +102,8 @@ async fn change_user_role() -> anyhow::Result<()> {
     assert_eq!(
         list,
         vec![ServerDatabase {
-            name: format!("{}/{}", owner, db),
+            db: db.to_string(),
+            owner: owner.to_string(),
             db_type: DbType::Mapped,
             role: DbUserRole::Read,
             size: 2656,

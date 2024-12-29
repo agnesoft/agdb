@@ -61,10 +61,13 @@ pub(crate) async fn add(
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse<impl IntoResponse> {
-    let name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
 
-    if server_db.find_user_db_id(owner_id, &name).await?.is_some() {
+    if server_db
+        .find_user_db_id(owner_id, &owner, &db)
+        .await?
+        .is_some()
+    {
         return Err(ErrorCode::DbExists.into());
     }
 
@@ -102,9 +105,8 @@ pub(crate) async fn audit(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<DbAudit>)> {
-    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    server_db.user_db_id(owner_id, &db_name).await?;
+    server_db.user_db_id(owner_id, &owner, &db).await?;
 
     Ok((StatusCode::OK, Json(db_pool.audit(&owner, &db).await?)))
 }
@@ -131,9 +133,8 @@ pub(crate) async fn backup(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    server_db.user_db_id(owner_id, &db_name).await?;
+    server_db.user_db_id(owner_id, &owner, &db).await?;
 
     let (commit_index, _result) = cluster.exec(DbBackup { owner, db }).await?;
 
@@ -167,22 +168,22 @@ pub(crate) async fn clear(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseResource>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let role = server_db.user_db_role(owner_id, &db_name).await?;
+    let role = server_db.user_db_role(owner_id, &owner, &db).await?;
 
     let (commit_index, _result) = cluster
         .exec(DbClear {
-            owner,
-            db,
+            owner: owner.clone(),
+            db: db.clone(),
             resource: request.resource,
         })
         .await?;
 
-    let size = db_pool.db_size(&db_name).await.unwrap_or(0);
-    let database = server_db.user_db(owner_id, &db_name).await?;
+    let size = db_pool.db_size(&owner, &db).await.unwrap_or(0);
+    let database = server_db.user_db(owner_id, &owner, &db).await?;
     let db = ServerDatabase {
-        name: db_name,
+        db,
+        owner,
         db_type: database.db_type,
         role,
         backup: database.backup,
@@ -220,9 +221,8 @@ pub(crate) async fn convert(
     Path((owner, db)): Path<(String, String)>,
     request: Query<DbTypeParam>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let db_type = server_db.user_db(owner_id, &db_name).await?.db_type;
+    let db_type = server_db.user_db(owner_id, &owner, &db).await?.db_type;
 
     if db_type == request.db_type {
         return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
@@ -271,14 +271,12 @@ pub(crate) async fn copy(
         .new_name
         .split_once('/')
         .ok_or(ErrorCode::DbInvalid)?;
-    let source_db = db_name(&owner, &db);
-    let target_db = db_name(new_owner, new_db);
     let owner_id = server_db.user_id(&owner).await?;
-    let db_type = server_db.user_db(owner_id, &source_db).await?.db_type;
+    let db_type = server_db.user_db(owner_id, &owner, &db).await?.db_type;
     let new_owner_id = server_db.user_id(new_owner).await?;
 
     if server_db
-        .find_user_db_id(new_owner_id, &target_db)
+        .find_user_db_id(new_owner_id, new_owner, new_db)
         .await?
         .is_some()
     {
@@ -323,7 +321,7 @@ pub(crate) async fn delete(
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<impl IntoResponse> {
     let user_id = server_db.user_id(&owner).await?;
-    let _ = server_db.user_db_id(user_id, &db_name(&owner, &db)).await?;
+    let _ = server_db.user_db_id(user_id, &owner, &db).await?;
 
     let (commit_index, _result) = cluster.exec(DbDelete { owner, db }).await?;
 
@@ -356,14 +354,13 @@ pub(crate) async fn exec(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let required_role = required_role(&queries);
     if required_role != DbUserRole::Read {
         return Err(permission_denied(
             "mutable queries not allowed, use exec_mut endpoint",
         ));
     }
-    let results = db_pool.exec(&db_name, queries).await?;
+    let results = db_pool.exec(&owner, &db, queries).await?;
     Ok((StatusCode::OK, Json(QueriesResults(results))))
 }
 
@@ -391,11 +388,10 @@ pub(crate) async fn exec_mut(
     Path((owner, db)): Path<(String, String)>,
     Json(queries): Json<Queries>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let required_role = required_role(&queries);
 
     let (commit_index, results) = if required_role == DbUserRole::Read {
-        (0, db_pool.exec(&db_name, queries).await?)
+        (0, db_pool.exec(&owner, &db, queries).await?)
     } else {
         let mut index = 0;
         let mut results = Vec::new();
@@ -443,8 +439,9 @@ pub(crate) async fn list(
 
     for db in databases {
         dbs.push(ServerDatabase {
-            size: db_pool.db_size(&db.name).await.unwrap_or(0),
-            name: db.name,
+            size: db_pool.db_size(&db.owner, &db.db).await.unwrap_or(0),
+            db: db.db,
+            owner: db.owner,
             db_type: db.db_type,
             role: DbUserRole::Admin,
             backup: db.backup,
@@ -475,19 +472,24 @@ pub(crate) async fn optimize(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let database = server_db.user_db(owner_id, &db_name).await?;
-    let role = server_db.user_db_role(owner_id, &db_name).await?;
+    let database = server_db.user_db(owner_id, &owner, &db).await?;
+    let role = server_db.user_db_role(owner_id, &owner, &db).await?;
 
-    let (commit_index, _result) = cluster.exec(DbOptimize { owner, db }).await?;
-    let size = db_pool.db_size(&db_name).await?;
+    let (commit_index, _result) = cluster
+        .exec(DbOptimize {
+            owner: owner.clone(),
+            db: db.clone(),
+        })
+        .await?;
+    let size = db_pool.db_size(&owner, &db).await?;
 
     Ok((
         StatusCode::OK,
         [("commit-index", commit_index.to_string())],
         Json(ServerDatabase {
-            name: db_name,
+            db,
+            owner,
             db_type: database.db_type,
             role,
             backup: database.backup,
@@ -518,7 +520,7 @@ pub(crate) async fn remove(
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<impl IntoResponse> {
     let user_id = server_db.user_id(&owner).await?;
-    let _ = server_db.user_db_id(user_id, &db_name(&owner, &db)).await?;
+    let _ = server_db.user_db_id(user_id, &owner, &db).await?;
 
     let (commit_index, _result) = cluster.exec(DbRemove { owner, db }).await?;
 
@@ -553,11 +555,10 @@ pub(crate) async fn rename(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let _ = server_db.user_db_id(owner_id, &db_name).await?;
+    let _ = server_db.user_db_id(owner_id, &owner, &db).await?;
 
-    if db_name == request.new_name {
+    if db_name(&owner, &db) == request.new_name {
         return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
     }
 
@@ -568,7 +569,7 @@ pub(crate) async fn rename(
 
     let new_owner_id = server_db.user_id(new_owner).await?;
     if server_db
-        .find_user_db_id(new_owner_id, &request.new_name)
+        .find_user_db_id(new_owner_id, new_owner, new_db)
         .await?
         .is_some()
     {
@@ -611,9 +612,8 @@ pub(crate) async fn restore(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<impl IntoResponse> {
-    let db_name = db_name(&owner, &db);
     let owner_id = server_db.user_id(&owner).await?;
-    let _ = server_db.user_db_id(owner_id, &db_name).await?;
+    let _ = server_db.user_db_id(owner_id, &owner, &db).await?;
 
     let (commit_index, _result) = cluster.exec(DbRestore { owner, db }).await?;
 

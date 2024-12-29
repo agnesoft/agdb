@@ -3,7 +3,6 @@ use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
-use crate::utilities::db_name;
 use agdb::UserValue;
 use agdb_api::DbResource;
 use serde::Deserialize;
@@ -18,9 +17,8 @@ pub(crate) struct DbClear {
 
 impl Action for DbClear {
     async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        let owner = db.user_id(&self.owner).await?;
-        let name = db_name(&self.owner, &self.db);
-        let mut database = db.user_db(owner, &name).await?;
+        let user = db.user_id(&self.owner).await?;
+        let mut database = db.user_db(user, &self.owner, &self.db).await?;
         db_pool
             .clear_db(&self.owner, &self.db, &mut database, self.resource)
             .await?;

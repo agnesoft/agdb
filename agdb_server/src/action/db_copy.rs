@@ -4,7 +4,6 @@ use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_db::Database;
 use crate::server_error::ServerResult;
-use crate::utilities::db_name;
 use agdb::UserValue;
 use agdb_api::DbType;
 use serde::Deserialize;
@@ -21,17 +20,16 @@ pub(crate) struct DbCopy {
 
 impl Action for DbCopy {
     async fn exec(self, db: ServerDb, db_pool: DbPool) -> ServerResult<ClusterActionResult> {
-        let name = db_name(&self.owner, &self.db);
-        let target_name = db_name(&self.new_owner, &self.new_db);
         let new_owner_id = db.user_id(&self.new_owner).await?;
         db_pool
-            .copy_db(&name, &self.new_owner, &self.new_db, &target_name)
+            .copy_db(&self.owner, &self.db, &self.new_owner, &self.new_db)
             .await?;
         db.insert_db(
             new_owner_id,
             Database {
                 db_id: None,
-                name: target_name,
+                db: self.new_db,
+                owner: self.new_owner,
                 db_type: self.db_type,
                 backup: 0,
             },

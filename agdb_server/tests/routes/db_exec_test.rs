@@ -745,6 +745,22 @@ async fn db_not_found() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn someone_elses_db() -> anyhow::Result<()> {
+    let mut server = TestServer::new().await?;
+    let owner = &next_user_name();
+    let db = &next_db_name();
+    let user = &next_user_name();
+    server.api.user_login(ADMIN, ADMIN).await?;
+    server.api.admin_user_add(owner, owner).await?;
+    server.api.admin_user_add(user, user).await?;
+    server.api.admin_db_add(owner, db, DbType::Memory).await?;
+    server.api.user_login(user, user).await?;
+    let status = server.api.db_exec(owner, db, &[]).await.unwrap_err().status;
+    assert_eq!(status, 404);
+    Ok(())
+}
+
+#[tokio::test]
 async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server

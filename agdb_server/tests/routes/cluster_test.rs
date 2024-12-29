@@ -14,11 +14,19 @@ use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
 use assert_cmd::cargo::CommandCargoExt;
 use std::process::Command;
+use std::time::Duration;
 
 #[tokio::test]
 async fn rebalance() -> anyhow::Result<()> {
     let mut servers = create_cluster(3).await?;
-    let mut leader = AgdbApi::new(ReqwestClient::new(), &servers[0].address);
+    let mut leader = AgdbApi::new(
+        ReqwestClient::with_client(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(10))
+                .build()?,
+        ),
+        &servers[0].address,
+    );
     leader.user_login(ADMIN, ADMIN).await?;
     leader.admin_shutdown().await?;
     assert!(servers[0].process.wait()?.success());
@@ -26,7 +34,15 @@ async fn rebalance() -> anyhow::Result<()> {
     let mut statuses = Vec::with_capacity(servers.len());
 
     for server in &servers[1..] {
-        let status = wait_for_leader(&AgdbApi::new(ReqwestClient::new(), &server.address)).await?;
+        let status = wait_for_leader(&AgdbApi::new(
+            ReqwestClient::with_client(
+                reqwest::Client::builder()
+                    .timeout(Duration::from_secs(10))
+                    .build()?,
+            ),
+            &server.address,
+        ))
+        .await?;
         statuses.push(status);
     }
 
@@ -43,7 +59,15 @@ async fn rebalance() -> anyhow::Result<()> {
     statuses.clear();
 
     for server in &servers {
-        let status = wait_for_leader(&AgdbApi::new(ReqwestClient::new(), &server.address)).await?;
+        let status = wait_for_leader(&AgdbApi::new(
+            ReqwestClient::with_client(
+                reqwest::Client::builder()
+                    .timeout(Duration::from_secs(10))
+                    .build()?,
+            ),
+            &server.address,
+        ))
+        .await?;
         statuses.push(status);
     }
 
@@ -75,9 +99,10 @@ async fn admin_db_add() -> anyhow::Result<()> {
     let db_list = client.admin_db_list().await?.1;
     let server_db = db_list
         .iter()
-        .find(|d| d.name == format!("{owner}/{db}"))
+        .find(|d| d.db == *db && d.owner == *owner)
         .unwrap();
-    assert_eq!(server_db.name, format!("{owner}/{db}"));
+    assert_eq!(server_db.db, *db);
+    assert_eq!(server_db.owner, *owner);
     assert_eq!(server_db.db_type, DbType::Memory);
     Ok(())
 }
@@ -158,7 +183,7 @@ async fn admin_db_convert() -> anyhow::Result<()> {
     let db_list = client.admin_db_list().await?.1;
     let server_db = db_list
         .iter()
-        .find(|d| d.name == format!("{owner}/{db}"))
+        .find(|d| d.db == *db && d.owner == *owner)
         .unwrap();
     assert_eq!(server_db.db_type, DbType::Mapped);
     Ok(())
@@ -258,7 +283,7 @@ async fn admin_db_optimize() -> anyhow::Result<()> {
         .await?
         .1
         .iter()
-        .find(|d| d.name == format!("{owner}/{db}"))
+        .find(|d| d.db == *db && d.owner == *owner)
         .unwrap()
         .size;
     client.admin_db_optimize(owner, db).await?;
@@ -303,7 +328,8 @@ async fn admin_db_rename() -> anyhow::Result<()> {
     client.user_login(owner, owner).await?;
     let dbs = client.db_list().await?.1;
     assert_eq!(dbs.len(), 1);
-    assert_eq!(dbs[0].name, format!("{owner}/{db2}"));
+    assert_eq!(dbs[0].db, *db2);
+    assert_eq!(dbs[0].owner, *owner);
     Ok(())
 }
 
@@ -414,7 +440,8 @@ async fn db_add() -> anyhow::Result<()> {
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbType::Memory).await?;
     let db_list = client.db_list().await?.1;
-    assert_eq!(db_list[0].name, format!("{owner}/{db}"));
+    assert_eq!(db_list[0].db, *db);
+    assert_eq!(db_list[0].owner, *owner);
     assert_eq!(db_list[0].db_type, DbType::Memory);
     Ok(())
 }
@@ -623,7 +650,8 @@ async fn db_rename() -> anyhow::Result<()> {
     client.db_rename(owner, db, owner, db2).await?;
     let dbs = client.db_list().await?.1;
     assert_eq!(dbs.len(), 1);
-    assert_eq!(dbs[0].name, format!("{owner}/{db2}"));
+    assert_eq!(dbs[0].db, *db2);
+    assert_eq!(dbs[0].owner, *owner);
     Ok(())
 }
 

@@ -80,7 +80,7 @@ $queries = [
 ];
 
 // Execute the queries.
-$result = $client->dbExec("php_user1", "db1", $queries);
+$result = $client->dbExecMut("php_user1", "db1", $queries);
 
 // Print the result of the last query.
 printf($result[3]);

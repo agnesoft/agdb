@@ -5,7 +5,6 @@ use crate::server_db::ServerDb;
 use crate::server_error::permission_denied;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
-use crate::utilities::db_name;
 use agdb_api::DbUser;
 use agdb_api::DbUserRole;
 use axum::extract::Path;
@@ -53,8 +52,7 @@ pub(crate) async fn add(
         return Err(permission_denied("cannot change role of db owner"));
     }
 
-    let db_name = db_name(&owner, &db);
-    let db_id = server_db.user_db_id(user.0, &db_name).await?;
+    let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
 
     if !server_db.is_db_admin(user.0, db_id).await? {
         return Err(permission_denied("admin only"));
@@ -97,7 +95,7 @@ pub(crate) async fn list(
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<(StatusCode, Json<Vec<DbUser>>)> {
-    let db_id = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
+    let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
 
     Ok((StatusCode::OK, Json(server_db.db_users(db_id).await?)))
 }
@@ -129,7 +127,7 @@ pub(crate) async fn remove(
         return Err(permission_denied("cannot remove owner"));
     }
 
-    let db_id = server_db.user_db_id(user.0, &db_name(&owner, &db)).await?;
+    let db_id = server_db.user_db_id(user.0, &owner, &db).await?;
     let user_id = server_db.user_id(&username).await?;
 
     if user.0 != user_id && !server_db.is_db_admin(user.0, db_id).await? {

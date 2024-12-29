@@ -122,7 +122,7 @@ fn main() -> Result<(), QueryError> {
         // enum as numbers, we can simply re-instert the users back.
         t.exec_mut(QueryBuilder::insert().elements(&users).query())
 
-        // NOTE: When migrating huge amount fo data it would be better to do it in batches using
+        // NOTE: When migrating huge amount of data it would be better to do it in batches using
         // the `limit` and `offset` values in the search query.
     })?;
 
@@ -130,7 +130,7 @@ fn main() -> Result<(), QueryError> {
     println!("{:?}", user);
 
     // Finally after you are sure the data in the "old" format is no longer needed you can remove
-    // it from the code in any of the subsequent runs/releases.
+    // it from the code in any of the subsequent releases of your software.
 
     Ok(())
 }

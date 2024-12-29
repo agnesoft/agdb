@@ -1,13 +1,6 @@
 export type TCellType = string | number | Date | boolean;
 
-export type TRow = {
-    [key: string]: TCellType;
-};
-
-export type Action<T extends TRow> = {
-    label: string;
-    action: (row: T) => void;
-};
+export type TRow = Record<string, TCellType>;
 
 export type Column<T extends TRow> = {
     key: string;
@@ -17,7 +10,7 @@ export type Column<T extends TRow> = {
     filterable?: boolean;
     cellComponent?: string | ((row: T) => string);
     valueFormatter?: (value: TCellType) => TCellType;
-    actions?: Action<T>[];
+    actions?: Action[];
 };
 
 export type Table<T extends TRow> = {

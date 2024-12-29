@@ -28,10 +28,15 @@ addTable({
             title: "Actions",
             actions: [
                 {
+                    key: "edit",
                     label: "Edit",
                     action: (row: TRow) => console.log("Edit", row.name),
                 },
-                { label: "Delete", action: () => console.log("Delete") },
+                {
+                    key: "delete",
+                    label: "Delete",
+                    action: () => console.log("Delete"),
+                },
             ],
         },
     ],

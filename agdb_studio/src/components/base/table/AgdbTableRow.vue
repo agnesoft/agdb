@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { defineProps, computed, type PropType, provide } from "vue";
+import { computed, type PropType, provide } from "vue";
 import { type Column, type TRow } from "@/composables/table/types";
 import { INJECT_KEY_ROW } from "@/composables/table/constants";
 import AgdbCell from "./AgdbCell.vue";

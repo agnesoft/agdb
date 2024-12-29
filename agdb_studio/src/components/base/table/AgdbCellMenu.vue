@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import type { Action, TRow } from "@/composables/table/types";
+import type { TRow } from "@/composables/table/types";
 import AgdbDropdown from "../dropdown/AgdbDropdown.vue";
 import { MdRoundMenu } from "@kalimahapps/vue-icons";
 import { inject, type PropType } from "vue";
 import { INJECT_KEY_ROW } from "@/composables/table/constants";
 
 const props = defineProps({
-    actions: { type: Array as PropType<Action<TRow>[]>, required: true },
+    actions: { type: Array as PropType<Action[]>, required: true },
 });
 
 const row = inject<TRow>(INJECT_KEY_ROW)!;
@@ -22,7 +22,7 @@ const row = inject<TRow>(INJECT_KEY_ROW)!;
                 <div
                     v-for="action in props.actions"
                     :key="action.label"
-                    @click="() => action.action(row)"
+                    @click="() => action.action?.(row)"
                     class="dropdown-item"
                 >
                     {{ action.label }}

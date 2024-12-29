@@ -23,9 +23,6 @@ const column = computed(() => columns.get(props.cellKey));
 const value = computed(() => row[props.cellKey]);
 
 const formattedValue = computed(() => {
-    // if (!column.value || !value.value) {
-    //     return "";
-    // }
     if (column.value?.valueFormatter) {
         return column.value.valueFormatter(value.value);
     }

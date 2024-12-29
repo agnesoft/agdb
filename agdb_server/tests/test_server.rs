@@ -5,7 +5,6 @@ use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
-use std::any;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Child;

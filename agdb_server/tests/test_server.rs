@@ -5,6 +5,7 @@ use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
 use anyhow::anyhow;
 use assert_cmd::prelude::*;
+use std::any;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Child;
@@ -161,11 +162,13 @@ impl TestServerImpl {
             let token: String = client
                 .post(format!("{}/api/v1/user/login", address))
                 .json(&admin)
+                .timeout(Duration::from_secs(10))
                 .send()?
                 .json()?;
 
             client
                 .post(format!("{}/api/v1/admin/shutdown", address))
+                .timeout(Duration::from_secs(10))
                 .bearer_auth(token)
                 .send()?;
             Ok(())
@@ -181,9 +184,15 @@ impl TestServerImpl {
         }
 
         self.process.kill()?;
-        self.process.wait()?;
 
-        Ok(())
+        for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
+            if self.process.try_wait()?.is_some() {
+                return Ok(());
+            }
+            std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+        }
+
+        anyhow::bail!("Failed to shutdown server")
     }
 
     fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {

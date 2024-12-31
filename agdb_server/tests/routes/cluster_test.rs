@@ -12,8 +12,6 @@ use agdb_api::DbResource;
 use agdb_api::DbType;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
-use assert_cmd::cargo::CommandCargoExt;
-use std::process::Command;
 use std::time::Duration;
 
 #[tokio::test]
@@ -22,22 +20,22 @@ async fn rebalance() -> anyhow::Result<()> {
     let mut leader = AgdbApi::new(
         ReqwestClient::with_client(
             reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
+                .timeout(Duration::from_secs(30))
                 .build()?,
         ),
         &servers[0].address,
     );
     leader.user_login(ADMIN, ADMIN).await?;
     leader.admin_shutdown().await?;
-    assert!(servers[0].process.wait()?.success());
+    servers[0].wait().await?;
 
-    let mut statuses = Vec::with_capacity(servers.len());
+    let mut statuses = Vec::with_capacity(servers.len() - 1);
 
     for server in &servers[1..] {
         let status = wait_for_leader(&AgdbApi::new(
             ReqwestClient::with_client(
                 reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
+                    .timeout(Duration::from_secs(30))
                     .build()?,
             ),
             &server.address,
@@ -50,10 +48,7 @@ async fn rebalance() -> anyhow::Result<()> {
         assert_eq!(statuses[0], *status);
     }
 
-    let dir = &servers[0].dir;
-    servers[0].process = Command::cargo_bin("agdb_server")?
-        .current_dir(dir)
-        .spawn()?;
+    servers[0].restart()?;
     wait_for_ready(&leader).await?;
 
     statuses.clear();
@@ -62,7 +57,7 @@ async fn rebalance() -> anyhow::Result<()> {
         let status = wait_for_leader(&AgdbApi::new(
             ReqwestClient::with_client(
                 reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
+                    .timeout(Duration::from_secs(30))
                     .build()?,
             ),
             &server.address,

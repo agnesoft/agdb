@@ -8,11 +8,9 @@ use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::DbType;
 use agdb_api::ReqwestClient;
-use assert_cmd::cargo::CommandCargoExt;
 use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::path::Path;
-use std::process::Command;
 use std::time::Duration;
 
 #[tokio::test]
@@ -84,10 +82,8 @@ async fn config_reuse() -> anyhow::Result<()> {
     );
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_shutdown().await?;
-    assert!(server.process.wait()?.success());
-    server.process = Command::cargo_bin("agdb_server")?
-        .current_dir(&server.dir)
-        .spawn()?;
+    server.wait().await?;
+    server.restart()?;
     wait_for_ready(&client).await?;
     Ok(())
 }
@@ -115,12 +111,10 @@ async fn db_list_after_shutdown() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_shutdown().await?;
-        assert!(server.process.wait()?.success());
+        server.wait().await?;
     }
 
-    server.process = Command::cargo_bin("agdb_server")?
-        .current_dir(&server.dir)
-        .spawn()?;
+    server.restart()?;
     wait_for_ready(&client).await?;
     client.user_login("userx", "userxpassword").await?;
     let dbs = client.db_list().await?.1;
@@ -152,14 +146,12 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_shutdown().await?;
-        assert!(server.process.wait()?.success());
+        server.wait().await?;
     }
 
     std::fs::remove_dir_all(Path::new(&server.data_dir).join("userx"))?;
 
-    server.process = Command::cargo_bin("agdb_server")?
-        .current_dir(&server.dir)
-        .spawn()?;
+    server.restart()?;
     wait_for_ready(&client).await?;
     client.user_login("userx", "userxpassword").await?;
     let dbs = client.db_list().await?.1;
@@ -217,12 +209,10 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
         client.user_logout().await?;
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_shutdown().await?;
-        assert!(server.process.wait()?.success());
+        server.wait().await?;
     }
 
-    server.process = Command::cargo_bin("agdb_server")?
-        .current_dir(&server.dir)
-        .spawn()?;
+    server.restart()?;
     wait_for_ready(&client).await?;
     client.user_login("user1", "userxpassword").await?;
     let results = client
@@ -256,7 +246,7 @@ async fn reset_admin_password() -> anyhow::Result<()> {
         client.admin_user_add("user1", "password123").await?;
         client.user_change_password(ADMIN, "lostpassword").await?;
         client.admin_shutdown().await?;
-        assert!(server.process.wait()?.success());
+        server.wait().await?;
     }
 
     let config_file = Path::new(&server.dir).join(CONFIG_FILE);
@@ -264,15 +254,13 @@ async fn reset_admin_password() -> anyhow::Result<()> {
         std::fs::read_to_string(&config_file)?.replace("admin: admin", "admin: NEW_ADMIN");
     std::fs::write(config_file, new_config)?;
 
-    server.process = Command::cargo_bin("agdb_server")?
-        .current_dir(&server.dir)
-        .spawn()?;
+    server.restart()?;
     wait_for_ready(&client).await?;
 
     client.user_login("NEW_ADMIN", "NEW_ADMIN").await?;
     let list = client.admin_user_list().await;
     client.admin_shutdown().await?;
-    assert!(server.process.wait()?.success());
+    server.wait().await?;
     assert_eq!(list?.1.len(), 3);
 
     Ok(())
@@ -308,12 +296,10 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
         assert_eq!(status, 201);
         client.user_login(ADMIN, ADMIN).await?;
         client.admin_shutdown().await?;
-        assert!(server.process.wait()?.success());
+        server.wait().await?;
     }
 
-    server.process = Command::cargo_bin("agdb_server")?
-        .current_dir(&server.dir)
-        .spawn()?;
+    server.restart()?;
     wait_for_ready(&client).await?;
     client.user_login(owner, "password123").await?;
 

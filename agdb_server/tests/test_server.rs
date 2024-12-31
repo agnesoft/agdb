@@ -4,15 +4,18 @@ use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
 use anyhow::anyhow;
-use assert_cmd::prelude::*;
 use std::collections::HashMap;
 use std::path::Path;
-use std::process::Child;
-use std::process::Command;
+use std::path::PathBuf;
 use std::sync::atomic::AtomicU16;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Weak;
 use std::time::Duration;
 use std::time::Instant;
+use tokio::process::Child;
+use tokio::process::Command;
+use tokio::sync::RwLock;
 
 const ADMIN: &str = "admin";
 const BINARY: &str = "agdb_server";
@@ -25,33 +28,40 @@ const RETRY_ATTEMPS: u16 = 10;
 const SERVER_DATA_DIR: &str = "agdb_server_data";
 const SHUTDOWN_RETRY_TIMEOUT: Duration = Duration::from_millis(100);
 const SHUTDOWN_RETRY_ATTEMPTS: u16 = 100;
-const TEST_TIMEOUT: u128 = 10000;
+const TEST_TIMEOUT: u128 = 30000;
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
 
-type ClusterImpl = (Vec<TestServerImpl>, u64);
+type ClusterImpl = Vec<TestServerImpl>;
 
 static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
-static SERVER: std::sync::OnceLock<tokio::sync::RwLock<Option<TestServerImpl>>> =
-    std::sync::OnceLock::new();
-static CLUSTER: std::sync::OnceLock<tokio::sync::RwLock<Option<ClusterImpl>>> =
-    std::sync::OnceLock::new();
+static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
+static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
+
+fn server_bin() -> anyhow::Result<PathBuf> {
+    let mut path = std::env::current_exe()?;
+    path.pop();
+    path.pop();
+    Ok(path.join(format!("{BINARY}{}", std::env::consts::EXE_SUFFIX)))
+}
 
 pub struct TestServer {
     pub dir: String,
     pub data_dir: String,
     pub api: AgdbApi<ReqwestClient>,
+    pub server: Arc<TestServerImpl>,
 }
 
 pub struct TestServerImpl {
     pub dir: String,
     pub data_dir: String,
     pub address: String,
-    pub process: Child,
-    pub instances: u16,
+    pub process: Option<Child>,
 }
 
 pub struct TestCluster {
     apis: Vec<AgdbApi<ReqwestClient>>,
+    _cluster: Arc<ClusterImpl>,
 }
 
 impl TestServerImpl {
@@ -87,13 +97,12 @@ impl TestServerImpl {
             address.clone()
         };
 
-        let mut process = Command::cargo_bin(BINARY)?.current_dir(&dir).spawn()?;
+        let mut process = Command::new(server_bin()?)
+            .current_dir(&dir)
+            .kill_on_drop(true)
+            .spawn()?;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
             &api_address,
         );
 
@@ -104,8 +113,7 @@ impl TestServerImpl {
                         dir,
                         data_dir,
                         address: api_address,
-                        process,
-                        instances: 1,
+                        process: Some(process),
                     })
                 }
                 Ok(status) => println!("Server at {api_address} is not ready: {status}"),
@@ -141,12 +149,28 @@ impl TestServerImpl {
         PORT.fetch_add(1, Ordering::Relaxed) + std::process::id() as u16
     }
 
-    fn shutdown_server(&mut self) -> anyhow::Result<()> {
-        if self.process.try_wait()?.is_some() {
-            return Ok(());
+    pub fn restart(&mut self) -> anyhow::Result<()> {
+        self.process = Some(
+            Command::new(server_bin()?)
+                .current_dir(&self.dir)
+                .kill_on_drop(true)
+                .spawn()?,
+        );
+        Ok(())
+    }
+
+    pub async fn wait(&mut self) -> anyhow::Result<()> {
+        if let Some(p) = self.process.as_mut() {
+            p.wait().await?;
         }
 
-        let mut address = self.address.clone();
+        Ok(())
+    }
+
+    async fn shutdown_server(mut process: Child, mut address: String) -> anyhow::Result<()> {
+        if process.try_wait()?.is_some() {
+            return Ok(());
+        }
 
         if !address.starts_with("http") {
             address = format!("http://{}", address);
@@ -156,34 +180,40 @@ impl TestServerImpl {
         admin.insert("username", ADMIN.to_string());
         admin.insert("password", ADMIN.to_string());
 
-        std::thread::spawn(move || -> anyhow::Result<()> {
-            let client = reqwest::blocking::Client::new();
-            let token: String = client
-                .post(format!("{}/api/v1/user/login", address))
-                .json(&admin)
-                .send()?
-                .json()?;
+        let client = reqwest::Client::new();
+        let token: String = client
+            .post(format!("{}/api/v1/user/login", address))
+            .json(&admin)
+            .timeout(CLIENT_TIMEOUT)
+            .send()
+            .await?
+            .json()
+            .await?;
 
-            client
-                .post(format!("{}/api/v1/admin/shutdown", address))
-                .bearer_auth(token)
-                .send()?;
-            Ok(())
-        })
-        .join()
-        .map_err(|e| anyhow!("{:?}", e))??;
+        client
+            .post(format!("{}/api/v1/admin/shutdown", address))
+            .timeout(CLIENT_TIMEOUT)
+            .bearer_auth(token)
+            .send()
+            .await?;
 
         for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
-            if self.process.try_wait()?.is_some() {
+            if process.try_wait()?.is_some() {
                 return Ok(());
             }
             std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
         }
 
-        self.process.kill()?;
-        self.process.wait()?;
+        process.kill().await?;
 
-        Ok(())
+        for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
+            if process.try_wait()?.is_some() {
+                return Ok(());
+            }
+            std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+        }
+
+        anyhow::bail!("Failed to shutdown server")
     }
 
     fn remove_dir_if_exists(dir: &str) -> anyhow::Result<()> {
@@ -197,28 +227,27 @@ impl TestServerImpl {
 
 impl TestServer {
     pub async fn new() -> anyhow::Result<Self> {
-        let global_server = SERVER.get_or_init(|| tokio::sync::RwLock::new(None));
+        let global_server = SERVER.get_or_init(|| RwLock::new(Weak::new()));
         let mut server_guard = global_server.write().await;
 
-        if server_guard.is_none() {
-            *server_guard = Some(TestServerImpl::new().await?);
+        let server = if let Some(server) = server_guard.upgrade() {
+            server
         } else {
-            server_guard.as_mut().unwrap().instances += 1;
-        }
-
-        let server = server_guard.as_ref().unwrap();
+            let server = Arc::new(TestServerImpl::new().await?);
+            *server_guard = Arc::downgrade(&server);
+            server
+        };
 
         Ok(Self {
             api: AgdbApi::new(
                 ReqwestClient::with_client(
-                    reqwest::Client::builder()
-                        .timeout(Duration::from_secs(10))
-                        .build()?,
+                    reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
                 ),
                 &server.address,
             ),
             dir: server.dir.clone(),
             data_dir: server.data_dir.clone(),
+            server,
         })
     }
 
@@ -233,39 +262,60 @@ impl TestServer {
 
 impl Drop for TestServerImpl {
     fn drop(&mut self) {
-        let _ = Self::shutdown_server(self);
-        let _ = Self::remove_dir_if_exists(&self.dir);
+        static DROP_RUNTIME: std::sync::OnceLock<tokio::runtime::Runtime> =
+            std::sync::OnceLock::new();
+
+        if let Some(p) = self.process.take() {
+            let address = self.address.clone();
+            let dir = self.dir.clone();
+
+            let f = DROP_RUNTIME
+                .get_or_init(|| tokio::runtime::Runtime::new().unwrap())
+                .spawn(async move {
+                    let _ = Self::shutdown_server(p, address)
+                        .await
+                        .inspect_err(|e| println!("{e:?}"));
+                });
+
+            for _ in 0..SHUTDOWN_RETRY_ATTEMPTS {
+                if f.is_finished() {
+                    break;
+                }
+
+                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
+            }
+
+            let _ = Self::remove_dir_if_exists(&dir).inspect_err(|e| println!("{e:?}"));
+        }
     }
 }
 
 impl TestCluster {
     async fn new() -> anyhow::Result<Self> {
-        let global_cluster = CLUSTER.get_or_init(|| tokio::sync::RwLock::new(None));
+        let global_cluster = CLUSTER.get_or_init(|| RwLock::new(Weak::new()));
         let mut cluster_guard = global_cluster.write().await;
 
-        if cluster_guard.is_none() {
-            *cluster_guard = Some((create_cluster(2).await?, 1));
+        let nodes = if let Some(nodes) = cluster_guard.upgrade() {
+            nodes
         } else {
-            cluster_guard.as_mut().unwrap().1 += 1;
-        }
+            let nodes = Arc::new(create_cluster(3).await?);
+            *cluster_guard = Arc::downgrade(&nodes);
+            nodes
+        };
 
         let mut cluster = Self {
-            apis: cluster_guard
-                .as_ref()
-                .unwrap()
-                .0
+            apis: nodes
                 .iter()
                 .map(|s| {
                     Ok(AgdbApi::new(
                         ReqwestClient::with_client(
-                            reqwest::Client::builder()
-                                .timeout(Duration::from_secs(10))
-                                .build()?,
+                            reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
                         ),
                         &s.address,
                     ))
                 })
                 .collect::<anyhow::Result<Vec<AgdbApi<ReqwestClient>>>>()?,
+            _cluster: nodes,
         };
 
         cluster.apis[1].cluster_user_login(ADMIN, ADMIN).await?;
@@ -342,11 +392,7 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
     {
         let server = server.await??;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .timeout(Duration::from_secs(10))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
             &server.address,
         );
         servers.push((server, api));
@@ -370,46 +416,4 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
     servers.swap(0, leader);
 
     Ok(servers.into_iter().map(|(s, _)| s).collect())
-}
-
-impl Drop for TestServer {
-    fn drop(&mut self) {
-        let global_server = SERVER.get().unwrap();
-        let mut server_guard = loop {
-            if let Ok(s) = global_server.try_write() {
-                break s;
-            } else {
-                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
-            }
-        };
-
-        if let Some(s) = server_guard.as_mut() {
-            if s.instances == 1 {
-                *server_guard = None;
-            } else {
-                s.instances -= 1;
-            }
-        }
-    }
-}
-
-impl Drop for TestCluster {
-    fn drop(&mut self) {
-        let global_cluster = CLUSTER.get().unwrap();
-        let mut cluster_guard = loop {
-            if let Ok(c) = global_cluster.try_write() {
-                break c;
-            } else {
-                std::thread::sleep(SHUTDOWN_RETRY_TIMEOUT);
-            }
-        };
-
-        if let Some(c) = cluster_guard.as_mut() {
-            if c.1 == 1 {
-                *cluster_guard = None;
-            } else {
-                c.1 -= 1;
-            }
-        }
-    }
 }

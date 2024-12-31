@@ -19,6 +19,11 @@ const config = {
         href: "https://github.com/agnesoft/agdb/tree/main/examples/schema_migration",
         newWindow: true,
     },
+    "server-client-php": {
+        title: "server client - php",
+        href: "https://github.com/agnesoft/agdb/tree/main/examples/server_client_php",
+        newWindow: true,
+    },
     "server-client-rust": {
         title: "server client - rust",
         href: "https://github.com/agnesoft/agdb/tree/main/examples/server_client_rust",
@@ -29,9 +34,9 @@ const config = {
         href: "https://github.com/agnesoft/agdb/tree/main/examples/server_client_typescript",
         newWindow: true,
     },
-    "strong-types": {
-        title: "strong types",
-        href: "https://github.com/agnesoft/agdb/tree/main/examples/strong_types",
+    "user-types": {
+        title: "user types",
+        href: "https://github.com/agnesoft/agdb/tree/main/examples/user_types",
         newWindow: true,
     },
 };

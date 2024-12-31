@@ -153,7 +153,7 @@ pub(crate) async fn status(
 
                 let response = client
                     .get(&url)
-                    .timeout(std::time::Duration::from_secs(1))
+                    .timeout(std::time::Duration::from_secs(5))
                     .send()
                     .await;
 

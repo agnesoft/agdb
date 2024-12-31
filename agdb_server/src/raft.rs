@@ -343,13 +343,12 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             self.append_storage(log)
                 .await
                 .map_err(|e| self.commit_error(request, e.description))?;
-        }
 
-        if self.local().log_commit < request.log_commit {
-            let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
-            self.commit_storage(available_commit)
-                .await
-                .map_err(|e| self.commit_error(request, e.description))?;
+            if log.index <= request.log_commit {
+                self.commit_storage(log.index)
+                    .await
+                    .map_err(|e| self.commit_error(request, e.description))?;
+            }
         }
 
         Self::ok(request)
@@ -447,8 +446,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         );
 
         if self.local().log_commit < request.log_commit {
-            let available_commit = std::cmp::min(self.local().log_index, request.log_commit);
-            self.commit_storage(available_commit)
+            self.commit_storage(request.log_commit)
                 .await
                 .map_err(|e| self.commit_error(request, e.description))?;
         }
@@ -561,21 +559,21 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
     }
 
     fn validate_log_append(&self, request: &Request<T>, log: &Log<T>) -> Result<(), Response> {
-        if self.local().log_commit >= log.index {
+        if self.local().log_commit >= log.index || log.index > (self.local().log_index + 1) {
             return Err(Response {
                 target: request.index,
                 result: ResponseType::LogMismatch(LogMismatch {
                     index: MismatchedValues {
                         local: Some(self.local().log_index),
-                        requested: Some(request.log_index),
+                        requested: Some(log.index),
                     },
                     term: MismatchedValues {
                         local: Some(self.local().log_term),
-                        requested: Some(request.log_term),
+                        requested: Some(log.term),
                     },
                     commit: MismatchedValues {
                         local: Some(self.local().log_commit),
-                        requested: Some(request.log_commit),
+                        requested: Some(log.index),
                     },
                 }),
             });
@@ -877,6 +875,30 @@ mod test {
             panic!("{node} has not become a followerwithin {:?}", TIMEOUT);
         }
 
+        async fn expect_data(&self, node: u64, data: &[u8]) {
+            let timer = Instant::now();
+            let mut logs = Vec::new();
+
+            while timer.elapsed() < TIMEOUT {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                logs = self.nodes.read().await[node as usize]
+                    .read()
+                    .await
+                    .cluster
+                    .storage
+                    .logs
+                    .iter()
+                    .map(|log| log.data)
+                    .collect::<Vec<u8>>();
+
+                if logs == data {
+                    return;
+                }
+            }
+
+            panic!("mismatched {node} data:\nEXPECTED: {data:?}\nACTUAL: {logs:?}",);
+        }
+
         async fn expect_storage_synced(&self, left_node: u64, right_node: u64) {
             let timer = Instant::now();
             let mut left_storage = TestStorage::default();
@@ -950,23 +972,7 @@ mod test {
         cluster.start().await;
         cluster.expect_leader(0).await;
         cluster.append(0, 1).await?;
-        let logs = cluster.nodes.read().await[0]
-            .read()
-            .await
-            .cluster
-            .storage
-            .logs
-            .clone();
-        assert_eq!(logs.len(), 1);
-        assert_eq!(
-            cluster.nodes.read().await[0]
-                .read()
-                .await
-                .cluster
-                .storage
-                .commit,
-            1
-        );
+        cluster.expect_data(0, &[1]).await;
         Ok(())
     }
 
@@ -988,6 +994,7 @@ mod test {
         cluster.start().await;
         cluster.expect_leader(0).await;
         cluster.append(0, 1).await?;
+        cluster.expect_data(0, &[1]).await;
         cluster.expect_storage_synced(0, 1).await;
         cluster.expect_storage_synced(0, 2).await;
         Ok(())
@@ -1000,6 +1007,7 @@ mod test {
         cluster.expect_leader(0).await;
         cluster.block(1).await;
         cluster.append(0, 1).await?;
+        cluster.expect_data(0, &[1]).await;
         cluster.expect_storage_synced(0, 2).await;
         cluster.unblock().await;
         cluster.expect_storage_synced(0, 1).await;
@@ -1012,11 +1020,13 @@ mod test {
         cluster.start().await;
         cluster.expect_leader(0).await;
         cluster.append(0, 1).await?;
+        cluster.expect_data(0, &[1]).await;
         cluster.expect_storage_synced(0, 1).await;
         cluster.expect_storage_synced(0, 2).await;
         cluster.block(2).await;
         cluster.append(0, 1).await?;
         cluster.append(0, 2).await?;
+        cluster.expect_data(0, &[1, 1, 2]).await;
         cluster.expect_storage_synced(0, 1).await;
         cluster.unblock().await;
         cluster.expect_storage_synced(0, 2).await;
@@ -1030,8 +1040,10 @@ mod test {
         cluster.expect_leader(0).await;
         cluster.block(0).await;
         cluster.append(0, 1).await?;
+        cluster.expect_data(0, &[1]).await;
         cluster.expect_leader(1).await;
         cluster.append(1, 2).await?;
+        cluster.expect_data(1, &[2]).await;
         cluster.expect_storage_synced(1, 2).await;
         cluster.unblock().await;
         cluster.expect_storage_synced(0, 1).await;
@@ -1044,6 +1056,7 @@ mod test {
         cluster.start().await;
         cluster.expect_leader(0).await;
         cluster.append(0, 1).await?;
+        cluster.expect_data(0, &[1]).await;
         cluster.expect_storage_synced(0, 1).await;
         cluster.expect_storage_synced(0, 2).await;
         cluster.expect_storage_synced(0, 3).await;
@@ -1051,11 +1064,50 @@ mod test {
         cluster.block(0).await;
         cluster.expect_leader(1).await;
         cluster.append(1, 2).await?;
+        cluster.expect_data(1, &[1, 2]).await;
         cluster.expect_storage_synced(1, 2).await;
         cluster.expect_storage_synced(1, 3).await;
         cluster.expect_storage_synced(1, 4).await;
         cluster.unblock().await;
+        cluster.expect_data(0, &[1, 2]).await;
         cluster.expect_storage_synced(0, 1).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn out_of_order_logs() -> anyhow::Result<()> {
+        let mut cluster = TestCluster::new(3);
+        cluster.start().await;
+        cluster.expect_leader(0).await;
+
+        let requests1 = cluster.nodes.read().await[0]
+            .write()
+            .await
+            .cluster
+            .append(1, None)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        let mut requests = cluster.nodes.read().await[0]
+            .write()
+            .await
+            .cluster
+            .append(2, None)
+            .await
+            .map_err(|e| anyhow!(e.description))?;
+
+        requests.extend(requests1);
+
+        for request in requests {
+            if let Some(channel) = &cluster.requests_channel {
+                channel.send(request).await?;
+            }
+        }
+
+        cluster.expect_data(0, &[1, 2]).await;
+        cluster.expect_storage_synced(0, 1).await;
+        cluster.expect_storage_synced(0, 2).await;
+
         Ok(())
     }
 }

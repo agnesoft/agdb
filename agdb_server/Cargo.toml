@@ -17,7 +17,7 @@ agdb_api = { version = "0.9.2", path = "../agdb_api/rust", features = ["reqwest"
 axum = { version = "0.7", features = ["http2"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 http-body-util = "0.1"
-reqwest = { version = "0.12", features = ["json", "blocking", "stream"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
 ring = "0.17"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -33,5 +33,4 @@ utoipa-rapidoc = { version = "4", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-assert_cmd = "2"
 anyhow = "1"

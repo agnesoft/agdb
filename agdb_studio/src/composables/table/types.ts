@@ -17,5 +17,4 @@ export type Table<T extends TRow> = {
     name: string;
     columns: Map<string, Column<T>>;
     data?: Map<string, T>;
-    uniqueKey?: string;
 };

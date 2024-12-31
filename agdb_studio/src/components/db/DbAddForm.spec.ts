@@ -1,5 +1,6 @@
 import DbAddForm from "./DbAddForm.vue";
 import { mount } from "@vue/test-utils";
+import { describe, beforeEach, vi, it, expect } from "vitest";
 
 const { addDatabase } = vi.hoisted(() => {
     return {
@@ -22,6 +23,7 @@ describe("DbAddForm", () => {
         vi.clearAllMocks();
     });
     it("should add a database when user submits", async () => {
+        addDatabase.mockResolvedValueOnce(true);
         expect(addDatabase).not.toHaveBeenCalled();
         const wrapper = mount(DbAddForm);
         await wrapper.find("input").setValue("test_db");
@@ -31,6 +33,7 @@ describe("DbAddForm", () => {
         expect(addDatabase).toHaveBeenCalledOnce();
     });
     it("should add a database when user clicks submit button", async () => {
+        addDatabase.mockResolvedValueOnce(true);
         expect(addDatabase).not.toHaveBeenCalled();
         const wrapper = mount(DbAddForm);
         await wrapper.find("input").setValue("test_db");

@@ -13,9 +13,7 @@ const setTableData = <T extends TRow>(tableName: string, data: T[]): void => {
         table.columns.forEach((column) => {
             rowData[column.key] = data[rowIndex][column.key];
         });
-        const rowKey = table.uniqueKey
-            ? rowData[table.uniqueKey].toString()
-            : rowIndex;
+        const rowKey = rowIndex;
 
         table.data.set(rowKey, rowData);
     }
@@ -23,9 +21,7 @@ const setTableData = <T extends TRow>(tableName: string, data: T[]): void => {
 
 const addRow = <T extends TRow>(tableName: string, row: T): void => {
     const table = getTable<T>(tableName);
-    const rowKey =
-        (table?.uniqueKey && row[table.uniqueKey].toString()) ??
-        table?.data?.size.toString();
+    const rowKey = table?.data?.size.toString();
     if (!rowKey) {
         return;
     }

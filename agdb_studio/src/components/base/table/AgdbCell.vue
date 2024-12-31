@@ -30,7 +30,7 @@ const formattedValue = computed(() => {
 </script>
 
 <template>
-    <div>
+    <div class="agdb-cell">
         <div v-if="column?.cellComponent">
             <component :is="column.cellComponent" :value="value" />
         </div>

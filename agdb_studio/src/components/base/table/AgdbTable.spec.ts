@@ -3,14 +3,14 @@ import AgdbTable from "./AgdbTable.vue";
 import { addTable, clearTables } from "@/composables/table/tableConfig";
 import { setTableData } from "@/composables/table/tableData";
 import { TABLE_NAME, tableConfig, tableData } from "@/tests/tableMocks";
-import { describe, beforeEach, vi, it, expect } from "vitest";
+import { describe, beforeEach, it, expect } from "vitest";
 
 describe("AgdbTable", () => {
     beforeEach(() => {
         clearTables();
     });
     it("should render for correct data", () => {
-        addTable({ name: TABLE_NAME, columns: tableConfig, uniqueKey: "name" });
+        addTable({ name: TABLE_NAME, columns: tableConfig });
         setTableData(TABLE_NAME, tableData);
 
         const wrapper = mount(AgdbTable, {

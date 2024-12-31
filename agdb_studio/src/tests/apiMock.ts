@@ -5,6 +5,13 @@ export const user_status = vi.fn();
 export const db_list = vi.fn();
 export const db_add = vi.fn();
 export const db_backup = vi.fn();
+export const db_restore = vi.fn();
+export const db_clear = vi.fn();
+export const db_convert = vi.fn();
+export const db_remove = vi.fn();
+export const db_delete = vi.fn();
+export const db_optimize = vi.fn();
+export const db_audit = vi.fn().mockResolvedValue([]);
 
 export const client = vi.fn().mockResolvedValue({
     login: vi.fn().mockResolvedValue("token"),
@@ -24,6 +31,13 @@ export const client = vi.fn().mockResolvedValue({
     db_list,
     db_add,
     db_backup,
+    db_restore,
+    db_clear,
+    db_convert,
+    db_remove,
+    db_delete,
+    db_optimize,
+    db_audit,
 });
 vi.mock("agdb_api", () => {
     return {

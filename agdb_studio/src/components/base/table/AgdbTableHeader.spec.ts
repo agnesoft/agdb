@@ -1,6 +1,6 @@
 import { shallowMount } from "@vue/test-utils";
 import AgdbTableHeader from "./AgdbTableHeader.vue";
-import { describe, beforeEach, vi, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 
 describe("TableHeader", () => {
     it("should render", () => {

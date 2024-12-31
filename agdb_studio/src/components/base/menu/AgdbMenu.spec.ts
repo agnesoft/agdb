@@ -1,7 +1,7 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import AgdbMenu from "./AgdbMenu.vue";
-import dbActions from "@/composables/db/dbConfig";
+import { dbActions } from "@/composables/db/dbConfig";
 import { db_backup } from "@/tests/apiMock";
 
 describe("AgdbMenu", () => {

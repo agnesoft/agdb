@@ -1,7 +1,8 @@
 export const TABLE_NAME = "my_table";
 export const tableConfig = [
     { key: "role", title: "Role" },
-    { key: "name", title: "Name" },
+    { key: "owner", title: "Owner" },
+    { key: "db", title: "Name" },
     { key: "db_type", title: "Type" },
     { key: "size", title: "Size" },
     {
@@ -18,19 +19,42 @@ tableConfig.forEach((column) => {
 export const tableData = [
     {
         role: "admin",
-        name: "admin/app1",
+        owner: "admin",
+        db: "app1",
         db_type: "memory",
         size: 10,
         backup: 0,
     },
-    { role: "user", name: "user/app1", db_type: "file", size: 20, backup: 0 },
-    { role: "admin", name: "admin/app3", db_type: "file", size: 50, backup: 0 },
+    {
+        role: "user",
+        owner: "user",
+        db: "app1",
+        db_type: "file",
+        size: 20,
+        backup: 0,
+    },
     {
         role: "admin",
-        name: "admin/app2",
+        owner: "admin",
+        db: "app3",
+        db_type: "file",
+        size: 50,
+        backup: 0,
+    },
+    {
+        role: "admin",
+        owner: "admin",
+        db: "app2",
         db_type: "mapped",
         size: 20,
         backup: 0,
     },
-    { role: "user", name: "user/app2", db_type: "memory", size: 40, backup: 0 },
+    {
+        role: "user",
+        owner: "user",
+        db: "app2",
+        db_type: "memory",
+        size: 40,
+        backup: 0,
+    },
 ];

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { useDbStore } from "@/composables/stores/DbStore";
+import { useDbStore } from "@/composables/db/DbStore";
 import { onMounted } from "vue";
 import DbAddForm from "@/components/db/DbAddForm.vue";
 import DbTable from "@/components/db/DbTable.vue";

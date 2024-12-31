@@ -17,15 +17,11 @@ const props = defineProps({
 const cellKeys = computed(() => {
     return Object.keys(props.row);
 });
-// const getFromattedValue = (key: string) => {
-//     const column = props.columns.get(key);
-//     const value = props.row[key];
-//     if (column?.valueFormatter) {
-//         return column.valueFormatter(value);
-//     }
-//     return value;
-// };
-provide(INJECT_KEY_ROW, props.row);
+
+const rowData = computed(() => {
+    return props.row;
+});
+provide(INJECT_KEY_ROW, rowData);
 </script>
 
 <template>

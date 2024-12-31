@@ -24,7 +24,7 @@ const { databases, fetchDatabases } = vi.hoisted(() => {
     };
 });
 
-vi.mock("@/composables/stores/DbStore", () => {
+vi.mock("@/composables/db/DbStore", () => {
     return {
         useDbStore: () => {
             return {

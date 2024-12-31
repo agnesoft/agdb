@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import AgdbTable from "../base/table/AgdbTable.vue";
-import { useDbStore } from "@/composables/stores/DbStore";
+import { useDbStore } from "@/composables/db/DbStore";
 import { addTable } from "@/composables/table/tableConfig";
 import { setTableData } from "@/composables/table/tableData";
 import { watchEffect } from "vue";
 import { dateFormatter } from "@/composables/table/utils";
-import type { TRow } from "@/composables/table/types";
+import dbActions from "@/composables/db/DbActions";
 
 const { databases } = useDbStore();
 
@@ -15,7 +15,8 @@ addTable({
     name: TABLE_KEY,
     columns: [
         { key: "role", title: "Role" },
-        { key: "name", title: "Owner/Name" },
+        { key: "owner", title: "Owner" },
+        { key: "db", title: "Name" },
         { key: "db_type", title: "Type" },
         { key: "size", title: "Size" },
         {
@@ -26,21 +27,9 @@ addTable({
         {
             key: "actions",
             title: "Actions",
-            actions: [
-                {
-                    key: "edit",
-                    label: "Edit",
-                    action: (row: TRow) => console.log("Edit", row.name),
-                },
-                {
-                    key: "delete",
-                    label: "Delete",
-                    action: () => console.log("Delete"),
-                },
-            ],
+            actions: dbActions,
         },
     ],
-    uniqueKey: "name",
 });
 
 watchEffect(() => {
@@ -63,7 +52,7 @@ watchEffect(() => {
     overflow: auto;
 }
 .db-table {
-    width: 1100px;
+    width: 1200px;
     margin: 0 auto;
 }
 </style>

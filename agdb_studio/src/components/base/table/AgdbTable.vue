@@ -23,9 +23,9 @@ const rows = computed(() => {
 const columns = computed(() => {
     return getTableColumns<TRow>(props.name);
 });
-
-provide(INJECT_KEY_TABLE_NAME, props.name);
-provide(INJECT_KEY_COLUMNS, columns.value);
+const tableKey = props.name;
+provide(INJECT_KEY_TABLE_NAME, tableKey);
+provide(INJECT_KEY_COLUMNS, columns);
 </script>
 
 <template>
@@ -53,5 +53,6 @@ provide(INJECT_KEY_COLUMNS, columns.value);
     gap: 1rem;
     padding: 0.5rem;
     border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
 }
 </style>

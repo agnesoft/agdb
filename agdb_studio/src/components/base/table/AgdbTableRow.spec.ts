@@ -9,7 +9,8 @@ describe("TableRow", () => {
                 columns: columnsMap,
                 row: {
                     role: "admin",
-                    name: "admin/app3",
+                    owner: "admin",
+                    db: "app3",
                     db_type: "file",
                     size: 50,
                     backup: 0,
@@ -17,5 +18,6 @@ describe("TableRow", () => {
             },
         });
         expect(wrapper.text()).toContain("admin");
+        expect(wrapper.text()).toContain("app3");
     });
 });

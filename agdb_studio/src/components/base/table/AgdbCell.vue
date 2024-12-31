@@ -4,7 +4,7 @@ import {
     INJECT_KEY_ROW,
 } from "@/composables/table/constants";
 import type { Column, TRow } from "@/composables/table/types";
-import { computed, inject } from "vue";
+import { computed, inject, type Ref } from "vue";
 import AgdbCellMenu from "./AgdbCellMenu.vue";
 
 const props = defineProps({
@@ -13,14 +13,13 @@ const props = defineProps({
         required: true,
     },
 });
-const columns = inject<Map<string, Column<TRow>>>(
-    INJECT_KEY_COLUMNS,
-    new Map(),
-);
-const row = inject<TRow>(INJECT_KEY_ROW, {} as TRow);
+const columns = inject<Ref<Map<string, Column<TRow>>>>(INJECT_KEY_COLUMNS);
+const row = inject<Ref<TRow>>(INJECT_KEY_ROW);
 
-const column = computed(() => columns.get(props.cellKey));
-const value = computed(() => row[props.cellKey]);
+const column = computed(() => columns?.value.get(props.cellKey));
+const value = computed(() => {
+    return row?.value[props.cellKey] ?? "";
+});
 
 const formattedValue = computed(() => {
     if (column.value?.valueFormatter) {

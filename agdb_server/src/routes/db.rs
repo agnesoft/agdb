@@ -20,7 +20,6 @@ use crate::server_error::permission_denied;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResponse;
 use crate::user_id::UserId;
-use crate::utilities::db_name;
 use crate::utilities::required_role;
 use agdb_api::DbAudit;
 use agdb_api::DbResource;
@@ -42,7 +41,8 @@ use utoipa::ToSchema;
 #[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseRename {
-    pub new_name: String,
+    pub new_owner: String,
+    pub new_db: String,
 }
 
 #[derive(Deserialize, IntoParams, ToSchema)]
@@ -310,19 +310,15 @@ pub(crate) async fn copy(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (new_owner, new_db) = request
-        .new_name
-        .split_once('/')
-        .ok_or(ErrorCode::DbInvalid)?;
     let db_type = server_db.user_db(user.0, &owner, &db).await?.db_type;
     let username = server_db.user_name(user.0).await?;
 
-    if new_owner != username {
+    if request.new_owner != username {
         return Err(permission_denied("cannot copy db to another user"));
     }
 
     if server_db
-        .find_user_db_id(user.0, new_owner, new_db)
+        .find_user_db_id(user.0, &request.new_owner, &request.new_db)
         .await?
         .is_some()
     {
@@ -333,8 +329,8 @@ pub(crate) async fn copy(
         .exec(DbCopy {
             owner,
             db,
-            new_owner: new_owner.to_string(),
-            new_db: new_db.to_string(),
+            new_owner: request.new_owner.clone(),
+            new_db: request.new_db.clone(),
             db_type,
         })
         .await?;
@@ -641,22 +637,17 @@ pub(crate) async fn rename(
 ) -> ServerResponse<impl IntoResponse> {
     let _ = server_db.user_db_id(user.0, &owner, &db).await?;
 
-    if db_name(&owner, &db) == request.new_name {
+    if request.new_owner == owner && request.new_db == db {
         return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
     }
-
-    let (new_owner, new_db) = request
-        .new_name
-        .split_once('/')
-        .ok_or(ErrorCode::DbInvalid)?;
 
     if owner != server_db.user_name(user.0).await? {
         return Err(permission_denied("owner only"));
     }
 
-    let new_owner_id = server_db.user_id(new_owner).await?;
+    let new_owner_id = server_db.user_id(&request.new_owner).await?;
     if server_db
-        .find_user_db_id(new_owner_id, new_owner, new_db)
+        .find_user_db_id(new_owner_id, &request.new_owner, &request.new_db)
         .await?
         .is_some()
     {
@@ -667,8 +658,8 @@ pub(crate) async fn rename(
         .exec(DbRename {
             owner,
             db,
-            new_owner: new_owner.to_string(),
-            new_db: new_db.to_string(),
+            new_owner: request.new_owner.to_string(),
+            new_db: request.new_db.to_string(),
         })
         .await?;
 

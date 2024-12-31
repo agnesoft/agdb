@@ -1176,7 +1176,8 @@ declare namespace Components {
             size: number; // int64
         }
         export interface ServerDatabaseRename {
-            new_name: string;
+            new_db: string;
+            new_owner: string;
         }
         export interface ServerDatabaseResource {
             resource: DbResource;
@@ -1303,7 +1304,8 @@ declare namespace Paths {
     namespace AdminDbCopy {
         namespace Parameters {
             export type Db = string;
-            export type NewName = string;
+            export type NewDb = string;
+            export type NewOwner = string;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1311,7 +1313,8 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         export interface QueryParameters {
-            new_name: Parameters.NewName;
+            new_owner: Parameters.NewOwner;
+            new_db: Parameters.NewDb;
         }
         namespace Responses {
             export interface $201 {
@@ -1425,7 +1428,8 @@ declare namespace Paths {
     namespace AdminDbRename {
         namespace Parameters {
             export type Db = string;
-            export type NewName = string;
+            export type NewDb = string;
+            export type NewOwner = string;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1433,7 +1437,8 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         export interface QueryParameters {
-            new_name: Parameters.NewName;
+            new_owner: Parameters.NewOwner;
+            new_db: Parameters.NewDb;
         }
         namespace Responses {
             export interface $201 {
@@ -1776,7 +1781,8 @@ declare namespace Paths {
     namespace DbCopy {
         namespace Parameters {
             export type Db = string;
-            export type NewName = string;
+            export type NewDb = string;
+            export type NewOwner = string;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1784,7 +1790,8 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         export interface QueryParameters {
-            new_name: Parameters.NewName;
+            new_owner: Parameters.NewOwner;
+            new_db: Parameters.NewDb;
         }
         namespace Responses {
             export interface $201 {
@@ -1910,7 +1917,8 @@ declare namespace Paths {
     namespace DbRename {
         namespace Parameters {
             export type Db = string;
-            export type NewName = string;
+            export type NewDb = string;
+            export type NewOwner = string;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1918,7 +1926,8 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         export interface QueryParameters {
-            new_name: Parameters.NewName;
+            new_owner: Parameters.NewOwner;
+            new_db: Parameters.NewDb;
         }
         namespace Responses {
             export interface $201 {

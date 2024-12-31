@@ -362,7 +362,7 @@ void (empty response body)
 ## `adminDbCopy()`
 
 ```php
-adminDbCopy($owner, $db, $new_name)
+adminDbCopy($owner, $db, $new_owner, $new_db)
 ```
 
 
@@ -386,10 +386,11 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
-$new_name = 'new_name_example'; // string
+$new_owner = 'new_owner_example'; // string
+$new_db = 'new_db_example'; // string
 
 try {
-    $apiInstance->adminDbCopy($owner, $db, $new_name);
+    $apiInstance->adminDbCopy($owner, $db, $new_owner, $new_db);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->adminDbCopy: ', $e->getMessage(), PHP_EOL;
 }
@@ -401,7 +402,8 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
-| **new_name** | **string**|  | |
+| **new_owner** | **string**|  | |
+| **new_db** | **string**|  | |
 
 ### Return type
 
@@ -780,7 +782,7 @@ void (empty response body)
 ## `adminDbRename()`
 
 ```php
-adminDbRename($owner, $db, $new_name)
+adminDbRename($owner, $db, $new_owner, $new_db)
 ```
 
 
@@ -804,10 +806,11 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
-$new_name = 'new_name_example'; // string
+$new_owner = 'new_owner_example'; // string
+$new_db = 'new_db_example'; // string
 
 try {
-    $apiInstance->adminDbRename($owner, $db, $new_name);
+    $apiInstance->adminDbRename($owner, $db, $new_owner, $new_db);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->adminDbRename: ', $e->getMessage(), PHP_EOL;
 }
@@ -819,7 +822,8 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
-| **new_name** | **string**|  | |
+| **new_owner** | **string**|  | |
+| **new_db** | **string**|  | |
 
 ### Return type
 
@@ -2000,7 +2004,7 @@ void (empty response body)
 ## `dbCopy()`
 
 ```php
-dbCopy($owner, $db, $new_name)
+dbCopy($owner, $db, $new_owner, $new_db)
 ```
 
 
@@ -2024,10 +2028,11 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
-$new_name = 'new_name_example'; // string
+$new_owner = 'new_owner_example'; // string
+$new_db = 'new_db_example'; // string
 
 try {
-    $apiInstance->dbCopy($owner, $db, $new_name);
+    $apiInstance->dbCopy($owner, $db, $new_owner, $new_db);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dbCopy: ', $e->getMessage(), PHP_EOL;
 }
@@ -2039,7 +2044,8 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
-| **new_name** | **string**|  | |
+| **new_owner** | **string**|  | |
+| **new_db** | **string**|  | |
 
 ### Return type
 
@@ -2418,7 +2424,7 @@ void (empty response body)
 ## `dbRename()`
 
 ```php
-dbRename($owner, $db, $new_name)
+dbRename($owner, $db, $new_owner, $new_db)
 ```
 
 
@@ -2442,10 +2448,11 @@ $apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
 );
 $owner = 'owner_example'; // string | db owner user name
 $db = 'db_example'; // string | db name
-$new_name = 'new_name_example'; // string
+$new_owner = 'new_owner_example'; // string
+$new_db = 'new_db_example'; // string
 
 try {
-    $apiInstance->dbRename($owner, $db, $new_name);
+    $apiInstance->dbRename($owner, $db, $new_owner, $new_db);
 } catch (Exception $e) {
     echo 'Exception when calling AgdbApi->dbRename: ', $e->getMessage(), PHP_EOL;
 }
@@ -2457,7 +2464,8 @@ try {
 | ------------- | ------------- | ------------- | ------------- |
 | **owner** | **string**| db owner user name | |
 | **db** | **string**| db name | |
-| **new_name** | **string**|  | |
+| **new_owner** | **string**|  | |
+| **new_db** | **string**|  | |
 
 ### Return type
 

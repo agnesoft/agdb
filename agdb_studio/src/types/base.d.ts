@@ -2,7 +2,11 @@ type StyleObject = {
     [key: string]: string;
 };
 
-type ActionFn<T> = ((params: T) => void) | (() => void);
+type ActionProps<T> = {
+    event: Event;
+    params: T;
+};
+type ActionFn<T> = ({ event, params }: ActionProps<T>) => void;
 
 type Action = {
     key: string;

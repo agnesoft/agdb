@@ -6,13 +6,27 @@ import type { DbType } from "agdb_api/dist/openapi";
 const name = ref("");
 const db_type = ref<DbType>("memory");
 
-const { addDatabase } = useDbStore();
+const { addDatabase, fetchDatabases } = useDbStore();
 
-const add = () => {
+const loading = ref(false);
+
+const add = (event: Event) => {
+    loading.value = true;
+    event.preventDefault();
+
     addDatabase({
         name: name.value,
         db_type: db_type.value,
-    });
+    })
+        .then(() => {
+            loading.value = false;
+            name.value = "";
+            db_type.value = "memory";
+            fetchDatabases();
+        })
+        .catch(() => {
+            loading.value = false;
+        });
 };
 </script>
 

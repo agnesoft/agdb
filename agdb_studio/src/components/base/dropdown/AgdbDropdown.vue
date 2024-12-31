@@ -17,7 +17,7 @@ const toggle = () => {
         <button type="button" class="trigger button" @click="toggle">
             <slot name="trigger"></slot>
         </button>
-        <div v-if="opened" class="content">
+        <div v-if="opened" class="content" @click="close">
             <slot name="content"></slot>
         </div>
     </div>
@@ -26,12 +26,5 @@ const toggle = () => {
 <style lang="less" scoped>
 .content {
     position: absolute;
-    background-color: var(--color-background-mute);
-    min-width: 160px;
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
-    z-index: 1;
-    border: 1px solid var(--color-border);
-    border-radius: 0.5rem;
-    overflow: auto;
 }
 </style>

@@ -7,40 +7,70 @@ const props = defineProps({
 });
 
 const openedSubmenu = ref<string>();
-const openSubmenu = (label: string) => {
-    openedSubmenu.value = label;
+const openSubmenu = (key: string) => {
+    openedSubmenu.value = key;
 };
 </script>
 
 <template>
-    <div class="agdb-menu">
+    <div class="agdb-menu" @mouseleave="openedSubmenu = undefined">
         <div
             v-for="action in props.actions"
-            :key="action.label"
-            @click="action.action"
+            :key="action.key"
+            @click="(event: MouseEvent) => action.action({ event })"
             class="menu-item"
-            @hover="openSubmenu(action.label)"
+            @mouseover="openSubmenu(action.key)"
         >
             {{ action.label }}
-            <button v-if="action.actions" class="menu-item-button">
+            <span v-if="action.actions" class="menu-item-button">
                 <AkChevronRightSmall />
-            </button>
+            </span>
             <AgdbMenu
-                v-if="openedSubmenu === action.label && action.actions"
+                class="submenu"
+                v-if="openedSubmenu === action.key && action.actions"
                 :actions="action.actions"
             />
-            <!-- <div v-if="openedSubmenu === action.label" class="submenu">
-                <div
-                    v-for="submenuAction in action.actions"
-                    :key="submenuAction.label"
-                    @click="submenuAction.action"
-                    class="submenu-item"
-                >
-                    {{ submenuAction.label }}
-                </div>
-            </div> -->
         </div>
     </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.menu-item {
+    padding: 0.5rem;
+    cursor: pointer;
+    transition:
+        background-color 0.2s,
+        color 0.2s;
+    position: relative;
+    &:hover {
+        background-color: var(--color-background-active);
+        color: var(--black);
+    }
+    &:first-child {
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+    }
+    &:last-child {
+        border-bottom-left-radius: 0.5rem;
+        border-bottom-right-radius: 0.5rem;
+    }
+}
+.menu-item-button {
+    float: right;
+}
+.agdb-menu,
+::v-deep(.agdb-menu) {
+    color: var(--color-text);
+    background-color: var(--color-background-mute);
+    min-width: 10rem;
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+}
+.submenu {
+    position: absolute;
+    left: calc(100% - 2rem);
+    top: 0.5rem;
+}
+</style>

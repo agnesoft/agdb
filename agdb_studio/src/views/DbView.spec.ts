@@ -1,5 +1,6 @@
 import DbView from "./DbView.vue";
 import { mount, shallowMount } from "@vue/test-utils";
+import { describe, beforeEach, vi, it, expect } from "vitest";
 
 const { databases, fetchDatabases } = vi.hoisted(() => {
     return {

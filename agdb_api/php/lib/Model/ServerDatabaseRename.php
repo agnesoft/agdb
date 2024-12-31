@@ -57,7 +57,8 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
       * @var string[]
       */
     protected static $openAPITypes = [
-        'new_name' => 'string'
+        'new_db' => 'string',
+        'new_owner' => 'string'
     ];
 
     /**
@@ -68,7 +69,8 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'new_name' => null
+        'new_db' => null,
+        'new_owner' => null
     ];
 
     /**
@@ -77,7 +79,8 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'new_name' => false
+        'new_db' => false,
+        'new_owner' => false
     ];
 
     /**
@@ -166,7 +169,8 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
      * @var string[]
      */
     protected static $attributeMap = [
-        'new_name' => 'new_name'
+        'new_db' => 'new_db',
+        'new_owner' => 'new_owner'
     ];
 
     /**
@@ -175,7 +179,8 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
      * @var string[]
      */
     protected static $setters = [
-        'new_name' => 'setNewName'
+        'new_db' => 'setNewDb',
+        'new_owner' => 'setNewOwner'
     ];
 
     /**
@@ -184,7 +189,8 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
      * @var string[]
      */
     protected static $getters = [
-        'new_name' => 'getNewName'
+        'new_db' => 'getNewDb',
+        'new_owner' => 'getNewOwner'
     ];
 
     /**
@@ -244,7 +250,8 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
      */
     public function __construct(array $data = null)
     {
-        $this->setIfExists('new_name', $data ?? [], null);
+        $this->setIfExists('new_db', $data ?? [], null);
+        $this->setIfExists('new_owner', $data ?? [], null);
     }
 
     /**
@@ -274,8 +281,11 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
     {
         $invalidProperties = [];
 
-        if ($this->container['new_name'] === null) {
-            $invalidProperties[] = "'new_name' can't be null";
+        if ($this->container['new_db'] === null) {
+            $invalidProperties[] = "'new_db' can't be null";
+        }
+        if ($this->container['new_owner'] === null) {
+            $invalidProperties[] = "'new_owner' can't be null";
         }
         return $invalidProperties;
     }
@@ -293,28 +303,55 @@ class ServerDatabaseRename implements ModelInterface, ArrayAccess, \JsonSerializ
 
 
     /**
-     * Gets new_name
+     * Gets new_db
      *
      * @return string
      */
-    public function getNewName()
+    public function getNewDb()
     {
-        return $this->container['new_name'];
+        return $this->container['new_db'];
     }
 
     /**
-     * Sets new_name
+     * Sets new_db
      *
-     * @param string $new_name new_name
+     * @param string $new_db new_db
      *
      * @return self
      */
-    public function setNewName($new_name)
+    public function setNewDb($new_db)
     {
-        if (is_null($new_name)) {
-            throw new \InvalidArgumentException('non-nullable new_name cannot be null');
+        if (is_null($new_db)) {
+            throw new \InvalidArgumentException('non-nullable new_db cannot be null');
         }
-        $this->container['new_name'] = $new_name;
+        $this->container['new_db'] = $new_db;
+
+        return $this;
+    }
+
+    /**
+     * Gets new_owner
+     *
+     * @return string
+     */
+    public function getNewOwner()
+    {
+        return $this->container['new_owner'];
+    }
+
+    /**
+     * Sets new_owner
+     *
+     * @param string $new_owner new_owner
+     *
+     * @return self
+     */
+    public function setNewOwner($new_owner)
+    {
+        if (is_null($new_owner)) {
+            throw new \InvalidArgumentException('non-nullable new_owner cannot be null');
+        }
+        $this->container['new_owner'] = $new_owner;
 
         return $this;
     }

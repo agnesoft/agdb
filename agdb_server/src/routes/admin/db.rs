@@ -23,7 +23,6 @@ use crate::server_db::ServerDb;
 use crate::server_error::permission_denied;
 use crate::server_error::ServerResponse;
 use crate::user_id::AdminId;
-use crate::utilities::db_name;
 use crate::utilities::required_role;
 use agdb_api::DbAudit;
 use agdb_api::DbUserRole;
@@ -267,16 +266,12 @@ pub(crate) async fn copy(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse<impl IntoResponse> {
-    let (new_owner, new_db) = request
-        .new_name
-        .split_once('/')
-        .ok_or(ErrorCode::DbInvalid)?;
     let owner_id = server_db.user_id(&owner).await?;
     let db_type = server_db.user_db(owner_id, &owner, &db).await?.db_type;
-    let new_owner_id = server_db.user_id(new_owner).await?;
+    let new_owner_id = server_db.user_id(&request.new_owner).await?;
 
     if server_db
-        .find_user_db_id(new_owner_id, new_owner, new_db)
+        .find_user_db_id(new_owner_id, &request.new_owner, &request.new_db)
         .await?
         .is_some()
     {
@@ -287,8 +282,8 @@ pub(crate) async fn copy(
         .exec(DbCopy {
             owner,
             db,
-            new_owner: new_owner.to_string(),
-            new_db: new_db.to_string(),
+            new_owner: request.new_owner.clone(),
+            new_db: request.new_db.clone(),
             db_type,
         })
         .await?;
@@ -558,18 +553,13 @@ pub(crate) async fn rename(
     let owner_id = server_db.user_id(&owner).await?;
     let _ = server_db.user_db_id(owner_id, &owner, &db).await?;
 
-    if db_name(&owner, &db) == request.new_name {
+    if owner == request.new_owner && db == request.new_db {
         return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
     }
 
-    let (new_owner, new_db) = request
-        .new_name
-        .split_once('/')
-        .ok_or(ErrorCode::DbInvalid)?;
-
-    let new_owner_id = server_db.user_id(new_owner).await?;
+    let new_owner_id = server_db.user_id(&request.new_owner).await?;
     if server_db
-        .find_user_db_id(new_owner_id, new_owner, new_db)
+        .find_user_db_id(new_owner_id, &request.new_owner, &request.new_db)
         .await?
         .is_some()
     {
@@ -580,8 +570,8 @@ pub(crate) async fn rename(
         .exec(DbRename {
             owner,
             db,
-            new_owner: new_owner.to_string(),
-            new_db: new_db.to_string(),
+            new_owner: request.new_owner.clone(),
+            new_db: request.new_db.clone(),
         })
         .await?;
 

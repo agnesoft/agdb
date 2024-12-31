@@ -1,6 +1,6 @@
 import type { ServerDatabase } from "agdb_api/dist/openapi";
 import { client } from "@/services/api.service";
-// import type { TRow } from "../table/types";
+import { dateFormatter } from "@/composables/table/utils";
 
 type DbActionProps = ActionProps<ServerDatabase>;
 const dbActions: Action[] = [
@@ -105,4 +105,22 @@ const dbActions: Action[] = [
     },
 ];
 
-export default dbActions;
+const dbColumns = [
+    { key: "role", title: "Role" },
+    { key: "owner", title: "Owner" },
+    { key: "db", title: "Name" },
+    { key: "db_type", title: "Type" },
+    { key: "size", title: "Size" },
+    {
+        key: "backup",
+        title: "Backup",
+        valueFormatter: dateFormatter,
+    },
+    {
+        key: "actions",
+        title: "Actions",
+        actions: dbActions,
+    },
+];
+
+export { dbActions, dbColumns };

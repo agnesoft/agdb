@@ -20,13 +20,14 @@ const openSubmenu = (key: string) => {
             @click="(event: MouseEvent) => action.action({ event })"
             class="menu-item"
             @mouseover="openSubmenu(action.key)"
+            :data-key="action.key"
         >
             {{ action.label }}
             <span v-if="action.actions" class="menu-item-button">
                 <AkChevronRightSmall />
             </span>
             <AgdbMenu
-                class="submenu"
+                class="sub-menu"
                 v-if="openedSubmenu === action.key && action.actions"
                 :actions="action.actions"
             />
@@ -68,7 +69,7 @@ const openSubmenu = (key: string) => {
     border: 1px solid var(--color-border);
     border-radius: 0.5rem;
 }
-.submenu {
+.sub-menu {
     position: absolute;
     left: calc(100% - 2rem);
     top: 0.5rem;

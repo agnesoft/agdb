@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import AgdbCellMenu from "./AgdbCellMenu.vue";
+import { describe, beforeEach, vi, it, expect } from "vitest";
 
 describe("AgdbCellMenu", () => {
     beforeEach(() => {

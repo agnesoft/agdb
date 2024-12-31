@@ -1,6 +1,7 @@
 import { shallowMount } from "@vue/test-utils";
 import AgdbTableRow from "./AgdbTableRow.vue";
 import { columnsMap } from "@/tests/tableMocks";
+import { describe, beforeEach, vi, it, expect } from "vitest";
 
 describe("TableRow", () => {
     it("should render", () => {

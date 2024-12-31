@@ -5,7 +5,7 @@ import { MdRoundMenu } from "@kalimahapps/vue-icons";
 import { computed, inject, type PropType, type Ref } from "vue";
 import { INJECT_KEY_ROW } from "@/composables/table/constants";
 import AgdbMenu from "../menu/AgdbMenu.vue";
-import { useDbStore } from "@/composables/db/DbStore";
+import { useDbStore } from "@/composables/db/dbStore";
 
 const props = defineProps({
     actions: { type: Array as PropType<Action[]>, required: true },

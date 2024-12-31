@@ -1,11 +1,10 @@
 <script lang="ts" setup>
 import AgdbTable from "../base/table/AgdbTable.vue";
-import { useDbStore } from "@/composables/db/DbStore";
+import { useDbStore } from "@/composables/db/dbStore";
 import { addTable } from "@/composables/table/tableConfig";
 import { setTableData } from "@/composables/table/tableData";
 import { watchEffect } from "vue";
-import { dateFormatter } from "@/composables/table/utils";
-import dbActions from "@/composables/db/DbActions";
+import { dbColumns } from "@/composables/db/dbConfig";
 
 const { databases } = useDbStore();
 
@@ -13,23 +12,7 @@ const TABLE_KEY = "databases";
 
 addTable({
     name: TABLE_KEY,
-    columns: [
-        { key: "role", title: "Role" },
-        { key: "owner", title: "Owner" },
-        { key: "db", title: "Name" },
-        { key: "db_type", title: "Type" },
-        { key: "size", title: "Size" },
-        {
-            key: "backup",
-            title: "Backup",
-            valueFormatter: dateFormatter,
-        },
-        {
-            key: "actions",
-            title: "Actions",
-            actions: dbActions,
-        },
-    ],
+    columns: dbColumns,
 });
 
 watchEffect(() => {

@@ -22,12 +22,15 @@
     --text-dark-2: rgba(235, 235, 235, 0.64);
 
     --base-font: "Red Hat Display", sans-serif;
+
+    --orange: #ffa02c;
 }
 
 :root {
     --color-background: var(--white);
     --color-background-soft: var(--white-soft);
     --color-background-mute: var(--white-mute);
+    --color-background-active: var(--orange);
 
     --color-border: var(--divider-light-2);
     --color-border-hover: var(--divider-light-1);

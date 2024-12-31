@@ -6,10 +6,9 @@ const tables = ref<Map<string, Table<TRow>>>(new Map<string, Table<TRow>>());
 export type AddTableProps<T extends TRow> = {
     name: string;
     columns: Column<T>[];
-    uniqueKey?: string;
 };
 
-const addTable = ({ name, columns, uniqueKey }: AddTableProps<TRow>): void => {
+const addTable = ({ name, columns }: AddTableProps<TRow>): void => {
     const columnMap = new Map<string, Column<TRow>>();
     columns.forEach((column) => {
         columnMap.set(column.key, column);
@@ -18,7 +17,6 @@ const addTable = ({ name, columns, uniqueKey }: AddTableProps<TRow>): void => {
         name,
         columns: columnMap,
         data: new Map(),
-        uniqueKey,
     });
 };
 

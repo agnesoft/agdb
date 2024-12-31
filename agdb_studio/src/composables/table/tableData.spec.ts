@@ -8,9 +8,10 @@ import {
 } from "./tableData";
 import { TABLE_NAME, tableConfig, tableData } from "@/tests/tableMocks";
 import { addFilter, getTableFilter, setSort } from "./tableFilter";
+import { describe, beforeEach, it, expect } from "vitest";
 
 describe("tableData", () => {
-    addTable({ name: TABLE_NAME, columns: tableConfig, uniqueKey: "name" });
+    addTable({ name: TABLE_NAME, columns: tableConfig });
 
     beforeEach(() => {
         const table = getTable(TABLE_NAME);
@@ -68,11 +69,11 @@ describe("tableData", () => {
         it("should remove row", () => {
             const table = getTable(TABLE_NAME);
             setTableData(TABLE_NAME, tableData);
-            expect(table?.data?.get("admin/app1")).toBeDefined();
+            expect(table?.data?.get("1")).toBeDefined();
             expect(table?.data?.size).toBe(5);
-            removeRow(TABLE_NAME, "admin/app1");
+            removeRow(TABLE_NAME, "1");
             expect(table?.data?.size).toBe(4);
-            expect(table?.data?.get("admin/app1")).toBeUndefined();
+            expect(table?.data?.get("1")).toBeUndefined();
         });
     });
 
@@ -119,18 +120,21 @@ describe("tableData", () => {
         it("should return sorted rows in desc order", () => {
             setTableData(TABLE_NAME, tableData);
             setSort(TABLE_NAME, "size", "desc");
-            expect(getRows(TABLE_NAME)[0][1].name).toBe("admin/app3");
+            expect(getRows(TABLE_NAME)[0][1].db).toBe("app3");
+            expect(getRows(TABLE_NAME)[0][1].owner).toBe("admin");
         });
         it("should return sorted rows in asc order", () => {
             setTableData(TABLE_NAME, tableData);
             setSort(TABLE_NAME, "size", "asc");
-            expect(getRows(TABLE_NAME)[0][1].name).toBe("admin/app1");
+            expect(getRows(TABLE_NAME)[0][1].db).toBe("app1");
+            expect(getRows(TABLE_NAME)[0][1].owner).toBe("admin");
         });
         it("should return sorted rows with multiple sort keys", () => {
             setTableData(TABLE_NAME, tableData);
             setSort(TABLE_NAME, "role", "asc");
-            setSort(TABLE_NAME, "name", "desc");
-            expect(getRows(TABLE_NAME)[0][1].name).toBe("user/app2");
+            setSort(TABLE_NAME, "owner", "desc");
+            expect(getRows(TABLE_NAME)[0][1].db).toBe("app1");
+            expect(getRows(TABLE_NAME)[0][1].owner).toBe("user");
         });
         it("should return empty array if table doesn't exist", () => {
             expect(getRows("non_existent_table").length).toBe(0);

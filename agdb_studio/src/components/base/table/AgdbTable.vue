@@ -1,10 +1,14 @@
 <script lang="ts" setup>
-import { computed, defineProps } from "vue";
+import { computed, provide } from "vue";
 import { getRows } from "@/composables/table/tableData";
-import TableRow from "@/components/base/table/TableRow.vue";
-import TableHeader from "./TableHeader.vue";
+import AgdbTableRow from "@/components/base/table/AgdbTableRow.vue";
+import AgdbTableHeader from "./AgdbTableHeader.vue";
 import { getTableColumns } from "@/composables/table/tableConfig";
 import { type TRow } from "@/composables/table/types";
+import {
+    INJECT_KEY_COLUMNS,
+    INJECT_KEY_TABLE_NAME,
+} from "@/composables/table/constants";
 
 const props = defineProps({
     name: {
@@ -19,13 +23,16 @@ const rows = computed(() => {
 const columns = computed(() => {
     return getTableColumns<TRow>(props.name);
 });
+const tableKey = props.name;
+provide(INJECT_KEY_TABLE_NAME, tableKey);
+provide(INJECT_KEY_COLUMNS, columns);
 </script>
 
 <template>
     <div class="agdb-table">
-        <TableHeader :tableKey="name" />
+        <AgdbTableHeader :tableKey="name" />
         <template v-for="row in rows" :key="row[0]">
-            <TableRow :row="row[1]" :columns="columns" />
+            <AgdbTableRow :row="row[1]" :columns="columns" />
         </template>
     </div>
 </template>
@@ -46,5 +53,6 @@ const columns = computed(() => {
     gap: 1rem;
     padding: 0.5rem;
     border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
 }
 </style>

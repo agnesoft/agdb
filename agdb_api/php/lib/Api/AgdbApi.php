@@ -1684,16 +1684,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name new_name (required)
+     * @param  string $new_owner new_owner (required)
+     * @param  string $new_db new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbCopy'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function adminDbCopy($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbCopy'][0])
+    public function adminDbCopy($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbCopy'][0])
     {
-        $this->adminDbCopyWithHttpInfo($owner, $db, $new_name, $contentType);
+        $this->adminDbCopyWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType);
     }
 
     /**
@@ -1701,16 +1702,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbCopy'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function adminDbCopyWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbCopy'][0])
+    public function adminDbCopyWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbCopy'][0])
     {
-        $request = $this->adminDbCopyRequest($owner, $db, $new_name, $contentType);
+        $request = $this->adminDbCopyRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -1749,15 +1751,16 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbCopy'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminDbCopyAsync($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbCopy'][0])
+    public function adminDbCopyAsync($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbCopy'][0])
     {
-        return $this->adminDbCopyAsyncWithHttpInfo($owner, $db, $new_name, $contentType)
+        return $this->adminDbCopyAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -1770,16 +1773,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbCopy'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminDbCopyAsyncWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbCopy'][0])
+    public function adminDbCopyAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbCopy'][0])
     {
         $returnType = '';
-        $request = $this->adminDbCopyRequest($owner, $db, $new_name, $contentType);
+        $request = $this->adminDbCopyRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -1809,13 +1813,14 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbCopy'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function adminDbCopyRequest($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbCopy'][0])
+    public function adminDbCopyRequest($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbCopy'][0])
     {
 
         // verify the required parameter 'owner' is set
@@ -1832,10 +1837,17 @@ class AgdbApi
             );
         }
 
-        // verify the required parameter 'new_name' is set
-        if ($new_name === null || (is_array($new_name) && count($new_name) === 0)) {
+        // verify the required parameter 'new_owner' is set
+        if ($new_owner === null || (is_array($new_owner) && count($new_owner) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $new_name when calling adminDbCopy'
+                'Missing the required parameter $new_owner when calling adminDbCopy'
+            );
+        }
+
+        // verify the required parameter 'new_db' is set
+        if ($new_db === null || (is_array($new_db) && count($new_db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $new_db when calling adminDbCopy'
             );
         }
 
@@ -1849,8 +1861,17 @@ class AgdbApi
 
         // query params
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $new_name,
-            'new_name', // param base name
+            $new_owner,
+            'new_owner', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $new_db,
+            'new_db', // param base name
             'string', // openApiType
             'form', // style
             true, // explode
@@ -3698,16 +3719,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name new_name (required)
+     * @param  string $new_owner new_owner (required)
+     * @param  string $new_db new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRename'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function adminDbRename($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbRename'][0])
+    public function adminDbRename($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbRename'][0])
     {
-        $this->adminDbRenameWithHttpInfo($owner, $db, $new_name, $contentType);
+        $this->adminDbRenameWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType);
     }
 
     /**
@@ -3715,16 +3737,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRename'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function adminDbRenameWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbRename'][0])
+    public function adminDbRenameWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbRename'][0])
     {
-        $request = $this->adminDbRenameRequest($owner, $db, $new_name, $contentType);
+        $request = $this->adminDbRenameRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -3763,15 +3786,16 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRename'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminDbRenameAsync($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbRename'][0])
+    public function adminDbRenameAsync($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbRename'][0])
     {
-        return $this->adminDbRenameAsyncWithHttpInfo($owner, $db, $new_name, $contentType)
+        return $this->adminDbRenameAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -3784,16 +3808,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRename'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function adminDbRenameAsyncWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbRename'][0])
+    public function adminDbRenameAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbRename'][0])
     {
         $returnType = '';
-        $request = $this->adminDbRenameRequest($owner, $db, $new_name, $contentType);
+        $request = $this->adminDbRenameRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -3823,13 +3848,14 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminDbRename'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function adminDbRenameRequest($owner, $db, $new_name, string $contentType = self::contentTypes['adminDbRename'][0])
+    public function adminDbRenameRequest($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['adminDbRename'][0])
     {
 
         // verify the required parameter 'owner' is set
@@ -3846,10 +3872,17 @@ class AgdbApi
             );
         }
 
-        // verify the required parameter 'new_name' is set
-        if ($new_name === null || (is_array($new_name) && count($new_name) === 0)) {
+        // verify the required parameter 'new_owner' is set
+        if ($new_owner === null || (is_array($new_owner) && count($new_owner) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $new_name when calling adminDbRename'
+                'Missing the required parameter $new_owner when calling adminDbRename'
+            );
+        }
+
+        // verify the required parameter 'new_db' is set
+        if ($new_db === null || (is_array($new_db) && count($new_db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $new_db when calling adminDbRename'
             );
         }
 
@@ -3863,8 +3896,17 @@ class AgdbApi
 
         // query params
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $new_name,
-            'new_name', // param base name
+            $new_owner,
+            'new_owner', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $new_db,
+            'new_db', // param base name
             'string', // openApiType
             'form', // style
             true, // explode
@@ -9173,16 +9215,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name new_name (required)
+     * @param  string $new_owner new_owner (required)
+     * @param  string $new_db new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbCopy'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function dbCopy($owner, $db, $new_name, string $contentType = self::contentTypes['dbCopy'][0])
+    public function dbCopy($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbCopy'][0])
     {
-        $this->dbCopyWithHttpInfo($owner, $db, $new_name, $contentType);
+        $this->dbCopyWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType);
     }
 
     /**
@@ -9190,16 +9233,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbCopy'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dbCopyWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['dbCopy'][0])
+    public function dbCopyWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbCopy'][0])
     {
-        $request = $this->dbCopyRequest($owner, $db, $new_name, $contentType);
+        $request = $this->dbCopyRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -9238,15 +9282,16 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbCopy'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dbCopyAsync($owner, $db, $new_name, string $contentType = self::contentTypes['dbCopy'][0])
+    public function dbCopyAsync($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbCopy'][0])
     {
-        return $this->dbCopyAsyncWithHttpInfo($owner, $db, $new_name, $contentType)
+        return $this->dbCopyAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -9259,16 +9304,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbCopy'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dbCopyAsyncWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['dbCopy'][0])
+    public function dbCopyAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbCopy'][0])
     {
         $returnType = '';
-        $request = $this->dbCopyRequest($owner, $db, $new_name, $contentType);
+        $request = $this->dbCopyRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -9298,13 +9344,14 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbCopy'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dbCopyRequest($owner, $db, $new_name, string $contentType = self::contentTypes['dbCopy'][0])
+    public function dbCopyRequest($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbCopy'][0])
     {
 
         // verify the required parameter 'owner' is set
@@ -9321,10 +9368,17 @@ class AgdbApi
             );
         }
 
-        // verify the required parameter 'new_name' is set
-        if ($new_name === null || (is_array($new_name) && count($new_name) === 0)) {
+        // verify the required parameter 'new_owner' is set
+        if ($new_owner === null || (is_array($new_owner) && count($new_owner) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $new_name when calling dbCopy'
+                'Missing the required parameter $new_owner when calling dbCopy'
+            );
+        }
+
+        // verify the required parameter 'new_db' is set
+        if ($new_db === null || (is_array($new_db) && count($new_db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $new_db when calling dbCopy'
             );
         }
 
@@ -9338,8 +9392,17 @@ class AgdbApi
 
         // query params
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $new_name,
-            'new_name', // param base name
+            $new_owner,
+            'new_owner', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $new_db,
+            'new_db', // param base name
             'string', // openApiType
             'form', // style
             true, // explode
@@ -11187,16 +11250,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name new_name (required)
+     * @param  string $new_owner new_owner (required)
+     * @param  string $new_db new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRename'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return void
      */
-    public function dbRename($owner, $db, $new_name, string $contentType = self::contentTypes['dbRename'][0])
+    public function dbRename($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbRename'][0])
     {
-        $this->dbRenameWithHttpInfo($owner, $db, $new_name, $contentType);
+        $this->dbRenameWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType);
     }
 
     /**
@@ -11204,16 +11268,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRename'] to see the possible values for this operation
      *
      * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
      * @throws \InvalidArgumentException
      * @return array of null, HTTP status code, HTTP response headers (array of strings)
      */
-    public function dbRenameWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['dbRename'][0])
+    public function dbRenameWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbRename'][0])
     {
-        $request = $this->dbRenameRequest($owner, $db, $new_name, $contentType);
+        $request = $this->dbRenameRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         try {
             $options = $this->createHttpClientOption();
@@ -11252,15 +11317,16 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRename'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dbRenameAsync($owner, $db, $new_name, string $contentType = self::contentTypes['dbRename'][0])
+    public function dbRenameAsync($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbRename'][0])
     {
-        return $this->dbRenameAsyncWithHttpInfo($owner, $db, $new_name, $contentType)
+        return $this->dbRenameAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, $contentType)
             ->then(
                 function ($response) {
                     return $response[0];
@@ -11273,16 +11339,17 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRename'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    public function dbRenameAsyncWithHttpInfo($owner, $db, $new_name, string $contentType = self::contentTypes['dbRename'][0])
+    public function dbRenameAsyncWithHttpInfo($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbRename'][0])
     {
         $returnType = '';
-        $request = $this->dbRenameRequest($owner, $db, $new_name, $contentType);
+        $request = $this->dbRenameRequest($owner, $db, $new_owner, $new_db, $contentType);
 
         return $this->client
             ->sendAsync($request, $this->createHttpClientOption())
@@ -11312,13 +11379,14 @@ class AgdbApi
      *
      * @param  string $owner db owner user name (required)
      * @param  string $db db name (required)
-     * @param  string $new_name (required)
+     * @param  string $new_owner (required)
+     * @param  string $new_db (required)
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['dbRename'] to see the possible values for this operation
      *
      * @throws \InvalidArgumentException
      * @return \GuzzleHttp\Psr7\Request
      */
-    public function dbRenameRequest($owner, $db, $new_name, string $contentType = self::contentTypes['dbRename'][0])
+    public function dbRenameRequest($owner, $db, $new_owner, $new_db, string $contentType = self::contentTypes['dbRename'][0])
     {
 
         // verify the required parameter 'owner' is set
@@ -11335,10 +11403,17 @@ class AgdbApi
             );
         }
 
-        // verify the required parameter 'new_name' is set
-        if ($new_name === null || (is_array($new_name) && count($new_name) === 0)) {
+        // verify the required parameter 'new_owner' is set
+        if ($new_owner === null || (is_array($new_owner) && count($new_owner) === 0)) {
             throw new \InvalidArgumentException(
-                'Missing the required parameter $new_name when calling dbRename'
+                'Missing the required parameter $new_owner when calling dbRename'
+            );
+        }
+
+        // verify the required parameter 'new_db' is set
+        if ($new_db === null || (is_array($new_db) && count($new_db) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $new_db when calling dbRename'
             );
         }
 
@@ -11352,8 +11427,17 @@ class AgdbApi
 
         // query params
         $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
-            $new_name,
-            'new_name', // param base name
+            $new_owner,
+            'new_owner', // param base name
+            'string', // openApiType
+            'form', // style
+            true, // explode
+            true // required
+        ) ?? []);
+        // query params
+        $queryParams = array_merge($queryParams, ObjectSerializer::toQueryValue(
+            $new_db,
+            'new_db', // param base name
             'string', // openApiType
             'form', // style
             true, // explode

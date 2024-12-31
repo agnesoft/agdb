@@ -122,7 +122,7 @@ impl<T: HttpClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!(
-                    "/admin/db/{owner}/{db}/copy?new_name={new_owner}/{new_db}"
+                    "/admin/db/{owner}/{db}/copy?new_owner={new_owner}&new_db={new_db}"
                 )),
                 &None,
                 &self.token,
@@ -210,7 +210,7 @@ impl<T: HttpClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!(
-                    "/admin/db/{owner}/{db}/rename?new_name={new_owner}/{new_db}"
+                    "/admin/db/{owner}/{db}/rename?new_owner={new_owner}&new_db={new_db}"
                 )),
                 &None,
                 &self.token,
@@ -457,7 +457,7 @@ impl<T: HttpClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!(
-                    "/db/{owner}/{db}/copy?new_name={new_owner}/{new_db}"
+                    "/db/{owner}/{db}/copy?new_owner={new_owner}&new_db={new_db}"
                 )),
                 &None,
                 &self.token,
@@ -533,7 +533,7 @@ impl<T: HttpClient> AgdbApi<T> {
             .client
             .post::<(), ()>(
                 &self.url(&format!(
-                    "/db/{owner}/{db}/rename?new_name={new_owner}/{new_db}"
+                    "/db/{owner}/{db}/rename?new_owner={new_owner}&new_db={new_db}"
                 )),
                 &None,
                 &self.token,

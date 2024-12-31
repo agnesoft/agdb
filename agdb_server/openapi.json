@@ -336,7 +336,15 @@
             }
           },
           {
-            "name": "new_name",
+            "name": "new_owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
             "in": "query",
             "required": true,
             "schema": {
@@ -655,7 +663,15 @@
             }
           },
           {
-            "name": "new_name",
+            "name": "new_owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
             "in": "query",
             "required": true,
             "schema": {
@@ -1609,7 +1625,15 @@
             }
           },
           {
-            "name": "new_name",
+            "name": "new_owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
             "in": "query",
             "required": true,
             "schema": {
@@ -1946,7 +1970,15 @@
             }
           },
           {
-            "name": "new_name",
+            "name": "new_owner",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_db",
             "in": "query",
             "required": true,
             "schema": {
@@ -3664,10 +3696,14 @@
       "ServerDatabaseRename": {
         "type": "object",
         "required": [
-          "new_name"
+          "new_owner",
+          "new_db"
         ],
         "properties": {
-          "new_name": {
+          "new_db": {
+            "type": "string"
+          },
+          "new_owner": {
             "type": "string"
           }
         }

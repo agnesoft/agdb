@@ -1,13 +1,8 @@
+use crate::server_error::ServerResult;
 use agdb::QueryType;
 use agdb_api::DbUserRole;
 use agdb_api::Queries;
-
-use crate::server_error::ServerResult;
 use std::path::Path;
-
-pub(crate) fn db_name(owner: &str, db: &str) -> String {
-    format!("{owner}/{db}")
-}
 
 pub(crate) async fn get_size<P>(path: P) -> ServerResult<u64>
 where

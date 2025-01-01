@@ -56,10 +56,10 @@ pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
             .map(|f| (f.ident.as_ref(), &f.ty))
             .collect::<Vec<(Option<&Ident>, &Type)>>();
 
-        if fields_types.is_empty() || fields_types[0].0.is_none() {
-            serialize_tuple(name, fields_types)
-        } else {
+        if fields_types.is_empty() || fields_types[0].0.is_some() {
             serialize_struct(name, fields_types)
+        } else {
+            serialize_tuple(name, fields_types)
         }
     } else if let syn::Data::Enum(data) = input.data {
         serialize_enum(name, data)

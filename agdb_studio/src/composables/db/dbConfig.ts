@@ -5,14 +5,17 @@ import { dateFormatter } from "@/composables/table/utils";
 type DbActionProps = ActionProps<ServerDatabase>;
 const dbActions: Action[] = [
     {
+        key: "audit",
+        label: "Audit",
+        action: ({ params }: DbActionProps) =>
+            client.value?.db_audit(params).then((res) => {
+                console.log(res.data);
+            }),
+    },
+    {
         key: "backup",
         label: "Backup",
         action: ({ params }: DbActionProps) => client.value?.db_backup(params),
-    },
-    {
-        key: "restore",
-        label: "Restore",
-        action: ({ params }: DbActionProps) => client.value?.db_restore(params),
     },
     {
         key: "clear",
@@ -74,16 +77,6 @@ const dbActions: Action[] = [
     //     label: "Copy",
     //     action: ({ params }: DbActionProps) => client.value?.db_copy(params),
     // },
-    // {
-    //     key: "rename",
-    //     label: "Rename",
-    //     action: ({ params }: DbActionProps) => client.value?.db_rename(params),
-    // }
-    {
-        key: "remove",
-        label: "Remove",
-        action: ({ params }: DbActionProps) => client.value?.db_remove(params),
-    },
     {
         key: "delete",
         label: "Delete",
@@ -95,13 +88,22 @@ const dbActions: Action[] = [
         action: ({ params }: DbActionProps) =>
             client.value?.db_optimize(params),
     },
+
     {
-        key: "audit",
-        label: "Audit",
-        action: ({ params }: DbActionProps) =>
-            client.value?.db_audit(params).then((res) => {
-                console.log(res.data);
-            }),
+        key: "remove",
+        label: "Remove",
+        action: ({ params }: DbActionProps) => client.value?.db_remove(params),
+    },
+    // todo: implement input for db name
+    // {
+    //     key: "rename",
+    //     label: "Rename",
+    //     action: ({ params }: DbActionProps) => client.value?.db_rename(params),
+    // }
+    {
+        key: "restore",
+        label: "Restore",
+        action: ({ params }: DbActionProps) => client.value?.db_restore(params),
     },
 ];
 

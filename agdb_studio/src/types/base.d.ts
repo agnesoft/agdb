@@ -13,4 +13,5 @@ type Action = {
     label: string;
     action?: ActionFn;
     actions?: Action[];
+    confirmation?: string[];
 };

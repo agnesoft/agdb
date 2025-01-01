@@ -4,11 +4,10 @@ use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
 use agdb::AgdbDeSerialize;
-use agdb::UserValue;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Deserialize, UserValue, AgdbDeSerialize)]
+#[derive(Clone, Serialize, Deserialize, AgdbDeSerialize)]
 pub(crate) struct ChangePassword {
     pub(crate) user: String,
     pub(crate) new_password: Vec<u8>,

@@ -102,8 +102,8 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
     let serializers = enum_data.variants.iter().enumerate().map(|(index, variant)| {
         let variant_name = &variant.ident;
         let variant_index = index as u8;
-        
-        if variant.fields.is_empty() {    
+
+        if variant.fields.is_empty() {
             quote! { #name::#variant_name => { __buffer.push(#variant_index); } }
         } else {
             let mut named = false;
@@ -131,8 +131,8 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
     let deserializers = enum_data.variants.iter().enumerate().map(|(index, variant)| {
         let variant_index = index as u8;
         let variant_name = &variant.ident;
-        
-        if variant.fields.is_empty() {    
+
+        if variant.fields.is_empty() {
             quote! { Some(#variant_index) => { Ok(#name::#variant_name) } }
         } else {
             let mut named = true;
@@ -187,7 +187,7 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
                     ),*
                     _ => Err(agdb::DbError::from("Invalid enum variant"))
                 }
-                
+
             }
         }
     }

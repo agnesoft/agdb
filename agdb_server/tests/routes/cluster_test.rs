@@ -6,6 +6,7 @@ use crate::wait_for_ready;
 use crate::TestCluster;
 use crate::TestServer;
 use crate::ADMIN;
+use agdb::Comparison;
 use agdb::QueryBuilder;
 use agdb_api::AgdbApi;
 use agdb_api::DbResource;
@@ -564,17 +565,43 @@ async fn db_exec() -> anyhow::Result<()> {
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbType::Memory).await?;
-    client
+    let res = client
         .db_exec_mut(
             owner,
             db,
-            &[QueryBuilder::insert()
-                .nodes()
-                .aliases("root")
-                .query()
-                .into()],
+            &[
+                QueryBuilder::insert()
+                    .nodes()
+                    .aliases("root")
+                    .query()
+                    .into(),
+                QueryBuilder::insert()
+                    .nodes()
+                    .values([
+                        [("desc", "hello").into()],
+                        [("desc", "world").into()],
+                        [("desc", "!").into()],
+                    ])
+                    .query()
+                    .into(),
+                QueryBuilder::insert()
+                    .edges()
+                    .from("root")
+                    .to(":1")
+                    .query()
+                    .into(),
+                QueryBuilder::select()
+                    .search()
+                    .from("root")
+                    .where_()
+                    .key("desc")
+                    .value(Comparison::Contains("o".into()))
+                    .query()
+                    .into(),
+            ],
         )
         .await?;
+    assert_eq!(res.1[3].result, 2);
     client.user_login(owner, owner).await?;
     let result = client
         .db_exec(

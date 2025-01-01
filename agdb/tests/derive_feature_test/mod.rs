@@ -1,4 +1,4 @@
-mod test_db;
+use crate::test_db::TestDb;
 
 use agdb::AgdbDeSerialize;
 use agdb::AgdbSerialize;
@@ -12,8 +12,6 @@ use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::UserValue;
 use agdb::UserValueMarker;
-#[allow(unused_imports)]
-use test_db::TestDb;
 
 #[derive(Default, Debug, Clone, PartialEq, UserValueMarker)]
 enum Status {

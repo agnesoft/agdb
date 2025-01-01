@@ -67,7 +67,7 @@ pub(crate) async fn forward_to_leader(
         } else {
             return Response::builder()
                 .status(StatusCode::SERVICE_UNAVAILABLE)
-                .body("Cluster is not ready yet".into())
+                .body("cluster is not ready yet".into())
                 .expect("cluster not ready yet response");
         }
     }

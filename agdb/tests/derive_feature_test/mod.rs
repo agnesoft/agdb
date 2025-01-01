@@ -924,3 +924,15 @@ fn derived_serialization_enum_struct() {
 
     assert_eq!(s, deserialized);
 }
+
+#[test]
+fn derive_serialization_empty_struct() {
+    #[derive(AgdbDeSerialize, PartialEq, Debug)]
+
+    struct S {}
+
+    let s = S {};
+    let serialized = s.serialize();
+    let deserialized = S::deserialize(&serialized).unwrap();
+    assert_eq!(s, deserialized);
+}

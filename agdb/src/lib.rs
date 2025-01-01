@@ -40,6 +40,7 @@ pub use query::QueryType;
 
 #[cfg(feature = "derive")]
 pub use agdb_derive::AgdbDeSerialize;
+
 #[cfg(feature = "derive")]
 pub use agdb_derive::{UserValue, UserValueMarker};
 

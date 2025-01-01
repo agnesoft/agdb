@@ -14,6 +14,7 @@ use crate::StorageData;
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 pub struct DbKeyValue {
     /// Key of the property
     pub key: DbValue,

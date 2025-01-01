@@ -15,6 +15,7 @@ use crate::StorageData;
 /// of elements with all properties except all values will be empty.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectKeysQuery(pub QueryIds);
 

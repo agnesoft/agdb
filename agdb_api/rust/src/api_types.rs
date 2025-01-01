@@ -1,3 +1,4 @@
+use agdb::AgdbDeSerialize;
 use agdb::DbError;
 use agdb::DbValue;
 use agdb::QueryResult;
@@ -8,7 +9,18 @@ use std::fmt::Display;
 use utoipa::ToSchema;
 
 #[derive(
-    Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    AgdbDeSerialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum DbType {
@@ -19,7 +31,18 @@ pub enum DbType {
 }
 
 #[derive(
-    Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    AgdbDeSerialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum DbResource {
@@ -37,7 +60,18 @@ pub struct DbUser {
 }
 
 #[derive(
-    Clone, Copy, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    AgdbDeSerialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
@@ -69,7 +103,7 @@ pub struct AdminStatus {
     pub size: u64,
 }
 
-#[derive(Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Clone, Deserialize, Serialize, ToSchema, AgdbDeSerialize)]
 pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]

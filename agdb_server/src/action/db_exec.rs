@@ -3,13 +3,14 @@ use super::ServerDb;
 use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_error::ServerResult;
+use agdb::AgdbDeSerialize;
 use agdb::DbUserValue;
 use agdb::QueryResult;
 use agdb_api::Queries;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, AgdbDeSerialize)]
 pub(crate) struct DbExec {
     pub(crate) user: String,
     pub(crate) owner: String,

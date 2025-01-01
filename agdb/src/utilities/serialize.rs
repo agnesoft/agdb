@@ -116,6 +116,23 @@ impl Serialize for String {
     }
 }
 
+impl Serialize for bool {
+    fn serialize(&self) -> Vec<u8> {
+        vec![*self as u8]
+    }
+
+    fn deserialize(bytes: &[u8]) -> Result<Self, DbError> {
+        bytes
+            .first()
+            .ok_or(DbError::from("bool deserialization error: out of bounds"))
+            .map(|&b| b != 0)
+    }
+
+    fn serialized_size(&self) -> u64 {
+        1
+    }
+}
+
 impl<T: Serialize> Serialize for Vec<T> {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.serialized_size() as usize);

@@ -27,6 +27,7 @@ use crate::StorageData;
 /// with their ids but no properties.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct InsertNodesQuery {
     /// Number of nodes to be inserted.

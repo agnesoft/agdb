@@ -56,6 +56,7 @@ use crate::{
 #[cfg(any(feature = "serde", feature = "openapi"))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 #[derive(Clone, Debug, PartialEq)]
 #[expect(clippy::large_enum_variant)]
 pub enum QueryType {
@@ -209,10 +210,12 @@ impl From<SelectValuesQuery> for QueryType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::AgdbSerialize;
+    use crate::DbKeyOrder;
     use crate::QueryBuilder;
 
     #[test]
-    fn derived_from_debug_and_partial_eq() {
+    fn derives() {
         let queries: Vec<QueryType> = vec![
             QueryBuilder::insert().nodes().count(2).query().into(),
             QueryBuilder::insert()
@@ -246,8 +249,33 @@ mod tests {
             QueryBuilder::remove().index("key").query().into(),
             QueryBuilder::remove().values("key").ids(1).query().into(),
             QueryBuilder::remove().ids("node1").query().into(),
+            QueryBuilder::search()
+                .depth_first()
+                .to(1)
+                .order_by(DbKeyOrder::Asc("id".into()))
+                .offset(10)
+                .limit(10)
+                .where_()
+                .node()
+                .or()
+                .edge()
+                .and()
+                .not_beyond()
+                .keys("hidden")
+                .and()
+                .where_()
+                .distance(crate::CountComparison::Equal(2))
+                .or()
+                .key("key")
+                .value(crate::Comparison::NotEqual("value".into()))
+                .query()
+                .into(),
         ];
         let _ = format!("{:?}", queries);
         assert_eq!(queries, queries);
+
+        let serialized = AgdbSerialize::serialize(&queries);
+        let deserialized: Vec<QueryType> = AgdbSerialize::deserialize(&serialized).unwrap();
+        assert_eq!(queries, deserialized);
     }
 }

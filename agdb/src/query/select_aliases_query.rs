@@ -17,6 +17,7 @@ use crate::StorageData;
 /// the value `String`.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectAliasesQuery(pub QueryIds);
 

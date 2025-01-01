@@ -36,11 +36,12 @@ use crate::action::user_remove::UserRemove;
 use crate::db_pool::DbPool;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
+use agdb::AgdbDeSerialize;
 use agdb::QueryResult;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, AgdbDeSerialize)]
 pub(crate) enum ClusterAction {
     UserAdd(UserAdd),
     ClusterLogin(ClusterLogin),
@@ -197,5 +198,24 @@ impl From<DbUserAdd> for ClusterAction {
 impl From<DbUserRemove> for ClusterAction {
     fn from(value: DbUserRemove) -> Self {
         ClusterAction::DbUserRemove(value)
+    }
+}
+
+impl Serialize for ClusterAction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&agdb::AgdbSerialize::serialize(self))
+    }
+}
+
+impl<'de> Deserialize<'de> for ClusterAction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        agdb::AgdbSerialize::deserialize(&bytes).map_err(serde::de::Error::custom)
     }
 }

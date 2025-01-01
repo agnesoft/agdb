@@ -4,12 +4,12 @@ use crate::action::Action;
 use crate::action::ClusterActionResult;
 use crate::server_db::Database;
 use crate::server_error::ServerResult;
-use agdb::UserValue;
+use agdb::AgdbDeSerialize;
 use agdb_api::DbType;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Deserialize, UserValue)]
+#[derive(Clone, Serialize, Deserialize, AgdbDeSerialize)]
 pub(crate) struct DbAdd {
     pub(crate) owner: String,
     pub(crate) db: String,

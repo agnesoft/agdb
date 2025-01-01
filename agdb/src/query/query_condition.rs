@@ -6,6 +6,7 @@ use crate::QueryId;
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 pub enum QueryConditionLogic {
     /// Logical AND (&&)
     And,
@@ -18,6 +19,7 @@ pub enum QueryConditionLogic {
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 pub enum QueryConditionModifier {
     /// No modifier
     None,
@@ -38,6 +40,7 @@ pub enum QueryConditionModifier {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 pub enum QueryConditionData {
     /// Distance from the search origin. Takes count comparison
     /// (e.g. Equal, GreaterThan).
@@ -90,6 +93,7 @@ pub enum QueryConditionData {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 pub struct QueryCondition {
     /// Logic operator (e.g. And, Or)
     pub logic: QueryConditionLogic,
@@ -108,6 +112,7 @@ pub struct QueryCondition {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 pub enum CountComparison {
     /// property == this
     Equal(u64),
@@ -139,6 +144,7 @@ pub enum CountComparison {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "derive", derive(agdb::AgdbDeSerialize))]
 pub enum Comparison {
     /// property == this
     Equal(DbValue),

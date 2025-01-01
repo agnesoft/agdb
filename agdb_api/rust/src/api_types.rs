@@ -1,3 +1,4 @@
+use agdb::AgdbDeSerialize;
 use agdb::DbError;
 use agdb::DbValue;
 use agdb::QueryResult;
@@ -8,7 +9,18 @@ use std::fmt::Display;
 use utoipa::ToSchema;
 
 #[derive(
-    Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    AgdbDeSerialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum DbType {
@@ -19,7 +31,18 @@ pub enum DbType {
 }
 
 #[derive(
-    Copy, Clone, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    AgdbDeSerialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum DbResource {
@@ -37,7 +60,18 @@ pub struct DbUser {
 }
 
 #[derive(
-    Clone, Copy, Debug, Default, Serialize, Deserialize, ToSchema, PartialEq, Eq, PartialOrd, Ord,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    AgdbDeSerialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum DbUserRole {
@@ -69,7 +103,7 @@ pub struct AdminStatus {
     pub size: u64,
 }
 
-#[derive(Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Clone, Deserialize, Serialize, ToSchema, AgdbDeSerialize)]
 pub struct Queries(pub Vec<QueryType>);
 
 #[derive(Serialize, ToSchema)]
@@ -379,5 +413,49 @@ mod tests {
         let data = serde_json::to_string(&cs1).unwrap();
         let cs2: ClusterStatus = serde_json::from_str(&data).unwrap();
         assert_eq!(cs1, cs2);
+    }
+
+    #[test]
+    fn db_resource() {
+        let db_resource = DbResource::from("db");
+        assert_eq!(db_resource, DbResource::Db);
+        let db_resource = DbResource::from("audit");
+        assert_eq!(db_resource, DbResource::Audit);
+        let db_resource = DbResource::from("backup");
+        assert_eq!(db_resource, DbResource::Backup);
+        let db_resource = DbResource::from("all");
+        assert_eq!(db_resource, DbResource::All);
+
+        let db_value = DbValue::from(DbResource::All);
+        let db_resource: DbResource = db_value.try_into().unwrap();
+        assert_eq!(db_resource, DbResource::All);
+    }
+
+    #[test]
+    fn db_user_role() {
+        let db_role = DbUserRole::from("admin");
+        assert_eq!(db_role, DbUserRole::Admin);
+        let db_role = DbUserRole::from("write");
+        assert_eq!(db_role, DbUserRole::Write);
+        let db_role = DbUserRole::from("read");
+        assert_eq!(db_role, DbUserRole::Read);
+
+        let db_value = DbValue::from(DbUserRole::Admin);
+        let db_role: DbUserRole = db_value.try_into().unwrap();
+        assert_eq!(db_role, DbUserRole::Admin);
+    }
+
+    #[test]
+    fn db_type() {
+        let db_type = DbType::from("mapped");
+        assert_eq!(db_type, DbType::Mapped);
+        let db_type = DbType::from("file");
+        assert_eq!(db_type, DbType::File);
+        let db_type = DbType::from("memory");
+        assert_eq!(db_type, DbType::Memory);
+
+        let db_value = DbValue::from(DbType::Memory);
+        let db_type: DbType = db_value.try_into().unwrap();
+        assert_eq!(db_type, DbType::Memory);
     }
 }

@@ -41,10 +41,11 @@ pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
 
 /// The derive macro to add `agdb` platform agnostic serialization
 /// support. This is only needed if you want to serialize custom
-/// complex data structures to `agdb` compatible binary format.
-/// It is used internally to serialize the `agdb` data structures.
+/// complex data structures and do not want or cannot use serde.
+/// It is primarily used internally to serialize the `agdb` data
+/// structures.
 #[proc_macro_derive(AgdbDeSerialize)]
-pub fn agdb_serialize(item: TokenStream) -> TokenStream {
+pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = input.ident;
 
@@ -72,24 +73,30 @@ pub fn agdb_serialize(item: TokenStream) -> TokenStream {
 fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream {
     let sizes = enum_data.variants.iter().map(|variant| {
         let variant_name = &variant.ident;
+
         if variant.fields.is_empty() {
             quote! { #name::#variant_name => {} }
-        } else if variant.fields.len() == 1 {
-            quote! { #name::#variant_name(__value) => { size += __value.serialized_size(); } }
         } else {
+            let mut named = false;
             let names = variant
                 .fields
                 .iter()
                 .enumerate()
                 .map(|(index, field)| {
-                    if let Some(ident) = &field.ident {
-                        format_ident!("__{}", ident)
+                    if let Some(i) = &field.ident {
+                        named = true;
+                        i.clone()
                     } else {
                         format_ident!("__{}", index)
                     }
                 })
                 .collect::<Vec<_>>();
-            quote! { #name::#variant_name(#(#names),*) => { #(size += #names.serialized_size();)* } }
+
+            if named {
+                quote! { #name::#variant_name { #(#names),* } => { #(size += #names.serialized_size();)* } }
+            } else {
+                quote! { #name::#variant_name(#(#names),*) => { #(size += #names.serialized_size();)* } }
+            }
         }
     });
     let serializers = enum_data.variants.iter().enumerate().map(|(index, variant)| {
@@ -98,22 +105,27 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
         
         if variant.fields.is_empty() {    
             quote! { #name::#variant_name => { __buffer.push(#variant_index); } }
-        } else if variant.fields.len() == 1 {
-            quote! { #name::#variant_name(__value) => { __buffer.push(#variant_index); __buffer.extend(__value.serialize()); } }
         } else {
+            let mut named = false;
             let names = variant
                 .fields
                 .iter()
                 .enumerate()
                 .map(|(index, field)| {
                     if let Some(ident) = &field.ident {
-                        format_ident!("__{}", ident)
+                        named = true;
+                        ident.clone()
                     } else {
                         format_ident!("__{}", index)
                     }
                 })
                 .collect::<Vec<_>>();
-            quote! { #name::#variant_name(#(#names),*) => { __buffer.push(#variant_index); #(__buffer.extend(#names.serialize());)* } }
+
+            if named {
+                quote! { #name::#variant_name { #(#names),* } => { __buffer.push(#variant_index); #(__buffer.extend(#names.serialize());)* } }
+            } else {
+                quote! { #name::#variant_name(#(#names),*) => { __buffer.push(#variant_index); #(__buffer.extend(#names.serialize());)* } }
+            }
         }
     });
     let deserializers = enum_data.variants.iter().enumerate().map(|(index, variant)| {
@@ -122,9 +134,6 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
         
         if variant.fields.is_empty() {    
             quote! { Some(#variant_index) => { Ok(#name::#variant_name) } }
-        } else if variant.fields.len() == 1 {
-            let ty = &variant.fields.iter().next().unwrap().ty;
-            quote! { Some(#variant_index) => { Ok(#name::#variant_name(<#ty as agdb::AgdbSerialize>::deserialize(&buffer[1..])?)) } }
         } else {
             let mut named = true;
             let fields = variant
@@ -142,7 +151,7 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
                 .collect::<Vec<_>>();
 
             if named {
-            quote! { Some(#variant_index) => { let mut __offset = 1_u64; Ok(#name::#variant_name({ #(#fields),* })) } }
+                quote! { Some(#variant_index) => { let mut __offset = 1_u64; Ok(#name::#variant_name { #(#fields),* } ) } }
             } else {
                 quote! { Some(#variant_index) => { let mut __offset = 1_u64; Ok(#name::#variant_name( #(#fields),* )) } }
             }

@@ -868,7 +868,7 @@ enum MyE {
     C(u64, u64),
     D(S3),
     E(MyOtherEnum),
-    //E { f1: u64, f2: u64 },
+    F { f1: u64, f2: u64 },
 }
 
 #[test]
@@ -910,6 +910,15 @@ fn derived_serialization_enum_nested_struct() {
 #[test]
 fn derived_serialization_enum_nested_enum() {
     let s = MyE::E(MyOtherEnum::A);
+    let serialized = s.serialize();
+    let deserialized = MyE::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derived_serialization_enum_struct() {
+    let s = MyE::F { f1: 1, f2: 2 };
     let serialized = s.serialize();
     let deserialized = MyE::deserialize(&serialized).unwrap();
 

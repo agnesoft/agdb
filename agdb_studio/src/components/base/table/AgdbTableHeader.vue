@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { getTableColumnsArray } from "@/composables/table/tableConfig";
-import { defineProps, computed } from "vue";
+import { computed } from "vue";
 const props = defineProps({
     tableKey: {
         type: String,

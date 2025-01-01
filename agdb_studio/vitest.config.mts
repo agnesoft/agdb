@@ -1,4 +1,3 @@
-// import { fileURLToPath } from "node:url";
 import {
     mergeConfig,
     defineConfig,
@@ -15,7 +14,6 @@ export default mergeConfig(
             environment: "jsdom",
             exclude: [...configDefaults.exclude, "e2e/*"],
             root: path.resolve(__dirname, "."),
-            // root: fileURLToPath(new URL("./", import.meta.url)),
             coverage: {
                 provider: "istanbul",
                 all: true,

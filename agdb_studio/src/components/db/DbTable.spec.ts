@@ -1,5 +1,6 @@
 import { shallowMount } from "@vue/test-utils";
 import DbTable from "./DbTable.vue";
+import { describe, it, expect } from "vitest";
 
 describe("DbTable", () => {
     it("should render", () => {

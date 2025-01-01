@@ -25,7 +25,7 @@ const addDatabase = async ({ name, db_type }: AddDatabaseProps) => {
     client.value?.db_add({ owner: username.value, db: name, db_type });
 };
 
-export const useDbList = () => {
+export const useDbStore = () => {
     return {
         databases,
         fetchDatabases,

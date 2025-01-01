@@ -8,19 +8,19 @@ import {
     tableExists,
 } from "./tableConfig";
 import { TABLE_NAME, tableConfig, columnsMap } from "@/tests/tableMocks";
+import { describe, beforeEach, it, expect } from "vitest";
 
 describe("tableData", () => {
     beforeEach(() => {
         clearTables();
     });
     it("should return table configs", () => {
-        addTable({ name: TABLE_NAME, columns: tableConfig, uniqueKey: "name" });
+        addTable({ name: TABLE_NAME, columns: tableConfig });
         const table = getTable(TABLE_NAME);
         expect(table).toEqual({
             name: TABLE_NAME,
             columns: columnsMap,
             data: new Map(),
-            uniqueKey: "name",
         });
         const columns = getTableColumns(TABLE_NAME);
         expect(columns).toEqual(columnsMap);
@@ -41,7 +41,7 @@ describe("tableData", () => {
     });
 
     it("should remove table", () => {
-        addTable({ name: TABLE_NAME, columns: tableConfig, uniqueKey: "name" });
+        addTable({ name: TABLE_NAME, columns: tableConfig });
         const table = getTable(TABLE_NAME);
         expect(table).toBeDefined();
         removeTable(TABLE_NAME);
@@ -50,7 +50,7 @@ describe("tableData", () => {
     });
 
     it("should check if table exists", () => {
-        addTable({ name: TABLE_NAME, columns: tableConfig, uniqueKey: "name" });
+        addTable({ name: TABLE_NAME, columns: tableConfig });
         expect(tableExists(TABLE_NAME)).toBeTruthy();
         expect(tableExists("non_existent_table")).toBeFalsy();
     });

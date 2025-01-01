@@ -7,9 +7,10 @@ import {
     removeFilter,
     setSort,
 } from "./tableFilter";
+import { describe, beforeEach, it, expect } from "vitest";
 
 describe("tableFilter", () => {
-    addTable({ name: TABLE_NAME, columns: tableConfig, uniqueKey: "name" });
+    addTable({ name: TABLE_NAME, columns: tableConfig });
     setTableData(TABLE_NAME, tableData);
 
     beforeEach(() => {

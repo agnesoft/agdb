@@ -1,5 +1,6 @@
-import { useDbList } from "./DbStore";
+import { useDbStore } from "./dbStore";
 import { db_list, db_add } from "@/tests/apiMock";
+import { describe, beforeEach, vi, it, expect } from "vitest";
 
 db_list.mockResolvedValue({
     data: [
@@ -50,26 +51,21 @@ describe("DbStore", () => {
         vi.clearAllMocks();
     });
     it("fetches databases when called", async () => {
-        const { databases, fetchDatabases } = useDbList();
+        const { databases, fetchDatabases } = useDbStore();
         await fetchDatabases();
         expect(databases.value).toHaveLength(2);
     });
 
     it("adds a database when called", async () => {
         expect(db_add).not.toHaveBeenCalled();
-        const { addDatabase } = useDbList();
+        const { addDatabase } = useDbStore();
         await addDatabase({ name: "test_db", db_type: "memory" });
         expect(db_add).toHaveBeenCalledOnce();
-        // expect(db_add).toHaveBeenCalledWith({
-        //     owner: "test_user",
-        //     db: "test_db",
-        //     db_type: "memory",
-        // });
     });
 
     it("does nothing if not logged in", async () => {
         username.value = "";
-        const { addDatabase } = useDbList();
+        const { addDatabase } = useDbStore();
         await addDatabase({ name: "test_db", db_type: "memory" });
         expect(db_add).not.toHaveBeenCalled();
     });

@@ -56,10 +56,10 @@ pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
             .map(|f| (f.ident.as_ref(), &f.ty))
             .collect::<Vec<(Option<&Ident>, &Type)>>();
 
-        if fields_types.is_empty() || fields_types[0].0.is_none() {
-            serialize_tuple(name, fields_types)
-        } else {
+        if fields_types.is_empty() || fields_types[0].0.is_some() {
             serialize_struct(name, fields_types)
+        } else {
+            serialize_tuple(name, fields_types)
         }
     } else if let syn::Data::Enum(data) = input.data {
         serialize_enum(name, data)
@@ -93,9 +93,9 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
                 .collect::<Vec<_>>();
 
             if named {
-                quote! { #name::#variant_name { #(#names),* } => { #(size += #names.serialized_size();)* } }
+                quote! { #name::#variant_name { #(#names),* } => { #(size += agdb::AgdbSerialize::serialized_size(#names);)* } }
             } else {
-                quote! { #name::#variant_name(#(#names),*) => { #(size += #names.serialized_size();)* } }
+                quote! { #name::#variant_name(#(#names),*) => { #(size += agdb::AgdbSerialize::serialized_size(#names);)* } }
             }
         }
     });
@@ -122,9 +122,9 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
                 .collect::<Vec<_>>();
 
             if named {
-                quote! { #name::#variant_name { #(#names),* } => { __buffer.push(#variant_index); #(__buffer.extend(#names.serialize());)* } }
+                quote! { #name::#variant_name { #(#names),* } => { __buffer.push(#variant_index); #(__buffer.extend(agdb::AgdbSerialize::serialize(#names));)* } }
             } else {
-                quote! { #name::#variant_name(#(#names),*) => { __buffer.push(#variant_index); #(__buffer.extend(#names.serialize());)* } }
+                quote! { #name::#variant_name(#(#names),*) => { __buffer.push(#variant_index); #(__buffer.extend(agdb::AgdbSerialize::serialize(#names));)* } }
             }
         }
     });
@@ -142,10 +142,10 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
                 .map(|field| {
                     let ty = &field.ty;
                     if let Some(ident) = &field.ident {
-                        quote! { #ident: { let #ident = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?; __offset += #ident.serialized_size(); #ident } }
+                        quote! { #ident: { let #ident = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?; __offset += agdb::AgdbSerialize::serialized_size(&#ident); #ident } }
                     } else {
                         named = false;
-                        quote! { { let v = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?; __offset += v.serialized_size(); v } }
+                        quote! { { let v = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?; __offset += agdb::AgdbSerialize::serialized_size(&v); v } }
                     }
                 })
                 .collect::<Vec<_>>();
@@ -171,7 +171,7 @@ fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream 
             }
 
             fn serialize(&self) -> Vec<u8> {
-                let mut __buffer = Vec::with_capacity(self.serialized_size() as usize);
+                let mut __buffer = Vec::with_capacity(agdb::AgdbSerialize::serialized_size(self) as usize);
                 match self {
                     #(
                         #serializers
@@ -207,7 +207,7 @@ fn serialize_tuple(
         .map(|(index, (_name, _ty))| {
             let num = Index::from(index);
             quote! {
-                size += self.#num.serialized_size();
+                size += agdb::AgdbSerialize::serialized_size(&self.#num);
             }
         });
     let serializers = fields_types
@@ -216,14 +216,14 @@ fn serialize_tuple(
         .map(|(index, (_name, _ty))| {
             let num = Index::from(index);
             quote! {
-                __buffer.extend(self.#num.serialize());
+                __buffer.extend(agdb::AgdbSerialize::serialize(&self.#num));
             }
         });
     let deserializers = fields_types.iter().enumerate().map(|(index, (_name, ty))| {
         let name = format_ident!("__{}", index);
         quote! {
             let #name = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?;
-            __offset += #name.serialized_size();
+            __offset += agdb::AgdbSerialize::serialized_size(&#name);
         }
     });
 
@@ -238,7 +238,7 @@ fn serialize_tuple(
             }
 
             fn serialize(&self) -> Vec<u8> {
-                let mut __buffer = Vec::with_capacity(self.serialized_size() as usize);
+                let mut __buffer = Vec::with_capacity(agdb::AgdbSerialize::serialized_size(self) as usize);
                 #(
                     #serializers
                 )*
@@ -268,20 +268,20 @@ fn serialize_struct(
     let sizes = fields_types.iter().map(|(name, _ty)| {
         let name = name.unwrap();
         quote! {
-            size += self.#name.serialized_size();
+            size += agdb::AgdbSerialize::serialized_size(&self.#name);
         }
     });
     let serializers = fields_types.iter().map(|(name, _ty)| {
         let name = name.unwrap();
         quote! {
-            __buffer.extend(self.#name.serialize());
+            __buffer.extend(agdb::AgdbSerialize::serialize(&self.#name));
         }
     });
     let deserializers = fields_types.iter().map(|(name, ty)| {
         let name = name.unwrap();
         quote! {
             let #name = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?;
-            __offset += #name.serialized_size();
+            __offset += agdb::AgdbSerialize::serialized_size(&#name);
         }
     });
 
@@ -296,7 +296,7 @@ fn serialize_struct(
             }
 
             fn serialize(&self) -> Vec<u8> {
-                let mut __buffer = Vec::with_capacity(self.serialized_size() as usize);
+                let mut __buffer = Vec::with_capacity(agdb::AgdbSerialize::serialized_size(self) as usize);
                 #(
                     #serializers
                 )*
@@ -552,8 +552,8 @@ fn impl_db_id(data: &syn::DataStruct) -> proc_macro2::TokenStream {
             if let Some(name) = &f.ident {
                 if name == DB_ID {
                     return Some(quote! {
-                        if let Some(id) = self.db_id.clone() {
-                            return Some(id.into());
+                        if let Some(id) = &self.db_id {
+                            return Some(id.clone().into());
                         } else {
                             return None;
                         }

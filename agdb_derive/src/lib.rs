@@ -1,7 +1,12 @@
 use proc_macro::TokenStream;
+use quote::format_ident;
 use quote::quote;
 use syn::parse_macro_input;
+use syn::DataEnum;
 use syn::DeriveInput;
+use syn::Ident;
+use syn::Index;
+use syn::Type;
 
 const DB_ID: &str = "db_id";
 
@@ -32,6 +37,285 @@ pub fn db_user_value_marker_derive(item: TokenStream) -> TokenStream {
     };
 
     tokens.into()
+}
+
+/// The derive macro to add `agdb` platform agnostic serialization
+/// support. This is only needed if you want to serialize custom
+/// complex data structures and do not want or cannot use serde.
+/// It is primarily used internally to serialize the `agdb` data
+/// structures.
+#[proc_macro_derive(AgdbDeSerialize)]
+pub fn agdb_de_serialize(item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as DeriveInput);
+    let name = input.ident;
+
+    let tokens = if let syn::Data::Struct(data) = input.data {
+        let fields_types = data
+            .fields
+            .iter()
+            .map(|f| (f.ident.as_ref(), &f.ty))
+            .collect::<Vec<(Option<&Ident>, &Type)>>();
+
+        if fields_types.is_empty() || fields_types[0].0.is_none() {
+            serialize_tuple(name, fields_types)
+        } else {
+            serialize_struct(name, fields_types)
+        }
+    } else if let syn::Data::Enum(data) = input.data {
+        serialize_enum(name, data)
+    } else {
+        unimplemented!()
+    };
+
+    tokens.into()
+}
+
+fn serialize_enum(name: Ident, enum_data: DataEnum) -> proc_macro2::TokenStream {
+    let sizes = enum_data.variants.iter().map(|variant| {
+        let variant_name = &variant.ident;
+
+        if variant.fields.is_empty() {
+            quote! { #name::#variant_name => {} }
+        } else {
+            let mut named = false;
+            let names = variant
+                .fields
+                .iter()
+                .enumerate()
+                .map(|(index, field)| {
+                    if let Some(i) = &field.ident {
+                        named = true;
+                        i.clone()
+                    } else {
+                        format_ident!("__{}", index)
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if named {
+                quote! { #name::#variant_name { #(#names),* } => { #(size += #names.serialized_size();)* } }
+            } else {
+                quote! { #name::#variant_name(#(#names),*) => { #(size += #names.serialized_size();)* } }
+            }
+        }
+    });
+    let serializers = enum_data.variants.iter().enumerate().map(|(index, variant)| {
+        let variant_name = &variant.ident;
+        let variant_index = index as u8;
+
+        if variant.fields.is_empty() {
+            quote! { #name::#variant_name => { __buffer.push(#variant_index); } }
+        } else {
+            let mut named = false;
+            let names = variant
+                .fields
+                .iter()
+                .enumerate()
+                .map(|(index, field)| {
+                    if let Some(ident) = &field.ident {
+                        named = true;
+                        ident.clone()
+                    } else {
+                        format_ident!("__{}", index)
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if named {
+                quote! { #name::#variant_name { #(#names),* } => { __buffer.push(#variant_index); #(__buffer.extend(#names.serialize());)* } }
+            } else {
+                quote! { #name::#variant_name(#(#names),*) => { __buffer.push(#variant_index); #(__buffer.extend(#names.serialize());)* } }
+            }
+        }
+    });
+    let deserializers = enum_data.variants.iter().enumerate().map(|(index, variant)| {
+        let variant_index = index as u8;
+        let variant_name = &variant.ident;
+
+        if variant.fields.is_empty() {
+            quote! { Some(#variant_index) => { Ok(#name::#variant_name) } }
+        } else {
+            let mut named = true;
+            let fields = variant
+                .fields
+                .iter()
+                .map(|field| {
+                    let ty = &field.ty;
+                    if let Some(ident) = &field.ident {
+                        quote! { #ident: { let #ident = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?; __offset += #ident.serialized_size(); #ident } }
+                    } else {
+                        named = false;
+                        quote! { { let v = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?; __offset += v.serialized_size(); v } }
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if named {
+                quote! { Some(#variant_index) => { let mut __offset = 1_u64; Ok(#name::#variant_name { #(#fields),* } ) } }
+            } else {
+                quote! { Some(#variant_index) => { let mut __offset = 1_u64; Ok(#name::#variant_name( #(#fields),* )) } }
+            }
+        }
+    });
+
+    quote! {
+        impl agdb::AgdbSerialize for #name {
+            fn serialized_size(&self) -> u64 {
+                let mut size = 1_u64;
+                match self {
+                    #(
+                        #sizes
+                    )*
+                }
+                size
+            }
+
+            fn serialize(&self) -> Vec<u8> {
+                let mut __buffer = Vec::with_capacity(self.serialized_size() as usize);
+                match self {
+                    #(
+                        #serializers
+                    )*
+                }
+                __buffer
+            }
+
+            fn deserialize(buffer: &[u8]) -> Result<Self, agdb::DbError> {
+                match buffer.first() {
+                    #(
+                        #deserializers
+                    ),*
+                    _ => Err(agdb::DbError::from("Invalid enum variant"))
+                }
+
+            }
+        }
+    }
+}
+
+fn serialize_tuple(
+    name: Ident,
+    fields_types: Vec<(Option<&Ident>, &Type)>,
+) -> proc_macro2::TokenStream {
+    let names = fields_types
+        .iter()
+        .enumerate()
+        .map(|(index, (_name, _ty))| format_ident!("__{}", index));
+    let sizes = fields_types
+        .iter()
+        .enumerate()
+        .map(|(index, (_name, _ty))| {
+            let num = Index::from(index);
+            quote! {
+                size += self.#num.serialized_size();
+            }
+        });
+    let serializers = fields_types
+        .iter()
+        .enumerate()
+        .map(|(index, (_name, _ty))| {
+            let num = Index::from(index);
+            quote! {
+                __buffer.extend(self.#num.serialize());
+            }
+        });
+    let deserializers = fields_types.iter().enumerate().map(|(index, (_name, ty))| {
+        let name = format_ident!("__{}", index);
+        quote! {
+            let #name = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?;
+            __offset += #name.serialized_size();
+        }
+    });
+
+    quote! {
+        impl agdb::AgdbSerialize for #name {
+            fn serialized_size(&self) -> u64 {
+                let mut size = 0;
+                #(
+                    #sizes
+                )*
+                size
+            }
+
+            fn serialize(&self) -> Vec<u8> {
+                let mut __buffer = Vec::with_capacity(self.serialized_size() as usize);
+                #(
+                    #serializers
+                )*
+                __buffer
+            }
+
+            fn deserialize(buffer: &[u8]) -> Result<Self, agdb::DbError> {
+                let mut __offset = 0;
+                #(
+                   #deserializers
+                )*
+                Ok(Self(
+                    #(
+                        #names
+                    ),*
+                ))
+            }
+        }
+    }
+}
+
+fn serialize_struct(
+    name: Ident,
+    fields_types: Vec<(Option<&Ident>, &Type)>,
+) -> proc_macro2::TokenStream {
+    let names = fields_types.iter().map(|(name, _ty)| name.unwrap());
+    let sizes = fields_types.iter().map(|(name, _ty)| {
+        let name = name.unwrap();
+        quote! {
+            size += self.#name.serialized_size();
+        }
+    });
+    let serializers = fields_types.iter().map(|(name, _ty)| {
+        let name = name.unwrap();
+        quote! {
+            __buffer.extend(self.#name.serialize());
+        }
+    });
+    let deserializers = fields_types.iter().map(|(name, ty)| {
+        let name = name.unwrap();
+        quote! {
+            let #name = <#ty as agdb::AgdbSerialize>::deserialize(&buffer[__offset as usize..])?;
+            __offset += #name.serialized_size();
+        }
+    });
+
+    quote! {
+        impl agdb::AgdbSerialize for #name {
+            fn serialized_size(&self) -> u64 {
+                let mut size = 0;
+                #(
+                    #sizes
+                )*
+                size
+            }
+
+            fn serialize(&self) -> Vec<u8> {
+                let mut __buffer = Vec::with_capacity(self.serialized_size() as usize);
+                #(
+                    #serializers
+                )*
+                __buffer
+            }
+
+            fn deserialize(buffer: &[u8]) -> Result<Self, agdb::DbError> {
+                let mut __offset = 0;
+                #(
+                   #deserializers
+                )*
+                Ok(Self {
+                    #(
+                        #names
+                    ),*
+                })
+            }
+        }
+    }
 }
 
 /// The derive macro to add `agdb` compatibility

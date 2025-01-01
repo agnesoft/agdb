@@ -1,5 +1,7 @@
-mod test_db;
+use crate::test_db::TestDb;
 
+use agdb::AgdbDeSerialize;
+use agdb::AgdbSerialize;
 use agdb::DbElement;
 use agdb::DbError;
 use agdb::DbId;
@@ -10,8 +12,6 @@ use agdb::QueryId;
 use agdb::QueryResult;
 use agdb::UserValue;
 use agdb::UserValueMarker;
-#[allow(unused_imports)]
-use test_db::TestDb;
 
 #[derive(Default, Debug, Clone, PartialEq, UserValueMarker)]
 enum Status {
@@ -815,4 +815,112 @@ fn try_from_db_element_bad_conversion() {
         err_text,
         "Failed to convert value of 'password': Type mismatch. Cannot convert 'i64' to 'string'"
     );
+}
+
+#[test]
+fn derived_serialization_struct() {
+    #[derive(AgdbDeSerialize, Debug, PartialEq)]
+    struct S {
+        f1: u64,
+        f2: u64,
+    }
+
+    let s = S { f1: 1, f2: 2 };
+    let serialized = s.serialize();
+    let deserialized = S::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derived_serialization_tuple() {
+    #[derive(AgdbDeSerialize, Debug, PartialEq)]
+    struct S(u64, u64);
+
+    let s = S(1, 2);
+    let serialized = s.serialize();
+    let deserialized = S::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[derive(AgdbDeSerialize, Debug, PartialEq)]
+struct S1 {
+    f1: u64,
+}
+
+#[derive(AgdbDeSerialize, Debug, PartialEq)]
+struct S2(S1);
+
+#[derive(AgdbDeSerialize, Debug, PartialEq)]
+struct S3(S2, S2);
+
+#[derive(AgdbDeSerialize, Debug, PartialEq)]
+enum MyOtherEnum {
+    A,
+    B,
+}
+
+#[derive(AgdbDeSerialize, Debug, PartialEq)]
+enum MyE {
+    A,
+    B(u64),
+    C(u64, u64),
+    D(S3),
+    E(MyOtherEnum),
+    F { f1: u64, f2: u64 },
+}
+
+#[test]
+fn derived_serialization_enum_unit() {
+    let s = MyE::A;
+    let serialized = s.serialize();
+    let deserialized = MyE::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derived_serialization_enum_tuple() {
+    let s = MyE::B(1);
+    let serialized = s.serialize();
+    let deserialized = MyE::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derived_serialization_enum_tuple_multiple() {
+    let s = MyE::C(1, 2);
+    let serialized = s.serialize();
+    let deserialized = MyE::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derived_serialization_enum_nested_struct() {
+    let s = MyE::D(S3(S2(S1 { f1: 1 }), S2(S1 { f1: 2 })));
+    let serialized = s.serialize();
+    let deserialized = MyE::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derived_serialization_enum_nested_enum() {
+    let s = MyE::E(MyOtherEnum::A);
+    let serialized = s.serialize();
+    let deserialized = MyE::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
+}
+
+#[test]
+fn derived_serialization_enum_struct() {
+    let s = MyE::F { f1: 1, f2: 2 };
+    let serialized = s.serialize();
+    let deserialized = MyE::deserialize(&serialized).unwrap();
+
+    assert_eq!(s, deserialized);
 }

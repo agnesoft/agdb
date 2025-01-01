@@ -1,5 +1,11 @@
+#[cfg(feature = "derive")]
+mod derive_feature_test;
+#[cfg(feature = "derive")]
+mod efficient_agdb;
 #[cfg(feature = "openapi")]
 mod openapi_feature_test;
+#[cfg(feature = "derive")]
+mod quickstart;
 #[cfg(feature = "serde")]
 mod serde_feature_test;
 mod test_db;
@@ -78,7 +84,6 @@ fn public_types() {
     use agdb::StorageSlice;
     use agdb::Transaction;
     use agdb::TransactionMut;
-    use agdb::UserValue;
 }
 
 #[test]

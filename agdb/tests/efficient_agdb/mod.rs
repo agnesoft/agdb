@@ -1,5 +1,3 @@
-mod test_db;
-
 use crate::test_db::TestFile;
 use agdb::Comparison::Equal;
 use agdb::CountComparison;

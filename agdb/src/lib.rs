@@ -18,6 +18,8 @@
 //! // QueryResult { result: 1, elements: [ DbElement { id: DbId(1), values: [ DbKeyValue { key: String("key"), value: Int(123) } ] } ] }
 //! ```
 
+extern crate self as agdb;
+
 mod collections;
 mod command;
 mod db;
@@ -35,6 +37,9 @@ pub mod test_utilities;
 
 #[cfg(any(feature = "serde", feature = "openapi"))]
 pub use query::QueryType;
+
+#[cfg(feature = "derive")]
+pub use agdb_derive::AgdbDeSerialize;
 
 #[cfg(feature = "derive")]
 pub use agdb_derive::{UserValue, UserValueMarker};

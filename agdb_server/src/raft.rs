@@ -8,6 +8,7 @@ use std::time::Instant;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Log<T> {
+    #[serde(skip)]
     pub(crate) db_id: Option<DbId>,
     pub(crate) index: u64,
     pub(crate) term: u64,

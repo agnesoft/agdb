@@ -570,7 +570,7 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
             }
         } else if self.local().log_term < log.term
             && self.local().log_commit < log.index
-            && self.local().log_commit + 1 >= log.index
+            && self.local().log_index + 1 >= log.index
         {
             return Ok(true);
         }

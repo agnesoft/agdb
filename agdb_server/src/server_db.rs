@@ -509,7 +509,7 @@ impl ServerDb {
             let logs: Vec<DbId> = t
                 .exec(
                     QueryBuilder::select()
-                        .values(["index"])
+                        .values("index")
                         .search()
                         .index(COMMITTED)
                         .value(false)

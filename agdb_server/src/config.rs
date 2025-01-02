@@ -31,7 +31,7 @@ pub(crate) struct ConfigImpl {
 
 pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
     if let Ok(content) = std::fs::read_to_string(config_file) {
-        let mut config_impl: ConfigImpl = serde_yaml::from_str(&content)?;
+        let mut config_impl: ConfigImpl = serde_yml::from_str(&content)?;
         config_impl.cluster_node_id = config_impl
             .cluster
             .iter()
@@ -63,7 +63,7 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
         start_time: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
     };
 
-    std::fs::write(config_file, serde_yaml::to_string(&config)?)?;
+    std::fs::write(config_file, serde_yml::to_string(&config)?)?;
 
     Ok(Config::new(config))
 }
@@ -148,7 +148,7 @@ mod tests {
             cluster_node_id: 0,
             start_time: 0,
         };
-        std::fs::write(test_file.filename, serde_yaml::to_string(&config).unwrap()).unwrap();
+        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
         assert_eq!(
             config::new(test_file.filename).unwrap_err().description,
             "Cluster does not contain local node: localhost:3000"
@@ -158,38 +158,38 @@ mod tests {
     #[test]
     fn log_level() {
         let level = LogLevel(LevelFilter::OFF);
-        let serialized = serde_yaml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
+        let serialized = serde_yml::to_string(&level).unwrap();
+        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
 
         let level = LogLevel(LevelFilter::ERROR);
-        let serialized = serde_yaml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
+        let serialized = serde_yml::to_string(&level).unwrap();
+        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
 
         let level = LogLevel(LevelFilter::WARN);
-        let serialized = serde_yaml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
+        let serialized = serde_yml::to_string(&level).unwrap();
+        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
 
         let level = LogLevel(LevelFilter::INFO);
-        let serialized = serde_yaml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
+        let serialized = serde_yml::to_string(&level).unwrap();
+        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
 
         let level = LogLevel(LevelFilter::DEBUG);
-        let serialized = serde_yaml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
+        let serialized = serde_yml::to_string(&level).unwrap();
+        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
 
         let level = LogLevel(LevelFilter::TRACE);
-        let serialized = serde_yaml::to_string(&level).unwrap();
-        let other: LogLevel = serde_yaml::from_str(&serialized).unwrap();
+        let serialized = serde_yml::to_string(&level).unwrap();
+        let other: LogLevel = serde_yml::from_str(&serialized).unwrap();
         assert_eq!(level.0, other.0);
 
         let serialized = "INVALID".to_string();
         assert_eq!(
-            serde_yaml::from_str::<LogLevel>(&serialized)
+            serde_yml::from_str::<LogLevel>(&serialized)
                 .unwrap_err()
                 .to_string(),
             "Invalid log level"

@@ -16,6 +16,11 @@ use tower_http::cors::CorsLayer;
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
 
+async fn openapi_endpoint() -> String {
+    "openapi".to_string()
+    //Api::openapi().to_pretty_json().unwrap_or_default()
+}
+
 pub(crate) fn app(
     cluster: Cluster,
     config: Config,
@@ -39,116 +44,128 @@ pub(crate) fn app(
         .route("/admin/status", routing::get(routes::admin::status))
         .route("/admin/user/list", routing::get(routes::admin::user::list))
         .route(
-            "/admin/user/:user/logout",
+            "/admin/user/{user}/logout",
             routing::post(routes::admin::user::logout),
         )
         .route(
-            "/admin/user/:user/add",
+            "/admin/user/{user}/add",
             routing::post(routes::admin::user::add),
         )
         .route(
-            "/admin/user/:user/change_password",
+            "/admin/user/{user}/change_password",
             routing::put(routes::admin::user::change_password),
         )
         .route(
-            "/admin/user/:user/remove",
+            "/admin/user/{user}/remove",
             routing::delete(routes::admin::user::remove),
         )
         .route("/admin/db/list", routing::get(routes::admin::db::list))
         .route(
-            "/admin/db/:user/:db/add",
+            "/admin/db/{user}/{db}/add",
             routing::post(routes::admin::db::add),
         )
         .route(
-            "/admin/db/:user/:db/audit",
+            "/admin/db/{user}/{db}/audit",
             routing::get(routes::admin::db::audit),
         )
         .route(
-            "/admin/db/:user/:db/backup",
+            "/admin/db/{user}/{db}/backup",
             routing::post(routes::admin::db::backup),
         )
         .route(
-            "/admin/db/:user/:db/clear",
+            "/admin/db/{user}/{db}/clear",
             routing::post(routes::admin::db::clear),
         )
         .route(
-            "/admin/db/:user/:db/convert",
+            "/admin/db/{user}/{db}/convert",
             routing::post(routes::admin::db::convert),
         )
         .route(
-            "/admin/db/:user/:db/copy",
+            "/admin/db/{user}/{db}/copy",
             routing::post(routes::admin::db::copy),
         )
         .route(
-            "/admin/db/:user/:db/delete",
+            "/admin/db/{user}/{db}/delete",
             routing::delete(routes::admin::db::delete),
         )
         .route(
-            "/admin/db/:user/:db/exec",
+            "/admin/db/{user}/{db}/exec",
             routing::post(routes::admin::db::exec),
         )
         .route(
-            "/admin/db/:user/:db/exec_mut",
+            "/admin/db/{user}/{db}/exec_mut",
             routing::post(routes::admin::db::exec_mut),
         )
         .route(
-            "/admin/db/:user/:db/optimize",
+            "/admin/db/{user}/{db}/optimize",
             routing::post(routes::admin::db::optimize),
         )
         .route(
-            "/admin/db/:user/:db/remove",
+            "/admin/db/{user}/{db}/remove",
             routing::delete(routes::admin::db::remove),
         )
         .route(
-            "/admin/db/:user/:db/rename",
+            "/admin/db/{user}/{db}/rename",
             routing::post(routes::admin::db::rename),
         )
         .route(
-            "/admin/db/:user/:db/restore",
+            "/admin/db/{user}/{db}/restore",
             routing::post(routes::admin::db::restore),
         )
         .route(
-            "/admin/db/:user/:db/user/list",
+            "/admin/db/{user}/{db}/user/list",
             routing::get(routes::admin::db::user::list),
         )
         .route(
-            "/admin/db/:user/:db/user/:other/add",
+            "/admin/db/{user}/{db}/user/{other}/add",
             routing::put(routes::admin::db::user::add),
         )
         .route(
-            "/admin/db/:user/:db/user/:other/remove",
+            "/admin/db/{user}/{db}/user/{other}/remove",
             routing::delete(routes::admin::db::user::remove),
         )
         .route("/db/list", routing::get(routes::db::list))
-        .route("/db/:user/:db/add", routing::post(routes::db::add))
-        .route("/db/:user/:db/audit", routing::get(routes::db::audit))
-        .route("/db/:user/:db/backup", routing::post(routes::db::backup))
-        .route("/db/:user/:db/clear", routing::post(routes::db::clear))
-        .route("/db/:user/:db/convert", routing::post(routes::db::convert))
-        .route("/db/:user/:db/copy", routing::post(routes::db::copy))
-        .route("/db/:user/:db/delete", routing::delete(routes::db::delete))
-        .route("/db/:user/:db/exec", routing::post(routes::db::exec))
+        .route("/db/{user}/{db}/add", routing::post(routes::db::add))
+        .route("/db/{user}/{db}/audit", routing::get(routes::db::audit))
+        .route("/db/{user}/{db}/backup", routing::post(routes::db::backup))
+        .route("/db/{user}/{db}/clear", routing::post(routes::db::clear))
         .route(
-            "/db/:user/:db/exec_mut",
+            "/db/{user}/{db}/convert",
+            routing::post(routes::db::convert),
+        )
+        .route("/db/{user}/{db}/copy", routing::post(routes::db::copy))
+        .route(
+            "/db/{user}/{db}/delete",
+            routing::delete(routes::db::delete),
+        )
+        .route("/db/{user}/{db}/exec", routing::post(routes::db::exec))
+        .route(
+            "/db/{user}/{db}/exec_mut",
             routing::post(routes::db::exec_mut),
         )
         .route(
-            "/db/:user/:db/optimize",
+            "/db/{user}/{db}/optimize",
             routing::post(routes::db::optimize),
         )
-        .route("/db/:user/:db/remove", routing::delete(routes::db::remove))
-        .route("/db/:user/:db/rename", routing::post(routes::db::rename))
-        .route("/db/:user/:db/restore", routing::post(routes::db::restore))
         .route(
-            "/db/:user/:db/user/list",
+            "/db/{user}/{db}/remove",
+            routing::delete(routes::db::remove),
+        )
+        .route("/db/{user}/{db}/rename", routing::post(routes::db::rename))
+        .route(
+            "/db/{user}/{db}/restore",
+            routing::post(routes::db::restore),
+        )
+        .route(
+            "/db/{user}/{db}/user/list",
             routing::get(routes::db::user::list),
         )
         .route(
-            "/db/:user/:db/user/:other/add",
+            "/db/{user}/{db}/user/{other}/add",
             routing::put(routes::db::user::add),
         )
         .route(
-            "/db/:user/:db/user/:other/remove",
+            "/db/{user}/{db}/user/{other}/remove",
             routing::delete(routes::db::user::remove),
         )
         .route("/cluster", routing::post(routes::cluster::cluster))
@@ -158,7 +175,7 @@ pub(crate) fn app(
             routing::post(routes::cluster::logout),
         )
         .route(
-            "/cluster/admin/user/:user/logout",
+            "/cluster/admin/user/{user}/logout",
             routing::post(routes::cluster::admin_logout),
         )
         .route("/cluster/status", routing::get(routes::cluster::status))
@@ -168,7 +185,9 @@ pub(crate) fn app(
             "/user/change_password",
             routing::put(routes::user::change_password),
         )
-        .route("/user/status", routing::get(routes::user::status));
+        .route("/user/status", routing::get(routes::user::status))
+        .route("/openapi", routing::get(openapi_endpoint));
+    //.route("/", routing::get());
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
@@ -176,7 +195,7 @@ pub(crate) fn app(
         .allow_origin(tower_http::cors::Any);
 
     let router = Router::new()
-        .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
+        //  .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest("/api/v1", api_v1)
         .layer(middleware::from_fn_with_state(
             state.clone(),

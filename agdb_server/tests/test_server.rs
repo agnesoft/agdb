@@ -65,7 +65,7 @@ pub struct TestCluster {
 }
 
 impl TestServerImpl {
-    pub async fn with_config(mut config: HashMap<&str, serde_yaml::Value>) -> anyhow::Result<Self> {
+    pub async fn with_config(mut config: HashMap<&str, serde_yml::Value>) -> anyhow::Result<Self> {
         let address = if let Some(address) = config.get("address") {
             address
                 .as_str()
@@ -89,7 +89,7 @@ impl TestServerImpl {
             .create_new(true)
             .write(true)
             .open(Path::new(&dir).join(CONFIG_FILE))?;
-        serde_yaml::to_writer(file, &config)?;
+        serde_yml::to_writer(file, &config)?;
 
         let api_address = if let Some(basepath) = config.get("basepath") {
             format!("{address}{}", basepath.as_str().unwrap_or_default())
@@ -134,7 +134,7 @@ impl TestServerImpl {
     }
 
     pub async fn new() -> anyhow::Result<Self> {
-        let mut config = HashMap::<&str, serde_yaml::Value>::new();
+        let mut config = HashMap::<&str, serde_yml::Value>::new();
         config.insert("admin", ADMIN.into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("basepath", "".into());
@@ -369,7 +369,7 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
 
     for _ in 0..nodes {
         let port = TestServerImpl::next_port();
-        let mut config = HashMap::<&str, serde_yaml::Value>::new();
+        let mut config = HashMap::<&str, serde_yml::Value>::new();
         config.insert("bind", format!("{HOST}:{port}").into());
         config.insert("address", format!("http://{HOST}:{port}").into());
         config.insert("admin", ADMIN.into());

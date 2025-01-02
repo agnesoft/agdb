@@ -162,7 +162,7 @@ async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn basepath_test() -> anyhow::Result<()> {
-    let mut config = HashMap::<&str, serde_yaml::Value>::new();
+    let mut config = HashMap::<&str, serde_yml::Value>::new();
     config.insert("admin", ADMIN.into());
     config.insert("data_dir", SERVER_DATA_DIR.into());
     config.insert("basepath", "/public".into());

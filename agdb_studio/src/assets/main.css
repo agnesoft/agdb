@@ -49,5 +49,7 @@ ul {
     }
 }
 
-@media (min-width: 1024px) {
+.emphesized {
+    color: #ff8800;
+    font-weight: bold;
 }

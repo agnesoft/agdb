@@ -1,5 +1,6 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import useModal from "./modal";
+import { convertArrayOfStringsToContent } from "@/utils/content";
 
 describe("Modal", () => {
     const { showModal, hideModal } = useModal();
@@ -9,14 +10,14 @@ describe("Modal", () => {
     it("shows a modal", () => {
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
         });
         expect(useModal().modalIsVisible.value).toBe(true);
     });
     it("hides a modal", () => {
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
         });
         hideModal();
         expect(useModal().modalIsVisible.value).toBe(false);
@@ -24,7 +25,7 @@ describe("Modal", () => {
     it("shows a modal with custom buttons", () => {
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
             buttons: [
                 {
                     className: "button",
@@ -40,16 +41,16 @@ describe("Modal", () => {
         const onConfirm = vi.fn();
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
             onConfirm,
         });
         useModal().buttons.value[1].action();
         expect(onConfirm).toHaveBeenCalled();
         expect(useModal().modalIsVisible.value).toBe(false);
     });
-    it("sets default if no header or body is provided", () => {
+    it("sets default if no header or content is provided", () => {
         showModal({});
-        expect(useModal().content.header).toBe("");
-        expect(useModal().content.body).toHaveLength(0);
+        expect(useModal().modal.header).toBe("");
+        expect(useModal().modal.content).toHaveLength(0);
     });
 });

@@ -45,6 +45,9 @@ declare namespace Components {
          * where the "contains" makes little sense (i.e. does 3 contain 1?).
          */
         {
+            /**
+             * property == this
+             */
             Equal: /**
              * Database value is a strongly types value.
              *
@@ -59,6 +62,9 @@ declare namespace Components {
              */
             DbValue;
         } | {
+            /**
+             * property > this
+             */
             GreaterThan: /**
              * Database value is a strongly types value.
              *
@@ -73,6 +79,9 @@ declare namespace Components {
              */
             DbValue;
         } | {
+            /**
+             * property >= this
+             */
             GreaterThanOrEqual: /**
              * Database value is a strongly types value.
              *
@@ -87,6 +96,9 @@ declare namespace Components {
              */
             DbValue;
         } | {
+            /**
+             * property < this
+             */
             LessThan: /**
              * Database value is a strongly types value.
              *
@@ -101,6 +113,9 @@ declare namespace Components {
              */
             DbValue;
         } | {
+            /**
+             * property <= this
+             */
             LessThanOrEqual: /**
              * Database value is a strongly types value.
              *
@@ -115,6 +130,9 @@ declare namespace Components {
              */
             DbValue;
         } | {
+            /**
+             * property != this
+             */
             NotEqual: /**
              * Database value is a strongly types value.
              *
@@ -129,6 +147,9 @@ declare namespace Components {
              */
             DbValue;
         } | {
+            /**
+             * property.contains(this)
+             */
             Contains: /**
              * Database value is a strongly types value.
              *
@@ -190,15 +211,7 @@ declare namespace Components {
          * that represents a node or an edge.
          */
         export interface DbElement {
-            /**
-             * Database id is a wrapper around `i64`.
-             * The id is an identifier of a database element
-             * both nodes and edges. The positive ids represent nodes,
-             * negative ids represent edges. The value of `0` is
-             * logically invalid (there cannot be element with id 0) and a default.
-             */
-            from?: number | null; // int64
-            id: /**
+            from?: null | /**
              * Database id is a wrapper around `i64`.
              * The id is an identifier of a database element
              * both nodes and edges. The positive ids represent nodes,
@@ -207,13 +220,24 @@ declare namespace Components {
              */
             DbId /* int64 */;
             /**
+             * Element id.
+             */
+            id: /**
              * Database id is a wrapper around `i64`.
              * The id is an identifier of a database element
              * both nodes and edges. The positive ids represent nodes,
              * negative ids represent edges. The value of `0` is
              * logically invalid (there cannot be element with id 0) and a default.
              */
-            to?: number | null; // int64
+            DbId /* int64 */;
+            to?: null | /**
+             * Database id is a wrapper around `i64`.
+             * The id is an identifier of a database element
+             * both nodes and edges. The positive ids represent nodes,
+             * negative ids represent edges. The value of `0` is
+             * logically invalid (there cannot be element with id 0) and a default.
+             */
+            DbId /* int64 */;
             /**
              * List of key-value pairs associated with the element.
              */
@@ -245,6 +269,9 @@ declare namespace Components {
          * Ordering for search queries
          */
         export type DbKeyOrder = /* Ordering for search queries */ {
+            /**
+             * Ascending order (from smallest)
+             */
             Asc: /**
              * Database value is a strongly types value.
              *
@@ -259,6 +286,9 @@ declare namespace Components {
              */
             DbValue;
         } | {
+            /**
+             * Descending order (from largest)
+             */
             Desc: /**
              * Database value is a strongly types value.
              *
@@ -279,6 +309,9 @@ declare namespace Components {
          * tuple of types that are convertible to `DbValue`.
          */
         export interface DbKeyValue {
+            /**
+             * Key of the property
+             */
             key: /**
              * Database value is a strongly types value.
              *
@@ -292,6 +325,9 @@ declare namespace Components {
              * with `to_string()` but otherwise requires a `match`.
              */
             DbValue;
+            /**
+             * Value of the property
+             */
             value: /**
              * Database value is a strongly types value.
              *
@@ -347,7 +383,7 @@ declare namespace Components {
             /**
              * Byte array, sometimes referred to as blob
              */
-            Bytes: string; // binary
+            Bytes: number /* int32 */[];
         } | {
             /**
              * 64-bit wide signed integer
@@ -359,6 +395,9 @@ declare namespace Components {
              */
             U64: number; // int64
         } | {
+            /**
+             * 64-bit floating point number
+             */
             F64: /**
              * Database float is a wrapper around `f64` to provide
              * functionality like comparison. The comparison is
@@ -417,6 +456,9 @@ declare namespace Components {
              * Aliases to be inserted
              */
             aliases: string[];
+            /**
+             * Ids to be aliased
+             */
             ids: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -452,6 +494,9 @@ declare namespace Components {
              * and destination.
              */
             each: boolean;
+            /**
+             * Origins
+             */
             from: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -461,6 +506,10 @@ declare namespace Components {
              * select queries.
              */
             QueryIds;
+            /**
+             * Optional ids of edges (optionally a search sub-query).
+             * This can be empty.
+             */
             ids: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -470,6 +519,9 @@ declare namespace Components {
              * select queries.
              */
             QueryIds;
+            /**
+             * Destinations
+             */
             to: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -479,12 +531,20 @@ declare namespace Components {
              * select queries.
              */
             QueryIds;
+            /**
+             * Key value pairs to be associated with
+             * the new edges.
+             */
             values: /**
              * Helper type distinguishing uniform (`Single`) values
              * and multiple (`Multi`) values in database queries.
              */
             QueryValues;
         }
+        /**
+         * Query to create a new index on
+         * a given key.
+         */
         export type InsertIndexQuery = /**
          * Database value is a strongly types value.
          *
@@ -525,6 +585,10 @@ declare namespace Components {
              * Number of nodes to be inserted.
              */
             count: number; // int64
+            /**
+             * Optional ids of nodes (optionally a search sub-query).
+             * This can be empty.
+             */
             ids: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -534,6 +598,10 @@ declare namespace Components {
              * select queries.
              */
             QueryIds;
+            /**
+             * Key value pairs to be associated with
+             * the new nodes.
+             */
             values: /**
              * Helper type distinguishing uniform (`Single`) values
              * and multiple (`Multi`) values in database queries.
@@ -553,6 +621,9 @@ declare namespace Components {
          * NOTE: The result is NOT number of affected elements but individual properties.
          */
         export interface InsertValuesQuery {
+            /**
+             * Ids whose properties should be updated
+             */
             ids: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -562,6 +633,9 @@ declare namespace Components {
              * select queries.
              */
             QueryIds;
+            /**
+             * Key value pairs to be inserted to the existing elements.
+             */
             values: /**
              * Helper type distinguishing uniform (`Single`) values
              * and multiple (`Multi`) values in database queries.
@@ -588,14 +662,28 @@ declare namespace Components {
          * `data`, logic operator and a modifier.
          */
         export interface QueryCondition {
+            /**
+             * Condition data (or type) defining what type
+             * of validation is to be performed.
+             */
             data: /* Query condition data */ QueryConditionData;
+            /**
+             * Logic operator (e.g. And, Or)
+             */
             logic: /* Logical operator for query conditions */ QueryConditionLogic;
+            /**
+             * Condition modifier (e.g. None, Beyond, Not, NotBeyond)
+             */
             modifier: /* Query condition modifier */ QueryConditionModifier;
         }
         /**
          * Query condition data
          */
         export type QueryConditionData = /* Query condition data */ {
+            /**
+             * Distance from the search origin. Takes count comparison
+             * (e.g. Equal, GreaterThan).
+             */
             Distance: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
@@ -603,6 +691,12 @@ declare namespace Components {
              */
             CountComparison;
         } | ("Edge") | {
+            /**
+             * Tests number of edges (from+to) of the current element.
+             * Only nodes will pass. Self-referential edges are
+             * counted twice. Takes count comparison
+             * (e.g. Equal, GreaterThan).
+             */
             EdgeCount: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
@@ -610,6 +704,11 @@ declare namespace Components {
              */
             CountComparison;
         } | {
+            /**
+             * Tests the number of outgoing edges (from) of the
+             * current element. Takes count comparison
+             * (e.g. Equal, GreaterThan).
+             */
             EdgeCountFrom: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
@@ -617,6 +716,11 @@ declare namespace Components {
              */
             CountComparison;
         } | {
+            /**
+             * Tests the number of incoming edges (to) of the
+             * current element. Takes count comparison
+             * (e.g. Equal, GreaterThan).
+             */
             EdgeCountTo: /**
              * Comparison of unsigned integers (`u64`) used
              * by `distance()` and `edge_count*()` conditions. Supports
@@ -639,6 +743,9 @@ declare namespace Components {
              * with a value that evaluates true against `comparison`.
              */
             KeyValue: {
+                /**
+                 * Property key
+                 */
                 key: /**
                  * Database value is a strongly types value.
                  *
@@ -652,6 +759,9 @@ declare namespace Components {
                  * with `to_string()` but otherwise requires a `match`.
                  */
                 DbValue;
+                /**
+                 * Comparison operator (e.g. Equal, GreaterThan etc.)
+                 */
                 value: /**
                  * Comparison of database values ([`DbValue`]) used
                  * by `key()` condition. Supports
@@ -710,6 +820,9 @@ declare namespace Components {
          * id or a string alias.
          */
         {
+            /**
+             * Numerical id as [`DbId`]
+             */
             Id: /**
              * Database id is a wrapper around `i64`.
              * The id is an identifier of a database element
@@ -751,6 +864,9 @@ declare namespace Components {
              */
             QueryId[];
         } | {
+            /**
+             * Search query
+             */
             Search: /* Query to search for ids in the database following the graph. */ SearchQuery;
         };
         /**
@@ -813,7 +929,11 @@ declare namespace Components {
              */
             InsertEdgesQuery;
         } | {
-            InsertIndex: InsertIndexQuery;
+            InsertIndex: /**
+             * Query to create a new index on
+             * a given key.
+             */
+            InsertIndexQuery;
         } | {
             InsertNodes: /**
              * Query to insert nodes to the database. Only one of
@@ -849,7 +969,16 @@ declare namespace Components {
              */
             InsertValuesQuery;
         } | {
-            Remove: RemoveQuery;
+            Remove: /**
+             * Query to remove database elements (nodes & edges). It
+             * is not an error if any of the `ids` do not already exist.
+             *
+             * All properties associated with a given element are also removed.
+             *
+             * If removing nodes all of its incoming and outgoing edges are
+             * also removed along with their properties.
+             */
+            RemoveQuery;
         } | {
             RemoveAliases: /**
              * Query to remove aliases from the database. It
@@ -861,13 +990,32 @@ declare namespace Components {
              */
             RemoveAliasesQuery;
         } | {
-            RemoveIndex: RemoveIndexQuery;
+            RemoveIndex: /**
+             * Query to create a new index on
+             * a given key.
+             */
+            RemoveIndexQuery;
         } | {
-            RemoveValues: RemoveValuesQuery;
+            RemoveValues: /**
+             * Query to remove properties from existing elements
+             * in the database. All of the specified `ids` must
+             * exist in the database however they do not need to have
+             * all the listed keys (it is NOT an error if any or all keys
+             * do not exist on any of the elements).
+             */
+            RemoveValuesQuery;
         } | {
             Search: /* Query to search for ids in the database following the graph. */ SearchQuery;
         } | {
-            SelectAliases: SelectAliasesQuery;
+            SelectAliases: /**
+             * Query to select aliases of given ids. All of the ids
+             * must exist in the database and have an alias.
+             *
+             * The result will be number of returned aliases and list
+             * of elements with a single property `String("alias")` holding
+             * the value `String`.
+             */
+            SelectAliasesQuery;
         } | {
             SelectAllAliases: /**
              * Query to select all aliases in the database.
@@ -904,9 +1052,24 @@ declare namespace Components {
              */
             SelectIndexesQuery;
         } | {
-            SelectKeys: SelectKeysQuery;
+            SelectKeys: /**
+             * Query to select only property keys of given ids. All
+             * of the ids must exist in the database.
+             *
+             * The result will be number of elements returned and the list
+             * of elements with all properties except all values will be empty.
+             */
+            SelectKeysQuery;
         } | {
-            SelectKeyCount: SelectKeyCountQuery;
+            SelectKeyCount: /**
+             * Query to select number of properties (key count) of
+             * given ids. All of the ids must exist in the database.
+             *
+             * The result will be number of elements returned and the list
+             * of elements with a single property `String("key_count")` with
+             * a value `u64`.
+             */
+            SelectKeyCountQuery;
         } | {
             SelectNodeCount: /**
              * Query to select number of nodes in the database.
@@ -969,6 +1132,10 @@ declare namespace Components {
          * many aliases have been actually removed.
          */
         export type RemoveAliasesQuery = string[];
+        /**
+         * Query to create a new index on
+         * a given key.
+         */
         export type RemoveIndexQuery = /**
          * Database value is a strongly types value.
          *
@@ -982,6 +1149,15 @@ declare namespace Components {
          * with `to_string()` but otherwise requires a `match`.
          */
         DbValue;
+        /**
+         * Query to remove database elements (nodes & edges). It
+         * is not an error if any of the `ids` do not already exist.
+         *
+         * All properties associated with a given element are also removed.
+         *
+         * If removing nodes all of its incoming and outgoing edges are
+         * also removed along with their properties.
+         */
         export type RemoveQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s
@@ -991,6 +1167,13 @@ declare namespace Components {
          * select queries.
          */
         QueryIds;
+        /**
+         * Query to remove properties from existing elements
+         * in the database. All of the specified `ids` must
+         * exist in the database however they do not need to have
+         * all the listed keys (it is NOT an error if any or all keys
+         * do not exist on any of the elements).
+         */
         export type RemoveValuesQuery = /**
          * Query to select elements with only certain properties of
          * given ids. All ids must exist in the database and all
@@ -1004,6 +1187,10 @@ declare namespace Components {
          * Query to search for ids in the database following the graph.
          */
         export interface SearchQuery {
+            /**
+             * Search algorithm to be used. Will be bypassed for path
+             * searches that unconditionally use A*.
+             */
             algorithm: /* Search algorithm to be used */ SearchQueryAlgorithm;
             /**
              * Set of conditions every element must satisfy to be included in the
@@ -1014,6 +1201,10 @@ declare namespace Components {
              * `data`, logic operator and a modifier.
              */
             QueryCondition[];
+            /**
+             * Target element of the path search (if origin is specified)
+             * or starting element of the reverse search (if origin is not specified).
+             */
             destination: /**
              * Database id used in queries that lets
              * you refer to a database element as numerical
@@ -1034,6 +1225,9 @@ declare namespace Components {
              * `offset` and `limit` are applied.
              */
             order_by: /* Ordering for search queries */ DbKeyOrder[];
+            /**
+             * Starting element of the search.
+             */
             origin: /**
              * Database id used in queries that lets
              * you refer to a database element as numerical
@@ -1045,6 +1239,14 @@ declare namespace Components {
          * Search algorithm to be used
          */
         export type SearchQueryAlgorithm = "BreadthFirst" | "DepthFirst" | "Index" | "Elements";
+        /**
+         * Query to select aliases of given ids. All of the ids
+         * must exist in the database and have an alias.
+         *
+         * The result will be number of returned aliases and list
+         * of elements with a single property `String("alias")` holding
+         * the value `String`.
+         */
         export type SelectAliasesQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s
@@ -1083,6 +1285,9 @@ declare namespace Components {
              * from the nodes.
              */
             from: boolean;
+            /**
+             * Ids of the nodes to select edge count for.
+             */
             ids: /**
              * List of database ids used in queries. It
              * can either represent a list of [`QueryId`]s
@@ -1108,6 +1313,14 @@ declare namespace Components {
          */
         export interface SelectIndexesQuery {
         }
+        /**
+         * Query to select number of properties (key count) of
+         * given ids. All of the ids must exist in the database.
+         *
+         * The result will be number of elements returned and the list
+         * of elements with a single property `String("key_count")` with
+         * a value `u64`.
+         */
         export type SelectKeyCountQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s
@@ -1117,6 +1330,13 @@ declare namespace Components {
          * select queries.
          */
         QueryIds;
+        /**
+         * Query to select only property keys of given ids. All
+         * of the ids must exist in the database.
+         *
+         * The result will be number of elements returned and the list
+         * of elements with all properties except all values will be empty.
+         */
         export type SelectKeysQuery = /**
          * List of database ids used in queries. It
          * can either represent a list of [`QueryId`]s
@@ -1175,9 +1395,12 @@ declare namespace Components {
             role: DbUserRole;
             size: number; // int64
         }
-        export interface ServerDatabaseRename {
+        export interface ServerDatabaseAdminRename {
             new_db: string;
             new_owner: string;
+        }
+        export interface ServerDatabaseRename {
+            new_db: string;
         }
         export interface ServerDatabaseResource {
             resource: DbResource;
@@ -1782,7 +2005,6 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type NewDb = string;
-            export type NewOwner = string;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1790,15 +2012,12 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         export interface QueryParameters {
-            new_owner: Parameters.NewOwner;
             new_db: Parameters.NewDb;
         }
         namespace Responses {
             export interface $201 {
             }
             export interface $401 {
-            }
-            export interface $403 {
             }
             export interface $404 {
             }
@@ -1918,7 +2137,6 @@ declare namespace Paths {
         namespace Parameters {
             export type Db = string;
             export type NewDb = string;
-            export type NewOwner = string;
             export type Owner = string;
         }
         export interface PathParameters {
@@ -1926,7 +2144,6 @@ declare namespace Paths {
             db: Parameters.Db;
         }
         export interface QueryParameters {
-            new_owner: Parameters.NewOwner;
             new_db: Parameters.NewDb;
         }
         namespace Responses {
@@ -3029,6 +3246,7 @@ export type SelectKeysQuery = Components.Schemas.SelectKeysQuery;
 export type SelectNodeCountQuery = Components.Schemas.SelectNodeCountQuery;
 export type SelectValuesQuery = Components.Schemas.SelectValuesQuery;
 export type ServerDatabase = Components.Schemas.ServerDatabase;
+export type ServerDatabaseAdminRename = Components.Schemas.ServerDatabaseAdminRename;
 export type ServerDatabaseRename = Components.Schemas.ServerDatabaseRename;
 export type ServerDatabaseResource = Components.Schemas.ServerDatabaseResource;
 export type UserCredentials = Components.Schemas.UserCredentials;

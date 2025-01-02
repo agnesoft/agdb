@@ -41,7 +41,6 @@ use utoipa::ToSchema;
 #[derive(Deserialize, IntoParams, ToSchema)]
 #[into_params(parameter_in = Query)]
 pub struct ServerDatabaseRename {
-    pub new_owner: String,
     pub new_db: String,
 }
 
@@ -297,7 +296,6 @@ pub(crate) async fn convert(
     responses(
          (status = 201, description = "db copied"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "cannot copy db to another user"),
          (status = 404, description = "user / db not found"),
          (status = 465, description = "target db exists"),
          (status = 467, description = "invalid db"),
@@ -313,12 +311,8 @@ pub(crate) async fn copy(
     let db_type = server_db.user_db(user.0, &owner, &db).await?.db_type;
     let username = server_db.user_name(user.0).await?;
 
-    if request.new_owner != username {
-        return Err(permission_denied("cannot copy db to another user"));
-    }
-
     if server_db
-        .find_user_db_id(user.0, &request.new_owner, &request.new_db)
+        .find_user_db_id(user.0, &username, &request.new_db)
         .await?
         .is_some()
     {
@@ -329,7 +323,7 @@ pub(crate) async fn copy(
         .exec(DbCopy {
             owner,
             db,
-            new_owner: request.new_owner.clone(),
+            new_owner: username,
             new_db: request.new_db.clone(),
             db_type,
         })
@@ -635,19 +629,18 @@ pub(crate) async fn rename(
     Path((owner, db)): Path<(String, String)>,
     request: Query<ServerDatabaseRename>,
 ) -> ServerResponse<impl IntoResponse> {
-    let _ = server_db.user_db_id(user.0, &owner, &db).await?;
+    let username = server_db.user_name(user.0).await?;
 
-    if request.new_owner == owner && request.new_db == db {
-        return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
-    }
-
-    if owner != server_db.user_name(user.0).await? {
+    if owner != username {
         return Err(permission_denied("owner only"));
     }
 
-    let new_owner_id = server_db.user_id(&request.new_owner).await?;
+    if request.new_db == db {
+        return Ok((StatusCode::CREATED, [("commit-index", String::new())]));
+    }
+
     if server_db
-        .find_user_db_id(new_owner_id, &request.new_owner, &request.new_db)
+        .find_user_db_id(user.0, &username, &request.new_db)
         .await?
         .is_some()
     {
@@ -658,7 +651,7 @@ pub(crate) async fn rename(
         .exec(DbRename {
             owner,
             db,
-            new_owner: request.new_owner.to_string(),
+            new_owner: username,
             new_db: request.new_db.to_string(),
         })
         .await?;

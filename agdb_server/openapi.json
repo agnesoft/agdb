@@ -1626,14 +1626,6 @@
             }
           },
           {
-            "name": "new_owner",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "new_db",
             "in": "query",
             "required": true,
@@ -1648,9 +1640,6 @@
           },
           "401": {
             "description": "unauthorized"
-          },
-          "403": {
-            "description": "cannot copy db to another user"
           },
           "404": {
             "description": "user / db not found"
@@ -1965,14 +1954,6 @@
             "name": "db",
             "in": "path",
             "description": "db name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "new_owner",
-            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -3786,7 +3767,7 @@
           }
         }
       },
-      "ServerDatabaseRename": {
+      "ServerDatabaseAdminRename": {
         "type": "object",
         "required": [
           "new_owner",
@@ -3797,6 +3778,17 @@
             "type": "string"
           },
           "new_owner": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseRename": {
+        "type": "object",
+        "required": [
+          "new_db"
+        ],
+        "properties": {
+          "new_db": {
             "type": "string"
           }
         }

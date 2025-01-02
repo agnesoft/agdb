@@ -37,11 +37,6 @@ const buttons = computed<Button[]>(() => {
             text: "Confirm",
             action: () => {
                 onConfirm.value?.();
-                console.log(
-                    "inputs",
-                    getContentInputs(KEY_MODAL),
-                    getInputValue(KEY_MODAL, "new_name"),
-                );
                 hideModal();
             },
             type: "submit",
@@ -49,9 +44,6 @@ const buttons = computed<Button[]>(() => {
     }
     return [...customButtons.value, ...defaultButtons];
 });
-
-// const inputs = ref<Map<string, string | number | boolean>>(new Map());
-// const inputs = new Map<string, Ref<string | number | boolean | undefined>>();
 
 type ShowModalProps = {
     header?: string;
@@ -75,19 +67,6 @@ const showModal = ({
         }
     });
 
-    // inputs.value = new Map();
-    // content?.forEach((c) => {
-    //     if (c.input) {
-    //         inputs.value.set(c.input.key, "");
-    //     }
-    // });
-    // inputs.clear();
-    // content?.forEach((c) => {
-    //     if (c.input) {
-    //         inputs.set(c.input.key, ref());
-    //     }
-    // });
-
     onConfirm.value = onConfirmFn;
     modalIsVisible.value = true;
     customButtons.value = extraButtons || [];
@@ -101,6 +80,5 @@ export default function useModal() {
         hideModal,
         showModal,
         onConfirm,
-        // inputs,
     };
 }

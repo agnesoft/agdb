@@ -37,11 +37,6 @@ watch(modalIsVisible, async () => {
                     class="modal-body"
                 />
             </form>
-            <!-- <AgdbContent
-                :content="modal.content"
-                :contentKey="KEY_MODAL"
-                class="modal-body"
-            /> -->
             <footer class="modal-footer">
                 <button
                     v-for="button in buttons"

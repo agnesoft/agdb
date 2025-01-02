@@ -4,12 +4,30 @@ const inputs = ref(
     new Map<Symbol, Map<string, Ref<string | number | boolean | undefined>>>(),
 );
 
-const getContentInputs = (contentKey: Symbol) => {
+const getContentInputs = (
+    contentKey: Symbol,
+): Map<string, Ref<string | number | boolean | undefined>> | undefined => {
     return inputs.value.get(contentKey);
 };
 
-const getInputValue = (contentKey: Symbol, inputKey: string) => {
-    return inputs.value.get(contentKey)?.get(inputKey);
+const getInputValue = (
+    contentKey: Symbol,
+    inputKey: string,
+): string | number | boolean | undefined => {
+    return inputs.value.get(contentKey)?.get(inputKey)?.value;
+};
+
+const setInputValue = (
+    contentKey: Symbol,
+    inputKey: string,
+    value: string | number | boolean | undefined,
+) => {
+    const input = inputs.value.get(contentKey)?.get(inputKey);
+    if (!input) {
+        return;
+    }
+
+    input.value = value;
 };
 
 const clearInputs = (contentKey: Symbol) => {
@@ -30,5 +48,11 @@ const addInput = (
 };
 
 export const useContentInputs = () => {
-    return { getContentInputs, clearInputs, addInput, getInputValue };
+    return {
+        getContentInputs,
+        clearInputs,
+        addInput,
+        getInputValue,
+        setInputValue,
+    };
 };

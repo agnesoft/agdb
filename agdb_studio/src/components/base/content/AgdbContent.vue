@@ -7,7 +7,7 @@ const props = defineProps({
     contentKey: { type: Symbol, required: true },
 });
 
-const { getContentInputs } = useContentInputs();
+const { getContentInputs, setInputValue } = useContentInputs();
 const inputs = getContentInputs(props.contentKey) ?? new Map();
 
 const autofocusElement = ref();
@@ -33,7 +33,7 @@ onMounted(() => {
             <div v-if="part.component">
                 <component :is="part.component" />
             </div>
-            <div v-if="part.input">
+            <div v-if="part.input" class="input-row">
                 <label>{{ part.input.label }}</label>
                 <input
                     v-if="inputs.get(part.input.key) !== undefined"
@@ -44,11 +44,14 @@ onMounted(() => {
                         }
                     "
                     @input="
-                        (event: Event) =>
-                            inputs.set(
+                        (event: Event) => {
+                            if (!part.input) return;
+                            setInputValue(
+                                props.contentKey,
                                 part.input?.key,
                                 (event.target as HTMLInputElement).value,
-                            )
+                            );
+                        }
                     "
                 />
             </div>
@@ -61,5 +64,9 @@ onMounted(() => {
     p {
         margin-bottom: 1rem;
     }
+}
+.input-row {
+    display: flex;
+    gap: 1rem;
 }
 </style>

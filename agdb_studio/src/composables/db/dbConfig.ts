@@ -133,13 +133,10 @@ const dbActions: Action[] = [
         key: "copy",
         label: "Copy",
         action: ({ params }: DbActionProps) => {
-            const new_name = getInputValue(
-                KEY_MODAL,
-                "new_name",
-            )?.value?.toString();
-            console.log(getInputValue(KEY_MODAL, "new_name"));
-            return new_name?.length
-                ? client.value?.db_copy({ ...params, new_name })
+            const new_db = getInputValue(KEY_MODAL, "new_db")?.toString();
+            const { db, owner } = params;
+            return new_db?.length
+                ? client.value?.db_copy({ db, owner, new_db })
                 : Promise.reject();
         },
         confirmation: [
@@ -148,7 +145,7 @@ const dbActions: Action[] = [
             ]),
             {
                 input: {
-                    key: "new_name",
+                    key: "new_db",
                     label: "New name",
                     type: "text",
                     autofocus: true,
@@ -198,12 +195,10 @@ const dbActions: Action[] = [
         key: "rename",
         label: "Rename",
         action: ({ params }: DbActionProps) => {
-            const new_name = getInputValue(
-                KEY_MODAL,
-                "new_name",
-            )?.value?.toString();
-            return new_name?.length
-                ? client.value?.db_rename({ ...params, new_name })
+            const new_db = getInputValue(KEY_MODAL, "new_db")?.toString();
+            const { db, owner } = params;
+            return new_db?.length
+                ? client.value?.db_rename({ db, owner, new_db })
                 : Promise.reject();
         },
         confirmation: [
@@ -212,7 +207,7 @@ const dbActions: Action[] = [
             ]),
             {
                 input: {
-                    key: "new_name",
+                    key: "new_db",
                     label: "New name",
                     type: "text",
                     autofocus: true,

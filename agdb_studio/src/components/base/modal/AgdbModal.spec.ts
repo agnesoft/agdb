@@ -2,6 +2,7 @@ import { describe, beforeEach, it, expect } from "vitest";
 import useModal from "@/composables/modal/modal";
 import AgdbModal from "./AgdbModal.vue";
 import { mount } from "@vue/test-utils";
+import { convertArrayOfStringsToContent } from "@/utils/content";
 
 describe("AgdbModal", () => {
     const { showModal, hideModal } = useModal();
@@ -14,7 +15,7 @@ describe("AgdbModal", () => {
         expect(wrapper.isVisible()).toBe(false);
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
         });
         await wrapper.vm.$nextTick();
         expect(wrapper.isVisible()).toBe(true);
@@ -22,7 +23,7 @@ describe("AgdbModal", () => {
     it("hides a modal when clicked on close button", async () => {
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
         });
         await wrapper.vm.$nextTick();
         await wrapper.find(".modal-footer .button").trigger("click");
@@ -32,7 +33,7 @@ describe("AgdbModal", () => {
     it("hides a modal when clicked on close button in heades", async () => {
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
         });
         await wrapper.vm.$nextTick();
         await wrapper.find(".modal-header .close-button").trigger("click");
@@ -42,7 +43,7 @@ describe("AgdbModal", () => {
     it("shows a modal with custom buttons", async () => {
         showModal({
             header: "Test Header",
-            body: ["Test Body"],
+            content: convertArrayOfStringsToContent(["Test Body"]),
             buttons: [
                 {
                     className: "button",

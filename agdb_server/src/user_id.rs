@@ -21,7 +21,6 @@ pub(crate) struct ClusterId();
 #[derive(Default)]
 pub(crate) struct UserName(pub(crate) String);
 
-#[axum::async_trait]
 impl<S: Sync + Send> FromRequestParts<S> for UserName
 where
     S: Send + Sync,
@@ -42,7 +41,6 @@ where
     }
 }
 
-#[axum::async_trait]
 impl<S: Sync + Send> FromRequestParts<S> for UserId
 where
     S: Send + Sync,
@@ -61,7 +59,6 @@ where
     }
 }
 
-#[axum::async_trait]
 impl<S: Sync + Send> FromRequestParts<S> for AdminId
 where
     S: Send + Sync,
@@ -86,7 +83,6 @@ where
     }
 }
 
-#[axum::async_trait]
 impl<S: Sync + Send> FromRequestParts<S> for ClusterId
 where
     S: Send + Sync,

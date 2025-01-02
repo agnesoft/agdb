@@ -103,6 +103,7 @@ pub struct QueryCondition {
 
     /// Condition data (or type) defining what type
     /// of validation is to be performed.
+    #[cfg_attr(feature = "openapi", schema(no_recursion))]
     pub data: QueryConditionData,
 }
 

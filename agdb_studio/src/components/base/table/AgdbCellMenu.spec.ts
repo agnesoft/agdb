@@ -4,6 +4,7 @@ import { describe, beforeEach, vi, it, expect } from "vitest";
 import { dbActions } from "@/composables/db/dbConfig";
 import { INJECT_KEY_ROW } from "@/composables/table/constants";
 import useModal from "@/composables/modal/modal";
+import { convertArrayOfStringsToContent } from "@/utils/content";
 const { fetchDatabases } = vi.hoisted(() => {
     return {
         fetchDatabases: vi.fn(),
@@ -84,10 +85,10 @@ describe("AgdbCellMenu", () => {
     });
     it("should open the modal on click when confirmation is required", async () => {
         const deleteAction = vi.fn();
-        const deleteConfirmation = [
+        const deleteConfirmation = convertArrayOfStringsToContent([
             "Are you sure you want to delete this database?",
             "This will permanently delete all data.",
-        ];
+        ]);
         const wrapper = mount(AgdbCellMenu, {
             props: {
                 actions: [

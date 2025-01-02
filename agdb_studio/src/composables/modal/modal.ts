@@ -1,12 +1,9 @@
 import { computed, reactive, ref } from "vue";
+import type { Button, Modal } from "./types";
 
-type Modal = {
-    header: string;
-    body: string[];
-};
-const content = reactive<Modal>({
+const modal = reactive<Modal>({
     header: "",
-    body: [],
+    content: [],
 });
 
 const modalIsVisible = ref(false);
@@ -14,15 +11,9 @@ const modalIsVisible = ref(false);
 const onConfirm = ref<() => void>();
 
 const hideModal = () => {
-    content.header = "";
-    content.body = [];
+    modal.header = "";
+    modal.content = [];
     modalIsVisible.value = false;
-};
-
-type Button = {
-    className: string;
-    text: string;
-    action: () => void;
 };
 
 const customButtons = ref<Button[]>([]);
@@ -50,20 +41,19 @@ const buttons = computed<Button[]>(() => {
 
 type ShowModalProps = {
     header?: string;
-    body?: string[];
-    footer?: string;
+    content?: Content[];
     onConfirm?: () => void;
     buttons?: Button[];
 };
 
 const showModal = ({
     header,
-    body,
+    content,
     onConfirm: onConfirmFn,
     buttons: extraButtons,
 }: ShowModalProps) => {
-    content.header = header ?? "";
-    content.body = body ?? [];
+    modal.header = header ?? "";
+    modal.content = content ?? [];
     onConfirm.value = onConfirmFn;
     modalIsVisible.value = true;
     customButtons.value = extraButtons || [];
@@ -71,7 +61,7 @@ const showModal = ({
 
 export default function useModal() {
     return {
-        content,
+        modal,
         buttons,
         modalIsVisible,
         hideModal,

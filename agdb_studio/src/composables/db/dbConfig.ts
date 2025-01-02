@@ -1,6 +1,7 @@
 import type { ServerDatabase } from "agdb_api/dist/openapi";
 import { client } from "@/services/api.service";
 import { dateFormatter } from "@/composables/table/utils";
+import { convertArrayOfStringsToContent } from "@/utils/content";
 
 type DbActionProps = ActionProps<ServerDatabase>;
 const dbActions: Action[] = [
@@ -17,8 +18,13 @@ const dbActions: Action[] = [
         label: "Backup",
         action: ({ params }: DbActionProps) => client.value?.db_backup(params),
         confirmation: [
-            "Are you sure you want to backup this database?",
-            "This will swap the existing backup with the current db.",
+            ...convertArrayOfStringsToContent(
+                ["Are you sure you want to backup this database?"],
+                { emphesizedWords: ["backup"] },
+            ),
+            ...convertArrayOfStringsToContent([
+                "This will swap the existing backup with the current db.",
+            ]),
         ],
     },
     {
@@ -30,38 +36,50 @@ const dbActions: Action[] = [
                 label: "All",
                 action: ({ params }: DbActionProps) =>
                     client.value?.db_clear({ ...params, resource: "all" }),
-                confirmation: [
-                    "Are you sure you want to clear all resources of this database?",
-                    "This will reset the database.",
-                ],
+                confirmation: convertArrayOfStringsToContent(
+                    [
+                        "Are you sure you want to clear all resources of this database?",
+                        "This will reset the database.",
+                    ],
+                    { emphesizedWords: ["clear", "all"] },
+                ),
             },
             {
                 key: "db",
                 label: "Db only",
                 action: ({ params }: DbActionProps) =>
                     client.value?.db_clear({ ...params, resource: "db" }),
-                confirmation: [
-                    "Are you sure you want to clear this database?",
-                    "This will remove all data.",
-                ],
+                confirmation: convertArrayOfStringsToContent(
+                    [
+                        "Are you sure you want to clear this database?",
+                        "This will remove all data.",
+                    ],
+                    { emphesizedWords: ["clear", "database"] },
+                ),
             },
             {
                 key: "audit",
                 label: "Audit only",
                 action: ({ params }: DbActionProps) =>
                     client.value?.db_clear({ ...params, resource: "audit" }),
-                confirmation: [
-                    "Are you sure you want to clear the audit log of this database?",
-                ],
+                confirmation: convertArrayOfStringsToContent(
+                    [
+                        "Are you sure you want to clear the audit log of this database?",
+                    ],
+                    { emphesizedWords: ["clear", "audit"] },
+                ),
             },
             {
                 key: "backup",
                 label: "Backup only",
                 action: ({ params }: DbActionProps) =>
                     client.value?.db_clear({ ...params, resource: "backup" }),
-                confirmation: [
-                    "Are you sure you want to clear the backup of this database?",
-                ],
+                confirmation: convertArrayOfStringsToContent(
+                    [
+                        "Are you sure you want to clear the backup of this database?",
+                    ],
+                    { emphesizedWords: ["clear", "backup"] },
+                ),
             },
         ],
     },
@@ -74,27 +92,36 @@ const dbActions: Action[] = [
                 label: "Memory",
                 action: ({ params }: DbActionProps) =>
                     client.value?.db_convert({ ...params, db_type: "memory" }),
-                confirmation: [
-                    "Are you sure you want to convert this database to memory only?",
-                ],
+                confirmation: convertArrayOfStringsToContent(
+                    [
+                        "Are you sure you want to convert this database to memory only?",
+                    ],
+                    { emphesizedWords: ["convert", "memory"] },
+                ),
             },
             {
                 key: "file",
                 label: "File",
                 action: ({ params }: DbActionProps) =>
                     client.value?.db_convert({ ...params, db_type: "file" }),
-                confirmation: [
-                    "Are you sure you want to convert this database to file based database?",
-                ],
+                confirmation: convertArrayOfStringsToContent(
+                    [
+                        "Are you sure you want to convert this database to file based database?",
+                    ],
+                    { emphesizedWords: ["convert", "file"] },
+                ),
             },
             {
                 key: "mapped",
                 label: "Mapped",
                 action: ({ params }: DbActionProps) =>
                     client.value?.db_convert({ ...params, db_type: "mapped" }),
-                confirmation: [
-                    "Are you sure you want to convert this database to memory mapped database?",
-                ],
+                confirmation: convertArrayOfStringsToContent(
+                    [
+                        "Are you sure you want to convert this database to memory mapped database?",
+                    ],
+                    { emphesizedWords: ["convert", "mapped"] },
+                ),
             },
         ],
     },
@@ -109,8 +136,14 @@ const dbActions: Action[] = [
         label: "Delete",
         action: ({ params }: DbActionProps) => client.value?.db_delete(params),
         confirmation: [
-            "Are you sure you want to delete this database?",
-            "This will permanently delete all data.",
+            ...convertArrayOfStringsToContent(
+                ["Are you sure you want to delete this database?"],
+                { emphesizedWords: ["delete"] },
+            ),
+            ...convertArrayOfStringsToContent(
+                ["This will permanently delete all data."],
+                { emphesizedWords: ["all data"] },
+            ),
         ],
     },
     {
@@ -118,17 +151,23 @@ const dbActions: Action[] = [
         label: "Optimize",
         action: ({ params }: DbActionProps) =>
             client.value?.db_optimize(params),
-        confirmation: ["Are you sure you want to optimize this database?"],
+        confirmation: convertArrayOfStringsToContent(
+            ["Are you sure you want to optimize this database?"],
+            { emphesizedWords: ["optimize"] },
+        ),
     },
 
     {
         key: "remove",
         label: "Remove",
         action: ({ params }: DbActionProps) => client.value?.db_remove(params),
-        confirmation: [
-            "Are you sure you want to remove this database?",
-            "This will only disassociate the database from the server. No data will be deleted.",
-        ],
+        confirmation: convertArrayOfStringsToContent(
+            [
+                "Are you sure you want to remove this database?",
+                "This will only disassociate the database from the server. No data will be deleted.",
+            ],
+            { emphesizedWords: ["remove"] },
+        ),
     },
     // todo: implement input for db name
     // {
@@ -140,10 +179,13 @@ const dbActions: Action[] = [
         key: "restore",
         label: "Restore",
         action: ({ params }: DbActionProps) => client.value?.db_restore(params),
-        confirmation: [
-            "Are you sure you want to restore backup of this database?",
-            "This will swap the existing db with the backup.",
-        ],
+        confirmation: convertArrayOfStringsToContent(
+            [
+                "Are you sure you want to restore backup of this database?",
+                "This will swap the existing db with the backup.",
+            ],
+            { emphesizedWords: ["restore"] },
+        ),
     },
 ];
 

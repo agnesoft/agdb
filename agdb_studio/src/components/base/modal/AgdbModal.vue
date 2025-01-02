@@ -2,21 +2,28 @@
 import useModal from "@/composables/modal/modal";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
 
-const { content, buttons, hideModal, modalIsVisible } = useModal();
+const { modal, buttons, hideModal, modalIsVisible } = useModal();
 </script>
 
 <template>
     <div v-if="modalIsVisible" class="modal-background">
         <section class="modal">
             <header class="modal-header">
-                <h3>{{ content.header }}</h3>
+                <h3>{{ modal.header }}</h3>
                 <button @click="hideModal" class="close-button">
                     <ClCloseMd />
                 </button>
             </header>
             <div class="modal-body">
-                <p v-for="(paragraph, index) in content.body" :key="index">
-                    {{ paragraph }}
+                <p v-for="(paragraph, index) in modal.content" :key="index">
+                    <span
+                        v-for="(text, index2) in paragraph.paragraph"
+                        :key="index2"
+                        :style="text.style"
+                        :class="text.className"
+                    >
+                        {{ text.text }}
+                    </span>
                 </p>
             </div>
             <footer class="modal-footer">

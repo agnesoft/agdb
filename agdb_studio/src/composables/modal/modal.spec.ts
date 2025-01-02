@@ -1,6 +1,6 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import useModal from "./modal";
-import { convertArrayOfStringsToContent } from "@/utils/content";
+import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 
 describe("Modal", () => {
     const { showModal, hideModal } = useModal();

@@ -2,7 +2,7 @@ import { describe, beforeEach, it, expect } from "vitest";
 import useModal from "@/composables/modal/modal";
 import AgdbModal from "./AgdbModal.vue";
 import { mount } from "@vue/test-utils";
-import { convertArrayOfStringsToContent } from "@/utils/content";
+import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 
 describe("AgdbModal", () => {
     const { showModal, hideModal } = useModal();

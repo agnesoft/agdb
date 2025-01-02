@@ -1,7 +1,11 @@
 import type { ServerDatabase } from "agdb_api/dist/openapi";
 import { client } from "@/services/api.service";
 import { dateFormatter } from "@/composables/table/utils";
-import { convertArrayOfStringsToContent } from "@/utils/content";
+import { convertArrayOfStringsToContent } from "@/composables/content/utils";
+import { useContentInputs } from "../content/inputs";
+import { KEY_MODAL } from "../modal/constants";
+
+const { getInputValue } = useContentInputs();
 
 type DbActionProps = ActionProps<ServerDatabase>;
 const dbActions: Action[] = [
@@ -125,12 +129,33 @@ const dbActions: Action[] = [
             },
         ],
     },
-    // todo: implement input for db name
-    // {
-    //     key: "copy",
-    //     label: "Copy",
-    //     action: ({ params }: DbActionProps) => client.value?.db_copy(params),
-    // },
+    {
+        key: "copy",
+        label: "Copy",
+        action: ({ params }: DbActionProps) => {
+            const new_name = getInputValue(
+                KEY_MODAL,
+                "new_name",
+            )?.value?.toString();
+            console.log(getInputValue(KEY_MODAL, "new_name"));
+            return new_name?.length
+                ? client.value?.db_copy({ ...params, new_name })
+                : Promise.reject();
+        },
+        confirmation: [
+            ...convertArrayOfStringsToContent([
+                "Insert name of the new database.",
+            ]),
+            {
+                input: {
+                    key: "new_name",
+                    label: "New name",
+                    type: "text",
+                    autofocus: true,
+                },
+            },
+        ],
+    },
     {
         key: "delete",
         label: "Delete",
@@ -169,12 +194,32 @@ const dbActions: Action[] = [
             { emphesizedWords: ["remove"] },
         ),
     },
-    // todo: implement input for db name
-    // {
-    //     key: "rename",
-    //     label: "Rename",
-    //     action: ({ params }: DbActionProps) => client.value?.db_rename(params),
-    // }
+    {
+        key: "rename",
+        label: "Rename",
+        action: ({ params }: DbActionProps) => {
+            const new_name = getInputValue(
+                KEY_MODAL,
+                "new_name",
+            )?.value?.toString();
+            return new_name?.length
+                ? client.value?.db_rename({ ...params, new_name })
+                : Promise.reject();
+        },
+        confirmation: [
+            ...convertArrayOfStringsToContent([
+                "Insert new name of the database.",
+            ]),
+            {
+                input: {
+                    key: "new_name",
+                    label: "New name",
+                    type: "text",
+                    autofocus: true,
+                },
+            },
+        ],
+    },
     {
         key: "restore",
         label: "Restore",

@@ -13,31 +13,44 @@ const openSubmenu = (key: string) => {
 </script>
 
 <template>
-    <div class="agdb-menu" @mouseleave="openedSubmenu = undefined">
-        <div
+    <ul class="agdb-menu" @mouseleave="openedSubmenu = undefined">
+        <li
             v-for="action in props.actions"
             :key="action.key"
-            @click="(event: MouseEvent) => action.action({ event })"
+            @click.prevent="
+                (event: MouseEvent) => {
+                    if (action.actions) {
+                        openSubmenu(action.key);
+                    }
+                    action.action({ event });
+                }
+            "
             class="menu-item"
             @mouseover="openSubmenu(action.key)"
             :data-key="action.key"
         >
-            {{ action.label }}
-            <span v-if="action.actions" class="menu-item-button">
-                <AkChevronRightSmall />
-            </span>
+            <a
+                href="#"
+                :class="{
+                    active: openedSubmenu === action.key && action.actions,
+                }"
+            >
+                {{ action.label }}
+                <span v-if="action.actions" class="menu-item-button">
+                    <AkChevronRightSmall />
+                </span>
+            </a>
             <AgdbMenu
                 class="sub-menu"
                 v-if="openedSubmenu === action.key && action.actions"
                 :actions="action.actions"
             />
-        </div>
-    </div>
+        </li>
+    </ul>
 </template>
 
 <style lang="less" scoped>
 .menu-item {
-    padding: 0.5rem;
     cursor: pointer;
     transition:
         background-color 0.2s,
@@ -54,6 +67,21 @@ const openSubmenu = (key: string) => {
     &:last-child {
         border-bottom-left-radius: 0.5rem;
         border-bottom-right-radius: 0.5rem;
+    }
+
+    a {
+        padding: 0.5rem;
+        display: block;
+        color: var(--color-text);
+        text-decoration: none;
+        opacity: none;
+        transition: color 0.2s;
+        width: 100%;
+        height: 100%;
+        &:hover,
+        &.active {
+            color: var(--black);
+        }
     }
 }
 .menu-item-button {

@@ -68,6 +68,7 @@ use utoipa_rapidoc::RapiDoc;
     ),
     components(schemas(
         routes::db::DbTypeParam,
+        routes::admin::db::ServerDatabaseAdminRename,
         routes::db::ServerDatabaseRename,
         routes::db::ServerDatabaseResource,
         routes::db::user::DbUserRoleParam,

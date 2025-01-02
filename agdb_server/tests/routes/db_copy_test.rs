@@ -25,7 +25,7 @@ async fn copy() -> anyhow::Result<()> {
         .query()
         .into()];
     server.api.db_exec_mut(owner, db, queries).await?;
-    let status = server.api.db_copy(owner, db, owner, db2).await?;
+    let status = server.api.db_copy(owner, db, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner).join(db2).exists());
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
@@ -66,7 +66,7 @@ async fn copy_from_different_user() -> anyhow::Result<()> {
         .into()];
     server.api.admin_db_exec_mut(owner, db, queries).await?;
     server.api.user_login(owner2, owner2).await?;
-    let status = server.api.db_copy(owner, db, owner2, db2).await?;
+    let status = server.api.db_copy(owner, db, db2).await?;
     assert_eq!(status, 201);
     assert!(Path::new(&server.data_dir).join(owner2).join(db2).exists());
     let queries = &vec![QueryBuilder::select().ids("root").query().into()];
@@ -97,34 +97,8 @@ async fn copy_to_removed() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::Mapped).await?;
     server.api.db_add(owner, db2, DbType::Mapped).await?;
     server.api.db_remove(owner, db2).await?;
-    let status = server
-        .api
-        .db_copy(owner, db, owner, db2)
-        .await
-        .unwrap_err()
-        .status;
+    let status = server.api.db_copy(owner, db, db2).await.unwrap_err().status;
     assert_eq!(status, 465);
-    Ok(())
-}
-
-#[tokio::test]
-async fn copy_to_other_user() -> anyhow::Result<()> {
-    let mut server = TestServer::new().await?;
-    let owner = &next_user_name();
-    let owner2 = &next_user_name();
-    let db = &next_db_name();
-    server.api.user_login(ADMIN, ADMIN).await?;
-    server.api.admin_user_add(owner, owner).await?;
-    server.api.admin_user_add(owner2, owner2).await?;
-    server.api.user_login(owner, owner).await?;
-    server.api.db_add(owner, db, DbType::Mapped).await?;
-    let status = server
-        .api
-        .db_copy(owner, db, owner2, db)
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 403);
     Ok(())
 }
 
@@ -139,12 +113,7 @@ async fn target_exists() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Memory).await?;
     server.api.db_add(owner, db2, DbType::Memory).await?;
-    let status = server
-        .api
-        .db_copy(owner, db, owner, db2)
-        .await
-        .unwrap_err()
-        .status;
+    let status = server.api.db_copy(owner, db, db2).await.unwrap_err().status;
     assert_eq!(status, 465);
     Ok(())
 }
@@ -158,12 +127,7 @@ async fn target_self() -> anyhow::Result<()> {
     server.api.admin_user_add(owner, owner).await?;
     server.api.user_login(owner, owner).await?;
     server.api.db_add(owner, db, DbType::Memory).await?;
-    let status = server
-        .api
-        .db_copy(owner, db, owner, db)
-        .await
-        .unwrap_err()
-        .status;
+    let status = server.api.db_copy(owner, db, db).await.unwrap_err().status;
     assert_eq!(status, 465);
     Ok(())
 }
@@ -179,7 +143,7 @@ async fn invalid() -> anyhow::Result<()> {
     server.api.db_add(owner, db, DbType::File).await?;
     let status = server
         .api
-        .db_copy(owner, db, owner, &format!("{}/a\0a", owner))
+        .db_copy(owner, db, &format!("{}/a\0a", owner))
         .await
         .unwrap_err()
         .status;
@@ -196,7 +160,7 @@ async fn db_not_found() -> anyhow::Result<()> {
     server.api.user_login(owner, owner).await?;
     let status = server
         .api
-        .db_copy(owner, "db", owner, "dbx")
+        .db_copy(owner, "db", "dbx")
         .await
         .unwrap_err()
         .status;
@@ -209,7 +173,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .db_copy("owner", "db", "owner", "dbx")
+        .db_copy("owner", "db", "dbx")
         .await
         .unwrap_err()
         .status;

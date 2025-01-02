@@ -17,7 +17,6 @@ use crate::config::Config;
 use crate::db_pool::DbPool;
 use crate::error_code::ErrorCode;
 use crate::routes::db::DbTypeParam;
-use crate::routes::db::ServerDatabaseRename;
 use crate::routes::db::ServerDatabaseResource;
 use crate::server_db::ServerDb;
 use crate::server_error::permission_denied;
@@ -35,6 +34,16 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
+use serde::Deserialize;
+use utoipa::IntoParams;
+use utoipa::ToSchema;
+
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[into_params(parameter_in = Query)]
+pub struct ServerDatabaseAdminRename {
+    pub new_owner: String,
+    pub new_db: String,
+}
 
 #[utoipa::path(post,
     path = "/api/v1/admin/db/{owner}/{db}/add",
@@ -249,7 +258,7 @@ pub(crate) async fn convert(
     params(
         ("owner" = String, Path, description = "db owner user name"),
         ("db" = String, Path, description = "db name"),
-        ServerDatabaseRename
+        ServerDatabaseAdminRename
     ),
     responses(
          (status = 201, description = "db copied"),
@@ -264,7 +273,7 @@ pub(crate) async fn copy(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-    request: Query<ServerDatabaseRename>,
+    request: Query<ServerDatabaseAdminRename>,
 ) -> ServerResponse<impl IntoResponse> {
     let owner_id = server_db.user_id(&owner).await?;
     let db_type = server_db.user_db(owner_id, &owner, &db).await?.db_type;
@@ -533,7 +542,7 @@ pub(crate) async fn remove(
     params(
         ("owner" = String, Path, description = "db owner user name"),
         ("db" = String, Path, description = "db name"),
-        ServerDatabaseRename
+        ServerDatabaseAdminRename
     ),
     responses(
          (status = 201, description = "db renamed"),
@@ -548,7 +557,7 @@ pub(crate) async fn rename(
     State(cluster): State<Cluster>,
     State(server_db): State<ServerDb>,
     Path((owner, db)): Path<(String, String)>,
-    request: Query<ServerDatabaseRename>,
+    request: Query<ServerDatabaseAdminRename>,
 ) -> ServerResponse<impl IntoResponse> {
     let owner_id = server_db.user_id(&owner).await?;
     let _ = server_db.user_db_id(owner_id, &owner, &db).await?;

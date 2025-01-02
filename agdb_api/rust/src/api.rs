@@ -446,19 +446,11 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
-    pub async fn db_copy(
-        &self,
-        owner: &str,
-        db: &str,
-        new_owner: &str,
-        new_db: &str,
-    ) -> AgdbApiResult<u16> {
+    pub async fn db_copy(&self, owner: &str, db: &str, new_db: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(
-                &self.url(&format!(
-                    "/db/{owner}/{db}/copy?new_owner={new_owner}&new_db={new_db}"
-                )),
+                &self.url(&format!("/db/{owner}/{db}/copy?new_db={new_db}")),
                 &None,
                 &self.token,
             )
@@ -522,19 +514,11 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn db_rename(
-        &self,
-        owner: &str,
-        db: &str,
-        new_owner: &str,
-        new_db: &str,
-    ) -> AgdbApiResult<u16> {
+    pub async fn db_rename(&self, owner: &str, db: &str, new_db: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(
-                &self.url(&format!(
-                    "/db/{owner}/{db}/rename?new_owner={new_owner}&new_db={new_db}"
-                )),
+                &self.url(&format!("/db/{owner}/{db}/rename?new_db={new_db}")),
                 &None,
                 &self.token,
             )

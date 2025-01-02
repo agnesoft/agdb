@@ -1,10 +1,11 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.1.0",
   "info": {
     "title": "agdb_server",
     "description": "Agnesoft Graph Database Server",
     "license": {
-      "name": "Apache-2.0"
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
     },
     "version": "0.9.2"
   },
@@ -1625,14 +1626,6 @@
             }
           },
           {
-            "name": "new_owner",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "new_db",
             "in": "query",
             "required": true,
@@ -1647,9 +1640,6 @@
           },
           "401": {
             "description": "unauthorized"
-          },
-          "403": {
-            "description": "cannot copy db to another user"
           },
           "404": {
             "description": "user / db not found"
@@ -1964,14 +1954,6 @@
             "name": "db",
             "in": "path",
             "description": "db name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "new_owner",
-            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
@@ -2441,78 +2423,92 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "property == this",
             "required": [
               "Equal"
             ],
             "properties": {
               "Equal": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property == this"
               }
             }
           },
           {
             "type": "object",
+            "description": "property > this",
             "required": [
               "GreaterThan"
             ],
             "properties": {
               "GreaterThan": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property > this"
               }
             }
           },
           {
             "type": "object",
+            "description": "property >= this",
             "required": [
               "GreaterThanOrEqual"
             ],
             "properties": {
               "GreaterThanOrEqual": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property >= this"
               }
             }
           },
           {
             "type": "object",
+            "description": "property < this",
             "required": [
               "LessThan"
             ],
             "properties": {
               "LessThan": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property < this"
               }
             }
           },
           {
             "type": "object",
+            "description": "property <= this",
             "required": [
               "LessThanOrEqual"
             ],
             "properties": {
               "LessThanOrEqual": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property <= this"
               }
             }
           },
           {
             "type": "object",
+            "description": "property != this",
             "required": [
               "NotEqual"
             ],
             "properties": {
               "NotEqual": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property != this"
               }
             }
           },
           {
             "type": "object",
+            "description": "property.contains(this)",
             "required": [
               "Contains"
             ],
             "properties": {
               "Contains": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "property.contains(this)"
               }
             }
           }
@@ -2523,6 +2519,7 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "property == this",
             "required": [
               "Equal"
             ],
@@ -2537,6 +2534,7 @@
           },
           {
             "type": "object",
+            "description": "property > this",
             "required": [
               "GreaterThan"
             ],
@@ -2551,6 +2549,7 @@
           },
           {
             "type": "object",
+            "description": "property >= this",
             "required": [
               "GreaterThanOrEqual"
             ],
@@ -2565,6 +2564,7 @@
           },
           {
             "type": "object",
+            "description": "property < this",
             "required": [
               "LessThan"
             ],
@@ -2579,6 +2579,7 @@
           },
           {
             "type": "object",
+            "description": "property <= this",
             "required": [
               "LessThanOrEqual"
             ],
@@ -2593,6 +2594,7 @@
           },
           {
             "type": "object",
+            "description": "property != this",
             "required": [
               "NotEqual"
             ],
@@ -2623,23 +2625,30 @@
         ],
         "properties": {
           "from": {
-            "allOf": [
+            "oneOf": [
               {
-                "$ref": "#/components/schemas/DbId"
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DbId",
+                "description": "Origin node id."
               }
-            ],
-            "nullable": true
+            ]
           },
           "id": {
-            "$ref": "#/components/schemas/DbId"
+            "$ref": "#/components/schemas/DbId",
+            "description": "Element id."
           },
           "to": {
-            "allOf": [
+            "oneOf": [
               {
-                "$ref": "#/components/schemas/DbId"
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DbId",
+                "description": "Destination node id."
               }
-            ],
-            "nullable": true
+            ]
           },
           "values": {
             "type": "array",
@@ -2664,23 +2673,27 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "Ascending order (from smallest)",
             "required": [
               "Asc"
             ],
             "properties": {
               "Asc": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "Ascending order (from smallest)"
               }
             }
           },
           {
             "type": "object",
+            "description": "Descending order (from largest)",
             "required": [
               "Desc"
             ],
             "properties": {
               "Desc": {
-                "$ref": "#/components/schemas/DbValue"
+                "$ref": "#/components/schemas/DbValue",
+                "description": "Descending order (from largest)"
               }
             }
           }
@@ -2696,10 +2709,12 @@
         ],
         "properties": {
           "key": {
-            "$ref": "#/components/schemas/DbValue"
+            "$ref": "#/components/schemas/DbValue",
+            "description": "Key of the property"
           },
           "value": {
-            "$ref": "#/components/schemas/DbValue"
+            "$ref": "#/components/schemas/DbValue",
+            "description": "Value of the property"
           }
         }
       },
@@ -2769,19 +2784,25 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "Byte array, sometimes referred to as blob",
             "required": [
               "Bytes"
             ],
             "properties": {
               "Bytes": {
-                "type": "string",
-                "format": "binary",
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                },
                 "description": "Byte array, sometimes referred to as blob"
               }
             }
           },
           {
             "type": "object",
+            "description": "64-bit wide signed integer",
             "required": [
               "I64"
             ],
@@ -2795,6 +2816,7 @@
           },
           {
             "type": "object",
+            "description": "64-bit wide unsigned integer",
             "required": [
               "U64"
             ],
@@ -2809,17 +2831,20 @@
           },
           {
             "type": "object",
+            "description": "64-bit floating point number",
             "required": [
               "F64"
             ],
             "properties": {
               "F64": {
-                "$ref": "#/components/schemas/DbF64"
+                "$ref": "#/components/schemas/DbF64",
+                "description": "64-bit floating point number"
               }
             }
           },
           {
             "type": "object",
+            "description": "UTF-8 string",
             "required": [
               "String"
             ],
@@ -2832,6 +2857,7 @@
           },
           {
             "type": "object",
+            "description": "List of 64-bit wide signed integers",
             "required": [
               "VecI64"
             ],
@@ -2848,6 +2874,7 @@
           },
           {
             "type": "object",
+            "description": "List of 64-bit wide unsigned integers",
             "required": [
               "VecU64"
             ],
@@ -2865,6 +2892,7 @@
           },
           {
             "type": "object",
+            "description": "List of 64-bit floating point numbers",
             "required": [
               "VecF64"
             ],
@@ -2880,6 +2908,7 @@
           },
           {
             "type": "object",
+            "description": "List of UTF-8 strings",
             "required": [
               "VecString"
             ],
@@ -2912,7 +2941,8 @@
             "description": "Aliases to be inserted"
           },
           "ids": {
-            "$ref": "#/components/schemas/QueryIds"
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Ids to be aliased"
           }
         }
       },
@@ -2932,21 +2962,26 @@
             "description": "If `true` create an edge between each origin\nand destination."
           },
           "from": {
-            "$ref": "#/components/schemas/QueryIds"
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Origins"
           },
           "ids": {
-            "$ref": "#/components/schemas/QueryIds"
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Optional ids of edges (optionally a search sub-query).\nThis can be empty."
           },
           "to": {
-            "$ref": "#/components/schemas/QueryIds"
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Destinations"
           },
           "values": {
-            "$ref": "#/components/schemas/QueryValues"
+            "$ref": "#/components/schemas/QueryValues",
+            "description": "Key value pairs to be associated with\nthe new edges."
           }
         }
       },
       "InsertIndexQuery": {
-        "$ref": "#/components/schemas/DbValue"
+        "$ref": "#/components/schemas/DbValue",
+        "description": "Query to create a new index on\na given key."
       },
       "InsertNodesQuery": {
         "type": "object",
@@ -2972,10 +3007,12 @@
             "minimum": 0
           },
           "ids": {
-            "$ref": "#/components/schemas/QueryIds"
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Optional ids of nodes (optionally a search sub-query).\nThis can be empty."
           },
           "values": {
-            "$ref": "#/components/schemas/QueryValues"
+            "$ref": "#/components/schemas/QueryValues",
+            "description": "Key value pairs to be associated with\nthe new nodes."
           }
         }
       },
@@ -2988,10 +3025,12 @@
         ],
         "properties": {
           "ids": {
-            "$ref": "#/components/schemas/QueryIds"
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Ids whose properties should be updated"
           },
           "values": {
-            "$ref": "#/components/schemas/QueryValues"
+            "$ref": "#/components/schemas/QueryValues",
+            "description": "Key value pairs to be inserted to the existing elements."
           }
         }
       },
@@ -3038,13 +3077,16 @@
         ],
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/QueryConditionData"
+            "$ref": "#/components/schemas/QueryConditionData",
+            "description": "Condition data (or type) defining what type\nof validation is to be performed."
           },
           "logic": {
-            "$ref": "#/components/schemas/QueryConditionLogic"
+            "$ref": "#/components/schemas/QueryConditionLogic",
+            "description": "Logic operator (e.g. And, Or)"
           },
           "modifier": {
-            "$ref": "#/components/schemas/QueryConditionModifier"
+            "$ref": "#/components/schemas/QueryConditionModifier",
+            "description": "Condition modifier (e.g. None, Beyond, Not, NotBeyond)"
           }
         }
       },
@@ -3052,12 +3094,14 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "Distance from the search origin. Takes count comparison\n(e.g. Equal, GreaterThan).",
             "required": [
               "Distance"
             ],
             "properties": {
               "Distance": {
-                "$ref": "#/components/schemas/CountComparison"
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Distance from the search origin. Takes count comparison\n(e.g. Equal, GreaterThan)."
               }
             }
           },
@@ -3070,39 +3114,46 @@
           },
           {
             "type": "object",
+            "description": "Tests number of edges (from+to) of the current element.\nOnly nodes will pass. Self-referential edges are\ncounted twice. Takes count comparison\n(e.g. Equal, GreaterThan).",
             "required": [
               "EdgeCount"
             ],
             "properties": {
               "EdgeCount": {
-                "$ref": "#/components/schemas/CountComparison"
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Tests number of edges (from+to) of the current element.\nOnly nodes will pass. Self-referential edges are\ncounted twice. Takes count comparison\n(e.g. Equal, GreaterThan)."
               }
             }
           },
           {
             "type": "object",
+            "description": "Tests the number of outgoing edges (from) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan).",
             "required": [
               "EdgeCountFrom"
             ],
             "properties": {
               "EdgeCountFrom": {
-                "$ref": "#/components/schemas/CountComparison"
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Tests the number of outgoing edges (from) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan)."
               }
             }
           },
           {
             "type": "object",
+            "description": "Tests the number of incoming edges (to) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan).",
             "required": [
               "EdgeCountTo"
             ],
             "properties": {
               "EdgeCountTo": {
-                "$ref": "#/components/schemas/CountComparison"
+                "$ref": "#/components/schemas/CountComparison",
+                "description": "Tests the number of incoming edges (to) of the\ncurrent element. Takes count comparison\n(e.g. Equal, GreaterThan)."
               }
             }
           },
           {
             "type": "object",
+            "description": "Tests if the current id is in the list of ids.",
             "required": [
               "Ids"
             ],
@@ -3118,6 +3169,7 @@
           },
           {
             "type": "object",
+            "description": "Tests if the current element has a property `key`\nwith a value that evaluates true against `comparison`.",
             "required": [
               "KeyValue"
             ],
@@ -3131,10 +3183,12 @@
                 ],
                 "properties": {
                   "key": {
-                    "$ref": "#/components/schemas/DbValue"
+                    "$ref": "#/components/schemas/DbValue",
+                    "description": "Property key"
                   },
                   "value": {
-                    "$ref": "#/components/schemas/Comparison"
+                    "$ref": "#/components/schemas/Comparison",
+                    "description": "Comparison operator (e.g. Equal, GreaterThan etc.)"
                   }
                 }
               }
@@ -3142,6 +3196,7 @@
           },
           {
             "type": "object",
+            "description": "Test if the current element has **all** of the keys listed.",
             "required": [
               "Keys"
             ],
@@ -3164,6 +3219,7 @@
           },
           {
             "type": "object",
+            "description": "Nested list of conditions (equivalent to brackets).",
             "required": [
               "Where"
             ],
@@ -3202,17 +3258,20 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "Numerical id as [`DbId`]",
             "required": [
               "Id"
             ],
             "properties": {
               "Id": {
-                "$ref": "#/components/schemas/DbId"
+                "$ref": "#/components/schemas/DbId",
+                "description": "Numerical id as [`DbId`]"
               }
             }
           },
           {
             "type": "object",
+            "description": "String alias",
             "required": [
               "Alias"
             ],
@@ -3230,6 +3289,7 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "List of [`QueryId`]s",
             "required": [
               "Ids"
             ],
@@ -3245,12 +3305,14 @@
           },
           {
             "type": "object",
+            "description": "Search query",
             "required": [
               "Search"
             ],
             "properties": {
               "Search": {
-                "$ref": "#/components/schemas/SearchQuery"
+                "$ref": "#/components/schemas/SearchQuery",
+                "description": "Search query"
               }
             }
           }
@@ -3486,6 +3548,7 @@
         "oneOf": [
           {
             "type": "object",
+            "description": "Single list of properties (key-value pairs)\nto be applied to all elements in a query.",
             "required": [
               "Single"
             ],
@@ -3501,6 +3564,7 @@
           },
           {
             "type": "object",
+            "description": "List of lists of properties (key-value pairs)\nto be applied to all elements in a query. There\nmust be as many lists of properties as ids\nin a query.",
             "required": [
               "Multi"
             ],
@@ -3528,13 +3592,16 @@
         "description": "Query to remove aliases from the database. It\nis not an error if an alias to be removed already\ndoes not exist.\n\nThe result will be a negative number signifying how\nmany aliases have been actually removed."
       },
       "RemoveIndexQuery": {
-        "$ref": "#/components/schemas/DbValue"
+        "$ref": "#/components/schemas/DbValue",
+        "description": "Query to create a new index on\na given key."
       },
       "RemoveQuery": {
-        "$ref": "#/components/schemas/QueryIds"
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to remove database elements (nodes & edges). It\nis not an error if any of the `ids` do not already exist.\n\nAll properties associated with a given element are also removed.\n\nIf removing nodes all of its incoming and outgoing edges are\nalso removed along with their properties."
       },
       "RemoveValuesQuery": {
-        "$ref": "#/components/schemas/SelectValuesQuery"
+        "$ref": "#/components/schemas/SelectValuesQuery",
+        "description": "Query to remove properties from existing elements\nin the database. All of the specified `ids` must\nexist in the database however they do not need to have\nall the listed keys (it is NOT an error if any or all keys\ndo not exist on any of the elements)."
       },
       "SearchQuery": {
         "type": "object",
@@ -3550,7 +3617,8 @@
         ],
         "properties": {
           "algorithm": {
-            "$ref": "#/components/schemas/SearchQueryAlgorithm"
+            "$ref": "#/components/schemas/SearchQueryAlgorithm",
+            "description": "Search algorithm to be used. Will be bypassed for path\nsearches that unconditionally use A*."
           },
           "conditions": {
             "type": "array",
@@ -3560,7 +3628,8 @@
             "description": "Set of conditions every element must satisfy to be included in the\nresult. Some conditions also influence the search path as well."
           },
           "destination": {
-            "$ref": "#/components/schemas/QueryId"
+            "$ref": "#/components/schemas/QueryId",
+            "description": "Target element of the path search (if origin is specified)\nor starting element of the reverse search (if origin is not specified)."
           },
           "limit": {
             "type": "integer",
@@ -3582,7 +3651,8 @@
             "description": "Order of the elements in the result. The sorting happens before\n`offset` and `limit` are applied."
           },
           "origin": {
-            "$ref": "#/components/schemas/QueryId"
+            "$ref": "#/components/schemas/QueryId",
+            "description": "Starting element of the search."
           }
         }
       },
@@ -3597,7 +3667,8 @@
         ]
       },
       "SelectAliasesQuery": {
-        "$ref": "#/components/schemas/QueryIds"
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to select aliases of given ids. All of the ids\nmust exist in the database and have an alias.\n\nThe result will be number of returned aliases and list\nof elements with a single property `String(\"alias\")` holding\nthe value `String`."
       },
       "SelectAllAliasesQuery": {
         "type": "object",
@@ -3617,7 +3688,8 @@
             "description": "If set to `true` the query will count outgoing edges\nfrom the nodes."
           },
           "ids": {
-            "$ref": "#/components/schemas/QueryIds"
+            "$ref": "#/components/schemas/QueryIds",
+            "description": "Ids of the nodes to select edge count for."
           },
           "to": {
             "type": "boolean",
@@ -3630,10 +3702,12 @@
         "description": "Query to select all indexes in the database.\n\nThe result will be number of returned indexes and single element\nwith index 0 and the properties corresponding to the names of the indexes\n(keys) with `u64` values representing number of indexed values in each\nindex."
       },
       "SelectKeyCountQuery": {
-        "$ref": "#/components/schemas/QueryIds"
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to select number of properties (key count) of\ngiven ids. All of the ids must exist in the database.\n\nThe result will be number of elements returned and the list\nof elements with a single property `String(\"key_count\")` with\na value `u64`."
       },
       "SelectKeysQuery": {
-        "$ref": "#/components/schemas/QueryIds"
+        "$ref": "#/components/schemas/QueryIds",
+        "description": "Query to select only property keys of given ids. All\nof the ids must exist in the database.\n\nThe result will be number of elements returned and the list\nof elements with all properties except all values will be empty."
       },
       "SelectNodeCountQuery": {
         "type": "object",
@@ -3693,7 +3767,7 @@
           }
         }
       },
-      "ServerDatabaseRename": {
+      "ServerDatabaseAdminRename": {
         "type": "object",
         "required": [
           "new_owner",
@@ -3704,6 +3778,17 @@
             "type": "string"
           },
           "new_owner": {
+            "type": "string"
+          }
+        }
+      },
+      "ServerDatabaseRename": {
+        "type": "object",
+        "required": [
+          "new_db"
+        ],
+        "properties": {
+          "new_db": {
             "type": "string"
           }
         }

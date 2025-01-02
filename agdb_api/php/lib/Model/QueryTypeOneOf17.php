@@ -1,6 +1,6 @@
 <?php
 /**
- * ChangePassword
+ * QueryTypeOneOf17
  *
  * PHP version 7.4
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * ChangePassword Class Doc Comment
+ * QueryTypeOneOf17 Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
+class QueryTypeOneOf17 implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       *
       * @var string
       */
-    protected static $openAPIModelName = 'ChangePassword';
+    protected static $openAPIModelName = 'QueryType_oneOf_17';
 
     /**
       * Array of property to type mappings. Used for (de)serialization
@@ -57,8 +57,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'new_password' => 'string',
-        'password' => 'string'
+        'select_values' => '\Agnesoft\AgdbApi\Model\SelectValuesQuery'
     ];
 
     /**
@@ -69,8 +68,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'new_password' => null,
-        'password' => null
+        'select_values' => null
     ];
 
     /**
@@ -79,8 +77,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'new_password' => false,
-        'password' => false
+        'select_values' => false
     ];
 
     /**
@@ -169,8 +166,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'new_password' => 'new_password',
-        'password' => 'password'
+        'select_values' => 'SelectValues'
     ];
 
     /**
@@ -179,8 +175,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'new_password' => 'setNewPassword',
-        'password' => 'setPassword'
+        'select_values' => 'setSelectValues'
     ];
 
     /**
@@ -189,8 +184,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'new_password' => 'getNewPassword',
-        'password' => 'getPassword'
+        'select_values' => 'getSelectValues'
     ];
 
     /**
@@ -250,8 +244,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(array $data = null)
     {
-        $this->setIfExists('new_password', $data ?? [], null);
-        $this->setIfExists('password', $data ?? [], null);
+        $this->setIfExists('select_values', $data ?? [], null);
     }
 
     /**
@@ -281,11 +274,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['new_password'] === null) {
-            $invalidProperties[] = "'new_password' can't be null";
-        }
-        if ($this->container['password'] === null) {
-            $invalidProperties[] = "'password' can't be null";
+        if ($this->container['select_values'] === null) {
+            $invalidProperties[] = "'select_values' can't be null";
         }
         return $invalidProperties;
     }
@@ -303,55 +293,28 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets new_password
+     * Gets select_values
      *
-     * @return string
+     * @return \Agnesoft\AgdbApi\Model\SelectValuesQuery
      */
-    public function getNewPassword()
+    public function getSelectValues()
     {
-        return $this->container['new_password'];
+        return $this->container['select_values'];
     }
 
     /**
-     * Sets new_password
+     * Sets select_values
      *
-     * @param string $new_password new_password
+     * @param \Agnesoft\AgdbApi\Model\SelectValuesQuery $select_values select_values
      *
      * @return self
      */
-    public function setNewPassword($new_password)
+    public function setSelectValues($select_values)
     {
-        if (is_null($new_password)) {
-            throw new \InvalidArgumentException('non-nullable new_password cannot be null');
+        if (is_null($select_values)) {
+            throw new \InvalidArgumentException('non-nullable select_values cannot be null');
         }
-        $this->container['new_password'] = $new_password;
-
-        return $this;
-    }
-
-    /**
-     * Gets password
-     *
-     * @return string
-     */
-    public function getPassword()
-    {
-        return $this->container['password'];
-    }
-
-    /**
-     * Sets password
-     *
-     * @param string $password password
-     *
-     * @return self
-     */
-    public function setPassword($password)
-    {
-        if (is_null($password)) {
-            throw new \InvalidArgumentException('non-nullable password cannot be null');
-        }
-        $this->container['password'] = $password;
+        $this->container['select_values'] = $select_values;
 
         return $this;
     }

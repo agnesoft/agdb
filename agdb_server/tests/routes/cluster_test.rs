@@ -530,7 +530,7 @@ async fn db_copy() -> anyhow::Result<()> {
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbType::Memory).await?;
-    client.db_copy(owner, db, owner, db2).await?;
+    client.db_copy(owner, db, db2).await?;
     client.user_login(owner, owner).await?;
     let dbs = client.db_list().await?.1.len();
     assert_eq!(dbs, 2);
@@ -669,7 +669,7 @@ async fn db_rename() -> anyhow::Result<()> {
     client.admin_user_add(owner, owner).await?;
     client.cluster_user_login(owner, owner).await?;
     client.db_add(owner, db, DbType::Memory).await?;
-    client.db_rename(owner, db, owner, db2).await?;
+    client.db_rename(owner, db, db2).await?;
     let dbs = client.db_list().await?.1;
     assert_eq!(dbs.len(), 1);
     assert_eq!(dbs[0].db, *db2);

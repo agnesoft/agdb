@@ -340,12 +340,13 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         );
 
         for log in logs {
-            self.validate_log_append(request, log)?;
-            self.append_storage(log)
-                .await
-                .map_err(|e| self.commit_error(request, e.description))?;
+            if self.validate_log_append(request, log)? {
+                self.append_storage(log)
+                    .await
+                    .map_err(|e| self.commit_error(request, e.description))?;
+            }
 
-            if log.index <= request.log_commit {
+            if log.index <= request.log_commit && self.local().log_commit < log.index {
                 self.commit_storage(log.index)
                     .await
                     .map_err(|e| self.commit_error(request, e.description))?;
@@ -559,28 +560,38 @@ impl<T: Clone, N, S: Storage<T, N>> Cluster<T, N, S> {
         Ok(())
     }
 
-    fn validate_log_append(&self, request: &Request<T>, log: &Log<T>) -> Result<(), Response> {
-        if self.local().log_commit >= log.index || log.index > (self.local().log_index + 1) {
-            return Err(Response {
-                target: request.index,
-                result: ResponseType::LogMismatch(LogMismatch {
-                    index: MismatchedValues {
-                        local: Some(self.local().log_index),
-                        requested: Some(log.index),
-                    },
-                    term: MismatchedValues {
-                        local: Some(self.local().log_term),
-                        requested: Some(log.term),
-                    },
-                    commit: MismatchedValues {
-                        local: Some(self.local().log_commit),
-                        requested: Some(log.index),
-                    },
-                }),
-            });
+    fn validate_log_append(&self, request: &Request<T>, log: &Log<T>) -> Result<bool, Response> {
+        if self.local().log_term == log.term {
+            if self.local().log_index >= log.index {
+                return Ok(false);
+            } else if self.local().log_commit < log.index && self.local().log_index + 1 == log.index
+            {
+                return Ok(true);
+            }
+        } else if self.local().log_term < log.term
+            && self.local().log_commit < log.index
+            && self.local().log_index + 1 >= log.index
+        {
+            return Ok(true);
         }
 
-        Ok(())
+        Err(Response {
+            target: request.index,
+            result: ResponseType::LogMismatch(LogMismatch {
+                index: MismatchedValues {
+                    local: Some(self.local().log_index),
+                    requested: Some(log.index),
+                },
+                term: MismatchedValues {
+                    local: Some(self.local().log_term),
+                    requested: Some(log.term),
+                },
+                commit: MismatchedValues {
+                    local: Some(self.local().log_commit),
+                    requested: Some(log.index),
+                },
+            }),
+        })
     }
 
     fn validate_log_for_vote(&self, request: &Request<T>) -> Result<(), Response> {

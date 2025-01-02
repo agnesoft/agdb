@@ -1,6 +1,6 @@
 <?php
 /**
- * ChangePassword
+ * ServerDatabaseAdminRename
  *
  * PHP version 7.4
  *
@@ -32,7 +32,7 @@ use \ArrayAccess;
 use \Agnesoft\AgdbApi\ObjectSerializer;
 
 /**
- * ChangePassword Class Doc Comment
+ * ServerDatabaseAdminRename Class Doc Comment
  *
  * @category Class
  * @package  Agnesoft\AgdbApi
@@ -40,7 +40,7 @@ use \Agnesoft\AgdbApi\ObjectSerializer;
  * @link     https://openapi-generator.tech
  * @implements \ArrayAccess<string, mixed>
  */
-class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
+class ServerDatabaseAdminRename implements ModelInterface, ArrayAccess, \JsonSerializable
 {
     public const DISCRIMINATOR = null;
 
@@ -49,7 +49,7 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       *
       * @var string
       */
-    protected static $openAPIModelName = 'ChangePassword';
+    protected static $openAPIModelName = 'ServerDatabaseAdminRename';
 
     /**
       * Array of property to type mappings. Used for (de)serialization
@@ -57,8 +57,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var string[]
       */
     protected static $openAPITypes = [
-        'new_password' => 'string',
-        'password' => 'string'
+        'new_db' => 'string',
+        'new_owner' => 'string'
     ];
 
     /**
@@ -69,8 +69,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       * @psalm-var array<string, string|null>
       */
     protected static $openAPIFormats = [
-        'new_password' => null,
-        'password' => null
+        'new_db' => null,
+        'new_owner' => null
     ];
 
     /**
@@ -79,8 +79,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
       * @var boolean[]
       */
     protected static array $openAPINullables = [
-        'new_password' => false,
-        'password' => false
+        'new_db' => false,
+        'new_owner' => false
     ];
 
     /**
@@ -169,8 +169,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $attributeMap = [
-        'new_password' => 'new_password',
-        'password' => 'password'
+        'new_db' => 'new_db',
+        'new_owner' => 'new_owner'
     ];
 
     /**
@@ -179,8 +179,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $setters = [
-        'new_password' => 'setNewPassword',
-        'password' => 'setPassword'
+        'new_db' => 'setNewDb',
+        'new_owner' => 'setNewOwner'
     ];
 
     /**
@@ -189,8 +189,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      * @var string[]
      */
     protected static $getters = [
-        'new_password' => 'getNewPassword',
-        'password' => 'getPassword'
+        'new_db' => 'getNewDb',
+        'new_owner' => 'getNewOwner'
     ];
 
     /**
@@ -250,8 +250,8 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
      */
     public function __construct(array $data = null)
     {
-        $this->setIfExists('new_password', $data ?? [], null);
-        $this->setIfExists('password', $data ?? [], null);
+        $this->setIfExists('new_db', $data ?? [], null);
+        $this->setIfExists('new_owner', $data ?? [], null);
     }
 
     /**
@@ -281,11 +281,11 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $invalidProperties = [];
 
-        if ($this->container['new_password'] === null) {
-            $invalidProperties[] = "'new_password' can't be null";
+        if ($this->container['new_db'] === null) {
+            $invalidProperties[] = "'new_db' can't be null";
         }
-        if ($this->container['password'] === null) {
-            $invalidProperties[] = "'password' can't be null";
+        if ($this->container['new_owner'] === null) {
+            $invalidProperties[] = "'new_owner' can't be null";
         }
         return $invalidProperties;
     }
@@ -303,55 +303,55 @@ class ChangePassword implements ModelInterface, ArrayAccess, \JsonSerializable
 
 
     /**
-     * Gets new_password
+     * Gets new_db
      *
      * @return string
      */
-    public function getNewPassword()
+    public function getNewDb()
     {
-        return $this->container['new_password'];
+        return $this->container['new_db'];
     }
 
     /**
-     * Sets new_password
+     * Sets new_db
      *
-     * @param string $new_password new_password
+     * @param string $new_db new_db
      *
      * @return self
      */
-    public function setNewPassword($new_password)
+    public function setNewDb($new_db)
     {
-        if (is_null($new_password)) {
-            throw new \InvalidArgumentException('non-nullable new_password cannot be null');
+        if (is_null($new_db)) {
+            throw new \InvalidArgumentException('non-nullable new_db cannot be null');
         }
-        $this->container['new_password'] = $new_password;
+        $this->container['new_db'] = $new_db;
 
         return $this;
     }
 
     /**
-     * Gets password
+     * Gets new_owner
      *
      * @return string
      */
-    public function getPassword()
+    public function getNewOwner()
     {
-        return $this->container['password'];
+        return $this->container['new_owner'];
     }
 
     /**
-     * Sets password
+     * Sets new_owner
      *
-     * @param string $password password
+     * @param string $new_owner new_owner
      *
      * @return self
      */
-    public function setPassword($password)
+    public function setNewOwner($new_owner)
     {
-        if (is_null($password)) {
-            throw new \InvalidArgumentException('non-nullable password cannot be null');
+        if (is_null($new_owner)) {
+            throw new \InvalidArgumentException('non-nullable new_owner cannot be null');
         }
-        $this->container['password'] = $password;
+        $this->container['new_owner'] = $new_owner;
 
         return $this;
     }

@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**bytes** | **\SplFileObject** | Byte array, sometimes referred to as blob |
+**bytes** | **int[]** | Byte array, sometimes referred to as blob |
 **i64** | **int** | 64-bit wide signed integer |
 **u64** | **int** | 64-bit wide unsigned integer |
 **f64** | **float** | Database float is a wrapper around &#x60;f64&#x60; to provide functionality like comparison. The comparison is using &#x60;total_cmp&#x60; standard library function. See its [docs](https://doc.rust-lang.org/std/primitive.f64.html#method.total_cmp) to understand how it handles NaNs and other edge cases of floating point numbers. |

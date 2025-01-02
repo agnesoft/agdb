@@ -93,8 +93,8 @@ The admin users can do some (but not all) actions that the owner can:
 
 | Action                              | Permission | Description                                                                                      |
 | ----------------------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
-| /api/v1/db/{owner}/{db}/list        | read       | lists the databases with role of the current user (owned and others')                            |
 | /api/v1/db/{owner}/{db}/add         | owner      | adds (from existing files) or creates a database (memory, memory mapped, file only)              |
+| /api/v1/db/{owner}/{db}/audit       | read       | returns the log of all mutable queries that ran against the database (with user who ran them)    |
 | /api/v1/db/{owner}/{db}/backup      | admin      | creates an automatic backup snapshot of the database (see backup docs below)                     |
 | /api/v1/db/{owner}/{db}/clear       | admin      | clears the content of the database (either all, db only, audit only, backup only)                |
 | /api/v1/db/{owner}/{db}/convert     | admin      | converts db between memory/mapped/file                                                           |
@@ -102,13 +102,13 @@ The admin users can do some (but not all) actions that the owner can:
 | /api/v1/db/{owner}/{db}/delete      | owner      | deletes the database including files on disk                                                     |
 | /api/v1/db/{owner}/{db}/exec        | read       | executes queries against the database (does not allow mutable queries)                           |
 | /api/v1/db/{owner}/{db}/exec_mut    | write      | executes queries against the database (allows both mutable and immutable queries)                |
+| /api/v1/db/{owner}/{db}/list        | read       | lists the databases with role of the current user (owned and others')                            |
 | /api/v1/db/{owner}/{db}/optimize    | write      | optimizes the underlying file storage packing the data reclaiming unused regions (defragmenting) |
 | /api/v1/db/{owner}/{db}/remove      | owner      | removes the database from the server but keeps the files on disk (main, WAL, backup, audit)      |
 | /api/v1/db/{owner}/{db}/rename      | owner      | changes the name of the database (this API can be used to transfer db ownership!)                |
 | /api/v1/db/{owner}/{db}/restore     | admin      | restores the database from the automatic backup - the current database will become the backup    |
-| /api/v1/db/{owner}/{db}/audit       | read       | returns the log of all mutable queries that ran against the database (with user who ran them)    |
-| /api/v1/db/{owner}/{db}/user/list   | read       | list users of the database with their roles                                                      |
 | /api/v1/db/{owner}/{db}/user/add    | admin      | adds a user to the database                                                                      |
+| /api/v1/db/{owner}/{db}/user/list   | read       | list users of the database with their roles                                                      |
 | /api/v1/db/{owner}/{db}/user/remove | admin      | removes a user from the database                                                                 |
 
 ### Backups
@@ -149,14 +149,14 @@ Each `agdb_server` has exactly one admin account (`admin` by default) that acts 
 
 | Action                                        | Description                                                                                        |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| /api/v1/admin/db/\*                           | provides same endpoints as for regular users but without owner/role restrictions                   |
 | /api/v1/admin/shutdown                        | gracefully shuts down the server                                                                   |
 | /api/v1/admin/status                          | lists extended statistics of the server - uptime, # dbs, # users, # logged users, server data size |
-| /api/v1/admin/user/list                       | lists the all users on the server                                                                  |
-| /api/v1/admin/user/{username}/logout          | force logout of any user                                                                           |
 | /api/v1/admin/user/{username}/add             | adds new user to the server                                                                        |
 | /api/v1/admin/user/{username}/change_password | changes password of a user                                                                         |
+| /api/v1/admin/user/{username}/logout          | force logout of any user                                                                           |
 | /api/v1/admin/user/{username}/remove          | deletes user and all their data (databases) from the server                                        |
-| /api/v1/admin/db/\*                           | provides same endpoints as for regular users but without owner/role restrictions                   |
+| /api/v1/admin/user/list                       | lists the all users on the server                                                                  |
 
 ## Shutdown
 
@@ -174,5 +174,5 @@ Following are the special or miscellaneous endpoints:
 | Endpoint             | Description                                          |
 | -------------------- | ---------------------------------------------------- |
 | /api/v1              | serves rapidoc OpenAPI GUI (use this in the browser) |
-| /api/v1/status       | returns 200 OK if the server is ready (up)           |
 | /api/v1/openapi.json | returns the server's OpenAPI specification as json   |
+| /api/v1/status       | returns 200 OK if the server is ready (up)           |

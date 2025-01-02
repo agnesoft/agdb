@@ -1,4 +1,4 @@
-use crate::api::Api;
+use crate::api;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -13,13 +13,6 @@ use axum::Router;
 use reqwest::Method;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
-use utoipa::OpenApi;
-use utoipa_rapidoc::RapiDoc;
-
-async fn openapi_endpoint() -> String {
-    "openapi".to_string()
-    //Api::openapi().to_pretty_json().unwrap_or_default()
-}
 
 pub(crate) fn app(
     cluster: Cluster,
@@ -186,8 +179,7 @@ pub(crate) fn app(
             routing::put(routes::user::change_password),
         )
         .route("/user/status", routing::get(routes::user::status))
-        .route("/openapi", routing::get(openapi_endpoint));
-    //.route("/", routing::get());
+        .route("/openapi.json", routing::get(api::openapi_json));
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
@@ -195,8 +187,8 @@ pub(crate) fn app(
         .allow_origin(tower_http::cors::Any);
 
     let router = Router::new()
-        //  .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .nest("/api/v1", api_v1)
+        .route("/api/v1", routing::get(api::rapidoc))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             forward::forward_to_leader,

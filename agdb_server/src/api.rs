@@ -1,9 +1,13 @@
 use crate::routes;
+use axum::response::IntoResponse;
+use reqwest::header::CONTENT_TYPE;
+use reqwest::StatusCode;
 use utoipa::openapi::security::Http;
 use utoipa::openapi::security::HttpAuthScheme;
 use utoipa::openapi::security::SecurityScheme;
 use utoipa::Modify;
 use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -135,6 +139,18 @@ impl Modify for BearerToken {
             )
         }
     }
+}
+
+pub(crate) async fn openapi_json() -> String {
+    Api::openapi().to_json().unwrap_or_default()
+}
+
+pub(crate) async fn rapidoc() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [(CONTENT_TYPE, "text/html")],
+        RapiDoc::with_url("/api/v1", "/api/v1/openapi.json", Api::openapi()).to_html(),
+    )
 }
 
 #[cfg(test)]

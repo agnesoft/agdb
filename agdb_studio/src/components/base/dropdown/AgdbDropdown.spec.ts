@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import AgdbDropdown from "./AgdbDropdown.vue";
 import { describe, beforeEach, vi, it, expect } from "vitest";
+import DropdownContent from "./DropdownContent.vue";
 
 describe("AgdbDropdown", () => {
     beforeEach(() => {
@@ -14,13 +15,14 @@ describe("AgdbDropdown", () => {
             },
         });
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
+        expect(dropdown.isVisible()).toBe(true);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(false);
+        expect(dropdown.isVisible()).toBe(false);
     });
 
     it("should close when clicking outside", async () => {
@@ -31,14 +33,15 @@ describe("AgdbDropdown", () => {
             },
         });
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
+        expect(dropdown.isVisible()).toBe(true);
         document.body.click();
         await wrapper.vm.$nextTick();
         document.body.click();
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(false);
+        expect(dropdown.isVisible()).toBe(false);
     });
 });

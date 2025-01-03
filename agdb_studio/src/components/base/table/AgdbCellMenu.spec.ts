@@ -5,6 +5,7 @@ import { dbActions } from "@/composables/db/dbConfig";
 import { INJECT_KEY_ROW } from "@/composables/table/constants";
 import useModal from "@/composables/modal/modal";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
+import DropdownContent from "../dropdown/DropdownContent.vue";
 const { fetchDatabases } = vi.hoisted(() => {
     return {
         fetchDatabases: vi.fn(),
@@ -47,13 +48,14 @@ describe("AgdbCellMenu", () => {
             },
         });
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
+        expect(dropdown.isVisible()).toBe(true);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(false);
+        expect(dropdown.isVisible()).toBe(false);
     });
     it("should call action on click when no confirmation required", async () => {
         const wrapper = mount(AgdbCellMenu, {
@@ -75,15 +77,17 @@ describe("AgdbCellMenu", () => {
                 },
             },
         });
+
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
-        const action = wrapper.find(".menu-item[data-key=audit]");
+        expect(dropdown.isVisible()).toBe(true);
+        const action = dropdown.find(".menu-item[data-key=audit]");
         await action.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(false);
+        expect(dropdown.isVisible()).toBe(false);
     });
     it("should open the modal on click when confirmation is required", async () => {
         const deleteAction = vi.fn();
@@ -120,15 +124,17 @@ describe("AgdbCellMenu", () => {
                 },
             },
         });
+
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
-        const action = wrapper.find(".menu-item[data-key=delete]");
+        expect(dropdown.isVisible()).toBe(true);
+        const action = dropdown.find(".menu-item[data-key=delete]");
         await action.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(false);
+        expect(dropdown.isVisible()).toBe(false);
         expect(modalIsVisible.value).toBe(true);
         onConfirm.value?.();
         expect(deleteAction).toHaveBeenCalledOnce();
@@ -155,15 +161,17 @@ describe("AgdbCellMenu", () => {
                 },
             },
         });
+
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
-        const action = wrapper.find(".menu-item[data-key=convert]");
+        expect(dropdown.isVisible()).toBe(true);
+        const action = dropdown.find(".menu-item[data-key=convert]");
         await action.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(true);
+        expect(dropdown.isVisible()).toBe(true);
     });
 
     it("should use header function if provided", async () => {
@@ -202,14 +210,15 @@ describe("AgdbCellMenu", () => {
             },
         });
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
-        const action = wrapper.find(".menu-item[data-key=delete]");
+        expect(dropdown.isVisible()).toBe(true);
+        const action = dropdown.find(".menu-item[data-key=delete]");
         await action.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(false);
+        expect(dropdown.isVisible()).toBe(false);
         expect(header).toHaveBeenCalled();
         expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
         expect(modal.header).toBe("Test Header");
@@ -248,14 +257,15 @@ describe("AgdbCellMenu", () => {
             },
         });
         const trigger = wrapper.find(".trigger");
-        expect(wrapper.find(".content").exists()).toBe(false);
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
         trigger.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").isVisible()).toBe(true);
-        const action = wrapper.find(".menu-item[data-key=delete]");
+        expect(dropdown.isVisible()).toBe(true);
+        const action = dropdown.find(".menu-item[data-key=delete]");
         await action.trigger("click");
         await wrapper.vm.$nextTick();
-        expect(wrapper.find(".content").exists()).toBe(false);
+        expect(dropdown.isVisible()).toBe(false);
         expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
         expect(modal.header).toBe("Confirm action");
     });

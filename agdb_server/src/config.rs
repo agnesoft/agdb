@@ -1,3 +1,4 @@
+use crate::password::SALT_LEN;
 use crate::server_error::ServerError;
 use crate::server_error::ServerResult;
 use serde::Deserialize;
@@ -21,12 +22,15 @@ pub(crate) struct ConfigImpl {
     pub(crate) admin: String,
     pub(crate) log_level: LogLevel,
     pub(crate) data_dir: String,
+    pub(crate) pepper_path: String,
     pub(crate) cluster_token: String,
     pub(crate) cluster: Vec<Url>,
     #[serde(skip)]
     pub(crate) cluster_node_id: usize,
     #[serde(skip)]
     pub(crate) start_time: u64,
+    #[serde(skip)]
+    pub(crate) pepper: Option<[u8; SALT_LEN]>,
 }
 
 pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
@@ -38,11 +42,29 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
             .position(|x| x == &config_impl.address)
             .unwrap_or(0);
         config_impl.start_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+
+        if !config_impl.pepper_path.is_empty() {
+            let pepper = std::fs::read(&config_impl.pepper_path)?;
+
+            if pepper.len() != SALT_LEN {
+                return Err(ServerError::from(format!(
+                    "invalid pepper length {}, expected 16",
+                    pepper.len()
+                )));
+            }
+
+            config_impl.pepper = Some(
+                pepper[0..SALT_LEN]
+                    .try_into()
+                    .expect("pepper length should be 16"),
+            );
+        }
+
         let config = Config::new(config_impl);
 
         if !config.cluster.is_empty() && !config.cluster.contains(&config.address) {
             return Err(ServerError::from(format!(
-                "Cluster does not contain local node: {}",
+                "cluster does not contain local node: {}",
                 config.address
             )));
         }
@@ -57,10 +79,12 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
         admin: "admin".to_string(),
         log_level: LogLevel(LevelFilter::INFO),
         data_dir: "agdb_server_data".to_string(),
+        pepper_path: String::new(),
         cluster_token: "cluster".to_string(),
         cluster: vec![],
         cluster_node_id: 0,
         start_time: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+        pepper: None,
     };
 
     std::fs::write(config_file, serde_yml::to_string(&config)?)?;
@@ -143,15 +167,94 @@ mod tests {
             admin: "admin".to_string(),
             log_level: LogLevel(LevelFilter::INFO),
             data_dir: "agdb_server_data".to_string(),
+            pepper_path: String::new(),
             cluster_token: "cluster".to_string(),
             cluster: vec![Url::parse("localhost:3001").unwrap()],
             cluster_node_id: 0,
             start_time: 0,
+            pepper: None,
         };
         std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
         assert_eq!(
             config::new(test_file.filename).unwrap_err().description,
-            "Cluster does not contain local node: localhost:3000"
+            "cluster does not contain local node: localhost:3000"
+        );
+    }
+
+    #[test]
+    fn pepper_path() {
+        let test_file = TestFile::new("pepper_path.yaml");
+        let pepper_file = TestFile::new("pepper_path");
+        let pepper = b"abcdefghijklmnop";
+        std::fs::write(pepper_file.filename, pepper).unwrap();
+        let config = ConfigImpl {
+            bind: ":::3000".to_string(),
+            address: Url::parse("localhost:3000").unwrap(),
+            basepath: "".to_string(),
+            admin: "admin".to_string(),
+            log_level: LogLevel(LevelFilter::INFO),
+            data_dir: "agdb_server_data".to_string(),
+            pepper_path: pepper_file.filename.to_string(),
+            cluster_token: "cluster".to_string(),
+            cluster: vec![],
+            cluster_node_id: 0,
+            start_time: 0,
+            pepper: None,
+        };
+
+        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
+
+        let config = config::new(test_file.filename).unwrap();
+
+        assert_eq!(config.pepper.as_ref(), Some(pepper));
+    }
+
+    #[test]
+    fn pepper_missing() {
+        let test_file = TestFile::new("pepper_missing.yaml");
+        let config = ConfigImpl {
+            bind: ":::3000".to_string(),
+            address: Url::parse("localhost:3000").unwrap(),
+            basepath: "".to_string(),
+            admin: "admin".to_string(),
+            log_level: LogLevel(LevelFilter::INFO),
+            data_dir: "agdb_server_data".to_string(),
+            pepper_path: "missing_file".to_string(),
+            cluster_token: "cluster".to_string(),
+            cluster: vec![],
+            cluster_node_id: 0,
+            start_time: 0,
+            pepper: None,
+        };
+        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
+
+        assert!(config::new(test_file.filename).is_err());
+    }
+
+    #[test]
+    fn pepper_invalid_len() {
+        let test_file = TestFile::new("pepper_invalid_len.yaml");
+        let pepper_file = TestFile::new("pepper_invalid_len");
+        std::fs::write(pepper_file.filename, b"0123456789").unwrap();
+        let config = ConfigImpl {
+            bind: ":::3000".to_string(),
+            address: Url::parse("localhost:3000").unwrap(),
+            basepath: "".to_string(),
+            admin: "admin".to_string(),
+            log_level: LogLevel(LevelFilter::INFO),
+            data_dir: "agdb_server_data".to_string(),
+            pepper_path: pepper_file.filename.to_string(),
+            cluster_token: "cluster".to_string(),
+            cluster: vec![],
+            cluster_node_id: 0,
+            start_time: 0,
+            pepper: None,
+        };
+        std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
+
+        assert_eq!(
+            config::new(test_file.filename).unwrap_err().description,
+            "invalid pepper length 10, expected 16"
         );
     }
 

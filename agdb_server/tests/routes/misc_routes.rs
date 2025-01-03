@@ -167,6 +167,7 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("data_dir", SERVER_DATA_DIR.into());
     config.insert("basepath", "/public".into());
     config.insert("log_level", "INFO".into());
+    config.insert("pepper_path", "".into());
     config.insert("cluster_token", "test".into());
     config.insert("cluster", Vec::<String>::new().into());
 

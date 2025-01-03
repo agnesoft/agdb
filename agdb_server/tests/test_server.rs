@@ -139,6 +139,7 @@ impl TestServerImpl {
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("basepath", "".into());
         config.insert("log_level", "INFO".into());
+        config.insert("pepper_path", "".into());
         config.insert("cluster_token", "test".into());
         config.insert("cluster", Vec::<String>::new().into());
 
@@ -376,6 +377,7 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
         config.insert("basepath", "".into());
         config.insert("log_level", "INFO".into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
+        config.insert("pepper_path", "".into());
         config.insert("cluster_token", "test".into());
 
         configs.push(config);

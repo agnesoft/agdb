@@ -34,7 +34,14 @@ const mapActions = (actions: Action[]): Action[] => {
                 : action.confirmation
                   ? ({ event }: ActionProps<undefined>) =>
                         showModal({
-                            header: "Confirm action",
+                            header: action.confirmationHeader
+                                ? typeof action.confirmationHeader ===
+                                  "function"
+                                    ? action.confirmationHeader({
+                                          params: row?.value,
+                                      })
+                                    : action.confirmationHeader
+                                : "Confirm action",
                             content: action.confirmation,
                             onConfirm: () =>
                                 runAction({ event, params: undefined }),

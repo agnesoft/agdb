@@ -11,7 +11,7 @@ export const db_convert = vi.fn();
 export const db_remove = vi.fn();
 export const db_delete = vi.fn();
 export const db_optimize = vi.fn();
-export const db_audit = vi.fn().mockResolvedValue([]);
+export const db_audit = vi.fn().mockResolvedValue({ data: [] });
 export const db_copy = vi.fn();
 export const db_rename = vi.fn();
 

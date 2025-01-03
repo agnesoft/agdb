@@ -4,17 +4,35 @@ import { dateFormatter } from "@/composables/table/utils";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
+import useModal from "../modal/modal";
 
 const { getInputValue } = useContentInputs();
+const { showModal } = useModal();
 
-type DbActionProps = ActionProps<ServerDatabase>;
+export type DbActionProps = ActionProps<ServerDatabase>;
+
+const getConfirmationHeaderFn = ({ params }: DbActionProps) =>
+    `Confirm action for ${params.owner}/${params.db}`;
+
 const dbActions: Action[] = [
     {
         key: "audit",
         label: "Audit",
         action: ({ params }: DbActionProps) =>
             client.value?.db_audit(params).then((res) => {
-                console.log(res.data);
+                const content = res.data.length
+                    ? convertArrayOfStringsToContent(
+                          res.data.map(
+                              (item) =>
+                                  `${item.timestamp} | ${item.user} | ${item.query}`,
+                          ),
+                      )
+                    : convertArrayOfStringsToContent(["No audit logs found."]);
+
+                showModal({
+                    header: `Audit log of ${params.owner}/${params.db}`,
+                    content,
+                });
             }),
     },
     {
@@ -30,6 +48,7 @@ const dbActions: Action[] = [
                 "This will swap the existing backup with the current db.",
             ]),
         ],
+        confirmationHeader: getConfirmationHeaderFn,
     },
     {
         key: "clear",
@@ -47,6 +66,7 @@ const dbActions: Action[] = [
                     ],
                     { emphesizedWords: ["clear", "all"] },
                 ),
+                confirmationHeader: getConfirmationHeaderFn,
             },
             {
                 key: "db",
@@ -60,6 +80,7 @@ const dbActions: Action[] = [
                     ],
                     { emphesizedWords: ["clear", "database"] },
                 ),
+                confirmationHeader: getConfirmationHeaderFn,
             },
             {
                 key: "audit",
@@ -72,6 +93,7 @@ const dbActions: Action[] = [
                     ],
                     { emphesizedWords: ["clear", "audit"] },
                 ),
+                confirmationHeader: getConfirmationHeaderFn,
             },
             {
                 key: "backup",
@@ -84,6 +106,7 @@ const dbActions: Action[] = [
                     ],
                     { emphesizedWords: ["clear", "backup"] },
                 ),
+                confirmationHeader: getConfirmationHeaderFn,
             },
         ],
     },
@@ -102,6 +125,7 @@ const dbActions: Action[] = [
                     ],
                     { emphesizedWords: ["convert", "memory"] },
                 ),
+                confirmationHeader: getConfirmationHeaderFn,
             },
             {
                 key: "file",
@@ -114,6 +138,7 @@ const dbActions: Action[] = [
                     ],
                     { emphesizedWords: ["convert", "file"] },
                 ),
+                confirmationHeader: getConfirmationHeaderFn,
             },
             {
                 key: "mapped",
@@ -126,6 +151,7 @@ const dbActions: Action[] = [
                     ],
                     { emphesizedWords: ["convert", "mapped"] },
                 ),
+                confirmationHeader: getConfirmationHeaderFn,
             },
         ],
     },
@@ -152,6 +178,7 @@ const dbActions: Action[] = [
                 },
             },
         ],
+        confirmationHeader: getConfirmationHeaderFn,
     },
     {
         key: "delete",
@@ -167,6 +194,7 @@ const dbActions: Action[] = [
                 { emphesizedWords: ["all data"] },
             ),
         ],
+        confirmationHeader: getConfirmationHeaderFn,
     },
     {
         key: "optimize",
@@ -177,6 +205,7 @@ const dbActions: Action[] = [
             ["Are you sure you want to optimize this database?"],
             { emphesizedWords: ["optimize"] },
         ),
+        confirmationHeader: getConfirmationHeaderFn,
     },
 
     {
@@ -190,6 +219,7 @@ const dbActions: Action[] = [
             ],
             { emphesizedWords: ["remove"] },
         ),
+        confirmationHeader: getConfirmationHeaderFn,
     },
     {
         key: "rename",
@@ -214,6 +244,7 @@ const dbActions: Action[] = [
                 },
             },
         ],
+        confirmationHeader: getConfirmationHeaderFn,
     },
     {
         key: "restore",
@@ -226,6 +257,7 @@ const dbActions: Action[] = [
             ],
             { emphesizedWords: ["restore"] },
         ),
+        confirmationHeader: getConfirmationHeaderFn,
     },
 ];
 
@@ -247,4 +279,4 @@ const dbColumns = [
     },
 ];
 
-export { dbActions, dbColumns };
+export { dbActions, dbColumns, getConfirmationHeaderFn };

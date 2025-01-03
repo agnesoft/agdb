@@ -34,4 +34,5 @@ type Action = {
     action?: ActionFn;
     actions?: Action[];
     confirmation?: Content[];
+    confirmationHeader?: string | ActionFn;
 };

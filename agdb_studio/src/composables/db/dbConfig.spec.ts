@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { dbActions, dbColumns } from "./dbConfig";
+import {
+    dbActions,
+    dbColumns,
+    getConfirmationHeaderFn,
+    type DbActionProps,
+} from "./dbConfig";
 import {
     db_backup,
     db_restore,
@@ -15,8 +20,11 @@ import {
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
 import { ref } from "vue";
+import useModal from "../modal/modal";
 
 const { addInput, setInputValue, clearAllInputs } = useContentInputs();
+
+const { modalIsVisible, modal } = useModal();
 
 describe("dbConfig", () => {
     describe("dbColumns", () => {
@@ -107,6 +115,55 @@ describe("dbConfig", () => {
             action?.action({ params }).catch(() => {});
             expect(api).not.toHaveBeenCalled();
             clearAllInputs();
+        });
+
+        it("should print the empty audit log", async () => {
+            const action = dbActions.find((action) => action.key === "audit");
+            const params = { db: "test_db", owner: "test_owner" };
+            await action?.action({ params });
+            expect(db_audit).toHaveBeenCalledWith(params);
+
+            expect(modalIsVisible.value).toBe(true);
+            expect(modal.header).toBe("Audit log of test_owner/test_db");
+            expect(modal.content).toHaveLength(1);
+        });
+        it("should print the audit log", async () => {
+            const action = dbActions.find((action) => action.key === "audit");
+            const params = { db: "test_db", owner: "test_owner" };
+            db_audit.mockResolvedValueOnce({
+                data: [
+                    {
+                        timestamp: "123",
+                        user: "test_user",
+                        query: "test_query",
+                    },
+                    {
+                        timestamp: "456",
+                        user: "test_user2",
+                        query: "test_query2",
+                    },
+                ],
+            });
+            await action?.action({ params });
+            expect(db_audit).toHaveBeenCalledWith(params);
+
+            expect(modalIsVisible.value).toBe(true);
+            expect(modal.header).toBe("Audit log of test_owner/test_db");
+            expect(modal.content).toHaveLength(2);
+            expect(modal.content[0].paragraph?.at(0)?.text).toBe(
+                "123 | test_user | test_query",
+            );
+            expect(modal.content[1].paragraph?.at(0)?.text).toBe(
+                "456 | test_user2 | test_query2",
+            );
+        });
+    });
+    describe("getConfirmationHeaderFn", () => {
+        it("should return correct header", () => {
+            const header = getConfirmationHeaderFn({
+                params: { db: "test_db", owner: "test_owner" },
+            } as unknown as DbActionProps);
+            expect(header).toBe("Confirm action for test_owner/test_db");
         });
     });
 });

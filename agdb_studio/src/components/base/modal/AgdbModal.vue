@@ -1,8 +1,24 @@
 <script lang="ts" setup>
 import useModal from "@/composables/modal/modal";
 import { ClCloseMd } from "@kalimahapps/vue-icons";
+import AgdbContent from "../content/AgdbContent.vue";
+import { KEY_MODAL } from "@/composables/modal/constants";
+import { nextTick, ref, watch } from "vue";
 
 const { modal, buttons, hideModal, modalIsVisible } = useModal();
+
+const autofocusElement = ref();
+
+watch(modalIsVisible, async () => {
+    if (
+        !modalIsVisible.value ||
+        modal.content.some((part) => part.input?.autofocus)
+    ) {
+        return;
+    }
+    await nextTick();
+    autofocusElement.value?.focus();
+});
 </script>
 
 <template>
@@ -14,24 +30,26 @@ const { modal, buttons, hideModal, modalIsVisible } = useModal();
                     <ClCloseMd />
                 </button>
             </header>
-            <div class="modal-body">
-                <p v-for="(paragraph, index) in modal.content" :key="index">
-                    <span
-                        v-for="(text, index2) in paragraph.paragraph"
-                        :key="index2"
-                        :style="text.style"
-                        :class="text.className"
-                    >
-                        {{ text.text }}
-                    </span>
-                </p>
-            </div>
+            <form id="modal-form">
+                <AgdbContent
+                    :content="modal.content"
+                    :contentKey="KEY_MODAL"
+                    class="modal-body"
+                />
+            </form>
             <footer class="modal-footer">
                 <button
                     v-for="button in buttons"
                     :key="button.text"
                     @click="button.action"
                     :class="button.className"
+                    :type="button.type ?? 'button'"
+                    :form="button.type === 'submit' ? 'modal-form' : undefined"
+                    :ref="
+                        (el) => {
+                            if (button.type === 'submit') autofocusElement = el;
+                        }
+                    "
                 >
                     {{ button.text }}
                 </button>
@@ -51,6 +69,7 @@ const { modal, buttons, hideModal, modalIsVisible } = useModal();
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 1000;
 }
 .modal {
     background-color: var(--color-background-soft);
@@ -69,7 +88,7 @@ const { modal, buttons, hideModal, modalIsVisible } = useModal();
 }
 .modal-body {
     padding: 1rem;
-    > p {
+    p {
         margin-bottom: 1rem;
     }
 }

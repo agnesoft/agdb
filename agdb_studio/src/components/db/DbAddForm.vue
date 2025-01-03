@@ -33,9 +33,14 @@ const add = (event: Event) => {
 <template>
     <div class="db-add-form">
         <h2>Add Database</h2>
-        <form @submit="add">
-            <input type="text" v-model="name" placeholder="Name" />
-            <select v-model="db_type">
+        <form @submit="add" id="db-add-form">
+            <input
+                type="text"
+                v-model="name"
+                placeholder="Name"
+                name="db-name"
+            />
+            <select v-model="db_type" name="db-type">
                 <option value="memory">Memory</option>
                 <option value="file">File</option>
                 <option value="mapped">Mapped</option>

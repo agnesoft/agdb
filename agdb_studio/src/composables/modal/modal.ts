@@ -3,8 +3,7 @@ import type { Button, Modal } from "./types";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "./constants";
 
-const { addInput, clearInputs, getContentInputs, getInputValue } =
-    useContentInputs();
+const { addInput, clearInputs } = useContentInputs();
 const modal = reactive<Modal>({
     header: "",
     content: [],
@@ -14,7 +13,7 @@ const modalIsVisible = ref(false);
 
 const onConfirm = ref<() => void>();
 
-const hideModal = () => {
+const hideModal = (): void => {
     modal.header = "";
     modal.content = [];
     modalIsVisible.value = false;
@@ -57,7 +56,7 @@ const showModal = ({
     content,
     onConfirm: onConfirmFn,
     buttons: extraButtons,
-}: ShowModalProps) => {
+}: ShowModalProps): void => {
     modal.header = header ?? "";
     modal.content = content ?? [];
     clearInputs(KEY_MODAL);

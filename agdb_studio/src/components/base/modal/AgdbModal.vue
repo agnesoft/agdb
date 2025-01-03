@@ -11,7 +11,7 @@ const autofocusElement = ref();
 
 watch(modalIsVisible, async () => {
     if (
-        !modalIsVisible ||
+        !modalIsVisible.value ||
         modal.content.some((part) => part.input?.autofocus)
     ) {
         return;

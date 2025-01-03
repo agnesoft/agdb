@@ -45,7 +45,6 @@ onMounted(() => {
                     "
                     @input="
                         (event: Event) => {
-                            if (!part.input) return;
                             setInputValue(
                                 props.contentKey,
                                 part.input?.key,

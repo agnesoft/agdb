@@ -19,9 +19,12 @@ const getInputValue = (
 
 const setInputValue = (
     contentKey: Symbol,
-    inputKey: string,
+    inputKey: string | undefined,
     value: string | number | boolean | undefined,
-) => {
+): void => {
+    if (!inputKey || !inputKey.length) {
+        return;
+    }
     const input = inputs.value.get(contentKey)?.get(inputKey);
     if (!input) {
         return;
@@ -39,12 +42,16 @@ const addInput = (
     contentKey: Symbol,
     inputKey: string,
     value: Ref<string | number | boolean | undefined>,
-) => {
+): void => {
     const inputsMap = inputs.value.get(contentKey);
     if (!inputsMap) {
         inputs.value.set(contentKey, new Map());
     }
     inputs.value.get(contentKey)?.set(inputKey, value);
+};
+
+const clearAllInputs = (): void => {
+    inputs.value.clear();
 };
 
 export const useContentInputs = () => {
@@ -54,5 +61,6 @@ export const useContentInputs = () => {
         addInput,
         getInputValue,
         setInputValue,
+        clearAllInputs,
     };
 };

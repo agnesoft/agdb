@@ -52,7 +52,6 @@ export const initClient = async (): Promise<void> => {
             return undefined;
         },
     );
-    console.log("Client initialized");
     client.value?.interceptors.response.use(
         responseInterceptor,
         errorInterceptor,

@@ -27,7 +27,9 @@ For non-production use:
 cargo install agdb_server
 ```
 
-For production a manual build & install is recommended. You would build `agdb_server` from source in release mode with a custom `pepper` file. The `pepper` file located in sources as `agdb_server/pepper` contains a random 16 character value that is used internally to additionally "season" the encrypted passwords. When building for production you should change this value to a different one and keep the pepper file as secret in case you needed to rebuild the server or build a new version.
+For production use there are several options:
+
+1. Manual build & install. You would build `agdb_server` from source in release mode with a custom `pepper` file. The `pepper` file located in sources as `agdb_server/pepper` contains a random 16 character value that is used internally to additionally "season" the encrypted passwords. When building for production you should change this value to a different one and keep the pepper file as secret in case you needed to rebuild the server or build a new version.
 
 The steps for a production/manual build (use `bash` on Unix or `git bash` on Windows):
 
@@ -50,6 +52,8 @@ mv target/release/agdb_server "<location available on your PATH>"
     of all your users via `/api/v1/admin/user/{username}/change_password` API
     (including the old admin account).
 </Callout>
+
+2. Use default pepper value (it is still recommended to build manually and use a different value) but specify in configuration the "pepper_path" from which the pepper would be loaded in runtime. This file and location should be treated as secret and all of the caveats from step 1 still apply. On the other hand you would not need to rebuild the server in the future.
 
 ### Run the server
 

@@ -7,11 +7,14 @@ use ring::rand::SystemRandom;
 use serde::Deserialize;
 use serde::Serialize;
 use std::num::NonZeroU32;
+use std::sync::OnceLock;
 
 pub(crate) const PASSWORD_LEN: usize = digest::SHA256_OUTPUT_LEN;
 pub(crate) const SALT_LEN: usize = 16;
+
+pub(crate) static BUILTIN_PEPPER: &[u8; SALT_LEN] = std::include_bytes!("../pepper");
+pub(crate) static PEPPER: OnceLock<[u8; SALT_LEN]> = OnceLock::new();
 static ALGORITHM: pbkdf2::Algorithm = pbkdf2::PBKDF2_HMAC_SHA256;
-static PEPPER: &[u8; SALT_LEN] = std::include_bytes!("../pepper");
 static DB_SALT: [u8; SALT_LEN] = [
     198, 78, 119, 143, 114, 32, 22, 184, 167, 93, 196, 63, 154, 18, 14, 79,
 ];
@@ -74,17 +77,25 @@ impl Password {
     }
 
     fn salt(user: &str, user_salt: [u8; SALT_LEN]) -> Vec<u8> {
-        let mut salt = Vec::with_capacity(
-            user.as_bytes().len() + user_salt.len() + DB_SALT.len() + PEPPER.len(),
-        );
+        let mut salt = Vec::with_capacity(user.as_bytes().len() + SALT_LEN * 3);
 
         salt.extend(DB_SALT);
         salt.extend(user.as_bytes());
-        salt.extend(PEPPER);
+        salt.extend(PEPPER.get().expect("pepper should be initialized"));
         salt.extend(user_salt);
 
         salt
     }
+}
+
+pub(crate) fn init(pepper: Option<[u8; SALT_LEN]>) {
+    PEPPER.get_or_init(|| {
+        if let Some(p) = pepper {
+            p
+        } else {
+            *BUILTIN_PEPPER
+        }
+    });
 }
 
 pub(crate) fn validate_password(password: &str) -> ServerResult {
@@ -109,6 +120,8 @@ mod tests {
 
     #[test]
     fn verify_password() -> ServerResult {
+        init(None);
+
         let password = Password::create("alice", "MyPassword123");
         assert_ne!(password.password, [0_u8; PASSWORD_LEN]);
         assert_ne!(password.user_salt, [0_u8; SALT_LEN]);

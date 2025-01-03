@@ -28,6 +28,8 @@ async fn main() -> ServerResult {
         .with_max_level(config.log_level.0)
         .init();
 
+    password::init(config.pepper);
+
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let server_db = server_db::new(&config).await?;
     let db_pool = db_pool::new(config.clone(), &server_db).await?;

@@ -29,6 +29,7 @@ basepath: "" # base path to append to the address in case the server is to be ru
 admin: admin # the admin user that will be created automatically for the server, the password will be the same as name (admin by default, recommended to change after startup)
 data_dir: agdb_server_data # directory to store user data
 log_level: INFO # Options are: OFF, ERROR, WARN, INFO, DEBUG, TRACE
+pepper_path: "" # Optional path to a runtime secret file containing 16 bytes "pepper" value for additionally "seasoning" (hashing) passwords. If empty a built-in pepper value is used - see "How to run the server?"" guide for details
 ```
 
 You can prepare it in advance in a file `agdb_server.yaml`. After the server database is created changes to the `admin` field will have no effect, but the other settings can be changed later. All config changes require server restart to take effect.

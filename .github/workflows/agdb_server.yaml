@@ -63,7 +63,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t agnesoft/agdb:dev -f agdb_server/containerfile .
-      - run: docker run -p 3000:3000 agnesoft/agdb:dev
-      - run: curl -sSf http://localhost:3000/api/v1/status
-      - run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u agnesoft --password-stdin
-      - run: docker push agnesoft/agdb:dev
+      - run: docker run -d -p 3000:3000 agnesoft/agdb:dev
+      - run: curl --connect-timeout 5 --max-time 5 --retry 5 --retry-delay 0 --retry-max-time 30 http://localhost:3000/api/v1/status
+      - run: |
+          token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')
+          curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown

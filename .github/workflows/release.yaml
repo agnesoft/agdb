@@ -27,6 +27,9 @@ jobs:
       - run: docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
       - run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u agnesoft --password-stdin
       - run: docker push agnesoft/agdb:dev
+      - run: docker tag agnesoft/agdb:dev ghcr.io/agnesoft/agdb:dev
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u agnesoft --password-stdin
+      - run: docker push ghcr.io/agnesoft/agdb:dev
 
   new_version:
     runs-on: ubuntu-latest
@@ -88,7 +91,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ORG_TOKEN }}
 
-  publish_dockerhub:
+  publish_dockerhub_ghcr:
     runs-on: ubuntu-latest
     needs: [release, new_version]
     if: needs.new_version.outputs.new_version != ''
@@ -99,3 +102,8 @@ jobs:
       - run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u agnesoft --password-stdin
       - run: docker push agnesoft/agdb:latest
       - run: docker push agnesoft/agdb:${{ needs.new_version.outputs.new_version }}
+      - run: docker tag agnesoft/agdb:latest ghcr.io/agnesoft/agdb:latest
+      - run: docker tag agnesoft/agdb:${{ needs.new_version.outputs.new_version }} ghcr.io/agnesoft/agdb:${{ needs.new_version.outputs.new_version }}
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u agnesoft --password-stdin
+      - run: docker push ghcr.io/agnesoft/agdb:latest
+      - run: docker push ghcr.io/agnesoft/agdb:${{ needs.new_version.outputs.new_version }}

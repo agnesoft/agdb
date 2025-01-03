@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
@@ -28,6 +28,11 @@ const routes = [
         path: "/about",
         name: "about",
         component: { template: "<div>About</div>" },
+    },
+    {
+        path: "/db",
+        name: "db",
+        component: { template: "<div>Databases</div>" },
     },
 ];
 

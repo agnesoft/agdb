@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { convertArrayOfStringsToContent } from "@/utils/content";
+import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 
 describe("Content utils", () => {
     it("converts an array of strings to content", () => {
@@ -29,7 +29,6 @@ describe("Content utils", () => {
         const content = convertArrayOfStringsToContent(["Next test Body"], {
             emphesizedWords: ["test"],
         });
-        console.log(content);
         expect(content).toEqual([
             {
                 paragraph: [

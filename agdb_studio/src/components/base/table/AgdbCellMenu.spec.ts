@@ -4,7 +4,7 @@ import { describe, beforeEach, vi, it, expect } from "vitest";
 import { dbActions } from "@/composables/db/dbConfig";
 import { INJECT_KEY_ROW } from "@/composables/table/constants";
 import useModal from "@/composables/modal/modal";
-import { convertArrayOfStringsToContent } from "@/utils/content";
+import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 const { fetchDatabases } = vi.hoisted(() => {
     return {
         fetchDatabases: vi.fn(),

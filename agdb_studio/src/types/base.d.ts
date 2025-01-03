@@ -13,9 +13,19 @@ type Paragraph = {
     style?: StyleObject;
     className?: string;
 };
+type InputType = "text" | "number" | "password" | "email" | "checkbox";
+type Input = {
+    key: string;
+    label: string;
+    type: InputType;
+    style?: StyleObject;
+    className?: string;
+    autofocus?: boolean;
+};
 type Content = {
     paragraph?: Paragraph[];
     component?: string;
+    input?: Input;
 };
 
 type Action = {

@@ -35,7 +35,7 @@ watchEffect(() => {
     overflow: auto;
 }
 .db-table {
-    width: 1200px;
+    width: 1300px;
     margin: 0 auto;
 }
 </style>

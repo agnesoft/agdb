@@ -1,6 +1,8 @@
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import useModal from "./modal";
-import { convertArrayOfStringsToContent } from "@/utils/content";
+import { convertArrayOfStringsToContent } from "@/composables/content/utils";
+import { useContentInputs } from "../content/inputs";
+import { KEY_MODAL } from "./constants";
 
 describe("Modal", () => {
     const { showModal, hideModal } = useModal();
@@ -52,5 +54,25 @@ describe("Modal", () => {
         showModal({});
         expect(useModal().modal.header).toBe("");
         expect(useModal().modal.content).toHaveLength(0);
+    });
+    it("adds inputs to the store", () => {
+        const { getInputValue, setInputValue } = useContentInputs();
+        setInputValue(KEY_MODAL, "test", "test");
+        expect(getInputValue(KEY_MODAL, "test")).toBe(undefined);
+        showModal({
+            header: "Test Header",
+            content: [
+                {
+                    input: {
+                        key: "test",
+                        label: "New name",
+                        type: "text",
+                        autofocus: true,
+                    },
+                },
+            ],
+        });
+        setInputValue(KEY_MODAL, "test", "test");
+        expect(getInputValue(KEY_MODAL, "test")).toBe("test");
     });
 });

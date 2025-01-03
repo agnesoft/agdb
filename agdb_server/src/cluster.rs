@@ -184,8 +184,8 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
         hash,
         size: std::cmp::max(config.cluster.len() as u64, 1),
         election_factor: 1,
-        heartbeat_timeout: Duration::from_secs(1),
-        term_timeout: Duration::from_secs(3),
+        heartbeat_timeout: Duration::from_millis(config.cluster_heartbeat_timeout_ms),
+        term_timeout: Duration::from_millis(config.cluster_term_timeout_ms),
     };
     let raft = Arc::new(RwLock::new(raft::Cluster::new(storage, settings)));
     let mut nodes = vec![];

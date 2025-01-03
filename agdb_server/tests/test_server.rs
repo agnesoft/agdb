@@ -141,6 +141,8 @@ impl TestServerImpl {
         config.insert("log_level", "INFO".into());
         config.insert("pepper_path", "".into());
         config.insert("cluster_token", "test".into());
+        config.insert("cluster_heartbeat_timeout_ms", 1000.into());
+        config.insert("cluster_term_timeout_ms", 3000.into());
         config.insert("cluster", Vec::<String>::new().into());
 
         Self::with_config(config).await
@@ -379,6 +381,8 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("pepper_path", "".into());
         config.insert("cluster_token", "test".into());
+        config.insert("cluster_heartbeat_timeout_ms", 1000.into());
+        config.insert("cluster_term_timeout_ms", 3000.into());
 
         configs.push(config);
         cluster.push(format!("http://{HOST}:{port}"));

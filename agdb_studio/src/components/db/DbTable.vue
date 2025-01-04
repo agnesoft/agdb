@@ -8,11 +8,12 @@ import { dbColumns } from "@/composables/db/dbConfig";
 
 const { databases } = useDbStore();
 
-const TABLE_KEY = "databases";
+const TABLE_KEY = Symbol("databases");
 
 addTable({
     name: TABLE_KEY,
     columns: dbColumns,
+    rowDetailsComponent: "DbTableRowDetails",
 });
 
 watchEffect(() => {
@@ -35,7 +36,7 @@ watchEffect(() => {
     overflow: auto;
 }
 .db-table {
-    width: 1300px;
+    width: 1400px;
     margin: 0 auto;
 }
 </style>

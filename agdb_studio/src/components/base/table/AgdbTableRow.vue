@@ -1,8 +1,14 @@
 <script lang="ts" setup>
-import { computed, type PropType, provide } from "vue";
+import { computed, inject, type PropType, provide, type Ref, ref } from "vue";
 import { type Column, type TRow } from "@/composables/table/types";
-import { INJECT_KEY_ROW } from "@/composables/table/constants";
+import {
+    INJECT_KEY_ROW,
+    INJECT_KEY_TABLE_NAME,
+} from "@/composables/table/constants";
 import AgdbCell from "./AgdbCell.vue";
+import { getTable } from "@/composables/table/tableConfig";
+import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
+import SlideUpTransition from "@/components/transitions/SlideUpTransition.vue";
 
 const props = defineProps({
     row: {
@@ -22,14 +28,53 @@ const rowData = computed(() => {
     return props.row;
 });
 provide(INJECT_KEY_ROW, rowData);
+
+const tableKey = inject<Ref<Symbol | string>>(INJECT_KEY_TABLE_NAME);
+const rowDetailsComponent = computed(() => {
+    return tableKey ? getTable(tableKey.value)?.rowDetailsComponent : undefined;
+});
+const rowExpanded = ref(false);
+const toggleExpandRow = (): void => {
+    rowExpanded.value = !rowExpanded.value;
+};
 </script>
 
 <template>
-    <div class="agdb-table-row columns">
-        <div v-for="cellKey in cellKeys" :key="cellKey">
-            <AgdbCell :cell-key="cellKey" />
+    <div class="agdb-table-row-wrap">
+        <div
+            :class="[
+                'agdb-table-row columns',
+                { expandable: rowDetailsComponent },
+            ]"
+        >
+            <div v-for="cellKey in cellKeys" :key="cellKey">
+                <AgdbCell :cell-key="cellKey" />
+            </div>
+            <div v-if="rowDetailsComponent">
+                <button
+                    @click="toggleExpandRow"
+                    class="button button-transparent expand-row"
+                >
+                    <AkChevronDownSmall v-if="!rowExpanded" />
+                    <AkChevronUpSmall v-else />
+                </button>
+            </div>
         </div>
+        <SlideUpTransition>
+            <div v-if="rowExpanded && rowDetailsComponent" class="expanded-row">
+                details
+                <component :is="rowDetailsComponent" />
+            </div>
+        </SlideUpTransition>
     </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.agdb-table-row-wrap {
+    border-bottom: 1px solid var(--color-border);
+    .expanded-row {
+        border: 1px solid var(--color-border);
+        border-bottom: none;
+    }
+}
+</style>

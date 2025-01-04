@@ -63,9 +63,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
-      - run: docker run -d -p 3000:3000 agnesoft/agdb:dev
+      - run: docker compose -f agdb_server/compose.yaml up --wait
       - run: sleep 5
-      - run: curl http://localhost:3000/api/v1/status
+      - run: if [[ "$(curl -s http://localhost:3000/api/v1/cluster/status | grep "\"leader\":true")" == "" ]]; then exit 1; fi
       - run: |
-          token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')
+          token=$(curl -X POST http://localhost:3002/api/v1/cluster/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')
+          curl -H "Authorization: Bearer $token" -X POST http://localhost:3002/api/v1/admin/shutdown
           curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown
+          curl -H "Authorization: Bearer $token" -X POST http://localhost:3001/api/v1/admin/shutdown

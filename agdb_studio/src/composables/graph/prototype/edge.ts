@@ -4,7 +4,7 @@ export type EdgeOptions = {
     id: number;
     from?: Node;
     to?: Node;
-    values: { [key: string]: string };
+    values: Record<string, string>;
 };
 
 export interface Edge {
@@ -18,7 +18,7 @@ export interface Edge {
 
     getValues(): Map<string, string>;
 
-    getValuesObject(): { [key: string]: string };
+    getValuesObject(): Record<string, string>;
 
     getValuesEntries(): IterableIterator<[string, string]>;
 
@@ -93,8 +93,8 @@ export const Edge = (function () {
         return this[symbol].values;
     };
 
-    Edge.prototype.getValuesObject = function (): { [key: string]: string } {
-        const result: { [key: string]: string } = {};
+    Edge.prototype.getValuesObject = function (): Record<string, string> {
+        const result: Record<string, string> = {};
         for (const [key, value] of this[symbol].values.entries()) {
             result[key] = value;
         }

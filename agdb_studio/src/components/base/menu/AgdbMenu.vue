@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, type PropType } from "vue";
 import { AkChevronRightSmall } from "@kalimahapps/vue-icons";
+import FadeTrasition from "@/components/transitions/FadeTrasition.vue";
 
 const props = defineProps({
     actions: { type: Array as PropType<Action[]>, required: true },
@@ -40,11 +41,13 @@ const openSubmenu = (key: string) => {
                     <AkChevronRightSmall />
                 </span>
             </a>
-            <AgdbMenu
-                class="sub-menu"
-                v-if="openedSubmenu === action.key && action.actions"
-                :actions="action.actions"
-            />
+            <FadeTrasition>
+                <AgdbMenu
+                    class="sub-menu"
+                    v-if="openedSubmenu === action.key && action.actions"
+                    :actions="action.actions"
+                />
+            </FadeTrasition>
         </li>
     </ul>
 </template>

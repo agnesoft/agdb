@@ -6,7 +6,7 @@ export type Coordinates = {
 
 type NodeOptions = {
     id: number;
-    values: { [key: string]: string };
+    values: Record<string, string>;
     coordinates: Coordinates;
 };
 
@@ -19,7 +19,7 @@ export interface Node {
 
     getValues(): Map<string, string>;
 
-    getValuesObject(): { [key: string]: string };
+    getValuesObject(): Record<string, string>;
 
     getValuesEntries(): IterableIterator<[string, string]>;
 
@@ -91,8 +91,8 @@ export const Node = (function () {
         return this[symbol].values;
     };
 
-    Node.prototype.getValuesObject = function (): { [key: string]: string } {
-        const result: { [key: string]: string } = {};
+    Node.prototype.getValuesObject = function (): Record<string, string> {
+        const result: Record<string, string> = {};
         for (const [key, value] of this[symbol].values.entries()) {
             result[key] = value;
         }

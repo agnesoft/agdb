@@ -6,7 +6,7 @@ export type Coordinates = {
 
 export type NodeOptions = {
     id: number;
-    values: { [key: string]: string };
+    values: Record<string, string>;
     coordinates: Coordinates;
 };
 
@@ -26,7 +26,7 @@ export type Node = {
     getZ: () => number;
     dist: (v: Node) => number;
     getValues: () => Map<string, string>;
-    getValuesObject: () => { [key: string]: string };
+    getValuesObject: () => Record<string, string>;
 };
 
 function useNode(options: NodeOptions): Node {
@@ -51,8 +51,8 @@ function useNode(options: NodeOptions): Node {
         return values;
     };
 
-    const getValuesObject = (): { [key: string]: string } => {
-        const result: { [key: string]: string } = {};
+    const getValuesObject = (): Record<string, string> => {
+        const result: Record<string, string> = {};
         for (const [key, value] of values.entries()) {
             result[key] = value;
         }

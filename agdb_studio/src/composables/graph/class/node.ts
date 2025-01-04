@@ -6,7 +6,7 @@ export type Coordinates = {
 
 type NodeOptions = {
     id: number;
-    values: { [key: string]: string };
+    values: Record<string, string>;
     coordinates: Coordinates;
 };
 
@@ -49,8 +49,8 @@ export default class Node {
         return this.values;
     }
 
-    public getValuesObject(): { [key: string]: string } {
-        const result: { [key: string]: string } = {};
+    public getValuesObject(): Record<string, string> {
+        const result: Record<string, string> = {};
         for (const [key, value] of this.values.entries()) {
             result[key] = value;
         }

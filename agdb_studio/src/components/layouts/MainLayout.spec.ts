@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import MainLayout from "@/layouts/MainLayout.vue";
+import MainLayout from "./MainLayout.vue";
 import { createRouter, createWebHistory } from "vue-router";
 
 const { loginMock, isLoggedInMock, logoutMock } = vi.hoisted(() => {

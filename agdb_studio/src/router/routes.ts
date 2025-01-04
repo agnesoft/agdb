@@ -1,4 +1,4 @@
-import MainLayout from "@/layouts/MainLayout.vue";
+import MainLayout from "@/components/layouts/MainLayout.vue";
 
 export const createRoutes = () => {
     return [

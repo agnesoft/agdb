@@ -4,7 +4,7 @@ export type EdgeOptions = {
     id: number;
     from?: Node;
     to?: Node;
-    values: { [key: string]: string };
+    values: Record<string, string>;
 };
 
 export default class Edge {
@@ -60,8 +60,8 @@ export default class Edge {
         return this.values;
     }
 
-    public getValuesObject(): { [key: string]: string } {
-        const result: { [key: string]: string } = {};
+    public getValuesObject(): Record<string, string> {
+        const result: Record<string, string> = {};
         for (const [key, value] of this.values.entries()) {
             result[key] = value;
         }

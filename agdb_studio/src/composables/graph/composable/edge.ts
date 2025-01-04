@@ -4,7 +4,7 @@ export type EdgeOptions = {
     id: number;
     from?: Node;
     to?: Node;
-    values: { [key: string]: string };
+    values: Record<string, string>;
 };
 
 export type Edge = {
@@ -19,7 +19,7 @@ export type Edge = {
     getTo: () => Node | undefined;
     setTo: (toNode: Node) => void;
     getValues: () => Map<string, string>;
-    getValuesObject: () => { [key: string]: string };
+    getValuesObject: () => Record<string, string>;
 };
 
 const useEdge = function (options: EdgeOptions): Edge {
@@ -68,8 +68,8 @@ const useEdge = function (options: EdgeOptions): Edge {
         return values;
     };
 
-    const getValuesObject = (): { [key: string]: string } => {
-        const result: { [key: string]: string } = {};
+    const getValuesObject = (): Record<string, string> => {
+        const result: Record<string, string> = {};
         for (const [key, value] of values.entries()) {
             result[key] = value;
         }

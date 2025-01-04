@@ -1,6 +1,6 @@
 type GraphElementBase = {
     id: number;
-    values: { [key: string]: string };
+    values: Record<string, string>;
 };
 
 type GraphNode = GraphElementBase;

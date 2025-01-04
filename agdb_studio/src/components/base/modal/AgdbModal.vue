@@ -26,7 +26,11 @@ watch(modalIsVisible, async () => {
         <section class="modal">
             <header class="modal-header">
                 <h3>{{ modal.header }}</h3>
-                <button @click="hideModal" class="close-button">
+                <button
+                    @click="hideModal"
+                    class="button button-transparent"
+                    data-testid="close-modal"
+                >
                     <ClCloseMd />
                 </button>
             </header>
@@ -98,15 +102,5 @@ watch(modalIsVisible, async () => {
     padding: 1rem;
     border-top: 1px solid var(--color-border);
     gap: 1rem;
-}
-.close-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--color-text);
-    transition: opacity 0.2s;
-    &:hover {
-        opacity: 0.8;
-    }
 }
 </style>

@@ -2,7 +2,10 @@ import type { TRow } from "./types";
 import { getTable } from "./tableConfig";
 import { getTableFilter } from "./tableFilter";
 
-const setTableData = <T extends TRow>(tableName: string, data: T[]): void => {
+const setTableData = <T extends TRow>(
+    tableName: Symbol | string,
+    data: T[],
+): void => {
     const table = getTable<TRow>(tableName);
     if (!table) {
         return;
@@ -19,7 +22,7 @@ const setTableData = <T extends TRow>(tableName: string, data: T[]): void => {
     }
 };
 
-const addRow = <T extends TRow>(tableName: string, row: T): void => {
+const addRow = <T extends TRow>(tableName: Symbol | string, row: T): void => {
     const table = getTable<T>(tableName);
     const rowKey = table?.data?.size.toString();
     if (!rowKey) {
@@ -29,22 +32,25 @@ const addRow = <T extends TRow>(tableName: string, row: T): void => {
     table?.data?.set(rowKey, row);
 };
 
-const removeRow = <T extends TRow>(tableName: string, rowKey: string): void => {
+const removeRow = <T extends TRow>(
+    tableName: Symbol | string,
+    rowKey: string,
+): void => {
     const table = getTable<T>(tableName);
     table?.data?.delete(rowKey);
 };
 
-const clearTableData = <T extends TRow>(tableName: string): void => {
+const clearTableData = <T extends TRow>(tableName: Symbol | string): void => {
     const table = getTable<T>(tableName);
     table?.data?.clear();
 };
 
-const getRows = <T extends TRow>(name: string): [string, T][] => {
-    const table = getTable<T>(name);
+const getRows = <T extends TRow>(tableName: Symbol | string): [string, T][] => {
+    const table = getTable<T>(tableName);
     if (!table?.data) {
         return [];
     }
-    const filter = getTableFilter(name);
+    const filter = getTableFilter(tableName);
     const filteredRows = Array.from(table.data).filter(([, row]) => {
         if (filter.filters.size === 0) {
             return true;

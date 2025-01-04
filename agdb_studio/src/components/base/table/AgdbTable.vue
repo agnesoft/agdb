@@ -12,7 +12,7 @@ import {
 
 const props = defineProps({
     name: {
-        type: String,
+        type: [Symbol, String],
         required: true,
     },
 });
@@ -23,7 +23,7 @@ const rows = computed(() => {
 const columns = computed(() => {
     return getTableColumns<TRow>(props.name);
 });
-const tableKey = props.name;
+const tableKey = computed(() => props.name);
 provide(INJECT_KEY_TABLE_NAME, tableKey);
 provide(INJECT_KEY_COLUMNS, columns);
 </script>
@@ -52,7 +52,9 @@ provide(INJECT_KEY_COLUMNS, columns);
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
     padding: 0.5rem;
-    border-bottom: 1px solid var(--color-border);
     white-space: nowrap;
+    &.expandable {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) 50px;
+    }
 }
 </style>

@@ -169,6 +169,8 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("log_level", "INFO".into());
     config.insert("pepper_path", "".into());
     config.insert("cluster_token", "test".into());
+    config.insert("cluster_heartbeat_timeout_ms", 1000.into());
+    config.insert("cluster_term_timeout_ms", 3000.into());
     config.insert("cluster", Vec::<String>::new().into());
 
     let _server = TestServerImpl::with_config(config).await?;

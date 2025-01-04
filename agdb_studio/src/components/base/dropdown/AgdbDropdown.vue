@@ -2,7 +2,7 @@
 import { vOnClickOutside } from "@vueuse/components";
 import { ref } from "vue";
 import DropdownContent from "./DropdownContent.vue";
-import FadeTrasition from "@/components/transitions/FadeTrasition.vue";
+import SlideUpTransition from "@/components/transitions/SlideUpTransition.vue";
 
 const opened = ref(false);
 const close = () => {
@@ -25,7 +25,7 @@ const buttonRef = ref<HTMLElement>();
             <slot name="trigger"></slot>
         </button>
         <Teleport to="body">
-            <FadeTrasition>
+            <SlideUpTransition>
                 <DropdownContent
                     :button-ref="buttonRef"
                     :opened="opened"
@@ -34,7 +34,7 @@ const buttonRef = ref<HTMLElement>();
                 >
                     <slot name="content"></slot>
                 </DropdownContent>
-            </FadeTrasition>
+            </SlideUpTransition>
         </Teleport>
     </div>
 </template>

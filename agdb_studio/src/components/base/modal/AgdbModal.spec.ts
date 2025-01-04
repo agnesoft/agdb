@@ -44,7 +44,9 @@ describe("AgdbModal", () => {
             content: convertArrayOfStringsToContent(["Test Body"]),
         });
         await wrapper.vm.$nextTick();
-        await wrapper.find(".modal-header .close-button").trigger("click");
+        await wrapper
+            .find(".modal-header .button[data-testid=close-modal]")
+            .trigger("click");
         await wrapper.vm.$nextTick();
         expect(wrapper.isVisible()).toBe(false);
     });
@@ -64,8 +66,10 @@ describe("AgdbModal", () => {
             ],
         });
         await wrapper.vm.$nextTick();
-        expect(wrapper.findAll(".button")).toHaveLength(2);
-        expect(wrapper.find(".button").text()).toBe("Custom Button");
+        expect(wrapper.findAll(".modal-footer .button")).toHaveLength(2);
+        expect(wrapper.find(".modal-footer .button").text()).toBe(
+            "Custom Button",
+        );
     });
     it("sets focus on the submit button", async () => {
         const wrapper = mount(AgdbModal, {

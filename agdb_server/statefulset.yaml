@@ -29,39 +29,12 @@ metadata:
     app: agdb
 data:
   start.sh: |
-    echo \"startig...\"
-    if [[ -f /agdb/agdb_server.yaml ]]; then
-      rm -f /agdb/agdb_server.yaml
-    fi
-    cp /agdb/config/${AGDB_REPLICA_INDEX}_agdb_server.yaml /agdb/agdb_server.yaml
+    cp /agdb/config/agdb_server.yaml /agdb/agdb_server.yaml
+    sed -i "s/{id}/$AGDB_REPLICA_INDEX/g" /agdb/agdb_server.yaml
     /usr/local/bin/agdb_server
-  0_agdb_server.yaml: |
+  agdb_server.yaml: |
     bind: :::3000
-    address: http://agdb-0.agdb.default.svc.cluster.local:3000
-    basepath: ""
-    admin: admin
-    log_level: INFO
-    data_dir: /agdb/data
-    pepper_path: /agdb/pepper/pepper
-    cluster_token: cluster
-    cluster_heartbeat_timeout_ms: 1000
-    cluster_term_timeout_ms: 3000
-    cluster: [http://agdb-0.agdb.default.svc.cluster.local:3000, http://agdb-1.agdb.default.svc.cluster.local:3000, http://agdb-2.agdb.default.svc.cluster.local:3000]
-  1_agdb_server.yaml: |
-    bind: :::3000
-    address: http://agdb-1.agdb.default.svc.cluster.local:3000
-    basepath: ""
-    admin: admin
-    log_level: INFO
-    data_dir: /agdb/data
-    pepper_path: /agdb/pepper/pepper
-    cluster_token: cluster
-    cluster_heartbeat_timeout_ms: 1000
-    cluster_term_timeout_ms: 3000
-    cluster: [http://agdb-0.agdb.default.svc.cluster.local:3000, http://agdb-1.agdb.default.svc.cluster.local:3000, http://agdb-2.agdb.default.svc.cluster.local:3000]
-  2_agdb_server.yaml: |
-    bind: :::3000
-    address: http://agdb-2.agdb.default.svc.cluster.local:3000
+    address: http://agdb-{id}.agdb.default.svc.cluster.local:3000
     basepath: ""
     admin: admin
     log_level: INFO
@@ -107,8 +80,8 @@ spec:
                 fieldRef:
                   fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
           volumeMounts:
-            # - name: agdb-data
-            #   mountPath: /agdb/data
+            - name: agdb-data
+              mountPath: /agdb/data
             - name: config
               mountPath: /agdb/config
             - name: pepper
@@ -121,13 +94,13 @@ spec:
         - name: pepper
           secret:
             secretName: agdb-pepper
-  # volumeClaimTemplates:
-  #   - metadata:
-  #       name: agdb-data
-  #       labels:
-  #         app: agdb
-  #     spec:
-  #       accessModes: ["ReadWriteOnce"]
-  #       resources:
-  #         requests:
-  #           storage: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: agdb-data
+        labels:
+          app: agdb
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

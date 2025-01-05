@@ -46,7 +46,8 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
         config_impl.start_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
         if !config_impl.pepper_path.is_empty() {
-            let pepper = std::fs::read(&config_impl.pepper_path)?;
+            let pepper_raw = std::fs::read(&config_impl.pepper_path)?;
+            let pepper = pepper_raw.trim_ascii();
 
             if pepper.len() != SALT_LEN {
                 return Err(ServerError::from(format!(

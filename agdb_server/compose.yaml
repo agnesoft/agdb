@@ -10,6 +10,8 @@ services:
     configs:
       - source: agdb0_config
         target: /agdb/agdb_server.yaml
+      - source: pepper
+        target: /agdb/pepper
   agdb1:
     image: agnesoft/agdb:dev
     hostname: agdb1
@@ -21,6 +23,8 @@ services:
     configs:
       - source: agdb1_config
         target: /agdb/agdb_server.yaml
+      - source: pepper
+        target: /agdb/pepper
   agdb2:
     image: agnesoft/agdb:dev
     hostname: agdb2
@@ -32,6 +36,8 @@ services:
     configs:
       - source: agdb2_config
         target: /agdb/agdb_server.yaml
+      - source: pepper
+        target: /agdb/pepper
 
 volumes:
   agdb0_data:
@@ -39,6 +45,9 @@ volumes:
   agdb2_data:
 
 configs:
+  pepper:
+    content: |
+      1234567891234567
   agdb0_config:
     content: |
       bind: :::3000
@@ -47,7 +56,7 @@ configs:
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
-      pepper_path: ""
+      pepper_path: /agdb/pepper
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
@@ -60,7 +69,7 @@ configs:
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
-      pepper_path: ""
+      pepper_path: /agdb/pepper
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
@@ -73,7 +82,7 @@ configs:
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
-      pepper_path: ""
+      pepper_path: /agdb/pepper
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000

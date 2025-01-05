@@ -14,17 +14,17 @@ async fn user_list() -> anyhow::Result<()> {
     let (status, list) = server.api.admin_user_list().await?;
     assert_eq!(status, 200);
     assert!(list.contains(&UserStatus {
-        name: "admin".to_string(),
+        username: "admin".to_string(),
         login: true,
         admin: true,
     }));
     assert!(list.contains(&UserStatus {
-        name: user1.to_string(),
+        username: user1.to_string(),
         login: false,
         admin: false,
     }));
     assert!(list.contains(&UserStatus {
-        name: user2.to_string(),
+        username: user2.to_string(),
         login: false,
         admin: false,
     }));

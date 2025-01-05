@@ -144,7 +144,7 @@ pub(crate) async fn status(
         StatusCode::OK,
         Json(UserStatus {
             admin: username.0 == config.admin,
-            name: username.0,
+            username: username.0,
             login: true,
         }),
     ))

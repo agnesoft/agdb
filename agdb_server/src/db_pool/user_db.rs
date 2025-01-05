@@ -127,7 +127,7 @@ fn audit_query(user: &str, audit: &mut Vec<QueryAudit>, query: QueryType) {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs(),
-        user: user.to_string(),
+        username: user.to_string(),
         query,
     });
 }

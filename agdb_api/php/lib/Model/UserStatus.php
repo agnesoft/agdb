@@ -59,7 +59,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPITypes = [
         'admin' => 'bool',
         'login' => 'bool',
-        'name' => 'string'
+        'username' => 'string'
     ];
 
     /**
@@ -72,7 +72,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $openAPIFormats = [
         'admin' => null,
         'login' => null,
-        'name' => null
+        'username' => null
     ];
 
     /**
@@ -83,7 +83,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static array $openAPINullables = [
         'admin' => false,
         'login' => false,
-        'name' => false
+        'username' => false
     ];
 
     /**
@@ -174,7 +174,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $attributeMap = [
         'admin' => 'admin',
         'login' => 'login',
-        'name' => 'name'
+        'username' => 'username'
     ];
 
     /**
@@ -185,7 +185,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $setters = [
         'admin' => 'setAdmin',
         'login' => 'setLogin',
-        'name' => 'setName'
+        'username' => 'setUsername'
     ];
 
     /**
@@ -196,7 +196,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     protected static $getters = [
         'admin' => 'getAdmin',
         'login' => 'getLogin',
-        'name' => 'getName'
+        'username' => 'getUsername'
     ];
 
     /**
@@ -258,7 +258,7 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     {
         $this->setIfExists('admin', $data ?? [], null);
         $this->setIfExists('login', $data ?? [], null);
-        $this->setIfExists('name', $data ?? [], null);
+        $this->setIfExists('username', $data ?? [], null);
     }
 
     /**
@@ -294,8 +294,8 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
         if ($this->container['login'] === null) {
             $invalidProperties[] = "'login' can't be null";
         }
-        if ($this->container['name'] === null) {
-            $invalidProperties[] = "'name' can't be null";
+        if ($this->container['username'] === null) {
+            $invalidProperties[] = "'username' can't be null";
         }
         return $invalidProperties;
     }
@@ -367,28 +367,28 @@ class UserStatus implements ModelInterface, ArrayAccess, \JsonSerializable
     }
 
     /**
-     * Gets name
+     * Gets username
      *
      * @return string
      */
-    public function getName()
+    public function getUsername()
     {
-        return $this->container['name'];
+        return $this->container['username'];
     }
 
     /**
-     * Sets name
+     * Sets username
      *
-     * @param string $name name
+     * @param string $username username
      *
      * @return self
      */
-    public function setName($name)
+    public function setUsername($username)
     {
-        if (is_null($name)) {
-            throw new \InvalidArgumentException('non-nullable name cannot be null');
+        if (is_null($username)) {
+            throw new \InvalidArgumentException('non-nullable username cannot be null');
         }
-        $this->container['name'] = $name;
+        $this->container['username'] = $username;
 
         return $this;
     }

@@ -11,6 +11,7 @@ spec:
   clusterIP: None
   selector:
     app: agdb
+
 ---
 apiVersion: v1
 kind: Secret
@@ -20,6 +21,7 @@ metadata:
     app: agdb
 stringData:
   pepper: "1234567891234567"
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -44,6 +46,7 @@ data:
     cluster_heartbeat_timeout_ms: 1000
     cluster_term_timeout_ms: 3000
     cluster: [http://agdb-0.agdb.default.svc.cluster.local:3000, http://agdb-1.agdb.default.svc.cluster.local:3000, http://agdb-2.agdb.default.svc.cluster.local:3000]
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet

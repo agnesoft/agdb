@@ -93,12 +93,12 @@ fn update_npm_project(
             .arg("npm install")
             .current_dir(project_dir),
     )?;
-    run_command(
+    let _ = run_command(
         Command::new("bash")
             .arg("-c")
             .arg("npm audit fix")
             .current_dir(project_dir),
-    )?;
+    );
 
     Ok(())
 }
@@ -135,7 +135,19 @@ fn run_command(command: &mut Command) -> Result<(), CIError> {
     let out = command.output()?;
     std::io::stdout().write_all(&out.stdout)?;
     std::io::stderr().write_all(&out.stderr)?;
-    Ok(())
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(CIError {
+            description: format!(
+                "Command failed: {command:?} ({})",
+                command
+                    .get_current_dir()
+                    .unwrap_or(Path::new("."))
+                    .to_string_lossy()
+            ),
+        })
+    }
 }
 
 fn main() -> Result<(), CIError> {
@@ -169,8 +181,8 @@ fn main() -> Result<(), CIError> {
     println!("Generating PHP openapi");
     run_command(
         Command::new("bash")
-            .arg("-c")
-            .arg("./ci.sh openapi")
+            .arg("ci.sh")
+            .arg("openapi")
             .current_dir(Path::new("agdb_api").join("php")),
     )?;
 
@@ -196,8 +208,8 @@ fn main() -> Result<(), CIError> {
     println!("Generating PHP test_queries");
     run_command(
         Command::new("bash")
-            .arg("-c")
-            .arg("./ci.sh test_queries")
+            .arg("ci.sh")
+            .arg("test_queries")
             .current_dir(Path::new("agdb_api").join("php")),
     )?;
 

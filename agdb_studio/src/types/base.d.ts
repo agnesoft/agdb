@@ -22,9 +22,10 @@ type Input = {
     className?: string;
     autofocus?: boolean;
 };
+
 type Content = {
     paragraph?: Paragraph[];
-    component?: string;
+    component?: AsyncComponent;
     input?: Input;
 };
 

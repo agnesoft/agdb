@@ -8,7 +8,7 @@ export type Column<T extends TRow> = {
     cellClass?: string | ((row: T) => string);
     sortable?: boolean;
     filterable?: boolean;
-    cellComponent?: string | ((row: T) => string);
+    cellComponent?: AsyncComponent | ((row: T) => AsyncComponent);
     valueFormatter?: (value: TCellType) => TCellType;
     actions?: Action[];
 };
@@ -17,5 +17,5 @@ export type Table<T extends TRow> = {
     name: Symbol | string;
     columns: Map<string, Column<T>>;
     data?: Map<string, T>;
-    rowDetailsComponent?: string;
+    rowDetailsComponent?: AsyncComponent;
 };

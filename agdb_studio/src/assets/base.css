@@ -20,10 +20,12 @@
     --text-light-2: rgba(60, 60, 60, 0.66);
     --text-dark-1: var(--white);
     --text-dark-2: rgba(235, 235, 235, 0.64);
+    --text-dark-3: rgba(235, 235, 235, 0.4);
 
     --base-font: "Red Hat Display", sans-serif;
 
     --orange: #ffa02c;
+    --red: #af2836;
 }
 
 :root {
@@ -37,6 +39,7 @@
 
     --color-heading: var(--text-light-1);
     --color-text: var(--text-light-1);
+    --color-text-muted: var(--text-light-2);
 
     --section-gap: 160px;
 }
@@ -52,6 +55,7 @@
 
         --color-heading: var(--text-dark-1);
         --color-text: var(--text-dark-2);
+        --color-text-muted: var(--text-dark-3);
     }
 }
 

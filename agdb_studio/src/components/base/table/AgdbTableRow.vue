@@ -9,6 +9,7 @@ import AgdbCell from "./AgdbCell.vue";
 import { getTable } from "@/composables/table/tableConfig";
 import { AkChevronDownSmall, AkChevronUpSmall } from "@kalimahapps/vue-icons";
 import SlideUpTransition from "@/components/transitions/SlideUpTransition.vue";
+import { getAsyncComponent } from "@/utils/asyncComponents";
 
 const props = defineProps({
     row: {
@@ -31,7 +32,13 @@ provide(INJECT_KEY_ROW, rowData);
 
 const tableKey = inject<Ref<Symbol | string>>(INJECT_KEY_TABLE_NAME);
 const rowDetailsComponent = computed(() => {
-    return tableKey ? getTable(tableKey.value)?.rowDetailsComponent : undefined;
+    const name = tableKey
+        ? getTable(tableKey.value)?.rowDetailsComponent
+        : undefined;
+    if (name) {
+        return getAsyncComponent(name);
+    }
+    return undefined;
 });
 const rowExpanded = ref(false);
 const toggleExpandRow = (): void => {
@@ -62,8 +69,7 @@ const toggleExpandRow = (): void => {
         </div>
         <SlideUpTransition>
             <div v-if="rowExpanded && rowDetailsComponent" class="expanded-row">
-                details
-                <component :is="rowDetailsComponent" />
+                <component :is="rowDetailsComponent" :row="row" />
             </div>
         </SlideUpTransition>
     </div>

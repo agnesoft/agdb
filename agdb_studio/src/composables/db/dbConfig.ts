@@ -24,7 +24,7 @@ const dbActions: Action[] = [
                     ? convertArrayOfStringsToContent(
                           res.data.map(
                               (item) =>
-                                  `${item.timestamp} | ${item.user} | ${item.query}`,
+                                  `${item.timestamp} | ${item.username} | ${item.query}`,
                           ),
                       )
                     : convertArrayOfStringsToContent(["No audit logs found."]);

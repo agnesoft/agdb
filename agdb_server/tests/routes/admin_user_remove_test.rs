@@ -20,7 +20,7 @@ async fn remove() -> anyhow::Result<()> {
         .await?
         .1
         .iter()
-        .any(|u| u.name == *user));
+        .any(|u| u.username == *user));
     Ok(())
 }
 
@@ -45,7 +45,7 @@ async fn remove_with_other() -> anyhow::Result<()> {
         .await?
         .1
         .iter()
-        .any(|u| u.name == *owner));
+        .any(|u| u.username == *owner));
     assert!(!Path::new(&server.data_dir).join(owner).exists());
     server.api.user_login(user, user).await?;
     assert!(server.api.db_list().await?.1.is_empty());

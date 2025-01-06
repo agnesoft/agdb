@@ -18,7 +18,7 @@ const fetchUserStatus = async () => {
     }
 
     client.value?.user_status()?.then((status) => {
-        username.value = status.data.name;
+        username.value = status.data.username;
         admin.value = status.data.admin;
     });
 };

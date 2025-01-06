@@ -359,7 +359,7 @@ async fn admin_user_add() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
     let users = client.admin_user_list().await?.1;
-    let added_user = users.iter().find(|u| u.name.as_str() == user);
+    let added_user = users.iter().find(|u| u.username.as_str() == user);
     assert!(added_user.is_some());
     Ok(())
 }
@@ -416,11 +416,11 @@ async fn admin_user_remove() -> anyhow::Result<()> {
     client.user_login(ADMIN, ADMIN).await?;
     client.admin_user_add(user, user).await?;
     let users = client.admin_user_list().await?.1;
-    let added_user = users.iter().find(|u| u.name.as_str() == user);
+    let added_user = users.iter().find(|u| u.username.as_str() == user);
     assert!(added_user.is_some());
     client.admin_user_remove(user).await?;
     let users = client.admin_user_list().await?.1;
-    let added_user = users.iter().find(|u| u.name.as_str() == user);
+    let added_user = users.iter().find(|u| u.username.as_str() == user);
     assert!(added_user.is_none());
     Ok(())
 }

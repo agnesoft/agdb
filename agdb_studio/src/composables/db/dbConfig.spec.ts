@@ -127,6 +127,7 @@ describe("dbConfig", () => {
             expect(modal.header).toBe("Audit log of test_owner/test_db");
             expect(modal.content).toHaveLength(1);
         });
+
         it("should print the audit log", async () => {
             const action = dbActions.find((action) => action.key === "audit");
             const params = { db: "test_db", owner: "test_owner" };
@@ -134,12 +135,12 @@ describe("dbConfig", () => {
                 data: [
                     {
                         timestamp: "123",
-                        user: "test_user",
+                        username: "test_user",
                         query: "test_query",
                     },
                     {
                         timestamp: "456",
-                        user: "test_user2",
+                        username: "test_user2",
                         query: "test_query2",
                     },
                 ],
@@ -158,6 +159,7 @@ describe("dbConfig", () => {
             );
         });
     });
+
     describe("getConfirmationHeaderFn", () => {
         it("should return correct header", () => {
             const header = getConfirmationHeaderFn({

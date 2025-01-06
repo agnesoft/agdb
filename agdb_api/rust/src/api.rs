@@ -235,13 +235,13 @@ impl<T: HttpClient> AgdbApi<T> {
         &self,
         owner: &str,
         db: &str,
-        user: &str,
+        username: &str,
         db_role: DbUserRole,
     ) -> AgdbApiResult<u16> {
         self.client
             .put::<()>(
                 &self.url(&format!(
-                    "/admin/db/{owner}/{db}/user/{user}/add?db_role={db_role}"
+                    "/admin/db/{owner}/{db}/user/{username}/add?db_role={db_role}"
                 )),
                 &None,
                 &self.token,
@@ -266,11 +266,11 @@ impl<T: HttpClient> AgdbApi<T> {
         &self,
         owner: &str,
         db: &str,
-        user: &str,
+        username: &str,
     ) -> AgdbApiResult<u16> {
         self.client
             .delete(
-                &self.url(&format!("/admin/db/{owner}/{db}/user/{user}/remove")),
+                &self.url(&format!("/admin/db/{owner}/{db}/user/{username}/remove")),
                 &self.token,
             )
             .await
@@ -290,11 +290,11 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn admin_user_add(&self, user: &str, password: &str) -> AgdbApiResult<u16> {
+    pub async fn admin_user_add(&self, username: &str, password: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<UserCredentials, ()>(
-                &self.url(&format!("/admin/user/{user}/add")),
+                &self.url(&format!("/admin/user/{username}/add")),
                 &Some(UserCredentials {
                     password: password.to_string(),
                 }),
@@ -306,12 +306,12 @@ impl<T: HttpClient> AgdbApi<T> {
 
     pub async fn admin_user_change_password(
         &self,
-        user: &str,
+        username: &str,
         password: &str,
     ) -> AgdbApiResult<u16> {
         self.client
             .put::<UserCredentials>(
-                &self.url(&format!("/admin/user/{user}/change_password")),
+                &self.url(&format!("/admin/user/{username}/change_password")),
                 &Some(UserCredentials {
                     password: password.to_string(),
                 }),
@@ -326,11 +326,11 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn admin_user_logout(&self, user: &str) -> AgdbApiResult<u16> {
+    pub async fn admin_user_logout(&self, username: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(
-                &self.url(&format!("/admin/user/{user}/logout")),
+                &self.url(&format!("/admin/user/{username}/logout")),
                 &None,
                 &self.token,
             )
@@ -338,10 +338,10 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
-    pub async fn admin_user_remove(&self, user: &str) -> AgdbApiResult<u16> {
+    pub async fn admin_user_remove(&self, username: &str) -> AgdbApiResult<u16> {
         self.client
             .delete(
-                &self.url(&format!("/admin/user/{user}/remove")),
+                &self.url(&format!("/admin/user/{username}/remove")),
                 &self.token,
             )
             .await
@@ -359,11 +359,11 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
-    pub async fn cluster_admin_user_logout(&self, user: &str) -> AgdbApiResult<u16> {
+    pub async fn cluster_admin_user_logout(&self, username: &str) -> AgdbApiResult<u16> {
         Ok(self
             .client
             .post::<(), ()>(
-                &self.url(&format!("/cluster/admin/user/{user}/logout")),
+                &self.url(&format!("/cluster/admin/user/{username}/logout")),
                 &None,
                 &self.token,
             )
@@ -371,13 +371,17 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
-    pub async fn cluster_user_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {
+    pub async fn cluster_user_login(
+        &mut self,
+        username: &str,
+        password: &str,
+    ) -> AgdbApiResult<u16> {
         let (status, token) = self
             .client
             .post::<UserLogin, String>(
                 &self.url("/cluster/user/login"),
                 &Some(UserLogin {
-                    username: user.to_string(),
+                    username: username.to_string(),
                     password: password.to_string(),
                 }),
                 &None,
@@ -542,13 +546,13 @@ impl<T: HttpClient> AgdbApi<T> {
         &self,
         owner: &str,
         db: &str,
-        user: &str,
+        username: &str,
         db_role: DbUserRole,
     ) -> AgdbApiResult<u16> {
         self.client
             .put::<()>(
                 &self.url(&format!(
-                    "/db/{owner}/{db}/user/{user}/add?db_role={db_role}"
+                    "/db/{owner}/{db}/user/{username}/add?db_role={db_role}"
                 )),
                 &None,
                 &self.token,
@@ -565,10 +569,15 @@ impl<T: HttpClient> AgdbApi<T> {
             .await
     }
 
-    pub async fn db_user_remove(&self, owner: &str, db: &str, user: &str) -> AgdbApiResult<u16> {
+    pub async fn db_user_remove(
+        &self,
+        owner: &str,
+        db: &str,
+        username: &str,
+    ) -> AgdbApiResult<u16> {
         self.client
             .delete(
-                &self.url(&format!("/db/{owner}/{db}/user/{user}/remove")),
+                &self.url(&format!("/db/{owner}/{db}/user/{username}/remove")),
                 &self.token,
             )
             .await
@@ -578,13 +587,13 @@ impl<T: HttpClient> AgdbApi<T> {
         Ok(self.client.get::<()>(&self.url("/status"), &None).await?.0)
     }
 
-    pub async fn user_login(&mut self, user: &str, password: &str) -> AgdbApiResult<u16> {
+    pub async fn user_login(&mut self, username: &str, password: &str) -> AgdbApiResult<u16> {
         let (status, token) = self
             .client
             .post::<UserLogin, String>(
                 &self.url("/user/login"),
                 &Some(UserLogin {
-                    username: user.to_string(),
+                    username: username.to_string(),
                     password: password.to_string(),
                 }),
                 &None,

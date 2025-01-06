@@ -55,7 +55,7 @@ pub enum DbResource {
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DbUser {
-    pub user: String,
+    pub username: String,
     pub role: DbUserRole,
 }
 
@@ -112,7 +112,7 @@ pub struct QueriesResults(pub Vec<QueryResult>);
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq)]
 pub struct QueryAudit {
     pub timestamp: u64,
-    pub user: String,
+    pub username: String,
     pub query: QueryType,
 }
 
@@ -142,7 +142,7 @@ pub struct UserLogin {
 
 #[derive(Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserStatus {
-    pub name: String,
+    pub username: String,
     pub login: bool,
     pub admin: bool,
 }
@@ -269,7 +269,7 @@ mod tests {
         let _ = format!(
             "{:?}",
             DbUser {
-                user: "user".to_string(),
+                username: "user".to_string(),
                 role: DbUserRole::Admin
             }
         );
@@ -287,7 +287,7 @@ mod tests {
         let _ = format!(
             "{:?}",
             UserStatus {
-                name: "user".to_string(),
+                username: "user".to_string(),
                 login: true,
                 admin: false
             }
@@ -296,7 +296,7 @@ mod tests {
             "{:?}",
             QueryAudit {
                 timestamp: 0,
-                user: "user".to_string(),
+                username: "user".to_string(),
                 query: QueryType::SelectIndexes(SelectIndexesQuery {})
             }
         );
@@ -315,7 +315,7 @@ mod tests {
     fn derived_from_partial_eq() {
         let query_audit = QueryAudit {
             timestamp: 0,
-            user: "user".to_string(),
+            username: "user".to_string(),
             query: QueryType::SelectIndexes(SelectIndexesQuery {}),
         };
         let audit = DbAudit(vec![query_audit]);
@@ -327,11 +327,11 @@ mod tests {
         assert!(DbType::Memory < DbType::File);
         assert!(DbUserRole::Admin < DbUserRole::Write);
         let user = DbUser {
-            user: "user".to_string(),
+            username: "user".to_string(),
             role: DbUserRole::Admin,
         };
         let other = DbUser {
-            user: "user2".to_string(),
+            username: "user2".to_string(),
             role: DbUserRole::Admin,
         };
         assert!(user < other);
@@ -353,12 +353,12 @@ mod tests {
         };
         assert!(db < other);
         let status = UserStatus {
-            name: "user".to_string(),
+            username: "user".to_string(),
             login: true,
             admin: false,
         };
         let other = UserStatus {
-            name: "user2".to_string(),
+            username: "user2".to_string(),
             login: true,
             admin: false,
         };
@@ -377,7 +377,7 @@ mod tests {
         );
 
         let user = DbUser {
-            user: "user".to_string(),
+            username: "user".to_string(),
             role: DbUserRole::Admin,
         };
 
@@ -395,7 +395,7 @@ mod tests {
         assert_eq!(db.cmp(&db), std::cmp::Ordering::Equal);
 
         let status = UserStatus {
-            name: "user".to_string(),
+            username: "user".to_string(),
             login: false,
             admin: false,
         };

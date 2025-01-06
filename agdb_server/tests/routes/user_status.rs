@@ -10,7 +10,7 @@ async fn user() -> anyhow::Result<()> {
     server.api.admin_user_add(user, user).await?;
     server.api.user_login(user, user).await?;
     let user_status = server.api.user_status().await?.1;
-    assert_eq!(user_status.name, *user);
+    assert_eq!(user_status.username, *user);
     assert!(user_status.login);
     assert!(!user_status.admin);
     Ok(())
@@ -21,7 +21,7 @@ async fn admin() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     server.api.user_login(ADMIN, ADMIN).await?;
     let user_status = server.api.user_status().await?.1;
-    assert_eq!(user_status.name, ADMIN);
+    assert_eq!(user_status.username, ADMIN);
     assert!(user_status.login);
     assert!(user_status.admin);
 

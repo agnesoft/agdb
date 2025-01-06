@@ -24,11 +24,11 @@ async fn list() -> anyhow::Result<()> {
     list.sort();
     let mut expected = vec![
         DbUser {
-            user: owner.to_string(),
+            username: owner.to_string(),
             role: DbUserRole::Admin,
         },
         DbUser {
-            user: user.to_string(),
+            username: user.to_string(),
             role: DbUserRole::Write,
         },
     ];

@@ -22,7 +22,7 @@ describe("useAccount", () => {
 
     it("fetches user status", async () => {
         user_status.mockResolvedValueOnce({
-            data: { name: "test", admin: true },
+            data: { username: "test", admin: true },
         });
         const { username, admin, fetchUserStatus } = useAccount();
         await fetchUserStatus();

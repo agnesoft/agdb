@@ -87,7 +87,9 @@ function openapi() {
     fi
 
     echo "composer dump-autoload..."
-    (echo "Y" | composer dump-autoload -o) || true
+    composer --version
+    cd ../../
+    composer dump-autoload -o
 }
 
 function test_queries() {

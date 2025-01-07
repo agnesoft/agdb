@@ -3,6 +3,11 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
+#[cfg(target_os = "windows")]
+const BASH: &str = "C:/Program Files/Git/bin/bash.exe";
+#[cfg(not(target_os = "windows"))]
+const BASH: &str = "bash";
+
 const IGNORE: [&str; 10] = [
     "node_modules",
     "vendor",
@@ -88,17 +93,17 @@ fn update_npm_project(
         project_dir.to_string_lossy()
     );
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("-c")
             .arg("npm install")
             .current_dir(project_dir),
     )?;
-    run_command(
-        Command::new("bash")
+    let _ = run_command(
+        Command::new(BASH)
             .arg("-c")
             .arg("npm audit fix")
             .current_dir(project_dir),
-    )?;
+    );
 
     Ok(())
 }
@@ -135,13 +140,24 @@ fn run_command(command: &mut Command) -> Result<(), CIError> {
     let out = command.output()?;
     std::io::stdout().write_all(&out.stdout)?;
     std::io::stderr().write_all(&out.stderr)?;
-    Ok(())
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(CIError {
+            description: format!(
+                "Command failed: {command:?} ({})",
+                command
+                    .get_current_dir()
+                    .unwrap_or(Path::new("."))
+                    .to_string_lossy()
+            ),
+        })
+    }
 }
 
-fn main() -> Result<(), CIError> {
+fn ci() -> Result<(), CIError> {
     let current_version = current_version()?;
     let new_version = new_version()?;
-
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
@@ -160,7 +176,7 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating Typescript openapi");
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("-c")
             .arg("npm run openapi")
             .current_dir(Path::new("agdb_api").join("typescript")),
@@ -168,9 +184,9 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating PHP openapi");
     run_command(
-        Command::new("bash")
-            .arg("-c")
-            .arg("./ci.sh openapi")
+        Command::new(BASH)
+            .arg("ci.sh")
+            .arg("openapi")
             .current_dir(Path::new("agdb_api").join("php")),
     )?;
 
@@ -187,7 +203,7 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating Typescript test_queries");
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("-c")
             .arg("npm run test_queries")
             .current_dir(Path::new("agdb_api").join("typescript")),
@@ -195,13 +211,17 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating PHP test_queries");
     run_command(
-        Command::new("bash")
-            .arg("-c")
-            .arg("./ci.sh test_queries")
+        Command::new(BASH)
+            .arg("ci.sh")
+            .arg("test_queries")
             .current_dir(Path::new("agdb_api").join("php")),
     )?;
 
     println!("DONE");
 
     Ok(())
+}
+
+fn main() -> Result<(), CIError> {
+    ci().inspect_err(|e| println!("Error: {:?}", e))
 }

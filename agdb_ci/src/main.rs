@@ -3,6 +3,11 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
+#[cfg(target_os = "windows")]
+const BASH: &str = "C:/Program Files/Git/bin/bash.exe";
+#[cfg(not(target_os = "windows"))]
+const BASH: &str = "bash";
+
 const IGNORE: [&str; 10] = [
     "node_modules",
     "vendor",
@@ -88,13 +93,13 @@ fn update_npm_project(
         project_dir.to_string_lossy()
     );
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("-c")
             .arg("npm install")
             .current_dir(project_dir),
     )?;
     let _ = run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("-c")
             .arg("npm audit fix")
             .current_dir(project_dir),
@@ -151,9 +156,13 @@ fn run_command(command: &mut Command) -> Result<(), CIError> {
 }
 
 fn main() -> Result<(), CIError> {
+    println!(
+        "PATH: {}",
+        std::env::var("PATH").unwrap().replace(";", "\n")
+    );
+
     let current_version = current_version()?;
     let new_version = new_version()?;
-
     println!("Current version: {}", current_version);
     println!("New version: {}", new_version);
 
@@ -172,7 +181,7 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating Typescript openapi");
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("-c")
             .arg("npm run openapi")
             .current_dir(Path::new("agdb_api").join("typescript")),
@@ -180,7 +189,7 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating PHP openapi");
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("ci.sh")
             .arg("openapi")
             .current_dir(Path::new("agdb_api").join("php")),
@@ -199,7 +208,7 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating Typescript test_queries");
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("-c")
             .arg("npm run test_queries")
             .current_dir(Path::new("agdb_api").join("typescript")),
@@ -207,7 +216,7 @@ fn main() -> Result<(), CIError> {
 
     println!("Generating PHP test_queries");
     run_command(
-        Command::new("bash")
+        Command::new(BASH)
             .arg("ci.sh")
             .arg("test_queries")
             .current_dir(Path::new("agdb_api").join("php")),

@@ -152,18 +152,10 @@ fn run_command(command: &mut Command) -> Result<(), CIError> {
                     .to_string_lossy()
             ),
         })
-        .inspect(|e| {
-            println!("{:?}", e);
-        })
     }
 }
 
-fn main() -> Result<(), CIError> {
-    println!(
-        "PATH: {}",
-        std::env::var("PATH").unwrap().replace(";", "\n")
-    );
-
+fn ci() -> Result<(), CIError> {
     let current_version = current_version()?;
     let new_version = new_version()?;
     println!("Current version: {}", current_version);
@@ -228,4 +220,8 @@ fn main() -> Result<(), CIError> {
     println!("DONE");
 
     Ok(())
+}
+
+fn main() -> Result<(), CIError> {
+    ci().inspect_err(|e| println!("Error: {:?}", e))
 }

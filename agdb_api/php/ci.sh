@@ -63,7 +63,9 @@ function format() {
 function openapi() {
     rm -rf lib/
     rm -rf docs/
-    
+
+    echo "OSTYPE: $OSTYPE"
+
     if [[ "$OSTYPE" == "msys" ]]; then
         local package="Agnesoft\AgdbApi"
     else
@@ -84,7 +86,8 @@ function openapi() {
         sed -i -e 's~Agnesoft\\\\Agdb~Agnesoft\\Agdb~g' README.md
     fi
 
-    echo "Y" | composer dump-autoload -o
+    echo "composer dump-autoload..."
+    (echo "Y" | composer dump-autoload -o) || true
 }
 
 function test_queries() {

@@ -152,6 +152,9 @@ fn run_command(command: &mut Command) -> Result<(), CIError> {
                     .to_string_lossy()
             ),
         })
+        .inspect(|e| {
+            println!("{:?}", e);
+        })
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::api;
+use crate::api::Api;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::db_pool::DbPool;
@@ -13,6 +13,8 @@ use axum::Router;
 use reqwest::Method;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
 
 pub(crate) fn app(
     cluster: Cluster,
@@ -178,8 +180,7 @@ pub(crate) fn app(
             "/user/change_password",
             routing::put(routes::user::change_password),
         )
-        .route("/user/status", routing::get(routes::user::status))
-        .route("/openapi.json", routing::get(api::openapi_json));
+        .route("/user/status", routing::get(routes::user::status));
 
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
@@ -188,7 +189,7 @@ pub(crate) fn app(
 
     let router = Router::new()
         .nest("/api/v1", api_v1)
-        .route("/api/v1", routing::get(api::rapidoc))
+        .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             forward::forward_to_leader,

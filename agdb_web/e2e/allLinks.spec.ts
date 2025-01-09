@@ -16,11 +16,14 @@ const validateLinks = async (page: Page) => {
             !href.startsWith("javascript") &&
             !href.startsWith("#")
         ) {
+            const sourcePageTitle = await page.title();
+            const error = `${sourcePageTitle} -> ${href}`;
+
             await page.goto(href);
 
             const pageTitle = await page.title();
-            expect(pageTitle.length).toBeGreaterThan(0);
-            expect(pageTitle).not.toContain("404");
+            expect(pageTitle.length, error).toBeGreaterThan(0);
+            expect(pageTitle, error).not.toContain("404");
 
             validatedLinks.push(href);
 

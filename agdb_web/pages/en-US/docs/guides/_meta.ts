@@ -14,6 +14,14 @@ const config = {
         title: "How to Run Server",
         display: "normal",
     },
+    "server-bare-metal": {
+        title: "- Server (Bare Metal)",
+        display: "normal",
+    },
+    "cluster-bare-metal": {
+        title: "- Cluster (Bare Metal)",
+        display: "normal",
+    },
     "how-to-use-studio": {
         title: "How to Use Studio",
         display: "normal",

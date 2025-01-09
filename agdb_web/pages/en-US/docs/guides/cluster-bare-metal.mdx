@@ -1,0 +1,90 @@
+---
+title: "How to run the cluster on bare metal?"
+description: "How to run the server on bare metal, Agnesoft Graph Database"
+---
+
+import { Callout, Steps } from "nextra/components";
+
+# How to run the cluster on bare metal?
+
+The `agdb_server` can be run as a cluster on bare metal. First you should build the server as described in the [server - bare metal](/docs/guides/server-bare-metal) guide. In the following steps we will run a cluster of 3 nodes on a local machine however it should work essentially the same even when each server was run on its own machine:
+
+<Steps>
+
+### Prepare cluster configuration
+
+First we create the configuration files for our nodes. Notice that the only difference is the port in the address option. As described in the main [server](/docs/references/server) documentation the address field determines the index of the local node (position in the cluster list). The list of nodes is then the same and having the same order for each instance as it provides the cluster "hash" for establishing trust in the cluster (in addition to the `cluster_token`):
+
+```yaml
+#node0: ~/agdb_cluster/node0/agdb_server.yaml
+bind: :::3000
+address: http://localhost:3000
+basepath: ""
+admin: admin
+log_level: INFO
+data_dir: agdb_server_data
+pepper_path: ""
+cluster_token: cluster
+cluster_heartbeat_timeout_ms: 1000
+cluster_term_timeout_ms: 3000
+cluster: [http://localhost:3000, http://localhost:3001, http://localhost:3002]
+
+#node1: ~/agdb_cluster/node1/agdb_server.yaml
+bind: :::3000
+address: http://localhost:3001
+basepath: ""
+admin: admin
+log_level: INFO
+data_dir: agdb_server_data
+pepper_path: ""
+cluster_token: cluster
+cluster_heartbeat_timeout_ms: 1000
+cluster_term_timeout_ms: 3000
+cluster: [http://localhost:3000, http://localhost:3001, http://localhost:3002]
+
+#node2: ~/agdb_cluster/node2/agdb_server.yaml
+bind: :::3000
+address: http://localhost:3002
+basepath: ""
+admin: admin
+log_level: INFO
+data_dir: agdb_server_data
+pepper_path: ""
+cluster_token: cluster
+cluster_heartbeat_timeout_ms: 1000
+cluster_term_timeout_ms: 3000
+cluster: [http://localhost:3000, http://localhost:3001, http://localhost:3002]
+```
+
+### Run the server
+
+Next we run all 3 nodes as background processes in their respective directories with the prepared config files. It is recommended to run each in its own shell so you can observe the logs otherwise they would be all writing to the same shell if run as background processes (i.e. `agdb_server &`). If you decide to run all of them in the same shell each log messages clearly indicates to which node it belongs using the node's index (e.g. `[0]`, `[1]` etc.)
+
+```bash
+cd ~/agdb_cluster/node0/ #run each node in its respective directory
+agdb_server
+```
+
+### Test that the cluster is up with `curl`
+
+The following commands will hit each node and return the list of nodes, their status and which one is the leader. If the servers are connected and operating normally the returned list should be the same from each node.
+
+```bash
+curl -v localhost:3000/api/v1/cluster/status
+curl -v localhost:3001/api/v1/cluster/status
+curl -v localhost:3002/api/v1/cluster/status
+```
+
+### Shutdown the servers
+
+The cluster must be shutdown one node using the same mechanism as with single server including the `CTRL+C`. Using curl:
+
+```bash
+# this will produce an admin API token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}')
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/shutdown
+```
+
+While it is technically possible to use cluster login and avoid logins to each node separately it might be fragile and not work well in situations where the cluster is in the bad shapes with nodes not being available etc. Local login and shutdown are guaranteed to work regardless of the overall cluster status.
+
+</Steps>

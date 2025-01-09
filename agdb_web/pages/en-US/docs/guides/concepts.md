@@ -67,7 +67,7 @@ The database durability is provided by the write-ahead-log (WAL) file which reco
 
 Just like the memory the main database file will get fragmented over time. Sectors of the file used for the data that was later reallocated will remain unused (fragmented) until the database file is defragmented. That operation is performed automatically on database object instance drop.
 
-The storage taken by individual elements are properties is generally as follows:
+The storage taken by individual elements and properties is generally as follows:
 
 -   node: 32 bytes
 -   edge: 32 bytes

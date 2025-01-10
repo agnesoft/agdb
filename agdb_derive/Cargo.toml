@@ -1,6 +1,6 @@
 [package]
 name = "agdb_derive"
-version = "0.9.2"
+version = "0.10.0"
 edition = "2021"
 license = "Apache-2.0"
 homepage = "https://github.com/agnesoft/agdb"

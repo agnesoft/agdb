@@ -15,7 +15,9 @@ The server is based on [`axum`](https://github.com/tokio-rs/axum) and uses OpenA
 
 GUI accessible at (run in a browser when the server is running):
 
-`http://localhost:3000/api/v1`
+```
+http://localhost:3000/api/v1
+```
 
 ## Configuration
 
@@ -38,7 +40,7 @@ cluster: [] # list of "address" fields of all nodes in the cluster including loc
 
 You can prepare it in advance in a file `agdb_server.yaml`. After the server database is created changes to the `admin` field will have no effect, but the other settings can be changed later. All config changes require server restart to take effect.
 
-The server is built with a default `pepper` (can be changed as [part of the build](/docs/guides/server-bare-metal)) that is used if `pepper_path` is not specified. If unique it makes sure the two different `agdb_server` instances do not produce the same password hashes and enhances the security. The `pepper` value is to be considered a secret.
+The server is built with a default `pepper` (can be changed as [part of the build](/docs/guides/how-to-run-server/server-bare-metal) ) that is used if `pepper_path` is not specified. If unique it makes sure the two different `agdb_server` instances do not produce the same password hashes and enhances the security. The `pepper` value is to be considered a secret.
 
 ## Cluster
 

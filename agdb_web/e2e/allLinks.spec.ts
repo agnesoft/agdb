@@ -6,6 +6,7 @@ const validateLinks = async (page: Page) => {
     const links = await page
         .locator("a")
         .evaluateAll((els) => els.map((el) => el.getAttribute("href")));
+    const sourcePageTitle = await page.title();
 
     for (const href of links) {
         if (
@@ -16,9 +17,7 @@ const validateLinks = async (page: Page) => {
             !href.startsWith("javascript") &&
             !href.startsWith("#")
         ) {
-            const sourcePageTitle = await page.title();
             const error = `${sourcePageTitle} -> ${href}`;
-
             await page.goto(href);
 
             const pageTitle = await page.title();

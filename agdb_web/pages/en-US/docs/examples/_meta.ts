@@ -15,7 +15,7 @@ const config = {
         newWindow: true,
     },
     k8s: {
-        title: "Kubernetes (K8s)",
+        title: "kubernetes (k8s)",
         href: "https://github.com/agnesoft/agdb/tree/main/examples/k8s",
         newWindow: true,
     },

@@ -15,7 +15,7 @@ GUI accessible at (run in a browser when the server is running):
 
 `http://localhost:3000/api/v1`
 
-<!-- ![rapidoc](/docs/images/agdb_server_rapidoc.png) -->
+![rapidoc](/docs/images/agdb_server_rapidoc.png)
 
 ## Configuration
 
@@ -58,7 +58,11 @@ This means that you can freely choose a node and perform any action through it a
 This however does NOT prevent inconsistencies in situations where every request is sent to a different node (e.g. when accessing the cluster through single service in Kubernetes). The `agdb` does not offer consistency across all nodes at all times - only leader + local node (if different) + number of other (unspecified) nodes required to reach majority.
 
 <Callout>
-The pepper value (used for additionally hashing the passwords, see the [configuration](#configuration) section) also needs to be the same across the cluster as when sending actions to do with passwords only the hashed values are sent between nodes rather than raw passwords for security reasons. 
+    The pepper value (used for additionally hashing the passwords, see the
+    [configuration](#configuration) section) also needs to be the same across
+    the cluster as when sending actions to do with passwords only the hashed
+    values are sent between nodes rather than raw passwords for security
+    reasons.
 </Callout>
 
 The nodes use `cluster_token` from the config (see above) and calculated cluster `hash` to authenticate to each other. The hash is the calculated value based on the `cluster` array in the config listing all the nodes (`address` values) in the cluster. It is required for the `cluster` array to be the same in the config files of all nodes. Additionally, when the `cluster` is not empty the local `address` value must match one of the addresses. The index of such address is the index of the node in the cluster.
@@ -80,7 +84,11 @@ cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:30
 ```
 
 <Callout>
-    You should run a cluster of at least 2 nodes. Recommended number is 3 or any odd number. The even number of nodes will still work but the benefits of the consensus algorithm will be somewhat diminished due to the majority rule. Majority of 2 is 2 nodes, of 3 nodes is 2 nodes, of 4 nodes is 3 nodes, of 5 nodes is also 3 nodes etc.
+    You should run a cluster of at least 2 nodes. Recommended number is 3 or any
+    odd number. The even number of nodes will still work but the benefits of the
+    consensus algorithm will be somewhat diminished due to the majority rule.
+    Majority of 2 is 2 nodes, of 3 nodes is 2 nodes, of 4 nodes is 3 nodes, of 5
+    nodes is also 3 nodes etc.
 </Callout>
 
 The node0 will have the index `0`, the node1 will have the index `1` and node2 will have the index `2` as their respective addresses (`address` field) match these indexes in the `cluster` array which itself is the same in all configs and thus produces the same cluster hash. This mechanism helps protect the cluster during topology change. However, if you need to change number of nodes in the cluster, you risk the [split brain issue](<https://en.wikipedia.org/wiki/Split-brain_(computing)>). For instance if you changed the number of nodes from 3 to 5 on node0 then the node1 and node2 would still see the old topology of 3 nodes, elect either as leader and continued as normal. Whereas the node0 with the 2 new nodes could do the same (as majority in cluster of 5 is 3 nodes). If you must for any reason change the topology:
@@ -92,7 +100,8 @@ The node0 will have the index `0`, the node1 will have the index `1` and node2 w
 -   Bring the new nodes up and let them synchronize with the leader
 
 <Callout type="warning">
-    Make topology changes only when absolutely necessary and excercise great care when doing it.
+    Make topology changes only when absolutely necessary and excercise great
+    care when doing it.
 </Callout>
 
 Available cluster endpoints:
@@ -175,7 +184,7 @@ The admin users can do some (but not all) actions that the owner can:
 | /api/v1/db/{owner}/{db}/list        | read       | lists the databases with role of the current user (owned and others')                            |
 | /api/v1/db/{owner}/{db}/optimize    | write      | optimizes the underlying file storage packing the data reclaiming unused regions (defragmenting) |
 | /api/v1/db/{owner}/{db}/remove      | owner      | removes the database from the server but keeps the files on disk (main, WAL, backup, audit)      |
-| /api/v1/db/{owner}/{db}/rename      | owner      | changes the name of the database (this API can be used to transfer db ownership!)                |
+| /api/v1/db/{owner}/{db}/rename      | owner      | changes the name of the database (this API can be used to transfer db ownership)                 |
 | /api/v1/db/{owner}/{db}/restore     | admin      | restores the database from the automatic backup - the current database will become the backup    |
 | /api/v1/db/{owner}/{db}/user/add    | admin      | adds a user to the database                                                                      |
 | /api/v1/db/{owner}/{db}/user/list   | read       | list users of the database with their roles                                                      |

@@ -13,7 +13,7 @@ const modalIsVisible = ref(false);
 
 const onConfirm = ref<() => void>();
 
-const hideModal = (): void => {
+const closeModal = (): void => {
     modal.header = "";
     modal.content = [];
     modalIsVisible.value = false;
@@ -27,7 +27,7 @@ const buttons = computed<Button[]>(() => {
         {
             className: "button",
             text: "Close",
-            action: hideModal,
+            action: closeModal,
         },
     ];
     if (onConfirm.value) {
@@ -36,7 +36,7 @@ const buttons = computed<Button[]>(() => {
             text: "Confirm",
             action: () => {
                 onConfirm.value?.();
-                hideModal();
+                closeModal();
             },
             type: "submit",
         });
@@ -51,7 +51,7 @@ type ShowModalProps = {
     buttons?: Button[];
 };
 
-const showModal = ({
+const openModal = ({
     header,
     content,
     onConfirm: onConfirmFn,
@@ -76,8 +76,8 @@ export default function useModal() {
         modal,
         buttons,
         modalIsVisible,
-        hideModal,
-        showModal,
+        closeModal,
+        openModal,
         onConfirm,
     };
 }

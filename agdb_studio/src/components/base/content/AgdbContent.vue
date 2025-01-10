@@ -35,8 +35,22 @@ onMounted(() => {
             </div>
             <div v-if="part.input" class="input-row">
                 <label>{{ part.input.label }}</label>
+                <select
+                    v-if="
+                        inputs.get(part.input.key) !== undefined &&
+                        part.input.type === 'select'
+                    "
+                >
+                    <option
+                        v-for="(option, index) in part.input.options"
+                        :key="index"
+                        :value="option.value"
+                    >
+                        {{ option.label }}
+                    </option>
+                </select>
                 <input
-                    v-if="inputs.get(part.input.key) !== undefined"
+                    v-else-if="inputs.get(part.input.key) !== undefined"
                     :type="part.input.type"
                     :ref="
                         (el) => {
@@ -65,7 +79,9 @@ onMounted(() => {
     }
 }
 .input-row {
-    display: flex;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: minmax(60px, 150px) minmax(150px, 1fr);
+    grid-gap: 1rem;
+    margin-bottom: 1rem;
 }
 </style>

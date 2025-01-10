@@ -5,7 +5,7 @@ import AgdbContent from "../content/AgdbContent.vue";
 import { KEY_MODAL } from "@/composables/modal/constants";
 import { nextTick, ref, watch } from "vue";
 
-const { modal, buttons, hideModal, modalIsVisible } = useModal();
+const { modal, buttons, closeModal, modalIsVisible } = useModal();
 
 const autofocusElement = ref();
 
@@ -27,7 +27,7 @@ watch(modalIsVisible, async () => {
             <header class="modal-header">
                 <h3>{{ modal.header }}</h3>
                 <button
-                    @click="hideModal"
+                    @click="closeModal"
                     class="button button-transparent"
                     data-testid="close-modal"
                 >

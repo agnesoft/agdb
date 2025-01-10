@@ -40,6 +40,10 @@ const removeUser = async (params: RemoveUserProps) => {
     client.value?.db_user_remove(params);
 };
 
+const isDbRoleType = (role: string): role is DbUserRole => {
+    return ["read", "write", "admin"].includes(role);
+};
+
 export const useDbUsers = () => {
     return {
         getDbUsers,
@@ -48,5 +52,6 @@ export const useDbUsers = () => {
         removeUser,
         clearDbUsers,
         clearAllDbUsers,
+        isDbRoleType,
     };
 };

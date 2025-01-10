@@ -11,7 +11,7 @@ const { fetchDatabases } = vi.hoisted(() => {
         fetchDatabases: vi.fn(),
     };
 });
-const { modalIsVisible, onConfirm, modal, hideModal } = useModal();
+const { modalIsVisible, onConfirm, modal, closeModal } = useModal();
 
 vi.mock("@/composables/db/dbStore", () => {
     return {
@@ -25,7 +25,7 @@ vi.mock("@/composables/db/dbStore", () => {
 describe("AgdbCellMenu", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        hideModal();
+        closeModal();
     });
     it("should open and close on click", async () => {
         const wrapper = mount(AgdbCellMenu, {

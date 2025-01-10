@@ -7,7 +7,7 @@ import { KEY_MODAL } from "../modal/constants";
 import useModal from "../modal/modal";
 
 const { getInputValue } = useContentInputs();
-const { showModal } = useModal();
+const { openModal } = useModal();
 
 export type DbActionProps = ActionProps<ServerDatabase>;
 
@@ -29,7 +29,7 @@ const dbActions: Action[] = [
                       )
                     : convertArrayOfStringsToContent(["No audit logs found."]);
 
-                showModal({
+                openModal({
                     header: `Audit log of ${params.owner}/${params.db}`,
                     content,
                 });

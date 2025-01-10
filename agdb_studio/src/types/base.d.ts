@@ -13,7 +13,17 @@ type Paragraph = {
     style?: StyleObject;
     className?: string;
 };
-type InputType = "text" | "number" | "password" | "email" | "checkbox";
+type InputType =
+    | "text"
+    | "number"
+    | "password"
+    | "email"
+    | "checkbox"
+    | "select";
+type OptionType = {
+    value: string;
+    label: string;
+};
 type Input = {
     key: string;
     label: string;
@@ -21,6 +31,7 @@ type Input = {
     style?: StyleObject;
     className?: string;
     autofocus?: boolean;
+    options?: OptionType[];
 };
 
 type Content = {

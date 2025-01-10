@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agdb
+  labels:
+    app: agdb
+spec:
+  ports:
+    - port: 3000
+      name: agdb
+  clusterIP: None
+  selector:
+    app: agdb
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agdb-pepper
+  labels:
+    app: agdb
+stringData:
+  pepper: "1234567891234567"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agdb-config
+  labels:
+    app: agdb
+data:
+  agdb_server.yaml: |
+    bind: :::3000
+    address: http://agdb.default.svc.cluster.local:3000
+    basepath: ""
+    admin: admin
+    log_level: INFO
+    data_dir: /agdb/data
+    pepper_path: /agdb/pepper/pepper
+    cluster_token: cluster
+    cluster_heartbeat_timeout_ms: 1000
+    cluster_term_timeout_ms: 3000
+    cluster: []
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: agdb
+  labels:
+    app: agdb
+spec:
+  serviceName: "agdb"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agdb
+  template:
+    metadata:
+      labels:
+        app: agdb
+    spec:
+      containers:
+        - name: agdb
+          image: agnesoft/agdb:dev
+          ports:
+            - containerPort: 3000
+              name: agdb
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: agdb-data
+              mountPath: /agdb/data
+            - name: config
+              mountPath: /agdb/config
+            - name: pepper
+              mountPath: /agdb/pepper
+      volumes:
+        - name: config
+          configMap:
+            name: agdb-config
+            defaultMode: 511
+        - name: pepper
+          secret:
+            secretName: agdb-pepper
+  volumeClaimTemplates:
+    - metadata:
+        name: agdb-data
+        labels:
+          app: agdb
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

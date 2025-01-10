@@ -95,7 +95,7 @@ data:
 
 The main part of the deployment is the stateful set definition. While replica set could work to some extent the instances of `agdb_server` are not interchangable and cannot be freely scaled horizontally. The stateful set type is therefore a better fit. It uses the selector and labels `app: agdb` in order to "link" the service and the underlying pod together. Kubernetes is using selectors rather than direct mapping when linking various things together such as services and pods. We specify 1 replica only (refer to the [agdb as K8s cluster](/docs/guides/how-to-run-server/cluster-k8s) for an alternative).
 
-The container spec matches the port on the service by name `agdb` and exposes the containe port `3000` (default). The security context specifies the user `1000` (default uid in the container) and disables root access as it is not needed and enhances security.
+The container spec matches the port on the service by name `agdb` and exposes the container port `3000` (default). The security context specifies the user `1000` (default uid in the container) and disables root access as it is not needed and enhances security.
 
 Finally we specify volumes and volume mounts to add the `secret`, `configmap` and persistent volume claim (PVC) to the expected locations. The PVC is a way how data can survive restart or redeployment. By default 1 GB of storage is specified which can be increased (but not decreased) in subsequent deployments.
 
@@ -158,7 +158,7 @@ spec:
 
 ### Test that the server is up with `curl`
 
-The following command must be run from within the cluster unless the server was exposed via `LoadBalancer` or `Ingress`. The `.default.` bit is the name of the namespace where the everything was deployed.
+The following command must be run from within the cluster unless the server was exposed via `LoadBalancer` or `Ingress`. The `.default.` bit is the name of the namespace where everything was deployed.
 
 ```bash
 curl -v http://agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
@@ -166,9 +166,9 @@ curl -v http://agdb.default.svc.cluster.local:3000/api/v1/status # should return
 
 ### Additional considerations
 
--   You could use the `localhost:3000/api/v1/status` as a startup/readiness/health probe
--   Standard shutdown procedure via the endpoint will not work as K8s will simply restart the server
+-   You could use the `localhost:3000/api/v1/status` as a startup/readiness/health probe.
+-   Standard shutdown procedure via the endpoint will not work as K8s will simply restart the server.
 -   Consider running the [cluster](/docs/guides/how-to-run-server/cluster-k8s) rather than just a single node.
--   You shoul be able to adapt the above to other platforms such as AWS EKS.
+-   You should be able to adapt the above to other platforms such as AWS EKS.
 
 </Steps>

@@ -42,77 +42,7 @@ You can prepare it in advance in a file `agdb_server.yaml`. After the server dat
 
 The server is built with a default `pepper` (can be changed as [part of the build](/docs/guides/how-to-run-server/server-bare-metal) ) that is used if `pepper_path` is not specified. If unique it makes sure the two different `agdb_server` instances do not produce the same password hashes and enhances the security. The `pepper` value is to be considered a secret.
 
-## Cluster
-
-You can an in most cases should run the server in a cluster for resiliency and durability of the data. The exception would be if you require speed at the cost of resiliency and durability and the `agdb` is used more as a cache rather than main database.
-
-The `agdb_server` is using custom implementation of a [Raft consensus algorithm](<https://en.wikipedia.org/wiki/Raft_(algorithm)>). The benefits of the algorithm are durability, data consistency and speed as the actions do not need to be persisted to all nodes (only majority) before acknowledging the client. The custom implementation in `agdb` additionally offers the following features and guarantees atop of Raft:
-
--   Write action acknowledgement happens only when the respective action was executed fully (not just that the action was received by the majority as is the standard implementation).
--   Clients can request write operations through any member of the cluster (not only the leader) and the node will forward it to the current leader and act as a proxy.
--   When forwarding the action the node will only acknowledge the client when both of the following becomes true:
-    -   The leader committed the operation meaning the majority of the nodes persisted the action.
-    -   The node through which the action was performed executed the action itself and in full.
--   Even when there is no leader elected such as when the cluster is being (re)deployed the read operations are always available
-
-This means that you can freely choose a node and perform any action through it and observe consistent results at the minor performance penalty due to the forwarding (unless you picked the leader node). It might be useful in situations where reads are more frequent as they would be more spread out across the cluster.
-
-This however does NOT prevent inconsistencies in situations where every request is sent to a different node (e.g. when accessing the cluster through single service in Kubernetes). The `agdb` does not offer consistency across all nodes at all times - only leader + local node (if different) + number of other (unspecified) nodes required to reach majority.
-
-<Callout>
-    The pepper value (used for additionally hashing the passwords, see the
-    [configuration](#configuration) section) also needs to be the same across
-    the cluster as when sending actions to do with passwords only the hashed
-    values are sent between nodes rather than raw passwords for security
-    reasons.
-</Callout>
-
-The nodes use `cluster_token` from the config (see above) and calculated cluster `hash` to authenticate to each other. The hash is the calculated value based on the `cluster` array in the config listing all the nodes (`address` values) in the cluster. It is required for the `cluster` array to be the same in the config files of all nodes. Additionally, when the `cluster` is not empty the local `address` value must match one of the addresses. The index of such address is the index of the node in the cluster.
-
-Example:
-
-```
-#node0 agdb_server.yaml
-address: http://localhost:3000
-cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
-
-#node1 abdb_server.yaml
-address: http://localhost:3001
-cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
-
-#node2 agdb_server.yaml
-address: http://localhost:3002
-cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
-```
-
-<Callout>
-    You should run a cluster of at least 2 nodes. Recommended number is 3 or any
-    odd number. The even number of nodes will still work but the benefits of the
-    consensus algorithm will be somewhat diminished due to the majority rule.
-    Majority of 2 is 2 nodes, of 3 nodes is 2 nodes, of 4 nodes is 3 nodes, of 5
-    nodes is also 3 nodes etc.
-</Callout>
-
-The node0 will have the index `0`, the node1 will have the index `1` and node2 will have the index `2` as their respective addresses (`address` field) match these indexes in the `cluster` array which itself is the same in all configs and thus produces the same cluster hash. This mechanism helps protect the cluster during topology change. However, if you need to change number of nodes in the cluster, you risk the [split brain issue](<https://en.wikipedia.org/wiki/Split-brain_(computing)>). For instance if you changed the number of nodes from 3 to 5 on node0 then the node1 and node2 would still see the old topology of 3 nodes, elect either as leader and continued as normal. Whereas the node0 with the 2 new nodes could do the same (as majority in cluster of 5 is 3 nodes). If you must for any reason change the topology:
-
--   Perform backup of all nodes
--   Prevent new nodes from starting (do NOT start new nodes under any circumstances yet)
--   Update the configuration of the OLD (existing) nodes with the new nodes one by one
--   Wait for the cluster leader to be established (this is only possible if the majority rules allow it: going from 3 to 5 is fine, going from 3 to 7 is not)
--   Bring the new nodes up and let them synchronize with the leader
-
-<Callout type="warning">
-    Make topology changes only when absolutely necessary and excercise great
-    care when doing it.
-</Callout>
-
-Available cluster endpoints:
-
-| Action                      | Description                                                                                                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| /api/v1/cluster/status      | returns the list of cluster nodes indicating which nodes are reachable from the current node and which node is the leader                                        |
-| /api/v1/cluster/user/login  | logs in the user cluster wide so that using the same token accessing other nodes will not require new login, this might overwrite existing tokens on other nodes |
-| /api/v1/cluster/user/logout | invalidate tokens on all nodes in the cluster                                                                                                                    |
+                                                                                                                  |
 
 ## Users
 
@@ -247,6 +177,78 @@ The server can be gracefully shutdown with `CTRL+C` or programmatically by using
 token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}') #will produce a token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
 curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/shutdown
 ```
+
+## Cluster
+
+You can an in most cases should run the server in a cluster for resiliency and durability of the data. The exception would be if you require speed at the cost of resiliency and durability and the `agdb` is used more as a cache rather than main database.
+
+The `agdb_server` is using custom implementation of a [Raft consensus algorithm](<https://en.wikipedia.org/wiki/Raft_(algorithm)>). The benefits of the algorithm are durability, data consistency and speed as the actions do not need to be persisted to all nodes (only majority) before acknowledging the client. The custom implementation in `agdb` additionally offers the following features and guarantees atop of Raft:
+
+-   Write action acknowledgement happens only when the respective action was executed fully (not just that the action was received by the majority as is the standard implementation).
+-   Clients can request write operations through any member of the cluster (not only the leader) and the node will forward it to the current leader and act as a proxy.
+-   When forwarding the action the node will only acknowledge the client when both of the following becomes true:
+    -   The leader committed the operation meaning the majority of the nodes persisted the action.
+    -   The node through which the action was performed executed the action itself and in full.
+-   Even when there is no leader elected such as when the cluster is being (re)deployed the read operations are always available
+
+This means that you can freely choose a node and perform any action through it and observe consistent results at the minor performance penalty due to the forwarding (unless you picked the leader node). It might be useful in situations where reads are more frequent as they would be more spread out across the cluster.
+
+This however does NOT prevent inconsistencies in situations where every request is sent to a different node (e.g. when accessing the cluster through single service in Kubernetes). The `agdb` does not offer consistency across all nodes at all times - only leader + local node (if different) + number of other (unspecified) nodes required to reach majority.
+
+<Callout>
+    The pepper value (used for additionally hashing the passwords, see the
+    [configuration](#configuration) section) also needs to be the same across
+    the cluster as when sending actions to do with passwords only the hashed
+    values are sent between nodes rather than raw passwords for security
+    reasons.
+</Callout>
+
+The nodes use `cluster_token` from the config (see above) and calculated cluster `hash` to authenticate to each other. The hash is the calculated value based on the `cluster` array in the config listing all the nodes (`address` values) in the cluster. It is required for the `cluster` array to be the same in the config files of all nodes. Additionally, when the `cluster` is not empty the local `address` value must match one of the addresses. The index of such address is the index of the node in the cluster.
+
+Example:
+
+```
+#node0 agdb_server.yaml
+address: http://localhost:3000
+cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+
+#node1 abdb_server.yaml
+address: http://localhost:3001
+cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+
+#node2 agdb_server.yaml
+address: http://localhost:3002
+cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+```
+
+<Callout>
+    You should run a cluster of at least 2 nodes. Recommended number is 3 or any
+    odd number. The even number of nodes will still work but the benefits of the
+    consensus algorithm will be somewhat diminished due to the majority rule.
+    Majority of 2 is 2 nodes, of 3 nodes is 2 nodes, of 4 nodes is 3 nodes, of 5
+    nodes is also 3 nodes etc.
+</Callout>
+
+The node0 will have the index `0`, the node1 will have the index `1` and node2 will have the index `2` as their respective addresses (`address` field) match these indexes in the `cluster` array which itself is the same in all configs and thus produces the same cluster hash. This mechanism helps protect the cluster during topology change. However, if you need to change number of nodes in the cluster, you risk the [split brain issue](<https://en.wikipedia.org/wiki/Split-brain_(computing)>). For instance if you changed the number of nodes from 3 to 5 on node0 then the node1 and node2 would still see the old topology of 3 nodes, elect either as leader and continued as normal. Whereas the node0 with the 2 new nodes could do the same (as majority in cluster of 5 is 3 nodes). If you must for any reason change the topology:
+
+-   Perform backup of all nodes
+-   Prevent new nodes from starting (do NOT start new nodes under any circumstances yet)
+-   Update the configuration of the OLD (existing) nodes with the new nodes one by one
+-   Wait for the cluster leader to be established (this is only possible if the majority rules allow it: going from 3 to 5 is fine, going from 3 to 7 is not)
+-   Bring the new nodes up and let them synchronize with the leader
+
+<Callout type="warning">
+    Make topology changes only when absolutely necessary and excercise great
+    care when doing it.
+</Callout>
+
+Available cluster endpoints:
+
+| Action                      | Description                                                                                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| /api/v1/cluster/status      | returns the list of cluster nodes indicating which nodes are reachable from the current node and which node is the leader                                        |
+| /api/v1/cluster/user/login  | logs in the user cluster wide so that using the same token accessing other nodes will not require new login, this might overwrite existing tokens on other nodes |
+| /api/v1/cluster/user/logout | invalidate tokens on all nodes in the cluster                                                                                                                    |
 
 ## Misc
 

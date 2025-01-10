@@ -1,8 +1,174 @@
 ---
-title: "How to run the server in Kubernetes (K8s)?"
-description: "How to run the server in K8s (Kubernetes), Agnesoft Graph Database"
+title: "How to run the server in Kubernetes?"
+description: "How to run the server in Kubernetes, Agnesoft Graph Database"
 ---
 
 import { Callout, Steps } from "nextra/components";
 
-TODO
+# How to run the server in Kubernetes?
+
+The `agdb_server` can be run in Kubernetes using official Docker image. Optionally you can [build the image](https://github.com/agnesoft/agdb/blob/main/agdb_server/containerfile) yourself and host it at your the place of your choosing. Please refer to the [server-docker](/docs/guides/how-to-run-server/server-docker) guide for available images.
+
+<Callout>
+    This guide is for running `agdb_server` as a single instance. This is only
+    recommended when resiliency is not required and/or if speed is of the
+    essence. Consider running
+    [cluster](/docs/guides/how-to-run-server/cluster-k8s) instead.
+</Callout>
+
+### Requirements
+
+-   Kubernetes cluster (you can enable local K8s cluster in Docker Desktop)
+-   kubectl
+
+### Stateful set yaml
+
+You can find an example Kubernetes deployment at https://github.com/agnesoft/agdb/tree/main/examples/k8s
+
+The example breakdown:
+
+<Steps>
+
+### Service
+
+First we deploy the K8s service of type `ClusterIP` that only allows communication inside the cluster. As we are running a database server it would typically serve other backends in the same cluster and not be accessible from the outside. If such access is needed consider using `LoadBalancer` type service or `Ingress` controller with the `ClusterIp` service. The port available in the cluster is `3000` under a name of `agdb`. Furthermore we specify selector value `app: agdb` and also a label of the same value.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+    name: agdb
+    labels:
+        app: agdb
+spec:
+    ports:
+        - port: 3000
+          name: agdb
+    clusterIP: None
+    selector:
+        app: agdb
+```
+
+### Secret
+
+Next document is the pepper secret `agdb-pepper`.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+    name: agdb-pepper
+    labels:
+        app: agdb
+stringData:
+    pepper: "1234567891234567"
+```
+
+### ConfigMap
+
+The configuration named `agdb-config` via the `ConfigMap` is optional as the default configuration would work just as well. It might however be useful if you needed to change anything regarding the server later.
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: agdb-config
+    labels:
+        app: agdb
+data:
+    agdb_server.yaml: |
+        bind: :::3000
+        address: http://agdb.default.svc.cluster.local:3000
+        basepath: ""
+        admin: admin
+        log_level: INFO
+        data_dir: /agdb/data
+        pepper_path: /agdb/pepper/pepper
+        cluster_token: cluster
+        cluster_heartbeat_timeout_ms: 1000
+        cluster_term_timeout_ms: 3000
+        cluster: []
+```
+
+### StatefulSet
+
+The main part of the deployment is the stateful set definition. While replica set could work to some extent the instances of `agdb_server` are not interchangable and cannot be freely scaled horizontally. The stateful set type is therefore a better fit. It uses the selector and labels `app: agdb` in order to "link" the service and the underlying pod together. Kubernetes is using selectors rather than direct mapping when linking various things together such as services and pods. We specify 1 replica only (refer to the [agdb as K8s cluster](/docs/guides/how-to-run-server/cluster-k8s) for an alternative).
+
+The container spec matches the port on the service by name `agdb` and exposes the containe port `3000` (default). The security context specifies the user `1000` (default uid in the container) and disables root access as it is not needed and enhances security.
+
+Finally we specify volumes and volume mounts to add the `secret`, `configmap` and persistent volume claim (PVC) to the expected locations. The PVC is a way how data can survive restart or redeployment. By default 1 GB of storage is specified which can be increased (but not decreased) in subsequent deployments.
+
+```yaml
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: agdb
+  labels:
+    app: agdb
+spec:
+  serviceName: "agdb"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agdb
+  template:
+    metadata:
+      labels:
+        app: agdb
+    spec:
+      containers:
+        - name: agdb
+          image: agnesoft/agdb:dev
+          ports:
+            - containerPort: 3000
+              name: agdb
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: agdb-data
+              mountPath: /agdb/data
+            - name: config
+              mountPath: /agdb
+            - name: pepper
+              mountPath: /agdb/pepper
+      volumes:
+        - name: config
+          configMap:
+            name: agdb-config
+            defaultMode: 511
+        - name: pepper
+          secret:
+            secretName: agdb-pepper
+  volumeClaimTemplates:
+    - metadata:
+        name: agdb-data
+        labels:
+          app: agdb
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+```
+
+### Test that the server is up with `curl`
+
+The following command must be run from within the cluster unless the server was exposed via `LoadBalancer` or `Ingress`. The `.default.` bit is the name of the namespace where the everything was deployed.
+
+```bash
+curl -v http://agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
+```
+
+### Additional considerations
+
+-   You could use the `localhost:3000/api/v1/status` as a startup/readiness/health probe
+-   Standard shutdown procedure via the endpoint will not work as K8s will simply restart the server
+-   Consider running the [cluster](/docs/guides/how-to-run-server/cluster-k8s) rather than just a single node.
+-   You shoul be able to adapt the above to other platforms such as AWS EKS.
+
+</Steps>

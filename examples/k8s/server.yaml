@@ -76,7 +76,7 @@ spec:
             - name: agdb-data
               mountPath: /agdb/data
             - name: config
-              mountPath: /agdb/config
+              mountPath: /agdb
             - name: pepper
               mountPath: /agdb/pepper
       volumes:

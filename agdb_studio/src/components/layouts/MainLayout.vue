@@ -5,6 +5,7 @@ import LogoIcon from "@/components/base/icons/LogoIcon.vue";
 import { useAccount } from "@/composables/user/account";
 import AgdbModal from "@/components/base/modal/AgdbModal.vue";
 import FadeTrasition from "@/components/transitions/FadeTransition.vue";
+import NotificationViewer from "../notification/NotificationViewer.vue";
 
 const { logout } = useAuth();
 const { username } = useAccount();
@@ -32,6 +33,7 @@ const { username } = useAccount();
             <RouterView />
         </main>
         <footer></footer>
+        <NotificationViewer />
         <FadeTrasition>
             <AgdbModal />
         </FadeTrasition>

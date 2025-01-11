@@ -24,9 +24,22 @@
 
     --base-font: "Red Hat Display", sans-serif;
 
-    --orange: #ffa02c;
+    --orange: #d88621;
+    --orange-2: #ffa02c;
+    --orange-light: #f9f3e3;
+    --orange-dark: #b97a1f;
     --red: #af2836;
+    --red-2: #dc3545;
+    --red-light: #f8e9e9;
+    --red-dark: #8a1f2b;
     --green: #1e7732;
+    --green-2: #28a745;
+    --green-light: #e8f4e8;
+    --green-dark: #1a5f2a;
+    --blue: #025ec0;
+    --blue-2: #007bff;
+    --blue-light: #e8f4f9;
+    --blue-dark: #001f3f;
 }
 
 :root {
@@ -43,6 +56,18 @@
     --color-text-muted: var(--text-light-2);
 
     --section-gap: 160px;
+
+    --success-color: var(--green);
+    --success-color-background: var(--green-light);
+
+    --error-color: var(--red);
+    --error-color-background: var(--red-light);
+
+    --warning-color: var(--orange);
+    --warning-color-background: var(--orange-light);
+
+    --info-color: var(--blue);
+    --info-color-background: var(--blue-light);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,6 +82,11 @@
         --color-heading: var(--text-dark-1);
         --color-text: var(--text-dark-2);
         --color-text-muted: var(--text-dark-3);
+
+        --success-color-background: var(--green-dark);
+        --error-color-background: var(--red-dark);
+        --warning-color-background: var(--orange-dark);
+        --info-color-background: var(--blue-dark);
     }
 }
 

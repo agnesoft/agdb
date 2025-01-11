@@ -59,6 +59,7 @@ describe("TableRow", () => {
                 },
                 stubs: {
                     transitions: false,
+                    DbDetails: true,
                 },
             },
         });

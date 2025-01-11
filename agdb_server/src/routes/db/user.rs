@@ -100,7 +100,7 @@ pub(crate) async fn list(
     Ok((StatusCode::OK, Json(server_db.db_users(db_id).await?)))
 }
 
-#[utoipa::path(post,
+#[utoipa::path(delete,
     path = "/api/v1/db/{owner}/{db}/user/{username}/remove",
     operation_id = "db_user_remove",
     tag = "agdb",

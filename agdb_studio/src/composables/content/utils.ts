@@ -1,13 +1,15 @@
-type ConvertParams = {
+export type ConvertParams = {
     emphesizedWords?: string[];
 };
+
+export const EMPHESIZED_CLASSNAME = "emphesized";
 
 const emphesizeWords = (text: string, words: string[]): Paragraph[] => {
     const parts = text.split(new RegExp(`(${words.join("|")})`, "g"));
 
     return parts.map((part) => {
         if (words.includes(part)) {
-            return { text: part, className: "emphesized" };
+            return { text: part, className: EMPHESIZED_CLASSNAME };
         }
         return { text: part };
     });

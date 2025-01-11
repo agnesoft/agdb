@@ -12,7 +12,7 @@ describe("TableRow", () => {
     addTable({
         name: TABLE_NAME,
         columns: tableConfig,
-        rowDetailsComponent: "component",
+        rowDetailsComponent: "DbDetails",
     });
 
     it("should render", () => {
@@ -59,6 +59,7 @@ describe("TableRow", () => {
                 },
                 stubs: {
                     transitions: false,
+                    DbDetails: true,
                 },
             },
         });

@@ -4,7 +4,7 @@ import { useAuth } from "@/composables/user/auth";
 import LogoIcon from "@/components/base/icons/LogoIcon.vue";
 import { useAccount } from "@/composables/user/account";
 import AgdbModal from "@/components/base/modal/AgdbModal.vue";
-import FadeTrasition from "@/components/transitions/FadeTrasition.vue";
+import FadeTrasition from "@/components/transitions/FadeTransition.vue";
 
 const { logout } = useAuth();
 const { username } = useAccount();

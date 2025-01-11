@@ -8,7 +8,7 @@ const tables = ref<Map<Symbol | string, Table<TRow>>>(
 type AddTableProps<T extends TRow> = {
     name: Symbol | string;
     columns: Column<T>[];
-    rowDetailsComponent?: string;
+    rowDetailsComponent?: AsyncComponent;
 };
 
 const addTable = ({

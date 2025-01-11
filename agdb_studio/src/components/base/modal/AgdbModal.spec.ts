@@ -5,9 +5,9 @@ import { mount } from "@vue/test-utils";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 
 describe("AgdbModal", () => {
-    const { showModal, hideModal } = useModal();
+    const { openModal, closeModal } = useModal();
     beforeEach(() => {
-        hideModal();
+        closeModal();
     });
 
     it("shows a modal when called", async () => {
@@ -15,7 +15,7 @@ describe("AgdbModal", () => {
             attachTo: document.body,
         });
         expect(wrapper.isVisible()).toBe(false);
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
         });
@@ -26,7 +26,7 @@ describe("AgdbModal", () => {
         const wrapper = mount(AgdbModal, {
             attachTo: document.body,
         });
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
         });
@@ -39,7 +39,7 @@ describe("AgdbModal", () => {
         const wrapper = mount(AgdbModal, {
             attachTo: document.body,
         });
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
         });
@@ -54,7 +54,7 @@ describe("AgdbModal", () => {
         const wrapper = mount(AgdbModal, {
             attachTo: document.body,
         });
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
             buttons: [
@@ -75,7 +75,7 @@ describe("AgdbModal", () => {
         const wrapper = mount(AgdbModal, {
             attachTo: document.body,
         });
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
             onConfirm: () => {},
@@ -90,7 +90,7 @@ describe("AgdbModal", () => {
         const wrapper = mount(AgdbModal, {
             attachTo: document.body,
         });
-        showModal({
+        openModal({
             header: "Test Header",
             content: [
                 {

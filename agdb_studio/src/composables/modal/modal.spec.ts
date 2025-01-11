@@ -5,27 +5,27 @@ import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "./constants";
 
 describe("Modal", () => {
-    const { showModal, hideModal } = useModal();
+    const { openModal, closeModal } = useModal();
     beforeEach(() => {
-        hideModal();
+        closeModal();
     });
     it("shows a modal", () => {
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
         });
         expect(useModal().modalIsVisible.value).toBe(true);
     });
     it("hides a modal", () => {
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
         });
-        hideModal();
+        closeModal();
         expect(useModal().modalIsVisible.value).toBe(false);
     });
     it("shows a modal with custom buttons", () => {
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
             buttons: [
@@ -41,7 +41,7 @@ describe("Modal", () => {
     });
     it("calls onConfirm when confirm button is clicked and hides the modal", () => {
         const onConfirm = vi.fn();
-        showModal({
+        openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
             onConfirm,
@@ -51,7 +51,7 @@ describe("Modal", () => {
         expect(useModal().modalIsVisible.value).toBe(false);
     });
     it("sets default if no header or content is provided", () => {
-        showModal({});
+        openModal({});
         expect(useModal().modal.header).toBe("");
         expect(useModal().modal.content).toHaveLength(0);
     });
@@ -59,7 +59,7 @@ describe("Modal", () => {
         const { getInputValue, setInputValue } = useContentInputs();
         setInputValue(KEY_MODAL, "test", "test");
         expect(getInputValue(KEY_MODAL, "test")).toBe(undefined);
-        showModal({
+        openModal({
             header: "Test Header",
             content: [
                 {

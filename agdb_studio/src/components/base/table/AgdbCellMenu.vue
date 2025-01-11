@@ -14,7 +14,7 @@ const props = defineProps({
 
 const row = inject<Ref<TRow>>(INJECT_KEY_ROW);
 const { fetchDatabases } = useDbStore();
-const { showModal } = useModal();
+const { openModal } = useModal();
 
 const mapActions = (actions: Action[]): Action[] => {
     return actions.map((action) => {
@@ -33,7 +33,7 @@ const mapActions = (actions: Action[]): Action[] => {
                   }
                 : action.confirmation
                   ? ({ event }: ActionProps<undefined>) =>
-                        showModal({
+                        openModal({
                             header: action.confirmationHeader
                                 ? typeof action.confirmationHeader ===
                                   "function"

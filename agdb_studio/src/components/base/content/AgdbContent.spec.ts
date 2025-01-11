@@ -25,7 +25,7 @@ describe("AgdbContent", () => {
                         ],
                     },
                     {
-                        component: "my-component",
+                        component: "my-component" as unknown as AsyncComponent,
                     },
                     {
                         input: {
@@ -88,5 +88,33 @@ describe("AgdbContent", () => {
         await wrapper.vm.$nextTick();
         const input = wrapper.find("input");
         expect(input.element.matches(":focus")).toBe(true);
+    });
+    it("should render select input and change value", async () => {
+        const inputValue = ref("test");
+        addInput(testKey, "test", inputValue);
+        const wrapper = mount(AgdbContent, {
+            props: {
+                content: [
+                    {
+                        input: {
+                            key: "test",
+                            type: "select",
+                            label: "Test input",
+                            options: [
+                                { value: "test", label: "Test" },
+                                { value: "test2", label: "Test2" },
+                            ],
+                        },
+                    },
+                ],
+                contentKey: testKey,
+            },
+        });
+        const select = wrapper.find("select");
+        expect(select.element.value).toBe("test");
+        expect(getInputValue(testKey, "test")).toBe("test");
+        select.element.value = "test2";
+        await select.trigger("change");
+        expect(getInputValue(testKey, "test")).toBe("test2");
     });
 });

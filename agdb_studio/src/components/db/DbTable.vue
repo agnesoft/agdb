@@ -13,7 +13,7 @@ const TABLE_KEY = Symbol("databases");
 addTable({
     name: TABLE_KEY,
     columns: dbColumns,
-    rowDetailsComponent: "DbTableRowDetails",
+    rowDetailsComponent: "DbDetails",
 });
 
 watchEffect(() => {

@@ -44,7 +44,7 @@ const isDbRoleType = (role: string): role is DbUserRole => {
     return ["read", "write", "admin"].includes(role);
 };
 
-export const useDbUsers = () => {
+export const useDbUsersStore = () => {
     return {
         getDbUsers,
         fetchDbUsers,

@@ -1,13 +1,9 @@
 <script lang="ts" setup>
 import type { TRow } from "@/composables/table/types";
 import { computed, onMounted, type PropType } from "vue";
-import { useDbUsers } from "@/composables/db/dbUsers";
+import { useDbUsersStore } from "@/composables/db/dbUsersStore";
 import { ClCloseMd, ChPlus } from "@kalimahapps/vue-icons";
-import useModal from "@/composables/modal/modal";
-import { useDbStore } from "@/composables/db/dbStore";
-import { EMPHESIZED_CLASSNAME } from "@/composables/content/utils";
-import { KEY_MODAL } from "@/composables/modal/constants";
-import { useContentInputs } from "@/composables/content/inputs";
+import { useDbDetails, type DbDetailsParams } from "@/composables/db/dbDetails";
 
 const props = defineProps({
     row: {
@@ -16,107 +12,21 @@ const props = defineProps({
     },
 });
 
-const { getDbUsers, fetchDbUsers, removeUser, addUser, isDbRoleType } =
-    useDbUsers();
-const { getInputValue } = useContentInputs();
+const { fetchDbUsers, isDbRoleType } = useDbUsersStore();
 
-const dbParams = computed(() => {
+const dbParams = computed<DbDetailsParams>(() => {
     return {
         owner: typeof props.row?.owner === "string" ? props.row?.owner : "",
         db: typeof props.row?.db === "string" ? props.row?.db : "",
-        role: typeof props.row?.role === "string" ? props.row?.role : "",
+        role:
+            typeof props.row?.role === "string" && isDbRoleType(props.row.role)
+                ? props.row?.role
+                : "read",
     };
 });
 
-const users = computed(() => {
-    return getDbUsers(dbParams.value);
-});
-
-const { openModal } = useModal();
-const { getDbName } = useDbStore();
-
-const dbName = computed(() => {
-    return getDbName(dbParams.value);
-});
-
-const canEditUsers = computed(() => {
-    return dbParams.value.role === "admin";
-});
-
-const handleRemoveUser = (username: string) => {
-    openModal({
-        header: "Remove user",
-        content: [
-            {
-                paragraph: [
-                    { text: "Are you sure you want to remove user " },
-                    { text: username, className: EMPHESIZED_CLASSNAME },
-                    { text: " from database " },
-                    { text: dbName.value, className: EMPHESIZED_CLASSNAME },
-                    { text: "?" },
-                ],
-            },
-        ],
-
-        onConfirm: () => {
-            removeUser({
-                owner: dbParams.value.owner,
-                db: dbParams.value.db,
-                username: username,
-            }).then(() => {
-                fetchDbUsers(dbParams.value);
-            });
-        },
-    });
-};
-
-const handleAddUser = () => {
-    openModal({
-        header: "Add user",
-        content: [
-            {
-                paragraph: [
-                    { text: "Add user to database " },
-                    { text: dbName.value, className: EMPHESIZED_CLASSNAME },
-                ],
-            },
-            {
-                input: {
-                    key: "username",
-                    label: "Username",
-                    type: "text",
-                    autofocus: true,
-                },
-            },
-            {
-                input: {
-                    key: "role",
-                    label: "Role",
-                    type: "select",
-                    options: [
-                        { value: "admin", label: "Admin" },
-                        { value: "write", label: "Read/Write" },
-                        { value: "read", label: "Read Only" },
-                    ],
-                    defaultValue: "write",
-                },
-            },
-        ],
-        onConfirm: () => {
-            const username = getInputValue(KEY_MODAL, "username")?.toString();
-            const db_role = getInputValue(KEY_MODAL, "role")?.toString();
-
-            console.log({ username, db_role });
-            if (username?.length && db_role && isDbRoleType(db_role)) {
-                console.log("Adding user");
-                addUser({ ...dbParams.value, username, db_role }).then(() => {
-                    console.log("Fetching users");
-                    fetchDbUsers(dbParams.value);
-                });
-            }
-        },
-    });
-};
+const { users, dbName, canEditUsers, handleRemoveUser, handleAddUser } =
+    useDbDetails(dbParams);
 
 onMounted(() => {
     fetchDbUsers(dbParams.value);
@@ -138,15 +48,15 @@ onMounted(() => {
         </header>
 
         <ul class="db-users">
-            <li v-for="user in users" :key="user.user">
-                <span class="username">{{ user.user }}</span>
+            <li v-for="user in users" :key="user.username" class="user-item">
+                <span class="username">{{ user.username }}</span>
                 <span class="role">
                     ({{ user.role.charAt(0).toLocaleUpperCase() }})
                 </span>
                 <button
-                    v-if="user.user !== dbParams.owner && canEditUsers"
-                    class="button button-transparent"
-                    @click="handleRemoveUser(user.user)"
+                    v-if="user.username !== dbParams.owner && canEditUsers"
+                    class="button button-transparent remove-button"
+                    @click="handleRemoveUser(user.username)"
                     title="Remove user"
                 >
                     <ClCloseMd class="remove-icon" />

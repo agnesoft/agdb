@@ -1,31 +1,176 @@
 import { mount } from "@vue/test-utils";
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import DbDetails from "./DbDetails.vue";
-import { db_user_list, db_user_add, db_user_remove } from "@/tests/apiMock";
+import { ref } from "vue";
+// import { db_user_list, db_user_add, db_user_remove } from "@/tests/apiMock";
+
+// const { getDbName } = vi.hoisted(() => {
+//     return {
+//         getDbName: vi.fn().mockReturnValue("testOwner/testDb"),
+//     };
+// });
+
+// vi.mock("@/composables/db/dbStore", () => {
+//     return {
+//         useDbStore: () => {
+//             return {
+//                 getDbName,
+//             };
+//         },
+//     };
+// });
+
+const {
+    fetchDbUsers,
+    isDbRoleType,
+    // users,
+    // dbName,
+    // canEditUsers,
+    handleRemoveUser,
+    handleAddUser,
+} = vi.hoisted(() => {
+    return {
+        fetchDbUsers: vi.fn(),
+        isDbRoleType: vi.fn().mockReturnValue(true),
+        handleRemoveUser: vi.fn(),
+        handleAddUser: vi.fn(),
+    };
+});
+
+vi.mock("@/composables/db/dbUsersStore", () => {
+    return {
+        useDbUsersStore: () => {
+            return {
+                fetchDbUsers,
+                isDbRoleType,
+                // getDbUsers,
+            };
+        },
+    };
+});
+
+const canEditUsers = ref(true);
+
+vi.mock("@/composables/db/dbDetails", () => {
+    return {
+        useDbDetails: () => {
+            return {
+                users: ref([
+                    {
+                        username: "testUser",
+                        role: "read",
+                    },
+                    {
+                        username: "testUser2",
+                        role: "write",
+                    },
+                    {
+                        username: "testUser3",
+                        role: "admin",
+                    },
+                ]),
+                dbName: ref("testOwner/testDb"),
+                canEditUsers: canEditUsers,
+                handleRemoveUser,
+                handleAddUser,
+            };
+        },
+    };
+});
 
 describe("DbDetails", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        canEditUsers.value = true;
     });
     it("should render users", async () => {
-        db_user_list.mockResolvedValue({
-            data: [
-                {
-                    username: "test",
-                    role: "read",
-                },
-            ],
+        const wrapper = mount(DbDetails, {
+            // props: {
+            //     row: {
+            //         owner: "testOwner",
+            //         db: "testDb",
+            //         role: "admin",
+            //     },
+            // },
         });
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find("header").text()).toContain("testOwner/testDb");
+        const usernames = wrapper.findAll(".username");
+        expect(usernames.length).toBe(3);
+        expect(usernames[0].text()).toContain("testUser");
+        expect(usernames[1].text()).toContain("testUser2");
+        expect(usernames[2].text()).toContain("testUser3");
+
+        const roles = wrapper.findAll(".role");
+        expect(roles.length).toBe(3);
+        expect(roles[0].text()).toContain("(R)");
+        expect(roles[1].text()).toContain("(W)");
+        expect(roles[2].text()).toContain("(A)");
+    });
+
+    it("should add a user", async () => {
+        const wrapper = mount(DbDetails);
+        await wrapper.vm.$nextTick();
+        await wrapper.find(".add-button").trigger("click");
+        await wrapper.vm.$nextTick();
+
+        expect(handleAddUser).toHaveBeenCalled();
+    });
+
+    it("should remove a user", async () => {
+        const wrapper = mount(DbDetails);
+        await wrapper.vm.$nextTick();
+        await wrapper.find(".remove-button").trigger("click");
+        await wrapper.vm.$nextTick();
+
+        expect(handleRemoveUser).toHaveBeenCalled();
+    });
+
+    it("should not render add button if not admin", async () => {
+        canEditUsers.value = false;
         const wrapper = mount(DbDetails, {
             props: {
-                db: {
-                    owner: "test",
-                    db: "test",
+                row: {
+                    role: "read",
                 },
             },
         });
+
         await wrapper.vm.$nextTick();
-        expect(wrapper.text()).toContain("test");
-        expect(wrapper.text()).toContain("(R)");
+        const addButton = wrapper.find(".add-button");
+        expect(addButton.exists()).toBe(false);
+    });
+
+    it("should not render remove button if not admin", async () => {
+        canEditUsers.value = false;
+        const wrapper = mount(DbDetails, {
+            props: {
+                row: {
+                    role: "read",
+                },
+            },
+        });
+
+        await wrapper.vm.$nextTick();
+        const removeButton = wrapper.find(".remove-button");
+        expect(removeButton.exists()).toBe(false);
+    });
+
+    it("should not render remove button if user is owner", async () => {
+        const wrapper = mount(DbDetails, {
+            props: {
+                row: {
+                    owner: "testUser3",
+                    role: "admin",
+                    db: "testDb",
+                },
+            },
+        });
+
+        await wrapper.vm.$nextTick();
+        const items = wrapper.findAll(".user-item");
+        expect(items.length).toBe(3);
+        expect(items[0].find(".remove-button").exists()).toBe(true);
+        expect(items[2].find(".remove-button").exists()).toBe(false);
     });
 });

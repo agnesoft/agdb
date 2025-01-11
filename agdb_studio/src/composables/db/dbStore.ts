@@ -25,10 +25,7 @@ const addDatabase = async ({ name, db_type }: AddDatabaseProps) => {
     client.value?.db_add({ owner: username.value, db: name, db_type });
 };
 
-export type DbIdentification = {
-    owner: string;
-    db: string;
-};
+export type DbIdentification = Pick<ServerDatabase, "owner" | "db">;
 
 const getDbName = (db: DbIdentification) => {
     return `${db.owner}/${db.db}`;

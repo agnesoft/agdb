@@ -1,0 +1,89 @@
+services:
+  agdb0:
+    image: agnesoft/agdb:dev
+    hostname: agdb0
+    container_name: agdb0
+    ports:
+      - "3000:3000"
+    volumes:
+      - agdb0_data:/agdb
+    configs:
+      - source: agdb0_config
+        target: /agdb/agdb_server.yaml
+      - source: pepper
+        target: /agdb/pepper
+  agdb1:
+    image: agnesoft/agdb:dev
+    hostname: agdb1
+    container_name: agdb1
+    ports:
+      - "3001:3001"
+    volumes:
+      - agdb1_data:/agdb
+    configs:
+      - source: agdb1_config
+        target: /agdb/agdb_server.yaml
+      - source: pepper
+        target: /agdb/pepper
+  agdb2:
+    image: agnesoft/agdb:dev
+    hostname: agdb2
+    container_name: agdb2
+    ports:
+      - "3002:3002"
+    volumes:
+      - agdb2_data:/agdb
+    configs:
+      - source: agdb2_config
+        target: /agdb/agdb_server.yaml
+      - source: pepper
+        target: /agdb/pepper
+
+volumes:
+  agdb0_data:
+  agdb1_data:
+  agdb2_data:
+
+configs:
+  pepper:
+    content: |
+      1234567891234567
+  agdb0_config:
+    content: |
+      bind: :::3000
+      address: http://agdb0:3000
+      basepath: ""
+      admin: admin
+      log_level: INFO
+      data_dir: /agdb/data
+      pepper_path: /agdb/pepper
+      cluster_token: cluster
+      cluster_heartbeat_timeout_ms: 1000
+      cluster_term_timeout_ms: 3000
+      cluster: [http://agdb0:3000, http://agdb1:3001, http://agdb2:3002]
+  agdb1_config:
+    content: |
+      bind: :::3001
+      address: http://agdb1:3001
+      basepath: ""
+      admin: admin
+      log_level: INFO
+      data_dir: /agdb/data
+      pepper_path: /agdb/pepper
+      cluster_token: cluster
+      cluster_heartbeat_timeout_ms: 1000
+      cluster_term_timeout_ms: 3000
+      cluster: [http://agdb0:3000, http://agdb1:3001, http://agdb2:3002]
+  agdb2_config:
+    content: |
+      bind: :::3002
+      address: http://agdb2:3002
+      basepath: ""
+      admin: admin
+      log_level: INFO
+      data_dir: /agdb/data
+      pepper_path: /agdb/pepper
+      cluster_token: cluster
+      cluster_heartbeat_timeout_ms: 1000
+      cluster_term_timeout_ms: 3000
+      cluster: [http://agdb0:3000, http://agdb1:3001, http://agdb2:3002]

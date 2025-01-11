@@ -281,11 +281,11 @@ impl ServerDb {
             .for_each(|e| {
                 if e.id.0 < 0 {
                     users.push(DbUser {
-                        user: String::new(),
+                        username: String::new(),
                         role: (&e.values[0].value).into(),
                     });
                 } else {
-                    users.last_mut().unwrap().user = e.values[0].value.to_string();
+                    users.last_mut().unwrap().username = e.values[0].value.to_string();
                 }
             });
 
@@ -869,7 +869,7 @@ impl ServerDb {
             .elements
             .into_iter()
             .map(|e| UserStatus {
-                name: e.values[0].value.to_string(),
+                username: e.values[0].value.to_string(),
                 login: !e.values[1].value.to_string().is_empty(),
                 admin: e.id == admin_id,
             })

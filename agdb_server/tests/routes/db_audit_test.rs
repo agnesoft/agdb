@@ -27,7 +27,7 @@ async fn audit() -> anyhow::Result<()> {
     server.api.db_exec_mut(owner, db, &queries).await?;
     let (status, results) = server.api.db_audit(owner, db).await?;
     assert_eq!(status, 200);
-    assert_eq!(results.0[0].user, owner.to_string());
+    assert_eq!(results.0[0].username, owner.to_string());
     assert_eq!(results.0[0].query, queries.remove(0));
     Ok(())
 }

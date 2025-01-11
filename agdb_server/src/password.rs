@@ -77,7 +77,7 @@ impl Password {
     }
 
     fn salt(user: &str, user_salt: [u8; SALT_LEN]) -> Vec<u8> {
-        let mut salt = Vec::with_capacity(user.as_bytes().len() + SALT_LEN * 3);
+        let mut salt = Vec::with_capacity(user.len() + SALT_LEN * 3);
 
         salt.extend(DB_SALT);
         salt.extend(user.as_bytes());

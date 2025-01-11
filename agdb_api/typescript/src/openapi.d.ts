@@ -349,7 +349,7 @@ declare namespace Components {
         }
         export interface DbUser {
             role: DbUserRole;
-            user: string;
+            username: string;
         }
         export type DbUserRole = "admin" | "write" | "read";
         export interface DbUserRoleParam {
@@ -655,7 +655,7 @@ declare namespace Components {
         export interface QueryAudit {
             query: /* Convenience enum for serializing/deserializing queries. */ QueryType;
             timestamp: number; // int64
-            user: string;
+            username: string;
         }
         /**
          * Query condition. The condition consists of
@@ -1415,7 +1415,7 @@ declare namespace Components {
         export interface UserStatus {
             admin: boolean;
             login: boolean;
-            name: string;
+            username: string;
         }
     }
 }

@@ -536,4 +536,4 @@ We have also discovered issues with the schema and were able to seamlessly fix t
 
 Lastly we have seen that the queries can be simple, readable, statically checked and completely native while still providing complex functionality such as filtering through conditions, paging, ordering etc. Moreover, while the features of object queries won't make them always logically correct they eliminate entire categories of issues like syntax errors, type errors, security issues like SQL injection, and even certain logic errors etc.
 
-For the comprehensive overview of all queries see the [query reference](/docs/references/queries). For the code used in this document see [tests/efficient_agdb.rs](https://github.com/agnesoft/agdb/blob/main/agdb/tests/efficient_agdb.rs).
+For the comprehensive overview of all queries see the [query reference](/docs/references/queries). For the code used in this document see [the code in the tests](https://github.com/agnesoft/agdb/blob/main/agdb/tests/efficient_agdb/mod.rs).

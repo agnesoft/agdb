@@ -36,7 +36,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --package agdb_server --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive|agdb_api|api.rs" --fail-uncovered-functions 22 --show-missing-lines
+      - run: cargo llvm-cov --package agdb_server --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive|agdb_api|api.rs" --fail-uncovered-functions 40 --show-missing-lines
 
   agdb_server_test:
     runs-on: ubuntu-latest
@@ -63,9 +63,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
-      - run: docker run -d -p 3000:3000 agnesoft/agdb:dev
+      - run: docker compose -f agdb_server/compose.yaml up --wait
       - run: sleep 5
-      - run: curl http://localhost:3000/api/v1/status
+      - run: if [[ "$(curl -s http://localhost:3000/api/v1/cluster/status | grep "\"leader\":true")" == "" ]]; then exit 1; fi
       - run: |
-          token=$(curl -X POST http://localhost:3000/api/v1/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')
+          token=$(curl -X POST http://localhost:3002/api/v1/cluster/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')
+          curl -H "Authorization: Bearer $token" -X POST http://localhost:3002/api/v1/admin/shutdown
           curl -H "Authorization: Bearer $token" -X POST http://localhost:3000/api/v1/admin/shutdown
+          curl -H "Authorization: Bearer $token" -X POST http://localhost:3001/api/v1/admin/shutdown

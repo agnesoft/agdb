@@ -1,0 +1,111 @@
+---
+title: "How to run the server on bare metal?"
+description: "How to run the server on bare metal, Agnesoft Graph Database"
+---
+
+import { Callout, Steps } from "nextra/components";
+
+# How to run the server on bare metal?
+
+The `agdb_server` can be run on bare metal by building the binary and running it on the target machine:
+
+<Steps>
+
+### Install git
+
+From the [official source](https://git-scm.com/) (skip if you already have it).
+
+### Install Rust toolchain
+
+From the [official source](https://www.rust-lang.org/tools/install).
+
+### Install `agdb_server`
+
+```shell
+cargo install agdb_server
+```
+
+You can also build the server manually. One advantage is that you can use a custom `pepper` value and bake it into the binary instead of using runtime configured value. The `pepper` file is located in sources as `agdb_server/pepper` and contains a random 16 character value that is used internally to additionally "season" the encrypted passwords. When building for production you should change this value to a different one and keep the pepper file as secret in case you needed to rebuild the server or build a new version.
+
+The steps for a manual build (use `bash` on Unix or `git bash` on Windows):
+
+```bash
+git clone https://github.com/agnesoft/agdb.git
+cd agdb/
+git checkout $(git describe --tags) # checkout the latest released version
+echo "1234567891234567" > agdb_server/pepper #use a different value, this value will be a secret
+cargo build --release -p agdb_server
+mv target/release/agdb_server "<location available on your PATH>"
+# Windows: target/release/agdb_server.exe
+```
+
+<Callout type="warning">
+    Server with a different pepper value (e.g. default non-prod version) won't
+    be able to decode passwords in the internal database. If you lose the pepper
+    value of your server and need to rebuild it you should generate a new pepper
+    and then you will need to create a new admin account (by changing the config
+    value to a non-existent user) and using that account you can reset passwords
+    of all your users via `/api/v1/admin/user/{username}/change_password` API
+    (including the old admin account).
+</Callout>
+
+Alternatively you can use the default pepper value but specify in configuration the "pepper_path" from which the pepper would be loaded during runtime. This file and location should be treated as secret. All the caveats of manual build still apply including the recovery steps in case the pepper value is lost.
+
+### Run the server
+
+```bash
+agdb_server
+```
+
+The server upon starting will create few things in its working directory:
+
+-   `agdb_server.yaml`: Configuration file. You can alter it as you wish or prepare one in advance. You would need to restart the server for the changes to take effect.
+-   `agdb_data_dir/`: Folder for storing the user data. It can be changed in the configuration file (requires restart of the server and possibly moving the internal database and data, if any, to the new location).
+-   `agdb_data_dir/agdb_server.agdb` (`agdb_data_dir/.agdb_server.agdb`): Internal database of the server (uses `agdb` itself) + it's write ahead file (the dotfile).
+
+and report where it listens at:
+
+```
+2024-01-26T17:47:30.956260Z  INFO agdb_server: Listening at localhost:3000
+```
+
+<Callout>
+    You can prepare the configuration file before starting the server.
+</Callout>
+
+[Please refer to the server reference for the configuration options.](/docs/references/server)
+
+### Test that the server is up with `curl`
+
+```bash
+curl -v localhost:3000/api/v1/status # should return 200 OK
+```
+
+### Create a database user
+
+It is recommended (but optional) to create a regular user rather than using the `admin` user (which is however still possible):
+
+```bash
+ # produce an admin API token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}')
+# using admin token to create a user
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/user/my_db_user/add -d '{"password":"password123"}'
+# login as the new user and producing their token
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"my_db_user","password":"password123"}')
+```
+
+### Interact with the database server
+
+You can either continue using `curl`, interactive OpenAPI GUI from any browser `localhost:3000/api/v1` (provided by `rapidoc`) or choose one of the [available API clients](/api-docs/openapi). The raw OpenAPI specification can be downloaded from the server at `localhost:3000/api/v1/openapi.json` as well.
+
+### Shutdown the server
+
+The server can be shutdown with `CTRL+C` or programmatically posting to the shutdown endpoint as logged in server admin:
+
+```bash
+# this will produce an admin API token, e.g. "bb2fc207-90d1-45dd-8110-3247c4753cd5"
+token=$(curl -X POST -H 'Content-Type: application/json' localhost:3000/api/v1/user/login -d '{"username":"admin","password":"admin"}')
+curl -X POST -H "Authorization: Bearer ${token}" localhost:3000/api/v1/admin/shutdown
+```
+
+</Steps>

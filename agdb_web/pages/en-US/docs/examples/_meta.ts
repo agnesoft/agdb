@@ -14,6 +14,11 @@ const config = {
         href: "https://github.com/agnesoft/agdb/tree/main/examples/joins",
         newWindow: true,
     },
+    k8s: {
+        title: "kubernetes (k8s)",
+        href: "https://github.com/agnesoft/agdb/tree/main/examples/k8s",
+        newWindow: true,
+    },
     "schema-migration": {
         title: "schema migration",
         href: "https://github.com/agnesoft/agdb/tree/main/examples/schema_migration",

@@ -2,40 +2,16 @@ import { mount } from "@vue/test-utils";
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import DbDetails from "./DbDetails.vue";
 import { ref } from "vue";
-// import { db_user_list, db_user_add, db_user_remove } from "@/tests/apiMock";
 
-// const { getDbName } = vi.hoisted(() => {
-//     return {
-//         getDbName: vi.fn().mockReturnValue("testOwner/testDb"),
-//     };
-// });
-
-// vi.mock("@/composables/db/dbStore", () => {
-//     return {
-//         useDbStore: () => {
-//             return {
-//                 getDbName,
-//             };
-//         },
-//     };
-// });
-
-const {
-    fetchDbUsers,
-    isDbRoleType,
-    // users,
-    // dbName,
-    // canEditUsers,
-    handleRemoveUser,
-    handleAddUser,
-} = vi.hoisted(() => {
-    return {
-        fetchDbUsers: vi.fn(),
-        isDbRoleType: vi.fn().mockReturnValue(true),
-        handleRemoveUser: vi.fn(),
-        handleAddUser: vi.fn(),
-    };
-});
+const { fetchDbUsers, isDbRoleType, handleRemoveUser, handleAddUser } =
+    vi.hoisted(() => {
+        return {
+            fetchDbUsers: vi.fn(),
+            isDbRoleType: vi.fn().mockReturnValue(true),
+            handleRemoveUser: vi.fn(),
+            handleAddUser: vi.fn(),
+        };
+    });
 
 vi.mock("@/composables/db/dbUsersStore", () => {
     return {
@@ -43,7 +19,6 @@ vi.mock("@/composables/db/dbUsersStore", () => {
             return {
                 fetchDbUsers,
                 isDbRoleType,
-                // getDbUsers,
             };
         },
     };
@@ -84,15 +59,7 @@ describe("DbDetails", () => {
         canEditUsers.value = true;
     });
     it("should render users", async () => {
-        const wrapper = mount(DbDetails, {
-            // props: {
-            //     row: {
-            //         owner: "testOwner",
-            //         db: "testDb",
-            //         role: "admin",
-            //     },
-            // },
-        });
+        const wrapper = mount(DbDetails);
         await wrapper.vm.$nextTick();
         expect(wrapper.find("header").text()).toContain("testOwner/testDb");
         const usernames = wrapper.findAll(".username");

@@ -71,6 +71,7 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 - [Object queries](https://agdb.agnesoft.com/docs/references/queries) with builder pattern (no text, no query language)
 - Memory mapped for fast querying
 - [Server mode](https://agdb.agnesoft.com/docs/references/server)
+- [Cluster mode](https://agdb.agnesoft.com/docs/references/server#cluster)
 - [OpenAPI clients](https://agdb.agnesoft.com/api-docs/openapi) in any programming language
 - [Cloud](https://agdb.agnesoft.com/enterprise/cloud) hosted SaaS database
 - _Db itself has no dependencies_
@@ -186,18 +187,17 @@ flowchart TD;
 
 The following are planned features:
 
-| Feature                               | Description                                                                                                                                          |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Agdb Studio                           | Graphical interface to `agdb`                                                                                                                        |
-| Python Client                         | Convenience client using bindings genereated from OpenAPI.                                                                                           |
-| Java Client                           | Convenience client using bindings genereated from OpenAPI.                                                                                           |
-| C# Client                             | Convenience client using bindings genereated from OpenAPI.                                                                                           |
-| C Client                              | Convenience client using bindings genereated from OpenAPI.                                                                                           |
-| C++ Client                            | Convenience client using bindings genereated from OpenAPI.                                                                                           |
-| Data replication & consensus protocol | Allow replication by connecting several database nodes together with a RAFT protocol.                                                                |
-| Agdb Playground                       | Free public cloud-based playground to tinker with `agdb`.                                                                                            |
-| #\[no_std]                            | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. |
-| Public Cloud Offering                 | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     |
+| Feature               | Description                                                                                                                                          |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agdb Studio           | Graphical interface to `agdb`                                                                                                                        |
+| Python Client         | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| Java Client           | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C# Client             | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C Client              | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| C++ Client            | Convenience client using bindings genereated from OpenAPI.                                                                                           |
+| Agdb Playground       | Free public cloud-based playground to tinker with `agdb`.                                                                                            |
+| #\[no_std]            | The `agdb` does not require any dependencies and thus should be (in theory) `no_std` friendly but it will likely require some development & testing. |
+| Public Cloud Offering | Commercial & supported `agdb` instance hosted in a public cloud.                                                                                     |
 
 ## <img width="25" src="./agdb_web/public/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Reference
 

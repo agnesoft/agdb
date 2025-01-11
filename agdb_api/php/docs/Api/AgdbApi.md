@@ -48,7 +48,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**dbRestore()**](AgdbApi.md#dbRestore) | **POST** /api/v1/db/{owner}/{db}/restore |  |
 | [**dbUserAdd()**](AgdbApi.md#dbUserAdd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add |  |
 | [**dbUserList()**](AgdbApi.md#dbUserList) | **GET** /api/v1/db/{owner}/{db}/user/list |  |
-| [**dbUserRemove()**](AgdbApi.md#dbUserRemove) | **POST** /api/v1/db/{owner}/{db}/user/{username}/remove |  |
+| [**dbUserRemove()**](AgdbApi.md#dbUserRemove) | **DELETE** /api/v1/db/{owner}/{db}/user/{username}/remove |  |
 | [**status()**](AgdbApi.md#status) | **GET** /api/v1/status |  |
 | [**userChangePassword()**](AgdbApi.md#userChangePassword) | **PUT** /api/v1/user/change_password |  |
 | [**userLogin()**](AgdbApi.md#userLogin) | **POST** /api/v1/user/login |  |

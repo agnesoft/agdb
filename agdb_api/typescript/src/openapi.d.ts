@@ -3136,7 +3136,7 @@ export interface PathsDictionary {
     /**
      * db_user_remove
      */
-    'post'(
+    'delete'(
       parameters?: Parameters<Paths.DbUserRemove.PathParameters> | null,
       data?: any,
       config?: AxiosRequestConfig  

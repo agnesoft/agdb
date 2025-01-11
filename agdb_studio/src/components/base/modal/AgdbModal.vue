@@ -45,7 +45,7 @@ watch(modalIsVisible, async () => {
                 <button
                     v-for="button in buttons"
                     :key="button.text"
-                    @click="button.action"
+                    @click.prevent="button.action"
                     :class="button.className"
                     :type="button.type ?? 'button'"
                     :form="button.type === 'submit' ? 'modal-form' : undefined"

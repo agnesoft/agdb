@@ -14,6 +14,7 @@ const getInputValue = (
     contentKey: Symbol,
     inputKey: string,
 ): string | number | boolean | undefined => {
+    console.log(inputs.value.get(contentKey));
     return inputs.value.get(contentKey)?.get(inputKey)?.value;
 };
 

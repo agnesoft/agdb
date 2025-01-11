@@ -32,6 +32,7 @@ type Input = {
     className?: string;
     autofocus?: boolean;
     options?: OptionType[];
+    defaultValue?: string | number | boolean;
 };
 
 type Content = {

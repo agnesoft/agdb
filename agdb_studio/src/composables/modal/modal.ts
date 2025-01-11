@@ -62,7 +62,7 @@ const openModal = ({
     clearInputs(KEY_MODAL);
     content?.forEach((c) => {
         if (c.input) {
-            addInput(KEY_MODAL, c.input.key, ref());
+            addInput(KEY_MODAL, c.input.key, ref(c.input.defaultValue));
         }
     });
 

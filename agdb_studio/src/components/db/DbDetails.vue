@@ -59,7 +59,11 @@ const handleRemoveUser = (username: string) => {
         ],
 
         onConfirm: () => {
-            removeUser({ ...dbParams.value, username: username }).then(() => {
+            removeUser({
+                owner: dbParams.value.owner,
+                db: dbParams.value.db,
+                username: username,
+            }).then(() => {
                 fetchDbUsers(dbParams.value);
             });
         },
@@ -94,6 +98,7 @@ const handleAddUser = () => {
                         { value: "write", label: "Read/Write" },
                         { value: "read", label: "Read Only" },
                     ],
+                    defaultValue: "write",
                 },
             },
         ],
@@ -101,8 +106,11 @@ const handleAddUser = () => {
             const username = getInputValue(KEY_MODAL, "username")?.toString();
             const db_role = getInputValue(KEY_MODAL, "role")?.toString();
 
+            console.log({ username, db_role });
             if (username?.length && db_role && isDbRoleType(db_role)) {
+                console.log("Adding user");
                 addUser({ ...dbParams.value, username, db_role }).then(() => {
+                    console.log("Fetching users");
                     fetchDbUsers(dbParams.value);
                 });
             }

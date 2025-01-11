@@ -7,7 +7,7 @@ const props = defineProps({
     contentKey: { type: Symbol, required: true },
 });
 
-const { getContentInputs, setInputValue } = useContentInputs();
+const { getContentInputs, setInputValue, getInputValue } = useContentInputs();
 const inputs = getContentInputs(props.contentKey) ?? new Map();
 
 const autofocusElement = ref();
@@ -40,6 +40,16 @@ onMounted(() => {
                         inputs.get(part.input.key) !== undefined &&
                         part.input.type === 'select'
                     "
+                    @change="
+                        (event: Event) => {
+                            setInputValue(
+                                props.contentKey,
+                                part.input?.key,
+                                (event.target as HTMLSelectElement).value,
+                            );
+                        }
+                    "
+                    :value="getInputValue(props.contentKey, part.input.key)"
                 >
                     <option
                         v-for="(option, index) in part.input.options"

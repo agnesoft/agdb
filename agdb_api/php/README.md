@@ -121,7 +121,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**dbRestore**](docs/Api/AgdbApi.md#dbrestore) | **POST** /api/v1/db/{owner}/{db}/restore | 
 *AgdbApi* | [**dbUserAdd**](docs/Api/AgdbApi.md#dbuseradd) | **PUT** /api/v1/db/{owner}/{db}/user/{username}/add | 
 *AgdbApi* | [**dbUserList**](docs/Api/AgdbApi.md#dbuserlist) | **GET** /api/v1/db/{owner}/{db}/user/list | 
-*AgdbApi* | [**dbUserRemove**](docs/Api/AgdbApi.md#dbuserremove) | **POST** /api/v1/db/{owner}/{db}/user/{username}/remove | 
+*AgdbApi* | [**dbUserRemove**](docs/Api/AgdbApi.md#dbuserremove) | **DELETE** /api/v1/db/{owner}/{db}/user/{username}/remove | 
 *AgdbApi* | [**status**](docs/Api/AgdbApi.md#status) | **GET** /api/v1/status | 
 *AgdbApi* | [**userChangePassword**](docs/Api/AgdbApi.md#userchangepassword) | **PUT** /api/v1/user/change_password | 
 *AgdbApi* | [**userLogin**](docs/Api/AgdbApi.md#userlogin) | **POST** /api/v1/user/login | 

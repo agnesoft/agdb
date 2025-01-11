@@ -2161,7 +2161,7 @@
       }
     },
     "/api/v1/db/{owner}/{db}/user/{username}/remove": {
-      "post": {
+      "delete": {
         "tags": [
           "agdb"
         ],

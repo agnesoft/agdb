@@ -2,6 +2,7 @@ import { client } from "@/services/api.service";
 import type { DbUser, DbUserRole } from "agdb_api/dist/openapi";
 import { ref } from "vue";
 import { useDbStore, type DbIdentification } from "./dbStore";
+import { addNotification } from "../notification/notificationStore";
 
 const { getDbName } = useDbStore();
 
@@ -30,14 +31,26 @@ type AddUserProps = {
     db_role: DbUserRole;
 } & DbIdentification;
 const addUser = async (params: AddUserProps) => {
-    client.value?.db_user_add(params);
+    client.value?.db_user_add(params).then(() => {
+        addNotification({
+            type: "success",
+            title: "User added",
+            message: `User ${params.username} added to database ${getDbName(params)} successfully.`,
+        });
+    });
 };
 
 type RemoveUserProps = {
     username: string;
 } & DbIdentification;
 const removeUser = async (params: RemoveUserProps) => {
-    client.value?.db_user_remove(params);
+    client.value?.db_user_remove(params).then(() => {
+        addNotification({
+            type: "success",
+            title: "User removed",
+            message: `User ${params.username} removed from database ${getDbName(params)} successfully.`,
+        });
+    });
 };
 
 const isDbRoleType = (role: string): role is DbUserRole => {

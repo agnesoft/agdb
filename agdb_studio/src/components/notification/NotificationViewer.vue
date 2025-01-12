@@ -1,49 +1,83 @@
 <script lang="ts" setup>
-import { useNotificationStore } from "@/composables/notification/notificationStore";
-import { ref } from "vue";
+import {
+    notificationsReversed,
+    newNotifications,
+    viewerOpened,
+    toggleViewerOpened,
+    hasUnreadNotifications,
+    clearNotifications,
+} from "@/composables/notification/notificationStore";
 import FadeTransition from "../transitions/FadeTransition.vue";
 import NotificationItem from "./NotificationItem.vue";
-import { CaNotification } from "@kalimahapps/vue-icons";
-
-const { notifications, newNotifications } = useNotificationStore();
-const opened = ref(false);
-const toggleOpened = (): void => {
-    opened.value = !opened.value;
-};
+import {
+    CaNotification,
+    ClCloseMd,
+    CaNotificationNew,
+    CaRowDelete,
+} from "@kalimahapps/vue-icons";
 </script>
 
 <template>
-    <div class="notification-wrapper" v-if="notifications.length">
+    <div class="notification-wrapper" v-if="notificationsReversed.length">
         <FadeTransition>
-            <div class="notification-viewer" v-if="opened">
+            <div class="notification-viewer" v-if="viewerOpened">
+                <div class="notification-header">
+                    <h3><CaNotification /> Notifications</h3>
+
+                    <div class="header-buttons">
+                        <button
+                            @click="
+                                () => {
+                                    clearNotifications(), toggleViewerOpened();
+                                }
+                            "
+                            class="button button-transparent"
+                            title="Clear all notifications"
+                        >
+                            <CaRowDelete />
+                        </button>
+                        <button
+                            @click="toggleViewerOpened"
+                            class="button button-transparent"
+                            title="Hide notifications"
+                        >
+                            <ClCloseMd />
+                        </button>
+                    </div>
+                </div>
+                <div class="notifications">
+                    <TransitionGroup name="notification">
+                        <NotificationItem
+                            v-for="notification in notificationsReversed"
+                            :key="notification.id"
+                            :notification="notification"
+                        />
+                    </TransitionGroup>
+                </div>
+            </div>
+        </FadeTransition>
+        <div
+            v-if="!viewerOpened && newNotifications.length"
+            class="notification-flash"
+        >
+            <div class="notifications">
                 <TransitionGroup name="notification">
                     <NotificationItem
-                        v-for="notification in notifications"
+                        v-for="notification in newNotifications"
                         :key="notification.id"
                         :notification="notification"
                     />
                 </TransitionGroup>
             </div>
-        </FadeTransition>
-        <div
-            v-if="!opened && newNotifications.length"
-            class="notification-flash"
-        >
-            <TransitionGroup name="notification">
-                <NotificationItem
-                    v-for="notification in newNotifications"
-                    :key="notification.id"
-                    :notification="notification"
-                />
-            </TransitionGroup>
         </div>
         <button
-            @click="toggleOpened"
+            @click="toggleViewerOpened"
             class="button button-transparent notification-button"
             :class="{ shake: newNotifications.length }"
-            :title="`${opened ? 'Hide' : 'Show'} notifications`"
+            :title="`${viewerOpened ? 'Hide' : 'Show'} notifications`"
         >
-            <CaNotification />
+            <CaNotification v-if="!hasUnreadNotifications" />
+            <CaNotificationNew v-else />
         </button>
     </div>
 </template>
@@ -59,30 +93,40 @@ const toggleOpened = (): void => {
     flex-direction: column;
     align-items: flex-end;
 }
-.notification-viewer,
-.notification-flash {
+.notifications {
     display: grid;
     grid-template-columns: 1fr;
     grid-gap: 0.5rem;
     width: 20rem;
     max-width: 100%;
-    overflow: auto;
-    border-radius: 0.8rem;
+
+    align-items: end;
+    position: relative;
+    --notifications-padding: 0;
+    padding: var(--notifications-padding);
 }
 .notification-viewer {
-    padding: 0.5rem;
     background-color: var(--color-background-soft);
     border: 1px solid var(--color-border);
-    max-height: 30rem;
-    min-height: 10rem;
+    border-radius: 0.8rem;
+    .notifications {
+        overflow: auto;
+        max-height: 30rem;
+        min-height: 10rem;
+        --notifications-padding: 0.5rem;
+    }
 }
 .notification-flash {
+    position: fixed;
+    bottom: 3.8rem;
+    right: 0.8rem;
     padding: 1rem;
     display: flex;
     flex-direction: column;
     width: 20rem;
     max-width: 100%;
-    overflow: auto;
+    overflow: visible;
+    max-height: calc(100vh - 5rem);
 }
 @keyframes icon-shake {
     0% {
@@ -102,24 +146,56 @@ const toggleOpened = (): void => {
     }
 }
 .notification-button {
-    padding: 0.5rem 0.5rem 0 0;
-    // padding: 0;
+    padding: 0.5rem;
+    line-height: 0;
     font-size: 2rem;
+    background-color: var(--color-background);
+    border-radius: 50%;
     &.shake {
         animation: icon-shake 0.5s;
     }
+    z-index: 100;
 }
 .notification {
+    &-move,
     &-enter-active,
     &-leave-active {
         transition:
-            opacity 0.3s,
-            transform 0.3s;
+            opacity 0.3s ease-in-out,
+            transform 0.3s ease-in-out;
     }
     &-enter-from,
     &-leave-to {
         opacity: 0;
-        transform: translateY(1rem);
+        transform: translateY(-1rem);
+    }
+    &-leave-active {
+        width: calc(100% - var(--notifications-padding) * 2);
+        margin: 0 var(--notifications-padding);
+        // width: 100%;
+        position: absolute;
+    }
+
+    .notification-flash &-leave-active {
+        width: 100%;
+        margin: 0;
+        position: absolute;
+    }
+}
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.1rem 0;
+    border-bottom: 1px solid var(--color-border);
+    margin: 0;
+    h3 {
+        margin: 0;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0rem 0.5rem;
     }
 }
 </style>

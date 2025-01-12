@@ -6,9 +6,7 @@ import {
     MAX_CONNECTION_ATTEMPTS,
 } from "@/constants";
 import { computed, ref } from "vue";
-import { useNotificationStore } from "@/composables/notification/notificationStore";
-
-const { addNotification } = useNotificationStore();
+import { addNotification } from "@/composables/notification/notificationStore";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
 

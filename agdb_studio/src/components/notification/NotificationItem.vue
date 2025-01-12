@@ -1,6 +1,10 @@
 <script lang="ts" setup>
-import type { AgdbNotification } from "@/composables/notification/notificationStore";
+import {
+    removeNotification,
+    type AgdbNotification,
+} from "@/composables/notification/notificationStore";
 import type { PropType } from "vue";
+import { ClCloseMd } from "@kalimahapps/vue-icons";
 
 defineProps({
     notification: {
@@ -11,13 +15,33 @@ defineProps({
 </script>
 
 <template>
-    <div class="notification-item" :class="notification.type">
+    <div
+        class="notification-item"
+        :class="[
+            notification.type,
+            {
+                new: notification.new,
+                unread: !notification.read,
+                withSeparator: notification.title && notification.message,
+            },
+        ]"
+    >
         <h4 class="notification-title">{{ notification.title }}</h4>
+        <button
+            @click="removeNotification(notification.id)"
+            class="button button-transparent button-close"
+        >
+            <ClCloseMd />
+        </button>
+        <div
+            class="separator"
+            v-if="notification.title && notification.message"
+        ></div>
         <div class="notification-content" :class="notification.type">
             {{ notification.message }}
         </div>
         <div class="timestamp">
-            {{ new Date(notification.timestamp * 1000).toLocaleString() }}
+            {{ new Date(notification.timestamp).toLocaleString() }}
         </div>
     </div>
 </template>
@@ -26,45 +50,79 @@ defineProps({
 .notification-item {
     border-radius: 0.5rem;
     border: 1px solid transparent;
-    --message-background-color: var(--color-background);
     --message-border-color: transparent;
 
     border-color: var(--message-border-color);
     overflow: hidden;
     background-color: var(--color-background-soft);
+    transition:
+        background-color 0.5s ease,
+        outline 0.5s ease;
 
     &.info {
-        --message-background-color: var(--info-color-background);
-        --message-border-color: var(--info-color);
+        --message-border-color: var(--info-color-2);
     }
     &.success {
-        --message-background-color: var(--success-color-background);
-        --message-border-color: var(--success-color);
+        --message-border-color: var(--success-color-2);
     }
     &.warning {
-        --message-background-color: var(--warning-color-background);
-        --message-border-color: var(--warning-color);
+        --message-border-color: var(--warning-color-2);
     }
     &.error {
-        --message-background-color: var(--error-color-background);
-        --message-border-color: var(--error-color);
+        --message-border-color: var(--error-color-2);
     }
 
-    .notification-title {
-        font-size: 1rem;
-        font-weight: bold;
-        background-color: var(--message-background-color);
-        padding: 0.2rem 0.5rem;
+    &.unread {
+        background-color: var(--color-background);
     }
-    .notification-content {
-        font-size: 0.9rem;
-        padding: 0.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+        "content close"
+        "timestamp timestamp";
+    &.withSeparator {
+        grid-template-rows: auto 1px auto auto;
+        grid-template-areas:
+            "title close"
+            "separator separator"
+            "content content"
+            "timestamp timestamp";
     }
-    .timestamp {
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-        padding: 0.2rem 0.5rem;
-        text-align: right;
+}
+.notification-title {
+    grid-area: content;
+    font-size: 1rem;
+    font-weight: bold;
+    padding: 0.2rem 0.5rem;
+    color: var(--message-border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .withSeparator & {
+        grid-area: title;
     }
+}
+.button-close {
+    grid-area: close;
+    color: var(--message-border-color);
+    padding: 0.35rem 0.35rem 0 0;
+    align-self: flex-start;
+}
+.separator {
+    grid-area: separator;
+    border-bottom: 1px solid var(--message-border-color);
+}
+.notification-content {
+    grid-area: content;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+}
+.timestamp {
+    grid-area: timestamp;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    padding: 0.2rem 0.5rem;
+    text-align: right;
 }
 </style>

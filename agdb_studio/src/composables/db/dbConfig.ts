@@ -43,6 +43,7 @@ const dbActions: Action[] = [
         label: "Backup",
         action: ({ params }: DbActionProps) =>
             client.value?.db_backup(params).then(() => {
+                console.log("Backup created", params);
                 addNotification({
                     type: "success",
                     title: "Backup created",

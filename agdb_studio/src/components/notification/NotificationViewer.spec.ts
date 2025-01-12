@@ -1,19 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, beforeEach, vi, it, expect } from "vitest";
 import NotificationViewer from "./NotificationViewer.vue";
-import { ref } from "vue";
 import * as notificationStore from "@/composables/notification/notificationStore";
-
-// vi.mock("@/composables/notification/notificationStore");
-
-// const toggleViewerOpenedMock = vi.mocked(toggleViewerOpened);
-// const closeViewerMock = vi.mocked(closeViewer);
-// const clearNotificationsMock = vi.mocked(clearNotifications);
-
-// const notificationsReversedMock = vi.mocked(notificationsReversed);
-// const newNotificationsMock = vi.mocked(newNotifications);
-// const viewerOpenedMock = vi.mocked(viewerOpened);
-// const hasUnreadNotificationsMock = vi.mocked(hasUnreadNotifications);
 
 const toggleViewerOpenedMock = vi.spyOn(
     notificationStore,
@@ -24,79 +12,6 @@ const clearNotificationsMock = vi.spyOn(
     notificationStore,
     "clearNotifications",
 );
-
-// notificationsReversedMock.value = [
-//     {
-//         id: "testId",
-//         type: "info",
-//         title: "Test",
-//         message: "This is a test notification",
-//         timestamp: Date.now(),
-//     },
-// ];
-
-// const {
-//     closeViewer,
-//     clearNotifications,
-//     toggleViewerOpened,
-//     notificationsReversed,
-//     newNotifications,
-//     hasUnreadNotifications,
-//     viewerOpened,
-// } = vi.hoisted(() => {
-//     return {
-//         closeViewer: vi.fn(),
-//         clearNotifications: vi.fn(),
-//         toggleViewerOpened: vi.fn(),
-//         notificationsReversed: [
-//             {
-//                 id: "testId",
-//                 type: "info",
-//                 title: "Test",
-//                 message: "This is a test notification",
-//                 timestamp: Date.now(),
-//             },
-//         ],
-//         newNotifications: {
-//             value: [
-//                 {
-//                     id: "testId2",
-//                     type: "info",
-//                     title: "Test2",
-//                     message: "This is a test notification 2",
-//                     timestamp: Date.now(),
-//                 },
-//             ],
-//         },
-//         hasUnreadNotifications: { value: false },
-//         viewerOpened: { value: true },
-//     };
-// });
-
-// vi.mock("@/composables/notification/notificationStore", () => {
-//     return {
-//         notificationsReversed,
-//         newNotifications,
-//         hasUnreadNotifications,
-//         viewerOpened,
-//         // notificationsReversed: ref([
-//         //     {
-//         //         id: "testId",
-//         //         type: "info",
-//         //         title: "Test",
-//         //         message: "This is a test notification",
-//         //         timestamp: Date.now(),
-//         //     },
-//         // ]),
-//         // newNotifications: ref([]),
-//         // hasUnreadNotifications: ref(false),
-//         // viewerOpened: ref(false),
-//         toggleViewerOpened,
-//         clearNotifications,
-//         closeViewer,
-//     };
-// });
-
 const testNotifications: notificationStore.AddNotificationProps[] = [
     {
         type: "info",

@@ -6,6 +6,7 @@ import {
     toggleViewerOpened,
     hasUnreadNotifications,
     clearNotifications,
+    closeViewer,
 } from "@/composables/notification/notificationStore";
 import FadeTransition from "../transitions/FadeTransition.vue";
 import NotificationItem from "./NotificationItem.vue";
@@ -37,7 +38,7 @@ import {
                             <CaRowDelete />
                         </button>
                         <button
-                            @click="toggleViewerOpened"
+                            @click="closeViewer"
                             class="button button-transparent"
                             title="Hide notifications"
                         >
@@ -76,7 +77,7 @@ import {
             :class="{ shake: newNotifications.length }"
             :title="`${viewerOpened ? 'Hide' : 'Show'} notifications`"
         >
-            <CaNotification v-if="!hasUnreadNotifications" />
+            <CaNotification v-if="!hasUnreadNotifications || viewerOpened" />
             <CaNotificationNew v-else />
         </button>
     </div>

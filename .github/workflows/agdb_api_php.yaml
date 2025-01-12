@@ -16,9 +16,10 @@ jobs:
         working-directory: agdb_api/php
     steps:
       - uses: actions/checkout@v4
-      - run: composer install
       - run: npm ci
       - run: ./ci.sh format:check
+      - run: composer config --global use-parent-dir true
+      - run: composer install
       - run: ./ci.sh analyse
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: ./ci.sh coverage

@@ -27,6 +27,7 @@ jobs:
       run:
         working-directory: examples/server_client_typescript
     steps:
+      - uses: actions/checkout@v4
       - run: npm ci && npm run build
         working-directory: agdb_api/typescript
       - run: npm run format:check
@@ -38,7 +39,9 @@ jobs:
       run:
         working-directory: examples/server_client_php
     steps:
+      - uses: actions/checkout@v4
       - run: npm ci
       - run: npx prettier --plugin '@prettier/plugin-php' --check src
+      - run: composer config --global use-parent-dir true
       - run: composer install
       - run: vendor/bin/phpstan analyse --level=9 -v src

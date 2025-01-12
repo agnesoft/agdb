@@ -6,7 +6,7 @@ export type AgdbNotification = {
     type: AgdbNotificationType;
     title?: string;
     message?: string;
-    id: number;
+    id: string;
     timestamp: number;
     new?: boolean;
     read?: boolean;
@@ -37,7 +37,7 @@ watch(viewerOpened, (value) => {
     }
 });
 
-const hideNotification = (index: number): void => {
+const hideNotification = (index: string): void => {
     const notification = notifications.value.find((item) => item.id === index);
     if (notification) {
         notification.new = false;
@@ -52,7 +52,7 @@ export type AddNotificationProps = Pick<
 };
 
 const addNotification = (notification: AddNotificationProps): void => {
-    const id = maxId++;
+    const id = `${maxId++}`;
     const timeout = notification.timeout ?? defaultTimeoutToHide;
     const notificationData = {
         ...notification,
@@ -70,7 +70,7 @@ const addNotification = (notification: AddNotificationProps): void => {
     }
 };
 
-const removeNotification = (index: number): void => {
+const removeNotification = (index: string): void => {
     notifications.value = notifications.value.filter(
         (item) => item.id !== index,
     );

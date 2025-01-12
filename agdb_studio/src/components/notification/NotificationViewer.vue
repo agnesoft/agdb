@@ -32,14 +32,14 @@ import {
                                     clearNotifications(), toggleViewerOpened();
                                 }
                             "
-                            class="button button-transparent"
+                            class="button button-transparent button-clear"
                             title="Clear all notifications"
                         >
                             <CaRowDelete />
                         </button>
                         <button
                             @click="closeViewer"
-                            class="button button-transparent"
+                            class="button button-transparent button-close"
                             title="Hide notifications"
                         >
                             <ClCloseMd />

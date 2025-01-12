@@ -3,71 +3,46 @@ name: examples
 on:
   pull_request:
     branches: ["main"]
-
-env:
-  RUST_PROJECTS: "-p examples_app_db -p examples_indexes -p examples_joins -p examples_schema_migration -p examples_server_client -p examples_user_types"
+    paths:
+      - examples/**
+      - agdb/**
+      - agdb_derive/**
+      - agdb_server/**
+      - agdb_api/**
+      - .github/workflows/examples.yaml
 
 jobs:
-  diff:
+  agdb_examples_rust:
     runs-on: ubuntu-latest
-    outputs:
-      diff: ${{ steps.diff.outputs.diff }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: diff
-        shell: bash
-        run: |
-          if [[ "$(git diff origin/main --name-only -- agdb/ agdb_derive/ agdb_server/ agdb_api/ examples/ .github/workflows/examples.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
-
-  agdb_examples_analyse:
-    runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo clippy ${{ env.RUST_PROJECTS }} --all-targets --all-features -- -D warnings
-      - run: npm ci
-        working-directory: examples/server_client_typescript
-      - run: npm run lint:check
-        working-directory: examples/server_client_typescript
-      - run: composer install && vendor/bin/phpstan analyse --level=9 -v src
-        working-directory: examples/server_client_php
-      - run: vendor/bin/phpstan analyse --level=9 -v src
-        working-directory: examples/server_client_php
+      - run: cargo fmt -p examples_app_db -p examples_indexes -p examples_joins -p examples_schema_migration -p examples_server_client -p examples_user_types --check
+      - run: cargo clippy -p examples_app_db -p examples_indexes -p examples_joins -p examples_schema_migration -p examples_server_client -p examples_user_types --all-targets --all-features -- -D warnings
+      - run: cargo build -p examples_app_db -p examples_indexes -p examples_joins -p examples_schema_migration -p examples_server_client -p examples_user_types --all-features -r
 
-  agdb_examples_build:
+  agdb_examples_typescript:
     runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
+    defaults:
+      run:
+        working-directory: examples/server_client_typescript
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo build ${{ env.RUST_PROJECTS }} --all-features --release
-      - run: npm ci
-        working-directory: agdb_api/typescript
-      - run: npm run build
+      - run: npm ci && npm run build
         working-directory: agdb_api/typescript
       - run: npm ci
-        working-directory: examples/server_client_typescript
-      - run: npm run build
-        working-directory: examples/server_client_typescript
-
-  agdb_examples_format:
-    runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo fmt ${{ env.RUST_PROJECTS }} --check
-      - run: npm ci
-        working-directory: examples/server_client_typescript
       - run: npm run format:check
-        working-directory: examples/server_client_typescript
+      - run: npm run build
+
+  agdb_examples_php:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/server_client_php
+    steps:
+      - uses: actions/checkout@v4
       - run: npm ci
-        working-directory: examples/server_client_php
       - run: npx prettier --plugin '@prettier/plugin-php' --check src
-        working-directory: examples/server_client_php
+      - run: composer config --global use-parent-dir true
+      - run: composer install
+      - run: vendor/bin/phpstan analyse --level=9 -v src

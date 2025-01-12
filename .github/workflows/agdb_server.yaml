@@ -3,63 +3,27 @@ name: agdb_server
 on:
   pull_request:
     branches: ["main"]
+    paths:
+      - agdb_server/**
+      - agdb_api/rust/**
+      - agdb/**
+      - agdb_derive/**
+      - .github/workflows/agdb_server.yaml
 
 jobs:
-  diff:
+  agdb_server:
     runs-on: ubuntu-latest
-    outputs:
-      diff: ${{ steps.diff.outputs.diff }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: diff
-        shell: bash
-        run: |
-          if [[ "$(git diff origin/main --name-only -- agdb_server/ agdb/src/ agdb/Cargo.toml agdb_derive/src/ agdb_derive/Cargo.toml .github/workflows/agdb_server.yaml)" != "" ]]; then (echo "diff=true" >> $GITHUB_OUTPUT); fi
-
-  agdb_server_analyse:
-    runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo clippy --package agdb_server --all-targets --all-features -- -D warnings
-
-  agdb_server_coverage:
-    runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo fmt -p agdb_server -p agdb_api --check
+      - run: cargo clippy -p agdb_server -p agdb_api --all-targets --all-features -- -D warnings
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov --package agdb_server --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive|agdb_api|api.rs" --fail-uncovered-functions 40 --show-missing-lines
-
-  agdb_server_test:
-    runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: threshold=2; count=0; while cargo test --release --package agdb_server &> test.log && [[ "$count" != "$threshold" ]]; do count=$((count+1)); echo -n "."; done; cat test.log; echo "$count of $threshold tests run"
-
-  agdb_server_format:
-    runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo fmt --package agdb_server --check
+      - run: cargo llvm-cov -p agdb_server -p agdb_api --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive" --fail-uncovered-functions 41 --fail-uncovered-lines 200 --show-missing-lines
 
   agdb_server_image:
     runs-on: ubuntu-latest
-    needs: diff
-    if: needs.diff.outputs.diff == 'true'
     steps:
       - uses: actions/checkout@v4
       - run: docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .

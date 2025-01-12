@@ -2,6 +2,7 @@ import { ref } from "vue";
 import { client } from "@/services/api.service";
 import type { DbType, ServerDatabase } from "agdb_api/dist/openapi";
 import { useAccount } from "../user/account";
+import { addNotification } from "../notification/notificationStore";
 
 const databases = ref<ServerDatabase[]>([]);
 
@@ -22,7 +23,15 @@ const addDatabase = async ({ name, db_type }: AddDatabaseProps) => {
     if (!username.value) {
         return;
     }
-    client.value?.db_add({ owner: username.value, db: name, db_type });
+    client.value
+        ?.db_add({ owner: username.value, db: name, db_type })
+        .then(() => {
+            addNotification({
+                type: "success",
+                title: "Database added",
+                message: `Database ${name} added successfully.`,
+            });
+        });
 };
 
 export type DbIdentification = Pick<ServerDatabase, "owner" | "db">;

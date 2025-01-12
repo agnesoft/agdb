@@ -6,6 +6,7 @@ import {
     MAX_CONNECTION_ATTEMPTS,
 } from "@/constants";
 import { computed, ref } from "vue";
+import { addNotification } from "@/composables/notification/notificationStore";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
 
@@ -24,9 +25,23 @@ export const responseInterceptor = (response: AxiosResponse) => {
 };
 
 export const errorInterceptor = (error: AxiosError) => {
-    console.error(error.message);
+    console.error(error.message, error.response);
     if (error.response?.status === 401) {
         removeToken();
+    }
+
+    if (error.response) {
+        addNotification({
+            type: "error",
+            title: `Error: ${error.response.statusText}`,
+            message: `${error.response.data}`,
+        });
+    } else {
+        addNotification({
+            type: "error",
+            title: "Error",
+            message: `${error.message}`,
+        });
     }
     return Promise.reject(error);
 };
@@ -43,6 +58,10 @@ export const initClient = async (): Promise<void> => {
                 let message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms.`;
                 if (connectionAttempts === MAX_CONNECTION_ATTEMPTS) {
                     message = `Connection attempt ${connectionAttempts} failed. Retrying in ${timeout}ms. This is the final attempt.`;
+                    addNotification({
+                        type: "error",
+                        title: "Connection error",
+                    });
                 }
                 console.warn(message);
                 setTimeout(() => {

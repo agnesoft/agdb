@@ -1,6 +1,6 @@
 .button {
     display: inline-block;
-    padding: 5px 15px;
+    padding: 0.3em 1em;
     border: none;
     border-radius: 4px;
     text-align: center;
@@ -20,25 +20,25 @@
 }
 
 .button-default {
-    --backgroundColor: #007bff;
+    --backgroundColor: var(--blue-2);
     --color: var(--white);
-    --borderColor: #025ec0;
+    --borderColor: var(--blue);
 }
 
 .button-success {
-    --backgroundColor: #28a745;
+    --backgroundColor: var(--green-2);
     --color: var(--white);
-    --borderColor: #1e7732;
+    --borderColor: var(--green);
 }
 
 .button-warning {
-    --backgroundColor: var(--orange);
+    --backgroundColor: var(--orange-2);
     --color: var(--black);
-    --borderColor: #d88621;
+    --borderColor: var(--orange);
 }
 
 .button-danger {
-    --backgroundColor: #dc3545;
+    --backgroundColor: var(--red-2);
     --color: var(--white);
     --borderColor: var(--red);
 }
@@ -47,6 +47,7 @@
     --backgroundColor: transparent;
     --color: var(--color-text);
     --borderColor: transparent;
+    padding: 0.3em 0.5em;
 }
 
 .button:hover {

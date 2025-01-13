@@ -68,6 +68,12 @@
 
     --info-color: var(--blue);
     --info-color-2: var(--blue-dark);
+
+    --scrollbar-background: var(--divider-light-2);
+    --scrollbar-thumb: var(--color-text-muted);
+    --scrollbar-thumb-hover: var(--color-text);
+    --scrollbar-thumb-active: var(--color-text);
+    --scrollbar-border-color: var(--divider-light-2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -87,6 +93,12 @@
         --error-color-2: var(--red-light);
         --warning-color-2: var(--orange-light);
         --info-color-2: var(--blue-light);
+
+        --scrollbar-background: var(--divider-dark-2);
+        --scrollbar-thumb: var(--color-text-muted);
+        --scrollbar-thumb-hover: var(--color-text);
+        --scrollbar-thumb-active: var(--color-text);
+        --scrollbar-border-color: var(--divider-dark-2);
     }
 }
 

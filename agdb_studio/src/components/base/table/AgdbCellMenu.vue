@@ -57,7 +57,7 @@ const actions = computed(() => mapActions(props.actions));
 <template>
     <AgdbDropdown>
         <template #trigger>
-            <MdRoundMenu />
+            <div class="button"><MdRoundMenu /></div>
         </template>
         <template #content>
             <AgdbMenu :actions="actions" />

@@ -1,14 +1,10 @@
 <script lang="ts" setup>
 import { RouterLink, RouterView } from "vue-router";
-import { useAuth } from "@/composables/user/auth";
 import LogoIcon from "@/components/base/icons/LogoIcon.vue";
-import { useAccount } from "@/composables/user/account";
 import AgdbModal from "@/components/base/modal/AgdbModal.vue";
 import FadeTrasition from "@/components/transitions/FadeTransition.vue";
 import NotificationViewer from "../notification/NotificationViewer.vue";
-
-const { logout } = useAuth();
-const { username } = useAccount();
+import UserDropdown from "../header/UserDropdown.vue";
 </script>
 
 <template>
@@ -21,12 +17,7 @@ const { username } = useAccount();
                     <RouterLink to="/">Home</RouterLink>
                     <RouterLink to="/db">Databases</RouterLink>
                 </nav>
-                <button
-                    class="button button-warning logout-button"
-                    @click="logout"
-                >
-                    Logout {{ username }}
-                </button>
+                <UserDropdown />
             </div>
         </header>
         <main>

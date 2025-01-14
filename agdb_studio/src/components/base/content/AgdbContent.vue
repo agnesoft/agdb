@@ -90,8 +90,14 @@ onMounted(() => {
 }
 .input-row {
     display: grid;
-    grid-template-columns: minmax(60px, 150px) minmax(150px, 1fr);
+    grid-template-columns: minmax(60px, 170px) minmax(150px, 1fr);
     grid-gap: 1rem;
     margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .input-row {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

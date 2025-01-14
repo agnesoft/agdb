@@ -33,6 +33,7 @@ type Input = {
     autofocus?: boolean;
     options?: OptionType[];
     defaultValue?: string | number | boolean;
+    required?: boolean;
 };
 
 type Content = {

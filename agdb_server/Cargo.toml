@@ -16,6 +16,7 @@ agdb = { version = "0.10.0", path = "../agdb", features = ["serde", "openapi"] }
 agdb_api = { version = "0.10.0", path = "../agdb_api/rust", features = ["reqwest"] }
 axum = { version = "0.8", features = ["http2"] }
 axum-extra = { version = "0.10", features = ["typed-header"] }
+include_dir = "0.7"
 http-body-util = "0.1"
 reqwest = { version = "0.12", features = ["json", "stream"] }
 ring = "0.17"

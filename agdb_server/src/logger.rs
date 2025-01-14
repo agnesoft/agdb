@@ -49,7 +49,8 @@ pub(crate) async fn logger(
     next: Next,
 ) -> Result<impl IntoResponse, Response> {
     let mut log_record = LogRecord::default();
-    let skip_body = request.uri().path().ends_with("openapi.json");
+    let skip_body = request.uri().path().ends_with("openapi.json")
+        || request.uri().path().starts_with("/studio");
     let request = request_log(state, request, &mut log_record, skip_body).await?;
     let now = Instant::now();
     let response = next.run(request).await;

@@ -37,13 +37,6 @@ const testNotifications: AddNotificationProps[] = [
     { type: "warning", title: "Warning without message" },
 ];
 
-// const testAddNotification = () => {
-//     testNotifications.forEach((notification) => {
-//         addNotification(notification);
-//     });
-// };
-// testAddNotification();
-
 describe("notificationStore", () => {
     beforeEach(() => {
         vi.useFakeTimers();

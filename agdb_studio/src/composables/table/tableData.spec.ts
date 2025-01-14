@@ -9,9 +9,15 @@ import {
 import { TABLE_NAME, tableConfig, tableData } from "@/tests/tableMocks";
 import { addFilter, getTableFilter, setSort } from "./tableFilter";
 import { describe, beforeEach, it, expect } from "vitest";
+import type { TRow } from "./types";
 
 describe("tableData", () => {
-    addTable({ name: TABLE_NAME, columns: tableConfig });
+    addTable({
+        name: TABLE_NAME,
+        columns: tableConfig,
+        uniqueKey: (row: TRow) =>
+            `${row.owner.toString()}/${row.db.toString()}`,
+    });
 
     beforeEach(() => {
         const table = getTable(TABLE_NAME);
@@ -38,13 +44,24 @@ describe("tableData", () => {
             });
             setTableData("table_without_unique_key", tableData);
             const table = getTable("table_without_unique_key");
-            expect([...(table?.data?.keys() ?? [])]).toStrictEqual([
-                "0",
-                "1",
-                "2",
-                "3",
-                "4",
+            expect(table?.data?.size).toBe(5);
+        });
+        it("should set table data with custom string unique key", () => {
+            addTable({
+                name: "table_with_string_unique_key",
+                columns: [
+                    { key: "key", title: "Key" },
+                    { key: "value", title: "Value" },
+                ],
+                uniqueKey: "key",
+            });
+            setTableData("table_with_string_unique_key", [
+                { key: "key1", value: "value1" },
+                { key: "key2", value: "value2" },
+                { key: "key3", value: "value3" },
             ]);
+            const table = getTable("table_with_string_unique_key");
+            expect(table?.data?.size).toBe(3);
         });
     });
 
@@ -69,11 +86,11 @@ describe("tableData", () => {
         it("should remove row", () => {
             const table = getTable(TABLE_NAME);
             setTableData(TABLE_NAME, tableData);
-            expect(table?.data?.get("1")).toBeDefined();
+            expect(table?.data?.get("user/app1")).toBeDefined();
             expect(table?.data?.size).toBe(5);
-            removeRow(TABLE_NAME, "1");
+            removeRow(TABLE_NAME, "user/app1");
             expect(table?.data?.size).toBe(4);
-            expect(table?.data?.get("1")).toBeUndefined();
+            expect(table?.data?.get("user/app1")).toBeUndefined();
         });
     });
 

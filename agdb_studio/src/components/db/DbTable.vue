@@ -6,7 +6,7 @@ import { setTableData } from "@/composables/table/tableData";
 import { watchEffect } from "vue";
 import { dbColumns } from "@/composables/db/dbConfig";
 
-const { databases } = useDbStore();
+const { databases, getDbName } = useDbStore();
 
 const TABLE_KEY = Symbol("databases");
 
@@ -14,6 +14,8 @@ addTable({
     name: TABLE_KEY,
     columns: dbColumns,
     rowDetailsComponent: "DbDetails",
+    uniqueKey: (row) =>
+        getDbName({ owner: row.owner.toString(), db: row.db.toString() }),
 });
 
 watchEffect(() => {

@@ -32,6 +32,7 @@ describe("TableRow", () => {
             global: {
                 provide: {
                     [INJECT_KEY_COLUMNS]: { value: columnsMap },
+                    [INJECT_KEY_TABLE_NAME]: { value: TABLE_NAME },
                 },
             },
         });
@@ -69,5 +70,62 @@ describe("TableRow", () => {
         await wrapper.vm.$nextTick();
         await wrapper.vm.$nextTick();
         expect(wrapper.find(".expanded-row").exists()).toBe(true);
+    });
+
+    it("should not render expand button if rowDetailsComponent is not set", () => {
+        addTable({
+            name: "table_without_row_details",
+            columns: tableConfig,
+        });
+        const wrapper = mount(AgdbTableRow, {
+            props: {
+                columns: columnsMap,
+                row: {
+                    role: "admin",
+                    owner: "admin",
+                    db: "app3",
+                    db_type: "file",
+                    size: 50,
+                    backup: 0,
+                },
+            },
+            global: {
+                provide: {
+                    [INJECT_KEY_COLUMNS]: { value: columnsMap },
+                    [INJECT_KEY_TABLE_NAME]: {
+                        value: "table_without_row_details",
+                    },
+                },
+                stubs: {
+                    transitions: false,
+                },
+            },
+        });
+        expect(wrapper.find(".expand-row").exists()).toBe(false);
+    });
+    it("should handle if tableKey is undefined", () => {
+        const wrapper = mount(AgdbTableRow, {
+            props: {
+                columns: columnsMap,
+                row: {
+                    role: "admin",
+                    owner: "admin",
+                    db: "app3",
+                    db_type: "file",
+                    size: 50,
+                    backup: 0,
+                },
+            },
+            global: {
+                provide: {
+                    [INJECT_KEY_COLUMNS]: { value: columnsMap },
+                    [INJECT_KEY_TABLE_NAME]: undefined,
+                },
+                stubs: {
+                    transitions: false,
+                },
+            },
+        });
+        expect(wrapper.find(".expand-row").exists()).toBe(false);
     });
 });

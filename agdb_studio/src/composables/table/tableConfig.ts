@@ -9,12 +9,14 @@ type AddTableProps<T extends TRow> = {
     name: Symbol | string;
     columns: Column<T>[];
     rowDetailsComponent?: AsyncComponent;
+    uniqueKey?: string | ((row: T) => string);
 };
 
 const addTable = ({
     name,
     columns,
     rowDetailsComponent,
+    uniqueKey,
 }: AddTableProps<TRow>): void => {
     const columnMap = new Map<string, Column<TRow>>();
     columns.forEach((column) => {
@@ -25,6 +27,7 @@ const addTable = ({
         columns: columnMap,
         data: new Map(),
         rowDetailsComponent,
+        uniqueKey,
     });
 };
 

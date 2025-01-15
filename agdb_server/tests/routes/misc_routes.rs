@@ -318,3 +318,16 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn studio() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+    client
+        .get(format!("http://{}", server.url("/studio")))
+        .send()
+        .await?
+        .error_for_status()?;
+
+    Ok(())
+}

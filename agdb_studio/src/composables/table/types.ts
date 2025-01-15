@@ -18,4 +18,5 @@ export type Table<T extends TRow> = {
     columns: Map<string, Column<T>>;
     data?: Map<string, T>;
     rowDetailsComponent?: AsyncComponent;
+    uniqueKey?: string | ((row: T) => string);
 };

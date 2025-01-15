@@ -2,6 +2,17 @@ import type { TRow } from "./types";
 import { getTable } from "./tableConfig";
 import { getTableFilter } from "./tableFilter";
 
+const getRowKey = <T extends TRow>(
+    row: T,
+    uniqueKey?: string | ((row: T) => string),
+): string => {
+    const rowKey =
+        typeof uniqueKey === "string"
+            ? String(row[uniqueKey])
+            : uniqueKey?.(row);
+    return rowKey ?? (Date.now() + Math.random()).toString();
+};
+
 const setTableData = <T extends TRow>(
     tableName: Symbol | string,
     data: T[],
@@ -16,18 +27,15 @@ const setTableData = <T extends TRow>(
         table.columns.forEach((column) => {
             rowData[column.key] = data[rowIndex][column.key];
         });
-        const rowKey = rowIndex;
 
-        table.data.set(rowKey, rowData);
+        table.data.set(getRowKey(rowData, table.uniqueKey), rowData);
     }
 };
 
 const addRow = <T extends TRow>(tableName: Symbol | string, row: T): void => {
     const table = getTable<T>(tableName);
-    const rowKey = table?.data?.size.toString();
-    if (!rowKey) {
-        return;
-    }
+
+    const rowKey = getRowKey(row, table?.uniqueKey);
 
     table?.data?.set(rowKey, row);
 };

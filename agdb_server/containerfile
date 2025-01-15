@@ -1,11 +1,20 @@
-FROM rust:alpine AS builder
+FROM node:alpine AS builder_studio
+WORKDIR /usr/src/agdb_studio
+COPY . .
+WORKDIR /usr/src/agdb_studio/agdb_api/typescript
+RUN npm ci && npm run build
+WORKDIR /usr/src/agdb_studio/agdb_studio
+RUN npm ci && npm run build
+
+FROM rust:alpine AS builder_server
 WORKDIR /usr/src/agdb_server
 COPY . .
+COPY --from=builder_studio /usr/src/agdb_studio/agdb_studio/dist /usr/src/agdb_server/agdb_studio/dist
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static
 RUN cargo build --package agdb_server --release
 
 FROM alpine:latest
-COPY --from=builder /usr/src/agdb_server/target/release/agdb_server /usr/local/bin/agdb_server
+COPY --from=builder_server /usr/src/agdb_server/target/release/agdb_server /usr/local/bin/agdb_server
 # adduser -D: disable password, -H: do not create home directory
 RUN addgroup -g 1000 agdb && \
     adduser -D -H -u 1000 -G agdb agdb && \

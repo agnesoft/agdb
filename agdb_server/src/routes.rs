@@ -1,6 +1,7 @@
 pub(crate) mod admin;
 pub(crate) mod cluster;
 pub(crate) mod db;
+pub(crate) mod studio;
 pub(crate) mod user;
 
 use crate::server_error::ServerResult;

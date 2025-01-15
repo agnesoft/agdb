@@ -7,6 +7,7 @@ on:
       - agdb/**
       - agdb_derive/**
       - agdb_server/**
+      - agdb_api/rust/**
       - .github/workflows/coverage.yaml
 
 env:

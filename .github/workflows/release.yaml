@@ -9,6 +9,7 @@ on:
       - agdb_derive/**
       - agdb_server/**
       - agdb_studio/**
+      - .github/workflows/release.yaml
 
 env:
   CARGO_TERM_COLOR: always

@@ -8,6 +8,7 @@ on:
       - agdb_api/**
       - agdb_derive/**
       - agdb_server/**
+      - agdb_studio/**
 
 env:
   CARGO_TERM_COLOR: always

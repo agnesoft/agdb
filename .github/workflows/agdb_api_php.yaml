@@ -21,6 +21,10 @@ jobs:
       - run: composer config --global use-parent-dir true
       - run: composer install
       - run: ./ci.sh analyse
+      - run: npm ci && npm run build
+        working-directory: agdb_api/typescript
+      - run: npm ci && npm run build
+        working-directory: agdb_studio
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: ./ci.sh coverage
       - uses: actions/upload-artifact@v4

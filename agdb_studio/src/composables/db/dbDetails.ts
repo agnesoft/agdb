@@ -16,6 +16,11 @@ const { getInputValue } = useContentInputs();
 const { openModal } = useModal();
 const { getDbName } = useDbStore();
 
+export type AddUserParams = {
+    username?: string;
+    db_role?: string;
+};
+
 export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
     const users = computed(() => {
         return getDbUsers(dbParams.value);
@@ -29,7 +34,7 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
         return dbParams.value.role === "admin";
     });
 
-    const handleRemoveUser = (username: string) => {
+    const handleRemoveUser = (username: string): void => {
         if (!canEditUsers.value) {
             return;
         }
@@ -59,7 +64,12 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
         });
     };
 
-    const handleAddUser = () => {
+    const handleAddUser = (
+        { username, db_role }: AddUserParams = {
+            username: undefined,
+            db_role: undefined,
+        },
+    ): void => {
         if (!canEditUsers.value) {
             return;
         }
@@ -68,7 +78,7 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
             content: [
                 {
                     paragraph: [
-                        { text: "Add user to database " },
+                        { text: "Add/change user role in the database " },
                         { text: dbName.value, className: EMPHESIZED_CLASSNAME },
                     ],
                 },
@@ -78,6 +88,8 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
                         label: "Username",
                         type: "text",
                         autofocus: true,
+                        required: true,
+                        value: username,
                     },
                 },
                 {
@@ -90,24 +102,31 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
                             { value: "write", label: "Read/Write" },
                             { value: "read", label: "Read Only" },
                         ],
-                        defaultValue: "write",
+                        value: db_role || "write",
+                        required: true,
                     },
                 },
             ],
-            onConfirm: () => {
-                const username = getInputValue(
+            onConfirm: async () => {
+                const username = getInputValue<string>(
                     KEY_MODAL,
                     "username",
                 )?.toString();
-                const db_role = getInputValue(KEY_MODAL, "role")?.toString();
+                const db_role = getInputValue<string>(
+                    KEY_MODAL,
+                    "role",
+                )?.toString();
 
                 if (username?.length && db_role && isDbRoleType(db_role)) {
-                    addUser({ ...dbParams.value, username, db_role }).then(
-                        () => {
-                            fetchDbUsers(dbParams.value);
-                        },
-                    );
+                    return addUser({
+                        ...dbParams.value,
+                        username,
+                        db_role,
+                    }).then(() => {
+                        fetchDbUsers(dbParams.value);
+                    });
                 }
+                return false;
             },
         });
     };

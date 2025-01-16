@@ -5,10 +5,14 @@ import { ClUser02 } from "@kalimahapps/vue-icons";
 import { useAuth } from "@/composables/user/auth";
 import AgdbMenu from "../base/menu/AgdbMenu.vue";
 import useModal from "@/composables/modal/modal";
+import { client } from "@/services/api.service";
+import { useContentInputs } from "@/composables/content/inputs";
+import { KEY_MODAL } from "@/composables/modal/constants";
 
 const { logout } = useAuth();
 const { username } = useAccount();
 const { openModal } = useModal();
+const { getInputValue } = useContentInputs();
 
 const actions = [
     {
@@ -43,10 +47,30 @@ const actions = [
                         },
                     },
                 ],
+                onConfirm: async () => {
+                    const currentPassword = getInputValue<string>(
+                        KEY_MODAL,
+                        "currentPassword",
+                    );
+                    const newPassword = getInputValue<string>(
+                        KEY_MODAL,
+                        "newPassword",
+                    );
+                    const confirmNewPassword = getInputValue(
+                        KEY_MODAL,
+                        "confirmNewPassword",
+                    );
+                    if (newPassword !== confirmNewPassword) {
+                        return false;
+                    }
+                    return (
+                        client.value?.user_change_password({
+                            currentPassword: currentPassword,
+                            newPassword: newPassword?.toString(),
+                        }) ?? false
+                    );
+                },
             });
-        },
-        onConfirm: () => {
-            console.log("Change password");
         },
     },
     {

@@ -31,11 +31,11 @@ type AddUserProps = {
     db_role: DbUserRole;
 } & DbIdentification;
 const addUser = async (params: AddUserProps) => {
-    client.value?.db_user_add(params).then(() => {
+    return client.value?.db_user_add(params).then(() => {
         addNotification({
             type: "success",
-            title: "User added",
-            message: `User ${params.username} added to database ${getDbName(params)} successfully.`,
+            title: "User added/changed",
+            message: `User ${params.username} added/change in the database ${getDbName(params)} successfully.`,
         });
     });
 };
@@ -44,7 +44,7 @@ type RemoveUserProps = {
     username: string;
 } & DbIdentification;
 const removeUser = async (params: RemoveUserProps) => {
-    client.value?.db_user_remove(params).then(() => {
+    return client.value?.db_user_remove(params).then(() => {
         addNotification({
             type: "success",
             title: "User removed",

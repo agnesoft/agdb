@@ -1,20 +1,18 @@
-import { ref, type Ref } from "vue";
+import { ref, type Reactive } from "vue";
 
-const inputs = ref(
-    new Map<Symbol, Map<string, Ref<string | number | boolean | undefined>>>(),
-);
+const inputs = ref(new Map<Symbol, Map<string, Reactive<Input>>>());
 
 const getContentInputs = (
     contentKey: Symbol,
-): Map<string, Ref<string | number | boolean | undefined>> | undefined => {
+): Map<string, Reactive<Input>> | undefined => {
     return inputs.value.get(contentKey);
 };
 
-const getInputValue = (
+const getInputValue = <T = string | number | boolean | undefined>(
     contentKey: Symbol,
     inputKey: string,
-): string | number | boolean | undefined => {
-    return inputs.value.get(contentKey)?.get(inputKey)?.value;
+): T => {
+    return inputs.value.get(contentKey)?.get(inputKey)?.value as T;
 };
 
 const setInputValue = (
@@ -29,7 +27,7 @@ const setInputValue = (
     if (!input) {
         return;
     }
-
+    input.error = undefined;
     input.value = value;
 };
 
@@ -41,17 +39,32 @@ const clearInputs = (contentKey: Symbol) => {
 const addInput = (
     contentKey: Symbol,
     inputKey: string,
-    value: Ref<string | number | boolean | undefined>,
+    params: Input,
 ): void => {
     const inputsMap = inputs.value.get(contentKey);
     if (!inputsMap) {
         inputs.value.set(contentKey, new Map());
     }
-    inputs.value.get(contentKey)?.set(inputKey, value);
+    inputs.value.get(contentKey)?.set(inputKey, params);
 };
 
 const clearAllInputs = (): void => {
     inputs.value.clear();
+};
+
+const checkInputsRules = (contentKey: Symbol): boolean => {
+    const inputsMap = inputs.value.get(contentKey);
+    if (!inputsMap) {
+        return true;
+    }
+    let isValid = true;
+    inputsMap.forEach((input) => {
+        if (input.required && !input.value) {
+            input.error = "This field is required";
+            isValid = false;
+        }
+    });
+    return isValid;
 };
 
 export const useContentInputs = () => {
@@ -62,5 +75,6 @@ export const useContentInputs = () => {
         getInputValue,
         setInputValue,
         clearAllInputs,
+        checkInputsRules,
     };
 };

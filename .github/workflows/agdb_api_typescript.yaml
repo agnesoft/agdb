@@ -18,6 +18,9 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint:check
+      - run: npm run build
+      - run: npm ci && npm run build
+        working-directory: agdb_studio
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: npm run test
       - uses: actions/upload-artifact@v4

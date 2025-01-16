@@ -36,11 +36,9 @@ pub(crate) fn init(config: &Config) {
             f.replace(
                 "http://localhost:3000",
                 &format!(
-                    "{}",
-                    config
-                        .address
-                        .join(&config.basepath)
-                        .expect("should be valid url and base path")
+                    "{}{}",
+                    config.address.trim_end_matches("/"),
+                    &config.basepath
                 ),
             )
         } else {

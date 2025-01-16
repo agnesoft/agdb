@@ -7,7 +7,6 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 use tracing::level_filters::LevelFilter;
-use url::Url;
 
 pub(crate) type Config = Arc<ConfigImpl>;
 
@@ -17,7 +16,7 @@ pub(crate) struct LogLevel(pub(crate) LevelFilter);
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct ConfigImpl {
     pub(crate) bind: String,
-    pub(crate) address: Url,
+    pub(crate) address: String,
     pub(crate) basepath: String,
     pub(crate) admin: String,
     pub(crate) log_level: LogLevel,
@@ -26,7 +25,7 @@ pub(crate) struct ConfigImpl {
     pub(crate) cluster_token: String,
     pub(crate) cluster_heartbeat_timeout_ms: u64,
     pub(crate) cluster_term_timeout_ms: u64,
-    pub(crate) cluster: Vec<Url>,
+    pub(crate) cluster: Vec<String>,
     #[serde(skip)]
     pub(crate) cluster_node_id: usize,
     #[serde(skip)]
@@ -77,7 +76,7 @@ pub(crate) fn new(config_file: &str) -> ServerResult<Config> {
 
     let config = ConfigImpl {
         bind: ":::3000".to_string(),
-        address: Url::parse("localhost:3000")?,
+        address: "http://localhost:3000".to_string(),
         basepath: "".to_string(),
         admin: "admin".to_string(),
         log_level: LogLevel(LevelFilter::INFO),
@@ -167,7 +166,7 @@ mod tests {
         let test_file = TestFile::new("test_config_invalid_cluster.yaml");
         let config = ConfigImpl {
             bind: ":::3000".to_string(),
-            address: Url::parse("localhost:3000").unwrap(),
+            address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LogLevel(LevelFilter::INFO),
@@ -176,7 +175,7 @@ mod tests {
             cluster_token: "cluster".to_string(),
             cluster_heartbeat_timeout_ms: 1000,
             cluster_term_timeout_ms: 3000,
-            cluster: vec![Url::parse("localhost:3001").unwrap()],
+            cluster: vec!["http://localhost:3001".to_string()],
             cluster_node_id: 0,
             start_time: 0,
             pepper: None,
@@ -184,7 +183,7 @@ mod tests {
         std::fs::write(test_file.filename, serde_yml::to_string(&config).unwrap()).unwrap();
         assert_eq!(
             config::new(test_file.filename).unwrap_err().description,
-            "cluster does not contain local node: localhost:3000"
+            "cluster does not contain local node: http://localhost:3000"
         );
     }
 
@@ -196,7 +195,7 @@ mod tests {
         std::fs::write(pepper_file.filename, pepper).unwrap();
         let config = ConfigImpl {
             bind: ":::3000".to_string(),
-            address: Url::parse("localhost:3000").unwrap(),
+            address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LogLevel(LevelFilter::INFO),
@@ -223,7 +222,7 @@ mod tests {
         let test_file = TestFile::new("pepper_missing.yaml");
         let config = ConfigImpl {
             bind: ":::3000".to_string(),
-            address: Url::parse("localhost:3000").unwrap(),
+            address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LogLevel(LevelFilter::INFO),
@@ -249,7 +248,7 @@ mod tests {
         std::fs::write(pepper_file.filename, b"0123456789").unwrap();
         let config = ConfigImpl {
             bind: ":::3000".to_string(),
-            address: Url::parse("localhost:3000").unwrap(),
+            address: "http://localhost:3000".to_string(),
             basepath: "".to_string(),
             admin: "admin".to_string(),
             log_level: LogLevel(LevelFilter::INFO),

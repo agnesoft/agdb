@@ -146,7 +146,7 @@ pub(crate) async fn status(
     for (index, node) in config.cluster.iter().enumerate() {
         if index != cluster.index {
             let address = node.as_str().to_string();
-            let url = format!("{}api/v1/status", node.as_str());
+            let url = format!("{}/api/v1/status", node.trim_end_matches("/"));
 
             tasks.push(tokio::spawn(async move {
                 let client = reqwest::Client::new();

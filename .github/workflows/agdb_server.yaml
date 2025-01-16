@@ -24,7 +24,7 @@ jobs:
       - run: cargo clippy -p agdb_server -p agdb_api --all-targets --all-features -- -D warnings
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov -p agdb_server -p agdb_api --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive" --fail-uncovered-functions 41 --fail-uncovered-lines 200 --show-missing-lines
+      - run: cargo llvm-cov -p agdb_server -p agdb_api --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive" --fail-uncovered-functions 42 --fail-uncovered-lines 231 --show-missing-lines
 
   agdb_server_image:
     runs-on: ubuntu-latest

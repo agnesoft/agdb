@@ -5,6 +5,7 @@ use crate::db_pool::DbPool;
 use crate::forward;
 use crate::logger;
 use crate::routes;
+use crate::routes::studio;
 use crate::server_db::ServerDb;
 use crate::server_state::ServerState;
 use axum::middleware;
@@ -24,6 +25,8 @@ pub(crate) fn app(
     server_db: ServerDb,
     shutdown_sender: Sender<()>,
 ) -> Router {
+    studio::init(&config);
+
     let basepath = config.basepath.clone();
 
     let state = ServerState {

@@ -48,6 +48,7 @@ export type AgdbApiClient = Client & AgdbApi;
 
 export async function client(address: string): Promise<AgdbApiClient> {
     const api: OpenAPIClientAxios = new OpenAPIClientAxios({
+        withServer: { url: address },
         definition: `${address}/api/v1/openapi.json`,
     });
     const client = await api.init<AgdbApiClient>();

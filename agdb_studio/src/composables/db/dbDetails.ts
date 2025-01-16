@@ -52,15 +52,14 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
                 },
             ],
 
-            onConfirm: () => {
+            onConfirm: () =>
                 removeUser({
                     owner: dbParams.value.owner,
                     db: dbParams.value.db,
                     username: username,
                 }).then(() => {
                     fetchDbUsers(dbParams.value);
-                });
-            },
+                }),
         });
     };
 
@@ -107,7 +106,7 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
                     },
                 },
             ],
-            onConfirm: async () => {
+            onConfirm: () => {
                 const username = getInputValue<string>(
                     KEY_MODAL,
                     "username",

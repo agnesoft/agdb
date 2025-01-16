@@ -33,6 +33,10 @@ const setInputValue = (
 
 const clearInputs = (contentKey: Symbol) => {
     const inputsMap = inputs.value.get(contentKey);
+    inputsMap?.forEach((input) => {
+        input.error = undefined;
+        input.value = undefined;
+    });
     inputsMap?.clear();
 };
 
@@ -62,6 +66,15 @@ const checkInputsRules = (contentKey: Symbol): boolean => {
         if (input.required && !input.value) {
             input.error = "This field is required";
             isValid = false;
+        }
+        if (input.rules) {
+            input.rules.forEach((rule) => {
+                const error = rule(input.value as string);
+                if (error) {
+                    input.error = error;
+                    isValid = false;
+                }
+            });
         }
     });
     return isValid;

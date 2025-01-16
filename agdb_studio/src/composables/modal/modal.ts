@@ -11,7 +11,7 @@ const modal = reactive<Modal>({
 
 const modalIsVisible = ref(false);
 
-const onConfirm = ref<() => Promise<boolean | void> | boolean>();
+const onConfirm = ref<() => Promise<void | boolean> | boolean>();
 
 const closeModal = (): void => {
     modal.header = "";
@@ -44,9 +44,9 @@ const buttons = computed<Button[]>(() => {
                 const result = onConfirm.value();
                 if (result instanceof Promise) {
                     result.then(
-                        () => {
+                        (res: void | boolean) => {
                             confirmLoading.value = false;
-                            closeModal();
+                            if (res !== false) closeModal();
                         },
                         () => {
                             confirmLoading.value = false;
@@ -67,7 +67,7 @@ const buttons = computed<Button[]>(() => {
 type ShowModalProps = {
     header?: string;
     content?: Content[];
-    onConfirm?: () => Promise<boolean | void> | boolean;
+    onConfirm?: () => Promise<void | boolean> | boolean;
     buttons?: Button[];
 };
 

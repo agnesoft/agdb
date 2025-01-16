@@ -32,8 +32,8 @@ const changePassword = async (
     if (!client.value) {
         throw new Error("Client is not initialized");
     }
-    return client.value.user_change_password({
-        old_password: oldPassword,
+    return client.value.user_change_password(null, {
+        password: oldPassword,
         new_password: newPassword,
     });
 };

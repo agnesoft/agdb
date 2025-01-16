@@ -36,6 +36,14 @@ const actions = [
                             label: "New password",
                             key: "newPassword",
                             required: true,
+                            // rules: [
+                            //     (value: string) => {
+                            //         if (value.length < 8) {
+                            //             return "Password must be at least 8 characters long";
+                            //         }
+                            //         return undefined;
+                            //     },
+                            // ],
                         },
                     },
                     {
@@ -44,6 +52,20 @@ const actions = [
                             label: "Confirm new password",
                             key: "confirmNewPassword",
                             required: true,
+                            rules: [
+                                (value: string) => {
+                                    if (
+                                        value !==
+                                        getInputValue<string>(
+                                            KEY_MODAL,
+                                            "newPassword",
+                                        )
+                                    ) {
+                                        return "Passwords do not match";
+                                    }
+                                    return undefined;
+                                },
+                            ],
                         },
                     },
                 ],
@@ -63,12 +85,11 @@ const actions = [
                     if (newPassword !== confirmNewPassword) {
                         return false;
                     }
-                    return (
-                        client.value?.user_change_password({
-                            currentPassword: currentPassword,
-                            newPassword: newPassword?.toString(),
-                        }) ?? false
-                    );
+                    const response = await client.value?.user_change_password({
+                        currentPassword: currentPassword,
+                        newPassword: newPassword?.toString(),
+                    });
+                    return response ? true : false;
                 },
             });
         },

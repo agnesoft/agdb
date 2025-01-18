@@ -9,7 +9,7 @@ const config = {
     "---": {
         type: "separator",
     },
-    "distance": {
+    distance: {
         title: "Distance",
         display: "normal",
     },

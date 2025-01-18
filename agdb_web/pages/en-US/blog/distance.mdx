@@ -35,7 +35,7 @@ Searching from the node "projects" and only returning elements at distance 2. Th
 
 ## Limit the search
 
-In the previous section we have hinted to the power of distance so let's explore it properly. Expanding our graph with outputs of our projects: 
+In the previous section we have hinted to the power of distance so let's explore it properly. Expanding our graph with outputs of our projects:
 
 ![distance - outputs](/images/distance_outputs.png)
 
@@ -82,10 +82,10 @@ QueryBuilder::search()
 
 Let's break it down:
 
-- search starts at the node "projects" (distance 0)
-- we want only elements at distance 4 (the outputs): `.distance(CountComparison::Equal(4))`
-- additionally we want to limit the search to continue only `beyond` elements that satisfy the next condition: `.and().beyond().where_()` (NOTE: the nested `.where_()` is like opening a bracket)
-- the beyond conditions are: continue only if the distance is NOT 2 (`.distance(CountComparison::NotEqual(2))`) or if the element has property "name" with the value "B"
+-   search starts at the node "projects" (distance 0)
+-   we want only elements at distance 4 (the outputs): `.distance(CountComparison::Equal(4))`
+-   additionally we want to limit the search to continue only `beyond` elements that satisfy the next condition: `.and().beyond().where_()` (NOTE: the nested `.where_()` is like opening a bracket)
+-   the beyond conditions are: continue only if the distance is NOT 2 (`.distance(CountComparison::NotEqual(2))`) or if the element has property "name" with the value "B"
 
 The `beyond` condition might seem alien but when you look at the picture of the graph it should become clear. We are simply telling the algorithm to not consider anything at distance 2 (and therefore beyond) unless the `or` condition is satisfied (the element has the name we are looking for). Because only one node in our graph satisfies such condition ("project B") the algorithm will continue beyond it, reach the outputs (at distance 4) and return only those. Once more potentially greatly limiting the scope of work needed.
 
@@ -100,7 +100,8 @@ The detailed steps taken by the algorithm and how it evaluates each element:
 For general reference see [conditions evaluation in queries documentation](/docs/references/queries#truth-tables).
 
 <Callout>
-    The algorithms will never visit same element twice and are immune to cycles and dead locks.
+    The algorithms will never visit same element twice and are immune to cycles
+    and dead locks.
 </Callout>
 
 ## Conclusion

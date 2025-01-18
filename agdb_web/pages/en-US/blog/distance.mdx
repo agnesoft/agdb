@@ -21,7 +21,7 @@ Here the origin node is "project A" and therefore it is at distance 0. The edge 
 
 <Callout>
     The distance is only relevant when we are searching the graph and is always
-    measured from the point of origin of our search reagrdless of the search
+    measured from the point of origin of our search regardless of the search
     direction.
 </Callout>
 
@@ -85,7 +85,7 @@ QueryBuilder::search()
         .value(Comparison::Equal("B".into())).query();
 ```
 
-Now the algorithm will do least amount of work necessary to find what we are looking for
+Now the algorithm will do least amount of work necessary to find what we are looking for.
 
 ## No more joins
 
@@ -148,7 +148,7 @@ The detailed steps taken by the algorithm and how it evaluates each element:
 
 ### Distance 2:
 
-    - Distance is still less than 4 and the first condition evaluates `false` (nothing is selected)
+    - Distance is still less than 4 and the first condition evaluates `false` (nothing is selected).
     - The beyond qualified condition for distance now evaluates to `false` as we are at distance 2.
     - The `or` however will examine key `name` of all elements at this distance and thus will evaluate to `true` only if the value is `B`.
 

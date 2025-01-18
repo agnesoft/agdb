@@ -45,6 +45,6 @@ const contentStyle = computed(() => {
 <style lang="less" scoped>
 .content {
     position: absolute;
-    z-index: 500;
+    z-index: var(--z-index-dropdown);
 }
 </style>

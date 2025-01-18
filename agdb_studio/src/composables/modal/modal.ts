@@ -3,7 +3,7 @@ import type { Button, Modal } from "./types";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "./constants";
 
-const { addInput, clearInputs } = useContentInputs();
+const { addInput, clearInputs, checkInputsRules } = useContentInputs();
 const modal = reactive<Modal>({
     header: "",
     content: [],
@@ -11,7 +11,7 @@ const modal = reactive<Modal>({
 
 const modalIsVisible = ref(false);
 
-const onConfirm = ref<() => void>();
+const onConfirm = ref<() => Promise<void | boolean> | boolean>();
 
 const closeModal = (): void => {
     modal.header = "";
@@ -21,6 +21,31 @@ const closeModal = (): void => {
 };
 
 const customButtons = ref<Button[]>([]);
+
+const confirmLoading = ref(false);
+
+const handleConfirm = async (): Promise<void> => {
+    if (!checkInputsRules(KEY_MODAL) || !onConfirm.value) {
+        return;
+    }
+    confirmLoading.value = true;
+    const result = onConfirm.value();
+    if (result instanceof Promise) {
+        result.then(
+            (res: void | boolean) => {
+                confirmLoading.value = false;
+                if (res !== false) closeModal();
+            },
+            () => {
+                confirmLoading.value = false;
+            },
+        );
+        return;
+    } else if (result) {
+        confirmLoading.value = false;
+        closeModal();
+    }
+};
 
 const buttons = computed<Button[]>(() => {
     const defaultButtons: Button[] = [
@@ -34,10 +59,7 @@ const buttons = computed<Button[]>(() => {
         defaultButtons.push({
             className: "button button-success",
             text: "Confirm",
-            action: () => {
-                onConfirm.value?.();
-                closeModal();
-            },
+            action: handleConfirm,
             type: "submit",
         });
     }
@@ -47,7 +69,7 @@ const buttons = computed<Button[]>(() => {
 type ShowModalProps = {
     header?: string;
     content?: Content[];
-    onConfirm?: () => void;
+    onConfirm?: () => Promise<void | boolean> | boolean;
     buttons?: Button[];
 };
 
@@ -62,7 +84,7 @@ const openModal = ({
     clearInputs(KEY_MODAL);
     content?.forEach((c) => {
         if (c.input) {
-            addInput(KEY_MODAL, c.input.key, ref(c.input.defaultValue));
+            addInput(KEY_MODAL, c.input);
         }
     });
 
@@ -79,5 +101,6 @@ export default function useModal() {
         closeModal,
         openModal,
         onConfirm,
+        handleConfirm,
     };
 }

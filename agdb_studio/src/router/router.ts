@@ -18,7 +18,6 @@ export const beforeEach = (
     next: NavigationGuardNext,
 ) => {
     const { logout, isLoggedIn } = useAuth();
-    console.log("isLoggedIn.value", isLoggedIn.value);
     if (isLoggedIn.value) {
         if (to.name === "login") {
             logout();

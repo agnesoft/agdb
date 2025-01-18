@@ -19,9 +19,10 @@ const { openModal } = useModal();
 const mapActions = (actions: Action[]): Action[] => {
     return actions.map((action) => {
         const runAction = action.action
-            ? ({ event }: ActionProps<undefined>) => {
-                  action.action?.({ event, params: row?.value });
+            ? ({ event }: ActionProps<undefined>): Promise<void> | boolean => {
+                  const result = action.action?.({ event, params: row?.value });
                   fetchDatabases();
+                  return result;
               }
             : undefined;
         return {
@@ -57,7 +58,7 @@ const actions = computed(() => mapActions(props.actions));
 <template>
     <AgdbDropdown>
         <template #trigger>
-            <MdRoundMenu />
+            <div class="button"><MdRoundMenu /></div>
         </template>
         <template #content>
             <AgdbMenu :actions="actions" />

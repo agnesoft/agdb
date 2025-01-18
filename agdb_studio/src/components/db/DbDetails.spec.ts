@@ -3,15 +3,25 @@ import { describe, beforeEach, vi, it, expect } from "vitest";
 import DbDetails from "./DbDetails.vue";
 import { ref } from "vue";
 
-const { fetchDbUsers, isDbRoleType, handleRemoveUser, handleAddUser } =
-    vi.hoisted(() => {
-        return {
-            fetchDbUsers: vi.fn(),
-            isDbRoleType: vi.fn().mockReturnValue(true),
-            handleRemoveUser: vi.fn(),
-            handleAddUser: vi.fn(),
-        };
-    });
+const {
+    fetchDbUsers,
+    isDbRoleType,
+    handleRemoveUser,
+    handleAddUser,
+    isOwner,
+    handleUsernameClick,
+} = vi.hoisted(() => {
+    return {
+        fetchDbUsers: vi.fn(),
+        isDbRoleType: vi.fn().mockReturnValue(true),
+        handleRemoveUser: vi.fn(),
+        handleAddUser: vi.fn(),
+        isOwner: vi
+            .fn()
+            .mockImplementation((name: string) => name === "testUser3"),
+        handleUsernameClick: vi.fn(),
+    };
+});
 
 vi.mock("@/composables/db/dbUsersStore", () => {
     return {
@@ -48,6 +58,8 @@ vi.mock("@/composables/db/dbDetails", () => {
                 canEditUsers: canEditUsers,
                 handleRemoveUser,
                 handleAddUser,
+                isOwner,
+                handleUsernameClick,
             };
         },
     };
@@ -139,5 +151,14 @@ describe("DbDetails", () => {
         expect(items.length).toBe(3);
         expect(items[0].find(".remove-button").exists()).toBe(true);
         expect(items[2].find(".remove-button").exists()).toBe(false);
+    });
+
+    it("should handle username click", async () => {
+        const wrapper = mount(DbDetails);
+        await wrapper.vm.$nextTick();
+        const usernames = wrapper.findAll(".username");
+        await usernames[0].trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(handleUsernameClick).toHaveBeenCalledWith("testUser", "read");
     });
 });

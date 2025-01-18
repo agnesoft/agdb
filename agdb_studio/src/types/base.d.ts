@@ -6,7 +6,10 @@ type ActionProps<T> = {
     event: Event;
     params: T;
 };
-type ActionFn<T> = ({ event, params }: ActionProps<T>) => void;
+type ActionFn<T> = ({
+    event,
+    params,
+}: ActionProps<T>) => Promise<void> | boolean;
 
 type Paragraph = {
     text: string;
@@ -32,7 +35,10 @@ type Input = {
     className?: string;
     autofocus?: boolean;
     options?: OptionType[];
-    defaultValue?: string | number | boolean;
+    required?: boolean;
+    value?: string | number | boolean;
+    error?: string;
+    rules?: ((value: string) => string | undefined)[];
 };
 
 type Content = {

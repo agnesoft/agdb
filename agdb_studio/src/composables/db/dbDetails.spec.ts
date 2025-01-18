@@ -14,7 +14,7 @@ const dbParams = ref<DbDetailsParams>({
 });
 const { fetchDbUsers } = useDbUsersStore();
 const { modalIsVisible, onConfirm, closeModal } = useModal();
-const { setInputValue, clearAllInputs } = useContentInputs();
+const { setInputValue, clearAllInputs, getInputValue } = useContentInputs();
 
 describe("dbDetails", () => {
     beforeEach(() => {
@@ -83,5 +83,24 @@ describe("dbDetails", () => {
         expect(modalIsVisible.value).toBe(true);
         onConfirm.value?.();
         expect(db_user_add).not.toHaveBeenCalled();
+    });
+    it("should prefill username if clicked", () => {
+        const { handleUsernameClick } = useDbDetails(dbParams);
+        handleUsernameClick("testUser", "read");
+        expect(modalIsVisible.value).toBe(true);
+        expect(getInputValue(KEY_MODAL, "username")).toBe("testUser");
+        expect(getInputValue(KEY_MODAL, "role")).toBe("read");
+    });
+    it("should not allow to prefill username if owner", () => {
+        const { handleUsernameClick } = useDbDetails(dbParams);
+        handleUsernameClick("testOwner", "admin");
+        expect(modalIsVisible.value).toBe(false);
+    });
+    it("should not allow to prefill username if can't edit users", () => {
+        const { handleUsernameClick } = useDbDetails(
+            ref({ ...dbParams.value, role: "read" }),
+        );
+        handleUsernameClick("testUser", "read");
+        expect(modalIsVisible.value).toBe(false);
     });
 });

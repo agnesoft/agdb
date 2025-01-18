@@ -19,7 +19,11 @@ import {
 </script>
 
 <template>
-    <div class="notification-wrapper" v-if="notificationsReversed.length">
+    <div
+        class="notification-wrapper"
+        v-if="notificationsReversed.length"
+        :class="{ hasNew: newNotifications.length }"
+    >
         <FadeTransition>
             <div class="notification-viewer" v-if="viewerOpened">
                 <div class="notification-header">
@@ -88,11 +92,14 @@ import {
     position: fixed;
     bottom: 0;
     right: 0;
-    z-index: 10;
+    z-index: var(--z-index-notification);
     padding: 1rem;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    &.hasNew {
+        z-index: var(--z-index-notification-new);
+    }
 }
 .notifications {
     display: grid;
@@ -173,7 +180,6 @@ import {
     &-leave-active {
         width: calc(100% - var(--notifications-padding) * 2);
         margin: 0 var(--notifications-padding);
-        // width: 100%;
         position: absolute;
     }
 

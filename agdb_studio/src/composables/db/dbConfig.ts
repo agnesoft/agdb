@@ -233,16 +233,11 @@ const dbActions: Action[] = [
         key: "copy",
         label: "Copy",
         action: ({ params }: DbActionProps) => {
-            const new_db = getInputValue(KEY_MODAL, "new_db")?.toString();
+            const new_db = getInputValue<string>(
+                KEY_MODAL,
+                "new_db",
+            )?.toString();
             const { db, owner } = params;
-            if (!new_db?.length) {
-                addNotification({
-                    type: "error",
-                    title: "Error: Invalid input",
-                    message: "New name of the database is required.",
-                });
-                return Promise.reject();
-            }
             return client.value?.db_copy({ db, owner, new_db }).then(() => {
                 addNotification({
                     type: "success",
@@ -263,6 +258,7 @@ const dbActions: Action[] = [
                     label: "New name",
                     type: "text",
                     autofocus: true,
+                    required: true,
                 },
             },
         ],
@@ -333,16 +329,11 @@ const dbActions: Action[] = [
         key: "rename",
         label: "Rename",
         action: ({ params }: DbActionProps) => {
-            const new_db = getInputValue(KEY_MODAL, "new_db")?.toString();
+            const new_db = getInputValue<string>(
+                KEY_MODAL,
+                "new_db",
+            )?.toString();
             const { db, owner } = params;
-            if (!new_db?.length) {
-                addNotification({
-                    type: "error",
-                    title: "Error: Invalid input",
-                    message: "New name of the database is required.",
-                });
-                return Promise.reject();
-            }
             return client.value?.db_rename({ db, owner, new_db }).then(() => {
                 addNotification({
                     type: "success",
@@ -363,6 +354,7 @@ const dbActions: Action[] = [
                     label: "New name",
                     type: "text",
                     autofocus: true,
+                    required: true,
                 },
             },
         ],

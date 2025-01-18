@@ -44,7 +44,14 @@ The previous query searching at distance 2 remains unaffected. It would still st
 Another way the `distance` limits the required work when searching the graph is that even if the element is reached via the distance constrained - node "projects" at distance 0 and all the connected edges - because it cannot be included in the final result the algorithm will not be examining its properties if additional constraints are defined. For instance searching for a particular project:
 
 ```rust
-QueryBuilder::search().from("projects").where_().distance(CountComparison::Equal(2)).and().key("name").value(Comparison::Equal("project1".into())).query();
+QueryBuilder::search()
+    .from("projects")
+    .where_()
+        .distance(CountComparison::Equal(2))
+        .and()
+        .key("name")
+        .value(Comparison::Equal("project1".into()))
+    .query();
 ```
 
 The search algorithm will only look at the "name" properties of the elements at distance 2 rather than all properties. It is generally a good idea to lead the conditions with the distance constraints for this very reason.
@@ -52,7 +59,15 @@ The search algorithm will only look at the "name" properties of the elements at 
 The more efficient version would be to switch to depth-first-search and limit the search to a single returned element as to further restrict the work required:
 
 ```rust
-QueryBuilder::search().depth_first().from("projects").limit(1).where_().distance(CountComparison::Equal(2)).and().key("name").value(Comparison::Equal("project1".into())).query();
+QueryBuilder::search()
+    .depth_first() // use depth-first algorithm which is more efficient when searching for a single element
+    .from("projects")
+    .limit(1) // return maximum 1 element
+    .where_()
+        .distance(CountComparison::Equal(2))
+        .and()
+        .key("name")
+        .value(Comparison::Equal("project1".into())).query();
 ```
 
 ## No more joins

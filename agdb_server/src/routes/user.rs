@@ -105,7 +105,10 @@ pub(crate) async fn change_password(
     let old_pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {
-        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "invalid credentials",
+        ));
     }
 
     password::validate_password(&request.new_password)?;

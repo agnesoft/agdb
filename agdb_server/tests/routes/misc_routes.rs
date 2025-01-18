@@ -173,11 +173,13 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("cluster_term_timeout_ms", 3000.into());
     config.insert("cluster", Vec::<String>::new().into());
 
-    let _server = TestServerImpl::with_config(config).await?;
+    let server = TestServerImpl::with_config(config).await?;
 
-    // If the base path does not work the server
-    // will not ever be considered ready, see
-    // TestServer implementation for details.
+    reqwest::Client::new()
+        .get(format!("{}/studio", server.address))
+        .send()
+        .await?
+        .error_for_status()?;
 
     Ok(())
 }
@@ -315,6 +317,19 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
         .await?
         .1;
     assert_eq!(result[0].elements[0].values[0].value.to_u64()?, 1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn studio() -> anyhow::Result<()> {
+    let server = TestServer::new().await?;
+    let client = reqwest::Client::new();
+    client
+        .get(server.url("/studio"))
+        .send()
+        .await?
+        .error_for_status()?;
 
     Ok(())
 }

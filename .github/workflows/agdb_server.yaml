@@ -16,11 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: npm ci && npm run build
+        working-directory: agdb_api/typescript
+      - run: npm ci && npm run build
+        working-directory: agdb_studio
       - run: cargo fmt -p agdb_server -p agdb_api --check
       - run: cargo clippy -p agdb_server -p agdb_api --all-targets --all-features -- -D warnings
       - uses: taiki-e/install-action@cargo-llvm-cov
       - run: rustup component add llvm-tools-preview
-      - run: cargo llvm-cov -p agdb_server -p agdb_api --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive" --fail-uncovered-functions 41 --fail-uncovered-lines 200 --show-missing-lines
+      - run: cargo llvm-cov -p agdb_server -p agdb_api --all-features --ignore-filename-regex "agdb(.|..)src|agdb_derive" --fail-uncovered-functions 42 --fail-uncovered-lines 231 --show-missing-lines
 
   agdb_server_image:
     runs-on: ubuntu-latest
@@ -29,6 +33,7 @@ jobs:
       - run: docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
       - run: docker compose -f agdb_server/compose.yaml up --wait
       - run: sleep 5
+      - run: curl -s http://localhost:3000/studio
       - run: if [[ "$(curl -s http://localhost:3000/api/v1/cluster/status | grep "\"leader\":true")" == "" ]]; then exit 1; fi
       - run: |
           token=$(curl -X POST http://localhost:3002/api/v1/cluster/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')

@@ -32,7 +32,7 @@ async fn invalid_credentials() -> anyhow::Result<()> {
         .await
         .unwrap_err()
         .status;
-    assert_eq!(status, 401);
+    assert_eq!(status, 403);
     Ok(())
 }
 

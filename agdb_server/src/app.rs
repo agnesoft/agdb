@@ -5,11 +5,13 @@ use crate::db_pool::DbPool;
 use crate::forward;
 use crate::logger;
 use crate::routes;
+use crate::routes::studio;
 use crate::server_db::ServerDb;
 use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
 use axum::Router;
+use axum_extra::routing::RouterExt;
 use reqwest::Method;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
@@ -23,6 +25,8 @@ pub(crate) fn app(
     server_db: ServerDb,
     shutdown_sender: Sender<()>,
 ) -> Router {
+    studio::init(&config);
+
     let basepath = config.basepath.clone();
 
     let state = ServerState {
@@ -188,6 +192,8 @@ pub(crate) fn app(
         .allow_origin(tower_http::cors::Any);
 
     let router = Router::new()
+        .route_with_tsr("/studio/", routing::get(routes::studio::studio_root))
+        .route("/studio/{*file}", routing::get(routes::studio::studio))
         .nest("/api/v1", api_v1)
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .layer(middleware::from_fn_with_state(

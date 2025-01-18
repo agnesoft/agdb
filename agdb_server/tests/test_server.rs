@@ -73,8 +73,8 @@ impl TestServerImpl {
                 .to_string()
         } else {
             let port = Self::next_port();
-            let address = format!("{HOST}:{port}");
-            config.insert("bind", address.to_owned().into());
+            let address = format!("http://{HOST}:{port}");
+            config.insert("bind", format!("{HOST}:{port}").into());
             config.insert("address", address.to_owned().into());
             address
         };

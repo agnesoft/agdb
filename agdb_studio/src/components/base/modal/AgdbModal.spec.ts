@@ -78,7 +78,7 @@ describe("AgdbModal", () => {
         openModal({
             header: "Test Header",
             content: convertArrayOfStringsToContent(["Test Body"]),
-            onConfirm: () => {},
+            onConfirm: () => true,
         });
         await wrapper.vm.$nextTick();
         await wrapper.vm.$nextTick();
@@ -102,7 +102,7 @@ describe("AgdbModal", () => {
                     },
                 },
             ],
-            onConfirm: () => {},
+            onConfirm: () => true,
         });
         await wrapper.vm.$nextTick();
         await wrapper.vm.$nextTick();

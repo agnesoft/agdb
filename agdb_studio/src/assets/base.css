@@ -40,6 +40,11 @@
     --blue-2: #007bff;
     --blue-light: #4fcbff;
     --blue-dark: #0460bf;
+
+    --z-index-modal: 1000;
+    --z-index-notification: 10;
+    --z-index-notification-new: 1100;
+    --z-index-dropdown: 400;
 }
 
 :root {

@@ -16,12 +16,7 @@ const buttonRef = ref<HTMLElement>();
 
 <template>
     <div class="agdb-dropdown">
-        <button
-            type="button"
-            class="trigger button"
-            @click="toggle"
-            ref="buttonRef"
-        >
+        <button type="button" class="trigger" @click="toggle" ref="buttonRef">
             <slot name="trigger"></slot>
         </button>
         <Teleport to="body">
@@ -39,4 +34,11 @@ const buttonRef = ref<HTMLElement>();
     </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.trigger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+</style>

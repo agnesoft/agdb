@@ -25,8 +25,15 @@ const dbParams = computed<DbDetailsParams>(() => {
     };
 });
 
-const { users, dbName, canEditUsers, handleRemoveUser, handleAddUser } =
-    useDbDetails(dbParams);
+const {
+    users,
+    dbName,
+    canEditUsers,
+    handleRemoveUser,
+    handleAddUser,
+    isOwner,
+    handleUsernameClick,
+} = useDbDetails(dbParams);
 
 onMounted(() => {
     fetchDbUsers(dbParams.value);
@@ -41,7 +48,7 @@ onMounted(() => {
                 v-if="canEditUsers"
                 class="button button-transparent add-button"
                 title="Add user"
-                @click="handleAddUser"
+                @click="() => handleAddUser()"
             >
                 <ChPlus class="add-icon" />
             </button>
@@ -49,7 +56,14 @@ onMounted(() => {
 
         <ul class="db-users">
             <li v-for="user in users" :key="user.username" class="user-item">
-                <span class="username">{{ user.username }}</span>
+                <span
+                    class="username"
+                    @click="() => handleUsernameClick(user.username, user.role)"
+                    :class="{
+                        clickable: !isOwner(user.username) && canEditUsers,
+                    }"
+                    >{{ user.username }}</span
+                >
                 <span class="role">
                     ({{ user.role.charAt(0).toLocaleUpperCase() }})
                 </span>
@@ -108,5 +122,14 @@ onMounted(() => {
 .add-icon {
     color: var(--green);
     font-size: 1.5rem;
+}
+.username {
+    &.clickable {
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+        &:hover {
+            opacity: 0.8;
+        }
+    }
 }
 </style>

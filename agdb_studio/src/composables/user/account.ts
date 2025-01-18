@@ -24,6 +24,10 @@ const fetchUserStatus = async () => {
 };
 watch(() => token.value, fetchUserStatus, { immediate: true });
 
-export const useAccount = () => {
+export const useAccount = (): {
+    username: typeof username;
+    admin: typeof admin;
+    fetchUserStatus: () => Promise<void>;
+} => {
     return { username, admin, fetchUserStatus };
 };

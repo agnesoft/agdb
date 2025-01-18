@@ -73,7 +73,7 @@ watch(modalIsVisible, async () => {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: var(--z-index-modal);
 }
 .modal {
     background-color: var(--color-background-soft);

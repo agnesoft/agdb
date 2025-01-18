@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useContentInputs } from "@/composables/content/inputs";
-import { ref } from "vue";
 
 const {
     addInput,
@@ -9,7 +8,26 @@ const {
     getContentInputs,
     clearAllInputs,
     clearInputs,
+    checkInputsRules,
 } = useContentInputs();
+
+const testInput: Input = {
+    key: "testKey",
+    label: "Test label",
+    type: "text",
+    autofocus: true,
+    required: true,
+    value: "Test value",
+};
+
+const testInput2: Input = {
+    key: "testKey2",
+    label: "Test label 2",
+    type: "text",
+    autofocus: true,
+    required: true,
+    value: "Test value 2",
+};
 
 describe("Content inputs", () => {
     const contentKey = Symbol();
@@ -17,44 +35,34 @@ describe("Content inputs", () => {
         clearAllInputs();
     });
     it("adds an input", () => {
-        const inputKey = "test";
-        const value = ref("test value");
-        addInput(contentKey, inputKey, value);
+        addInput(contentKey, testInput);
         const inputs = getContentInputs(contentKey);
         expect(inputs).toBeDefined();
-        expect(inputs?.get(inputKey)?.value).toBe(value.value);
+        expect(inputs?.get(testInput.key)?.value).toBe("Test value");
     });
     it("gets an input value", () => {
-        const inputKey = "test";
-        const value = ref("test value");
-        addInput(contentKey, inputKey, value);
-        expect(getInputValue(contentKey, inputKey)).toBe(value.value);
+        addInput(contentKey, testInput);
+        expect(getInputValue(contentKey, testInput.key)).toBe("Test value");
     });
     it("sets an input value", () => {
-        const inputKey = "test";
-        const value = ref("test value");
-        addInput(contentKey, inputKey, value);
+        addInput(contentKey, testInput);
         const newValue = "new value";
         const newValue2 = "new value 2";
-        setInputValue(contentKey, inputKey, newValue);
+        setInputValue(contentKey, testInput.key, newValue);
 
-        addInput(contentKey, "test2", ref("test value 2"));
-        setInputValue(contentKey, "test2", newValue2);
-        expect(getInputValue(contentKey, inputKey)).toBe(newValue);
-        expect(getInputValue(contentKey, "test2")).toBe(newValue2);
+        addInput(contentKey, testInput2);
+        setInputValue(contentKey, testInput2.key, newValue2);
+        expect(getInputValue(contentKey, testInput.key)).toBe(newValue);
+        expect(getInputValue(contentKey, testInput2.key)).toBe(newValue2);
     });
     it("clears all inputs", () => {
-        const inputKey = "test";
-        const value = ref("test value");
-        addInput(contentKey, inputKey, value);
+        addInput(contentKey, testInput);
         clearAllInputs();
         const inputs = getContentInputs(contentKey);
         expect(inputs).toBeUndefined();
     });
     it("clears inputs", () => {
-        const inputKey = "test";
-        const value = ref("test value");
-        addInput(contentKey, inputKey, value);
+        addInput(contentKey, testInput);
         clearInputs(contentKey);
         const inputs = getContentInputs(contentKey);
         expect(inputs?.size).toBe(0);
@@ -70,5 +78,66 @@ describe("Content inputs", () => {
     it("does not set value if input key is undefined", () => {
         setInputValue(contentKey, undefined, "test");
         expect(getInputValue(contentKey, "")).toBeUndefined();
+    });
+
+    it("checks input rules", () => {
+        addInput(contentKey, testInput);
+        setInputValue(contentKey, testInput.key, "bla");
+        expect(checkInputsRules(contentKey)).toBe(true);
+    });
+
+    it("checks input rules with required input", () => {
+        addInput(contentKey, testInput);
+        setInputValue(contentKey, testInput.key, "");
+        expect(checkInputsRules(contentKey)).toBe(false);
+    });
+
+    it("checks input rules with custom rule", () => {
+        addInput(contentKey, {
+            ...testInput,
+            rules: [
+                (value: string) => (value === "test" ? "error" : undefined),
+            ],
+        });
+        setInputValue(contentKey, testInput.key, "test");
+        expect(checkInputsRules(contentKey)).toBe(false);
+    });
+
+    it("checks input rules with multiple inputs", () => {
+        addInput(contentKey, testInput);
+        addInput(contentKey, testInput2);
+        setInputValue(contentKey, testInput.key, "");
+        setInputValue(contentKey, testInput2.key, "");
+        expect(checkInputsRules(contentKey)).toBe(false);
+    });
+
+    it("checks input rules with multiple inputs and custom rule", () => {
+        addInput(contentKey, {
+            ...testInput,
+            rules: [
+                (value: string) => (value === "test" ? "error" : undefined),
+            ],
+        });
+        addInput(contentKey, testInput2);
+        setInputValue(contentKey, testInput.key, "test");
+        setInputValue(contentKey, testInput2.key, "");
+        expect(checkInputsRules(contentKey)).toBe(false);
+    });
+
+    it("checks input rules with multiple inputs and custom rule", () => {
+        addInput(contentKey, {
+            ...testInput,
+            rules: [
+                (value: string) => (value === "test" ? "error" : undefined),
+            ],
+        });
+        addInput(contentKey, testInput2);
+        setInputValue(contentKey, testInput.key, "test 2");
+        setInputValue(contentKey, testInput2.key, "test value 2");
+        expect(checkInputsRules(contentKey)).toBe(true);
+    });
+
+    it("handles undefined inputs", () => {
+        expect(checkInputsRules(contentKey)).toBe(true);
     });
 });

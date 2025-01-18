@@ -2249,7 +2249,7 @@
           "201": {
             "description": "password changed"
           },
-          "401": {
+          "403": {
             "description": "invalid credentials"
           },
           "461": {

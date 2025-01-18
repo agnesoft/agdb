@@ -2257,7 +2257,7 @@ declare namespace Paths {
         namespace Responses {
             export interface $201 {
             }
-            export interface $401 {
+            export interface $403 {
             }
             export interface $461 {
             }

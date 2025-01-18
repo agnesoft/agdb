@@ -3,7 +3,7 @@ title: Distance"
 description: "Blog, Agnesoft Graph Database"
 ---
 
-import { Callout } from "nextra/components";
+import { Callout, Steps } from "nextra/components";
 
 # Distance
 
@@ -20,7 +20,9 @@ The distance is also relative to the direction of the search. Consider a reverse
 Here the origin node is "project A" and therefore it is at distance 0. The edge is once again at distance 1 and the "projects" node is at distance 2.
 
 <Callout>
-    The distance is only relevant when we are searching the graph and is always measured from the point of origin of our search reagrdless of the search direction.
+    The distance is only relevant when we are searching the graph and is always
+    measured from the point of origin of our search reagrdless of the search
+    direction.
 </Callout>
 
 ## Distance of 2
@@ -42,7 +44,8 @@ QueryBuilder::search()
 Searching from the node "projects" and only returning elements at distance 2. The distance here serves two purposes. One is that it tells the algorithm what to return (elements at distance 2) and even more importantly it tells it when to stop searching. Since we are asking only for elements at the distance 2 it knows that it does not need to consider anything beyond that distance and can safely ignore it!
 
 <Callout>
-    At distance 2 there will always be all the adjacent (neighboring) nodes to the origin of search.
+    At distance 2 there will always be all the adjacent (neighboring) nodes to
+    the origin of search.
 </Callout>
 
 ## Limit the search
@@ -123,36 +126,50 @@ Let's break it down:
 -   search starts at the node "projects" (distance 0)
 -   we want only elements at distance 4 (the outputs): `.distance(CountComparison::Equal(4))`
 -   additionally we want to limit the search to continue only `beyond` certain elements: `.and().beyond().where_()` (NOTE: the nested `.where_()` is like opening a bracket so we specify multiple conditions for our beyond segment)
--   the beyond conditions then are: 
-    - continue only if the distance is NOT 2 (`.distance(CountComparison::NotEqual(2))`)
-    - OR
-    - if the element has property "name" with the value "B"
+-   the beyond conditions then are:
+    -   continue only if the distance is NOT 2 (`.distance(CountComparison::NotEqual(2))`)
+    -   OR
+    -   if the element has property "name" with the value "B"
 
 The `beyond` condition might seem alien but when you look at the picture of the search it should become clear. We are simply telling the algorithm to search normally and not consider anything at distance 2 or beyond unless the `or` condition is satisfied, in this case property "name" equals value "B". Because only one element in our graph satisfies such condition ("project B") the algorithm will continue beyond it (and stop at distance 2 otherwise) and eventually reach the distance 4 and return all elements it finds there. This potentially greatly limits the scope of work needed.
 
 The detailed steps taken by the algorithm and how it evaluates each element:
 
-1. Distance 0: 
+<Steps>
+### Distance 0:
+
     - Distance is less than 4 meaning the first condition evaluates `false` (nothing is selected but search will continue).
     - Second condition has modifier "beyond" meaning it is only considered for continuing or stopping the search, not for selecting elements.
     - Distance is not 2 so the beyond condition evaluates to `true` and due to the short circuit of the `or` condition we will not reach the `key` condition at all. Overall the beyond condition evaluates `true` and the search continues.
-2. Distance 1: 
+
+### Distance 1:
+
     - Same evaluation as at distance 0.
-3. Distance 2:
+
+### Distance 2:
+
     - Distance is still less than 4 and the first condition evaluates `false` (nothing is selected)
     - The beyond qualified condition for distance now evaluates to `false` as we are at distance 2.
     - The `or` however will examine key `name` of all elements at this distance and thus will evaluate to `true` only if the value is `B`.
-4. Distance 3:
+
+### Distance 3:
+
     - Same evaluation as 0 and 1.
     - This level is however reached only via elements that passed the previous beyond condition.
-5. Distance 4:
+
+### Distance 4:
+
     - Distance is now 4 and the first condition evaluates `true` and elements will be selected for the result.
     - Algorithm is now stopped as nothing further away can satisfy the first condition and evaluation of the beyond conditions is therefore not relevant.
+
+</Steps>
 
 For general reference of the conditions and their evaluation see [truth tables in queries documentation](/docs/references/queries#truth-tables).
 
 <Callout>
-    The algorithms will never visit same element twice and are immune to cycles. Similarly each element will appear in the result only once at the position of the first encounter.
+    The algorithms will never visit same element twice and are immune to cycles.
+    Similarly each element will appear in the result only once at the position
+    of the first encounter.
 </Callout>
 
 ## Conclusion

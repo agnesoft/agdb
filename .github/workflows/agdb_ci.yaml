@@ -19,6 +19,10 @@ jobs:
           fetch-depth: 0
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo fmt -p agdb_ci --check
+      - run: npm ci && npm run build
+        working-directory: agdb_api/typescript
+      - run: npm ci && npm run build
+        working-directory: agdb_studio
       - run: cargo clippy -p agdb_ci --all-targets --all-features -- -D warnings
       - run: cargo run -p agdb_ci -r
       - run: |

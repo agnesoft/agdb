@@ -91,7 +91,7 @@ pub(crate) async fn logout(user: UserId, State(server_db): State<ServerDb>) -> S
     request_body = ChangePassword,
     responses(
          (status = 201, description = "password changed"),
-         (status = 401, description = "invalid credentials"),
+         (status = 403, description = "invalid credentials"),
          (status = 461, description = "password too short (<8)"),
     )
 )]

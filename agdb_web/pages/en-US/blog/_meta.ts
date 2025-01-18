@@ -9,6 +9,10 @@ const config = {
     "---": {
         type: "separator",
     },
+    "distance": {
+        title: "Distance",
+        display: "normal",
+    },
     "why-graph": {
         title: "Why graph?",
         display: "normal",

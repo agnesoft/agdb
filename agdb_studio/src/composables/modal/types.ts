@@ -6,6 +6,6 @@ export type Modal = {
 export type Button = {
     className: string;
     text: string;
-    action: () => void;
+    action: () => void | Promise<void>;
     type?: "button" | "submit" | "reset";
 };

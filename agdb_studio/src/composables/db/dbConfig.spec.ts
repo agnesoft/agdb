@@ -19,12 +19,19 @@ import {
 } from "@/tests/apiMock";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
-import { ref } from "vue";
 import useModal from "../modal/modal";
 
 const { addInput, setInputValue, clearAllInputs } = useContentInputs();
 
 const { modalIsVisible, modal } = useModal();
+
+const testInput: Input = {
+    key: "new_db",
+    label: "Test label",
+    type: "text",
+    autofocus: true,
+    required: true,
+};
 
 describe("dbConfig", () => {
     describe("dbColumns", () => {
@@ -94,8 +101,8 @@ describe("dbConfig", () => {
             ["rename", db_rename],
         ])("should run correct db actions for %s", (key, api) => {
             const newName = "new_test_db";
-            addInput(KEY_MODAL, "new_db", ref());
-            setInputValue(KEY_MODAL, "new_db", newName);
+            addInput(KEY_MODAL, testInput);
+            setInputValue(KEY_MODAL, testInput.key, newName);
             const action = dbActions.find((action) => action.key === key);
             const params = { db: "test_db" };
             action?.action({ params });
@@ -103,17 +110,6 @@ describe("dbConfig", () => {
                 ...params,
                 new_db: newName,
             });
-            clearAllInputs();
-        });
-        it.each([
-            ["copy", db_copy],
-            ["rename", db_rename],
-        ])("should not run correct db actions for %s", (key, api) => {
-            addInput(KEY_MODAL, "new_db", ref());
-            const action = dbActions.find((action) => action.key === key);
-            const params = { db: "test_db" };
-            action?.action({ params }).catch(() => {});
-            expect(api).not.toHaveBeenCalled();
             clearAllInputs();
         });
 

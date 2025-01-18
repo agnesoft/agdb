@@ -1,4 +1,4 @@
-import { ref, type Reactive } from "vue";
+import { reactive, ref, type Reactive } from "vue";
 
 const inputs = ref(new Map<Symbol, Map<string, Reactive<Input>>>());
 
@@ -40,16 +40,12 @@ const clearInputs = (contentKey: Symbol) => {
     inputsMap?.clear();
 };
 
-const addInput = (
-    contentKey: Symbol,
-    inputKey: string,
-    params: Input,
-): void => {
+const addInput = (contentKey: Symbol, params: Input): void => {
     const inputsMap = inputs.value.get(contentKey);
     if (!inputsMap) {
         inputs.value.set(contentKey, new Map());
     }
-    inputs.value.get(contentKey)?.set(inputKey, params);
+    inputs.value.get(contentKey)?.set(params.key, reactive(params));
 };
 
 const clearAllInputs = (): void => {

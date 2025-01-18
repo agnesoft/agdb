@@ -24,6 +24,29 @@ const customButtons = ref<Button[]>([]);
 
 const confirmLoading = ref(false);
 
+const handleConfirm = async (): Promise<void> => {
+    if (!checkInputsRules(KEY_MODAL) || !onConfirm.value) {
+        return;
+    }
+    confirmLoading.value = true;
+    const result = onConfirm.value();
+    if (result instanceof Promise) {
+        result.then(
+            (res: void | boolean) => {
+                confirmLoading.value = false;
+                if (res !== false) closeModal();
+            },
+            () => {
+                confirmLoading.value = false;
+            },
+        );
+        return;
+    } else if (result) {
+        confirmLoading.value = false;
+        closeModal();
+    }
+};
+
 const buttons = computed<Button[]>(() => {
     const defaultButtons: Button[] = [
         {
@@ -36,28 +59,7 @@ const buttons = computed<Button[]>(() => {
         defaultButtons.push({
             className: "button button-success",
             text: "Confirm",
-            action: () => {
-                if (!checkInputsRules(KEY_MODAL) || !onConfirm.value) {
-                    return;
-                }
-                confirmLoading.value = true;
-                const result = onConfirm.value();
-                if (result instanceof Promise) {
-                    result.then(
-                        (res: void | boolean) => {
-                            confirmLoading.value = false;
-                            if (res !== false) closeModal();
-                        },
-                        () => {
-                            confirmLoading.value = false;
-                        },
-                    );
-                    return;
-                } else if (result) {
-                    confirmLoading.value = false;
-                    closeModal();
-                }
-            },
+            action: handleConfirm,
             type: "submit",
         });
     }
@@ -82,7 +84,7 @@ const openModal = ({
     clearInputs(KEY_MODAL);
     content?.forEach((c) => {
         if (c.input) {
-            addInput(KEY_MODAL, c.input.key, reactive(c.input));
+            addInput(KEY_MODAL, c.input);
         }
     });
 
@@ -99,5 +101,6 @@ export default function useModal() {
         closeModal,
         openModal,
         onConfirm,
+        handleConfirm,
     };
 }

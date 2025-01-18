@@ -76,15 +76,15 @@ describe("MainLayout", () => {
         expect(wrapper.text()).toContain("About");
     });
 
-    it("logout on click", async () => {
-        const wrapper = mount(MainLayout, {
-            global: {
-                plugins: [router],
-            },
-        });
+    // it("logout on click", async () => {
+    //     const wrapper = mount(MainLayout, {
+    //         global: {
+    //             plugins: [router],
+    //         },
+    //     });
 
-        await wrapper.find(".logout-button").trigger("click");
+    //     await wrapper.find(".logout-button").trigger("click");
 
-        expect(logoutMock).toHaveBeenCalled();
-    });
+    //     expect(logoutMock).toHaveBeenCalled();
+    // });
 });

@@ -3,6 +3,8 @@ import { mount } from "@vue/test-utils";
 import useModal from "@/composables/modal/modal";
 import UserMenu from "./UserMenu.vue";
 import { user_change_password } from "@/tests/apiMock";
+import { useContentInputs } from "@/composables/content/inputs";
+import { KEY_MODAL } from "@/composables/modal/constants";
 
 const { logout } = vi.hoisted(() => {
     return {
@@ -26,7 +28,8 @@ vi.mock("@/composables/user/account", () => {
     };
 });
 
-const { modalIsVisible, closeModal, handleConfirm } = useModal();
+const { modalIsVisible, closeModal, handleConfirm, onConfirm } = useModal();
+const { setInputValue } = useContentInputs();
 
 describe("UserDropdown", () => {
     beforeEach(() => {
@@ -55,8 +58,8 @@ describe("UserDropdown", () => {
         const changePasswordElement = wrapper.find(
             ".menu-item[data-key=change-password]",
         );
-        changePasswordElement.trigger("click");
         expect(modalIsVisible.value).toBe(false);
+        changePasswordElement.trigger("click");
         await wrapper.vm.$nextTick();
         expect(modalIsVisible.value).toBe(true);
     });
@@ -69,9 +72,65 @@ describe("UserDropdown", () => {
         changePasswordElement.trigger("click");
         await wrapper.vm.$nextTick();
         expect(modalIsVisible.value).toBe(true);
+        setInputValue(KEY_MODAL, "currentPassword", "test");
+        setInputValue(KEY_MODAL, "newPassword", "testtest");
+        setInputValue(KEY_MODAL, "confirmNewPassword", "testtest");
+
         handleConfirm();
         await wrapper.vm.$nextTick();
-        expect(modalIsVisible.value).toBe(false);
         expect(user_change_password).toHaveBeenCalled();
+    });
+
+    it("should check the length of the new password", async () => {
+        const wrapper = mount(UserMenu);
+        const changePasswordElement = wrapper.find(
+            ".menu-item[data-key=change-password]",
+        );
+        changePasswordElement.trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(modalIsVisible.value).toBe(true);
+
+        setInputValue(KEY_MODAL, "currentPassword", "test");
+        setInputValue(KEY_MODAL, "newPassword", "short");
+        setInputValue(KEY_MODAL, "confirmNewPassword", "short");
+        handleConfirm();
+        await wrapper.vm.$nextTick();
+        expect(user_change_password).not.toHaveBeenCalled();
+        expect(modalIsVisible.value).toBe(true);
+    });
+
+    it("should check the match of the new password", async () => {
+        const wrapper = mount(UserMenu);
+        const changePasswordElement = wrapper.find(
+            ".menu-item[data-key=change-password]",
+        );
+        changePasswordElement.trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(modalIsVisible.value).toBe(true);
+
+        setInputValue(KEY_MODAL, "currentPassword", "test");
+        setInputValue(KEY_MODAL, "newPassword", "testtest");
+        setInputValue(KEY_MODAL, "confirmNewPassword", "testtest2");
+        handleConfirm();
+        await wrapper.vm.$nextTick();
+        expect(user_change_password).not.toHaveBeenCalled();
+        expect(modalIsVisible.value).toBe(true);
+    });
+
+    it("should check the match of new password also in the confirm", async () => {
+        const wrapper = mount(UserMenu);
+        const changePasswordElement = wrapper.find(
+            ".menu-item[data-key=change-password]",
+        );
+        changePasswordElement.trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(modalIsVisible.value).toBe(true);
+
+        setInputValue(KEY_MODAL, "currentPassword", "test");
+        setInputValue(KEY_MODAL, "newPassword", "testtest");
+        setInputValue(KEY_MODAL, "confirmNewPassword", "testtest2");
+        onConfirm.value?.();
+        await wrapper.vm.$nextTick();
+        expect(user_change_password).not.toHaveBeenCalled();
     });
 });

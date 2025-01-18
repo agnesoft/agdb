@@ -4,7 +4,6 @@ import { computed, onMounted, type PropType } from "vue";
 import { useDbUsersStore } from "@/composables/db/dbUsersStore";
 import { ClCloseMd, ChPlus } from "@kalimahapps/vue-icons";
 import { useDbDetails, type DbDetailsParams } from "@/composables/db/dbDetails";
-import type { DbUserRole } from "agdb_api/dist/openapi";
 
 const props = defineProps({
     row: {
@@ -26,23 +25,19 @@ const dbParams = computed<DbDetailsParams>(() => {
     };
 });
 
-const { users, dbName, canEditUsers, handleRemoveUser, handleAddUser } =
-    useDbDetails(dbParams);
+const {
+    users,
+    dbName,
+    canEditUsers,
+    handleRemoveUser,
+    handleAddUser,
+    isOwner,
+    handleUsernameClick,
+} = useDbDetails(dbParams);
 
 onMounted(() => {
     fetchDbUsers(dbParams.value);
 });
-
-const isOwner = (username: string) => {
-    return username === dbParams.value.owner;
-};
-
-const handleUsernameClick = (username: string, role: DbUserRole) => {
-    if (isOwner(username) || !canEditUsers.value) {
-        return;
-    }
-    handleAddUser({ username, db_role: role });
-};
 </script>
 
 <template>

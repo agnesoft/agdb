@@ -1,4 +1,4 @@
-import type { ServerDatabase } from "agdb_api/dist/openapi";
+import type { DbUserRole, ServerDatabase } from "agdb_api/dist/openapi";
 import { useDbStore, type DbIdentification } from "./dbStore";
 import { useDbUsersStore } from "./dbUsersStore";
 import { useContentInputs } from "../content/inputs";
@@ -130,11 +130,24 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
         });
     };
 
+    const isOwner = (username: string) => {
+        return username === dbParams.value.owner;
+    };
+
+    const handleUsernameClick = (username: string, role: DbUserRole) => {
+        if (isOwner(username) || !canEditUsers.value) {
+            return;
+        }
+        handleAddUser({ username, db_role: role });
+    };
+
     return {
         users,
         dbName,
         canEditUsers,
         handleRemoveUser,
         handleAddUser,
+        isOwner,
+        handleUsernameClick,
     };
 };

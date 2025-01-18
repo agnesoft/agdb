@@ -17,7 +17,7 @@ export const db_rename = vi.fn().mockResolvedValue({});
 export const db_user_list = vi.fn();
 export const db_user_add = vi.fn().mockResolvedValue({});
 export const db_user_remove = vi.fn().mockResolvedValue({});
-export const user_change_password = vi.fn().mockResolvedValue({});
+export const user_change_password = vi.fn().mockResolvedValue(true);
 
 export const client = vi.fn().mockResolvedValue({
     login: vi.fn().mockResolvedValue("token"),

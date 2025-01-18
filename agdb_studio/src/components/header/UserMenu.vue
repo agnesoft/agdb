@@ -89,7 +89,7 @@ const actions = [
                             new_password: newPassword,
                         },
                     );
-                    return response ? true : false;
+                    return response !== undefined;
                 },
             });
         },
@@ -104,7 +104,6 @@ const actions = [
                     "Are you sure you want to logout?",
                 ]),
                 onConfirm: () => {
-                    console.log("Logging out");
                     logout();
                     return true;
                 },

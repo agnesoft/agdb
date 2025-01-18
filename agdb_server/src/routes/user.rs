@@ -91,7 +91,7 @@ pub(crate) async fn logout(user: UserId, State(server_db): State<ServerDb>) -> S
     request_body = ChangePassword,
     responses(
          (status = 201, description = "password changed"),
-         (status = 401, description = "invalid credentials"),
+         (status = 403, description = "invalid credentials"),
          (status = 461, description = "password too short (<8)"),
     )
 )]
@@ -105,7 +105,10 @@ pub(crate) async fn change_password(
     let old_pswd = Password::new(&user.username, &user.password, &user.salt)?;
 
     if !old_pswd.verify_password(&request.password) {
-        return Err(ServerError::new(StatusCode::UNAUTHORIZED, "unuauthorized"));
+        return Err(ServerError::new(
+            StatusCode::FORBIDDEN,
+            "invalid credentials",
+        ));
     }
 
     password::validate_password(&request.new_password)?;

@@ -6,6 +6,8 @@ on:
     paths:
       - agdb_ci/**
       - Version
+      - agdb_server/openapi.json
+      - agdb_server/test_queries.json
       - .github/workflows/agdb_ci.yaml
 
 jobs:

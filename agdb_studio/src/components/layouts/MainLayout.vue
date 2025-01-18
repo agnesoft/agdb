@@ -2,20 +2,41 @@
 import { RouterLink, RouterView } from "vue-router";
 import LogoIcon from "@/components/base/icons/LogoIcon.vue";
 import AgdbModal from "@/components/base/modal/AgdbModal.vue";
-import FadeTrasition from "@/components/transitions/FadeTransition.vue";
+import FadeTransition from "@/components/transitions/FadeTransition.vue";
 import NotificationViewer from "../notification/NotificationViewer.vue";
 import UserDropdown from "../header/UserDropdown.vue";
+import { computed } from "vue";
+import { isAdminView } from "@/composables/user/admin";
+
+const homeLink = computed(() => (isAdminView.value ? "/admin" : "/"));
+
+const links = computed(() => {
+    if (isAdminView.value) {
+        return [
+            { to: "/admin/db", text: "Databases" },
+            { to: "/admin/users", text: "Users" },
+        ];
+    }
+    return [{ to: "/db", text: "Databases" }];
+});
 </script>
 
 <template>
     <div class="main-layout">
         <header>
-            <RouterLink to="/"><LogoIcon /></RouterLink>
+            <RouterLink :to="homeLink" class="logo-wrapper">
+                <LogoIcon />
+                <span class="admin-label" v-if="isAdminView"> admin </span>
+            </RouterLink>
 
             <div class="wrapper">
                 <nav>
-                    <RouterLink to="/">Home</RouterLink>
-                    <RouterLink to="/db">Databases</RouterLink>
+                    <RouterLink
+                        v-for="link of links"
+                        :key="link.to"
+                        :to="link.to"
+                        >{{ link.text }}</RouterLink
+                    >
                 </nav>
                 <UserDropdown />
             </div>
@@ -25,9 +46,9 @@ import UserDropdown from "../header/UserDropdown.vue";
         </main>
         <footer></footer>
         <NotificationViewer />
-        <FadeTrasition>
+        <FadeTransition>
             <AgdbModal />
-        </FadeTrasition>
+        </FadeTransition>
     </div>
 </template>
 
@@ -84,6 +105,21 @@ nav a {
 
 nav a:first-of-type {
     border: 0;
+}
+
+.logo-wrapper {
+    position: relative;
+}
+
+.admin-label {
+    font-size: 0.8rem;
+    background-color: var(--red-2);
+    color: var(--white);
+    padding: 0.1rem 0.5rem;
+    border-radius: 5px;
+    position: absolute;
+    bottom: 0;
+    right: 0.8rem;
 }
 
 @media (min-width: 1024px) {

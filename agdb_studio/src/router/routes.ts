@@ -17,9 +17,33 @@ export const createRoutes = () => {
                     component: () => import("@/views/HomeView.vue"),
                 },
                 {
-                    path: "/db",
+                    path: "db",
                     name: "db",
                     component: () => import("@/views/DbView.vue"),
+                },
+                {
+                    path: "admin",
+                    meta: { requiresAdmin: true, admin: true },
+                    children: [
+                        {
+                            path: "",
+                            name: "admin",
+                            component: () =>
+                                import("@/views/admin/AdminView.vue"),
+                        },
+                        {
+                            path: "users",
+                            name: "admin-users",
+                            component: () =>
+                                import("@/views/admin/AdminUsersView.vue"),
+                        },
+                        {
+                            path: "db",
+                            name: "admin-db",
+                            component: () =>
+                                import("@/views/admin/AdminDbView.vue"),
+                        },
+                    ],
                 },
             ],
         },

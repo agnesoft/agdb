@@ -21,7 +21,10 @@ const onLogin = async () => {
     clearError();
     login(username.value, password.value)
         .then(async () => {
-            await router.push({ name: "home" });
+            const redirect = router.currentRoute.value.query.redirect;
+            await router.push(
+                typeof redirect === "string" ? redirect : { name: "home" },
+            );
             loading.value = false;
         })
         .catch((e) => {

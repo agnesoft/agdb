@@ -6,7 +6,7 @@ const validateRoutes = (routes: ReturnType<typeof createRoutes>) => {
         expect(route.path).toBeDefined();
         expect(route.component).toBeDefined();
         if (route.children) {
-            validateRoutes(route.children);
+            validateRoutes(route.children as ReturnType<typeof createRoutes>);
         }
     });
 };

@@ -17,12 +17,12 @@ const fetchUserStatus = async () => {
         return;
     }
 
-    client.value?.user_status()?.then((status) => {
+    return client.value?.user_status()?.then((status) => {
         username.value = status.data.username;
         admin.value = status.data.admin;
     });
 };
-watch(() => token.value, fetchUserStatus, { immediate: true });
+watch(() => token.value, fetchUserStatus);
 
 export const useAccount = (): {
     username: typeof username;

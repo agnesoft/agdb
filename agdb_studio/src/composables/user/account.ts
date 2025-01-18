@@ -1,7 +1,6 @@
 import { client } from "@/services/api.service";
 import { useAuth } from "@/composables/user/auth";
 import { ref, watch } from "vue";
-import type { AxiosResponse } from "axios";
 
 const username = ref<string | undefined>(undefined);
 const admin = ref<boolean>(false);
@@ -25,27 +24,10 @@ const fetchUserStatus = async () => {
 };
 watch(() => token.value, fetchUserStatus, { immediate: true });
 
-const changePassword = async (
-    oldPassword: string,
-    newPassword: string,
-): Promise<AxiosResponse> => {
-    if (!client.value) {
-        throw new Error("Client is not initialized");
-    }
-    return client.value.user_change_password(null, {
-        password: oldPassword,
-        new_password: newPassword,
-    });
-};
-
 export const useAccount = (): {
     username: typeof username;
     admin: typeof admin;
     fetchUserStatus: () => Promise<void>;
-    changePassword: (
-        oldPassword: string,
-        newPassword: string,
-    ) => Promise<AxiosResponse>;
 } => {
-    return { username, admin, fetchUserStatus, changePassword };
+    return { username, admin, fetchUserStatus };
 };

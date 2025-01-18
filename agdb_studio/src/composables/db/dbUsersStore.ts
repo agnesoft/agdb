@@ -8,21 +8,20 @@ const { getDbName } = useDbStore();
 
 const dbUsers = ref(new Map<string, DbUser[]>());
 
-const fetchDbUsers = async (params: DbIdentification) => {
+const fetchDbUsers = (params: DbIdentification): Promise<void> | undefined =>
     client.value?.db_user_list(params).then((users) => {
         dbUsers.value.set(getDbName(params), users.data);
     });
-};
 
-const getDbUsers = (params: DbIdentification) => {
+const getDbUsers = (params: DbIdentification): DbUser[] | undefined => {
     return dbUsers.value.get(getDbName(params));
 };
 
-const clearDbUsers = (params: DbIdentification) => {
+const clearDbUsers = (params: DbIdentification): void => {
     dbUsers.value.delete(getDbName(params));
 };
 
-const clearAllDbUsers = () => {
+const clearAllDbUsers = (): void => {
     dbUsers.value.clear();
 };
 

@@ -36,14 +36,14 @@ const actions = [
                             label: "New password",
                             key: "newPassword",
                             required: true,
-                            // rules: [
-                            //     (value: string) => {
-                            //         if (value.length < 8) {
-                            //             return "Password must be at least 8 characters long";
-                            //         }
-                            //         return undefined;
-                            //     },
-                            // ],
+                            rules: [
+                                (value: string) => {
+                                    if (value.length < 8) {
+                                        return "Password must be at least 8 characters long";
+                                    }
+                                    return undefined;
+                                },
+                            ],
                         },
                     },
                     {
@@ -85,10 +85,13 @@ const actions = [
                     if (newPassword !== confirmNewPassword) {
                         return false;
                     }
-                    const response = await client.value?.user_change_password({
-                        currentPassword: currentPassword,
-                        newPassword: newPassword?.toString(),
-                    });
+                    const response = await client.value?.user_change_password(
+                        null,
+                        {
+                            password: currentPassword,
+                            new_password: newPassword,
+                        },
+                    );
                     return response ? true : false;
                 },
             });

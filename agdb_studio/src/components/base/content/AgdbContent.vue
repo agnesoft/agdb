@@ -137,11 +137,16 @@ onMounted(() => {
     border: 1px solid var(--red);
     padding: 0.1rem 0.5rem;
     border-radius: 5px;
+    z-index: 1;
+    max-width: 40%;
 }
 
 @media (max-width: 768px) {
     .input-row {
         grid-template-columns: 1fr;
+    }
+    .error-message {
+        max-width: 60%;
     }
 }
 </style>

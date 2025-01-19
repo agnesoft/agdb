@@ -39,14 +39,14 @@ const onLogin = async () => {
         <form @submit.prevent="onLogin">
             <div>
                 <label for="username">Username:</label>
-                <input type="text" id="username" v-model="username" required />
+                <input id="username" v-model="username" type="text" required />
             </div>
             <div>
                 <label for="password">Password:</label>
                 <input
-                    type="password"
                     id="password"
                     v-model="password"
+                    type="password"
                     required
                 />
             </div>

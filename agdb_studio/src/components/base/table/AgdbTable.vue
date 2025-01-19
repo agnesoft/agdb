@@ -30,7 +30,7 @@ provide(INJECT_KEY_COLUMNS, columns);
 
 <template>
     <div class="agdb-table">
-        <AgdbTableHeader :tableKey="name" />
+        <AgdbTableHeader :table-key="name" />
         <template v-for="row in rows" :key="row[0]">
             <AgdbTableRow :row="row[1]" :columns="columns" />
         </template>

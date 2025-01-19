@@ -33,10 +33,10 @@ const add = (event: Event) => {
 <template>
     <div class="db-add-form">
         <h2>Add Database</h2>
-        <form @submit="add" id="db-add-form">
+        <form id="db-add-form" @submit="add">
             <input
-                type="text"
                 v-model="name"
+                type="text"
                 placeholder="Name"
                 name="db-name"
             />

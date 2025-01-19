@@ -26,7 +26,7 @@ const links = computed(() => {
         <header>
             <RouterLink :to="homeLink" class="logo-wrapper">
                 <LogoIcon />
-                <span class="admin-label" v-if="isAdminView"> admin </span>
+                <span v-if="isAdminView" class="admin-label"> admin </span>
             </RouterLink>
 
             <div class="wrapper">

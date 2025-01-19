@@ -42,6 +42,8 @@ onMounted(() => {
                             inputs.get(part.input.key) !== undefined &&
                             part.input.type === 'select'
                         "
+                        :value="getInputValue(props.contentKey, part.input.key)"
+                        :name="part.input.key"
                         @change="
                             (event: Event) => {
                                 setInputValue(
@@ -51,12 +53,10 @@ onMounted(() => {
                                 );
                             }
                         "
-                        :value="getInputValue(props.contentKey, part.input.key)"
-                        :name="part.input.key"
                     >
                         <option
-                            v-for="(option, index) in part.input.options"
-                            :key="index"
+                            v-for="option in part.input.options"
+                            :key="option.value"
                             :value="option.value"
                         >
                             {{ option.label }}
@@ -64,14 +64,15 @@ onMounted(() => {
                     </select>
                     <input
                         v-else-if="inputs.get(part.input.key) !== undefined"
-                        :name="part.input.key"
-                        :type="part.input.type"
                         :ref="
                             (el) => {
                                 if (part.input?.autofocus)
                                     autofocusElement = el;
                             }
                         "
+                        :name="part.input.key"
+                        :type="part.input.type"
+                        :value="getInputValue(props.contentKey, part.input.key)"
                         @input="
                             (event: Event) => {
                                 setInputValue(
@@ -81,7 +82,6 @@ onMounted(() => {
                                 );
                             }
                         "
-                        :value="getInputValue(props.contentKey, part.input.key)"
                     />
                     <FadeTransition>
                         <div v-if="part.input.error" class="error-message">

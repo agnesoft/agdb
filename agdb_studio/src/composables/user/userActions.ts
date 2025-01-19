@@ -6,7 +6,7 @@ import { convertArrayOfStringsToContent } from "../content/utils";
 import { client } from "@/services/api.service";
 import { KEY_MODAL } from "../modal/constants";
 import { computed } from "vue";
-import { isAdmin, isAdminView } from "./admin";
+import { useAdmin } from "./admin";
 
 const { logout } = useAuth();
 const { openModal } = useModal();
@@ -134,6 +134,7 @@ const accountActions = [
 ];
 
 export const useUserActions = () => {
+    const { isAdmin, isAdminView } = useAdmin();
     const actions = computed(() => [
         ...(isAdmin.value && !isAdminView.value ? toAdminView : adminActions),
         ...accountActions,

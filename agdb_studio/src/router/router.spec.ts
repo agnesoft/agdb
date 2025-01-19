@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import router from "@/router/router";
 
 const { isLoggedInMock, logoutMock } = vi.hoisted(() => {
@@ -34,13 +34,12 @@ describe("router", () => {
 
         expect(router.currentRoute.value.name).toBe("home");
     });
-    it("logout if logged in and navigates to login", async () => {
+    it("redirects to home if logged user tries to access login page", async () => {
         isLoggedInMock.value = true;
 
         await router.push("/login");
 
-        expect(router.currentRoute.value.name).toBe("login");
-        expect(logoutMock).toHaveBeenCalled();
+        expect(router.currentRoute.value.name).toBe("home");
     });
     it("loads the databases page", async () => {
         isLoggedInMock.value = true;

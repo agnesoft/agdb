@@ -6,7 +6,9 @@ import FadeTransition from "@/components/transitions/FadeTransition.vue";
 import NotificationViewer from "../notification/NotificationViewer.vue";
 import UserDropdown from "../header/UserDropdown.vue";
 import { computed } from "vue";
-import { isAdminView } from "@/composables/user/admin";
+import { useAdmin } from "@/composables/user/admin";
+
+const { isAdminView } = useAdmin();
 
 const homeLink = computed(() => (isAdminView.value ? "/admin" : "/"));
 

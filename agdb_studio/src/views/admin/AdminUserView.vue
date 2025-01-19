@@ -2,7 +2,7 @@
 
 <template>
     <div class="admin-user-view">
-        <h1>Admin Users View</h1>
+        <h1>Admin User View</h1>
     </div>
 </template>
 

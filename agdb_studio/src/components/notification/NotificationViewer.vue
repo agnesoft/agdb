@@ -20,31 +20,31 @@ import {
 
 <template>
     <div
-        class="notification-wrapper"
         v-if="notificationsReversed.length"
+        class="notification-wrapper"
         :class="{ hasNew: newNotifications.length }"
     >
         <FadeTransition>
-            <div class="notification-viewer" v-if="viewerOpened">
+            <div v-if="viewerOpened" class="notification-viewer">
                 <div class="notification-header">
                     <h3><CaNotification /> Notifications</h3>
 
                     <div class="header-buttons">
                         <button
+                            class="button button-transparent button-clear"
+                            title="Clear all notifications"
                             @click="
                                 () => {
                                     clearNotifications(), toggleViewerOpened();
                                 }
                             "
-                            class="button button-transparent button-clear"
-                            title="Clear all notifications"
                         >
                             <CaRowDelete />
                         </button>
                         <button
-                            @click="closeViewer"
                             class="button button-transparent button-close"
                             title="Hide notifications"
+                            @click="closeViewer"
                         >
                             <ClCloseMd />
                         </button>
@@ -76,10 +76,10 @@ import {
             </div>
         </div>
         <button
-            @click="toggleViewerOpened"
             class="button button-transparent notification-button"
             :class="{ shake: newNotifications.length }"
             :title="`${viewerOpened ? 'Hide' : 'Show'} notifications`"
+            @click="toggleViewerOpened"
         >
             <CaNotification v-if="!hasUnreadNotifications || viewerOpened" />
             <CaNotificationNew v-else />

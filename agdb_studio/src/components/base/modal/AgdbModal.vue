@@ -27,9 +27,9 @@ watch(modalIsVisible, async () => {
             <header class="modal-header">
                 <h3>{{ modal.header }}</h3>
                 <button
-                    @click="closeModal"
                     class="button button-transparent"
                     data-testid="close-modal"
+                    @click="closeModal"
                 >
                     <ClCloseMd />
                 </button>
@@ -37,7 +37,7 @@ watch(modalIsVisible, async () => {
             <form id="modal-form">
                 <AgdbContent
                     :content="modal.content"
-                    :contentKey="KEY_MODAL"
+                    :content-key="KEY_MODAL"
                     class="modal-body"
                 />
             </form>
@@ -45,15 +45,15 @@ watch(modalIsVisible, async () => {
                 <button
                     v-for="button in buttons"
                     :key="button.text"
-                    @click.prevent="button.action"
-                    :class="button.className"
-                    :type="button.type ?? 'button'"
-                    :form="button.type === 'submit' ? 'modal-form' : undefined"
                     :ref="
                         (el) => {
                             if (button.type === 'submit') autofocusElement = el;
                         }
                     "
+                    :class="button.className"
+                    :type="button.type ?? 'button'"
+                    :form="button.type === 'submit' ? 'modal-form' : undefined"
+                    @click.prevent="button.action"
                 >
                     {{ button.text }}
                 </button>

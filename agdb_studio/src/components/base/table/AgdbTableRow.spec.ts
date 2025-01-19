@@ -1,12 +1,30 @@
 import { mount } from "@vue/test-utils";
 import AgdbTableRow from "./AgdbTableRow.vue";
 import { columnsMap, TABLE_NAME, tableConfig } from "@/tests/tableMocks";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
     INJECT_KEY_COLUMNS,
     INJECT_KEY_TABLE_NAME,
 } from "@/composables/table/constants";
 import { addTable } from "@/composables/table/tableConfig";
+
+const { fetchDbUsers, isDbRoleType } = vi.hoisted(() => {
+    return {
+        fetchDbUsers: vi.fn().mockResolvedValue({ data: [] }),
+        isDbRoleType: vi.fn().mockReturnValue(true),
+    };
+});
+
+vi.mock("@/composables/db/dbUsersStore", () => {
+    return {
+        useDbUsersStore: () => {
+            return {
+                fetchDbUsers,
+                isDbRoleType,
+            };
+        },
+    };
+});
 
 describe("TableRow", () => {
     addTable({

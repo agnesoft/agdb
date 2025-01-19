@@ -28,14 +28,14 @@ defineProps({
     >
         <h4 class="notification-title">{{ notification.title }}</h4>
         <button
-            @click="removeNotification(notification.id)"
             class="button button-transparent button-close"
+            @click="removeNotification(notification.id)"
         >
             <ClCloseMd />
         </button>
         <div
-            class="separator"
             v-if="notification.title && notification.message"
+            class="separator"
         ></div>
         <div class="notification-content" :class="notification.type">
             {{ notification.message }}

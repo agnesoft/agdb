@@ -9,13 +9,13 @@ const { username } = useAccount();
 
 <template>
     <AgdbDropdown>
-        <template v-slot:trigger>
+        <template #trigger>
             <div class="user-dropdown-trigger button">
                 <ClUser02 />
                 <span>{{ username }}</span>
             </div>
         </template>
-        <template v-slot:content>
+        <template #content>
             <UserMenu />
         </template>
     </AgdbDropdown>

@@ -59,8 +59,8 @@ const toggleExpandRow = (): void => {
             </div>
             <div v-if="rowDetailsComponent">
                 <button
-                    @click="toggleExpandRow"
                     class="button button-transparent expand-row"
+                    @click="toggleExpandRow"
                 >
                     <AkChevronDownSmall v-if="!rowExpanded" />
                     <AkChevronUpSmall v-else />

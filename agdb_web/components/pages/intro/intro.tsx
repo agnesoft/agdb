@@ -5,7 +5,7 @@ export const Intro = () => {
         <div className={styles.intro}>
             <h1>agdb</h1>
             <p className={styles.subheading}>
-                First native database without compromises.
+                First application database without compromises.
             </p>
             <p className={styles.subheading}>
                 no query language | performance independnet of data size | 10X

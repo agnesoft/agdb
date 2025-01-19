@@ -6,15 +6,20 @@ import { convertArrayOfStringsToContent } from "../content/utils";
 import { client } from "@/services/api.service";
 import { KEY_MODAL } from "../modal/constants";
 import { computed } from "vue";
-import { useAdmin } from "./admin";
+import { useAdmin } from "@/composables/user/admin";
 
 const { logout } = useAuth();
 const { openModal } = useModal();
 const { getInputValue } = useContentInputs();
 
+export const USER_VIEW_KEY = "user-view";
+export const ADMIN_VIEW_KEY = "admin";
+export const CHANGE_PASSWORD_KEY = "change-password";
+export const LOGOUT_KEY = "logout";
+
 const adminActions = [
     {
-        key: "user-view",
+        key: USER_VIEW_KEY,
         label: "User View",
         action: () => {
             router.push({ name: "home" });
@@ -24,7 +29,7 @@ const adminActions = [
 
 const toAdminView = [
     {
-        key: "admin",
+        key: ADMIN_VIEW_KEY,
         label: "Admin View",
         action: () => {
             router.push({ name: "admin" });
@@ -34,7 +39,7 @@ const toAdminView = [
 
 const accountActions = [
     {
-        key: "change-password",
+        key: CHANGE_PASSWORD_KEY,
         label: "Change password",
         action: () => {
             openModal({
@@ -116,7 +121,7 @@ const accountActions = [
         },
     },
     {
-        key: "logout",
+        key: LOGOUT_KEY,
         label: "Logout",
         action: () => {
             openModal({
@@ -136,7 +141,11 @@ const accountActions = [
 export const useUserActions = () => {
     const { isAdmin, isAdminView } = useAdmin();
     const actions = computed(() => [
-        ...(isAdmin.value && !isAdminView.value ? toAdminView : adminActions),
+        ...(isAdmin.value
+            ? !isAdminView.value
+                ? toAdminView
+                : adminActions
+            : []),
         ...accountActions,
     ]);
 

@@ -5,7 +5,6 @@ import router from "@/router";
 const { admin } = useAccount();
 
 const isAdmin = computed<boolean>(() => {
-    console.log("isAdmin", admin.value);
     return admin.value;
 });
 

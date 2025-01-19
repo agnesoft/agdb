@@ -16,15 +16,15 @@ const buttonRef = ref<HTMLElement>();
 
 <template>
     <div class="agdb-dropdown">
-        <button type="button" class="trigger" @click="toggle" ref="buttonRef">
+        <button ref="buttonRef" type="button" class="trigger" @click="toggle">
             <slot name="trigger"></slot>
         </button>
         <Teleport to="body">
             <SlideUpTransition>
                 <DropdownContent
+                    v-on-click-outside="close"
                     :button-ref="buttonRef"
                     :opened="opened"
-                    v-on-click-outside="close"
                     @close="close"
                 >
                     <slot name="content"></slot>

@@ -21,7 +21,10 @@ const onLogin = async () => {
     clearError();
     login(username.value, password.value)
         .then(async () => {
-            await router.push({ name: "home" });
+            const redirect = router.currentRoute.value.query.redirect;
+            await router.push(
+                typeof redirect === "string" ? redirect : { name: "home" },
+            );
             loading.value = false;
         })
         .catch((e) => {
@@ -36,14 +39,14 @@ const onLogin = async () => {
         <form @submit.prevent="onLogin">
             <div>
                 <label for="username">Username:</label>
-                <input type="text" id="username" v-model="username" required />
+                <input id="username" v-model="username" type="text" required />
             </div>
             <div>
                 <label for="password">Password:</label>
                 <input
-                    type="password"
                     id="password"
                     v-model="password"
+                    type="password"
                     required
                 />
             </div>

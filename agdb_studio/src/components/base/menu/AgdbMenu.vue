@@ -18,6 +18,8 @@ const openSubmenu = (key: string) => {
         <li
             v-for="action in props.actions"
             :key="action.key"
+            class="menu-item"
+            :data-key="action.key"
             @click.prevent="
                 (event: MouseEvent) => {
                     if (action.actions) {
@@ -26,9 +28,7 @@ const openSubmenu = (key: string) => {
                     action.action({ event });
                 }
             "
-            class="menu-item"
             @mouseover="openSubmenu(action.key)"
-            :data-key="action.key"
         >
             <a
                 href="#"
@@ -43,8 +43,8 @@ const openSubmenu = (key: string) => {
             </a>
             <SlideUpTransition>
                 <AgdbMenu
-                    class="sub-menu"
                     v-if="openedSubmenu === action.key && action.actions"
+                    class="sub-menu"
                     :actions="action.actions"
                 />
             </SlideUpTransition>

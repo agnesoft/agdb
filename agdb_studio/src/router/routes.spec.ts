@@ -1,12 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { createRoutes } from "@/router/routes";
+import type { RouteRecordRaw } from "vue-router";
 
-const validateRoutes = (routes: ReturnType<typeof createRoutes>) => {
+const validateRoutes = (routes: RouteRecordRaw[]) => {
     routes.forEach((route) => {
         expect(route.path).toBeDefined();
-        expect(route.component).toBeDefined();
+
         if (route.children) {
             validateRoutes(route.children);
+        } else {
+            expect(route.component).toBeDefined();
         }
     });
 };

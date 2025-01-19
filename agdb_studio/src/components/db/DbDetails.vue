@@ -9,6 +9,7 @@ const props = defineProps({
     row: {
         type: Object as PropType<TRow>,
         required: false,
+        default: undefined,
     },
 });
 
@@ -58,10 +59,10 @@ onMounted(() => {
             <li v-for="user in users" :key="user.username" class="user-item">
                 <span
                     class="username"
-                    @click="() => handleUsernameClick(user.username, user.role)"
                     :class="{
                         clickable: !isOwner(user.username) && canEditUsers,
                     }"
+                    @click="() => handleUsernameClick(user.username, user.role)"
                     >{{ user.username }}</span
                 >
                 <span class="role">
@@ -70,8 +71,8 @@ onMounted(() => {
                 <button
                     v-if="user.username !== dbParams.owner && canEditUsers"
                     class="button button-transparent remove-button"
-                    @click="handleRemoveUser(user.username)"
                     title="Remove user"
+                    @click="handleRemoveUser(user.username)"
                 >
                     <ClCloseMd class="remove-icon" />
                 </button>

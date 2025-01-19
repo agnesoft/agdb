@@ -3,8 +3,10 @@ import { computed, ref } from "vue";
 
 const props = defineProps({
     opened: { type: Boolean, required: true },
-    buttonRef: { type: HTMLElement, required: false },
+    buttonRef: { type: HTMLElement, required: false, default: null },
 });
+
+defineEmits(["close"]);
 
 const contentRef = ref<HTMLElement>();
 
@@ -33,11 +35,11 @@ const contentStyle = computed(() => {
 
 <template>
     <div
-        class="content"
-        @click="$emit('close')"
         v-if="opened"
-        :style="contentStyle"
         ref="contentRef"
+        class="content"
+        :style="contentStyle"
+        @click="$emit('close')"
     >
         <slot></slot>
     </div>

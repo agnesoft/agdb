@@ -24,6 +24,7 @@ vi.mock("@/composables/user/account", () => {
     return {
         useAccount: () => ({
             username: "testUser",
+            admin: { value: false },
         }),
     };
 });

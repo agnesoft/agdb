@@ -168,6 +168,8 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("basepath", "/public".into());
     config.insert("log_level", "INFO".into());
     config.insert("pepper_path", "".into());
+    config.insert("tls_certificate", "".into());
+    config.insert("tls_key", "".into());
     config.insert("cluster_token", "test".into());
     config.insert("cluster_heartbeat_timeout_ms", 1000.into());
     config.insert("cluster_term_timeout_ms", 3000.into());
@@ -327,6 +329,36 @@ async fn studio() -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     client
         .get(server.url("/studio"))
+        .send()
+        .await?
+        .error_for_status()?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn https() -> anyhow::Result<()> {
+    let mut config = HashMap::<&str, serde_yml::Value>::new();
+    let port = TestServerImpl::next_port();
+
+    config.insert("bind", format!(":::{port}").into());
+    config.insert("address", format!("https://localhost:{port}").into());
+    config.insert("data_dir", SERVER_DATA_DIR.into());
+    config.insert("basepath", "".into());
+    config.insert("admin", ADMIN.into());
+    config.insert("log_level", "INFO".into());
+    config.insert("pepper_path", "".into());
+    config.insert("tls_certificate", "agdb_server/tests/test_cert.pem".into());
+    config.insert("tls_key", "agdb_server/tests/test_key.pem".into());
+    config.insert("cluster_token", "test".into());
+    config.insert("cluster_heartbeat_timeout_ms", 1000.into());
+    config.insert("cluster_term_timeout_ms", 3000.into());
+    config.insert("cluster", Vec::<String>::new().into());
+
+    let server = TestServerImpl::with_config(config).await?;
+
+    reqwest::Client::new()
+        .get(format!("{}/studio", server.address))
         .send()
         .await?
         .error_for_status()?;

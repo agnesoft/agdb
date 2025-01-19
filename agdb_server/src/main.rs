@@ -16,7 +16,10 @@ mod server_state;
 mod user_id;
 mod utilities;
 
+use axum_server::tls_rustls::RustlsConfig;
 use server_error::ServerResult;
+use std::net::SocketAddr;
+use std::path::PathBuf;
 use tokio::sync::broadcast;
 
 const CONFIG_FILE: &str = "agdb_server.yaml";
@@ -29,6 +32,12 @@ async fn main() -> ServerResult {
         .init();
 
     password::init(config.pepper);
+
+    let tls_config = RustlsConfig::from_pem_file(
+        PathBuf::from(config.tls_certificate.clone()),
+        PathBuf::from(config.tls_key.clone()),
+    )
+    .await?;
 
     let (shutdown_sender, shutdown_receiver) = broadcast::channel::<()>(1);
     let server_db = server_db::new(&config).await?;
@@ -48,10 +57,16 @@ async fn main() -> ServerResult {
         std::env::current_dir()?.join(&config.data_dir).display()
     );
     tracing::info!("Listening at {}", config.bind);
-    let listener = tokio::net::TcpListener::bind(&config.bind).await?;
-    axum::serve(listener, app)
-        .with_graceful_shutdown(cluster::start_with_shutdown(cluster, shutdown_receiver))
+    //let listener = tokio::net::TcpListener::bind(&config.bind).await?;
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+
+    axum_server::bind_rustls(addr, tls_config)
+        .serve(app.into_make_service())
         .await?;
+
+    // axum::serve(listener, app)
+    //     .with_graceful_shutdown(cluster::start_with_shutdown(cluster, shutdown_receiver))
+    //     .await?;
 
     Ok(())
 }

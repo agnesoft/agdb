@@ -53,7 +53,7 @@
     <a href="https://agdb.agnesoft.com/blog/blog">Why not SQL?</a>
 </p>
 
-The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
+The Agnesoft Graph Database (aka _agdb_) is application native database without compromises. It is persistent, optionally memory mapped graph database with native object 'no-text' queries. It can be used as a main persistent storage, data analytics platform as well as fast in-memory cache. Its typed schema-less data store allows for flexible and seamless data updates with no downtime or costly migrations. All queries are constructed via a builder pattern or directly as objects with no special language or text parsing.
 
 - [Key Features](#key-features)
 - [At a glance](#at-a-glance-db)
@@ -63,6 +63,12 @@ The Agnesoft Graph Database (aka _agdb_) is persistent, optionally memory mapped
 - [Reference](#reference)
 
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
+
+- No query language, queries are written in the same language as the application.
+- Performance without limits, constant time lookups and traversals.
+- 10X+ cost reduction simple to build, run & scale.
+
+Technical features:
 
 - Data plotted on a graph
 - Typed [key-value properties](https://agdb.agnesoft.com/docs/guides/concepts) attached to graph elements (nodes & edges)

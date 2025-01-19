@@ -9,7 +9,7 @@ export const Intro = () => {
             <p>
                 <a href="/docs/guides/quickstart">Quickstart</a>
                 <a href="/blog/blog">Why agdb?</a>
-                <a href="/consulation">Expert consultation</a>
+                <a href="/consultation">Expert consultation</a>
             </p>
         </div>
     );

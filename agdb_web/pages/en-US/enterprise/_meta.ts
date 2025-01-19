@@ -9,10 +9,6 @@ const config = {
     "---": {
         type: "separator",
     },
-    pricing: {
-        title: "Pricing",
-        display: "normal",
-    },
     cloud: {
         title: "Cloud",
         display: "normal",

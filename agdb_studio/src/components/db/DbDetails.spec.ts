@@ -12,7 +12,7 @@ const {
     handleUsernameClick,
 } = vi.hoisted(() => {
     return {
-        fetchDbUsers: vi.fn(),
+        fetchDbUsers: vi.fn().mockResolvedValue({ data: [] }),
         isDbRoleType: vi.fn().mockReturnValue(true),
         handleRemoveUser: vi.fn(),
         handleAddUser: vi.fn(),

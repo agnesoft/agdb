@@ -36,7 +36,7 @@ Databases traditionally tackles performance and scalability issues with caching,
 
 The actual solution is to limit the work required without sacrificing any of the important properties like data availability and latency. The `agdb` is designed to be just as fast regardless of the data set size. It plots data on a graph that allows for constant time lookups and traversals. This means that the `agdb` is just as fast with a data set of 10 records as it is with a data set of 10 billion records. When querying the database you specify what subgraph you are interested in and the `agdb` will return the results in constant time, depending only on the size of the subgraph, and not the entire data set!
 
-## 10X+ Cost Reduction
+## 10X Cost Reduction
 
 All the properties of `agdb` will drastically reduce costs of your database solution. The `agdb` is designed to be used by developers and data engineers, not DBAs. This means that you don't need to hire a dedicated team to manage your database. Your developers can easily do so. The `agdb` is also very simple to build (or use pre-built) and runs in Docker, Kubernetes, any of the public clouds or bare metal. It is written in Rust with minimal hardware footprint. It does not need any special consideration or special hardware. For resiliency, it offers cluster mode with custom enhanced consensus protocol for fastest possible guaranteed consistency.
 

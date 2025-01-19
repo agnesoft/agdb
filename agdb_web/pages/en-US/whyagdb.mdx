@@ -13,7 +13,7 @@ Introducing `agdb`, the first programming native database without compromises. T
 
 ## No Query language
 
-Context switching is one of the worst things that can happen to a developer. It takes time to switch between languages and it is very easy to make mistakes. The `agdb` is designed to be used with the same language as the application itself. This means that developers can write queries in the same language as the application itself. This makes it easier to write queries and reduces the chances of making mistakes that could lead to security vulnerabilities, data leaks or other issues.
+Context switching is one of the worst things that can happen to a developer. It takes time to switch between languages, and it is very easy to make mistakes. The `agdb` is designed to be used with the same language as the application itself. This means that developers can write queries in the same language as the application itself. This makes it easier to write queries and reduces the chances of making mistakes that could lead to security vulnerabilities, data leaks or other issues.
 
 Instead of a dedicated query language the `agdb` is using "native object queries". Queries in `agdb` are binary objects describing the requested data and its constraints. That not only reduces cognitive load of switching to another language but completely eliminates fundamental issues of interpreted textual query languages like SQL such as SQL injection.
 
@@ -21,13 +21,13 @@ Object queries are the most expressive way to query data. They directly translat
 
 ## Performance Without Limits
 
-Databases traditionally tackles performance and scalability issues with caching, indexing, sharding and other techniques. Unfortunately the data sets are growing faster than these techniques can keep up and eventually the data set outgrows the underlying technology. The solution to the big data problem is not in cleverly storing the data so it appears smaller sacrificing data locality and other properties in the process.
+Databases traditionally tackles performance and scalability issues with caching, indexing, sharding and other techniques. Unfortunately the data sets are growing faster than these techniques can keep up, and eventually the data set outgrows the underlying technology. The solution to the big data problem is not in cleverly storing the data so it appears smaller sacrificing data locality and other properties in the process.
 
-The actual solution is fundamentally limit the work required without sacrificing any of the important properties like data availability and latency. The `agdb` is designed to be just as fast regardless of the data set size. It plots data on a graph that allows for constant time lookups and traversals. This means that the `agdb` is just as fast with a data set of 10 records as it is with a data set of 10 billion records. When querying the database you specify what subgraph you are interested in and the `agdb` will return the results in constant time, depending only on the size of the subgraph, and not the entire data set!
+The actual solution is to limit the work required without sacrificing any of the important properties like data availability and latency. The `agdb` is designed to be just as fast regardless of the data set size. It plots data on a graph that allows for constant time lookups and traversals. This means that the `agdb` is just as fast with a data set of 10 records as it is with a data set of 10 billion records. When querying the database you specify what subgraph you are interested in and the `agdb` will return the results in constant time, depending only on the size of the subgraph, and not the entire data set!
 
 ## 10X+ Cost Reduction
 
-All the properties of `agdb` will drastically reduce costs of your database solution. The `agdb` is designed to be used by developers and data engineers, not DBAs. This means that you don't need to hire a team of DBAs to manage your database. The `agdb` is also very simple to build (or use pre-built) and runs in Docker, Kubernetes, any of the public clouds or bare metal. It is written in Rust with minimal hardware footprint. It does not need any special consideration or special hardware. For resiliency it offers cluster mode with custom enhanced consensus protocol for fastest possible guaranteed consistency.
+All the properties of `agdb` will drastically reduce costs of your database solution. The `agdb` is designed to be used by developers and data engineers, not DBAs. This means that you don't need to hire a team of DBAs to manage your database. The `agdb` is also very simple to build (or use pre-built) and runs in Docker, Kubernetes, any of the public clouds or bare metal. It is written in Rust with minimal hardware footprint. It does not need any special consideration or special hardware. For resiliency, it offers cluster mode with custom enhanced consensus protocol for fastest possible guaranteed consistency.
 
 ---
 

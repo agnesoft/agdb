@@ -9,6 +9,10 @@ const config = {
     "---": {
         type: "separator",
     },
+    consultation: {
+        title: "Technical Consultation",
+        display: "normal",
+    },
     cloud: {
         title: "Cloud",
         display: "normal",

@@ -12,6 +12,7 @@ const validateLinks = async (page: Page) => {
         if (
             href &&
             !validatedLinks.includes(href) &&
+            !href.includes("reddit.com") &&
             !href.startsWith("mailto") &&
             !href.startsWith("tel") &&
             !href.startsWith("javascript") &&

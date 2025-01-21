@@ -6,9 +6,7 @@ describe("intro", () => {
     it("should render the intro", () => {
         render(<Intro />);
         expect(
-            screen.getByText(
-                /Application native database for any use case./i,
-            ),
+            screen.getByText(/Application native database for any use case./i),
         ).toBeDefined();
     });
 });

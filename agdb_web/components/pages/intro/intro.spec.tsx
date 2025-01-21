@@ -7,7 +7,7 @@ describe("intro", () => {
         render(<Intro />);
         expect(
             screen.getByText(
-                /First application native database without compromises/i,
+                /Application native database for any use case./i,
             ),
         ).toBeDefined();
     });

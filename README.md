@@ -64,8 +64,9 @@ The Agnesoft Graph Database (aka _agdb_) is application native database without 
 
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Key Features
 
+- The `agdb` is application native database.
 - No query language, queries are written in the same language as the application.
-- Performance without limits, constant time lookups and traversals regardless of data size.
+- Performance without limits, constant time lookups and traversals regardless of db size.
 - Simple to build, use & scale.
 
 Technical features:

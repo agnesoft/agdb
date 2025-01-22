@@ -123,13 +123,13 @@ Yellow elements would be visited, red is where the algorithm would stop and not 
 
 Let's break it down:
 
--   search starts at the node "projects" (distance 0)
--   we want only elements at distance 4 (the outputs): `.distance(CountComparison::Equal(4))`
--   additionally we want to limit the search to continue only `beyond` certain elements: `.and().beyond().where_()` (NOTE: the nested `.where_()` is like opening a bracket so we specify multiple conditions for our beyond segment)
--   the beyond conditions then are:
-    -   continue only if the distance is NOT 2 (`.distance(CountComparison::NotEqual(2))`)
-    -   OR
-    -   if the element has property "name" with the value "B"
+- search starts at the node "projects" (distance 0)
+- we want only elements at distance 4 (the outputs): `.distance(CountComparison::Equal(4))`
+- additionally we want to limit the search to continue only `beyond` certain elements: `.and().beyond().where_()` (NOTE: the nested `.where_()` is like opening a bracket so we specify multiple conditions for our beyond segment)
+- the beyond conditions then are:
+    - continue only if the distance is NOT 2 (`.distance(CountComparison::NotEqual(2))`)
+    - OR
+    - if the element has property "name" with the value "B"
 
 The `beyond` condition might seem alien but when you look at the picture of the search it should become clear. We are simply telling the algorithm to search normally and not consider anything at distance 2 or beyond unless the `or` condition is satisfied, in this case property "name" equals value "B". Because only one element in our graph satisfies such condition ("project B") the algorithm will continue beyond it (and stop at distance 2 otherwise) and eventually reach the distance 4 and return all elements it finds there. This potentially greatly limits the scope of work needed.
 

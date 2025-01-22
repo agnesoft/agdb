@@ -41,9 +41,9 @@ We are setting up the database for the multithreaded use with the `Arc` and the 
 
 The users of our social network will be nodes connected to the `users` node. The information we want to store about our users are:
 
--   username
--   e-mail
--   password
+- username
+- e-mail
+- password
 
 Lets firs define the `User` struct to hold this information:
 
@@ -106,9 +106,9 @@ First we check if the user exists and return error if the username is taken. We 
 
 The users should be able to create posts. The data we want to store about the posts are:
 
--   title
--   body
--   author
+- title
+- body
+- author
 
 Once again lets define the `Post` type. The specially treated `db_id` field will become useful later on:
 
@@ -155,9 +155,9 @@ Beside connecting the node to two others we are also adding a property `authored
 
 The comments are created by the users and are either top level comments on a post or replies to other comments. Information we want to store about the comments are:
 
--   body
--   author
--   parent (post OR comment)
+- body
+- author
+- parent (post OR comment)
 
 We define the comment type:
 
@@ -244,9 +244,9 @@ fn remove_like(db: &mut Db, user: DbId, id: DbId) -> Result<(), QueryError> {
 
 This query removes elements returned by the search. The search is the "path search" starting (`from`) the user and looking for the `id` (`to`). It selects only the element with the `liked` property which would be the edge we are looking for. The query is simple because it takes advantage of several facts:
 
--   if the `id` exists the path to it will contain 3 elements: starting node, an edge and the `id` node
--   elements not selected for the result by the condition are penalized in the path search eliminating the candidate path through the `authored` node
--   `limit(1)` is not useful here because path search applies the limit after it found the best path which would be as described - containing just one suitable element anyway
+- if the `id` exists the path to it will contain 3 elements: starting node, an edge and the `id` node
+- elements not selected for the result by the condition are penalized in the path search eliminating the candidate path through the `authored` node
+- `limit(1)` is not useful here because path search applies the limit after it found the best path which would be as described - containing just one suitable element anyway
 
 Still if we were unsure the `id` exists or if we wanted to limit the search area as much as possible we could create a chain of conditions to only restrict the search to a particular distance and prevent the other edges to be followed:
 
@@ -347,8 +347,8 @@ The same outcome can be reached with number of other conditions as well. For exa
 
 Similarly to `user_posts` we can fetch the user comments and liked posts with slight modification of the condition:
 
--   user comments: `.keys(vec!["commented".into()])`
--   liked posts: `keys(vec!["title".into()])` and `.keys(vec!["liked".into()])`
+- user comments: `.keys(vec!["commented".into()])`
+- liked posts: `keys(vec!["title".into()])` and `.keys(vec!["liked".into()])`
 
 Notice as well that the function returns the `ids` of the elements we were interested in which gives us flexibility in what we want to retrieve about the posts. In order to retrieve say titles of the posts we would need to feed it to a select query:
 
@@ -429,8 +429,8 @@ Possibly the most common problem with any database is that it contains the infor
 
 In our case we have already identified two such issues with our database so far:
 
--   ordering posts based on likes
--   determining level of comments
+- ordering posts based on likes
+- determining level of comments
 
 We can perhaps already come up with more such as getting the authors of posts or comments, missing timestamp information etc. There are certainly more but for now let's focus on the two highlighted ones:
 

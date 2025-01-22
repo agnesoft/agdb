@@ -7,10 +7,10 @@ description: "Blog, Agnesoft Graph Database"
 
 The most ubiquitous database query language is SQL which is text based language created in the 1970s. Its biggest advantage is that being text based it can be used from any language to communicate with the database. However, just like relational (table) bases databases from the same era it has some major flaws:
 
--   It needs to be parsed and interpreted by the database during runtime leading to common syntax errors that are hard or impossible to statically check.
--   Being a separate programming language from the client coding language increases cognitive load on the programmer.
--   It opens up the database to attacks from SQL-injection where the attacker is trying to force the interpreter to treat the user input (e.g. table or column names) as SQL code itself issuing malicious commands such as stealing or damaging the data.
--   Being "Turing-complete" and complex language on itself means it can lead (and often leads) to incredibly complex and unmaintainable queries.
+- It needs to be parsed and interpreted by the database during runtime leading to common syntax errors that are hard or impossible to statically check.
+- Being a separate programming language from the client coding language increases cognitive load on the programmer.
+- It opens up the database to attacks from SQL-injection where the attacker is trying to force the interpreter to treat the user input (e.g. table or column names) as SQL code itself issuing malicious commands such as stealing or damaging the data.
+- Being "Turing-complete" and complex language on itself means it can lead (and often leads) to incredibly complex and unmaintainable queries.
 
 The last point is particularly troublesome because it partially stems from the `schema` issue discussed in the previous points. One common way to avoid changing the schema is to transform the data via queries. This is not only less efficient than representing the data in the correct form directly but also increases the complexity of queries significantly.
 

@@ -9,7 +9,7 @@ export default mergeConfig(
                 all: true,
                 exclude: [
                     "dist/**",
-                    ".eslintrc.cjs",
+                    "eslint.config.mjs",
                     "src/openapi.d.ts",
                     "query_test_generator.js",
                     "tests/**",

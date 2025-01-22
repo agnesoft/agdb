@@ -8,8 +8,9 @@ import {
 } from "@/composables/table/constants";
 import { addTable } from "@/composables/table/tableConfig";
 
-const { fetchDbUsers, isDbRoleType } = vi.hoisted(() => {
+const { getDbUsers, fetchDbUsers, isDbRoleType } = vi.hoisted(() => {
     return {
+        getDbUsers: vi.fn().mockReturnValue([]),
         fetchDbUsers: vi.fn().mockResolvedValue({ data: [] }),
         isDbRoleType: vi.fn().mockReturnValue(true),
     };
@@ -19,6 +20,7 @@ vi.mock("@/composables/db/dbUsersStore", () => {
     return {
         useDbUsersStore: () => {
             return {
+                getDbUsers,
                 fetchDbUsers,
                 isDbRoleType,
             };

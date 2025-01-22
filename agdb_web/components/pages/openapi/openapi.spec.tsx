@@ -27,7 +27,7 @@ describe("openapi", () => {
     it("should render the openapi code on click", async () => {
         const file = await import("../../../../agdb_server/openapi.json");
 
-        //@ts-ignore
+        //@ts-expect-error no types for default
         file.default = jsonMock;
 
         render(<OpenApi />);

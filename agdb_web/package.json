@@ -14,12 +14,11 @@
         "before-commit": "npm run format && npm run lint && npm run test && npm run test:e2e"
     },
     "dependencies": {
-        "@types/highlight.js": "^10",
-        "@vitest/coverage-istanbul": "^2",
+        "@theguild/remark-mermaid": "^0.2.0",
         "highlight.js": "^11",
-        "next": "14",
-        "nextra": "^3.2.4",
-        "nextra-theme-docs": "^3.2.4",
+        "next": "15",
+        "nextra": "^3",
+        "nextra-theme-docs": "^3",
         "react": "^18",
         "react-dom": "^18",
         "sass": "^1"
@@ -31,13 +30,13 @@
         "@types/react": "^18",
         "@types/react-dom": "^18",
         "@vitejs/plugin-react": "^4",
-        "@vitest/coverage-v8": "^2",
-        "eslint": "^8",
-        "eslint-config-next": "14",
-        "eslint-config-prettier": "^9",
-        "jsdom": "^25",
+        "@vitest/coverage-istanbul": "^3",
+        "eslint": "^9",
+        "eslint-config-next": "15",
+        "eslint-config-prettier": "^10",
+        "jsdom": "^26",
         "prettier": "^3",
         "typescript": "^5",
-        "vitest": "^2"
+        "vitest": "^3"
     }
 }

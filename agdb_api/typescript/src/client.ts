@@ -3,10 +3,10 @@ import type { Client } from "./openapi";
 
 type AgdbApi = {
     token: string | undefined;
-    login: (username: string, password: string) => Promise<string>;  
+    login: (username: string, password: string) => Promise<string>;
     logout: () => Promise<void>;
     get_token: () => string | undefined;
-    set_token: (token: string) => void;  
+    set_token: (token: string) => void;
     reset_token: () => void;
 };
 

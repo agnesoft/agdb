@@ -3,10 +3,10 @@ import type { Client } from "./openapi";
 
 type AgdbApi = {
     token: string | undefined;
-    login: (username: string, password: string) => Promise<string>; // eslint-disable-line no-unused-vars
+    login: (username: string, password: string) => Promise<string>;  
     logout: () => Promise<void>;
     get_token: () => string | undefined;
-    set_token: (token: string) => void; // eslint-disable-line no-unused-vars
+    set_token: (token: string) => void;  
     reset_token: () => void;
 };
 

@@ -13,7 +13,7 @@ export default defineConfig({
         exclude: [...configDefaults.exclude, "e2e/*"],
         root: path.resolve(__dirname, "."),
         coverage: {
-            provider: "istanbul",
+            provider: "v8",
             all: true,
             exclude: [
                 ...coverageConfigDefaults.exclude,

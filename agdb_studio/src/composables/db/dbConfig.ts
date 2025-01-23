@@ -19,10 +19,12 @@ import {
     dbRename,
     dbRestore,
 } from "./dbActions";
+import { useAdmin } from "../user/admin";
 
 const { getInputValue } = useContentInputs();
 const { openModal } = useModal();
 const { getDbName } = useDbStore();
+const { isAdminView } = useAdmin();
 
 export type DbActionProps = ActionProps<ServerDatabase>;
 
@@ -251,20 +253,42 @@ const dbActions: Action<ServerDatabase>[] = [
                 });
             });
         },
-        confirmation: [
-            ...convertArrayOfStringsToContent([
-                "Insert name of the new database.",
-            ]),
-            {
+        confirmation: ({ params }: DbActionProps) => {
+            const new_name: Content = {
                 input: {
                     key: "new_db",
-                    label: "New name",
+                    label: "Name",
                     type: "text",
                     autofocus: true,
                     required: true,
                 },
-            },
-        ],
+            };
+
+            if (isAdminView.value) {
+                const new_owner: Content = {
+                    input: {
+                        key: "new_owner",
+                        label: "Owner",
+                        type: "text",
+                        required: true,
+                        value: params.owner,
+                    },
+                };
+                return [
+                    ...convertArrayOfStringsToContent([
+                        "Insert name and owner of the new database.",
+                    ]),
+                    new_name,
+                    new_owner,
+                ];
+            }
+            return [
+                ...convertArrayOfStringsToContent([
+                    "Insert name of the new database.",
+                ]),
+                new_name,
+            ];
+        },
         confirmationHeader: getConfirmationHeaderFn,
     },
     {
@@ -331,7 +355,7 @@ const dbActions: Action<ServerDatabase>[] = [
     {
         key: "rename",
         label: "Rename",
-        action: ({ params }: DbActionProps) => {
+        action: async ({ params }: DbActionProps) => {
             const new_db = getInputValue<string>(
                 KEY_MODAL,
                 "new_db",
@@ -351,20 +375,44 @@ const dbActions: Action<ServerDatabase>[] = [
                 });
             });
         },
-        confirmation: [
-            ...convertArrayOfStringsToContent([
-                "Insert new name of the database.",
-            ]),
-            {
+
+        confirmation: ({ params }: DbActionProps) => {
+            const new_name: Content = {
                 input: {
                     key: "new_db",
-                    label: "New name",
+                    label: "Name",
                     type: "text",
                     autofocus: true,
                     required: true,
+                    value: params.db,
                 },
-            },
-        ],
+            };
+
+            if (isAdminView.value) {
+                const new_owner: Content = {
+                    input: {
+                        key: "new_owner",
+                        label: "Owner",
+                        type: "text",
+                        required: true,
+                        value: params.owner,
+                    },
+                };
+                return [
+                    ...convertArrayOfStringsToContent([
+                        "Insert new name and new owner of the database.",
+                    ]),
+                    new_name,
+                    new_owner,
+                ];
+            }
+            return [
+                ...convertArrayOfStringsToContent([
+                    "Insert name of the new database.",
+                ]),
+                new_name,
+            ];
+        },
         confirmationHeader: getConfirmationHeaderFn,
     },
     {

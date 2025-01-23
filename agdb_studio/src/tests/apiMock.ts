@@ -17,7 +17,26 @@ export const db_rename = vi.fn().mockResolvedValue({});
 export const db_user_list = vi.fn().mockResolvedValue({ data: [] });
 export const db_user_add = vi.fn().mockResolvedValue({});
 export const db_user_remove = vi.fn().mockResolvedValue({});
+export const db_exec = vi.fn().mockResolvedValue({});
+export const db_exec_mut = vi.fn().mockResolvedValue({});
 export const user_change_password = vi.fn().mockResolvedValue(true);
+export const admin_db_list = vi.fn();
+export const admin_db_add = vi.fn();
+export const admin_db_backup = vi.fn().mockResolvedValue({});
+export const admin_db_restore = vi.fn().mockResolvedValue({});
+export const admin_db_clear = vi.fn().mockResolvedValue({});
+export const admin_db_convert = vi.fn().mockResolvedValue({});
+export const admin_db_remove = vi.fn().mockResolvedValue({});
+export const admin_db_delete = vi.fn().mockResolvedValue({});
+export const admin_db_optimize = vi.fn().mockResolvedValue({});
+export const admin_db_audit = vi.fn().mockResolvedValue({ data: [] });
+export const admin_db_copy = vi.fn().mockResolvedValue({});
+export const admin_db_rename = vi.fn().mockResolvedValue({});
+export const admin_db_user_list = vi.fn().mockResolvedValue({ data: [] });
+export const admin_db_user_add = vi.fn().mockResolvedValue({});
+export const admin_db_user_remove = vi.fn().mockResolvedValue({});
+export const admin_db_exec = vi.fn().mockResolvedValue({});
+export const admin_db_exec_mut = vi.fn().mockResolvedValue({});
 
 export const client = vi.fn().mockResolvedValue({
     login: vi.fn().mockResolvedValue("token"),
@@ -34,6 +53,8 @@ export const client = vi.fn().mockResolvedValue({
         },
     },
     user_status,
+    user_change_password,
+
     db_list,
     db_add,
     db_backup,
@@ -49,7 +70,26 @@ export const client = vi.fn().mockResolvedValue({
     db_user_list,
     db_user_add,
     db_user_remove,
-    user_change_password,
+    db_exec,
+    db_exec_mut,
+
+    admin_db_list,
+    admin_db_add,
+    admin_db_backup,
+    admin_db_restore,
+    admin_db_clear,
+    admin_db_convert,
+    admin_db_remove,
+    admin_db_delete,
+    admin_db_optimize,
+    admin_db_audit,
+    admin_db_copy,
+    admin_db_rename,
+    admin_db_user_list,
+    admin_db_user_add,
+    admin_db_user_remove,
+    admin_db_exec,
+    admin_db_exec_mut,
 });
 vi.mock("agdb_api", () => {
     return {

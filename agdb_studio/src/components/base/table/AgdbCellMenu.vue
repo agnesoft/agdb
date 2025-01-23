@@ -18,29 +18,28 @@ const { openModal } = useModal();
 
 const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
     return actions.map((action) => {
-        const runAction:
-            | ActionFn<TRow, ActionReturn>
-            | ActionFn<undefined, ActionReturn>
-            | undefined = action.action
-            ? ({ event }: ActionProps<undefined>): ActionReturn => {
-                  if (!row || !action.action) return false;
-                  const result = action.action({
-                      event,
-                      params: row?.value,
-                  });
-                  fetchDatabases();
-                  return result;
-              }
-            : undefined;
+        const runAction: ActionFn<TRow, ActionReturn> | undefined =
+            action.action
+                ? ({ event }: ActionProps<TRow>): ActionReturn => {
+                      if (!row || !action.action) return false;
+                      const result = action.action({
+                          event,
+                          params: row?.value,
+                      });
+                      fetchDatabases();
+                      return result;
+                  }
+                : undefined;
         return {
             ...action,
-            action: runAction
-                ? ({ event }: ActionProps<undefined>) => {
+            action: !runAction
+                ? ({ event }: ActionProps<TRow>) => {
                       event.preventDefault();
                       event.stopPropagation();
+                      return false;
                   }
                 : action.confirmation
-                  ? ({ event }: ActionProps<undefined>) =>
+                  ? ({ event }: ActionProps<TRow>) => {
                         openModal({
                             header:
                                 action.confirmationHeader && row !== undefined
@@ -61,9 +60,17 @@ const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
                                           })
                                         : action.confirmation
                                     : undefined,
-                            onConfirm: () =>
-                                runAction({ event, params: undefined }),
-                        })
+                            onConfirm: () => {
+                                if (row !== undefined)
+                                    runAction({
+                                        event,
+                                        params: row.value,
+                                    });
+                                return true;
+                            },
+                        });
+                        return false;
+                    }
                   : runAction,
             actions: action.actions ? mapActions(action.actions) : undefined,
         };

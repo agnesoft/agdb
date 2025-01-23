@@ -7,7 +7,18 @@ import { KEY_MODAL } from "../modal/constants";
 import useModal from "../modal/modal";
 import { addNotification } from "../notification/notificationStore";
 import { useDbStore } from "./dbStore";
-import { dbCopy } from "./dbActions";
+import {
+    dbAudit,
+    dbBackup,
+    dbClear,
+    dbConvert,
+    dbCopy,
+    dbDelete,
+    dbOptimize,
+    dbRemove,
+    dbRename,
+    dbRestore,
+} from "./dbActions";
 
 const { getInputValue } = useContentInputs();
 const { openModal } = useModal();
@@ -24,7 +35,7 @@ const dbActions: Action<ServerDatabase>[] = [
         key: "audit",
         label: "Audit",
         action: ({ params }: DbActionProps) =>
-            client.value?.db_audit(params).then((res) => {
+            dbAudit(params).then((res) => {
                 const content = res.data.length
                     ? convertArrayOfStringsToContent(
                           res.data.map(
@@ -44,7 +55,7 @@ const dbActions: Action<ServerDatabase>[] = [
         key: "backup",
         label: "Backup",
         action: ({ params }: DbActionProps) =>
-            client.value?.db_backup(params).then(() => {
+            dbBackup(params).then(() => {
                 addNotification({
                     type: "success",
                     title: "Backup created",
@@ -70,17 +81,15 @@ const dbActions: Action<ServerDatabase>[] = [
                 key: "all",
                 label: "All",
                 action: ({ params }: DbActionProps) =>
-                    client.value
-                        ?.db_clear({ ...params, resource: "all" })
-                        .then(() => {
-                            addNotification({
-                                type: "success",
-                                title: "Database cleared",
-                                message: `Database ${getDbName(
-                                    params,
-                                )} has been cleared successfully.`,
-                            });
-                        }),
+                    dbClear({ ...params, resource: "all" }).then(() => {
+                        addNotification({
+                            type: "success",
+                            title: "Database cleared",
+                            message: `Database ${getDbName(
+                                params,
+                            )} has been cleared successfully.`,
+                        });
+                    }),
                 confirmation: convertArrayOfStringsToContent(
                     [
                         "Are you sure you want to clear all resources of this database?",
@@ -94,17 +103,15 @@ const dbActions: Action<ServerDatabase>[] = [
                 key: "db",
                 label: "Db only",
                 action: ({ params }: DbActionProps) =>
-                    client.value
-                        ?.db_clear({ ...params, resource: "db" })
-                        .then(() => {
-                            addNotification({
-                                type: "success",
-                                title: "Database cleared",
-                                message: `The data of ${getDbName(
-                                    params,
-                                )} has been cleared successfully.`,
-                            });
-                        }),
+                    dbClear({ ...params, resource: "db" }).then(() => {
+                        addNotification({
+                            type: "success",
+                            title: "Database cleared",
+                            message: `The data of ${getDbName(
+                                params,
+                            )} has been cleared successfully.`,
+                        });
+                    }),
                 confirmation: convertArrayOfStringsToContent(
                     [
                         "Are you sure you want to clear this database?",
@@ -118,17 +125,15 @@ const dbActions: Action<ServerDatabase>[] = [
                 key: "audit",
                 label: "Audit only",
                 action: ({ params }: DbActionProps) =>
-                    client.value
-                        ?.db_clear({ ...params, resource: "audit" })
-                        .then(() => {
-                            addNotification({
-                                type: "success",
-                                title: "Audit log cleared",
-                                message: `Audit log of ${getDbName(
-                                    params,
-                                )} has been cleared successfully.`,
-                            });
-                        }),
+                    dbClear({ ...params, resource: "audit" }).then(() => {
+                        addNotification({
+                            type: "success",
+                            title: "Audit log cleared",
+                            message: `Audit log of ${getDbName(
+                                params,
+                            )} has been cleared successfully.`,
+                        });
+                    }),
                 confirmation: convertArrayOfStringsToContent(
                     [
                         "Are you sure you want to clear the audit log of this database?",
@@ -141,17 +146,15 @@ const dbActions: Action<ServerDatabase>[] = [
                 key: "backup",
                 label: "Backup only",
                 action: ({ params }: DbActionProps) =>
-                    client.value
-                        ?.db_clear({ ...params, resource: "backup" })
-                        .then(() => {
-                            addNotification({
-                                type: "success",
-                                title: "Backup cleared",
-                                message: `Backup of ${getDbName(
-                                    params,
-                                )} has been cleared successfully.`,
-                            });
-                        }),
+                    dbClear({ ...params, resource: "backup" }).then(() => {
+                        addNotification({
+                            type: "success",
+                            title: "Backup cleared",
+                            message: `Backup of ${getDbName(
+                                params,
+                            )} has been cleared successfully.`,
+                        });
+                    }),
                 confirmation: convertArrayOfStringsToContent(
                     [
                         "Are you sure you want to clear the backup of this database?",
@@ -170,15 +173,13 @@ const dbActions: Action<ServerDatabase>[] = [
                 key: "memory",
                 label: "Memory",
                 action: ({ params }: DbActionProps) =>
-                    client.value
-                        ?.db_convert({ ...params, db_type: "memory" })
-                        .then(() => {
-                            addNotification({
-                                type: "success",
-                                title: "Database converted",
-                                message: `Database ${getDbName(params)} has been converted to memory only successfully.`,
-                            });
-                        }),
+                    dbConvert({ ...params, db_type: "memory" }).then(() => {
+                        addNotification({
+                            type: "success",
+                            title: "Database converted",
+                            message: `Database ${getDbName(params)} has been converted to memory only successfully.`,
+                        });
+                    }),
                 confirmation: convertArrayOfStringsToContent(
                     [
                         "Are you sure you want to convert this database to memory only?",
@@ -191,15 +192,13 @@ const dbActions: Action<ServerDatabase>[] = [
                 key: "file",
                 label: "File",
                 action: ({ params }: DbActionProps) =>
-                    client.value
-                        ?.db_convert({ ...params, db_type: "file" })
-                        .then(() => {
-                            addNotification({
-                                type: "success",
-                                title: "Database converted",
-                                message: `Database ${getDbName(params)} has been converted to file based successfully.`,
-                            });
-                        }),
+                    dbConvert({ ...params, db_type: "file" }).then(() => {
+                        addNotification({
+                            type: "success",
+                            title: "Database converted",
+                            message: `Database ${getDbName(params)} has been converted to file based successfully.`,
+                        });
+                    }),
                 confirmation: convertArrayOfStringsToContent(
                     [
                         "Are you sure you want to convert this database to file based database?",
@@ -212,15 +211,13 @@ const dbActions: Action<ServerDatabase>[] = [
                 key: "mapped",
                 label: "Mapped",
                 action: ({ params }: DbActionProps) =>
-                    client.value
-                        ?.db_convert({ ...params, db_type: "mapped" })
-                        .then(() => {
-                            addNotification({
-                                type: "success",
-                                title: "Database converted",
-                                message: `Database ${getDbName(params)} has been converted to memory mapped successfully.`,
-                            });
-                        }),
+                    dbConvert({ ...params, db_type: "mapped" }).then(() => {
+                        addNotification({
+                            type: "success",
+                            title: "Database converted",
+                            message: `Database ${getDbName(params)} has been converted to memory mapped successfully.`,
+                        });
+                    }),
                 confirmation: convertArrayOfStringsToContent(
                     [
                         "Are you sure you want to convert this database to memory mapped database?",
@@ -241,7 +238,7 @@ const dbActions: Action<ServerDatabase>[] = [
             )?.toString();
             const new_owner = getInputValue<string>(
                 KEY_MODAL,
-                "new_db",
+                "new_owner",
             )?.toString();
             const { db, owner } = params;
             return dbCopy({ db, owner, new_db, new_owner }).then(() => {
@@ -274,7 +271,7 @@ const dbActions: Action<ServerDatabase>[] = [
         key: "delete",
         label: "Delete",
         action: ({ params }: DbActionProps) =>
-            client.value?.db_delete(params).then(() => {
+            dbDelete(params).then(() => {
                 addNotification({
                     type: "success",
                     title: "Database deleted",
@@ -297,7 +294,7 @@ const dbActions: Action<ServerDatabase>[] = [
         key: "optimize",
         label: "Optimize",
         action: ({ params }: DbActionProps) =>
-            client.value?.db_optimize(params).then(() => {
+            dbOptimize(params).then(() => {
                 addNotification({
                     type: "success",
                     title: "Database optimized",
@@ -315,7 +312,7 @@ const dbActions: Action<ServerDatabase>[] = [
         key: "remove",
         label: "Remove",
         action: ({ params }: DbActionProps) =>
-            client.value?.db_remove(params).then(() => {
+            dbRemove(params).then(() => {
                 addNotification({
                     type: "success",
                     title: "Database removed",
@@ -339,8 +336,12 @@ const dbActions: Action<ServerDatabase>[] = [
                 KEY_MODAL,
                 "new_db",
             )?.toString();
+            const new_owner = getInputValue<string>(
+                KEY_MODAL,
+                "new_owner",
+            )?.toString();
             const { db, owner } = params;
-            return client.value?.db_rename({ db, owner, new_db }).then(() => {
+            return dbRename({ db, owner, new_db, new_owner }).then(() => {
                 addNotification({
                     type: "success",
                     title: "Database renamed",
@@ -370,7 +371,7 @@ const dbActions: Action<ServerDatabase>[] = [
         key: "restore",
         label: "Restore",
         action: ({ params }: DbActionProps) =>
-            client.value?.db_restore(params).then(() => {
+            dbRestore(params).then(() => {
                 addNotification({
                     type: "success",
                     title: "Database restored",

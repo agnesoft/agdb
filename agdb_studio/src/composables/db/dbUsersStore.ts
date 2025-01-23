@@ -4,13 +4,14 @@ import { ref } from "vue";
 import { useDbStore } from "./dbStore";
 import { addNotification } from "../notification/notificationStore";
 import type { DbIdentification } from "./types";
+import { dbUserAdd, dbUserList, dbUserRemove } from "./dbActions";
 
 const { getDbName } = useDbStore();
 
 const dbUsers = ref(new Map<string, DbUser[]>());
 
 const fetchDbUsers = (params: DbIdentification): Promise<void> | undefined =>
-    client.value?.db_user_list(params).then((users) => {
+    dbUserList(params).then((users) => {
         dbUsers.value.set(getDbName(params), users.data);
     });
 
@@ -31,7 +32,7 @@ type AddUserProps = {
     db_role: DbUserRole;
 } & DbIdentification;
 const addUser = async (params: AddUserProps) => {
-    return client.value?.db_user_add(params).then(() => {
+    return dbUserAdd(params).then(() => {
         addNotification({
             type: "success",
             title: "User added/changed",
@@ -44,7 +45,7 @@ type RemoveUserProps = {
     username: string;
 } & DbIdentification;
 const removeUser = async (params: RemoveUserProps) => {
-    return client.value?.db_user_remove(params).then(() => {
+    return dbUserRemove(params).then(() => {
         addNotification({
             type: "success",
             title: "User removed",

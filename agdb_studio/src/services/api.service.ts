@@ -5,8 +5,9 @@ import {
     BASE_CONNECTION_TIMEOUT,
     MAX_CONNECTION_ATTEMPTS,
 } from "@/constants";
-import { computed, ref } from "vue";
+import { computed, ref, type ComputedRef } from "vue";
 import { addNotification } from "@/composables/notification/notificationStore";
+import type { AgdbApiClient } from "agdb_api/dist/client";
 
 const _client = ref<AgdbApi.AgdbApiClient | undefined>();
 
@@ -44,6 +45,14 @@ export const errorInterceptor = (error: AxiosError) => {
         });
     }
     return Promise.reject(error);
+};
+
+export const checkClient: (
+    client: ComputedRef<AgdbApiClient | undefined>,
+) => asserts client is ComputedRef<AgdbApiClient> = (client) => {
+    if (!client.value) {
+        throw new Error("Client is not initialized");
+    }
 };
 
 let connectionAttempts = 0;

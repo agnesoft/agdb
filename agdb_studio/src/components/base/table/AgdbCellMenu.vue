@@ -9,25 +9,32 @@ import { useDbStore } from "@/composables/db/dbStore";
 import useModal from "@/composables/modal/modal";
 
 const props = defineProps({
-    actions: { type: Array as PropType<Action[]>, required: true },
+    actions: { type: Array as PropType<Action<any>[]>, required: true },
 });
 
 const row = inject<Ref<TRow>>(INJECT_KEY_ROW);
 const { fetchDatabases } = useDbStore();
 const { openModal } = useModal();
 
-const mapActions = (actions: Action[]): Action[] => {
+const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
     return actions.map((action) => {
-        const runAction = action.action
-            ? ({ event }: ActionProps<undefined>): Promise<void> | boolean => {
-                  const result = action.action?.({ event, params: row?.value });
+        const runAction:
+            | ActionFn<TRow, ActionReturn>
+            | ActionFn<undefined, ActionReturn>
+            | undefined = action.action
+            ? ({ event }: ActionProps<undefined>): ActionReturn => {
+                  if (!row || !action.action) return false;
+                  const result = action.action({
+                      event,
+                      params: row?.value,
+                  });
                   fetchDatabases();
                   return result;
               }
             : undefined;
         return {
             ...action,
-            action: !runAction
+            action: runAction
                 ? ({ event }: ActionProps<undefined>) => {
                       event.preventDefault();
                       event.stopPropagation();
@@ -35,15 +42,25 @@ const mapActions = (actions: Action[]): Action[] => {
                 : action.confirmation
                   ? ({ event }: ActionProps<undefined>) =>
                         openModal({
-                            header: action.confirmationHeader
-                                ? typeof action.confirmationHeader ===
-                                  "function"
-                                    ? action.confirmationHeader({
-                                          params: row?.value,
-                                      })
-                                    : action.confirmationHeader
-                                : "Confirm action",
-                            content: action.confirmation,
+                            header:
+                                action.confirmationHeader && row !== undefined
+                                    ? typeof action.confirmationHeader ===
+                                      "function"
+                                        ? action.confirmationHeader({
+                                              event,
+                                              params: row.value,
+                                          })
+                                        : action.confirmationHeader
+                                    : "Confirm action",
+                            content:
+                                action.confirmation && row !== undefined
+                                    ? typeof action.confirmation === "function"
+                                        ? action.confirmation({
+                                              event,
+                                              params: row.value,
+                                          })
+                                        : action.confirmation
+                                    : undefined,
                             onConfirm: () =>
                                 runAction({ event, params: undefined }),
                         })

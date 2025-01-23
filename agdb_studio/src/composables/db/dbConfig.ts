@@ -7,6 +7,7 @@ import { KEY_MODAL } from "../modal/constants";
 import useModal from "../modal/modal";
 import { addNotification } from "../notification/notificationStore";
 import { useDbStore } from "./dbStore";
+import { dbCopy } from "./dbActions";
 
 const { getInputValue } = useContentInputs();
 const { openModal } = useModal();
@@ -14,10 +15,11 @@ const { getDbName } = useDbStore();
 
 export type DbActionProps = ActionProps<ServerDatabase>;
 
-const getConfirmationHeaderFn = ({ params }: DbActionProps) =>
-    `Confirm action for ${params.owner}/${params.db}`;
+const getConfirmationHeaderFn: ActionFn<ServerDatabase, string> = ({
+    params,
+}: DbActionProps) => `Confirm action for ${params.owner}/${params.db}`;
 
-const dbActions: Action[] = [
+const dbActions: Action<ServerDatabase>[] = [
     {
         key: "audit",
         label: "Audit",
@@ -52,7 +54,7 @@ const dbActions: Action[] = [
         confirmation: [
             ...convertArrayOfStringsToContent(
                 ["Are you sure you want to backup this database?"],
-                { emphesizedWords: ["backup"] },
+                { emphasizedWords: ["backup"] },
             ),
             ...convertArrayOfStringsToContent([
                 "This will swap the existing backup with the current db.",
@@ -84,7 +86,7 @@ const dbActions: Action[] = [
                         "Are you sure you want to clear all resources of this database?",
                         "This will reset the database.",
                     ],
-                    { emphesizedWords: ["clear", "all"] },
+                    { emphasizedWords: ["clear", "all"] },
                 ),
                 confirmationHeader: getConfirmationHeaderFn,
             },
@@ -108,7 +110,7 @@ const dbActions: Action[] = [
                         "Are you sure you want to clear this database?",
                         "This will remove all data.",
                     ],
-                    { emphesizedWords: ["clear", "database"] },
+                    { emphasizedWords: ["clear", "database"] },
                 ),
                 confirmationHeader: getConfirmationHeaderFn,
             },
@@ -131,7 +133,7 @@ const dbActions: Action[] = [
                     [
                         "Are you sure you want to clear the audit log of this database?",
                     ],
-                    { emphesizedWords: ["clear", "audit"] },
+                    { emphasizedWords: ["clear", "audit"] },
                 ),
                 confirmationHeader: getConfirmationHeaderFn,
             },
@@ -154,7 +156,7 @@ const dbActions: Action[] = [
                     [
                         "Are you sure you want to clear the backup of this database?",
                     ],
-                    { emphesizedWords: ["clear", "backup"] },
+                    { emphasizedWords: ["clear", "backup"] },
                 ),
                 confirmationHeader: getConfirmationHeaderFn,
             },
@@ -181,7 +183,7 @@ const dbActions: Action[] = [
                     [
                         "Are you sure you want to convert this database to memory only?",
                     ],
-                    { emphesizedWords: ["convert", "memory"] },
+                    { emphasizedWords: ["convert", "memory"] },
                 ),
                 confirmationHeader: getConfirmationHeaderFn,
             },
@@ -202,7 +204,7 @@ const dbActions: Action[] = [
                     [
                         "Are you sure you want to convert this database to file based database?",
                     ],
-                    { emphesizedWords: ["convert", "file"] },
+                    { emphasizedWords: ["convert", "file"] },
                 ),
                 confirmationHeader: getConfirmationHeaderFn,
             },
@@ -223,7 +225,7 @@ const dbActions: Action[] = [
                     [
                         "Are you sure you want to convert this database to memory mapped database?",
                     ],
-                    { emphesizedWords: ["convert", "mapped"] },
+                    { emphasizedWords: ["convert", "mapped"] },
                 ),
                 confirmationHeader: getConfirmationHeaderFn,
             },
@@ -232,13 +234,17 @@ const dbActions: Action[] = [
     {
         key: "copy",
         label: "Copy",
-        action: ({ params }: DbActionProps) => {
+        action: async ({ params }: DbActionProps) => {
             const new_db = getInputValue<string>(
                 KEY_MODAL,
                 "new_db",
             )?.toString();
+            const new_owner = getInputValue<string>(
+                KEY_MODAL,
+                "new_db",
+            )?.toString();
             const { db, owner } = params;
-            return client.value?.db_copy({ db, owner, new_db }).then(() => {
+            return dbCopy({ db, owner, new_db, new_owner }).then(() => {
                 addNotification({
                     type: "success",
                     title: "Database copied",
@@ -278,11 +284,11 @@ const dbActions: Action[] = [
         confirmation: [
             ...convertArrayOfStringsToContent(
                 ["Are you sure you want to delete this database?"],
-                { emphesizedWords: ["delete"] },
+                { emphasizedWords: ["delete"] },
             ),
             ...convertArrayOfStringsToContent(
                 ["This will permanently delete all data."],
-                { emphesizedWords: ["all data"] },
+                { emphasizedWords: ["all data"] },
             ),
         ],
         confirmationHeader: getConfirmationHeaderFn,
@@ -300,7 +306,7 @@ const dbActions: Action[] = [
             }),
         confirmation: convertArrayOfStringsToContent(
             ["Are you sure you want to optimize this database?"],
-            { emphesizedWords: ["optimize"] },
+            { emphasizedWords: ["optimize"] },
         ),
         confirmationHeader: getConfirmationHeaderFn,
     },
@@ -321,7 +327,7 @@ const dbActions: Action[] = [
                 "Are you sure you want to remove this database?",
                 "This will only disassociate the database from the server. No data will be deleted.",
             ],
-            { emphesizedWords: ["remove"] },
+            { emphasizedWords: ["remove"] },
         ),
         confirmationHeader: getConfirmationHeaderFn,
     },
@@ -376,7 +382,7 @@ const dbActions: Action[] = [
                 "Are you sure you want to restore backup of this database?",
                 "This will swap the existing db with the backup.",
             ],
-            { emphesizedWords: ["restore"] },
+            { emphasizedWords: ["restore"] },
         ),
         confirmationHeader: getConfirmationHeaderFn,
     },

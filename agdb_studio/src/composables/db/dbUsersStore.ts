@@ -1,8 +1,9 @@
 import { client } from "@/services/api.service";
 import type { DbUser, DbUserRole } from "agdb_api/dist/openapi";
 import { ref } from "vue";
-import { useDbStore, type DbIdentification } from "./dbStore";
+import { useDbStore } from "./dbStore";
 import { addNotification } from "../notification/notificationStore";
+import type { DbIdentification } from "./types";
 
 const { getDbName } = useDbStore();
 

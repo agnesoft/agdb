@@ -31,9 +31,10 @@ db_add.mockResolvedValue({
     },
 });
 
-const { username } = vi.hoisted(() => {
+const { username, admin } = vi.hoisted(() => {
     return {
         username: { value: "test_user" },
+        admin: { value: false },
     };
 });
 vi.mock("../user/account", () => {
@@ -41,6 +42,7 @@ vi.mock("../user/account", () => {
         useAccount: () => {
             return {
                 username,
+                admin,
             };
         },
     };

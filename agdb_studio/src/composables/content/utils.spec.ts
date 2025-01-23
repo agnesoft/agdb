@@ -25,9 +25,9 @@ describe("Content utils", () => {
         ]);
     });
 
-    it("emphesizes words in a text", () => {
+    it("emphasizes words in a text", () => {
         const content = convertArrayOfStringsToContent(["Next test Body"], {
-            emphesizedWords: ["test"],
+            emphasizedWords: ["test"],
         });
         expect(content).toEqual([
             {
@@ -37,7 +37,7 @@ describe("Content utils", () => {
                     },
                     {
                         text: "test",
-                        className: "emphesized",
+                        className: "emphasized",
                     },
                     {
                         text: " Body",

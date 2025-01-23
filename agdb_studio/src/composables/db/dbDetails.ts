@@ -5,7 +5,7 @@ import { useContentInputs } from "../content/inputs";
 import { computed, type Ref } from "vue";
 import useModal from "../modal/modal";
 import { KEY_MODAL } from "../modal/constants";
-import { EMPHESIZED_CLASSNAME } from "../content/utils";
+import { EMPHASIZED_CLASSNAME } from "../content/utils";
 
 export type DbDetailsParams = DbIdentification & Pick<ServerDatabase, "role">;
 
@@ -44,9 +44,9 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
                 {
                     paragraph: [
                         { text: "Are you sure you want to remove user " },
-                        { text: username, className: EMPHESIZED_CLASSNAME },
+                        { text: username, className: EMPHASIZED_CLASSNAME },
                         { text: " from database " },
-                        { text: dbName.value, className: EMPHESIZED_CLASSNAME },
+                        { text: dbName.value, className: EMPHASIZED_CLASSNAME },
                         { text: "?" },
                     ],
                 },
@@ -78,7 +78,7 @@ export const useDbDetails = (dbParams: Ref<DbDetailsParams>) => {
                 {
                     paragraph: [
                         { text: "Add/change user role in the database " },
-                        { text: dbName.value, className: EMPHESIZED_CLASSNAME },
+                        { text: dbName.value, className: EMPHASIZED_CLASSNAME },
                     ],
                 },
                 {

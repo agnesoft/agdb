@@ -3,9 +3,9 @@ type TableFilter = {
     sort: Map<string, "asc" | "desc">;
 };
 
-const tableFilters = new Map<Symbol | string, TableFilter>();
+const tableFilters = new Map<symbol | string, TableFilter>();
 
-const getTableFilter = (tableName: Symbol | string): TableFilter => {
+const getTableFilter = (tableName: symbol | string): TableFilter => {
     let tableFilter = tableFilters.get(tableName);
     if (!tableFilter) {
         tableFilter = { filters: new Map(), sort: new Map() };
@@ -15,7 +15,7 @@ const getTableFilter = (tableName: Symbol | string): TableFilter => {
 };
 
 const addFilter = (
-    tableName: Symbol | string,
+    tableName: symbol | string,
     columnKey: string,
     value: string,
 ): void => {
@@ -23,13 +23,13 @@ const addFilter = (
     tableFilter.filters.set(columnKey, value);
 };
 
-const removeFilter = (tableName: Symbol | string, filterKey: string): void => {
+const removeFilter = (tableName: symbol | string, filterKey: string): void => {
     const tableFilter = getTableFilter(tableName);
     tableFilter.filters.delete(filterKey);
 };
 
 const setSort = (
-    tableName: Symbol | string,
+    tableName: symbol | string,
     columnKey: string,
     direction: "asc" | "desc",
 ): void => {

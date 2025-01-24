@@ -14,7 +14,7 @@ export type Column<T extends TRow> = {
 };
 
 export type Table<T extends TRow> = {
-    name: Symbol | string;
+    name: symbol | string;
     columns: Map<string, Column<T>>;
     data?: Map<string, T>;
     rowDetailsComponent?: AsyncComponent;

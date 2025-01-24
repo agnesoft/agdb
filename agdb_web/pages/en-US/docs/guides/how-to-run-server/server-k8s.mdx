@@ -18,8 +18,8 @@ The `agdb_server` can be run in Kubernetes using official Docker image. Optional
 
 ### Requirements
 
--   Kubernetes cluster (you can enable local K8s cluster in Docker Desktop)
--   kubectl
+- Kubernetes cluster (you can enable local K8s cluster in Docker Desktop)
+- kubectl
 
 ### Stateful set yaml
 
@@ -166,9 +166,9 @@ curl -v http://agdb.default.svc.cluster.local:3000/api/v1/status # should return
 
 ### Additional considerations
 
--   You could use the `localhost:3000/api/v1/status` as a startup/readiness/health probe.
--   Standard shutdown procedure via the endpoint will not work as K8s will simply restart the server.
--   Consider running the [cluster](/docs/guides/how-to-run-server/cluster-k8s) rather than just a single node.
--   You should be able to adapt the above to other platforms such as AWS EKS.
+- You could use the `localhost:3000/api/v1/status` as a startup/readiness/health probe.
+- Standard shutdown procedure via the endpoint will not work as K8s will simply restart the server.
+- Consider running the [cluster](/docs/guides/how-to-run-server/cluster-k8s) rather than just a single node.
+- You should be able to adapt the above to other platforms such as AWS EKS.
 
 </Steps>

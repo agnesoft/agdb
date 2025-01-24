@@ -33,12 +33,16 @@ export const CodeBlock: FC<CodeBlockProps> = ({
     const codeRef = useRef(null);
 
     useEffect(() => {
-        codeRef.current && highlight(codeRef.current);
+        if (codeRef.current) {
+            highlight(codeRef.current);
+        }
     }, [code, highlight]);
 
     const handleShowClick = () => {
         setHidden(false);
-        !code && onLoad && onLoad();
+        if (!code && onLoad) {
+            onLoad();
+        }
     };
 
     return (

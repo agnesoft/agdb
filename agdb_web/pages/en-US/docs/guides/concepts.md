@@ -15,12 +15,12 @@ Nodes and edges are `graph elements` and each can have key-value pairs associate
 
 **Terminology:**
 
--   Graph (set of nodes and edges)
--   Node (point on a graph)
--   Edge (connection between two nodes)
--   Graph elements (nodes & edges)
--   `db id` (graph element `id`, positive for nodes, negative for edges)
--   Values (key-value pairs associated with a node or an edge)
+- Graph (set of nodes and edges)
+- Node (point on a graph)
+- Edge (connection between two nodes)
+- Graph elements (nodes & edges)
+- `db id` (graph element `id`, positive for nodes, negative for edges)
+- Values (key-value pairs associated with a node or an edge)
 
 ## Query
 
@@ -36,10 +36,10 @@ See dedicated [queries](/docs/references/queries) documentation for details.
 
 **Terminology:**
 
--   Query (request to retrieve or manipulate data)
--   Immutable query (request to retrieve data)
--   Mutable query (request to manipulate data)
--   Result (result of a query)
+- Query (request to retrieve or manipulate data)
+- Immutable query (request to retrieve data)
+- Mutable query (request to manipulate data)
+- Result (result of a query)
 
 ## Transaction
 
@@ -53,9 +53,9 @@ In multithreaded environment you can easily synchronize the access to the databa
 
 **Terminology:**
 
--   Transaction (set of queries to be executed atomically against a database wrapped in a closure)
--   Mutable transaction (set of mutable & immutable queries wrapped in a closure)
--   Immutable transaction (set of immutable queries wrapped in a closure)
+- Transaction (set of queries to be executed atomically against a database wrapped in a closure)
+- Mutable transaction (set of mutable & immutable queries wrapped in a closure)
+- Immutable transaction (set of immutable queries wrapped in a closure)
 
 ## Storage
 
@@ -69,11 +69,11 @@ Just like the memory the main database file will get fragmented over time. Secto
 
 The storage taken by individual elements and properties is generally as follows:
 
--   node: 32 bytes
--   edge: 32 bytes
--   single key or value (<=15 bytes): 16 bytes
--   single key or value (>15 bytes): 32 bytes (+)
--   key-value pair: 32 bytes (+)
+- node: 32 bytes
+- edge: 32 bytes
+- single key or value (<=15 bytes): 16 bytes
+- single key or value (>15 bytes): 32 bytes (+)
+- key-value pair: 32 bytes (+)
 
 The size of the graph elements (nodes & edges) is fixed. The size of the properties (key-value pairs) is at least 32 bytes (16 per key and 16 per value) but can be greater if the value itself is greater. This creates some inefficiency for small values (e.g. integers) but it also allows application of small value optimization where values up to 15 bytes in size (e.g. strings) do not allocate or take extra space. When a value is larger than 15 bytes it will be stored separately with another 16 bytes overhead making it at least `32 + value length` bytes.
 
@@ -81,22 +81,22 @@ The reason for values taking 16 bytes at minimum instead of 8 is that the value 
 
 **Terminology:**
 
--   File storage (underlying single data file)
--   Write ahead log (WAL, shadowing file storage to provide durability)
+- File storage (underlying single data file)
+- Write ahead log (WAL, shadowing file storage to provide durability)
 
 ## Data types
 
 Supported types of both keys and values are:
 
--   `i64`
--   `u64`
--   `f64`
--   `String`
--   `Vec<u8>`
--   `Vec<i64>`
--   `Vec<u64>`
--   `Vec<f64>`
--   `Vec<String>`
+- `i64`
+- `u64`
+- `f64`
+- `String`
+- `Vec<u8>`
+- `Vec<i64>`
+- `Vec<u64>`
+- `Vec<f64>`
+- `Vec<String>`
 
 It is an enum of limited number of supported types that are universal across all platforms and programming languages. They are serialized in file as follows:
 

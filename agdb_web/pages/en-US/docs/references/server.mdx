@@ -149,8 +149,8 @@ While the server serves each request asynchronously and can serve any number of 
 
 There can be either:
 
--   unlimited amount of immutable transactions
--   exactly one mutable transaction
+- unlimited amount of immutable transactions
+- exactly one mutable transaction
 
 However, the `agdb` is written in such a way that it performs excellently even under heavily contested read/write load. See `agdb_benchmarks` and [performance documentation](/docs/references/performance).
 
@@ -184,12 +184,12 @@ You can an in most cases should run the server in a cluster for resiliency and d
 
 The `agdb_server` is using custom implementation of a [Raft consensus algorithm](<https://en.wikipedia.org/wiki/Raft_(algorithm)>). The benefits of the algorithm are durability, data consistency and speed as the actions do not need to be persisted to all nodes (only majority) before acknowledging the client. The custom implementation in `agdb` additionally offers the following features and guarantees atop of Raft:
 
--   Write action acknowledgement happens only when the respective action was executed fully (not just that the action was received by the majority as is the standard implementation).
--   Clients can request write operations through any member of the cluster (not only the leader) and the node will forward it to the current leader and act as a proxy.
--   When forwarding the action the node will only acknowledge the client when both of the following becomes true:
-    -   The leader committed the operation meaning the majority of the nodes persisted the action.
-    -   The node through which the action was performed executed the action itself and in full.
--   Even when there is no leader elected such as when the cluster is being (re)deployed the read operations are always available
+- Write action acknowledgement happens only when the respective action was executed fully (not just that the action was received by the majority as is the standard implementation).
+- Clients can request write operations through any member of the cluster (not only the leader) and the node will forward it to the current leader and act as a proxy.
+- When forwarding the action the node will only acknowledge the client when both of the following becomes true:
+    - The leader committed the operation meaning the majority of the nodes persisted the action.
+    - The node through which the action was performed executed the action itself and in full.
+- Even when there is no leader elected such as when the cluster is being (re)deployed the read operations are always available
 
 This means that you can freely choose a node and perform any action through it and observe consistent results at the minor performance penalty due to the forwarding (unless you picked the leader node). It might be useful in situations where reads are more frequent as they would be more spread out across the cluster.
 
@@ -231,11 +231,11 @@ cluster: ["http://localhost:3000", "http://localhost:3001", "http://localhost:30
 
 The node0 will have the index `0`, the node1 will have the index `1` and node2 will have the index `2` as their respective addresses (`address` field) match these indexes in the `cluster` array which itself is the same in all configs and thus produces the same cluster hash. This mechanism helps protect the cluster during topology change. However, if you need to change number of nodes in the cluster, you risk the [split brain issue](<https://en.wikipedia.org/wiki/Split-brain_(computing)>). For instance if you changed the number of nodes from 3 to 5 on node0 then the node1 and node2 would still see the old topology of 3 nodes, elect either as leader and continued as normal. Whereas the node0 with the 2 new nodes could do the same (as majority in cluster of 5 is 3 nodes). If you must for any reason change the topology:
 
--   Perform backup of all nodes
--   Prevent new nodes from starting (do NOT start new nodes under any circumstances yet)
--   Update the configuration of the OLD (existing) nodes with the new nodes one by one
--   Wait for the cluster leader to be established (this is only possible if the majority rules allow it: going from 3 to 5 is fine, going from 3 to 7 is not)
--   Bring the new nodes up and let them synchronize with the leader
+- Perform backup of all nodes
+- Prevent new nodes from starting (do NOT start new nodes under any circumstances yet)
+- Update the configuration of the OLD (existing) nodes with the new nodes one by one
+- Wait for the cluster leader to be established (this is only possible if the majority rules allow it: going from 3 to 5 is fine, going from 3 to 7 is not)
+- Bring the new nodes up and let them synchronize with the leader
 
 <Callout type="warning">
     Make topology changes only when absolutely necessary and excercise great

@@ -21,9 +21,10 @@ export default typescriptEslint.config(
                 parser: typescriptEslint.parser,
             },
         },
-        rules: {
-            "@typescript-eslint/no-explicit-any": "off",
-        },
     },
     eslintConfigPrettier,
+    {
+        files: ["src/composables/graph/prototype/**/*.{ts,vue}"],
+        rules: { "@typescript-eslint/no-explicit-any": "off" },
+    },
 );

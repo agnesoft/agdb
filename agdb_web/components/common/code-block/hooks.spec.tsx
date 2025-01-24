@@ -11,12 +11,24 @@ const { languagePackMock } = vi.hoisted(() => ({
 
 vi.mock("highlight.js/lib/core");
 
-vi.mock("highlight.js/lib/languages/json", () => languagePackMock);
-vi.mock("highlight.js/lib/languages/rust", () => languagePackMock);
-vi.mock("highlight.js/lib/languages/python", () => languagePackMock);
-vi.mock("highlight.js/lib/languages/php", () => languagePackMock);
-vi.mock("highlight.js/lib/languages/javascript", () => languagePackMock);
-vi.mock("highlight.js/lib/languages/typescript", () => languagePackMock);
+vi.mock("highlight.js/lib/languages/json", () => {
+    return { default: languagePackMock };
+});
+vi.mock("highlight.js/lib/languages/rust", () => {
+    return { default: languagePackMock };
+});
+vi.mock("highlight.js/lib/languages/python", () => {
+    return { default: languagePackMock };
+});
+vi.mock("highlight.js/lib/languages/php", () => {
+    return { default: languagePackMock };
+});
+vi.mock("highlight.js/lib/languages/javascript", () => {
+    return { default: languagePackMock };
+});
+vi.mock("highlight.js/lib/languages/typescript", () => {
+    return { default: languagePackMock };
+});
 
 describe("useHighlight", () => {
     beforeEach(() => {

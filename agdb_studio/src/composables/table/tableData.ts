@@ -14,7 +14,7 @@ const getRowKey = <T extends TRow>(
 };
 
 const setTableData = <T extends TRow>(
-    tableName: Symbol | string,
+    tableName: symbol | string,
     data: T[],
 ): void => {
     const table = getTable<TRow>(tableName);
@@ -32,7 +32,7 @@ const setTableData = <T extends TRow>(
     }
 };
 
-const addRow = <T extends TRow>(tableName: Symbol | string, row: T): void => {
+const addRow = <T extends TRow>(tableName: symbol | string, row: T): void => {
     const table = getTable<T>(tableName);
 
     const rowKey = getRowKey(row, table?.uniqueKey);
@@ -41,19 +41,19 @@ const addRow = <T extends TRow>(tableName: Symbol | string, row: T): void => {
 };
 
 const removeRow = <T extends TRow>(
-    tableName: Symbol | string,
+    tableName: symbol | string,
     rowKey: string,
 ): void => {
     const table = getTable<T>(tableName);
     table?.data?.delete(rowKey);
 };
 
-const clearTableData = <T extends TRow>(tableName: Symbol | string): void => {
+const clearTableData = <T extends TRow>(tableName: symbol | string): void => {
     const table = getTable<T>(tableName);
     table?.data?.clear();
 };
 
-const getRows = <T extends TRow>(tableName: Symbol | string): [string, T][] => {
+const getRows = <T extends TRow>(tableName: symbol | string): [string, T][] => {
     const table = getTable<T>(tableName);
     if (!table?.data) {
         return [];

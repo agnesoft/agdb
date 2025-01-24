@@ -1,22 +1,22 @@
 import { reactive, ref, type Reactive } from "vue";
 
-const inputs = ref(new Map<Symbol, Map<string, Reactive<Input>>>());
+const inputs = ref(new Map<symbol, Map<string, Reactive<Input>>>());
 
 const getContentInputs = (
-    contentKey: Symbol,
+    contentKey: symbol,
 ): Map<string, Reactive<Input>> | undefined => {
     return inputs.value.get(contentKey);
 };
 
 const getInputValue = <T = string | number | boolean | undefined>(
-    contentKey: Symbol,
+    contentKey: symbol,
     inputKey: string,
 ): T => {
     return inputs.value.get(contentKey)?.get(inputKey)?.value as T;
 };
 
 const setInputValue = (
-    contentKey: Symbol,
+    contentKey: symbol,
     inputKey: string | undefined,
     value: string | number | boolean | undefined,
 ): void => {
@@ -31,7 +31,7 @@ const setInputValue = (
     input.value = value;
 };
 
-const clearInputs = (contentKey: Symbol) => {
+const clearInputs = (contentKey: symbol) => {
     const inputsMap = inputs.value.get(contentKey);
     inputsMap?.forEach((input) => {
         input.error = undefined;
@@ -40,7 +40,7 @@ const clearInputs = (contentKey: Symbol) => {
     inputsMap?.clear();
 };
 
-const addInput = (contentKey: Symbol, params: Input): void => {
+const addInput = (contentKey: symbol, params: Input): void => {
     const inputsMap = inputs.value.get(contentKey);
     if (!inputsMap) {
         inputs.value.set(contentKey, new Map());
@@ -52,7 +52,7 @@ const clearAllInputs = (): void => {
     inputs.value.clear();
 };
 
-const checkInputsRules = (contentKey: Symbol): boolean => {
+const checkInputsRules = (contentKey: symbol): boolean => {
     const inputsMap = inputs.value.get(contentKey);
     if (!inputsMap) {
         return true;

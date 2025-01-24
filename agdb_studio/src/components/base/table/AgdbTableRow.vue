@@ -30,7 +30,7 @@ const rowData = computed(() => {
 });
 provide(INJECT_KEY_ROW, rowData);
 
-const tableKey = inject<Ref<Symbol | string>>(INJECT_KEY_TABLE_NAME);
+const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
 const rowDetailsComponent = computed(() => {
     const name = tableKey
         ? getTable(tableKey.value)?.rowDetailsComponent

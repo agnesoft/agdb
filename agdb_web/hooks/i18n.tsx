@@ -40,6 +40,7 @@ export const useI18n = () => {
     useEffect(() => {
         import(`../messages/${defaultLocale}.json`)
             .then(processFallbackMessages)
+            /* v8 ignore next */
             .catch(() => setFallbackMessages(new Map<string, string>()));
     }, [defaultLocale]);
 

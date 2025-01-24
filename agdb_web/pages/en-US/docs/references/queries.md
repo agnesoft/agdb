@@ -97,8 +97,8 @@ flowchart LR
 
 All interactions with the `agdb` are realized through queries. There are two kinds of queries:
 
--   Immutable queries
--   Mutable queries
+- Immutable queries
+- Mutable queries
 
 Immutable queries read the data from the database through `select` and `search` queries. Mutable queries write to or delete from the database through `insert` and `remove` queries. All queries follow the Rust rules about borrowing:
 
@@ -159,21 +159,21 @@ In some cases you may want to implement the `DbUserValue` trait yourself. For ex
 
 Types not directly used in the database but for which the conversions are supported:
 
--   u32 <=> u64
--   i32 <=> i64
--   f32 <=> f64
--   Vec<i32> <=> Vec<i64>
--   Vec<u32> <=> Vec<u64>
--   Vec<f32> <=> Vec<f64>
--   &str => String (only one way conversion to `String`)
--   Vec<&str> => Vec<String> (only one way conversion to `Vec<String>`)
--   bool (\*)
+- u32 <=> u64
+- i32 <=> i64
+- f32 <=> f64
+- Vec<i32> <=> Vec<i64>
+- Vec<u32> <=> Vec<u64>
+- Vec<f32> <=> Vec<f64>
+- &str => String (only one way conversion to `String`)
+- Vec<&str> => Vec<String> (only one way conversion to `Vec<String>`)
+- bool (\*)
 
 \* The boolean type is not a native type in the `agdb`, but you can still use it in your types in any language. The `bool` type will be converted to `u64` (0 == false, 1 == true). The `Vec<bool>` type will be converted to `Vec<u8>` (bytes, 0 == false, 1 == true). The conversion back to `bool` is possible from wider range of values - the same rules apply for vectorized version which however cannot be converted to from single values:
 
--   u64 / i64: any non-zero value will be `true`
--   f64: any value except `0.0` will be `true`
--   string: only `"true"` or `"1"` will be `true`
+- u64 / i64: any non-zero value will be `true`
+- f64: any value except `0.0` will be `true`
+- string: only `"true"` or `"1"` will be `true`
 
 ### QueryResult
 
@@ -290,8 +290,8 @@ This is especially important because it can change the meaning of a query making
 
 Mutable queries are the way to modify the data in the database. Remember there can only be a mutable query running against the database at any one time preventing all other mutable or immutable queries running concurrently. There are two types of mutable queries:
 
--   insert
--   remove
+- insert
+- remove
 
 The `insert` queries are used for both insert and updating data while `remove` queries are used to delete data from the database.
 
@@ -299,8 +299,8 @@ The `insert` queries are used for both insert and updating data while `remove` q
 
 Immutable queries read the data from the database and there can be an unlimited number of concurrent queries running against the database at the same time. There are two types of immutable queries:
 
--   select
--   search
+- select
+- search
 
 The `select` queries are used to read the data from the database using known `id`s of elements. The `search` queries are used to find the `id`s and the result of search queries is thus often combined with the `select` queries.
 
@@ -330,11 +330,11 @@ Worth noting is that regular `exec / exec_mut` methods on the `Db` object are ac
 
 There are 5 distinct insert queries:
 
--   insert aliases
--   insert edges
--   insert nodes
--   insert index
--   insert values
+- insert aliases
+- insert edges
+- insert nodes
+- insert index
+- insert values
 
 ### Insert aliases
 
@@ -535,8 +535,8 @@ QueryBuilder::insert().values_uniform([("k", "v").into(), (1, 10).into()]).searc
 
 Inserts or updates key-value pairs (properties) of existing elements or insert new elements (nodes). You need to specify the `ids` [`QueryIds`](#queryids--queryid) and the list of `values`. The `values` can be either [`QueryValues::Single`](#queryvalues) that will insert the single set of properties to all elements identified by `ids` or [`QueryValues::Multi`](#queryvalues) that will insert to each `id` its own set of properties, but their number must match the number of `ids`. If the user defined type contains `db_id` field of type `Option<T: Into<QueryId>>` you can use the shorthand `insert().element() / .insert().elements()` that will infer the values and `ids` from your types. The `values()` will be inferred from user defined types if they implement `DbUserValue` trait (`#derive(agdb::UserValue)`). Both singular and vectorized versions are supported.
 
--   If an `id` is non-0 or an existing alias that element will be updated in the database with provided values.
--   If an `id` is `0` or a non-existent alias new element (node) will be inserted into the database with that alias.
+- If an `id` is non-0 or an existing alias that element will be updated in the database with provided values.
+- If an `id` is `0` or a non-existent alias new element (node) will be inserted into the database with that alias.
 
 Note: that this query is insert-or-update for both nodes and existing values. By inserting the same `key` its old value will be overwritten with the new one.
 
@@ -544,10 +544,10 @@ Note: that this query is insert-or-update for both nodes and existing values. By
 
 There are 4 distinct remove queries:
 
--   remove aliases
--   remove (elements)
--   remove index
--   remove values
+- remove aliases
+- remove (elements)
+- remove index
+- remove values
 
 ### Remove aliases
 
@@ -679,14 +679,14 @@ The properties (key-value pairs) identified by `keys` and associated with `ids` 
 
 There are following select queries:
 
--   select aliases
--   select all aliases
--   select edge count
--   select (elements)
--   select indexes
--   select keys
--   select key count
--   select values
+- select aliases
+- select all aliases
+- select edge count
+- select (elements)
+- select indexes
+- select keys
+- select key count
+- select values
 
 ### Select aliases
 
@@ -1155,28 +1155,28 @@ QueryBuilder::search().from(1).where_().node().or().where_().edge().and().key("k
 
 The currently supported conditions are:
 
--   Where (opens nested list of conditions)
--   Edge (if the element is an `edge`)
--   Node (if the element is a `node`)
--   Distance (if the current distance of the search satisfies the numerical comparison, each graph element away from the start increases the distance, including edges, i.e. second node from start is at distance `2`)
--   EdgeCount (if the element is a node and total number of edges (in and out) satisfies the numerical comparison - self-referential edges are counted twice)
--   EdgeCountFrom (if the element is a node and total number of outgoing edges satisfies the numerical comparison)
--   EdgeCountTo (if the element is a node and total number of incoming edges satisfies the numerical comparison)
--   Ids (if the element `id` is in the list)
--   KeyValue (if the element's property has the `key` and its value satisfies `value` comparison)
--   Keys (if the element has all the `keys` regardless of their values)
--   EndWhere (closes nested list of conditions)
+- Where (opens nested list of conditions)
+- Edge (if the element is an `edge`)
+- Node (if the element is a `node`)
+- Distance (if the current distance of the search satisfies the numerical comparison, each graph element away from the start increases the distance, including edges, i.e. second node from start is at distance `2`)
+- EdgeCount (if the element is a node and total number of edges (in and out) satisfies the numerical comparison - self-referential edges are counted twice)
+- EdgeCountFrom (if the element is a node and total number of outgoing edges satisfies the numerical comparison)
+- EdgeCountTo (if the element is a node and total number of incoming edges satisfies the numerical comparison)
+- Ids (if the element `id` is in the list)
+- KeyValue (if the element's property has the `key` and its value satisfies `value` comparison)
+- Keys (if the element has all the `keys` regardless of their values)
+- EndWhere (closes nested list of conditions)
 
 All conditions can be further modified as follows:
 
--   Beyond (continues the search only beyond this element)
--   Not (reverses the condition result)
--   NotBeyond (stops the search beyond this element)
+- Beyond (continues the search only beyond this element)
+- Not (reverses the condition result)
+- NotBeyond (stops the search beyond this element)
 
 The conditions can be changed with logic operators:
 
--   And (logical `and`)
--   Or (logical `or`)
+- And (logical `and`)
+- Or (logical `or`)
 
 NOTE: The use of `where_` with an underscore as the method name is necessary to avoid conflict with the Rust keyword.
 

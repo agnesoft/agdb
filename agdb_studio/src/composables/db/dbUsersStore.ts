@@ -1,4 +1,3 @@
-import { client } from "@/services/api.service";
 import type { DbUser, DbUserRole } from "agdb_api/dist/openapi";
 import { ref } from "vue";
 import { useDbStore } from "./dbStore";

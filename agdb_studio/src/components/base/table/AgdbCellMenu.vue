@@ -9,7 +9,7 @@ import { useDbStore } from "@/composables/db/dbStore";
 import useModal from "@/composables/modal/modal";
 
 const props = defineProps({
-    actions: { type: Array as PropType<Action<any>[]>, required: true },
+    actions: { type: Array as PropType<Action<TRow>[]>, required: true },
 });
 
 const row = inject<Ref<TRow>>(INJECT_KEY_ROW);

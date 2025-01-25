@@ -17,8 +17,8 @@ onMounted(async () => {
             <DbAddForm />
             <button
                 class="button refresh"
-                @click="fetchDatabases"
                 title="refresh"
+                @click="fetchDatabases"
             >
                 <JaRefreshReverse />
             </button>

@@ -9,7 +9,7 @@ import { dbAdd, dbList } from "./dbActions";
 const databases = ref<ServerDatabase[]>([]);
 
 const fetchDatabases = async () => {
-    dbList().then((dbs: AxiosResponse<ServerDatabase[], any>) => {
+    dbList().then((dbs: AxiosResponse<ServerDatabase[]>) => {
         databases.value = dbs.data;
     });
 };

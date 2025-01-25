@@ -30,7 +30,7 @@ export const dbAdd = async (params: {
 
 export const dbAudit = async (
     params: DbIdentification,
-): Promise<AxiosResponse<Components.Schemas.DbAudit, any>> => {
+): Promise<AxiosResponse<Components.Schemas.DbAudit>> => {
     checkClient(client);
     if (shouldRunAdminAction()) {
         return client.value.admin_db_audit(params);
@@ -120,9 +120,7 @@ export const dbExecMut = async (
     return client.value.db_exec_mut(params);
 };
 
-export const dbList = async (): Promise<
-    AxiosResponse<ServerDatabase[], any>
-> => {
+export const dbList = async (): Promise<AxiosResponse<ServerDatabase[]>> => {
     checkClient(client);
     if (shouldRunAdminAction()) {
         return client.value.admin_db_list();

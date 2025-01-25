@@ -143,21 +143,12 @@ pub(crate) async fn status(
     let mut statuses = vec![ClusterStatus::default(); config.cluster.len()];
     let mut tasks = Vec::new();
     let leader = cluster.raft.read().await.leader();
-    let root_ca = cluster::root_ca(&config)?;
-    let mut client = reqwest::Client::builder();
-
-    #[cfg(feature = "tls")]
-    if let Some(root_ca) = root_ca {
-        client = client.add_root_certificate(root_ca);
-    }
-
-    let client = client.build()?;
 
     for (index, node) in config.cluster.iter().enumerate() {
         if index != cluster.index {
             let address = node.as_str().to_string();
             let url = format!("{}/api/v1/status", node.trim_end_matches("/"));
-            let client = client.clone();
+            let client = cluster::reqwest_client(&config)?;
 
             tasks.push(tokio::spawn(async move {
                 let response = client

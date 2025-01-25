@@ -10,8 +10,8 @@ FROM rust:alpine AS builder_server
 WORKDIR /usr/src/agdb_server
 COPY . .
 COPY --from=builder_studio /usr/src/agdb_studio/agdb_studio/dist /usr/src/agdb_server/agdb_studio/dist
-RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static
-RUN cargo build --package agdb_server --release
+RUN apk add --no-cache musl-dev
+RUN cargo build -r -p agdb_server --all-featurs
 
 FROM alpine:latest
 COPY --from=builder_server /usr/src/agdb_server/target/release/agdb_server /usr/local/bin/agdb_server

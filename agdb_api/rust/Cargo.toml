@@ -14,8 +14,10 @@ categories = ["database", "api-bindings"]
 [lib]
 
 [features]
+default = []
 reqwest = ["dep:reqwest"]
-tls = ["reqwest/rustls-tls"]
+rust-tls = ["reqwest/rustls-tls"]
+native-tls = ["reqwest/native-tls"]
 
 [dependencies]
 agdb = { version = "0.10.0", path = "../../agdb", features = ["serde", "openapi"] }

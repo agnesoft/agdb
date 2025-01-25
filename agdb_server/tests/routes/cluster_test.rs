@@ -1,6 +1,7 @@
 use crate::create_cluster;
 use crate::next_db_name;
 use crate::next_user_name;
+use crate::reqwest_client;
 use crate::wait_for_leader;
 use crate::wait_for_ready;
 use crate::TestCluster;
@@ -13,18 +14,12 @@ use agdb_api::DbResource;
 use agdb_api::DbType;
 use agdb_api::DbUserRole;
 use agdb_api::ReqwestClient;
-use std::time::Duration;
 
 #[tokio::test]
 async fn rebalance() -> anyhow::Result<()> {
     let mut servers = create_cluster(3, false).await?;
     let mut leader = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .use_rustls_tls()
-                .timeout(Duration::from_secs(30))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &servers[0].address,
     );
     leader.user_login(ADMIN, ADMIN).await?;
@@ -35,12 +30,7 @@ async fn rebalance() -> anyhow::Result<()> {
 
     for server in &servers[1..] {
         let status = wait_for_leader(&AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .use_rustls_tls()
-                    .timeout(Duration::from_secs(30))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest_client()),
             &server.address,
         ))
         .await?;
@@ -58,12 +48,7 @@ async fn rebalance() -> anyhow::Result<()> {
 
     for server in &servers {
         let status = wait_for_leader(&AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .use_rustls_tls()
-                    .timeout(Duration::from_secs(30))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest_client()),
             &server.address,
         ))
         .await?;

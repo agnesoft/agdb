@@ -169,9 +169,11 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 
 ### agdb_api
 
-| Feature | Default | Description                                                                                                                                 |
-| ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| reqwest | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
+| Feature    | Default | Description                                                                                                                                 |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| reqwest    | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
+| rust-tls   | no      | Enables rust-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                                                                   |
+| native-tls | no      | Enables native-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                                                                 |
 
 ### agdb_server
 

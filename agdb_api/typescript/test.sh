@@ -1,7 +1,7 @@
 rm -f agdb_server.yaml
 rm -rf agdb_server_data
-cargo build --release -p agdb_server
-cargo run --release -p agdb_server &
+cargo build -r -p agdb_server --all-features
+cargo run -r -p agdb_server &
 
 npx vitest run --coverage
 error_code=$?

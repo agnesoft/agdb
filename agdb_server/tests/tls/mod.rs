@@ -1,5 +1,5 @@
 use crate::create_cluster;
-use crate::root_ca;
+use crate::reqwest_client;
 use crate::wait_for_leader;
 use crate::wait_for_ready;
 use crate::TestServerImpl;
@@ -8,7 +8,6 @@ use crate::SERVER_DATA_DIR;
 use agdb_api::AgdbApi;
 use agdb_api::ReqwestClient;
 use std::collections::HashMap;
-use std::time::Duration;
 
 #[tokio::test]
 async fn https() -> anyhow::Result<()> {
@@ -49,13 +48,7 @@ async fn https() -> anyhow::Result<()> {
 async fn cluster() -> anyhow::Result<()> {
     let mut servers = create_cluster(3, true).await?;
     let mut leader = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .add_root_certificate(root_ca())
-                .use_rustls_tls()
-                .timeout(Duration::from_secs(30))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &servers[0].address,
     );
     leader.user_login(ADMIN, ADMIN).await?;
@@ -66,13 +59,7 @@ async fn cluster() -> anyhow::Result<()> {
 
     for server in &servers[1..] {
         let status = wait_for_leader(&AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .add_root_certificate(root_ca())
-                    .use_rustls_tls()
-                    .timeout(Duration::from_secs(30))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest_client()),
             &server.address,
         ))
         .await?;
@@ -90,13 +77,7 @@ async fn cluster() -> anyhow::Result<()> {
 
     for server in &servers {
         let status = wait_for_leader(&AgdbApi::new(
-            ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .add_root_certificate(root_ca())
-                    .use_rustls_tls()
-                    .timeout(Duration::from_secs(30))
-                    .build()?,
-            ),
+            ReqwestClient::with_client(reqwest_client()),
             &server.address,
         ))
         .await?;

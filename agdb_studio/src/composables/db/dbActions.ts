@@ -9,12 +9,11 @@ import type {
     ServerDatabase,
 } from "agdb_api/dist/openapi";
 import type { AxiosResponse } from "axios";
-import { computed } from "vue";
 import type { DbIdentification } from "./types";
 
 const { isAdminView, isAdmin } = useAdmin();
 
-const shouldRunAdminAction = computed(() => isAdminView.value && isAdmin.value);
+const shouldRunAdminAction = () => isAdminView.value && isAdmin.value;
 
 export const dbAdd = async (params: {
     owner: string;
@@ -22,7 +21,7 @@ export const dbAdd = async (params: {
     db_type: DbType;
 }): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_add(params);
     }
 
@@ -33,7 +32,7 @@ export const dbAudit = async (
     params: DbIdentification,
 ): Promise<AxiosResponse<Components.Schemas.DbAudit, any>> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_audit(params);
     }
 
@@ -44,7 +43,7 @@ export const dbBackup = async (
     params: DbIdentification,
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_backup(params);
     }
 
@@ -55,7 +54,7 @@ export const dbClear = async (
     params: DbIdentification & { resource: DbResource },
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_clear(params);
     }
 
@@ -66,7 +65,7 @@ export const dbConvert = async (
     params: DbIdentification & { db_type: DbType },
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_convert(params);
     }
 
@@ -80,7 +79,7 @@ export const dbCopy = async (
     },
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_copy(params);
     }
     const { new_owner, ...rest } = params; // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -92,7 +91,7 @@ export const dbDelete = async (
     params: DbIdentification,
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_delete(params);
     }
 
@@ -103,7 +102,7 @@ export const dbExec = async (
     params: DbIdentification & { sql: string },
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_exec(params);
     }
 
@@ -114,7 +113,7 @@ export const dbExecMut = async (
     params: DbIdentification & { sql: string },
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_exec_mut(params);
     }
 
@@ -125,7 +124,7 @@ export const dbList = async (): Promise<
     AxiosResponse<ServerDatabase[], any>
 > => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_list();
     }
 
@@ -136,7 +135,7 @@ export const dbOptimize = async (
     params: DbIdentification,
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_optimize(params);
     }
 
@@ -147,7 +146,7 @@ export const dbRemove = async (
     params: DbIdentification,
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_remove(params);
     }
 
@@ -161,7 +160,7 @@ export const dbRename = async (
     },
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_rename(params);
     }
     const { new_owner, ...rest } = params; // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -173,7 +172,7 @@ export const dbRestore = async (
     params: DbIdentification,
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_restore(params);
     }
 
@@ -187,7 +186,7 @@ export const dbUserAdd = async (
     } & DbIdentification,
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_user_add(params);
     }
 
@@ -198,7 +197,7 @@ export const dbUserList = async (
     params: DbIdentification,
 ): Promise<AxiosResponse<DbUser[]>> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_user_list(params);
     }
 
@@ -211,7 +210,7 @@ export const dbUserRemove = async (
     } & DbIdentification,
 ): Promise<AxiosResponse> => {
     checkClient(client);
-    if (shouldRunAdminAction.value) {
+    if (shouldRunAdminAction()) {
         return client.value.admin_db_user_remove(params);
     }
 

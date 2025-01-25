@@ -72,6 +72,7 @@ describe("dbActions", () => {
     describe("user actions", () => {
         beforeEach(() => {
             isAdmin.value = false;
+            isAdminView.value = false;
         });
         it("should add a database", async () => {
             dbActions.dbAdd({
@@ -364,6 +365,7 @@ describe("dbActions", () => {
                 owner: "test_user",
                 db: "test_db",
                 new_db: "new_db",
+                new_owner: "new_user",
             });
         });
 
@@ -372,12 +374,13 @@ describe("dbActions", () => {
                 owner: "test_user",
                 db: "test_db",
                 new_db: "new_db",
-                new_owner: "",
+                new_owner: "new_user",
             });
             expect(admin_db_rename).toHaveBeenCalledWith({
                 owner: "test_user",
                 db: "test_db",
                 new_db: "new_db",
+                new_owner: "new_user",
             });
         });
 

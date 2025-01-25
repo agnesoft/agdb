@@ -1,5 +1,4 @@
 import { ref } from "vue";
-import { client } from "@/services/api.service";
 import type { DbType, ServerDatabase } from "agdb_api/dist/openapi";
 import { useAccount } from "../user/account";
 import { addNotification } from "../notification/notificationStore";
@@ -38,20 +37,6 @@ const addDatabase = async ({ name, db_type }: AddDatabaseProps) => {
             message: `Database ${name} added successfully.`,
         });
     });
-
-    // runDbAction<{ owner: string; db: string; db_type: DbType }, any>(
-    //     DbAction.DB_ADD,
-    // )?.({
-    //     owner: username.value,
-    //     db: name,
-    //     db_type,
-    // }).then(() => {
-    //     addNotification({
-    //         type: "success",
-    //         title: "Database added",
-    //         message: `Database ${name} added successfully.`,
-    //     });
-    // });
 };
 
 const getDbName = (db: DbIdentification) => {

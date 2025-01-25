@@ -141,6 +141,88 @@ describe("AgdbCellMenu", () => {
         expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
         expect(modal.header).toBe(header);
     });
+    it("should create confirmation content from function", async () => {
+        const deleteAction = vi.fn();
+        const question = "Are you sure you want to delete this database?";
+        const header = "Delete Database";
+        const deleteConfirmation = vi
+            .fn()
+            .mockReturnValue(
+                convertArrayOfStringsToContent([
+                    question,
+                    "This will permanently delete all data.",
+                ]),
+            );
+        const wrapper = mount(AgdbCellMenu, {
+            props: {
+                actions: [
+                    {
+                        key: "delete",
+                        label: "Delete",
+                        action: deleteAction,
+                        confirmation: deleteConfirmation,
+                        confirmationHeader: header,
+                    },
+                ],
+            },
+            global: {
+                provide: {
+                    [INJECT_KEY_ROW]: {
+                        value: {
+                            role: "admin",
+                            owner: "admin",
+                            db: "test",
+                            db_type: "memory",
+                            size: 2656,
+                            backup: 0,
+                        },
+                    },
+                },
+            },
+        });
+
+        const trigger = wrapper.find(".trigger");
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
+        trigger.trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(dropdown.isVisible()).toBe(true);
+        const action = dropdown.find(".menu-item[data-key=delete]");
+        await action.trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(dropdown.isVisible()).toBe(false);
+        expect(modalIsVisible.value).toBe(true);
+        onConfirm.value?.();
+        expect(deleteAction).toHaveBeenCalledOnce();
+        expect(modal.content[0].paragraph?.at(0)?.text).toBe(question);
+        expect(modal.header).toBe(header);
+    });
+
+    it("should handle if row is not provided", async () => {
+        const deleteAction = vi.fn();
+        const header = "Delete Database";
+        const wrapper = mount(AgdbCellMenu, {
+            props: {
+                actions: [
+                    {
+                        key: "delete",
+                        label: "Delete",
+                        action: deleteAction,
+                        confirmationHeader: header,
+                    },
+                ],
+            },
+        });
+
+        const trigger = wrapper.find(".trigger");
+        const dropdown = wrapper.findComponent(DropdownContent);
+        expect(dropdown.isVisible()).toBe(false);
+        trigger.trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(dropdown.isVisible()).toBe(true);
+        const action = dropdown.find(".menu-item");
+        expect(action.exists()).toBe(false);
+    });
     it("should not close the dropdown if item has no action", async () => {
         const wrapper = mount(AgdbCellMenu, {
             props: {

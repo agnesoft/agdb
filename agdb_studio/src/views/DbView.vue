@@ -15,7 +15,11 @@ onMounted(async () => {
     <div class="db-view">
         <div class="header">
             <DbAddForm />
-            <button class="button" @click="fetchDatabases" title="refresh">
+            <button
+                class="button refresh"
+                @click="fetchDatabases"
+                title="refresh"
+            >
                 <JaRefreshReverse />
             </button>
         </div>

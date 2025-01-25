@@ -8,6 +8,6 @@ describe("AdminDbView", () => {
     });
     it("renders the admin db view", () => {
         const wrapper = shallowMount(AdminDbView);
-        expect(wrapper.text()).toContain("db-view");
+        expect(wrapper.html()).toContain("db-view");
     });
 });

@@ -17,11 +17,13 @@ const { fetchDatabases } = useDbStore();
 const { openModal } = useModal();
 
 const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
+    if (!row) return [];
     return actions.map((action) => {
         const runAction: ActionFn<TRow, ActionReturn> | undefined =
             action.action
                 ? ({ event }: ActionProps<TRow>): ActionReturn => {
-                      if (!row || !action.action) return false;
+                      /* v8 ignore next */
+                      if (!action.action) return false;
                       const result = action.action({
                           event,
                           params: row?.value,
@@ -41,33 +43,27 @@ const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
                 : action.confirmation
                   ? ({ event }: ActionProps<TRow>) => {
                         openModal({
-                            header:
-                                action.confirmationHeader && row !== undefined
-                                    ? typeof action.confirmationHeader ===
-                                      "function"
-                                        ? action.confirmationHeader({
-                                              event,
-                                              params: row.value,
-                                          })
-                                        : action.confirmationHeader
-                                    : "Confirm action",
+                            header: action.confirmationHeader
+                                ? typeof action.confirmationHeader ===
+                                  "function"
+                                    ? action.confirmationHeader({
+                                          event,
+                                          params: row.value,
+                                      })
+                                    : action.confirmationHeader
+                                : "Confirm action",
                             content:
-                                action.confirmation && row !== undefined
-                                    ? typeof action.confirmation === "function"
-                                        ? action.confirmation({
-                                              event,
-                                              params: row.value,
-                                          })
-                                        : action.confirmation
-                                    : undefined,
-                            onConfirm: () => {
-                                if (row !== undefined)
-                                    runAction({
-                                        event,
-                                        params: row.value,
-                                    });
-                                return true;
-                            },
+                                typeof action.confirmation === "function"
+                                    ? action.confirmation({
+                                          event,
+                                          params: row.value,
+                                      })
+                                    : action.confirmation,
+                            onConfirm: () =>
+                                runAction({
+                                    event,
+                                    params: row.value,
+                                }),
                         });
                         return false;
                     }

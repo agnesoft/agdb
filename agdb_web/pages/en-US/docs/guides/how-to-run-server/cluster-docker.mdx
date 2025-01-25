@@ -46,6 +46,8 @@ docker compose -f agdb_server/compose.yaml up --wait
 
 This command runs the 3 nodes as a docker cluster using docker compose that contains valid cluster configuration. The volumes are provided for each node so that the data is persisted. It exposes the nodes at the ports `3000`, `3001` and `3002`.
 
+By default, it is using TLS self-signed certificates. You can either remove the certificates and related configuration from the `compose.yaml` or provide your own certificates. Refer to the [server configuration](/docs/references/server) for more details.
+
 ### Test that the cluster is up with `curl`
 
 The following commands will hit each node and return the list of nodes, their status and which one is the leader. If the servers are connected and operating normally the returned list should be the same from each node.

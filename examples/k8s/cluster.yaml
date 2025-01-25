@@ -24,6 +24,18 @@ stringData:
 
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: agdb-certs
+  labels:
+    app: agdb
+data:
+  cert.pem: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tDQpNSUlCOXpDQ0FaMmdBd0lCQWdJVVVHazA2ODBWa2d5TWVOcEFmamNqa3pNbHFKZ3dDZ1lJS29aSXpqMEVBd0l3DQpJREVMTUFrR0ExVUVCaE1DUTFveEVUQVBCZ05WQkFvTUNFRm5ibVZ6YjJaME1DQVhEVGMxTURFd01UQXdNREF3DQpNRm9ZRHpRd09UWXdNVEF4TURBd01EQXdXakFQTVEwd0N3WURWUVFEREFSaFoyUmlNRmt3RXdZSEtvWkl6ajBDDQpBUVlJS29aSXpqMERBUWNEUWdBRTRPNmJlQ3BtODNFNGM4emtCODVLblRIZlQ4azRubnRMamQxeE5QcTlLNlpnDQpwQ2NVamh1NHBJRGFpdFl6SlRiQ05BV2o1WmxiblNNK043TUE5Y2FzMUtPQnd6Q0J3REFmQmdOVkhTTUVHREFXDQpnQlJ6NENRYUJRNXliMEwrMXZXNGdYeUo0UUtHaHpDQml3WURWUjBSQklHRE1JR0FnZ2xzYjJOaGJHaHZjM1NDDQpKV0ZuWkdJdE1DNWhaMlJpTG1SbFptRjFiSFF1YzNaakxtTnNkWE4wWlhJdWJHOWpZV3lDSldGblpHSXRNUzVoDQpaMlJpTG1SbFptRjFiSFF1YzNaakxtTnNkWE4wWlhJdWJHOWpZV3lDSldGblpHSXRNaTVoWjJSaUxtUmxabUYxDQpiSFF1YzNaakxtTnNkWE4wWlhJdWJHOWpZV3d3RHdZRFZSMFBBUUgvQkFVREF3ZUFBREFLQmdncWhrak9QUVFEDQpBZ05JQURCRkFpRUEva2ZEZktRV20zckRHSUhPaForMGJOSklBYUgxQ3d5SUJ1TmRqYjNiZE5vQ0lHTU5XUXJpDQpDSE5jRTBmOTJyQ05OZ3FleFNSSG1XeVNxN2t5RnlhQXFxWSsNCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0NCg==
+  key.pem: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tDQpNSUdIQWdFQU1CTUdCeXFHU000OUFnRUdDQ3FHU000OUF3RUhCRzB3YXdJQkFRUWdkVE5ORVpVODhTOU9aUkZxDQpwVmlLVmJGL05JZnQ2VGFJWEdvTzFuYS9iWnFoUkFOQ0FBVGc3cHQ0S21iemNUaHp6T1FIemtxZE1kOVB5VGllDQplMHVOM1hFMCtyMHJwbUNrSnhTT0c3aWtnTnFLMWpNbE5zSTBCYVBsbVZ1ZEl6NDNzd0QxeHF6VQ0KLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQ0K
+  root_ca.pem: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tDQpNSUlCaGpDQ0FTMmdBd0lCQWdJVWYxSk00d0pGZUF6aENjOGRkOFpCUkJNQ1hmSXdDZ1lJS29aSXpqMEVBd0l3DQpJREVMTUFrR0ExVUVCaE1DUTFveEVUQVBCZ05WQkFvTUNFRm5ibVZ6YjJaME1DQVhEVGMxTURFd01UQXdNREF3DQpNRm9ZRHpRd09UWXdNVEF4TURBd01EQXdXakFnTVFzd0NRWURWUVFHRXdKRFdqRVJNQThHQTFVRUNnd0lRV2R1DQpaWE52Wm5Rd1dUQVRCZ2NxaGtqT1BRSUJCZ2dxaGtqT1BRTUJCd05DQUFSd1ZVZ2RFeVlqOGVhK0M4aUlrNU1qDQpPNGE3d0V4SS9rY0R3Si9Ob21VbFlHbEN3OWlqY0tZdGlsN2ZITTRjWkMvbVYvc3l6VFlhV3FyZ1pDVC9QU05lDQpvME13UVRBUEJnTlZIUThCQWY4RUJRTURCNFlBTUIwR0ExVWREZ1FXQkJSejRDUWFCUTV5YjBMKzF2VzRnWHlKDQo0UUtHaHpBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUdIeFJkZHBPeEU3DQpHWnFHanFxYW82dU10djhtMHU3Uy8zZ3hwbkZ2ODhtMEFpQmpnU0llc2dIR2xnSHZHa0svYXVSblVKL2ZNd1c4DQowdThnTVlqQ1ZmRnlidz09DQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tDQo=
+
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: agdb-config
@@ -36,16 +48,19 @@ data:
     /usr/local/bin/agdb_server
   agdb_server.yaml: |
     bind: :::3000
-    address: http://agdb-{id}.agdb.default.svc.cluster.local:3000
+    address: https://agdb-{id}.agdb.default.svc.cluster.local:3000
     basepath: ""
     admin: admin
     log_level: INFO
     data_dir: /agdb/data
     pepper_path: /agdb/pepper/pepper
+    tls_certificate: /agdb/certs/cert.pem
+    tls_key: /agdb/certs/key.pem
+    tls_root: /agdb/certs/root_ca.pem
     cluster_token: cluster
     cluster_heartbeat_timeout_ms: 1000
     cluster_term_timeout_ms: 3000
-    cluster: [http://agdb-0.agdb.default.svc.cluster.local:3000, http://agdb-1.agdb.default.svc.cluster.local:3000, http://agdb-2.agdb.default.svc.cluster.local:3000]
+    cluster: [https://agdb-0.agdb.default.svc.cluster.local:3000, https://agdb-1.agdb.default.svc.cluster.local:3000, https://agdb-2.agdb.default.svc.cluster.local:3000]
 
 ---
 apiVersion: apps/v1
@@ -89,6 +104,8 @@ spec:
               mountPath: /agdb/config
             - name: pepper
               mountPath: /agdb/pepper
+            - name: certs
+              mountPath: /agdb/certs
       volumes:
         - name: config
           configMap:
@@ -97,6 +114,9 @@ spec:
         - name: pepper
           secret:
             secretName: agdb-pepper
+        - name: certs
+          secret:
+            secretName: agdb-certs
   volumeClaimTemplates:
     - metadata:
         name: agdb-data

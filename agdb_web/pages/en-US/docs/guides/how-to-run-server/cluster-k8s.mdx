@@ -50,7 +50,7 @@ spec:
     example `http://agdb-0.agdb.default.svc.cluster.local:3000`.
 </Callout>
 
-### Secret
+### Secrets
 
 Next document is the pepper secret `agdb-pepper`.
 
@@ -65,9 +65,28 @@ stringData:
     pepper: "1234567891234567"
 ```
 
+Followed by the certificates. In production you should create the certificates using kubectl command from secure files rather than embedding them into the manifest. However, for demonstration purposes the following example is provided. It uses self-signed certificate with the corresponding CA. It needs to be provided as `base64` value. You can use e.g. `cat cert.pem | base64` bash command to get the correct value (end of lines do not matter).
+
+<Callout>
+The certificate must be issued (or used as an alternative name - SAN) for the DNS names of the servers used in their configuration `address` field. E.g. `agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`, `agdb-2.default.svc.cluster.local`.
+</Callout>
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agdb-certs
+  labels:
+    app: agdb
+data:
+  cert.pem: ...
+  key.pem: ...
+  root_ca.pem: ...
+```
+
 ### ConfigMap
 
-The configuration named `agdb-config` via the `ConfigMap` is required as we need specific configuration for each node. Additionally we specify a custom `start.sh` script that dynamically assigns the deployment index as a cluster index on startup.
+The configuration named `agdb-config` via the `ConfigMap` is required as we need specific configuration for each node. Additionally, we specify a custom `start.sh` script that dynamically assigns the deployment index as a cluster index on startup. We are using the same certificate in all servers and it must be valid for all the names it is used for, e.g. `agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`, `agdb-2.default.svc.cluster.local`.
 
 ```yaml
 ---
@@ -90,6 +109,9 @@ data:
         log_level: INFO
         data_dir: /agdb/data
         pepper_path: /agdb/pepper/pepper
+        tls_certificate: /agdb/certs/cert.pem
+        tls_key: /agdb/certs/key.pem
+        tls_root: /agdb/certs/root_ca.pem
         cluster_token: cluster
         cluster_heartbeat_timeout_ms: 1000
         cluster_term_timeout_ms: 3000
@@ -102,9 +124,9 @@ The main part of the deployment is the stateful set definition. It uses the sele
 
 The container spec matches the port on the service by name `agdb` and exposes the container port `3000` (default). The security context specifies the user `1000` (default uid in the container) and disables root access as it is not needed and enhances security.
 
-Finally we specify volumes and volume mounts to add the `secret`, `configmap` and persistent volume claim (PVC) to the expected locations. The PVC is a way how data can survive restart or redeployment. By default 1 GB of storage is specified which can be increased (but not decreased) in subsequent deployments.
+Finally, we specify volumes and volume mounts to add the `secrets`, `configmap` and persistent volume claim (PVC) to the expected locations. The PVC is a way how data can survive restart or redeployment. By default, 1 GB of storage is specified which can be increased (but not decreased) in subsequent deployments.
 
-The custom command running the `start.sh` from the configmap and the environment variale `AGDB_REPLICA_INDEX` make sure the correct config is assigned to each node on startup.
+The custom command running the `start.sh` from the configmap and the environment variable `AGDB_REPLICA_INDEX` make sure the correct config is assigned to each node on startup. Certificates are provided for TLS support.
 
 ```yaml
 ---
@@ -149,6 +171,8 @@ spec:
               mountPath: /agdb/config
             - name: pepper
               mountPath: /agdb/pepper
+            - name: certs
+              mountPath: /agdb/certs
       volumes:
         - name: config
           configMap:
@@ -157,6 +181,9 @@ spec:
         - name: pepper
           secret:
             secretName: agdb-pepper
+        - name: certs
+          secret:
+            secretName: agdb-certs
   volumeClaimTemplates:
     - metadata:
         name: agdb-data
@@ -175,9 +202,9 @@ spec:
 The following command must be run from within the cluster unless the server was exposed via `LoadBalancer` or `Ingress`. The `.default.` bit is the name of the namespace where everything was deployed.
 
 ```bash
-curl -v http://agdb-0.agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
-curl -v http://agdb-1.agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
-curl -v http://agdb-2.agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
+curl -v https://agdb-0.agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
+curl -v https://agdb-1.agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
+curl -v https://agdb-2.agdb.default.svc.cluster.local:3000/api/v1/status # should return 200 OK
 ```
 
 ### Additional considerations
@@ -186,5 +213,7 @@ curl -v http://agdb-2.agdb.default.svc.cluster.local:3000/api/v1/status # should
 - Standard shutdown procedure via the endpoint will not work as K8s will simply restart the servers.
 - You should be able to adapt the above to other platforms such as AWS EKS.
 - Always connect to a particular node (e.g. `agdb-0`) rather than the service address since the latter will route the request to a random node.
+- If you are using `agdb` only inside the K8s cluster with no visibility outside of it you may want to disable TLS.
+- If you are exposing `agdb` outside the K8s cluster use real production certificate. In that case leave the `tls_root` configuration option empty.
 
 </Steps>

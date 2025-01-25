@@ -17,10 +17,11 @@ use std::time::Duration;
 
 #[tokio::test]
 async fn rebalance() -> anyhow::Result<()> {
-    let mut servers = create_cluster(3).await?;
+    let mut servers = create_cluster(3, false).await?;
     let mut leader = AgdbApi::new(
         ReqwestClient::with_client(
             reqwest::Client::builder()
+                .use_rustls_tls()
                 .timeout(Duration::from_secs(30))
                 .build()?,
         ),
@@ -36,6 +37,7 @@ async fn rebalance() -> anyhow::Result<()> {
         let status = wait_for_leader(&AgdbApi::new(
             ReqwestClient::with_client(
                 reqwest::Client::builder()
+                    .use_rustls_tls()
                     .timeout(Duration::from_secs(30))
                     .build()?,
             ),
@@ -58,6 +60,7 @@ async fn rebalance() -> anyhow::Result<()> {
         let status = wait_for_leader(&AgdbApi::new(
             ReqwestClient::with_client(
                 reqwest::Client::builder()
+                    .use_rustls_tls()
                     .timeout(Duration::from_secs(30))
                     .build()?,
             ),

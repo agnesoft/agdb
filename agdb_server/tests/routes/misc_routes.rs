@@ -170,6 +170,7 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("pepper_path", "".into());
     config.insert("tls_certificate", "".into());
     config.insert("tls_key", "".into());
+    config.insert("tls_root", "".into());
     config.insert("cluster_token", "test".into());
     config.insert("cluster_heartbeat_timeout_ms", 1000.into());
     config.insert("cluster_term_timeout_ms", 3000.into());

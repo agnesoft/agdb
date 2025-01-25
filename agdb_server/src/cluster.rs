@@ -17,12 +17,15 @@ use agdb_api::ReqwestClient;
 use axum::body::Body;
 use axum::extract::Request as AxumRequest;
 use axum::response::Response as AxumResponse;
+use reqwest::Certificate;
 use reqwest::StatusCode;
 use std::collections::HashMap;
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::signal;
 use tokio::sync::broadcast;
@@ -82,6 +85,7 @@ impl ClusterNodeImpl {
         address: &str,
         token: &str,
         responses: UnboundedSender<(Request<ClusterAction>, Response)>,
+        root_ca: Option<Certificate>,
     ) -> ServerResult<Self> {
         let base = if address.starts_with("http") || address.starts_with("https") {
             address.to_string()
@@ -91,13 +95,15 @@ impl ClusterNodeImpl {
 
         let (requests_sender, requests_receiver) = tokio::sync::mpsc::unbounded_channel();
         let base_url = base.trim_end_matches("/").to_string();
+        let mut client = reqwest::Client::builder().connect_timeout(Duration::from_secs(60));
+
+        #[cfg(feature = "tls")]
+        if let Some(root_ca) = root_ca {
+            client = client.add_root_certificate(root_ca);
+        }
 
         Ok(Self {
-            client: ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .connect_timeout(Duration::from_secs(60))
-                    .build()?,
-            ),
+            client: ReqwestClient::with_client(client.build()?),
             url: format!("{base_url}/api/v1/cluster"),
             base_url,
             token: Some(token.to_string()),
@@ -193,12 +199,14 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
 
     let responses = if !sorted_cluster.is_empty() {
         let (requests, responses) = tokio::sync::mpsc::unbounded_channel();
+        let root_ca = root_ca(config)?;
 
         for node in config.cluster.iter() {
             nodes.push(ClusterNode::new(ClusterNodeImpl::new(
                 node.as_str(),
                 &config.cluster_token,
                 requests.clone(),
+                root_ca.clone(),
             )?));
         }
 
@@ -421,4 +429,21 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
         self.db.logs_since(from_index).await
     }
+}
+
+pub(crate) fn root_ca(config: &Config) -> ServerResult<Option<Certificate>> {
+    static ROOT_CA: OnceLock<Option<Certificate>> = OnceLock::new();
+
+    Ok(ROOT_CA
+        .get_or_init(|| {
+            if config.tls_root.is_empty() {
+                return None;
+            }
+
+            let cert_data = std::fs::read(Path::new(&config.tls_root))
+                .expect("root certificate could not be read");
+            let cert = Certificate::from_pem(&cert_data).expect("root certificate data is invalid");
+            Some(cert)
+        })
+        .clone())
 }

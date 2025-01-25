@@ -40,7 +40,6 @@ static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
 static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
-static ROOT_CA: std::sync::OnceLock<Certificate> = std::sync::OnceLock::new();
 
 fn server_bin() -> anyhow::Result<PathBuf> {
     let mut path = std::env::current_exe()?;
@@ -69,6 +68,8 @@ pub struct TestCluster {
 }
 
 pub fn root_ca() -> Certificate {
+    static ROOT_CA: std::sync::OnceLock<Certificate> = std::sync::OnceLock::new();
+
     ROOT_CA
         .get_or_init(|| {
             let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -163,6 +164,7 @@ impl TestServerImpl {
         config.insert("pepper_path", "".into());
         config.insert("tls_certificate", "".into());
         config.insert("tls_key", "".into());
+        config.insert("tls_root", "".into());
         config.insert("cluster_token", "test".into());
         config.insert("cluster_heartbeat_timeout_ms", 1000.into());
         config.insert("cluster_term_timeout_ms", 3000.into());
@@ -207,6 +209,7 @@ impl TestServerImpl {
         admin.insert("password", ADMIN.to_string());
 
         let client = reqwest::Client::builder()
+            .use_rustls_tls()
             .add_root_certificate(root_ca())
             .build()?;
 
@@ -271,7 +274,8 @@ impl TestServer {
             api: AgdbApi::new(
                 ReqwestClient::with_client(
                     reqwest::Client::builder()
-                        .danger_accept_invalid_certs(true)
+                        .add_root_certificate(root_ca())
+                        .use_rustls_tls()
                         .timeout(CLIENT_TIMEOUT)
                         .build()?,
                 ),
@@ -330,7 +334,7 @@ impl TestCluster {
         let nodes = if let Some(nodes) = cluster_guard.upgrade() {
             nodes
         } else {
-            let nodes = Arc::new(create_cluster(3).await?);
+            let nodes = Arc::new(create_cluster(3, false).await?);
             *cluster_guard = Arc::downgrade(&nodes);
             nodes
         };
@@ -341,7 +345,11 @@ impl TestCluster {
                 .map(|s| {
                     Ok(AgdbApi::new(
                         ReqwestClient::with_client(
-                            reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
+                            reqwest::Client::builder()
+                                .add_root_certificate(root_ca())
+                                .use_rustls_tls()
+                                .timeout(CLIENT_TIMEOUT)
+                                .build()?,
                         ),
                         &s.address,
                     ))
@@ -394,29 +402,47 @@ pub async fn wait_for_leader(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<Vec
     ))
 }
 
-pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>> {
+pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestServerImpl>> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
     let mut servers = Vec::with_capacity(nodes);
+    let protocol = if tls { "https" } else { "http" };
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
+    let tls_cert = if tls {
+        format!("{manifest_dir}/tests/test_cert.pem")
+    } else {
+        String::new()
+    };
+    let tls_key = if tls {
+        format!("{manifest_dir}/tests/test_cert.key.pem")
+    } else {
+        String::new()
+    };
+    let tls_root = if tls {
+        format!("{manifest_dir}/tests/test_root_ca.pem")
+    } else {
+        String::new()
+    };
 
     for _ in 0..nodes {
         let port = TestServerImpl::next_port();
         let mut config = HashMap::<&str, serde_yml::Value>::new();
         config.insert("bind", format!("{HOST}:{port}").into());
-        config.insert("address", format!("http://{HOST}:{port}").into());
+        config.insert("address", format!("{protocol}://{HOST}:{port}").into());
         config.insert("admin", ADMIN.into());
         config.insert("basepath", "".into());
         config.insert("log_level", "INFO".into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("pepper_path", "".into());
-        config.insert("tls_certificate", "".into());
-        config.insert("tls_key", "".into());
+        config.insert("tls_certificate", tls_cert.clone().into());
+        config.insert("tls_key", tls_key.clone().into());
+        config.insert("tls_root", tls_root.clone().into());
         config.insert("cluster_token", "test".into());
         config.insert("cluster_heartbeat_timeout_ms", 1000.into());
         config.insert("cluster_term_timeout_ms", 3000.into());
 
         configs.push(config);
-        cluster.push(format!("http://{HOST}:{port}"));
+        cluster.push(format!("{protocol}://{HOST}:{port}"));
     }
 
     for config in &mut configs {
@@ -432,6 +458,7 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
             ReqwestClient::with_client(
                 reqwest::Client::builder()
                     .add_root_certificate(root_ca())
+                    .use_rustls_tls()
                     .timeout(CLIENT_TIMEOUT)
                     .build()?,
             ),

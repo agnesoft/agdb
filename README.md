@@ -173,6 +173,12 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | reqwest | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
 
+### agdb_server
+
+| Feature | Default | Description                                                                    |
+| ------- | ------- | ------------------------------------------------------------------------------ |
+| tls     | no      | Enables TLS support via `rustls`. On Windows requires MSVC and CMake to build. |
+
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 
 ```mermaid

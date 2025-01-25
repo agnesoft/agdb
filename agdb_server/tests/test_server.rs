@@ -1,9 +1,12 @@
 mod routes;
+#[cfg(feature = "tls")]
+mod tls;
 
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
 use agdb_api::ReqwestClient;
 use anyhow::anyhow;
+use reqwest::Certificate;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -37,6 +40,7 @@ static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
 static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
+static ROOT_CA: std::sync::OnceLock<Certificate> = std::sync::OnceLock::new();
 
 fn server_bin() -> anyhow::Result<PathBuf> {
     let mut path = std::env::current_exe()?;
@@ -62,6 +66,17 @@ pub struct TestServerImpl {
 pub struct TestCluster {
     apis: Vec<AgdbApi<ReqwestClient>>,
     _cluster: Arc<ClusterImpl>,
+}
+
+pub fn root_ca() -> Certificate {
+    ROOT_CA
+        .get_or_init(|| {
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+            let root_ca_buf =
+                std::fs::read(format!("{manifest_dir}/tests/test_root_ca.pem")).unwrap();
+            Certificate::from_pem(&root_ca_buf).unwrap()
+        })
+        .clone()
 }
 
 impl TestServerImpl {
@@ -102,7 +117,13 @@ impl TestServerImpl {
             .kill_on_drop(true)
             .spawn()?;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
+            ReqwestClient::with_client(
+                reqwest::Client::builder()
+                    .add_root_certificate(root_ca())
+                    .use_rustls_tls()
+                    .timeout(CLIENT_TIMEOUT)
+                    .build()?,
+            ),
             &api_address,
         );
 
@@ -185,7 +206,10 @@ impl TestServerImpl {
         admin.insert("username", ADMIN.to_string());
         admin.insert("password", ADMIN.to_string());
 
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .add_root_certificate(root_ca())
+            .build()?;
+
         let token: String = client
             .post(format!("{}/api/v1/user/login", address))
             .json(&admin)
@@ -246,7 +270,10 @@ impl TestServer {
         Ok(Self {
             api: AgdbApi::new(
                 ReqwestClient::with_client(
-                    reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
+                    reqwest::Client::builder()
+                        .danger_accept_invalid_certs(true)
+                        .timeout(CLIENT_TIMEOUT)
+                        .build()?,
                 ),
                 &server.address,
             ),
@@ -402,7 +429,12 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
     {
         let server = server.await??;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
+            ReqwestClient::with_client(
+                reqwest::Client::builder()
+                    .add_root_certificate(root_ca())
+                    .timeout(CLIENT_TIMEOUT)
+                    .build()?,
+            ),
             &server.address,
         );
         servers.push((server, api));

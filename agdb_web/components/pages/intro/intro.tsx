@@ -4,10 +4,17 @@ export const Intro = () => {
     return (
         <div className={styles.intro}>
             <h1>agdb</h1>
-            <p className={styles.subheading}>The graph database.</p>
+            <p className={styles.subheading}>
+                Application native database for any use case.
+            </p>
+            <p className={styles.subheading}>
+                no query language | performance independnet of data size | 10X
+                cost reduction
+            </p>
             <p>
                 <a href="/docs/guides/quickstart">Quickstart</a>
-                <a href="/blog/blog">Why agdb?</a>
+                <a href="/whyagdb">Why agdb?</a>
+                <a href="/enterprise/consultation">Expert consultation</a>
             </p>
         </div>
     );

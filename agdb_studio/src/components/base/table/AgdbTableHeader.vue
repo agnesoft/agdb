@@ -6,7 +6,7 @@ import {
 } from "@/composables/table/tableConfig";
 import { computed, inject, type Ref } from "vue";
 
-const tableKey = inject<Ref<Symbol | string>>(INJECT_KEY_TABLE_NAME);
+const tableKey = inject<Ref<symbol | string>>(INJECT_KEY_TABLE_NAME);
 const columns = computed(() => {
     if (!tableKey?.value) {
         return [];

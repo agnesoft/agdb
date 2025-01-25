@@ -27,11 +27,11 @@ Everything has the cost and graph databases are no exception. Some operations an
 
 The following is the list of requirements for an ideal graph database:
 
--   Free license
--   Faster than table based databases in most common use cases
--   No new language for querying
--   No text based queries
--   Rust and/or C++ driver
--   Resource efficient (storage & memory)
+- Free license
+- Faster than table based databases in most common use cases
+- No new language for querying
+- No text based queries
+- Rust and/or C++ driver
+- Resource efficient (storage & memory)
 
 Surprisingly there is no database that would fit the bill. Even the most popular graph databases such as `Neo4J` or `OrientDB` fall short on several of these requirements. They do have their own text based language (e.g. Cypher for Neo4J). They lack the drivers for C++/Rust. They are not particularly efficient (being mostly written in Java). Even the recent addition built in Rust - `SurrealDb` - is using text based SQL queries. Quite incomprehensibly its driver support for Rust itself is not very mature so far and was added only later despite the system being written in Rust. Something which is oddly common in the database world, e.g. `RethinkDb`, itself a document database, written mostly in C++, has no C++ support but does officially support for example Ruby. Atop of these issues they often do not leverage the graph structure very well (except for Neo4J which does great job at this) still leaning heavily towards tables.

@@ -59,9 +59,9 @@ agdb_server
 
 The server upon starting will create few things in its working directory:
 
--   `agdb_server.yaml`: Configuration file. You can alter it as you wish or prepare one in advance. You would need to restart the server for the changes to take effect.
--   `agdb_data_dir/`: Folder for storing the user data. It can be changed in the configuration file (requires restart of the server and possibly moving the internal database and data, if any, to the new location).
--   `agdb_data_dir/agdb_server.agdb` (`agdb_data_dir/.agdb_server.agdb`): Internal database of the server (uses `agdb` itself) + it's write ahead file (the dotfile).
+- `agdb_server.yaml`: Configuration file. You can alter it as you wish or prepare one in advance. You would need to restart the server for the changes to take effect.
+- `agdb_data_dir/`: Folder for storing the user data. It can be changed in the configuration file (requires restart of the server and possibly moving the internal database and data, if any, to the new location).
+- `agdb_data_dir/agdb_server.agdb` (`agdb_data_dir/.agdb_server.agdb`): Internal database of the server (uses `agdb` itself) + it's write ahead file (the dotfile).
 
 and report where it listens at:
 

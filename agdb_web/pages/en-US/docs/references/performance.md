@@ -9,11 +9,11 @@ Database performance is one of the key metrics when judging the suitability of t
 
 The `agdb` is designed with the following principles:
 
--   ACID database
--   O(1) complexity for direct access
--   O(n) complexity for search
--   Unlimited read concurrency
--   Exclusive writes
+- ACID database
+- O(1) complexity for direct access
+- O(n) complexity for search
+- Unlimited read concurrency
+- Exclusive writes
 
 The database is ACID compliant, operations must be transactional = `atomic` (A) meaning they are "all or nothing" operations, `consistent` (C) so that the queries will only produce valid state of the data, `isolated` (I) meaning the transactions do not affect each other when in flight and `durable` (D) meaning the database is resistant to system failure and will preserve integrity of the data. Direct access read/write operations have constant complexity of O(1) while search operations are O(n) but the `n` can be limited to a subgraph greatly reducing the time the operation takes.
 
@@ -23,18 +23,18 @@ Let's see if the `agdb` lives up to these principles.
 
 The `agdb_benchmarks` project is building upon the [Efficient agdb](/docs/references/efficient-agdb) simulating the traffic in a "social network" database. It simulates concurrent read & write operations on the same database:
 
--   Posters: Writes social media posts
--   Commenters: Writes comments to the existing posts
--   Post readers: Reads existing posts
--   Comment readers: Read existing comments
+- Posters: Writes social media posts
+- Commenters: Writes comments to the existing posts
+- Post readers: Reads existing posts
+- Comment readers: Read existing comments
 
 It is highly configurable through the `agdb_benchmarks.yaml` file (produced on first run) with the following settings:
 
--   How many of each category of users (post writers, comment writers, post readers, comment readers)
--   How many operations should each user perform
--   How large each operation should be [readers only] (e.g. how many posts to read)
--   Contents of each operation [writes only] (e.g. post title, post body)
--   Delay between each operation
+- How many of each category of users (post writers, comment writers, post readers, comment readers)
+- How many operations should each user perform
+- How large each operation should be [readers only] (e.g. how many posts to read)
+- Contents of each operation [writes only] (e.g. post title, post body)
+- Delay between each operation
 
 For writers the configured content is additionally augmented by the user `id` to produce unique content. The delays are further shifted by the user `id` to prevent unrealistic resource contention by everyone in a single millisecond. The read operations are repeated if no result is yielded effectively "waiting" for the readers to input data first.
 
@@ -42,20 +42,20 @@ The benchmark uses tokio tasks spawning everything together. It measures each da
 
 ### Default settings
 
--   Insert user nodes (for post & comment writers)
--   10 post writers (100 posts each, 100ms delay, non-small title (>15 bytes) & body (>15 bytes))
--   10 comment writers (100 comments each, 100ms delay, non-small body (>15 bytes))
--   100 post readers (100 reads each, 10 posts per read, 100ms delay)
--   100 comment readers (100 reads each, 10 comments per read, 100ms delay).
+- Insert user nodes (for post & comment writers)
+- 10 post writers (100 posts each, 100ms delay, non-small title (>15 bytes) & body (>15 bytes))
+- 10 comment writers (100 comments each, 100ms delay, non-small body (>15 bytes))
+- 100 post readers (100 reads each, 10 posts per read, 100ms delay)
+- 100 comment readers (100 reads each, 10 comments per read, 100ms delay).
 
 ### Measured operations
 
--   Insert user nodes: a node aliased `"users"` with individual users connected to it with a blank edge. Each user has properties `"name"` and `"email"` (values small values `<15 bytes`).
--   Write posts: a post node connected with a blank edge to the single node aliased `"posts"` and with an edge (property `"authored": 1`) to the respective user node. The properties are `"title"` and `"body"` from config (values are large `>15 bytes`).
--   Write comments: a comment node connected with a blank edge to the latest post (found via search from `"posts"` node) and with an edge (property `"commented": 1`) to the respective user node. The properties are only `"body"` from config (value is large `>15 bytes`).
--   Read posts: reads configured amount (e.g. 10 by default) of recent posts on each iteration (found via search from `"posts"` node).
--   Read comments: reads configured amount (e.g. 10 by default) of recent comments on the latest post (found via search from `"posts"` node).
--   Database size: after all operations finished & after optimization algorithm is run.
+- Insert user nodes: a node aliased `"users"` with individual users connected to it with a blank edge. Each user has properties `"name"` and `"email"` (values small values `<15 bytes`).
+- Write posts: a post node connected with a blank edge to the single node aliased `"posts"` and with an edge (property `"authored": 1`) to the respective user node. The properties are `"title"` and `"body"` from config (values are large `>15 bytes`).
+- Write comments: a comment node connected with a blank edge to the latest post (found via search from `"posts"` node) and with an edge (property `"commented": 1`) to the respective user node. The properties are only `"body"` from config (value is large `>15 bytes`).
+- Read posts: reads configured amount (e.g. 10 by default) of recent posts on each iteration (found via search from `"posts"` node).
+- Read comments: reads configured amount (e.g. 10 by default) of recent comments on the latest post (found via search from `"posts"` node).
+- Database size: after all operations finished & after optimization algorithm is run.
 
 ### Run command
 
@@ -67,10 +67,10 @@ cargo run --release -p agdb_benchmarks
 
 The following benchmarks were run on:
 
--   CPU: Intel Core i7-7700 4 cores (8 logical cores) @ 3,6 GHz
--   RAM: Crucial Ballistix Sport LT 16GB (2x8GB) DDR4 @ 2400 MHz
--   DISK: HyperX Savage - 240GB (KINGSTON SHSS37A240G, 4 cores, 8 channels Phison S10, 560 MB/s read, 530 MB/s write, SATA III (6 Gb/s))
--   OS: Windows 10 22H2 (19045.3448), Debian: Version 12 (bookworm) [running in Hyper-V/WSL2]
+- CPU: Intel Core i7-7700 4 cores (8 logical cores) @ 3,6 GHz
+- RAM: Crucial Ballistix Sport LT 16GB (2x8GB) DDR4 @ 2400 MHz
+- DISK: HyperX Savage - 240GB (KINGSTON SHSS37A240G, 4 cores, 8 channels Phison S10, 560 MB/s read, 530 MB/s write, SATA III (6 Gb/s))
+- OS: Windows 10 22H2 (19045.3448), Debian: Version 12 (bookworm) [running in Hyper-V/WSL2]
 
 When running on a different machine your results will vary, but the relative comparisons should still hold.
 
@@ -187,8 +187,8 @@ The used benchmark simulates highly contested database environment where dozens 
 
 Some advice:
 
--   Always measure your use case but do not rely on micro-benchmarks, use realistic workloads. See `Creating users` line in each table which is equivalent to an isolated micro-benchmark and compare it with the rest of the table that demonstrates realistic load with contention.
--   Correct storage backend matters. While the default is usually the best choice offering persistence and speed it comes with certain caveats:
-    -   Do not use memory mapped database if you store terabytes of data or your data set is likely to exceed your available RAM size.
-    -   Do not use memory mapped database if your use case is write heavy with infrequent reads. The memory mapping aids only in reading and slows down the writes a little bit.
-    -   Do not use in-memory cache if you need persistence even though it is the fastest.
+- Always measure your use case but do not rely on micro-benchmarks, use realistic workloads. See `Creating users` line in each table which is equivalent to an isolated micro-benchmark and compare it with the rest of the table that demonstrates realistic load with contention.
+- Correct storage backend matters. While the default is usually the best choice offering persistence and speed it comes with certain caveats:
+    - Do not use memory mapped database if you store terabytes of data or your data set is likely to exceed your available RAM size.
+    - Do not use memory mapped database if your use case is write heavy with infrequent reads. The memory mapping aids only in reading and slows down the writes a little bit.
+    - Do not use in-memory cache if you need persistence even though it is the fastest.

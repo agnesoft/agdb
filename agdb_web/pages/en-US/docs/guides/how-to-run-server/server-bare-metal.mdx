@@ -26,7 +26,8 @@ cargo install agdb_server --features tls # the `tls` feature is optional and can
 ```
 
 <Callout>
-    On all platforms the feature `tls` requires `CMake`. On Windows it requires additionally MSVC toolchain. If you do not need TLS simply omit the feature.
+    On all platforms the feature `tls` requires `CMake`. On Windows it requires
+    additionally MSVC toolchain. If you do not need TLS simply omit the feature.
 </Callout>
 
 You can also build the server manually. One advantage is that you can use a custom `pepper` value and bake it into the binary instead of using runtime configured value. The `pepper` file is located in sources as `agdb_server/pepper` and contains a random 16 character value that is used internally to additionally "season" the encrypted passwords. When building for production you should change this value to a different one and keep the pepper file as secret in case you needed to rebuild the server or build a new version.

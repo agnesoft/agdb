@@ -68,20 +68,23 @@ stringData:
 Followed by the certificates. In production you should create the certificates using kubectl command from secure files rather than embedding them into the manifest. However, for demonstration purposes the following example is provided. It uses self-signed certificate with the corresponding CA. It needs to be provided as `base64` value. You can use e.g. `cat cert.pem | base64` bash command to get the correct value (end of lines do not matter).
 
 <Callout>
-The certificate must be issued (or used as an alternative name - SAN) for the DNS names of the servers used in their configuration `address` field. E.g. `agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`, `agdb-2.default.svc.cluster.local`.
+    The certificate must be issued (or used as an alternative name - SAN) for
+    the DNS names of the servers used in their configuration `address` field.
+    E.g. `agdb-0.default.svc.cluster.local`, `agdb-1.default.svc.cluster.local`,
+    `agdb-2.default.svc.cluster.local`.
 </Callout>
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: agdb-certs
-  labels:
-    app: agdb
+    name: agdb-certs
+    labels:
+        app: agdb
 data:
-  cert.pem: ...
-  key.pem: ...
-  root_ca.pem: ...
+    cert.pem: ...
+    key.pem: ...
+    root_ca.pem: ...
 ```
 
 ### ConfigMap

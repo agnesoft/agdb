@@ -33,7 +33,7 @@ jobs:
       - run: docker build --pull -t agnesoft/agdb:dev -f agdb_server/containerfile .
       - run: docker compose -f agdb_server/compose.yaml up --wait
       - run: sleep 5
-      - run: curl -s https://localhost:3000/studio
+      - run: curl -s -k https://localhost:3000/studio
       - run: if [[ "$(curl -s -k https://localhost:3000/api/v1/cluster/status | grep "\"leader\":true")" == "" ]]; then exit 1; fi
       - run: |
           token=$(curl -X POST -k https://localhost:3002/api/v1/cluster/user/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}')

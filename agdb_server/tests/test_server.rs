@@ -39,7 +39,6 @@ static PORT: AtomicU16 = AtomicU16::new(DEFAULT_PORT);
 static COUNTER: AtomicU16 = AtomicU16::new(1);
 static SERVER: std::sync::OnceLock<RwLock<Weak<TestServerImpl>>> = std::sync::OnceLock::new();
 static CLUSTER: std::sync::OnceLock<RwLock<Weak<ClusterImpl>>> = std::sync::OnceLock::new();
-static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
 
 fn server_bin() -> anyhow::Result<PathBuf> {
     let mut path = std::env::current_exe()?;
@@ -83,28 +82,20 @@ pub fn root_ca() -> reqwest::Certificate {
 
 #[cfg(feature = "tls")]
 pub fn reqwest_client() -> reqwest::Client {
-    CLIENT
-        .get_or_init(|| {
-            reqwest::Client::builder()
-                .add_root_certificate(root_ca())
-                .use_rustls_tls()
-                .timeout(CLIENT_TIMEOUT)
-                .build()
-                .unwrap()
-        })
-        .clone()
+    reqwest::Client::builder()
+        .add_root_certificate(root_ca())
+        .use_rustls_tls()
+        .timeout(CLIENT_TIMEOUT)
+        .build()
+        .unwrap()
 }
 
 #[cfg(not(feature = "tls"))]
 pub fn reqwest_client() -> reqwest::Client {
-    CLIENT
-        .get_or_init(|| {
-            reqwest::Client::builder()
-                .timeout(CLIENT_TIMEOUT)
-                .build()
-                .unwrap()
-        })
-        .clone()
+    reqwest::Client::builder()
+        .timeout(CLIENT_TIMEOUT)
+        .build()
+        .unwrap()
 }
 
 impl TestServerImpl {

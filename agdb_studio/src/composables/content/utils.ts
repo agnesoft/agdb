@@ -1,15 +1,15 @@
 export type ConvertParams = {
-    emphesizedWords?: string[];
+    emphasizedWords?: string[];
 };
 
-export const EMPHESIZED_CLASSNAME = "emphesized";
+export const EMPHASIZED_CLASSNAME = "emphasized";
 
-const emphesizeWords = (text: string, words: string[]): Paragraph[] => {
+const emphasizeWords = (text: string, words: string[]): Paragraph[] => {
     const parts = text.split(new RegExp(`(${words.join("|")})`, "g"));
 
     return parts.map((part) => {
         if (words.includes(part)) {
-            return { text: part, className: EMPHESIZED_CLASSNAME };
+            return { text: part, className: EMPHASIZED_CLASSNAME };
         }
         return { text: part };
     });
@@ -20,8 +20,8 @@ const convertArrayOfStringsToContent = (
     params: ConvertParams | undefined = undefined,
 ): Content[] => {
     return array.map((text) => {
-        if (params?.emphesizedWords) {
-            return { paragraph: emphesizeWords(text, params.emphesizedWords) };
+        if (params?.emphasizedWords) {
+            return { paragraph: emphasizeWords(text, params.emphasizedWords) };
         }
         return { paragraph: [{ text }] };
     });

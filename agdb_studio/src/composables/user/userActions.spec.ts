@@ -97,7 +97,9 @@ describe("userActions.ts", () => {
         isAdmin.value = true;
         isAdminView.value = true;
         const { actions } = useUserActions();
-        actions.value.find((action) => action.key === USER_VIEW_KEY)?.action();
+        actions.value
+            .find((action) => action.key === USER_VIEW_KEY)
+            ?.action?.({} as ActionProps<undefined>);
         expect(pushMock).toHaveBeenCalledWith({ name: "home" });
     });
 
@@ -105,7 +107,9 @@ describe("userActions.ts", () => {
         isAdmin.value = true;
         isAdminView.value = false;
         const { actions } = useUserActions();
-        actions.value.find((action) => action.key === ADMIN_VIEW_KEY)?.action();
+        actions.value
+            .find((action) => action.key === ADMIN_VIEW_KEY)
+            ?.action?.({} as ActionProps<undefined>);
         expect(pushMock).toHaveBeenCalledWith({ name: "admin" });
     });
 });

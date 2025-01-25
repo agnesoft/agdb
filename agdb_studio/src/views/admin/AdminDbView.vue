@@ -1,9 +1,7 @@
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+import DbView from "@/views/DbView.vue";
+</script>
 
 <template>
-    <div class="admin-db-view">
-        <h1>Admin Db View</h1>
-    </div>
+    <DbView />
 </template>
-
-<style lang="less" scoped></style>

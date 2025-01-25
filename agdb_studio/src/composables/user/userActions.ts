@@ -17,27 +17,29 @@ export const ADMIN_VIEW_KEY = "admin";
 export const CHANGE_PASSWORD_KEY = "change-password";
 export const LOGOUT_KEY = "logout";
 
-const adminActions = [
+const adminActions: Action<undefined>[] = [
     {
         key: USER_VIEW_KEY,
         label: "User View",
         action: () => {
             router.push({ name: "home" });
+            return true;
         },
     },
 ];
 
-const toAdminView = [
+const toAdminView: Action<undefined>[] = [
     {
         key: ADMIN_VIEW_KEY,
         label: "Admin View",
         action: () => {
             router.push({ name: "admin" });
+            return true;
         },
     },
 ];
 
-const accountActions = [
+const accountActions: Action<undefined>[] = [
     {
         key: CHANGE_PASSWORD_KEY,
         label: "Change password",
@@ -118,6 +120,7 @@ const accountActions = [
                     return response !== undefined;
                 },
             });
+            return true;
         },
     },
     {
@@ -134,13 +137,14 @@ const accountActions = [
                     return true;
                 },
             });
+            return true;
         },
     },
 ];
 
 export const useUserActions = () => {
     const { isAdmin, isAdminView } = useAdmin();
-    const actions = computed(() => [
+    const actions = computed<Action<undefined>[]>(() => [
         ...(isAdmin.value
             ? !isAdminView.value
                 ? toAdminView

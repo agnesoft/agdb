@@ -37,7 +37,7 @@ describe("AgdbMenu", () => {
     it("should render the sub menu on hover", async () => {
         const wrapper = mount(AgdbMenu, {
             props: {
-                actions: dbActions,
+                actions: dbActions as unknown as Action<undefined>[],
             },
         });
 

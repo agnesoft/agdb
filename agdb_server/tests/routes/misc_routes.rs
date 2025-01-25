@@ -1,3 +1,4 @@
+use crate::reqwest_client;
 use crate::wait_for_ready;
 use crate::TestServer;
 use crate::TestServerImpl;
@@ -11,12 +12,11 @@ use agdb_api::ReqwestClient;
 use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::path::Path;
-use std::time::Duration;
 
 #[tokio::test]
 async fn missing() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
+    let client = reqwest_client();
     let status = client
         .get(server.full_url("/missing"))
         .send()
@@ -45,7 +45,7 @@ async fn shutdown_no_token() -> anyhow::Result<()> {
 #[tokio::test]
 async fn shutdown_bad_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
+    let client = reqwest_client();
     let status = client
         .post(server.full_url("/admin/shutdown"))
         .bearer_auth("bad")
@@ -59,7 +59,7 @@ async fn shutdown_bad_token() -> anyhow::Result<()> {
 #[tokio::test]
 async fn openapi() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
+    let client = reqwest_client();
     let status = client
         .get(server.full_url("/openapi.json"))
         .send()
@@ -73,11 +73,7 @@ async fn openapi() -> anyhow::Result<()> {
 async fn config_reuse() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
     let mut client = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &server.address,
     );
     client.user_login(ADMIN, ADMIN).await?;
@@ -92,11 +88,7 @@ async fn config_reuse() -> anyhow::Result<()> {
 async fn db_list_after_shutdown() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
     let mut client = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &server.address,
     );
 
@@ -127,11 +119,7 @@ async fn db_list_after_shutdown() -> anyhow::Result<()> {
 async fn db_list_after_shutdown_corrupted_data() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
     let mut client = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &server.address,
     );
 
@@ -168,6 +156,9 @@ async fn basepath_test() -> anyhow::Result<()> {
     config.insert("basepath", "/public".into());
     config.insert("log_level", "INFO".into());
     config.insert("pepper_path", "".into());
+    config.insert("tls_certificate", "".into());
+    config.insert("tls_key", "".into());
+    config.insert("tls_root", "".into());
     config.insert("cluster_token", "test".into());
     config.insert("cluster_heartbeat_timeout_ms", 1000.into());
     config.insert("cluster_term_timeout_ms", 3000.into());
@@ -175,7 +166,7 @@ async fn basepath_test() -> anyhow::Result<()> {
 
     let server = TestServerImpl::with_config(config).await?;
 
-    reqwest::Client::new()
+    reqwest_client()
         .get(format!("{}/studio", server.address))
         .send()
         .await?
@@ -188,11 +179,7 @@ async fn basepath_test() -> anyhow::Result<()> {
 async fn location_change_after_restart() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
     let mut client = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &server.address,
     );
 
@@ -238,11 +225,7 @@ async fn location_change_after_restart() -> anyhow::Result<()> {
 async fn reset_admin_password() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
     let mut client = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &server.address,
     );
 
@@ -275,11 +258,7 @@ async fn reset_admin_password() -> anyhow::Result<()> {
 async fn memory_db_from_backup() -> anyhow::Result<()> {
     let mut server = TestServerImpl::new().await?;
     let mut client = AgdbApi::new(
-        ReqwestClient::with_client(
-            reqwest::Client::builder()
-                .timeout(Duration::from_secs(10))
-                .build()?,
-        ),
+        ReqwestClient::with_client(reqwest_client()),
         &server.address,
     );
     let owner = "user1";
@@ -324,8 +303,7 @@ async fn memory_db_from_backup() -> anyhow::Result<()> {
 #[tokio::test]
 async fn studio() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
-    let client = reqwest::Client::new();
-    client
+    reqwest_client()
         .get(server.url("/studio"))
         .send()
         .await?

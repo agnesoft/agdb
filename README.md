@@ -79,6 +79,7 @@ Technical features:
 - Memory mapped for fast querying
 - [Server mode](https://agdb.agnesoft.com/docs/references/server)
 - [Cluster mode](https://agdb.agnesoft.com/docs/references/server#cluster)
+- In-built TLS support
 - [OpenAPI clients](https://agdb.agnesoft.com/api-docs/openapi) in any programming language
 - [Cloud](https://agdb.agnesoft.com/enterprise/cloud) hosted SaaS database
 - _Db itself has no dependencies_
@@ -169,9 +170,17 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 
 ### agdb_api
 
-| Feature | Default | Description                                                                                                                                 |
-| ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| reqwest | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
+| Feature    | Default | Description                                                                                                                                 |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| reqwest    | no      | Enables referential implementation of the `HttpClient` trait for agdb API client using [`reqwest`](https://github.com/seanmonstar/reqwest). |
+| rust-tls   | no      | Enables rust-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                                                                   |
+| native-tls | no      | Enables native-tls for [`reqwest`](https://github.com/seanmonstar/reqwest).                                                                 |
+
+### agdb_server
+
+| Feature | Default | Description                                                                    |
+| ------- | ------- | ------------------------------------------------------------------------------ |
+| tls     | no      | Enables TLS support via `rustls`. On Windows requires MSVC and CMake to build. |
 
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 

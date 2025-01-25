@@ -1,4 +1,6 @@
 mod routes;
+#[cfg(feature = "tls")]
+mod tls;
 
 use agdb_api::AgdbApi;
 use agdb_api::ClusterStatus;
@@ -64,6 +66,38 @@ pub struct TestCluster {
     _cluster: Arc<ClusterImpl>,
 }
 
+#[cfg(feature = "tls")]
+pub fn root_ca() -> reqwest::Certificate {
+    static ROOT_CA: std::sync::OnceLock<reqwest::Certificate> = std::sync::OnceLock::new();
+
+    ROOT_CA
+        .get_or_init(|| {
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+            let root_ca_buf =
+                std::fs::read(format!("{manifest_dir}/tests/test_root_ca.pem")).unwrap();
+            reqwest::Certificate::from_pem(&root_ca_buf).unwrap()
+        })
+        .clone()
+}
+
+#[cfg(feature = "tls")]
+pub fn reqwest_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .add_root_certificate(root_ca())
+        .use_rustls_tls()
+        .timeout(CLIENT_TIMEOUT)
+        .build()
+        .unwrap()
+}
+
+#[cfg(not(feature = "tls"))]
+pub fn reqwest_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .timeout(CLIENT_TIMEOUT)
+        .build()
+        .unwrap()
+}
+
 impl TestServerImpl {
     pub async fn with_config(mut config: HashMap<&str, serde_yml::Value>) -> anyhow::Result<Self> {
         let address = if let Some(address) = config.get("address") {
@@ -101,10 +135,7 @@ impl TestServerImpl {
             .current_dir(&dir)
             .kill_on_drop(true)
             .spawn()?;
-        let api = AgdbApi::new(
-            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
-            &api_address,
-        );
+        let api = AgdbApi::new(ReqwestClient::with_client(reqwest_client()), &api_address);
 
         for _ in 0..RETRY_ATTEMPS {
             match api.status().await {
@@ -140,6 +171,9 @@ impl TestServerImpl {
         config.insert("basepath", "".into());
         config.insert("log_level", "INFO".into());
         config.insert("pepper_path", "".into());
+        config.insert("tls_certificate", "".into());
+        config.insert("tls_key", "".into());
+        config.insert("tls_root", "".into());
         config.insert("cluster_token", "test".into());
         config.insert("cluster_heartbeat_timeout_ms", 1000.into());
         config.insert("cluster_term_timeout_ms", 3000.into());
@@ -183,7 +217,8 @@ impl TestServerImpl {
         admin.insert("username", ADMIN.to_string());
         admin.insert("password", ADMIN.to_string());
 
-        let client = reqwest::Client::new();
+        let client = reqwest_client();
+
         let token: String = client
             .post(format!("{}/api/v1/user/login", address))
             .json(&admin)
@@ -243,9 +278,7 @@ impl TestServer {
 
         Ok(Self {
             api: AgdbApi::new(
-                ReqwestClient::with_client(
-                    reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
-                ),
+                ReqwestClient::with_client(reqwest_client()),
                 &server.address,
             ),
             dir: server.dir.clone(),
@@ -301,7 +334,7 @@ impl TestCluster {
         let nodes = if let Some(nodes) = cluster_guard.upgrade() {
             nodes
         } else {
-            let nodes = Arc::new(create_cluster(3).await?);
+            let nodes = Arc::new(create_cluster(3, false).await?);
             *cluster_guard = Arc::downgrade(&nodes);
             nodes
         };
@@ -311,9 +344,7 @@ impl TestCluster {
                 .iter()
                 .map(|s| {
                     Ok(AgdbApi::new(
-                        ReqwestClient::with_client(
-                            reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?,
-                        ),
+                        ReqwestClient::with_client(reqwest_client()),
                         &s.address,
                     ))
                 })
@@ -365,27 +396,47 @@ pub async fn wait_for_leader(api: &AgdbApi<ReqwestClient>) -> anyhow::Result<Vec
     ))
 }
 
-pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>> {
+pub async fn create_cluster(nodes: usize, tls: bool) -> anyhow::Result<Vec<TestServerImpl>> {
     let mut configs = Vec::with_capacity(nodes);
     let mut cluster = Vec::with_capacity(nodes);
     let mut servers = Vec::with_capacity(nodes);
+    let protocol = if tls { "https" } else { "http" };
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
+    let tls_cert = if tls {
+        format!("{manifest_dir}/tests/test_cert.pem")
+    } else {
+        String::new()
+    };
+    let tls_key = if tls {
+        format!("{manifest_dir}/tests/test_cert.key.pem")
+    } else {
+        String::new()
+    };
+    let tls_root = if tls {
+        format!("{manifest_dir}/tests/test_root_ca.pem")
+    } else {
+        String::new()
+    };
 
     for _ in 0..nodes {
         let port = TestServerImpl::next_port();
         let mut config = HashMap::<&str, serde_yml::Value>::new();
         config.insert("bind", format!("{HOST}:{port}").into());
-        config.insert("address", format!("http://{HOST}:{port}").into());
+        config.insert("address", format!("{protocol}://{HOST}:{port}").into());
         config.insert("admin", ADMIN.into());
         config.insert("basepath", "".into());
         config.insert("log_level", "INFO".into());
         config.insert("data_dir", SERVER_DATA_DIR.into());
         config.insert("pepper_path", "".into());
+        config.insert("tls_certificate", tls_cert.clone().into());
+        config.insert("tls_key", tls_key.clone().into());
+        config.insert("tls_root", tls_root.clone().into());
         config.insert("cluster_token", "test".into());
         config.insert("cluster_heartbeat_timeout_ms", 1000.into());
         config.insert("cluster_term_timeout_ms", 3000.into());
 
         configs.push(config);
-        cluster.push(format!("http://{HOST}:{port}"));
+        cluster.push(format!("{protocol}://{HOST}:{port}"));
     }
 
     for config in &mut configs {
@@ -398,7 +449,7 @@ pub async fn create_cluster(nodes: usize) -> anyhow::Result<Vec<TestServerImpl>>
     {
         let server = server.await??;
         let api = AgdbApi::new(
-            ReqwestClient::with_client(reqwest::Client::builder().timeout(CLIENT_TIMEOUT).build()?),
+            ReqwestClient::with_client(reqwest_client()),
             &server.address,
         );
         servers.push((server, api));

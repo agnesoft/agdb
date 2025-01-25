@@ -1,5 +1,6 @@
 use crate::action::cluster_login::ClusterLogin;
 use crate::action::ClusterAction;
+use crate::cluster;
 use crate::cluster::Cluster;
 use crate::config::Config;
 use crate::raft::Request;
@@ -147,10 +148,9 @@ pub(crate) async fn status(
         if index != cluster.index {
             let address = node.as_str().to_string();
             let url = format!("{}/api/v1/status", node.trim_end_matches("/"));
+            let client = cluster::reqwest_client(&config)?;
 
             tasks.push(tokio::spawn(async move {
-                let client = reqwest::Client::new();
-
                 let response = client
                     .get(&url)
                     .timeout(std::time::Duration::from_secs(5))

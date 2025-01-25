@@ -34,7 +34,6 @@ async fn main() -> ServerResult {
     let server_db = server_db::new(&config).await?;
     let db_pool = db_pool::new(config.clone(), &server_db).await?;
     let cluster = cluster::new(&config, &server_db, &db_pool).await?;
-
     let app = app::app(
         cluster.clone(),
         config.clone(),
@@ -42,15 +41,49 @@ async fn main() -> ServerResult {
         server_db,
         shutdown_sender.clone(),
     );
+    let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver);
+
     tracing::info!("Process id: {}", std::process::id());
     tracing::info!(
         "Data directory: {}",
         std::env::current_dir()?.join(&config.data_dir).display()
     );
+
+    #[cfg(feature = "tls")]
+    if !config.tls_certificate.is_empty() && !config.tls_key.is_empty() {
+        rustls::crypto::aws_lc_rs::default_provider()
+            .install_default()
+            .expect("Default Crypto Provider failed to install");
+
+        let tls_config = axum_server::tls_rustls::RustlsConfig::from_pem_file(
+            std::path::PathBuf::from(config.tls_certificate.clone()),
+            std::path::PathBuf::from(config.tls_key.clone()),
+        )
+        .await?;
+        let handle = axum_server::Handle::new();
+        let shutdown_handle = handle.clone();
+
+        tracing::info!("TLS enabled");
+
+        tokio::spawn(async move {
+            cluster_handle.await;
+            shutdown_handle.graceful_shutdown(Some(std::time::Duration::from_secs(5)));
+        });
+
+        tracing::info!("Address: {}", config.address);
+        tracing::info!("Listening at {}", config.bind);
+        let listener = std::net::TcpListener::bind(&config.bind)?;
+        return Ok(axum_server::from_tcp_rustls(listener, tls_config)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await?);
+    }
+
+    tracing::info!("Address: {}", config.address);
     tracing::info!("Listening at {}", config.bind);
     let listener = tokio::net::TcpListener::bind(&config.bind).await?;
     axum::serve(listener, app)
-        .with_graceful_shutdown(cluster::start_with_shutdown(cluster, shutdown_receiver))
+        .with_graceful_shutdown(cluster_handle)
         .await?;
 
     Ok(())

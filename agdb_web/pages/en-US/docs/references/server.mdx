@@ -32,6 +32,9 @@ admin: admin # the admin user that will be created automatically for the server,
 data_dir: agdb_server_data # directory to store user data
 log_level: INFO # Options are: OFF, ERROR, WARN, INFO, DEBUG, TRACE
 pepper_path: "" # Optional path to a runtime secret file containing 16 bytes "pepper" value for additionally "seasoning" (hashing) passwords. If empty a built-in pepper value is used - see "How to run the server?" guide for details
+tls_certificate: "" # path to the TLS certificate file
+tls_key: "" # path to the TLS key file
+tls_root: "" # path to the TLS root CA file
 cluster_token: cluster # token used between members of the cluster for authentication, treat this value as secret
 cluster_heartbeat_timeout_ms: 1000 # number of milliseconds since last message sent to a node in the cluster before the leader sends a heartbeat message
 cluster_term_timeout_ms: 3000 # number of milliseconds without receiving a message from the leader after which the nodes will consider leader to be off and begin a new term
@@ -42,7 +45,22 @@ You can prepare it in advance in a file `agdb_server.yaml`. After the server dat
 
 The server is built with a default `pepper` (can be changed as [part of the build](/docs/guides/how-to-run-server/server-bare-metal) ) that is used if `pepper_path` is not specified. If unique it makes sure the two different `agdb_server` instances do not produce the same password hashes and enhances the security. The `pepper` value is to be considered a secret.
 
-                                                                                                                  |
+The TLS is turned on by specifying the `tls_certificate` and `tls_key` and internally uses (`rustls`)[https://github.com/rustls/rustls]. The `tls_root` is optional (can be empty) and needs to be specified only if you are using self-signed certificates. The certificate use in `tls_certificate` must be issued for the name (or one of alternative names) used in the `address` and `cluster` fields. For self-signed certificate and root CA (usable in docker compose or K8s deployments) you can use the following:
+
+```bash
+cargo install rustls-cert-gen
+rustls-cert-gen \
+    --common-name=agdb \
+    --ca-file-name=root_ca \
+     --cert-file-name=cert \
+     --country-name=CZ \
+     --organization-name=Agnesoft \
+     --san=localhost \
+     --san=agdb0 \
+     --san=agdb1 \
+     --san=agdb2 \
+     --output=.
+```
 
 ## Users
 

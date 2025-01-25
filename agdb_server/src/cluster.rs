@@ -82,6 +82,7 @@ impl ClusterNodeImpl {
         address: &str,
         token: &str,
         responses: UnboundedSender<(Request<ClusterAction>, Response)>,
+        config: &Config,
     ) -> ServerResult<Self> {
         let base = if address.starts_with("http") || address.starts_with("https") {
             address.to_string()
@@ -93,11 +94,7 @@ impl ClusterNodeImpl {
         let base_url = base.trim_end_matches("/").to_string();
 
         Ok(Self {
-            client: ReqwestClient::with_client(
-                reqwest::Client::builder()
-                    .connect_timeout(Duration::from_secs(60))
-                    .build()?,
-            ),
+            client: ReqwestClient::with_client(reqwest_client(config)?),
             url: format!("{base_url}/api/v1/cluster"),
             base_url,
             token: Some(token.to_string()),
@@ -199,6 +196,7 @@ pub(crate) async fn new(config: &Config, db: &ServerDb, db_pool: &DbPool) -> Ser
                 node.as_str(),
                 &config.cluster_token,
                 requests.clone(),
+                config,
             )?));
         }
 
@@ -421,4 +419,41 @@ impl Storage<ClusterAction, ResultNotifier> for ClusterStorage {
     async fn logs(&self, from_index: u64) -> ServerResult<Vec<Log<ClusterAction>>> {
         self.db.logs_since(from_index).await
     }
+}
+
+#[cfg(feature = "tls")]
+pub(crate) fn root_ca(config: &Config) -> ServerResult<Option<reqwest::Certificate>> {
+    static ROOT_CA: std::sync::OnceLock<Option<reqwest::Certificate>> = std::sync::OnceLock::new();
+
+    Ok(ROOT_CA
+        .get_or_init(|| {
+            if config.tls_root.is_empty() {
+                return None;
+            }
+
+            let cert_data = std::fs::read(std::path::Path::new(&config.tls_root))
+                .expect("root certificate could not be read");
+            let cert = reqwest::Certificate::from_pem(&cert_data)
+                .expect("root certificate data is invalid");
+            Some(cert)
+        })
+        .clone())
+}
+
+#[cfg(feature = "tls")]
+pub(crate) fn reqwest_client(config: &Config) -> ServerResult<reqwest::Client> {
+    let mut builder = reqwest::Client::builder().timeout(Duration::from_secs(60));
+
+    if let Some(root_ca) = root_ca(config)? {
+        builder = builder.add_root_certificate(root_ca).use_rustls_tls();
+    }
+
+    Ok(builder.build()?)
+}
+
+#[cfg(not(feature = "tls"))]
+pub(crate) fn reqwest_client(_config: &Config) -> ServerResult<reqwest::Client> {
+    Ok(reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()?)
 }

@@ -12,6 +12,12 @@ services:
         target: /agdb/agdb_server.yaml
       - source: pepper
         target: /agdb/pepper
+      - source: cert
+        target: /agdb/cert.pem
+      - source: cert_key
+        target: /agdb/cert.key.pem
+      - source: root_ca
+        target: /agdb/root_ca.pem
   agdb1:
     image: agnesoft/agdb:dev
     hostname: agdb1
@@ -25,6 +31,12 @@ services:
         target: /agdb/agdb_server.yaml
       - source: pepper
         target: /agdb/pepper
+      - source: cert
+        target: /agdb/cert.pem
+      - source: cert_key
+        target: /agdb/cert.key.pem
+      - source: root_ca
+        target: /agdb/root_ca.pem
   agdb2:
     image: agnesoft/agdb:dev
     hostname: agdb2
@@ -38,7 +50,12 @@ services:
         target: /agdb/agdb_server.yaml
       - source: pepper
         target: /agdb/pepper
-
+      - source: cert
+        target: /agdb/cert.pem
+      - source: cert_key
+        target: /agdb/cert.key.pem
+      - source: root_ca
+        target: /agdb/root_ca.pem
 volumes:
   agdb0_data:
   agdb1_data:
@@ -51,39 +68,54 @@ configs:
   agdb0_config:
     content: |
       bind: :::3000
-      address: http://agdb0:3000
+      address: https://agdb0:3000
       basepath: ""
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
       pepper_path: /agdb/pepper
+      tls_certificate: /agdb/cert.pem
+      tls_key: /agdb/cert.key.pem
+      tls_root: /agdb/root_ca.pem
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
-      cluster: [http://agdb0:3000, http://agdb1:3001, http://agdb2:3002]
+      cluster: [https://agdb0:3000, https://agdb1:3001, https://agdb2:3002]
   agdb1_config:
     content: |
       bind: :::3001
-      address: http://agdb1:3001
+      address: https://agdb1:3001
       basepath: ""
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
       pepper_path: /agdb/pepper
+      tls_certificate: /agdb/cert.pem
+      tls_key: /agdb/cert.key.pem
+      tls_root: /agdb/root_ca.pem
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
-      cluster: [http://agdb0:3000, http://agdb1:3001, http://agdb2:3002]
+      cluster: [https://agdb0:3000, https://agdb1:3001, https://agdb2:3002]
   agdb2_config:
     content: |
       bind: :::3002
-      address: http://agdb2:3002
+      address: https://agdb2:3002
       basepath: ""
       admin: admin
       log_level: INFO
       data_dir: /agdb/data
       pepper_path: /agdb/pepper
+      tls_certificate: /agdb/cert.pem
+      tls_key: /agdb/cert.key.pem
+      tls_root: /agdb/root_ca.pem
       cluster_token: cluster
       cluster_heartbeat_timeout_ms: 1000
       cluster_term_timeout_ms: 3000
-      cluster: [http://agdb0:3000, http://agdb1:3001, http://agdb2:3002]
+      cluster: [https://agdb0:3000, https://agdb1:3001, https://agdb2:3002]
+  cert:
+    file: ./test_certs/test_cert.pem
+  cert_key:
+    file: ./test_certs/test_cert.key.pem
+  root_ca:
+    file: ./test_certs/test_root_ca.pem

@@ -79,6 +79,7 @@ Technical features:
 - Memory mapped for fast querying
 - [Server mode](https://agdb.agnesoft.com/docs/references/server)
 - [Cluster mode](https://agdb.agnesoft.com/docs/references/server#cluster)
+- In-built TLS support
 - [OpenAPI clients](https://agdb.agnesoft.com/api-docs/openapi) in any programming language
 - [Cloud](https://agdb.agnesoft.com/enterprise/cloud) hosted SaaS database
 - _Db itself has no dependencies_

@@ -19,6 +19,7 @@ import {
     dbRestore,
 } from "./dbActions";
 import { useAdmin } from "../user/admin";
+import type { Column, TRow } from "../table/types";
 
 const { getInputValue } = useContentInputs();
 const { openModal } = useModal();
@@ -436,7 +437,7 @@ const dbActions: Action<ServerDatabase>[] = [
     },
 ];
 
-const dbColumns = [
+const dbColumns: Column<TRow>[] = [
     { key: "role", title: "Role" },
     { key: "owner", title: "Owner" },
     { key: "db", title: "Name" },
@@ -450,7 +451,7 @@ const dbColumns = [
     {
         key: "actions",
         title: "Actions",
-        actions: dbActions,
+        actions: dbActions as unknown as Action<TRow>[],
     },
 ];
 

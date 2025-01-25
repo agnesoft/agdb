@@ -10,7 +10,7 @@ export type Column<T extends TRow> = {
     filterable?: boolean;
     cellComponent?: AsyncComponent | ((row: T) => AsyncComponent);
     valueFormatter?: (value: TCellType) => TCellType;
-    actions?: Action[];
+    actions?: Action<T>[];
 };
 
 export type Table<T extends TRow> = {

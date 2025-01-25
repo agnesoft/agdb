@@ -6,6 +6,7 @@ import { INJECT_KEY_ROW } from "@/composables/table/constants";
 import useModal from "@/composables/modal/modal";
 import { convertArrayOfStringsToContent } from "@/composables/content/utils";
 import DropdownContent from "../dropdown/DropdownContent.vue";
+import type { TRow } from "@/composables/table/types";
 const { fetchDatabases } = vi.hoisted(() => {
     return {
         fetchDatabases: vi.fn(),
@@ -30,7 +31,7 @@ describe("AgdbCellMenu", () => {
     it("should open and close on click", async () => {
         const wrapper = mount(AgdbCellMenu, {
             props: {
-                actions: dbActions,
+                actions: dbActions as unknown as Action<TRow>[],
             },
             global: {
                 provide: {
@@ -60,7 +61,7 @@ describe("AgdbCellMenu", () => {
     it("should call action on click when no confirmation required", async () => {
         const wrapper = mount(AgdbCellMenu, {
             props: {
-                actions: dbActions,
+                actions: dbActions as unknown as Action<TRow>[],
             },
             global: {
                 provide: {
@@ -226,7 +227,7 @@ describe("AgdbCellMenu", () => {
     it("should not close the dropdown if item has no action", async () => {
         const wrapper = mount(AgdbCellMenu, {
             props: {
-                actions: dbActions,
+                actions: dbActions as unknown as Action<TRow>[],
             },
             global: {
                 provide: {

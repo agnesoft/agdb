@@ -1,11 +1,12 @@
 import type { DbUserRole, ServerDatabase } from "agdb_api/dist/openapi";
-import { useDbStore, type DbIdentification } from "./dbStore";
+import { useDbStore } from "./dbStore";
 import { useDbUsersStore } from "./dbUsersStore";
 import { useContentInputs } from "../content/inputs";
 import { computed, type Ref } from "vue";
 import useModal from "../modal/modal";
 import { KEY_MODAL } from "../modal/constants";
 import { EMPHASIZED_CLASSNAME } from "../content/utils";
+import type { DbIdentification } from "./types";
 
 export type DbDetailsParams = DbIdentification & Pick<ServerDatabase, "role">;
 

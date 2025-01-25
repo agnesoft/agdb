@@ -4,7 +4,7 @@ import { AkChevronRightSmall } from "@kalimahapps/vue-icons";
 import SlideUpTransition from "@/components/transitions/SlideUpTransition.vue";
 
 const props = defineProps({
-    actions: { type: Array as PropType<Action[]>, required: true },
+    actions: { type: Array as PropType<Action<undefined>[]>, required: true },
 });
 
 const openedSubmenu = ref<string>();
@@ -25,7 +25,7 @@ const openSubmenu = (key: string) => {
                     if (action.actions) {
                         openSubmenu(action.key);
                     }
-                    action.action({ event });
+                    action.action?.({ event, params: undefined });
                 }
             "
             @mouseover="openSubmenu(action.key)"

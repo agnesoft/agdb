@@ -16,12 +16,12 @@ const row = inject<Ref<TRow>>(INJECT_KEY_ROW);
 const { fetchDatabases } = useDbStore();
 const { openModal } = useModal();
 
-const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
+const mapActions = (actions: Action<TRow>[]): Action<undefined>[] => {
     if (!row) return [];
     return actions.map((action) => {
-        const runAction: ActionFn<TRow, ActionReturn> | undefined =
+        const runAction: ActionFn<undefined, ActionReturn> | undefined =
             action.action
-                ? ({ event }: ActionProps<TRow>): ActionReturn => {
+                ? ({ event }: ActionProps<undefined>): ActionReturn => {
                       /* v8 ignore next */
                       if (!action.action) return false;
                       const result = action.action({
@@ -33,15 +33,16 @@ const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
                   }
                 : undefined;
         return {
-            ...action,
+            key: action.key,
+            label: action.label,
             action: !runAction
-                ? ({ event }: ActionProps<TRow>) => {
+                ? ({ event }: ActionProps<undefined>) => {
                       event.preventDefault();
                       event.stopPropagation();
                       return false;
                   }
                 : action.confirmation
-                  ? ({ event }: ActionProps<TRow>) => {
+                  ? ({ event }: ActionProps<undefined>) => {
                         openModal({
                             header: action.confirmationHeader
                                 ? typeof action.confirmationHeader ===
@@ -62,7 +63,7 @@ const mapActions = (actions: Action<TRow>[]): Action<TRow>[] => {
                             onConfirm: () =>
                                 runAction({
                                     event,
-                                    params: row.value,
+                                    params: undefined,
                                 }),
                         });
                         return false;

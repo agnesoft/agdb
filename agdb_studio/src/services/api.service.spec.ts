@@ -4,9 +4,13 @@ import {
     initClient,
     responseInterceptor,
     errorInterceptor,
+    checkClient,
 } from "./api.service";
 import { client } from "@/tests/apiMock";
 import type { AxiosError, AxiosResponse } from "axios";
+import { vi, describe, it, beforeEach, expect } from "vitest";
+import type { ComputedRef } from "vue";
+import type { AgdbApiClient } from "agdb_api/dist/client";
 
 describe("client service", () => {
     Object.defineProperty(window, "location", {
@@ -67,6 +71,15 @@ describe("client service", () => {
             expect(
                 errorInterceptor(response as unknown as AxiosError<string>),
             ).rejects.toBe(response);
+        });
+    });
+    describe("checkClient", () => {
+        it("throws error if client is not initialized", () => {
+            expect(() => {
+                checkClient({ value: undefined } as unknown as ComputedRef<
+                    AgdbApiClient | undefined
+                >);
+            }).toThrow("Client is not initialized");
         });
     });
 });

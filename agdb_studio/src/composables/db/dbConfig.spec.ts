@@ -16,10 +16,28 @@ import {
     db_audit,
     db_copy,
     db_rename,
+    admin_db_copy,
+    admin_db_rename,
 } from "@/tests/apiMock";
 import { useContentInputs } from "../content/inputs";
 import { KEY_MODAL } from "../modal/constants";
 import useModal from "../modal/modal";
+import type { ServerDatabase } from "agdb_api/dist/openapi";
+
+const { isAdmin, isAdminView } = vi.hoisted(() => {
+    return {
+        isAdmin: { value: true },
+        isAdminView: { value: false },
+    };
+});
+vi.mock("@/composables/user/admin", () => {
+    return {
+        useAdmin: vi.fn().mockReturnValue({
+            isAdmin,
+            isAdminView,
+        }),
+    };
+});
 
 const { addInput, setInputValue, clearAllInputs } = useContentInputs();
 
@@ -30,6 +48,13 @@ const testInput: Input = {
     label: "Test label",
     type: "text",
     autofocus: true,
+    required: true,
+};
+const testOwnerInput: Input = {
+    key: "new_owner",
+    label: "Test label",
+    type: "text",
+    autofocus: false,
     required: true,
 };
 
@@ -48,6 +73,7 @@ describe("dbConfig", () => {
         beforeEach(() => {
             clearAllInputs();
             vi.clearAllMocks();
+            isAdminView.value = false;
         });
         it("should have correct db actions", () => {
             const actionKeys = dbActions.map((action) => action.key);
@@ -67,8 +93,11 @@ describe("dbConfig", () => {
             ["audit", db_audit],
         ])("should run correct db actions for %s", (key, api) => {
             const action = dbActions.find((action) => action.key === key);
-            const params = { db: "test_db" };
-            action?.action({ params });
+            const params = {
+                db: "test_db",
+                owner: "test_owner",
+            };
+            action?.action?.({ params } as ActionProps<ServerDatabase>);
             expect(api).toHaveBeenCalledWith(params);
         });
 
@@ -99,13 +128,13 @@ describe("dbConfig", () => {
         it.each([
             ["copy", db_copy],
             ["rename", db_rename],
-        ])("should run correct db actions for %s", (key, api) => {
+        ])("should run correct db actions for %s as user", (key, api) => {
             const newName = "new_test_db";
             addInput(KEY_MODAL, testInput);
             setInputValue(KEY_MODAL, testInput.key, newName);
             const action = dbActions.find((action) => action.key === key);
             const params = { db: "test_db" };
-            action?.action({ params });
+            action?.action?.({ params } as ActionProps<ServerDatabase>);
             expect(api).toHaveBeenCalledWith({
                 ...params,
                 new_db: newName,
@@ -113,10 +142,33 @@ describe("dbConfig", () => {
             clearAllInputs();
         });
 
+        it.each([
+            ["copy", admin_db_copy],
+            ["rename", admin_db_rename],
+        ])("should run correct db actions for %s as admin", (key, api) => {
+            isAdmin.value = true;
+            isAdminView.value = true;
+            const newName = "new_test_db";
+            addInput(KEY_MODAL, testInput);
+            setInputValue(KEY_MODAL, testInput.key, newName);
+            const newOwner = "new_owner";
+            addInput(KEY_MODAL, testOwnerInput);
+            setInputValue(KEY_MODAL, testOwnerInput.key, newOwner);
+            const action = dbActions.find((action) => action.key === key);
+            const params = { db: "test_db" };
+            action?.action?.({ params } as ActionProps<ServerDatabase>);
+            expect(api).toHaveBeenCalledWith({
+                ...params,
+                new_db: newName,
+                new_owner: newOwner,
+            });
+            clearAllInputs();
+        });
+
         it("should print the empty audit log", async () => {
             const action = dbActions.find((action) => action.key === "audit");
             const params = { db: "test_db", owner: "test_owner" };
-            await action?.action({ params });
+            await action?.action?.({ params } as ActionProps<ServerDatabase>);
             expect(db_audit).toHaveBeenCalledWith(params);
 
             expect(modalIsVisible.value).toBe(true);
@@ -141,7 +193,7 @@ describe("dbConfig", () => {
                     },
                 ],
             });
-            await action?.action({ params });
+            await action?.action?.({ params } as ActionProps<ServerDatabase>);
             expect(db_audit).toHaveBeenCalledWith(params);
 
             expect(modalIsVisible.value).toBe(true);
@@ -153,6 +205,72 @@ describe("dbConfig", () => {
             expect(modal.content[1].paragraph?.at(0)?.text).toBe(
                 "456 | test_user2 | test_query2",
             );
+        });
+
+        it("should create correct inputs for copy action for user", () => {
+            const action = dbActions.find((action) => action.key === "copy");
+            const params = { db: "test_db", owner: "test_owner" };
+
+            if (typeof action?.confirmation !== "function") {
+                throw new Error("Confirmation function not found");
+            }
+
+            const content = action.confirmation({
+                params,
+            } as ActionProps<ServerDatabase>);
+            expect(content).toHaveLength(2);
+            expect(content[1].input?.key).toBe("new_db");
+        });
+
+        it("should create correct inputs for copy action for admin", () => {
+            isAdmin.value = true;
+            isAdminView.value = true;
+            const action = dbActions.find((action) => action.key === "copy");
+            const params = { db: "test_db", owner: "test_owner" };
+
+            if (typeof action?.confirmation !== "function") {
+                throw new Error("Confirmation function not found");
+            }
+
+            const content = action.confirmation({
+                params,
+            } as ActionProps<ServerDatabase>);
+            expect(content).toHaveLength(3);
+            expect(content[1].input?.key).toBe("new_db");
+            expect(content[2].input?.key).toBe("new_owner");
+        });
+
+        it("should create correct inputs for rename action for user", () => {
+            const action = dbActions.find((action) => action.key === "rename");
+            const params = { db: "test_db", owner: "test_owner" };
+
+            if (typeof action?.confirmation !== "function") {
+                throw new Error("Confirmation function not found");
+            }
+
+            const content = action.confirmation({
+                params,
+            } as ActionProps<ServerDatabase>);
+            expect(content).toHaveLength(2);
+            expect(content[1].input?.key).toBe("new_db");
+        });
+
+        it("should create correct inputs for rename action for admin", () => {
+            isAdmin.value = true;
+            isAdminView.value = true;
+            const action = dbActions.find((action) => action.key === "rename");
+            const params = { db: "test_db", owner: "test_owner" };
+
+            if (typeof action?.confirmation !== "function") {
+                throw new Error("Confirmation function not found");
+            }
+
+            const content = action.confirmation({
+                params,
+            } as ActionProps<ServerDatabase>);
+            expect(content).toHaveLength(3);
+            expect(content[1].input?.key).toBe("new_db");
+            expect(content[2].input?.key).toBe("new_owner");
         });
     });
 

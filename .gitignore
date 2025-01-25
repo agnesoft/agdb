@@ -21,3 +21,4 @@ node_modules/
 openapitools.json
 .openapi-generator/
 composer.lock
+.vscode/

@@ -31,6 +31,7 @@ vi.mock("@/composables/db/dbStore", () => {
             return {
                 databases,
                 fetchDatabases,
+                addDatabase: vi.fn().mockResolvedValue({}),
             };
         },
     };
@@ -58,7 +59,10 @@ describe("DbView", () => {
     it("should refresh databases when user clicks refresh button", async () => {
         expect(fetchDatabases).not.toHaveBeenCalled();
         const wrapper = mount(DbView);
-        await wrapper.find("button").trigger("click");
+        expect(fetchDatabases).toHaveBeenCalledTimes(1);
+        const button = wrapper.find("button.refresh");
+        expect(button.html()).toContain("refresh");
+        await button.trigger("click");
         await wrapper.vm.$nextTick();
         expect(fetchDatabases).toHaveBeenCalledTimes(2);
     });

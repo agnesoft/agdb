@@ -3,7 +3,7 @@ import { userActions, userColumns } from "./userConfig";
 import {
     admin_user_change_password,
     admin_user_logout,
-    admin_user_remove,
+    admin_user_delete,
     cluster_admin_user_logout,
 } from "@/tests/apiMock";
 import { useContentInputs } from "../content/inputs";
@@ -132,7 +132,7 @@ describe("userConfig.ts", () => {
             await action?.action?.({
                 params: { username: "test_user" },
             } as ActionProps<UserStatus>);
-            expect(admin_user_remove).toHaveBeenCalledWith({
+            expect(admin_user_delete).toHaveBeenCalledWith({
                 username: "test_user",
             });
         });

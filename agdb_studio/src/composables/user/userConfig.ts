@@ -99,7 +99,7 @@ const userActions: Action<UserStatus>[] = [
         label: "Delete",
         action: async ({ params }) => {
             return client.value
-                ?.admin_user_remove({ username: params.username })
+                ?.admin_user_delete({ username: params.username })
                 .then(() => {
                     addNotification({
                         type: "success",

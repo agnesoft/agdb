@@ -3,12 +3,9 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 40vh;
-    min-height: 15rem;
-    max-height: 60rem;
     h1 {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
+        font-size: 3rem;
+        margin: 1rem;
         font-weight: 100;
         color: var(--grey-color-0);
     }
@@ -35,4 +32,14 @@
     font-weight: 100;
     margin-bottom: 3rem;
     color: var(--grey-color-2);
+}
+
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    a {
+        margin: 0.5rem;
+    }
 }

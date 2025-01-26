@@ -1,4 +1,4 @@
-import { useAdmin } from "../user/admin";
+import { useAdmin } from "../profile/admin";
 import { checkClient, client } from "@/services/api.service";
 import type {
     Components,

@@ -5,8 +5,8 @@ import {
     type RouteLocationNormalizedGeneric,
 } from "vue-router";
 import { createRoutes } from "./routes";
-import { useAuth } from "@/composables/user/auth";
-import { useAccount } from "@/composables/user/account";
+import { useAuth } from "@/composables/profile/auth";
+import { useAccount } from "@/composables/profile/account";
 
 const { isLoggedIn } = useAuth();
 const { admin, fetchUserStatus } = useAccount();

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref } from "vue";
-import { useAuth } from "@/composables/user/auth";
+import { useAuth } from "@/composables/profile/auth";
 import router from "@/router";
 import SpinnerIcon from "@/components/base/icons/SpinnerIcon.vue";
 

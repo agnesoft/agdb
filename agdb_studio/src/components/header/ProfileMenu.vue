@@ -1,11 +1,11 @@
 <script lang="ts" setup>
 import AgdbMenu from "../base/menu/AgdbMenu.vue";
-import { useUserActions } from "@/composables/user/userActions";
+import { useUserActions } from "@/composables/profile/profileActions";
 
 const { actions } = useUserActions();
 </script>
 <template>
-    <div class="user-dropdown-content">
+    <div class="profile-dropdown-content">
         <AgdbMenu :actions="actions" />
     </div>
 </template>

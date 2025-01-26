@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import UserDropdown from "./UserDropdown.vue";
+import ProfileDropdown from "./ProfileDropdown.vue";
 import DropdownContent from "../base/dropdown/DropdownContent.vue";
 
-vi.mock("@/composables/user/account", () => {
+vi.mock("@/composables/profile/account", () => {
     return {
         useAccount: () => ({
             username: "testUser",
@@ -12,14 +12,14 @@ vi.mock("@/composables/user/account", () => {
     };
 });
 
-describe("UserDropdown", () => {
+describe("ProfileDropdown", () => {
     it("renders", () => {
-        const wrapper = mount(UserDropdown);
+        const wrapper = mount(ProfileDropdown);
         expect(wrapper.text()).toContain("testUser");
     });
 
     it("should open and close on click", async () => {
-        const wrapper = mount(UserDropdown);
+        const wrapper = mount(ProfileDropdown);
         const trigger = wrapper.find(".trigger");
         const dropdown = wrapper.findComponent(DropdownContent);
         expect(dropdown.isVisible()).toBe(false);

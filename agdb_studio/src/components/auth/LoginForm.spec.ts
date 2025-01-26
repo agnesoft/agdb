@@ -17,7 +17,7 @@ const { loginMock, logoutMock, pushMock, currentRoute } = vi.hoisted(() => {
     };
 });
 
-vi.mock("@/composables/user/auth", () => {
+vi.mock("@/composables/profile/auth", () => {
     return {
         useAuth: () => ({
             login: loginMock,

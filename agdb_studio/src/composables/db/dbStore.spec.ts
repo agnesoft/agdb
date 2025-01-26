@@ -34,7 +34,7 @@ const { username, admin, dbAdd, dbList } = vi.hoisted(() => {
         }),
     };
 });
-vi.mock("../user/account", () => {
+vi.mock("@/composables/profile/account", () => {
     return {
         useAccount: () => {
             return {

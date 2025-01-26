@@ -18,7 +18,7 @@ import {
     dbRename,
     dbRestore,
 } from "./dbActions";
-import { useAdmin } from "../user/admin";
+import { useAdmin } from "../profile/admin";
 import type { Column, TRow } from "../table/types";
 
 const { getInputValue } = useContentInputs();

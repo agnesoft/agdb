@@ -1,5 +1,5 @@
 import { client } from "@/services/api.service";
-import { useAuth } from "@/composables/user/auth";
+import { useAuth } from "@/composables/profile/auth";
 import { ref, watch } from "vue";
 
 const username = ref<string | undefined>(undefined);

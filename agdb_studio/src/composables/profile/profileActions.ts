@@ -6,7 +6,7 @@ import { convertArrayOfStringsToContent } from "../content/utils";
 import { client } from "@/services/api.service";
 import { KEY_MODAL } from "../modal/constants";
 import { computed } from "vue";
-import { useAdmin } from "@/composables/user/admin";
+import { useAdmin } from "@/composables/profile/admin";
 
 const { logout } = useAuth();
 const { openModal } = useModal();

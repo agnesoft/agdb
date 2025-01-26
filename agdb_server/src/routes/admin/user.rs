@@ -75,7 +75,6 @@ pub(crate) async fn add(
     responses(
          (status = 201, description = "password changed"),
          (status = 401, description = "unauthorized"),
-         (status = 461, description = "password too short (<8)"),
          (status = 464, description = "user not found"),
     )
 )]
@@ -87,7 +86,6 @@ pub(crate) async fn change_password(
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse<impl IntoResponse> {
     let _user = server_db.user_id(&username).await?;
-    password::validate_password(&request.password)?;
     let pswd = Password::create(&username, &request.password);
 
     let (commit_index, _result) = cluster

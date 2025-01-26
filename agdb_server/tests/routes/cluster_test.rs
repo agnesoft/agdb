@@ -397,7 +397,7 @@ async fn admin_cluster_logout() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn admin_user_remove() -> anyhow::Result<()> {
+async fn admin_user_delete() -> anyhow::Result<()> {
     let mut cluster = TestCluster::new().await?;
     let client = cluster.apis.get_mut(1).unwrap();
     let user = &next_user_name();
@@ -406,7 +406,7 @@ async fn admin_user_remove() -> anyhow::Result<()> {
     let users = client.admin_user_list().await?.1;
     let added_user = users.iter().find(|u| u.username.as_str() == user);
     assert!(added_user.is_some());
-    client.admin_user_remove(user).await?;
+    client.admin_user_delete(user).await?;
     let users = client.admin_user_list().await?.1;
     let added_user = users.iter().find(|u| u.username.as_str() == user);
     assert!(added_user.is_none());

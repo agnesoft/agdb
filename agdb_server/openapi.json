@@ -183,9 +183,6 @@
           "401": {
             "description": "unauthorized"
           },
-          "403": {
-            "description": "memory db cannot have backup"
-          },
           "404": {
             "description": "db / user not found"
           }
@@ -704,6 +701,50 @@
         ]
       }
     },
+    "/api/v1/admin/db/{owner}/{db}/restore": {
+      "post": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_db_restore",
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "db",
+            "in": "path",
+            "description": "db name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "db restored"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "db or backup not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/db/{owner}/{db}/user/list": {
       "get": {
         "tags": [
@@ -1046,10 +1087,52 @@
           "401": {
             "description": "unauthorized"
           },
-          "461": {
-            "description": "password too short (<8)"
-          },
           "464": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/user/{username}/delete": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_delete",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
             "description": "user not found"
           }
         },
@@ -1095,51 +1178,6 @@
         ]
       }
     },
-    "/api/v1/admin/user/{username}/remove": {
-      "delete": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "admin_user_remove",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "user removed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserStatus"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "unauthorized"
-          },
-          "404": {
-            "description": "user not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
     "/api/v1/cluster/admin/user/{username}/logout": {
       "post": {
         "tags": [
@@ -1166,27 +1204,6 @@
           },
           "404": {
             "description": "user not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/cluster/logout": {
-      "post": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "cluster_user_logout",
-        "responses": {
-          "201": {
-            "description": "user logged out"
-          },
-          "401": {
-            "description": "invalid credentials"
           }
         },
         "security": [
@@ -1252,41 +1269,18 @@
         }
       }
     },
-    "/api/v1/db/admin/{owner}/{db}/restore": {
+    "/api/v1/cluster/user/logout": {
       "post": {
         "tags": [
           "agdb"
         ],
-        "operationId": "admin_db_restore",
-        "parameters": [
-          {
-            "name": "owner",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "db",
-            "in": "path",
-            "description": "db name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "cluster_user_logout",
         "responses": {
           "201": {
-            "description": "db restored"
+            "description": "user logged out"
           },
           "401": {
-            "description": "unauthorized"
-          },
-          "404": {
-            "description": "db or backup not found"
+            "description": "invalid credentials"
           }
         },
         "security": [

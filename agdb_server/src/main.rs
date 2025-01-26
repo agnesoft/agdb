@@ -40,7 +40,7 @@ async fn main() -> ServerResult {
         db_pool,
         server_db,
         shutdown_sender.clone(),
-    );
+    )?;
     let cluster_handle = cluster::start_with_shutdown(cluster, shutdown_receiver);
 
     tracing::info!("Process id: {}", std::process::id());

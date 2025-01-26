@@ -1473,8 +1473,6 @@ declare namespace Paths {
             }
             export interface $401 {
             }
-            export interface $403 {
-            }
             export interface $404 {
             }
         }
@@ -1810,9 +1808,22 @@ declare namespace Paths {
             }
             export interface $401 {
             }
-            export interface $461 {
-            }
             export interface $464 {
+            }
+        }
+    }
+    namespace AdminUserDelete {
+        namespace Parameters {
+            export type Username = string;
+        }
+        export interface PathParameters {
+            username: Parameters.Username;
+        }
+        namespace Responses {
+            export type $204 = Components.Schemas.UserStatus[];
+            export interface $401 {
+            }
+            export interface $404 {
             }
         }
     }
@@ -1833,21 +1844,6 @@ declare namespace Paths {
         namespace Responses {
             export interface $201 {
             }
-            export interface $401 {
-            }
-            export interface $404 {
-            }
-        }
-    }
-    namespace AdminUserRemove {
-        namespace Parameters {
-            export type Username = string;
-        }
-        export interface PathParameters {
-            username: Parameters.Username;
-        }
-        namespace Responses {
-            export type $204 = Components.Schemas.UserStatus[];
             export interface $401 {
             }
             export interface $404 {
@@ -2394,6 +2390,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminDbRename.Responses.$201>
   /**
+   * admin_db_restore
+   */
+  'admin_db_restore'(
+    parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+  /**
    * admin_db_user_list
    */
   'admin_db_user_list'(
@@ -2458,6 +2462,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
   /**
+   * admin_user_delete
+   */
+  'admin_user_delete'(
+    parameters?: Parameters<Paths.AdminUserDelete.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminUserDelete.Responses.$204>
+  /**
    * admin_user_logout
    */
   'admin_user_logout'(
@@ -2466,14 +2478,6 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   /**
-   * admin_user_remove
-   */
-  'admin_user_remove'(
-    parameters?: Parameters<Paths.AdminUserRemove.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
-  /**
    * cluster_admin_user_logout
    */
   'cluster_admin_user_logout'(
@@ -2481,14 +2485,6 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
-  /**
-   * cluster_user_logout
-   */
-  'cluster_user_logout'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   /**
    * cluster_status
    */
@@ -2506,13 +2502,13 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
   /**
-   * admin_db_restore
+   * cluster_user_logout
    */
-  'admin_db_restore'(
-    parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
+  'cluster_user_logout'(
+    parameters?: Parameters<UnknownParamsObject> | null,
     data?: any,
     config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+  ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   /**
    * db_list
    */
@@ -2822,6 +2818,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminDbRename.Responses.$201>
   }
+  ['/api/v1/admin/db/{owner}/{db}/restore']: {
+    /**
+     * admin_db_restore
+     */
+    'post'(
+      parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+  }
   ['/api/v1/admin/db/{owner}/{db}/user/list']: {
     /**
      * admin_db_user_list
@@ -2902,6 +2908,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
   }
+  ['/api/v1/admin/user/{username}/delete']: {
+    /**
+     * admin_user_delete
+     */
+    'delete'(
+      parameters?: Parameters<Paths.AdminUserDelete.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminUserDelete.Responses.$204>
+  }
   ['/api/v1/admin/user/{username}/logout']: {
     /**
      * admin_user_logout
@@ -2912,16 +2928,6 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
   }
-  ['/api/v1/admin/user/{username}/remove']: {
-    /**
-     * admin_user_remove
-     */
-    'delete'(
-      parameters?: Parameters<Paths.AdminUserRemove.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
-  }
   ['/api/v1/cluster/admin/user/{username}/logout']: {
     /**
      * cluster_admin_user_logout
@@ -2931,16 +2937,6 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
-  }
-  ['/api/v1/cluster/logout']: {
-    /**
-     * cluster_user_logout
-     */
-    'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   }
   ['/api/v1/cluster/status']: {
     /**
@@ -2962,15 +2958,15 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
   }
-  ['/api/v1/db/admin/{owner}/{db}/restore']: {
+  ['/api/v1/cluster/user/logout']: {
     /**
-     * admin_db_restore
+     * cluster_user_logout
      */
     'post'(
-      parameters?: Parameters<Paths.AdminDbRestore.PathParameters> | null,
+      parameters?: Parameters<UnknownParamsObject> | null,
       data?: any,
       config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.AdminDbRestore.Responses.$201>
+    ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   }
   ['/api/v1/db/list']: {
     /**

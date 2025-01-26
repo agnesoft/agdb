@@ -95,7 +95,7 @@ pub(crate) async fn login(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/cluster/logout",
+    path = "/api/v1/cluster/user/logout",
     operation_id = "cluster_user_logout",
     tag = "agdb",
     security(("Token" = [])),

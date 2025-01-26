@@ -17,7 +17,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminDbOptimize()**](AgdbApi.md#adminDbOptimize) | **POST** /api/v1/admin/db/{owner}/{db}/optimize |  |
 | [**adminDbRemove()**](AgdbApi.md#adminDbRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/remove |  |
 | [**adminDbRename()**](AgdbApi.md#adminDbRename) | **POST** /api/v1/admin/db/{owner}/{db}/rename |  |
-| [**adminDbRestore()**](AgdbApi.md#adminDbRestore) | **POST** /api/v1/db/admin/{owner}/{db}/restore |  |
+| [**adminDbRestore()**](AgdbApi.md#adminDbRestore) | **POST** /api/v1/admin/db/{owner}/{db}/restore |  |
 | [**adminDbUserAdd()**](AgdbApi.md#adminDbUserAdd) | **PUT** /api/v1/admin/db/{owner}/{db}/user/{username}/add |  |
 | [**adminDbUserList()**](AgdbApi.md#adminDbUserList) | **GET** /api/v1/admin/db/{owner}/{db}/user/list |  |
 | [**adminDbUserRemove()**](AgdbApi.md#adminDbUserRemove) | **DELETE** /api/v1/admin/db/{owner}/{db}/user/{username}/remove |  |
@@ -25,13 +25,13 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**adminStatus()**](AgdbApi.md#adminStatus) | **GET** /api/v1/admin/status |  |
 | [**adminUserAdd()**](AgdbApi.md#adminUserAdd) | **POST** /api/v1/admin/user/{username}/add |  |
 | [**adminUserChangePassword()**](AgdbApi.md#adminUserChangePassword) | **PUT** /api/v1/admin/user/{username}/change_password |  |
+| [**adminUserDelete()**](AgdbApi.md#adminUserDelete) | **DELETE** /api/v1/admin/user/{username}/delete |  |
 | [**adminUserList()**](AgdbApi.md#adminUserList) | **GET** /api/v1/admin/user/list |  |
 | [**adminUserLogout()**](AgdbApi.md#adminUserLogout) | **POST** /api/v1/admin/user/{username}/logout |  |
-| [**adminUserRemove()**](AgdbApi.md#adminUserRemove) | **DELETE** /api/v1/admin/user/{username}/remove |  |
 | [**clusterAdminUserLogout()**](AgdbApi.md#clusterAdminUserLogout) | **POST** /api/v1/cluster/admin/user/{username}/logout |  |
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
 | [**clusterUserLogin()**](AgdbApi.md#clusterUserLogin) | **POST** /api/v1/cluster/user/login |  |
-| [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/logout |  |
+| [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/user/logout |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |
@@ -1312,6 +1312,64 @@ void (empty response body)
 [[Back to Model list]](../../README.md#models)
 [[Back to README]](../../README.md)
 
+## `adminUserDelete()`
+
+```php
+adminUserDelete($username): \Agnesoft\AgdbApi\Model\UserStatus[]
+```
+
+
+
+### Example
+
+```php
+<?php
+require_once(__DIR__ . '/vendor/autoload.php');
+
+
+// Configure Bearer authorization: Token
+$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
+
+
+$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
+    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
+    // This is optional, `GuzzleHttp\Client` will be used as default.
+    new GuzzleHttp\Client(),
+    $config
+);
+$username = 'username_example'; // string | user name
+
+try {
+    $result = $apiInstance->adminUserDelete($username);
+    print_r($result);
+} catch (Exception $e) {
+    echo 'Exception when calling AgdbApi->adminUserDelete: ', $e->getMessage(), PHP_EOL;
+}
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| **username** | **string**| user name | |
+
+### Return type
+
+[**\Agnesoft\AgdbApi\Model\UserStatus[]**](../Model/UserStatus.md)
+
+### Authorization
+
+[Token](../../README.md#Token)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
+[[Back to Model list]](../../README.md#models)
+[[Back to README]](../../README.md)
+
 ## `adminUserList()`
 
 ```php
@@ -1419,64 +1477,6 @@ void (empty response body)
 
 - **Content-Type**: Not defined
 - **Accept**: Not defined
-
-[[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
-[[Back to Model list]](../../README.md#models)
-[[Back to README]](../../README.md)
-
-## `adminUserRemove()`
-
-```php
-adminUserRemove($username): \Agnesoft\AgdbApi\Model\UserStatus[]
-```
-
-
-
-### Example
-
-```php
-<?php
-require_once(__DIR__ . '/vendor/autoload.php');
-
-
-// Configure Bearer authorization: Token
-$config = Agnesoft\AgdbApi\Configuration::getDefaultConfiguration()->setAccessToken('YOUR_ACCESS_TOKEN');
-
-
-$apiInstance = new Agnesoft\AgdbApi\Api\AgdbApi(
-    // If you want use custom http client, pass your client which implements `GuzzleHttp\ClientInterface`.
-    // This is optional, `GuzzleHttp\Client` will be used as default.
-    new GuzzleHttp\Client(),
-    $config
-);
-$username = 'username_example'; // string | user name
-
-try {
-    $result = $apiInstance->adminUserRemove($username);
-    print_r($result);
-} catch (Exception $e) {
-    echo 'Exception when calling AgdbApi->adminUserRemove: ', $e->getMessage(), PHP_EOL;
-}
-```
-
-### Parameters
-
-| Name | Type | Description  | Notes |
-| ------------- | ------------- | ------------- | ------------- |
-| **username** | **string**| user name | |
-
-### Return type
-
-[**\Agnesoft\AgdbApi\Model\UserStatus[]**](../Model/UserStatus.md)
-
-### Authorization
-
-[Token](../../README.md#Token)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
 
 [[Back to top]](#) [[Back to API list]](../../README.md#endpoints)
 [[Back to Model list]](../../README.md#models)

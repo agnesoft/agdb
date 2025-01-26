@@ -131,7 +131,6 @@ pub(crate) async fn audit(
     responses(
          (status = 201, description = "backup created"),
          (status = 401, description = "unauthorized"),
-         (status = 403, description = "memory db cannot have backup"),
          (status = 404, description = "db / user not found"),
     )
 )]
@@ -591,7 +590,7 @@ pub(crate) async fn rename(
 }
 
 #[utoipa::path(post,
-    path = "/api/v1/db/admin/{owner}/{db}/restore",
+    path = "/api/v1/admin/db/{owner}/{db}/restore",
     operation_id = "admin_db_restore",
     tag = "agdb",
     security(("Token" = [])),
@@ -612,7 +611,7 @@ pub(crate) async fn restore(
     Path((owner, db)): Path<(String, String)>,
 ) -> ServerResponse<impl IntoResponse> {
     let owner_id = server_db.user_id(&owner).await?;
-    let _ = server_db.user_db_id(owner_id, &owner, &db).await?;
+    server_db.user_db_id(owner_id, &owner, &db).await?;
 
     let (commit_index, _result) = cluster.exec(DbRestore { owner, db }).await?;
 

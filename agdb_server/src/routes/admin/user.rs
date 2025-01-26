@@ -1,6 +1,6 @@
 use crate::action::change_password::ChangePassword as ChangePasswordAction;
 use crate::action::user_add::UserAdd;
-use crate::action::user_remove::UserRemove;
+use crate::action::user_delete::UserDelete;
 use crate::cluster::Cluster;
 use crate::error_code::ErrorCode;
 use crate::password;
@@ -75,7 +75,6 @@ pub(crate) async fn add(
     responses(
          (status = 201, description = "password changed"),
          (status = 401, description = "unauthorized"),
-         (status = 461, description = "password too short (<8)"),
          (status = 464, description = "user not found"),
     )
 )]
@@ -87,7 +86,6 @@ pub(crate) async fn change_password(
     Json(request): Json<UserCredentials>,
 ) -> ServerResponse<impl IntoResponse> {
     let _user = server_db.user_id(&username).await?;
-    password::validate_password(&request.password)?;
     let pswd = Password::create(&username, &request.password);
 
     let (commit_index, _result) = cluster
@@ -147,20 +145,20 @@ pub(crate) async fn logout(
 }
 
 #[utoipa::path(delete,
-    path = "/api/v1/admin/user/{username}/remove",
-    operation_id = "admin_user_remove",
+    path = "/api/v1/admin/user/{username}/delete",
+    operation_id = "admin_user_delete",
     tag = "agdb",
     security(("Token" = [])),
     params(
         ("username" = String, Path, description = "user name"),
     ),
     responses(
-         (status = 204, description = "user removed", body = Vec<UserStatus>),
+         (status = 204, description = "user deleted", body = Vec<UserStatus>),
          (status = 401, description = "unauthorized"),
          (status = 404, description = "user not found"),
     )
 )]
-pub(crate) async fn remove(
+pub(crate) async fn delete(
     _admin: AdminId,
     State(server_db): State<ServerDb>,
     State(cluster): State<Cluster>,
@@ -169,7 +167,7 @@ pub(crate) async fn remove(
     server_db.user_id(&username).await?;
 
     let (commit_index, _result) = cluster
-        .exec(UserRemove {
+        .exec(UserDelete {
             user: username.to_string(),
         })
         .await?;

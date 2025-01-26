@@ -1,6 +1,7 @@
 pub(crate) mod admin;
 pub(crate) mod cluster;
 pub(crate) mod db;
+#[cfg(feature = "studio")]
 pub(crate) mod studio;
 pub(crate) mod user;
 

@@ -19,18 +19,13 @@ async fn change_password() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn password_too_short() -> anyhow::Result<()> {
+async fn password_short() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(owner, owner).await?;
-    let status = server
-        .api
-        .admin_user_change_password(owner, "pswd")
-        .await
-        .unwrap_err()
-        .status;
-    assert_eq!(status, 461);
+    let status = server.api.admin_user_change_password(owner, "pswd").await?;
+    assert_eq!(status, 201);
     Ok(())
 }
 

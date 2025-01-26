@@ -178,9 +178,10 @@ For database concepts and primitive data types see [concepts](https://agdb.agnes
 
 ### agdb_server
 
-| Feature | Default | Description                                                                    |
-| ------- | ------- | ------------------------------------------------------------------------------ |
-| tls     | no      | Enables TLS support via `rustls`. On Windows requires MSVC and CMake to build. |
+| Feature | Default | Description                                                                                                                   |
+| ------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| tls     | no      | Enables TLS support via `rustls`. On Windows requires MSVC and CMake to build.                                                |
+| studio  | no      | Embedd the `agdb_studio` into the server at `/studio` route. Requires already built `agdb_api/typescript` and `agdb_studio/`. |
 
 ## <img width="25" src="https://agdb.agnesoft.com/images/logo.svg" alt="agdb logo">&nbsp;&nbsp;Decision Tree
 

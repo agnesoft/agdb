@@ -27,7 +27,7 @@ watchEffect(() => {
             <AgdbTable :name="TABLE_KEY" />
         </div>
 
-        <p v-else>No databases found</p>
+        <p v-else>No users found</p>
     </div>
 </template>
 

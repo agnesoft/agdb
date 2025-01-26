@@ -35,11 +35,11 @@ const add = (event: Event) => {
         <form id="user-add-form" @submit="add">
             <div class="form-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" v-model="username" />
+                <input id="username" v-model="username" type="text" />
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="text" id="password" v-model="password" />
+                <input id="password" v-model="password" type="text" />
             </div>
             <button type="submit" class="button" @click="add">Add User</button>
         </form>

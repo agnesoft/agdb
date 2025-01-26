@@ -2486,14 +2486,6 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
   /**
-   * cluster_user_logout
-   */
-  'cluster_user_logout'(
-    parameters?: Parameters<UnknownParamsObject> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
-  /**
    * cluster_status
    */
   'cluster_status'(
@@ -2509,6 +2501,14 @@ export interface OperationMethods {
     data?: Paths.ClusterUserLogin.RequestBody,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
+  /**
+   * cluster_user_logout
+   */
+  'cluster_user_logout'(
+    parameters?: Parameters<UnknownParamsObject> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   /**
    * db_list
    */
@@ -2938,16 +2938,6 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterAdminUserLogout.Responses.$201>
   }
-  ['/api/v1/cluster/logout']: {
-    /**
-     * cluster_user_logout
-     */
-    'post'(
-      parameters?: Parameters<UnknownParamsObject> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
-  }
   ['/api/v1/cluster/status']: {
     /**
      * cluster_status
@@ -2967,6 +2957,16 @@ export interface PathsDictionary {
       data?: Paths.ClusterUserLogin.RequestBody,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.ClusterUserLogin.Responses.$200>
+  }
+  ['/api/v1/cluster/user/logout']: {
+    /**
+     * cluster_user_logout
+     */
+    'post'(
+      parameters?: Parameters<UnknownParamsObject> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.ClusterUserLogout.Responses.$201>
   }
   ['/api/v1/db/list']: {
     /**

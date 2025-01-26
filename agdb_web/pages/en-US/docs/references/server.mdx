@@ -79,12 +79,14 @@ Users are allowed to change their password and to create and manipulate database
 
 Available user APIs:
 
-| Action                       | Description                                                         |
-| ---------------------------- | ------------------------------------------------------------------- |
-| /api/v1/user/change_password | changes the current user's password                                 |
-| /api/v1/user/login           | logs in the user returning an API token                             |
-| /api/v1/user/logout          | logs out the user and invalidating the API token \*                 |
-| /api/v1/user/status          | returns current user's username and whether it is a server admin \* |
+| Action                       | Description                                                                                                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| /api/v1/user/change_password | changes the current user's password                                                                                                                              |
+| /api/v1/user/login           | logs in the user returning an API token                                                                                                                          |
+| /api/v1/user/logout          | logs out the user and invalidating the API token \*                                                                                                              |
+| /api/v1/user/status          | returns current user's username and whether it is a server admin \*                                                                                              |
+| /api/v1/cluster/user/login   | logs in the user cluster wide so that using the same token accessing other nodes will not require new login, this might overwrite existing tokens on other nodes |
+| /api/v1/cluster/user/logout  | invalidate tokens on all nodes in the cluster                                                                                                                    |
 
 The login is shared meaning if you log in twice even from different devices you will get the same shared API token of that user. Similarly, when the `logout` endpoint is used this token is invalidated across all sessions.
 
@@ -186,6 +188,7 @@ Each `agdb_server` has exactly one admin account (`admin` by default) that acts 
 | /api/v1/admin/user/\{username\}/logout          | force logout of any user                                                                           |
 | /api/v1/admin/user/\{username\}/remove          | deletes user and all their data (databases) from the server                                        |
 | /api/v1/admin/user/list                         | lists the all users on the server                                                                  |
+| /api/v1/cluster/admin/user/\{username\}/logout  | force logout of any user from all nodes in the cluster                                             |
 
 ## Shutdown
 
@@ -260,20 +263,13 @@ The node0 will have the index `0`, the node1 will have the index `1` and node2 w
     care when doing it.
 </Callout>
 
-Available cluster endpoints:
-
-| Action                      | Description                                                                                                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| /api/v1/cluster/status      | returns the list of cluster nodes indicating which nodes are reachable from the current node and which node is the leader                                        |
-| /api/v1/cluster/user/login  | logs in the user cluster wide so that using the same token accessing other nodes will not require new login, this might overwrite existing tokens on other nodes |
-| /api/v1/cluster/user/logout | invalidate tokens on all nodes in the cluster                                                                                                                    |
-
 ## Misc
 
 Following are the special or miscellaneous endpoints:
 
-| Endpoint             | Description                                          |
-| -------------------- | ---------------------------------------------------- |
-| /api/v1              | serves rapidoc OpenAPI GUI (use this in the browser) |
-| /api/v1/openapi.json | returns the server's OpenAPI specification as json   |
-| /api/v1/status       | returns 200 OK if the server is ready (up)           |
+| Endpoint               | Description                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| /api/v1                | serves rapidoc OpenAPI GUI (use this in the browser)                                                                      |
+| /api/v1/openapi.json   | returns the server's OpenAPI specification as json                                                                        |
+| /api/v1/status         | returns 200 OK if the server is ready (up)                                                                                |
+| /api/v1/cluster/status | returns the list of cluster nodes indicating which nodes are reachable from the current node and which node is the leader |

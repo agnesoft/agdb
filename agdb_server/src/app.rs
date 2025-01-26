@@ -5,14 +5,12 @@ use crate::db_pool::DbPool;
 use crate::forward;
 use crate::logger;
 use crate::routes;
-use crate::routes::studio;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
 use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
 use axum::Router;
-use axum_extra::routing::RouterExt;
 use reqwest::Method;
 use tokio::sync::broadcast::Sender;
 use tower_http::cors::CorsLayer;
@@ -26,7 +24,8 @@ pub(crate) fn app(
     server_db: ServerDb,
     shutdown_sender: Sender<()>,
 ) -> ServerResult<Router> {
-    studio::init(&config)?;
+    #[cfg(feature = "studio")]
+    routes::studio::init(&config)?;
 
     let basepath = config.basepath.clone();
 
@@ -192,9 +191,18 @@ pub(crate) fn app(
         .allow_headers(tower_http::cors::Any)
         .allow_origin(tower_http::cors::Any);
 
-    let router = Router::new()
-        .route_with_tsr("/studio/", routing::get(routes::studio::studio_root))
-        .route("/studio/{*file}", routing::get(routes::studio::studio))
+    #[cfg(feature = "studio")]
+    let router = axum_extra::routing::RouterExt::route_with_tsr(
+        Router::new(),
+        "/studio/",
+        routing::get(routes::studio::studio_root),
+    )
+    .route("/studio/{*file}", routing::get(routes::studio::studio));
+
+    #[cfg(not(feature = "studio"))]
+    let router = Router::new();
+
+    let router = router
         .nest("/api/v1", api_v1)
         .merge(RapiDoc::with_openapi("/api/v1/openapi.json", Api::openapi()).path("/api/v1"))
         .layer(middleware::from_fn_with_state(

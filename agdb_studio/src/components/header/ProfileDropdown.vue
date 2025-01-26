@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { useAccount } from "@/composables/user/account";
+import { useAccount } from "@/composables/profile/account";
 import AgdbDropdown from "../base/dropdown/AgdbDropdown.vue";
 import { ClUser02 } from "@kalimahapps/vue-icons";
-import UserMenu from "./UserMenu.vue";
+import ProfileMenu from "./ProfileMenu.vue";
 
 const { username } = useAccount();
 </script>
@@ -16,7 +16,7 @@ const { username } = useAccount();
             </div>
         </template>
         <template #content>
-            <UserMenu />
+            <ProfileMenu />
         </template>
     </AgdbDropdown>
 </template>

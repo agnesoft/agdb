@@ -4,9 +4,9 @@ import LogoIcon from "@/components/base/icons/LogoIcon.vue";
 import AgdbModal from "@/components/base/modal/AgdbModal.vue";
 import FadeTransition from "@/components/transitions/FadeTransition.vue";
 import NotificationViewer from "../notification/NotificationViewer.vue";
-import UserDropdown from "../header/UserDropdown.vue";
+import ProfileDropdown from "../header/ProfileDropdown.vue";
 import { computed } from "vue";
-import { useAdmin } from "@/composables/user/admin";
+import { useAdmin } from "@/composables/profile/admin";
 
 const { isAdminView } = useAdmin();
 
@@ -40,7 +40,7 @@ const links = computed(() => {
                         >{{ link.text }}</RouterLink
                     >
                 </nav>
-                <UserDropdown />
+                <ProfileDropdown />
             </div>
         </header>
         <main>

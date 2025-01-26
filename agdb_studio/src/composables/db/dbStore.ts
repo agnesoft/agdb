@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import type { DbType, ServerDatabase } from "agdb_api/dist/openapi";
-import { useAccount } from "../user/account";
+import { useAccount } from "../profile/account";
 import { addNotification } from "../notification/notificationStore";
 import type { AxiosResponse } from "axios";
 import type { DbIdentification } from "./types";

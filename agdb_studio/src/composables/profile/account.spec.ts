@@ -8,7 +8,7 @@ const { isLoggedIn, token } = vi.hoisted(() => {
         token: { value: "test" },
     };
 });
-vi.mock("@/composables/user/auth", () => {
+vi.mock("@/composables/profile/auth", () => {
     return {
         useAuth: vi.fn().mockReturnValue({
             isLoggedIn,

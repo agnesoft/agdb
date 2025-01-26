@@ -98,9 +98,9 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**adminStatus**](docs/Api/AgdbApi.md#adminstatus) | **GET** /api/v1/admin/status | 
 *AgdbApi* | [**adminUserAdd**](docs/Api/AgdbApi.md#adminuseradd) | **POST** /api/v1/admin/user/{username}/add | 
 *AgdbApi* | [**adminUserChangePassword**](docs/Api/AgdbApi.md#adminuserchangepassword) | **PUT** /api/v1/admin/user/{username}/change_password | 
+*AgdbApi* | [**adminUserDelete**](docs/Api/AgdbApi.md#adminuserdelete) | **DELETE** /api/v1/admin/user/{username}/delete | 
 *AgdbApi* | [**adminUserList**](docs/Api/AgdbApi.md#adminuserlist) | **GET** /api/v1/admin/user/list | 
 *AgdbApi* | [**adminUserLogout**](docs/Api/AgdbApi.md#adminuserlogout) | **POST** /api/v1/admin/user/{username}/logout | 
-*AgdbApi* | [**adminUserRemove**](docs/Api/AgdbApi.md#adminuserremove) | **DELETE** /api/v1/admin/user/{username}/remove | 
 *AgdbApi* | [**clusterAdminUserLogout**](docs/Api/AgdbApi.md#clusteradminuserlogout) | **POST** /api/v1/cluster/admin/user/{username}/logout | 
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
 *AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 

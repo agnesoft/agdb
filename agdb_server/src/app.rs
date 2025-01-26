@@ -55,8 +55,8 @@ pub(crate) fn app(
             routing::put(routes::admin::user::change_password),
         )
         .route(
-            "/admin/user/{username}/remove",
-            routing::delete(routes::admin::user::remove),
+            "/admin/user/{username}/delete",
+            routing::delete(routes::admin::user::delete),
         )
         .route("/admin/db/list", routing::get(routes::admin::db::list))
         .route(

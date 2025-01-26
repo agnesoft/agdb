@@ -1812,6 +1812,21 @@ declare namespace Paths {
             }
         }
     }
+    namespace AdminUserDelete {
+        namespace Parameters {
+            export type Username = string;
+        }
+        export interface PathParameters {
+            username: Parameters.Username;
+        }
+        namespace Responses {
+            export type $204 = Components.Schemas.UserStatus[];
+            export interface $401 {
+            }
+            export interface $404 {
+            }
+        }
+    }
     namespace AdminUserList {
         namespace Responses {
             export type $200 = Components.Schemas.UserStatus[];
@@ -1829,21 +1844,6 @@ declare namespace Paths {
         namespace Responses {
             export interface $201 {
             }
-            export interface $401 {
-            }
-            export interface $404 {
-            }
-        }
-    }
-    namespace AdminUserRemove {
-        namespace Parameters {
-            export type Username = string;
-        }
-        export interface PathParameters {
-            username: Parameters.Username;
-        }
-        namespace Responses {
-            export type $204 = Components.Schemas.UserStatus[];
             export interface $401 {
             }
             export interface $404 {
@@ -2462,6 +2462,14 @@ export interface OperationMethods {
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
   /**
+   * admin_user_delete
+   */
+  'admin_user_delete'(
+    parameters?: Parameters<Paths.AdminUserDelete.PathParameters> | null,
+    data?: any,
+    config?: AxiosRequestConfig  
+  ): OperationResponse<Paths.AdminUserDelete.Responses.$204>
+  /**
    * admin_user_logout
    */
   'admin_user_logout'(
@@ -2469,14 +2477,6 @@ export interface OperationMethods {
     data?: any,
     config?: AxiosRequestConfig  
   ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
-  /**
-   * admin_user_remove
-   */
-  'admin_user_remove'(
-    parameters?: Parameters<Paths.AdminUserRemove.PathParameters> | null,
-    data?: any,
-    config?: AxiosRequestConfig  
-  ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
   /**
    * cluster_admin_user_logout
    */
@@ -2908,6 +2908,16 @@ export interface PathsDictionary {
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserChangePassword.Responses.$201>
   }
+  ['/api/v1/admin/user/{username}/delete']: {
+    /**
+     * admin_user_delete
+     */
+    'delete'(
+      parameters?: Parameters<Paths.AdminUserDelete.PathParameters> | null,
+      data?: any,
+      config?: AxiosRequestConfig  
+    ): OperationResponse<Paths.AdminUserDelete.Responses.$204>
+  }
   ['/api/v1/admin/user/{username}/logout']: {
     /**
      * admin_user_logout
@@ -2917,16 +2927,6 @@ export interface PathsDictionary {
       data?: any,
       config?: AxiosRequestConfig  
     ): OperationResponse<Paths.AdminUserLogout.Responses.$201>
-  }
-  ['/api/v1/admin/user/{username}/remove']: {
-    /**
-     * admin_user_remove
-     */
-    'delete'(
-      parameters?: Parameters<Paths.AdminUserRemove.PathParameters> | null,
-      data?: any,
-      config?: AxiosRequestConfig  
-    ): OperationResponse<Paths.AdminUserRemove.Responses.$204>
   }
   ['/api/v1/cluster/admin/user/{username}/logout']: {
     /**

@@ -1098,6 +1098,51 @@
         ]
       }
     },
+    "/api/v1/admin/user/{username}/delete": {
+      "delete": {
+        "tags": [
+          "agdb"
+        ],
+        "operationId": "admin_user_delete",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "user name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "404": {
+            "description": "user not found"
+          }
+        },
+        "security": [
+          {
+            "Token": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/user/{username}/logout": {
       "post": {
         "tags": [
@@ -1121,51 +1166,6 @@
           },
           "401": {
             "description": "admin only"
-          },
-          "404": {
-            "description": "user not found"
-          }
-        },
-        "security": [
-          {
-            "Token": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/user/{username}/remove": {
-      "delete": {
-        "tags": [
-          "agdb"
-        ],
-        "operationId": "admin_user_remove",
-        "parameters": [
-          {
-            "name": "username",
-            "in": "path",
-            "description": "user name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "user removed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/UserStatus"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "unauthorized"
           },
           "404": {
             "description": "user not found"

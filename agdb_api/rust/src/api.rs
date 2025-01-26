@@ -338,10 +338,10 @@ impl<T: HttpClient> AgdbApi<T> {
             .0)
     }
 
-    pub async fn admin_user_remove(&self, username: &str) -> AgdbApiResult<u16> {
+    pub async fn admin_user_delete(&self, username: &str) -> AgdbApiResult<u16> {
         self.client
             .delete(
-                &self.url(&format!("/admin/user/{username}/remove")),
+                &self.url(&format!("/admin/user/{username}/delete")),
                 &self.token,
             )
             .await

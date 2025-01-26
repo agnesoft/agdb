@@ -7,12 +7,12 @@ use agdb_api::DbUserRole;
 use std::path::Path;
 
 #[tokio::test]
-async fn remove() -> anyhow::Result<()> {
+async fn delete() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let user = &next_user_name();
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
-    let status = server.api.admin_user_remove(user).await?;
+    let status = server.api.admin_user_delete(user).await?;
     assert_eq!(status, 204);
     assert!(!server
         .api
@@ -25,7 +25,7 @@ async fn remove() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn remove_with_other() -> anyhow::Result<()> {
+async fn delete_with_other() -> anyhow::Result<()> {
     let mut server = TestServer::new().await?;
     let owner = &next_user_name();
     let user = &next_user_name();
@@ -38,7 +38,7 @@ async fn remove_with_other() -> anyhow::Result<()> {
         .api
         .admin_db_user_add(owner, db, user, DbUserRole::Write)
         .await?;
-    server.api.admin_user_remove(owner).await?;
+    server.api.admin_user_delete(owner).await?;
     assert!(!server
         .api
         .admin_user_list()
@@ -58,7 +58,7 @@ async fn user_not_found() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     let status = server
         .api
-        .admin_user_remove("not_found")
+        .admin_user_delete("not_found")
         .await
         .unwrap_err()
         .status;
@@ -73,7 +73,7 @@ async fn non_admin() -> anyhow::Result<()> {
     server.api.user_login(ADMIN, ADMIN).await?;
     server.api.admin_user_add(user, user).await?;
     server.api.user_login(user, user).await?;
-    let status = server.api.admin_user_remove(user).await.unwrap_err().status;
+    let status = server.api.admin_user_delete(user).await.unwrap_err().status;
     assert_eq!(status, 401);
     Ok(())
 }
@@ -83,7 +83,7 @@ async fn no_token() -> anyhow::Result<()> {
     let server = TestServer::new().await?;
     let status = server
         .api
-        .admin_user_remove("user")
+        .admin_user_delete("user")
         .await
         .unwrap_err()
         .status;

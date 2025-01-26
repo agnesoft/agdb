@@ -134,13 +134,13 @@ class AgdbApi
         'adminUserChangePassword' => [
             'application/json',
         ],
+        'adminUserDelete' => [
+            'application/json',
+        ],
         'adminUserList' => [
             'application/json',
         ],
         'adminUserLogout' => [
-            'application/json',
-        ],
-        'adminUserRemove' => [
             'application/json',
         ],
         'clusterAdminUserLogout' => [
@@ -6015,6 +6015,310 @@ class AgdbApi
     }
 
     /**
+     * Operation adminUserDelete
+     *
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserDelete'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return \Agnesoft\AgdbApi\Model\UserStatus[]
+     */
+    public function adminUserDelete($username, string $contentType = self::contentTypes['adminUserDelete'][0])
+    {
+        list($response) = $this->adminUserDeleteWithHttpInfo($username, $contentType);
+        return $response;
+    }
+
+    /**
+     * Operation adminUserDeleteWithHttpInfo
+     *
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserDelete'] to see the possible values for this operation
+     *
+     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
+     * @throws \InvalidArgumentException
+     * @return array of \Agnesoft\AgdbApi\Model\UserStatus[], HTTP status code, HTTP response headers (array of strings)
+     */
+    public function adminUserDeleteWithHttpInfo($username, string $contentType = self::contentTypes['adminUserDelete'][0])
+    {
+        $request = $this->adminUserDeleteRequest($username, $contentType);
+
+        try {
+            $options = $this->createHttpClientOption();
+            try {
+                $response = $this->client->send($request, $options);
+            } catch (RequestException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
+                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
+                );
+            } catch (ConnectException $e) {
+                throw new ApiException(
+                    "[{$e->getCode()}] {$e->getMessage()}",
+                    (int) $e->getCode(),
+                    null,
+                    null
+                );
+            }
+
+            $statusCode = $response->getStatusCode();
+
+
+            switch($statusCode) {
+                case 204:
+                    if ('\Agnesoft\AgdbApi\Model\UserStatus[]' === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ('\Agnesoft\AgdbApi\Model\UserStatus[]' !== 'string') {
+                            try {
+                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                            } catch (\JsonException $exception) {
+                                throw new ApiException(
+                                    sprintf(
+                                        'Error JSON decoding server response (%s)',
+                                        $request->getUri()
+                                    ),
+                                    $statusCode,
+                                    $response->getHeaders(),
+                                    $content
+                                );
+                            }
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\UserStatus[]', []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+            }
+
+            if ($statusCode < 200 || $statusCode > 299) {
+                throw new ApiException(
+                    sprintf(
+                        '[%d] Error connecting to the API (%s)',
+                        $statusCode,
+                        (string) $request->getUri()
+                    ),
+                    $statusCode,
+                    $response->getHeaders(),
+                    (string) $response->getBody()
+                );
+            }
+
+            $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
+            if ($returnType === '\SplFileObject') {
+                $content = $response->getBody(); //stream goes to serializer
+            } else {
+                $content = (string) $response->getBody();
+                if ($returnType !== 'string') {
+                    try {
+                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
+                    } catch (\JsonException $exception) {
+                        throw new ApiException(
+                            sprintf(
+                                'Error JSON decoding server response (%s)',
+                                $request->getUri()
+                            ),
+                            $statusCode,
+                            $response->getHeaders(),
+                            $content
+                        );
+                    }
+                }
+            }
+
+            return [
+                ObjectSerializer::deserialize($content, $returnType, []),
+                $response->getStatusCode(),
+                $response->getHeaders()
+            ];
+
+        } catch (ApiException $e) {
+            switch ($e->getCode()) {
+                case 204:
+                    $data = ObjectSerializer::deserialize(
+                        $e->getResponseBody(),
+                        '\Agnesoft\AgdbApi\Model\UserStatus[]',
+                        $e->getResponseHeaders()
+                    );
+                    $e->setResponseObject($data);
+                    break;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Operation adminUserDeleteAsync
+     *
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserDelete'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminUserDeleteAsync($username, string $contentType = self::contentTypes['adminUserDelete'][0])
+    {
+        return $this->adminUserDeleteAsyncWithHttpInfo($username, $contentType)
+            ->then(
+                function ($response) {
+                    return $response[0];
+                }
+            );
+    }
+
+    /**
+     * Operation adminUserDeleteAsyncWithHttpInfo
+     *
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserDelete'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function adminUserDeleteAsyncWithHttpInfo($username, string $contentType = self::contentTypes['adminUserDelete'][0])
+    {
+        $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
+        $request = $this->adminUserDeleteRequest($username, $contentType);
+
+        return $this->client
+            ->sendAsync($request, $this->createHttpClientOption())
+            ->then(
+                function ($response) use ($returnType) {
+                    if ($returnType === '\SplFileObject') {
+                        $content = $response->getBody(); //stream goes to serializer
+                    } else {
+                        $content = (string) $response->getBody();
+                        if ($returnType !== 'string') {
+                            $content = json_decode($content);
+                        }
+                    }
+
+                    return [
+                        ObjectSerializer::deserialize($content, $returnType, []),
+                        $response->getStatusCode(),
+                        $response->getHeaders()
+                    ];
+                },
+                function ($exception) {
+                    $response = $exception->getResponse();
+                    $statusCode = $response->getStatusCode();
+                    throw new ApiException(
+                        sprintf(
+                            '[%d] Error connecting to the API (%s)',
+                            $statusCode,
+                            $exception->getRequest()->getUri()
+                        ),
+                        $statusCode,
+                        $response->getHeaders(),
+                        (string) $response->getBody()
+                    );
+                }
+            );
+    }
+
+    /**
+     * Create request for operation 'adminUserDelete'
+     *
+     * @param  string $username user name (required)
+     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserDelete'] to see the possible values for this operation
+     *
+     * @throws \InvalidArgumentException
+     * @return \GuzzleHttp\Psr7\Request
+     */
+    public function adminUserDeleteRequest($username, string $contentType = self::contentTypes['adminUserDelete'][0])
+    {
+
+        // verify the required parameter 'username' is set
+        if ($username === null || (is_array($username) && count($username) === 0)) {
+            throw new \InvalidArgumentException(
+                'Missing the required parameter $username when calling adminUserDelete'
+            );
+        }
+
+
+        $resourcePath = '/api/v1/admin/user/{username}/delete';
+        $formParams = [];
+        $queryParams = [];
+        $headerParams = [];
+        $httpBody = '';
+        $multipart = false;
+
+
+
+        // path params
+        if ($username !== null) {
+            $resourcePath = str_replace(
+                '{' . 'username' . '}',
+                ObjectSerializer::toPathValue($username),
+                $resourcePath
+            );
+        }
+
+
+        $headers = $this->headerSelector->selectHeaders(
+            ['application/json', ],
+            $contentType,
+            $multipart
+        );
+
+        // for model (json/xml)
+        if (count($formParams) > 0) {
+            if ($multipart) {
+                $multipartContents = [];
+                foreach ($formParams as $formParamName => $formParamValue) {
+                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
+                    foreach ($formParamValueItems as $formParamValueItem) {
+                        $multipartContents[] = [
+                            'name' => $formParamName,
+                            'contents' => $formParamValueItem
+                        ];
+                    }
+                }
+                // for HTTP post (form)
+                $httpBody = new MultipartStream($multipartContents);
+
+            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
+                # if Content-Type contains "application/json", json_encode the form parameters
+                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
+            } else {
+                // for HTTP post (form)
+                $httpBody = ObjectSerializer::buildQuery($formParams);
+            }
+        }
+
+        // this endpoint requires Bearer authentication (access token)
+        if (!empty($this->config->getAccessToken())) {
+            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
+        }
+
+        $defaultHeaders = [];
+        if ($this->config->getUserAgent()) {
+            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
+        }
+
+        $headers = array_merge(
+            $defaultHeaders,
+            $headerParams,
+            $headers
+        );
+
+        $operationHost = $this->config->getHost();
+        $query = ObjectSerializer::buildQuery($queryParams);
+        return new Request(
+            'DELETE',
+            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
+            $headers,
+            $httpBody
+        );
+    }
+
+    /**
      * Operation adminUserList
      *
      * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserList'] to see the possible values for this operation
@@ -6505,310 +6809,6 @@ class AgdbApi
         $query = ObjectSerializer::buildQuery($queryParams);
         return new Request(
             'POST',
-            $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
-            $headers,
-            $httpBody
-        );
-    }
-
-    /**
-     * Operation adminUserRemove
-     *
-     * @param  string $username user name (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserRemove'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return \Agnesoft\AgdbApi\Model\UserStatus[]
-     */
-    public function adminUserRemove($username, string $contentType = self::contentTypes['adminUserRemove'][0])
-    {
-        list($response) = $this->adminUserRemoveWithHttpInfo($username, $contentType);
-        return $response;
-    }
-
-    /**
-     * Operation adminUserRemoveWithHttpInfo
-     *
-     * @param  string $username user name (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserRemove'] to see the possible values for this operation
-     *
-     * @throws \Agnesoft\AgdbApi\ApiException on non-2xx response or if the response body is not in the expected format
-     * @throws \InvalidArgumentException
-     * @return array of \Agnesoft\AgdbApi\Model\UserStatus[], HTTP status code, HTTP response headers (array of strings)
-     */
-    public function adminUserRemoveWithHttpInfo($username, string $contentType = self::contentTypes['adminUserRemove'][0])
-    {
-        $request = $this->adminUserRemoveRequest($username, $contentType);
-
-        try {
-            $options = $this->createHttpClientOption();
-            try {
-                $response = $this->client->send($request, $options);
-            } catch (RequestException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    $e->getResponse() ? $e->getResponse()->getHeaders() : null,
-                    $e->getResponse() ? (string) $e->getResponse()->getBody() : null
-                );
-            } catch (ConnectException $e) {
-                throw new ApiException(
-                    "[{$e->getCode()}] {$e->getMessage()}",
-                    (int) $e->getCode(),
-                    null,
-                    null
-                );
-            }
-
-            $statusCode = $response->getStatusCode();
-
-
-            switch($statusCode) {
-                case 204:
-                    if ('\Agnesoft\AgdbApi\Model\UserStatus[]' === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ('\Agnesoft\AgdbApi\Model\UserStatus[]' !== 'string') {
-                            try {
-                                $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                            } catch (\JsonException $exception) {
-                                throw new ApiException(
-                                    sprintf(
-                                        'Error JSON decoding server response (%s)',
-                                        $request->getUri()
-                                    ),
-                                    $statusCode,
-                                    $response->getHeaders(),
-                                    $content
-                                );
-                            }
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, '\Agnesoft\AgdbApi\Model\UserStatus[]', []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-            }
-
-            if ($statusCode < 200 || $statusCode > 299) {
-                throw new ApiException(
-                    sprintf(
-                        '[%d] Error connecting to the API (%s)',
-                        $statusCode,
-                        (string) $request->getUri()
-                    ),
-                    $statusCode,
-                    $response->getHeaders(),
-                    (string) $response->getBody()
-                );
-            }
-
-            $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
-            if ($returnType === '\SplFileObject') {
-                $content = $response->getBody(); //stream goes to serializer
-            } else {
-                $content = (string) $response->getBody();
-                if ($returnType !== 'string') {
-                    try {
-                        $content = json_decode($content, false, 512, JSON_THROW_ON_ERROR);
-                    } catch (\JsonException $exception) {
-                        throw new ApiException(
-                            sprintf(
-                                'Error JSON decoding server response (%s)',
-                                $request->getUri()
-                            ),
-                            $statusCode,
-                            $response->getHeaders(),
-                            $content
-                        );
-                    }
-                }
-            }
-
-            return [
-                ObjectSerializer::deserialize($content, $returnType, []),
-                $response->getStatusCode(),
-                $response->getHeaders()
-            ];
-
-        } catch (ApiException $e) {
-            switch ($e->getCode()) {
-                case 204:
-                    $data = ObjectSerializer::deserialize(
-                        $e->getResponseBody(),
-                        '\Agnesoft\AgdbApi\Model\UserStatus[]',
-                        $e->getResponseHeaders()
-                    );
-                    $e->setResponseObject($data);
-                    break;
-            }
-            throw $e;
-        }
-    }
-
-    /**
-     * Operation adminUserRemoveAsync
-     *
-     * @param  string $username user name (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserRemove'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function adminUserRemoveAsync($username, string $contentType = self::contentTypes['adminUserRemove'][0])
-    {
-        return $this->adminUserRemoveAsyncWithHttpInfo($username, $contentType)
-            ->then(
-                function ($response) {
-                    return $response[0];
-                }
-            );
-    }
-
-    /**
-     * Operation adminUserRemoveAsyncWithHttpInfo
-     *
-     * @param  string $username user name (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserRemove'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    public function adminUserRemoveAsyncWithHttpInfo($username, string $contentType = self::contentTypes['adminUserRemove'][0])
-    {
-        $returnType = '\Agnesoft\AgdbApi\Model\UserStatus[]';
-        $request = $this->adminUserRemoveRequest($username, $contentType);
-
-        return $this->client
-            ->sendAsync($request, $this->createHttpClientOption())
-            ->then(
-                function ($response) use ($returnType) {
-                    if ($returnType === '\SplFileObject') {
-                        $content = $response->getBody(); //stream goes to serializer
-                    } else {
-                        $content = (string) $response->getBody();
-                        if ($returnType !== 'string') {
-                            $content = json_decode($content);
-                        }
-                    }
-
-                    return [
-                        ObjectSerializer::deserialize($content, $returnType, []),
-                        $response->getStatusCode(),
-                        $response->getHeaders()
-                    ];
-                },
-                function ($exception) {
-                    $response = $exception->getResponse();
-                    $statusCode = $response->getStatusCode();
-                    throw new ApiException(
-                        sprintf(
-                            '[%d] Error connecting to the API (%s)',
-                            $statusCode,
-                            $exception->getRequest()->getUri()
-                        ),
-                        $statusCode,
-                        $response->getHeaders(),
-                        (string) $response->getBody()
-                    );
-                }
-            );
-    }
-
-    /**
-     * Create request for operation 'adminUserRemove'
-     *
-     * @param  string $username user name (required)
-     * @param  string $contentType The value for the Content-Type header. Check self::contentTypes['adminUserRemove'] to see the possible values for this operation
-     *
-     * @throws \InvalidArgumentException
-     * @return \GuzzleHttp\Psr7\Request
-     */
-    public function adminUserRemoveRequest($username, string $contentType = self::contentTypes['adminUserRemove'][0])
-    {
-
-        // verify the required parameter 'username' is set
-        if ($username === null || (is_array($username) && count($username) === 0)) {
-            throw new \InvalidArgumentException(
-                'Missing the required parameter $username when calling adminUserRemove'
-            );
-        }
-
-
-        $resourcePath = '/api/v1/admin/user/{username}/remove';
-        $formParams = [];
-        $queryParams = [];
-        $headerParams = [];
-        $httpBody = '';
-        $multipart = false;
-
-
-
-        // path params
-        if ($username !== null) {
-            $resourcePath = str_replace(
-                '{' . 'username' . '}',
-                ObjectSerializer::toPathValue($username),
-                $resourcePath
-            );
-        }
-
-
-        $headers = $this->headerSelector->selectHeaders(
-            ['application/json', ],
-            $contentType,
-            $multipart
-        );
-
-        // for model (json/xml)
-        if (count($formParams) > 0) {
-            if ($multipart) {
-                $multipartContents = [];
-                foreach ($formParams as $formParamName => $formParamValue) {
-                    $formParamValueItems = is_array($formParamValue) ? $formParamValue : [$formParamValue];
-                    foreach ($formParamValueItems as $formParamValueItem) {
-                        $multipartContents[] = [
-                            'name' => $formParamName,
-                            'contents' => $formParamValueItem
-                        ];
-                    }
-                }
-                // for HTTP post (form)
-                $httpBody = new MultipartStream($multipartContents);
-
-            } elseif (stripos($headers['Content-Type'], 'application/json') !== false) {
-                # if Content-Type contains "application/json", json_encode the form parameters
-                $httpBody = \GuzzleHttp\Utils::jsonEncode($formParams);
-            } else {
-                // for HTTP post (form)
-                $httpBody = ObjectSerializer::buildQuery($formParams);
-            }
-        }
-
-        // this endpoint requires Bearer authentication (access token)
-        if (!empty($this->config->getAccessToken())) {
-            $headers['Authorization'] = 'Bearer ' . $this->config->getAccessToken();
-        }
-
-        $defaultHeaders = [];
-        if ($this->config->getUserAgent()) {
-            $defaultHeaders['User-Agent'] = $this->config->getUserAgent();
-        }
-
-        $headers = array_merge(
-            $defaultHeaders,
-            $headerParams,
-            $headers
-        );
-
-        $operationHost = $this->config->getHost();
-        $query = ObjectSerializer::buildQuery($queryParams);
-        return new Request(
-            'DELETE',
             $operationHost . $resourcePath . ($query ? "?{$query}" : ''),
             $headers,
             $httpBody

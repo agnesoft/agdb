@@ -6,6 +6,7 @@ import {
 import type { Column, TRow } from "@/composables/table/types";
 import { computed, inject, type Ref } from "vue";
 import AgdbCellMenu from "./AgdbCellMenu.vue";
+import { BsCheckLg, ClCloseMd } from "@kalimahapps/vue-icons";
 
 const props = defineProps({
     cellKey: {
@@ -37,10 +38,21 @@ const formattedValue = computed(() => {
         <div v-else-if="column?.actions">
             <AgdbCellMenu :actions="column.actions" />
         </div>
+        <div v-else-if="column?.type === 'boolean'">
+            <BsCheckLg v-if="value" class="positive-icon" title="Yes" />
+            <ClCloseMd v-else class="negative-icon" title="No" />
+        </div>
         <div v-else>
             <p>{{ formattedValue }}</p>
         </div>
     </div>
 </template>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.positive-icon {
+    color: var(--success-color-2);
+}
+.negative-icon {
+    color: var(--error-color-2);
+}
+</style>

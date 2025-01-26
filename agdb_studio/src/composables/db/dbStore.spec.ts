@@ -59,6 +59,7 @@ describe("DbStore", () => {
     it("fetches databases when called", async () => {
         const { databases, fetchDatabases } = useDbStore();
         await fetchDatabases();
+        expect(dbList).toHaveBeenCalledOnce();
         expect(databases.value).toHaveLength(2);
     });
 

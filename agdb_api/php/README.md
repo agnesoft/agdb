@@ -104,7 +104,7 @@ Class | Method | HTTP request | Description
 *AgdbApi* | [**clusterAdminUserLogout**](docs/Api/AgdbApi.md#clusteradminuserlogout) | **POST** /api/v1/cluster/admin/user/{username}/logout | 
 *AgdbApi* | [**clusterStatus**](docs/Api/AgdbApi.md#clusterstatus) | **GET** /api/v1/cluster/status | 
 *AgdbApi* | [**clusterUserLogin**](docs/Api/AgdbApi.md#clusteruserlogin) | **POST** /api/v1/cluster/user/login | 
-*AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/logout | 
+*AgdbApi* | [**clusterUserLogout**](docs/Api/AgdbApi.md#clusteruserlogout) | **POST** /api/v1/cluster/user/logout | 
 *AgdbApi* | [**dbAdd**](docs/Api/AgdbApi.md#dbadd) | **POST** /api/v1/db/{owner}/{db}/add | 
 *AgdbApi* | [**dbAudit**](docs/Api/AgdbApi.md#dbaudit) | **GET** /api/v1/db/{owner}/{db}/audit | 
 *AgdbApi* | [**dbBackup**](docs/Api/AgdbApi.md#dbbackup) | **POST** /api/v1/db/{owner}/{db}/backup | 

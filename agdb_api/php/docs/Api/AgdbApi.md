@@ -31,7 +31,7 @@ All URIs are relative to http://localhost:3000, except if the operation defines 
 | [**clusterAdminUserLogout()**](AgdbApi.md#clusterAdminUserLogout) | **POST** /api/v1/cluster/admin/user/{username}/logout |  |
 | [**clusterStatus()**](AgdbApi.md#clusterStatus) | **GET** /api/v1/cluster/status |  |
 | [**clusterUserLogin()**](AgdbApi.md#clusterUserLogin) | **POST** /api/v1/cluster/user/login |  |
-| [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/logout |  |
+| [**clusterUserLogout()**](AgdbApi.md#clusterUserLogout) | **POST** /api/v1/cluster/user/logout |  |
 | [**dbAdd()**](AgdbApi.md#dbAdd) | **POST** /api/v1/db/{owner}/{db}/add |  |
 | [**dbAudit()**](AgdbApi.md#dbAudit) | **GET** /api/v1/db/{owner}/{db}/audit |  |
 | [**dbBackup()**](AgdbApi.md#dbBackup) | **POST** /api/v1/db/{owner}/{db}/backup |  |

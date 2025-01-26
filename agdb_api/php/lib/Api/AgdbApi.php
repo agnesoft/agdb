@@ -7732,7 +7732,7 @@ class AgdbApi
     {
 
 
-        $resourcePath = '/api/v1/cluster/logout';
+        $resourcePath = '/api/v1/cluster/user/logout';
         $formParams = [];
         $queryParams = [];
         $headerParams = [];

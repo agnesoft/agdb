@@ -1087,9 +1087,6 @@
           "401": {
             "description": "unauthorized"
           },
-          "461": {
-            "description": "password too short (<8)"
-          },
           "464": {
             "description": "user not found"
           }

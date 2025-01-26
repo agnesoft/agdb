@@ -1808,8 +1808,6 @@ declare namespace Paths {
             }
             export interface $401 {
             }
-            export interface $461 {
-            }
             export interface $464 {
             }
         }

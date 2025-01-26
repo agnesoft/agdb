@@ -7,6 +7,7 @@ use crate::logger;
 use crate::routes;
 use crate::routes::studio;
 use crate::server_db::ServerDb;
+use crate::server_error::ServerResult;
 use crate::server_state::ServerState;
 use axum::middleware;
 use axum::routing;
@@ -24,8 +25,8 @@ pub(crate) fn app(
     db_pool: DbPool,
     server_db: ServerDb,
     shutdown_sender: Sender<()>,
-) -> Router {
-    studio::init(&config);
+) -> ServerResult<Router> {
+    studio::init(&config)?;
 
     let basepath = config.basepath.clone();
 
@@ -207,9 +208,9 @@ pub(crate) fn app(
         .layer(cors)
         .with_state(state);
 
-    if !basepath.is_empty() {
+    Ok(if !basepath.is_empty() {
         Router::new().nest(&basepath, router)
     } else {
         router
-    }
+    })
 }

@@ -54,7 +54,6 @@ const userActions: Action<UserStatus>[] = [
         label: "Logout",
         action: async ({ params }) => {
             const cluster = !!getInputValue<string>(KEY_MODAL, "cluster");
-            console.log("cluster", cluster);
             if (cluster) {
                 return client.value
                     ?.cluster_admin_user_logout({

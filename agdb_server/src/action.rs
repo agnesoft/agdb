@@ -14,7 +14,7 @@ pub(crate) mod db_restore;
 pub(crate) mod db_user_add;
 pub(crate) mod db_user_remove;
 pub(crate) mod user_add;
-pub(crate) mod user_remove;
+pub(crate) mod user_delete;
 
 use crate::action::change_password::ChangePassword;
 use crate::action::cluster_login::ClusterLogin;
@@ -32,7 +32,7 @@ use crate::action::db_restore::DbRestore;
 use crate::action::db_user_add::DbUserAdd;
 use crate::action::db_user_remove::DbUserRemove;
 use crate::action::user_add::UserAdd;
-use crate::action::user_remove::UserRemove;
+use crate::action::user_delete::UserDelete;
 use crate::db_pool::DbPool;
 use crate::server_db::ServerDb;
 use crate::server_error::ServerResult;
@@ -46,7 +46,7 @@ pub(crate) enum ClusterAction {
     UserAdd(UserAdd),
     ClusterLogin(ClusterLogin),
     ChangePassword(ChangePassword),
-    UserRemove(UserRemove),
+    UserDelete(UserDelete),
     DbAdd(DbAdd),
     DbBackup(DbBackup),
     DbClear(DbClear),
@@ -81,7 +81,7 @@ impl ClusterAction {
             ClusterAction::UserAdd(action) => action.exec(db, db_pool).await,
             ClusterAction::ClusterLogin(action) => action.exec(db, db_pool).await,
             ClusterAction::ChangePassword(action) => action.exec(db, db_pool).await,
-            ClusterAction::UserRemove(action) => action.exec(db, db_pool).await,
+            ClusterAction::UserDelete(action) => action.exec(db, db_pool).await,
             ClusterAction::DbAdd(action) => action.exec(db, db_pool).await,
             ClusterAction::DbBackup(action) => action.exec(db, db_pool).await,
             ClusterAction::DbClear(action) => action.exec(db, db_pool).await,
@@ -117,9 +117,9 @@ impl From<ChangePassword> for ClusterAction {
     }
 }
 
-impl From<UserRemove> for ClusterAction {
-    fn from(value: UserRemove) -> Self {
-        ClusterAction::UserRemove(value)
+impl From<UserDelete> for ClusterAction {
+    fn from(value: UserDelete) -> Self {
+        ClusterAction::UserDelete(value)
     }
 }
 

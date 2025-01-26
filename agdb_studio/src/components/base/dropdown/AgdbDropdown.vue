@@ -19,7 +19,7 @@ const buttonRef = ref<HTMLElement>();
         <button ref="buttonRef" type="button" class="trigger" @click="toggle">
             <slot name="trigger"></slot>
         </button>
-        <Teleport to="body">
+        <Teleport to="#app">
             <SlideUpTransition>
                 <DropdownContent
                     v-on-click-outside="close"
